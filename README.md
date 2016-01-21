@@ -1,6 +1,10 @@
 # OpenVnmrJ
 Most of the code for OpenVnmrJ. Build tools are not in this repository and must  be installed.
 
+## DEVELOPMENT BRANCH	
+
+Use this for testing; consider it unstable
+
 README.ovj  
 v0.3  
 11 September 2015  
