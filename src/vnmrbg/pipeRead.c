@@ -626,7 +626,7 @@ int pipeRead(int argc, char *argv[], int retc, char *retv[])
    float *ptr;
    float *start;
    float *dptr;
-   float multIm;
+   float multRe, multIm;
 
    if (argc<2)
    {
@@ -641,7 +641,14 @@ int pipeRead(int argc, char *argv[], int retc, char *retv[])
    else
       sprintf(path,"%s/%s",curexpdir,argv[1]);
    elem = 1;
-   multIm = FTNORM;
+   if (jeolFlag)
+   {
+      multRe = multIm = 100.0;
+   }
+   else
+   {
+      multRe = multIm = FTNORM;
+   }
    if (argc >= 3)
    {
       if (isReal(argv[2]))
@@ -652,7 +659,7 @@ int pipeRead(int argc, char *argv[], int retc, char *retv[])
       }
       else if ( ! strcmp(argv[2],"rev") )
       {
-         multIm = -FTNORM;
+         multIm = -multRe;
       }
       if (argc >= 4)
       {
@@ -664,7 +671,7 @@ int pipeRead(int argc, char *argv[], int retc, char *retv[])
          }
          else if ( ! strcmp(argv[3],"rev") )
          {
-            multIm = -FTNORM;
+            multIm = -multRe;
          }
       }
    }
@@ -736,7 +743,7 @@ int pipeRead(int argc, char *argv[], int retc, char *retv[])
          num = xSize;
          while ( num-- )
          {
-            *dptr++ = *ptr++ * FTNORM;
+            *dptr++ = *ptr++ * multRe;
          }
       }
       else
@@ -744,7 +751,7 @@ int pipeRead(int argc, char *argv[], int retc, char *retv[])
          num = xSize / 2;
          while ( num-- )
          {
-            *dptr++ = *ptr * FTNORM;
+            *dptr++ = *ptr * multRe;
             *dptr++ = *(ptr+xSize/2) * multIm;
              ptr++;
          }
@@ -889,7 +896,7 @@ int pipeRead(int argc, char *argv[], int retc, char *retv[])
          {
             int toffset = firstTrace + (tracesPerBlk * block2D);
             for (pt=0; pt < np2D; pt++)
-              *dptr++ = *(ptr + toffset + pt*xSize) * FTNORM; 
+              *dptr++ = *(ptr + toffset + pt*xSize) * multRe; 
             firstTrace++;
             tracesDone++;
          }

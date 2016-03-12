@@ -1178,13 +1178,11 @@ int Console::addController(Controller *mine)
 
 RFController * Console::getRFControllerByLogicalIndex(int k)
 {
-  char emessage[MAXSTR];
   if (RFUserTable[k-1] != NULL)
      return(RFUserTable[k-1]);
   else
   {
-      sprintf(emessage,"no controller mapped at RF index %d. abort!\n",k);
-      abort_message(emessage);
+      abort_message("no controller mapped at RF index %d. abort!\n",k);
   }
   return(0);
 }
@@ -1857,7 +1855,6 @@ int Console::chk4EnoughHostBufferMemory()
 {
     char cbuff[MAXSTR];
     long long alottedMemory, FidSize_NF_Corrected,RequiredMemBytes;
-    char errstr[256];
     unsigned int fidSizeBytes;
     int numActiveDDRs;
     unsigned int nfadj,numDataPts,calc_nbufs;
@@ -1910,9 +1907,9 @@ int Console::chk4EnoughHostBufferMemory()
       nf,nfmod,fidSizeBytes,FidSize_NF_Corrected,calc_nbufs); */
     if (calc_nbufs < 2)
     {
-      sprintf(errstr,"Data Size %llu MB with %d active receivers, has exceeded Host buffer requirement (%llu MB) by %llu MB, abort.\n",
-        FidSize_NF_Corrected / 1048576, numActiveDDRs, RequiredMemBytes/1048576, (RequiredMemBytes - alottedMemory)/1048576 );
-      abort_message(errstr);
+      abort_message("Data Size %llu MB with %d active receivers, has exceeded Host buffer requirement (%llu MB) by %llu MB, abort.\n",
+        FidSize_NF_Corrected / 1048576, numActiveDDRs, RequiredMemBytes/1048576,
+        (RequiredMemBytes - alottedMemory)/1048576 );
       return 0;
     }
     return 1;

@@ -27,13 +27,11 @@ void WerrprintfWithPos(const char *format, ...) { }
 int getparmd(char *varname, char *vartype, int tree, double *varaddr, int size)
 {
     int ret;
-    char mess[MAXSTR];
 
     if ( (strcmp(vartype,"REAL") == 0) || (strcmp(vartype,"real") == 0) )
     {
         if ((ret = P_getreal(tree,varname,(double *)varaddr,1)) < 0)
-        {    sprintf(mess,"Cannot get parameter: %s\n",varname);
-             text_error(mess);
+        {    text_error("Cannot get parameter: %s\n",varname);
              if (bgflag)
                  P_err(ret,varname,": ");
              return(1);

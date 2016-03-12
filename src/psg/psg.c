@@ -669,6 +669,7 @@ double  nD;                  /* experiment dimensionality */
 double  ns;                  /* number of slices */
 double  ne;                  /* number of echoes */
 double  ni;                  /* number of standard increments */
+double  ni2;                 /* number of 3d increments */
 double  nv,nv2,nv3;          /* number of phase encode views */
 double  ssc;                 /* compressed ss transients */
 double  ticks;               /* external trigger counter */

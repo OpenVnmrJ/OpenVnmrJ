@@ -75,6 +75,9 @@ static double dpir_off;
 static double dpf_wc2;
 static double dpf_sc2;
 static int vertflag;
+static int axish = 0;
+static int axisp = 0;
+static double axisp_freq = 1.0;
 
 /*************/
 static void setwindows()
@@ -139,7 +142,9 @@ static void label_top(int index, double amp, int label_x)
   int  temp, len;
 
   (void) amp;
-  if (sfrq < 1.1) sprintf(label,"%1.2f",linefrq[index]/sfrq);
+  if (axish) sprintf(label,"%1.2f",linefrq[index]);
+  else if (axisp) sprintf(label,"%1.3f",linefrq[index]/axisp_freq);
+  else if (sfrq < 1.1) sprintf(label,"%1.2f",linefrq[index]/sfrq);
   else 		  sprintf(label,"%1.3f",linefrq[index]/sfrq);
   len =  xcharpixels * strlen(label);
   ymax0 = mnumypnts - len - (int) (5.0 * dispcalib);
@@ -223,7 +228,9 @@ static void label_bot(int index, double amp, int label_x)
   int  label_y,peak_y;
   int  ymax, ymax0, temp;
 
-  if (sfrq < 1.1) sprintf(label,"%1.2f",linefrq[index]/sfrq);
+  if (axish) sprintf(label,"%1.2f",linefrq[index]);
+  else if (axisp) sprintf(label,"%1.3f",linefrq[index]/axisp_freq);
+  else if (sfrq < 1.1) sprintf(label,"%1.2f",linefrq[index]/sfrq);
   else 		  sprintf(label,"%1.3f",linefrq[index]/sfrq);
   ymax0 = mnumypnts - xcharpixels * strlen(label) - (int) (11.0 * dispcalib);
   ymax = ymax0;
@@ -532,6 +539,9 @@ int dpf(int argc, char *argv[], int retc, char *retv[])
   (void) retv;
   Wturnoff_buttons();
   leader_len = 20.0;
+  axish = FALSE;
+  axisp = FALSE;
+  axisp_freq = 1.0;
   if (argc > 1)
   {
     for (i=1; i<argc; i++)
@@ -546,6 +556,12 @@ int dpf(int argc, char *argv[], int retc, char *retv[])
       } else if (strcmp(argv[i],"noll") == 0) donll = FALSE;
       else if (strcmp(argv[i],"pos") == 0) noneg = TRUE;
       else if (strcmp(argv[i],"top") == 0) top = TRUE;
+      else if (strcmp(argv[i],"axish") == 0) axish = TRUE;
+      else if (strcmp(argv[i],"axisp") == 0)
+      {
+         axisp = TRUE;
+         P_getreal(PROCESSED,"sfrq",&axisp_freq,1);
+      }
       else if (strcmp(argv[i],"leader") == 0)
       {
          if (((i+1) < argc) && isReal(argv[i+1]) )
@@ -578,7 +594,7 @@ int dpf(int argc, char *argv[], int retc, char *retv[])
     execString(command);
   }
 
-  if(P_getreal(CURRENT, "dpf_sc2",&dpf_wc2,1)) dpf_sc2=sc2;
+  if(P_getreal(CURRENT, "dpf_sc2",&dpf_sc2,1)) dpf_sc2=sc2;
   if(P_getreal(CURRENT, "dpf_wc2",&dpf_wc2,1)) dpf_wc2=wc2;
   if(dpf_wc2>wc2) dpf_wc2=wc2;
   if(dpf_sc2<sc2) dpf_sc2=sc2;

@@ -180,7 +180,6 @@ void no_shim_delay(double dur)
 
 void hsdelay(double dur)
 {
-   char      msg[80];
    int       codeStream[5];
    int       index;
    long long count;
@@ -199,20 +198,16 @@ void hsdelay(double dur)
    {
        if (dur < hst)
        {  if (ix == 1)
-          {  strcpy(msg,"Delay time is less than homospoil time (hst)\n");
-             text_error(msg);
-             strcpy(msg,"No homospoil pulse produced.\n");
-             text_error(msg);
+          {  text_error("Delay time is less than homospoil time (hst)\n");
+             text_error("No homospoil pulse produced.\n");
           }
        }
        else
        {
           dur = dur - hst;
           if (hst < 1e-7)
-          {  strcpy(msg,"Homospoil time is less than 100 ns (hst)\n");
-             text_error(msg);
-             strcpy(msg,"No homospoil pulse produced.\n");
-             text_error(msg);
+          {  text_error("Homospoil time is less than 100 ns (hst)\n");
+             text_error("No homospoil pulse produced.\n");
           }
           codeStream[0] = 1;
           tmp->outputACode(HOMOSPOIL,1,codeStream);    // 4 clocks
@@ -4471,7 +4466,6 @@ void genBlankOnOff(int state, int rfch)
 
 void genTxGateOnOff(int state, int rfch)
 {
-  char emessage[MAXSTR];
   RFController *Work = (RFController *) P2TheConsole->getRFControllerByLogicalIndex(rfch);
   if (Work->getProgDecInterlock() > 0)
   {
@@ -4489,8 +4483,7 @@ void genTxGateOnOff(int state, int rfch)
     // any check for rcvr on currently?
     if ( (Work->isObserve()) && rcvr_is_on_now )
     {
-      sprintf(emessage,"TX Gate cannot be turned on if receiver is on for %s  abort",Work->getName());
-      abort_message(emessage);
+      abort_message("TX Gate cannot be turned on if receiver is on for %s  abort",Work->getName());
     }
   }
 
@@ -5458,7 +5451,6 @@ int getNumActiveRcvrs()
  */
 void triggerSelect(int whichone)
 {
-   char emsg[MAXSTR];
    long long ticks;
 
    if (whichone == 0)
@@ -5467,8 +5459,7 @@ void triggerSelect(int whichone)
       whichone=1;
    }
    if ( (whichone<1) || (whichone>3) )
-   {  sprintf(emsg, "triggerSelect argument %d out of range 1-3, check trigger parameter",whichone);
-      abort_message(emsg);
+   {  abort_message("triggerSelect argument %d out of range 1-3, check trigger parameter",whichone);
    }
    P2TheConsole->newEvent();
    MasterController *Work =

@@ -101,7 +101,6 @@ int getorientation(char *c1,char *c2,char *c3,char *orientname)
 void grad_limit_checks(double xgrad,double ygrad,double zgrad,char *routinename)
 {
   double precision_limit;
-  char msge[256];
 
    if (bgflag)
      cout << "grad_limit_checks: xgrad=" << xgrad << " ygrad=" << ygrad << " zgrad=" << zgrad << endl;
@@ -112,21 +111,18 @@ void grad_limit_checks(double xgrad,double ygrad,double zgrad,char *routinename)
     zgrad = fabs(zgrad);
     if (xgrad > (gxlimit+(gxlimit*precision_limit)))
     {
-        sprintf(msge,"%s: X gradient: %7.3f exceeds safety limit: %7.3f.\n",
+        abort_message("%s: X gradient: %7.3f exceeds safety limit: %7.3f.\n",
                                                 routinename,xgrad,gxlimit);
-        abort_message(msge);
     }
     if (ygrad > (gylimit+(gylimit*precision_limit)))
     {
-        sprintf(msge,"%s: Y gradient: %7.3f exceeds safety limit: %7.3f.\n",
+        abort_message("%s: Y gradient: %7.3f exceeds safety limit: %7.3f.\n",
                                                 routinename,ygrad,gylimit);
-        abort_message(msge);
     }
     if (zgrad > (gzlimit+(gzlimit*precision_limit)))
     {
-        sprintf(msge,"%s: Z gradient: %7.3f exceeds safety limit: %7.3f.\n",
+        abort_message("%s: Z gradient: %7.3f exceeds safety limit: %7.3f.\n",
                                                 routinename,zgrad,gzlimit);
-        abort_message(msge);
     }
 
 }

@@ -350,30 +350,39 @@
           set="if axis='h' then $VALUE=1 else $VALUE=0 endif"
           />
       </group>
-      <group loc="180 145" size="95 20"
-        border="None"
-        tab="no"
-        enable="no"
-        useref="no"
-        subtype="Untitled"
-        rows="1"
-        columns="1"
+      <menu loc="180 145" size="90 20"
+        style="PlainText"
+        label="Peak Pick"
+        vq="pkpick"
+        vc="$pkpick='$VALUE' if ($pkpick='none') then pkpick='' plotoption('remove','pklabels') dpf('turnoff') ds('again') else pkpick=$pkpick plotoption('add','pklabels') showmanual('1d','peak','refresh') endif"
+        set="if pkpick='' then $VALUE='none' else $VALUE=pkpick endif"
+        editable="No"
         >
-        <radio loc="55 0" size="40 20"
-          style="PlainText"
+        <mlabel 
           label="Hz"
-          vq="pkpick"
-          vc="pkpick=`$axis=axis axis='h' ppf axis=$axis` showmanual('1d','peak','refresh')"
-          set="if (pkpick=`$axis=axis axis='h' ppf axis=$axis`) then $VALUE=1 else $VALUE=0 endif"
+          chval="ppf('axish')"
           />
-        <radio loc="5 0" size="55 20"
-          style="PlainText"
+        <mlabel 
           label="ppm"
-          vq="pkpick"
-          vc="pkpick=`$axis=axis axis='p' ppf axis=$axis` showmanual('1d','peak','refresh')"
-          set="if (pkpick=`$axis=axis axis='p' ppf axis=$axis`) then $VALUE=1 else $VALUE=0 endif"
+          chval="ppf('axisp')"
           />
-      </group>
+        <mlabel 
+          label="Hz,  top"
+          chval="ppf('axish','top')"
+          />
+        <mlabel 
+          label="ppm, top"
+          chval="ppf('axisp','top')"
+          />
+        <mlabel 
+          label="Default"
+          chval="ppf"
+          />
+        <mlabel 
+          label="None"
+          chval="none"
+          />
+      </menu>
       <check loc="180 205" size="80 20"
         style="PlainText"
         label="Molecule"
@@ -395,26 +404,23 @@
           style="PlainText"
           label="Normalized"
           vq="intstyle"
-          vc="intstyle='pirN' teststr('plotoption','intval'):$on if ($on) then insref='n' dpir endif"
-          set="$VALUE=(intstyle='pirN')"
+          vc="intstyle='pirN' insref='n' teststr('plotoption','intval'):$on if ($on) then dpir endif"
+          set="on('insref'):$VALUE"
           />
         <radio loc="10 0" size="60 20"
           style="PlainText"
           label="Scaled"
           vq="intstyle"
-          vc="intstyle='pir' teststr('plotoption','intval'):$on if ($on) then insref='y' dpir endif"
-          set="$VALUE=(intstyle='pir')"
+          vc="intstyle='pir' insref='y' teststr('plotoption','intval'):$on if ($on) then dpir endif"
+          set="on('insref'):$VALUE"
           />
       </group>
-      <check loc="170 125" size="105 20"
-        style="PlainText"
+      <label loc="180 125" size="75 20"
+        style="Label1"
         label="Peak labels"
-        vq="pkpick layout plotoption"
-        vc="if (pkpick='') then pkpick='ppf' endif plotoption('add','pklabels') dpf"
-        vc2="pkpick='' plotoption('remove','pklabels') dpf('turnoff') ds"
-        set="teststr('plotoption','pklabels'):$pklabel if (pkpick&lt;&gt;'' and $pklabel&gt;0.5) then $VALUE=1 else $VALUE=0 endif"
-        />
-      <check loc="170 165" size="75 20"
+        justify="Left"
+      />
+      <check loc="180 165" size="75 20"
         style="PlainText"
         label="Axis"
         vq="layout plotoption"
@@ -426,8 +432,8 @@
         style="PlainText"
         label="Integral values"
         vq="layout plotoption lifrq"
-        vc="plotoption('add','intval') dpir"
-        vc2="plotoption('remove','intval') ds"
+        vc="plotoption('add','intval') on('insref'):$e if ($e) then intstyle='pir' else intstyle='pirN' endif dpir"
+        vc2="plotoption('remove','intval') intstyle='' dpir('turnoff') ds('again')"
         set="teststr('plotoption','intval'):$VALUE"
         show="if (lifrq&lt;&gt;0) then $ENABLE=1 else $ENABLE=-1 endif"
         />

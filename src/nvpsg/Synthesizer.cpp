@@ -294,7 +294,7 @@ int Synthesizer::encodeFreq(double freq_mhz, int *array)
 
     // round away from the breakpoints
     for (j=0, bp=(breakpoint*) type->bp; bp->freq != 0; bp++, j++) {
-      float delta = fabsf(bp->freq - freq);
+      float delta = fabsf( (float) (bp->freq - freq) );
       if (delta < 1e6 && freq_index > (float)bp->freq) {
 	mhz = (unsigned short) (freq_mhz + 1);
 	DBG("%d: %f is close to %f! delta = %f, mhz=%d\n", j, freq, bp->freq, delta, (int)mhz);

@@ -1,0 +1,184 @@
+#!
+
+import os
+import shutil
+import datetime
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# target
+aptTarget = 'apt.jar'
+aptDashOTarget = 'apt.jar.dasho'
+aptProGuardTarget = 'apt.jar.pro'
+
+# current working directory
+cwd = os.getcwd()
+
+# get options environment
+boFile = os.path.join(cwd, os.pardir, os.pardir, 'buildoptions.py')
+if not os.path.exists(boFile):
+   boFile = os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py')
+execfile(boFile)
+
+# paths
+javaPath = os.path.join(ovjtools, 'java', 'bin')
+
+vnmrBoPath = os.path.join(cwd, os.pardir, 'vnmrj', 'src', 'vnmr', 'bo')
+vnmrBoDstPath = os.path.join(cwd, 'src', 'vnmr', 'bo')
+VnmrBoFileList = ['EPSGraphics.java',
+                  'Plot.java',
+                  'PlotBox.java',
+                  'PlotPoint.java']
+
+vnmrImgPath = os.path.join(cwd, os.pardir, 'vnmrj', 'src', 'vnmr', 'images')
+vnmrImgDstPath = os.path.join(cwd, 'src', 'vnmr', 'images')
+VnmrImgFileList = ['FullScale16.png']
+
+vjclientPath = os.path.join(cwd, os.pardir, 'vjclient', 'src', 'vnmr', 'vjclient')
+vjclientDstPath = os.path.join(cwd, 'src', 'vnmr', 'vjclient')
+vjclientFileList = [
+	       	   'DebugOutput.java',
+	       	   'Messages.java',
+	       	   'RegexFileFilter.java',
+	       	   'VnmrIO.java',
+	       	   'VnmrProxy.java',
+		  ]
+
+probeidPath = os.path.join(cwd, os.pardir, 'probeid', 'src', 'vnmr', 'probeid')
+probeidDstPath = os.path.join(cwd, 'src', 'vnmr', 'probeid')
+probeidFileList = [
+		   'ProbeIdAppdirs.java',
+		   'ProbeIdCache.java',
+		   'ProbeIdCacheTest.java',
+		   'ProbeIdClient.java',
+		   'ProbeIdCmd.java',
+		   'ProbeIdCrypto.java',
+		   'ProbeIdDb.java',
+		   'ProbeIdFileLock.java',
+		   'ProbeIdInputStream.java',
+		   'ProbeIdIOCommands.java',
+		   'ProbeIdIO.java',
+		   'ProbeIdIOTest.java',
+		   'ProbeId.java',
+		   'ProbeId.key',
+		   'ProbeIdKeyValueIO.java',
+		   'ProbeIdMismatchException.java',
+		   'ProbeIdMonitor.java',
+		   'ProbeIdPipeServer.java',
+		   'ProbeIdServer.java',
+		   'ProbeIdSimulatedProbe.java',
+		   'ProbeIdSocketServer.java',
+		   'ProbeIdSocketServerTest.java',
+		   'ProbeIdStore.java',
+		   'ProbeIdStream.java',
+		   'ProbeIdTinyFiles.java',
+		   'ProbeIdWrapper.java',
+		   'ProbeIdZip.java',
+ 		  ]
+
+vnmrUtilPath = os.path.join(cwd, os.pardir, 'vnmrj', 'src', 'vnmr', 'util')
+vnmrUtilDstPath = os.path.join(cwd, 'src', 'vnmr', 'util')
+VnmrUtilFileList = ['Complex.java',
+                    'Fmt.java',
+	            'QuotedStringTokenizer.java',
+                    'LinFit.java',
+                    'NLFit.java',
+                    'VButtonBorder.java']
+
+AptGifPath = os.path.join(cwd, 'src', 'vnmr', 'apt')
+AptGifDstPath = os.path.join(cwd, 'classes', 'vnmr', 'apt')
+AptGifFileList = ['cross.png',
+                  'proTune.gif',
+                  'minus.png',
+                  'plus.png',
+		  'target.png',
+		  'Calibration.png',
+                  'Open.png',
+		  'Load.png',
+		  'Short.png'
+		 ]
+
+# make sure the path(s) exist
+classesPath = os.path.join(cwd, 'classes')
+if not os.path.exists(classesPath):
+   os.makedirs(classesPath)
+
+#probeidJarPath  = os.path.join(cwd, os.pardir, 'probeid')
+#probeidJar   = os.path.join(probeidPath, 'probeid.jar')
+
+jUnitPath    = os.path.join(ovjtools, 'junit')
+jUnitJar     = os.path.join(jUnitPath, 'junit.jar')
+
+jarBin = os.path.join(javaPath, 'jar')
+
+# define build environment
+jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
+                          'CLASSPATH' : classesPath + ':' + jUnitJar, #+ ':' + probeidJar,
+                          'PATH' : javaPath + ':' + os.environ['PATH']})
+
+# this shouldn't really be necessary
+#Depends(classesPath, probeidJarPath)
+
+# todo: figure out how to get scons to build the dependency automatically
+#       without breaking the general (full) build from git-repo/software/
+# this breaks parallel builds:
+#SConscript(os.path.join(probeidJarPath, 'SConstruct'))
+
+# create source hardlinks at scons interpretation time
+# in java SDK 1.3+ javac doesn't follow symlinks
+buildMethods.hardLinkNow(jEnv, vnmrBoDstPath, vnmrBoPath, VnmrBoFileList);
+buildMethods.hardLinkNow(jEnv, vnmrImgDstPath, vnmrImgPath, VnmrImgFileList);
+buildMethods.hardLinkNow(jEnv, vnmrUtilDstPath, vnmrUtilPath, VnmrUtilFileList);
+buildMethods.hardLinkNow(jEnv, AptGifDstPath, AptGifPath, AptGifFileList);
+buildMethods.hardLinkNow(jEnv, probeidDstPath, probeidPath, probeidFileList);
+buildMethods.hardLinkNow(jEnv, vjclientDstPath, vjclientPath, vjclientFileList);
+
+# actual builds
+srcPath = os.path.join(cwd, 'src')
+javaBuildObj = jEnv.Java(JAVACFLAGS = '-J-mx128m',
+                         target     = classesPath,
+                         source     = srcPath)
+
+todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+shortDate = datetime.datetime.now().strftime("%Y-%m-%d %T")
+manifestFile = os.path.join(cwd,'Manifest')
+f = open(manifestFile,'w')
+f.write('Manifest-Version: 1.0 ')
+f.write(todaysDate)
+f.write('\n')
+f.write('Main-Class: vnmr.apt.ProbeTune\n')
+f.write('Implementation-Version: ')
+f.write(shortDate)
+f.write('\n')
+f.close()
+
+jarBuildObject = jEnv.Jar(JAR      = jarBin,
+                          target   = aptTarget,
+                          source   = [classesPath,
+                                      manifestFile],
+                          JARCHDIR = classesPath)
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,'console', 'inova', 'java')
+minstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,'console', 'mercury', 'java')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+if not os.path.exists(minstallPath):
+   os.makedirs(minstallPath)
+
+jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(installPath, os.path.join(cwd, aptTarget))))
+jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(minstallPath, os.path.join(cwd, aptTarget))))
+
+

@@ -7,7 +7,7 @@
  * For more information, see the LICENSE file.
  */
 
-/*----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------n
 |
 |   Modified   Author     Purpose
 |   --------   ------     -------
@@ -60,7 +60,7 @@
 #endif 
 
 extern char     HostName[];
-extern char     UserName[];
+extern char     OperatorName[];
 extern int      debug1;
 extern int      Bnmr;
 
@@ -140,6 +140,7 @@ extern void unlockAtcmd(const char *dir);
 extern void      sleepMilliSeconds(int secs);
 extern double round_freq(double baseMHz, double offsetHz,
                   double init_offsetHz, double stepsizeHz);
+extern void setAppdirs();
 
 static int  no_experiment(char  *);
 static int  stop_acquisition(int, char *[], char [], char [], char []);
@@ -2531,6 +2532,19 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
             }
             else
             {
+               char op[MAXPATH];
+
+               res = sscanf(cmd2do,"operator:%[^;]; %[^\n]\n", op, cmd2);
+               if (res == 2)
+               {
+                  if ( strcmp(op,OperatorName) && strcmp(op, "") )
+                  {
+                     strcpy(OperatorName,op);
+                     P_setstring(GLOBAL,"operator",OperatorName,0);
+                     setAppdirs();
+                  }
+                  sprintf(cmd2do,"%s\n", cmd2);
+               }
                doCmd = 1;
             }
             if (repeatAt)
@@ -2596,6 +2610,16 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
          {
             strcpy(cmd,cmd2);
          }
+         else
+         {
+            char op[MAXPATH];
+
+            res = sscanf(cmd2do,"operator:%[^;]; %[^\n]\n", op, cmd2);
+            if (res == 2)
+            {
+               strcpy(cmd,cmd2);
+            }
+         }
          if ( !matchOnly)
             Wscrprintf("%-10s %d:%.2d %-28s %s\n", user, hr, min, timespec, cmd);
          else if ( ! strcmp(argv[1],cmd) )
@@ -2649,6 +2673,16 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
             if (res == 3)
             {
                strcpy(cmd,cmd2);
+            }
+            else
+            {
+               char op[MAXPATH];
+
+               res = sscanf(cmd2do,"operator:%[^;]; %[^\n]\n", op, cmd2);
+               if (res == 2)
+               {
+                  strcpy(cmd,cmd2);
+               }
             }
             if ( strcmp(argv[1],cmd) )
                fprintf(fdTmp,"%ld %d %d %d %s %s %s %d:%d%s; %s\n",
@@ -2743,9 +2777,12 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
       }
       else
       {
-         fprintf(fd,"%ld %d %d %d %s %s %s %d:%d%s; %s\n",
+         char op[MAXSTR];
+
+         P_getstring(GLOBAL,"operator",op,1,MAXSTR);
+         fprintf(fd,"%ld %d %d %d %s %s %s %d:%d%s; operator:%s; %s\n",
                       atTime, uid, gid, umask4Vnmr, HostName, userdir,
-                      UserName, hr, min, timespec, argv[1]);
+                      UserName, hr, min, timespec, op, argv[1]);
       }
       fclose(fd);
       chmod(atPath,0666);

@@ -57,8 +57,6 @@ static char device[9];
 static char str[80],maptitle[80],dumch[80];
 static int ncols=6;
 static int debug=0;
-static char pens[6][8]={
-	{"green"},{"cyan"},{"magenta"},{"yellow"},{"white"},{"red"}};
 
 static void nmrWrite(double x, double y, char *string)
 {
@@ -154,7 +152,10 @@ static void pen(int penarg)
 	cargc=2;
         cretc=0;
 	strcpy(arg0,"pen");
-	strncpy(arg1,pens[penarg % 6],8);
+        if (penarg == 10)
+           strcpy(arg1,"envelope");
+        else
+           sprintf(arg1,"Spectrum%d",penarg);
 	cargv[0]=arg0;
 	cargv[1]=arg1;
 
@@ -352,7 +353,7 @@ int disp3Dmap(int argc, char *argv[], int retc, char *retv[])
 
 	/* draw frame, circle and lattice */
 
-	pen(1);
+	pen(8);
 	draw(x0,y0+wc2max);
 	draw(x0+wc2max,y0+wc2max);
 	draw(x0+wc2max,y0);
@@ -373,7 +374,7 @@ int disp3Dmap(int argc, char *argv[], int retc, char *retv[])
 		}
 		x=x0; 
 		y=y0;
-		pen(5);
+		pen(9);
 		for (i=1; i<ni; i++)
 		{
 			x=x+dx;
@@ -392,7 +393,7 @@ int disp3Dmap(int argc, char *argv[], int retc, char *retv[])
 	}
 	else
 	{
-		pen(5);
+		pen(9);
 		move(x0+wc2max,y0+wc2max/2);
 		draw(x0,y0+wc2max/2);
 	}
@@ -550,7 +551,7 @@ int disp3Dmap(int argc, char *argv[], int retc, char *retv[])
 
 	/* Draw scale bar */
 
-	pen(4);
+	pen(10);
 	if (flagamp)
 	{
 		sprintf(str,"%6.4f",range);
@@ -609,7 +610,7 @@ int disp3Dmap(int argc, char *argv[], int retc, char *retv[])
 	kk=0;
 	for (mapno=1;mapno<=nmaps;mapno++)		/* for each map */
 	{
-		pen((mapno-1) % ncols);
+		pen(((mapno-1) % ncols) + 2);
 		if (flag3D)
 		{
 			k=0;

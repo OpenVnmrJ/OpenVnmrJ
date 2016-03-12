@@ -22,19 +22,16 @@
 |
 |   Author Greg Brissey   4/28/86
 +---------------------------------------------------------------*/
-#define MAXSTR 256
 extern int Tflag;
 int setparm(const char *varname, const char *vartype, int tree,
             const void *varaddr, int index)
 {
     int ret;
-    char mess[MAXSTR];
 
     if ( (strcmp(vartype,"REAL") == 0) || (strcmp(vartype,"real") == 0) )
     {
         if ((ret = P_setreal(tree,varname,*(double *)varaddr,1)) < 0)
-        {   sprintf(mess,"Cannot set parameter: %s\n",varname);
-            text_error(mess);
+        {   text_error("Cannot set parameter: %s\n",varname);
 	    if (Tflag)
 	        P_err(ret,varname,": ");
 	    return(1);
@@ -46,17 +43,14 @@ int setparm(const char *varname, const char *vartype, int tree,
 	     (strcmp(vartype,"string") == 0) )
 	{
 	    if ((ret = P_setstring(tree,varname,(char *)varaddr,index)) < 0)
-            {	sprintf(mess,"Cannot set parameter: %s\n",varname);
-                text_error(mess);
+            {	text_error("Cannot set parameter: %s\n",varname);
 		if (Tflag)
 	     	    P_err(ret,varname,": ");
 	 	return(1);
             }
 	}
 	else
-	{   sprintf(mess,
-	      "Variable '%s' is neither 'real' nor 'string'.\n",vartype);
-            text_error(mess);
+	{   text_error("Variable '%s' is neither 'real' nor 'string'.\n",vartype);
 	    return(1);
 	}
     }

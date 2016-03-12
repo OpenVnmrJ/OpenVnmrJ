@@ -21,6 +21,7 @@
 #include "aptable.h"
 #include "apdelay.h"
 #include "wetfuncs.h"
+#include "pvars.h"
 
 extern int initializeSeq;
 extern double getval(const char *name);

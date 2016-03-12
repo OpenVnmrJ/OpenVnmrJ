@@ -1,0 +1,1 @@
+java -cp apt.jar -Dapt.debugCategories=TuningSummary,TuneAlgorithm vnmr.apt.ProbeTune -vnmrsystem C:\ProTune\ProTuneSys -vnmruser C:\ProTune\ProTuneUsr -probe asw -motorIP 172.16.0.245 -sweep na -sweepIP 172.16.0.9

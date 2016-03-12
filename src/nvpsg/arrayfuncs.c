@@ -456,17 +456,14 @@ static void setup(char *varptr, int lpindex, int varindex)
    int             index;
    int             type;
    int             ret;
-   char            mess[MAXSTR];
    vInfo           varinfo;	/* variable information structure */
 
    /* --- variable info  --- */
    if ( (ret = P_getVarInfo(CURRENT, varptr, &varinfo)) )
    {
-      sprintf(mess, "Cannot find the variable: '%s'", varptr);
-      text_error(mess);
       if (bgflag)
 	 P_err(ret, varptr, ": ");
-      psg_abort(1);
+      abort_message("Cannot find the variable: '%s'", varptr);
    }
 
    type = varinfo.basicType;
@@ -474,9 +471,7 @@ static void setup(char *varptr, int lpindex, int varindex)
    index = find(varptr);
    if (index == NOTFOUND)
    {
-      sprintf(mess, "variable '%s' does not exist.", varptr);
-      text_error(mess);
-      psg_abort(1);
+      abort_message("variable '%s' does not exist.", varptr);
    }
    if (bgflag)
    {
@@ -598,7 +593,6 @@ void arrayPS(int index, int numarrays, int arrayDim)
    int             ret;
    int             gindx;
    double         *temptr;
-   char            mess[MAXSTR];
    int             ntss;
    double          fidtime;
    double          arraydimvar;
@@ -656,11 +650,9 @@ void arrayPS(int index, int numarrays, int arrayDim)
 
 	    if ((ret = A_getreal(CURRENT, name, (double **) parmptr, valindx)) < 0)
 	    {
-	       sprintf(mess, "Cannot find the variable: '%s'", name);
-	       text_error(mess);
 	       if (bgflag)
 		  P_err(ret, name, ": ");
-	       psg_abort(1);
+	       abort_message("Cannot find the variable: '%s'", name);
 	    }
 	    gindx = lpel[index]->glblindex[varindx];
 	    if (gindx >= 0) {
@@ -682,11 +674,9 @@ void arrayPS(int index, int numarrays, int arrayDim)
 	 {
 	    if ((ret = A_getstring(CURRENT, name, parmptr, valindx)) < 0)
 	    {
-	       sprintf(mess, "Cannot find the variable: '%s'", name);
-	       text_error(mess);
 	       if (bgflag)
 		  P_err(ret, name, ": ");
-	       psg_abort(1);
+	       abort_message("Cannot find the variable: '%s'", name);
 	    }
 	    gindx = lpel[index]->glblindex[varindx];
 	    if (gindx >= 0) {
@@ -1084,7 +1074,6 @@ static void initglblstruc(const char *name, double *glbladdr, int (*function)() 
 int elemvalues(int elem)
 {
    char           *name;
-   char            mess[MAXSTR];
    int             ret;
    vInfo           varinfo;	/* variable information structure */
 
@@ -1099,11 +1088,9 @@ int elemvalues(int elem)
    name = lpel[elem - 1]->lpvar[0];
    if ( (ret = P_getVarInfo(CURRENT, name, &varinfo)) )
    {
-      sprintf(mess, "Cannot find the variable: '%s'", name);
-      text_error(mess);
       if (bgflag)
 	 P_err(ret, name, ": ");
-      psg_abort(1);
+      abort_message("Cannot find the variable: '%s'", name);
    }
    return ((int) varinfo.size);	/* # of values variable has */
 }

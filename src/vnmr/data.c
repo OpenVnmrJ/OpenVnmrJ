@@ -356,6 +356,10 @@ static void binit(int fileindex)
 }
 
 
+int D_fidversion()
+{
+   return( (int) fid_version_id);
+}
 /*---------------------------------------
 |					|
 |	     fidversion()/3		|

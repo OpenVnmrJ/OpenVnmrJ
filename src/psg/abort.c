@@ -429,8 +429,7 @@ void vnmrmsg(const char *paramstring)
    stat = -1;
    if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
    {
-	sprintf(addr,"vnmrmsg: cannot get Vnmr address.\n");
-        text_error(addr);
+	text_error("vnmrmsg: cannot get Vnmr address.\n");
    }
    else if (strcmp(addr,"Autoproc"))
    {
@@ -448,8 +447,7 @@ void vnmrmsg(const char *paramstring)
    	stat = deliverMessageSuid(addr,message);
 	if (stat < 0)
 	{
-	   sprintf(addr,"vnmrmsg: Error sending msg:%s.\n",paramstring);
-           text_error(addr);
+	   text_error("vnmrmsg: Error sending msg:%s.\n",paramstring);
 	}
    }
 }
@@ -467,8 +465,7 @@ void vnmremsg(const char *paramstring)
    stat = -1;
    if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
    {
-	sprintf(addr,"vnmremsg: cannot get Vnmr address.\n");
-        text_error(addr);
+	text_error("vnmremsg: cannot get Vnmr address.\n");
    }
    else if (strcmp(addr,"Autoproc"))
    {
@@ -508,8 +505,7 @@ void release_console()
    stat = -1;
    if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
    {
-	sprintf(addr,"vnmremsg: cannot get Vnmr address.\n");
-        text_error(addr);
+	text_error("vnmremsg: cannot get Vnmr address.\n");
    }
    else if (strcmp(addr,"Autoproc"))
    {
@@ -517,8 +513,7 @@ void release_console()
    	stat = deliverMessageSuid(addr,message);
 	if (stat < 0)
 	{
-	   sprintf(addr,"vnmremsg: Error sending release console msg.\n");
-           text_error(addr);
+	   text_error("vnmremsg: Error sending release console msg.\n");
 	}
    }
    

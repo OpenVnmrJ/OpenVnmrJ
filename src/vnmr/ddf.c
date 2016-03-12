@@ -70,6 +70,7 @@ extern int Bnmr;
 extern void Wturnoff_buttons();
 extern FILE *popen_call(char *cmdstr, char *mode);
 extern int  pclose_call(FILE *pfile);
+extern int  D_fidversion();
 
 static int count_lines(char *fn_addr );
 static void make_std_bhead(dblockhead *bh_ref, short b_status, short b_index );
@@ -1419,7 +1420,7 @@ static void calc_FID(void *data, double freq, double amp, double decay, double p
 }
 
 static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
-                              int npnts, double dwell, int fromFile )
+                              int npnts, double dwell, int fromFile, int phInvert )
 {
         char     cur_line[ 122 ];
         int      ival, index, len, this_line;
@@ -1441,6 +1442,8 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
                             cmd_name, fn_addr);
                         return( -1 );
            }
+           if (phInvert)
+              phase += 180.0;
            calc_FID(mem_buffer, freq, amp, decay, phase, dwell, npnts);
            return( npnts );
         }
@@ -1502,6 +1505,8 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
                         fclose( tfile );
                         return( -1 );
                 }
+                if (phInvert)
+                   phase += 180.0;
                 calc_FID(mem_buffer, freq, amp, decay, phase, dwell, npnts);
         }
 
@@ -1540,9 +1545,11 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
         dblockhead       this_bh;
         int              calcFID = 0;
         int              forceUpdate = 0;
+        int              addFlag = 0;
+        int              phaseInvert = 0;
 
         cmd_name = argv[ 0 ];
-        if (argc < COUNT_REQUIRED_ARGS || argc > MAX_NUMBER_MAKEFID_ARGS) {
+        if (argc < COUNT_REQUIRED_ARGS || argc > MAX_NUMBER_MAKEFID_ARGS+1) {
                 Werrprintf(
             "Usage:  %s( 'file_name' [, element number, format ] )", cmd_name
                 );
@@ -1563,8 +1570,20 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
            new_fid_format = REAL_NUMBERS;
            calcFID = 2;
         }
+        if ( ! strcmp(argv[argc-1],"add"))
+           addFlag = 1;
+        if ( ! strcmp(argv[argc-1],"sub"))
+        {
+           addFlag = 1;
+           phaseInvert = 1;
+        }
         if (element_number == 0)
+        {
            forceUpdate = 1;
+           addFlag = 0;
+           P_setreal(CURRENT,"arraydim",1.0,1);
+           P_setreal(PROCESSED,"arraydim",1.0,1);
+        }
         else
            element_number--;               /* VNMR numbers elements starting at 0 */
 
@@ -1619,19 +1638,28 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
 
 /*  Verify data format only if called out in the command arguments.  */
 
-                if (new_fid_format != UNDEFINED)
+                if (calcFID)
+                {
+                  new_fid_format = cur_fid_format;
+                }
+                else if (new_fid_format != UNDEFINED)
+                {
                   if (new_fid_format != cur_fid_format) {
                         report_data_format_inconsistent(
                                 argv[ 0 ], cur_fid_format);
                         ABORT;
                   }
                   else ;                /* do nothing if the two values match */
+                }
                 else                    /* new fid format not defined */
                   new_fid_format = cur_fid_format;
         }
         else                                    /* no data present */
+        {
+          addFlag = 0;
           if (new_fid_format == UNDEFINED)      /* default to dp=y */
             new_fid_format = DOUBLE_PREC;
+        }
 
       if (calcFID)
       {
@@ -1642,11 +1670,15 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
          P_getreal(CURRENT,"sw",&swval,1);
          P_setreal(PROCESSED,"sw",swval,1);
          mem_buffer = allocateWithId( npnts*sizeof(float), "makefid" );
-         np_makefid = calc_fid_from_values(cmd_name, fn_addr, mem_buffer, (int) npnts, 1.0/swval, calcFID );
+         np_makefid = calc_fid_from_values(cmd_name, fn_addr, mem_buffer,
+                               (int) npnts, 1.0/swval, calcFID, phaseInvert );
          if ( !update_fhead && ( element_number == 0) )
          {
             if (fid_fhead.np != np_makefid)
+            {
                update_fhead = 1;
+               addFlag = 0;
+            }
          }
       }
       else
@@ -1728,7 +1760,23 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
                 fid_fhead.nblocks = element_number+1;
         }
         if (update_fhead)
+        {
           ival = D_updatehead( D_USERFILE, &fid_fhead );
+          addFlag = 0;
+        }
+
+       if (update_fhead && ( D_fidversion() == 0) )
+       {
+          int i;
+          int ival;
+          for (i=0; i< old_nblocks; i++)
+          {
+                ival = D_getbuf( D_USERFILE, 1, i, &fid_block );
+                fid_block.head->status = fid_fhead.status;
+                ival = D_markupdated( D_USERFILE, i );
+                ival = D_release( D_USERFILE, i );
+          }
+       }
 
         stop_fixing_phf = 0;
 
@@ -1739,7 +1787,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
     intervening elements.                               */
 
         if (element_number > old_nblocks)
-          for (tmp_elem = fid_fhead.nblocks; tmp_elem < element_number; tmp_elem++) {
+          for (tmp_elem = old_nblocks; tmp_elem < element_number; tmp_elem++) {
                 ival = D_allocbuf( D_USERFILE, tmp_elem, &fid_block );
                 if (ival) {
                         Werrprintf(
@@ -1750,7 +1798,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
                 }
                 /*bzero( fid_block.data, fid_fhead.tbytes );*/
                 memset( fid_block.data, 0, fid_fhead.tbytes );
-                make_std_bhead( fid_block.head, fid_fhead.status, (short) tmp_elem );
+                make_std_bhead( fid_block.head, fid_fhead.status, (short) tmp_elem+1 );
                 ival = D_markupdated( D_USERFILE, tmp_elem );
                 ival = D_release( D_USERFILE, tmp_elem );
 
@@ -1769,22 +1817,25 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
            if (calcFID && update_fhead)
            {
                   make_std_bhead(
-                        &this_bh, fid_fhead.status, (short) element_number);
+                        &this_bh, fid_fhead.status, (short) element_number+1);
            }
            else
            {
                 ival = D_getblhead( D_USERFILE, element_number, &this_bh );
                 if (ival != 0)
                   make_std_bhead(
-                        &this_bh, fid_fhead.status, (short) element_number);
+                        &this_bh, fid_fhead.status, (short) element_number+1);
             }
         }
         else
-          make_std_bhead( &this_bh, fid_fhead.status, (short) element_number );
+          make_std_bhead( &this_bh, fid_fhead.status, (short) element_number+1 );
 
 /*  Now write the computed element out.  */
 
-        ival = D_allocbuf( D_USERFILE, element_number, &fid_block );
+        if (addFlag)
+           ival = D_getbuf( D_USERFILE, 1, element_number, &fid_block );
+        else
+           ival = D_allocbuf( D_USERFILE, element_number, &fid_block );
         if (ival) {
                 Werrprintf(
             "%s:  error allocating space for block %d", cmd_name, element_number
@@ -1793,10 +1844,57 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
                 ABORT;
         }
 
+        if ( calcFID && (new_fid_format != REAL_NUMBERS) )
+        {
+           register int np = np_makefid;
+
+           if (new_fid_format == SINGLE_PREC)
+           {
+               register short *optr = (short *) mem_buffer;
+               register float *iptr = (float *) mem_buffer;
+               while (np--)
+                  *optr++ = (short) *iptr++;
+           }
+           else if (new_fid_format == DOUBLE_PREC)
+           {
+               register int *optr = (int *) mem_buffer;
+               register float *iptr = (float *) mem_buffer;
+               while (np--)
+                  *optr++ = (int) *iptr++;
+           }
+        }
 /*  Note:  The order of the 1st 2 arguments reverses between bcopy and memcpy  */
 
         /*bcopy( mem_buffer, fid_block.data, fid_fhead.tbytes );*/
-        memcpy( fid_block.data, mem_buffer, fid_fhead.tbytes*fid_fhead.ntraces );
+        if (addFlag)
+        {
+            register int np = np_makefid;
+            if (new_fid_format == SINGLE_PREC)
+            {
+               register short *optr = (short *) fid_block.data;
+               register short *iptr = (short *) mem_buffer;
+               while (np--)
+                  *optr++ += *iptr++;
+            }
+            else if (new_fid_format == DOUBLE_PREC)
+            {
+               register int *optr = (int *) fid_block.data;
+               register int *iptr = (int *) mem_buffer;
+               while (np--)
+                  *optr++ += *iptr++;
+            }
+            else
+            {
+               register float *optr = (float *) fid_block.data;
+               register float *iptr = (float *) mem_buffer;
+               while (np--)
+                  *optr++ += *iptr++;
+            }
+        }
+        else
+        {
+           memcpy( fid_block.data, mem_buffer, fid_fhead.tbytes*fid_fhead.ntraces );
+        }
         /*bcopy( &this_bh, fid_block.head, sizeof( dblockhead ) );*/
         memcpy( fid_block.head, &this_bh, sizeof( dblockhead ) );
         ival = D_markupdated( D_USERFILE, element_number );

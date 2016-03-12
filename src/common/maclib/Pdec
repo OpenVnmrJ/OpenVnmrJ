@@ -51,7 +51,11 @@ IF ($arg = '1') THEN
 	dn='P31' f vsadj
 	if (macro='P31_calibration') then
 	    setoffset(-20,dn):dof
-	    wp=2p sp=6.3p j1xh=1.1 d1=20
+            if ($# = 2) then
+	      wp=0.2p sp=7.3p j1xh=1.1 d1=20
+            else
+	      wp=2p sp=6.3p j1xh=1.1 d1=20
+            endif
 	    array('pwx',25,2,4)
 	else
 	    setoffset(27.5,dn):dof
@@ -420,13 +424,14 @@ ELSEIF ($arg='finish') THEN
 
 
             gaussian ph
-	    $cmd=''
+            $ep=''
             execplot='cpplss'
 
 	    // Test for VeriPulse environment
             is_IP:$isIP
             if ($isIP) then
    	       exists('VParcingtest','maclib'):$arcex
+	       $cmd=''
 	       if ($arcex) then $cmd='VParcingtest' endif
                execplot='calibplot'
                profileflg='y'

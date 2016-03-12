@@ -1,7 +1,7 @@
 "macro add2d"
 // Chempacker macro
 
-// Usage add2d(<'new'>,<multiplier>)
+// Usage add2d(<'new'>,<multiplier>,<numinc>)
 //  The optional first string argument are
 //	'new' - the data in curexp is added to a new addsubexp
 //		This means every ni increment is added as a new trace
@@ -13,14 +13,16 @@
 // A negative multiplier is equivalent to sub
 // By default multiplier is 1
 
-$new=0 $mult=1 $clear=0
+$new=0 $mult=1 $clear=0 $ni=ni
 if $# > 0 then
     if typeof('$1') then
 	if $1='new' then $new=1 endif
 	if $1='clear' then $clear=1 endif
 	if $# > 1 then $mult=$2 endif
+	if $# > 2 then $ni=$3 endif
     else
 	$mult=$1
+	if $# > 1 then $ni=$2 endif
     endif
 endif
 
@@ -35,6 +37,8 @@ else
     $addcmd='add'
 endif
 
+$arraydim=arraydim*$ni/ni
+
 write('line3','%s/exp%d',userdir,addsubexp):$addsub
 if $new then
     clradd
@@ -43,9 +47,20 @@ if $new then
     repeat
 	select($i) {$addcmd}($mult,'new')
 	$i=$i+1
-    until $i > arraydim
-    writeparam($addsub+'/curpar','ni','current','add')
-    writeparam($addsub+'/procpar','ni','current','add')
+    until $i > $arraydim
+    fread('','usertree')
+    fread($addsub+'/curpar','usertree')
+    setvalue('ni',$ni,'usertree')
+    setvalue('arraydim',$arraydim,'usertree')
+    fsave($addsub+'/curpar','usertree')
+    fread('','usertree')
+    fread($addsub+'/procpar','usertree')
+    setvalue('ni',$ni,'usertree')
+    setvalue('arraydim',$arraydim,'usertree')
+    fsave($addsub+'/procpar','usertree')
+    fread('','usertree')
+//    writeparam($addsub+'/curpar','ni','current','add')
+//    writeparam($addsub+'/procpar','ni','current','add')
 else
     $lsfrq=lsfrq
     $phfid=phfid

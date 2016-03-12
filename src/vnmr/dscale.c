@@ -969,6 +969,7 @@ void scale2d(int drawbox, int yoffset, int drawscale, int dcolor)
   if(aspMode) ddfpnt2 = dfpnt2;
   else if (drawbox <= 0 && isInset()) {  // 1D inset, draw axis below the spectrum 
     ddfpnt2 = dfpnt2 - 2*dispcalib + vp*dispcalib; 
+    ddfpnt2 = dfpnt2 + yoffset - 2*dispcalib; 
   } else if (drawbox <= 0) { // 1D, draw axis 2mm lower than vp=0
     ddfpnt2 = dfpnt2 + yoffset - 2*dispcalib; 
   } else {

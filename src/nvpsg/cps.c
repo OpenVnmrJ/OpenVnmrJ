@@ -847,8 +847,7 @@ void putval(char *paramname, double paramvalue)
    stat = -1;
    if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
    {
-	sprintf(addr,"putval: cannot get Vnmr address for %s.\n",paramname);
-        text_error(addr);
+	text_error("putval: cannot get Vnmr address for %s.\n",paramname);
    }
    else
    {
@@ -857,8 +856,7 @@ void putval(char *paramname, double paramvalue)
    	stat = deliverMessageSuid(addr,message);
 	if (stat < 0)
 	{
-	   sprintf(addr,"putval: Error in parameter: %s.\n",paramname);
-           text_error(addr);
+	   text_error("putval: Error in parameter: %s.\n",paramname);
 	}
    }
 
@@ -877,8 +875,7 @@ void putstr(char *paramname, char *paramstring)
    stat = -1;
    if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
    {
-	sprintf(addr,"putval: cannot get Vnmr address for %s.\n",paramname);
-        text_error(addr);
+	text_error("putval: cannot get Vnmr address for %s.\n",paramname);
    }
    else
    {
@@ -887,8 +884,7 @@ void putstr(char *paramname, char *paramstring)
    	stat = deliverMessageSuid(addr,message);
 	if (stat < 0)
 	{
-	   sprintf(addr,"putval: Error in parameter: %s.\n",paramname);
-           text_error(addr);
+	   text_error("putval: Error in parameter: %s.\n",paramname);
 	}
    }
 
