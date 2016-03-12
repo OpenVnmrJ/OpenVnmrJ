@@ -37,12 +37,10 @@ int whattype(int tree, const char *name)
 {
    int             ret;
    vInfo           varinfo;	/* variable information structure */
-   char            mess[MAXSTR];
 
    if ( (ret = P_getVarInfo(tree, name, &varinfo)) )
    {
-      sprintf(mess, "Cannot find the variable: %s", name);
-      text_error(mess);
+      text_error("Cannot find the variable: %s", name);
       if (bgflag)
 	 P_err(ret, name, ": ");
       return (-1);
@@ -82,20 +80,17 @@ int par_maxminstep(int tree, const char *name, double *maxv, double *minv, doubl
 {
    int             ret,pindex;
    vInfo           varinfo;	/* variable information structure */
-   char            mess[MAXSTR];
 
    if ( (ret = P_getVarInfo(tree, name, &varinfo)) )
    {
-      sprintf(mess, "Cannot find the variable: %s", name);
-      text_error(mess);
+      text_error("Cannot find the variable: %s", name);
       if (bgflag)
 	 P_err(ret, name, ": ");
       return (-1);
    }
    if (varinfo.basicType != ST_REAL)
    {
-      sprintf(mess, "The variable '%s' is not a type 'REAL'", name);
-      text_error(mess);
+      text_error("The variable '%s' is not a type 'REAL'", name);
    }
    if (varinfo.prot & P_MMS)
    {

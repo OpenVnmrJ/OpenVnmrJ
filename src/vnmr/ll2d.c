@@ -6386,14 +6386,79 @@ int retc; char *retv[];
    register double max;
    register float *phasfl;
    register double noise;
+   int switchf1f2 = 0;
 
+   if (argc == 5)
+   {
+      char trace[5];
+
+      if ( ! P_getstring(CURRENT, "trace", trace, 1, 4) )
+         if ( ! strcmp(trace,"f1") )
+         {
+            switchf1f2 = 1;
+            P_setstring(CURRENT, "trace", "f2", 1);
+         }
+   }
    if (init2d(1,1))
-     ABORT;
+   {
+      if (switchf1f2)
+         P_setstring(CURRENT, "trace", "f1", 1);
+      ABORT;
+   }
    if (!d2flag)
      { Werrprintf("no 2D data in data file");
+       if (switchf1f2)
+          P_setstring(CURRENT, "trace", "f1", 1);
        ABORT;
      }
-   disp_status("PEAK2D");
+   if (argc == 5)
+   {
+      int errorExit = 0;
+      if (isReal(argv[1]))
+      {
+         npnt = ll2d_frq_to_dp( stringReal(argv[1]) + rflrfp ,sw,fn);
+      }
+      else
+      {
+         Werrprintf("first argument must be the F2 high field frequency");
+         errorExit = 1;
+      }
+      if (isReal(argv[2]))
+      {
+         fpnt = ll2d_frq_to_dp( stringReal(argv[2]) + rflrfp ,sw,fn);
+         npnt -= fpnt;
+      }
+      else
+      {
+         Werrprintf("second argument must be the F2 low field frequency");
+         errorExit = 1;
+      }
+      if (isReal(argv[3]))
+      {
+         npnt1 = ll2d_frq_to_dp( stringReal(argv[3])+rflrfp1 ,sw1,fn1);
+      }
+      else
+      {
+         Werrprintf("third argument must be the F1 high field frequency");
+         errorExit = 1;
+      }
+      if (isReal(argv[4]))
+      {
+         fpnt1 = ll2d_frq_to_dp( stringReal(argv[4])+rflrfp1 ,sw1,fn1);
+         npnt1 -= fpnt1;
+      }
+      else
+      {
+         Werrprintf("fourth argument must be the F1 low field frequency");
+         errorExit = 1;
+      }
+      if (errorExit)
+      {
+         if (switchf1f2)
+            P_setstring(CURRENT, "trace", "f1", 1);
+         ABORT;
+      }
+   }
    max = 0;
    maxtrace = 0;
    maxpoint = 0;
@@ -6415,6 +6480,32 @@ int retc; char *retv[];
            phasfl++;
          }
      }
+
+   if (argc == 5)
+   {
+      double val_cr;
+      double val_cr1;
+
+      val_cr = ll2d_dp_to_frq((double)(fpnt+maxpoint),sw,fn) - rflrfp;
+      val_cr1 = ll2d_dp_to_frq((double)(maxtrace),sw1,fn1) - rflrfp1;
+      if (switchf1f2)
+         P_setstring(CURRENT, "trace", "f1", 1);
+      if (retc >= 1)
+      {
+         retv[0] = realString(vs2d*max);
+         if (retc >= 1)
+         {
+            retv[1] = realString(val_cr);
+            if (retc >= 2)
+               retv[2] = realString(val_cr1);
+         }
+      }
+      else
+      {
+         Winfoprintf("maximum = %g, F2 freq=%g, F1 freq=%g",vs2d*max,val_cr,val_cr1);
+      }
+      RETURN;
+   }
 
     noise /= (double) (npnt*npnt1);
 
@@ -6583,6 +6674,5 @@ int retc; char *retv[];
     retv[2] = realString((double)maxpoint);
   if (retc>3)
     retv[3] = realString((double)noise*vs2d);
-  disp_status("      ");
   RETURN;
 }

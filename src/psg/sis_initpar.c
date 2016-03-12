@@ -345,6 +345,7 @@ void initparms_img()
     ns = getvalnwarn("ns");
     ne = getvalnwarn("ne");
     ni = getvalnwarn("ni");
+    ni2 = getvalnwarn("ni2");
     nv = getvalnwarn("nv");
     nv2 = getvalnwarn("nv2");
     nv3 = getvalnwarn("nv3");

@@ -398,6 +398,10 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
      {
         ftpar.zeroflag = TRUE;
      }
+     else if (strcmp(argv[arg_no], "rev") == 0)
+     {
+        ftpar.zeroflag = -1;
+     }
      else if (strcmp(argv[arg_no], "nf") == 0)
      {
         nfft = TRUE;
@@ -1678,6 +1682,10 @@ int ft(int argc, char *argv[], int retc, char *retv[])
      else if (strcmp(argv[arg_no], "zero") == 0)
      {
         ftpar.zeroflag = TRUE;
+     }
+     else if (strcmp(argv[arg_no], "rev") == 0)
+     {
+        ftpar.zeroflag = -1;
      }
      else if (strcmp(argv[arg_no], "nf") == 0)
      {

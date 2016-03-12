@@ -290,7 +290,7 @@ void DDRController::calc_filter()
             b1=(int)(0.5*n1-xs1);
         else
             b1=(int)(n1*(0.5-xs1));
-        b1=b1<0?0:b1;
+        b1= (b1<0) ? 0 : b1;
         if(stages==2){
             m2=(int)(sw1/sw2+0.5);
             n2=(int)(os2*sw1/sw2+0.5);
@@ -299,7 +299,7 @@ void DDRController::calc_filter()
                 b2=(int)(0.5*n2-xs2);
             else
                 b2=(int)(n2*(0.5-xs2));
-            b2=b2<0?0:b2;
+            b2= (b2<0) ? 0 : b2;
             ny1=(al-1)*m2+n2-b2;
             nx1=(ny1-1)*m1/l1+n1-b1;
         }
@@ -544,7 +544,6 @@ void DDRController::show_filter()
 int DDRController::initializeExpStates(int setupflag)
 {
     char cbuff[MAXSTR];
-    char errstr[256];
     int nt=0,bs=0;
     double tmp,sw;
     int args[256];
@@ -601,9 +600,8 @@ int DDRController::initializeExpStates(int setupflag)
     fidsize = np * 4 * nfmod;
 
     if (fidsize > 67108864L) {// > 64 MB
-       sprintf(errstr,"FID Size %lu Bytes has exceeded DDR internal buffer limits by %lu bytes, abort.\n",
+       abort_message("FID Size %lu Bytes has exceeded DDR internal buffer limits by %lu bytes, abort.\n",
         	fidsize, fidsize - 67108864L );
-       abort_message(errstr);
     }
 
     if (var_active("ddrtc",CURRENT)==0)

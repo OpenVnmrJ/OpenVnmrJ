@@ -36,11 +36,12 @@ IF ($arg='show') THEN
    getparam('style','Probe'):$style
    if ($style='') then probestyle='none' else probestyle=$style endif
    $probelistFile=userdir+'/persistence/VPprobelist'
+   $replaceSn=0
    if  ($probe_has_id) then "Look up details from probe. So far, only recognize OneNMR probe"
         rm('-f',$probelistFile):$e
 	$type='' probeidez('get','Type'):$type
         probeidez('get','SN'):IPprobesn
-        writeparam(userdir+'/persistence/VPpars','IPprobesn','replace')
+        $replaceSn=1
         addparams('serialno',IPprobesn,'Probe') 
 	$isone=0 $s1='' $s2=''
         //Work out the type of probe it is
@@ -84,6 +85,9 @@ IF ($arg='show') THEN
    $pfile=userdir+'/persistence/VPpars'
    exists($pfile,'file'):$e
    if ($e) then
+     if ($replaceSn=1) then
+        writeparam($pfile,'IPprobesn','replace')
+     endif
      $val=''
      rtv($pfile,'noabort','VPtestfile'):$val
 

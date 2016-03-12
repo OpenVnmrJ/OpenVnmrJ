@@ -213,7 +213,7 @@ struct _dsp_params	dsp_params;
 /* reals */
 double		alfa,at,bs,cttime,cttimeval;
 double		cur_tpwr,cur_tpwrf,cur_dpwr,cur_dpwrf;
-double		d1,d2,d3,dfrq,dhpmax,dhp,dlp,dmf,dod,dof,dof_init;
+double		d1,d2,d3,d4,dfrq,dhpmax,dhp,dlp,dmf,dod,dof,dof_init;
 double		dpwr,dpwrf,dqd_offset=0.0,dres;
 double		fb,fifoloopcount;
 double		gain,gmax,gradstepsz,hb_offset,hst;
@@ -2831,6 +2831,9 @@ vInfo	info;
    getparm("d2",    "real",  CURRENT,&d2,     1);
    if (P_getreal(CURRENT,"d3",&d3,1) < 0)
    {  d3 = 0.0;
+   }
+   if (P_getreal(CURRENT,"d4",&d4,1) < 0)
+   {  d4 = 0.0;
    }
    if (P_getreal(CURRENT,"pwx",&pwx,1) < 0)
    {  pwx = 0.0;

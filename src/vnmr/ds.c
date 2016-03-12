@@ -432,7 +432,6 @@ static void ds_reset()
   }
   resetflag = FALSE;
   spwpflag = FALSE;
-  disp_status("      ");
   dsstatus("");
 }
 
@@ -543,7 +542,6 @@ static void m_newcursor(int butnum, int x, int y, int moveflag)
     ds_mode = BOX_MODE;
     InitVal(FIELD4,HORIZ,DELTA_NAME, PARAM_COLOR,NOUNIT,
                          BLANK_NAME,-PARAM_COLOR,SCALED,dez);
-    disp_status("BOX   ");
     dsstatus("BOX");
     if (this_is_addi)
       addi_buttons();
@@ -624,12 +622,10 @@ static void b_cursor()
   {
     idelta  = save;
     m_newcursor(3,x1,0,0);
-    disp_status("BOX   ");
     dsstatus("BOX");
   }
   else
   { update_xcursor(1,0);  /* erase the second cursor */
-    disp_status("CURSOR");
     dsstatus("CURSOR");
   }
   if ((crsav >= sp) && (crsav <= sp + wp))
@@ -677,6 +673,8 @@ static void cr_line()
 static void ph_line()
 /**************/
 {
+  if (isXorOn)
+      vj_xoroff();
   DispField1(FIELD1, PARAM_COLOR, "vp");
   DispField2(FIELD1,-PARAM_COLOR, *cur_vp, 1);
   InitVal(FIELD3,HORIZ,RP_NAME, PARAM_COLOR,NOUNIT,
@@ -685,6 +683,8 @@ static void ph_line()
   DispField2(FIELD2,-PARAM_COLOR, *cur_vs, 1);
   InitVal(FIELD4,HORIZ,LP_NAME, PARAM_COLOR,NOUNIT,
                        LP_NAME,-PARAM_COLOR,NOT_SCALED,1);
+  if (isXorOn)
+      vj_xoron();
 }
 
 /*****************/
@@ -835,10 +835,8 @@ static int phasit(int fp, int np, int dfp, int dnp, double delt)
   release(phase_spec);
   displayspec(dfp,dnp,0,&next,&spec2,&erase2,vmax,vmin,SPEC_COLOR);
   if (do_lp) {
-      disp_status("1st PH");
       dsstatus("1st PH");
   } else {
-      disp_status("0th PH");
       dsstatus("0th PH");
   }
   return(COMPLETE);
@@ -901,7 +899,6 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
   Wgmode();
   if (butnum == 2)
   {
-    disp_status("PHASE");
     dsstatus("PHASE");
     if (x<dfpnt + (int)(0.05 * (double)dnpnt))
     {
@@ -935,7 +932,6 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
 
       if (phase_dnp == 0)  /* this is true on the first mouse button only */
       {
-        disp_status("0th PH");
         dsstatus("0th PH");
         phase_cursors(x);
         x = (oldx_cursor[0] + oldx_cursor[1]) / 2;
@@ -944,7 +940,6 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
       }
       else if ((x < oldx_cursor[0]) || (x > oldx_cursor[1]))
       {
-        disp_status("1st PH");
         dsstatus("1st PH");
         do_lp = phase_dfp + phase_dnp / 2;
         do_lp = (oldx_cursor[0] + oldx_cursor[1]) / 2;
@@ -965,6 +960,7 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
     }
     if (y != last_ph)
     {
+      int updateLP = 0;
       fine = (butnum == 1) ? 1.0 : phasefine;
       if (do_lp)
       {
@@ -980,8 +976,9 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
         if(bph()>0) {
           Winfoprintf("manual phase %d %f",c_buffer,lp);
           setBph1(c_buffer,lp);
-	} else
-          UpdateVal(HORIZ,LP_NAME,lp,SHOW);
+	} else {
+          updateLP = 1;
+        }
       }
       else
       {
@@ -993,8 +990,15 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
       if(bph()>0) {
         Winfoprintf("manual phase rp %d %f",c_buffer,rp);
         setBph0(c_buffer,rp);
-      } else
-        UpdateVal(HORIZ,RP_NAME,rp,SHOW);
+      } else {
+         if (isXorOn)
+           vj_xoroff();
+         UpdateVal(HORIZ,RP_NAME,rp,SHOW);
+         if (updateLP)
+            UpdateVal(HORIZ,LP_NAME,lp,SHOW);
+         if (isXorOn)
+            vj_xoron();
+      }
       last_ph = y;
     }
   }
@@ -1051,7 +1055,6 @@ static void b_phase()
    if (intflag)
       b_integral();
    ds_reset();
-   disp_status("PHASE");
    dsstatus("PHASE");
    do_lp = FALSE;
 
@@ -1066,7 +1069,6 @@ static void b_phase()
    if (checkphase_datafile())
    {
       Werrprintf("Cannot phase this data");
-      disp_status("         ");
       dsstatus("");
       return;
    }
@@ -1366,7 +1368,6 @@ static void b_spwp()
       addi_buttons();
     activate_mouse(m_spwp,ds_reset);
     m_spwp(4, 0, 0, 0);
-    disp_status("sp wp ");
     dsstatus("sp wp");
     InitVal(FIELD3,HORIZ,SP_NAME, PARAM_COLOR,NOUNIT,
                          SP_NAME,-PARAM_COLOR,SCALED,2);
@@ -1411,7 +1412,6 @@ static void b_thresh()
       y = 1;
     threshY = y;
     update_ycursor(1,y);
-    disp_status("thresh");
     dsstatus("thresh");
     DispField1(FIELD3, PARAM_COLOR, "th");
     DispField2(FIELD3,-PARAM_COLOR, th, 1);
@@ -1506,7 +1506,6 @@ static int m_lvltlt(int butnum, int x, int y, int moveflag)
       int newyval = 0;
       if (dnp == 0)  /* this is true on the first mouse button only */
       {
-        disp_status("lvl   ");
         dsstatus("lvl");
         phase_cursors(x);
         x = (oldx_cursor[0] + oldx_cursor[1]) / 2;
@@ -1521,7 +1520,6 @@ static int m_lvltlt(int butnum, int x, int y, int moveflag)
           int  fpt,index,lastpt;
           double value;
 
-          disp_status("tlt   ");
           dsstatus("tlt");
           do_lp = (oldx_cursor[0] + oldx_cursor[1]) / 2;
           update_xcursor(2,do_lp);
@@ -1543,7 +1541,6 @@ static int m_lvltlt(int butnum, int x, int y, int moveflag)
         }
         else
         {
-          disp_status("lvl   ");
           dsstatus("lvl");
           do_lp = 0;
           dnp = 1;
@@ -1610,7 +1607,6 @@ static void b_lvltlt()
    Wturnoff_mouse();
    Wgmode();
    ds_reset();
-   disp_status("dc    ");
    dsstatus("dc");
    DispField1(FIELD3, PARAM_COLOR, "lvl");
    DispField2(FIELD3,-PARAM_COLOR, lvl, 1);
@@ -1701,7 +1697,6 @@ static void b_z()
   if (intflag && regions)
     intdisp();
   activate_mouse(m_intreset,exit_z);
-  disp_status("reset");
   ParameterLine(1,COLUMN(FIELD3),PARAM_COLOR,"add     ");
   ParameterLine(2,COLUMN(FIELD3),PARAM_COLOR,"reset   ");
   ParameterLine(1,COLUMN(FIELD4),PARAM_COLOR,"remove  ");
@@ -1924,7 +1919,6 @@ static void b_expand()
   wpsav = wp;
   if (ds_mode!=BOX_MODE)
   {
-    disp_status("FULL  ");
     dsstatus("FULL");
     /* set sp,wp for full display */
     sp  = - rflrfp;
@@ -1944,7 +1938,6 @@ static void b_expand()
   }
   else
   {
-    disp_status("EXPAND");
     dsstatus("EXPAND");
     /* set sp,wp according to expansion box */
        sp  = (interfero) ? cr : cr - delta;
@@ -3968,7 +3961,6 @@ static void b_scwc()
 	  );
 	inset_labels();
 	activate_mouse( m_scwc, ds_reset );
-	disp_status( "sc wc" );
         dsstatus("sc wc");
         setButtonMode(SCWC_MODE);
 }
@@ -4096,12 +4088,10 @@ void ds_newCursor4freq(int num, double c1, double c2,
   {
     idelta  = save;
     m_newcursor(3,x1,0,0);
-    //disp_status("BOX   ");
     //dsstatus("BOX");
   }
   else
   { update_xcursor(1,0);  /* erase the second cursor */
-    //disp_status("CURSOR");
     //dsstatus("CURSOR");
   }
 }
@@ -4245,7 +4235,6 @@ void ds_inset(float c, float d)
   delta = d;
   spsav = sp;
   wpsav = wp;
-    disp_status("EXPAND");
     dsstatus("EXPAND");
     /* set sp,wp according to expansion box */
        sp  = (interfero) ? cr : cr - delta;
@@ -4261,7 +4250,6 @@ void ds_inset(float c, float d)
   b_cursor();
 
 	inset_labels();
-	disp_status( "sc wc" );
         dsstatus("sc wc");
 
 	Wturnoff_buttons();

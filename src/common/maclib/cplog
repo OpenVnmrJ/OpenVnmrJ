@@ -6,6 +6,7 @@ $name='' $archsamp=''
 if ($# < 2) then return($name,$archsamp) endif
 $arg2=$2
 
+/*
 isnewexp:$new
 if (auto='y') then $new=1 endif
 if ($new=0) then
@@ -13,6 +14,7 @@ if ($new=0) then
 else
       $archsamp=archivedir+'/'+sample
 endif
+*/
 
 if ($arg2='write') then $arg2='fid' endif
 
@@ -25,6 +27,16 @@ IF (($arg2 <> 'last') and
 
   if ($# < 3) then $3=pslabel endif
   if ($# > 3) then $archsamp=$4 endif
+
+  if $archsamp='' then
+    isnewexp:$new
+    if (auto='y') then $new=1 endif
+    if ($new=0) then
+      substr(file,'dirname'):$archsamp
+    else
+      $archsamp=archivedir+'/'+sample
+    endif
+  endif
 
   $listfile=$arg2+'list' 
   exists($archsamp+'/dirinfo','directory'):$direx
@@ -140,7 +152,20 @@ IF (($arg2 <> 'last') and
   endif
 
 ELSEIF ($arg2='wrxml') THEN
-   if ($1<>'') then $archsamp=$1 endif
+
+  if $1='' then
+    isnewexp:$new
+    if (auto='y') then $new=1 endif
+    if ($new=0) then
+      substr(file,'dirname'):$archsamp
+    else
+      $archsamp=archivedir+'/'+sample
+    endif
+
+  else
+    $archsamp=$1
+  endif
+
 	$fids=$3 $scout=0 $spec=0 $craft=0
 	if ($# < 4) then $4='LIB' endif
 	if ($4='Scout') then $4='LIB' $scout=1 endif
@@ -268,6 +293,16 @@ ELSEIF ($arg2='wrxml') THEN
 
 ELSEIF ($arg2='last') or ($arg2 = 'first') THEN
 
+  if $archsamp='' then
+    isnewexp:$new
+    if (auto='y') then $new=1 endif
+    if ($new=0) then
+      substr(file,'dirname'):$archsamp
+    else
+      $archsamp=archivedir+'/'+sample
+    endif
+  endif
+
     if $1='' then
     	$fidlog=$archsamp+'/dirinfo/fidlog'
 	exists($fidlog,'file'):$fileex
@@ -346,8 +381,8 @@ ELSEIF ($arg2='last') or ($arg2 = 'first') THEN
 		if $active>-0.5 then
 		    rtv($archsamp+'/'+$lastname,'noabort','lockfreq_'):$lockfreq
 		endif
-                abs(lockfreq-$lockfreq):$diff
-                if ($diff > 0.001) then
+		abs(lockfreq-$lockfreq):$diff
+		if ($diff > 0.001) then
 		    $lastname=''
 		elseif ($checktn<>'') or ($checkdn<>'') then
 		    rtv($archsamp+'/'+$lastname,'tn'):$tn
@@ -370,6 +405,16 @@ ELSEIF ($arg2 = 'iscpfid') THEN
     if ($# > 2) then
         if ($3<>'') then $archsamp=$3 endif
     endif
+    if $archsamp='' then
+    	isnewexp:$new
+    	if (auto='y') then $new=1 endif
+    	if ($new=0) then
+    	  substr(file,'dirname'):$archsamp
+    	else
+    	  $archsamp=archivedir+'/'+sample
+    	endif
+    endif
+
     $fidlog=$archsamp+'/dirinfo/fidlog'
     exists($fidlog,'file'):$lsfex
     if ($lsfex=0) then
@@ -398,6 +443,16 @@ ELSEIF ($arg2 = 'iscpfid') THEN
     return($isthere)
 
 ELSEIF ($arg2 = 'parud') THEN
+
+  if $archsamp='' then
+    isnewexp:$new
+    if (auto='y') then $new=1 endif
+    if ($new=0) then
+      substr(file,'dirname'):$archsamp
+    else
+      $archsamp=archivedir+'/'+sample
+    endif
+  endif
 
   $listfile='parupdate'
   exists($archsamp+'/dirinfo','directory'):$direx

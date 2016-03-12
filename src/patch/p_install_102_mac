@@ -173,6 +173,15 @@ then
   mv $vnmrsystem/biopack/maclib/NUSprocIST $tmp_save/biopack/maclib/.
 fi
 
+if [ -f $vnmrsystem/p11/part11Config ]
+then
+  lines=`grep "dir:checksum:/vnmr/bin:yes" $vnmrsystem/p11/part11Config | wc -l`
+  if [ $lines = 0 ]
+  then
+    echo "dir:checksum:/vnmr/bin:yes" >> $vnmrsystem/p11/part11Config
+  fi
+fi
+
 # The patchinstall script may run fixpsg and display messages about
 # rebooting the console or restarting the acquisition communication
 # programs (the "procs"). Setting the following three variables to
@@ -183,8 +192,10 @@ fi
 # fix_psg="yes"
 # reboot="yes"
 # su_acqproc="yes"
-
-# fix_psg="no"
+# Do fixpsg here to suppress warnings from clang compiler on newer MacOS versions
+$vnmrsystem/bin/fixpsg 2> /dev/null
+printf "$vnmrsystem/bin/fixpsg 2> /dev/null\n" >> $tmp_save/p_uninstall
+fix_psg="no"
 reboot="no"
 # su_acqproc="no"
 

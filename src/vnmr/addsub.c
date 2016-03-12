@@ -238,6 +238,8 @@ static int get_addsub_data(int newexp, dpointers *new_file, char *exppath,
 *  D_USERFILE is PHASEFILE in addsub experiment.  *
 **************************************************/
 
+   if (!fid)
+   {
      if ( (r = D_open(D_USERFILE, path, &datahead)) )
      {
         Werrprintf("cannot open addsub exp phase file: error = %d",r);
@@ -274,12 +276,14 @@ static int get_addsub_data(int newexp, dpointers *new_file, char *exppath,
      file_id = (newbuf || fid) ? D_USERFILE : D_DATAFILE;
      D_release(file_id, trace);
      D_close(file_id);
+   }
 
 /**************************************************
 *  Either the FID or the DATA file is now opened  *
 *  in the current experiment directory.           *
 **************************************************/
 
+     file_id = (newbuf || fid) ? D_USERFILE : D_DATAFILE;
      strcpy(path, exppath);
 #ifdef UNIX
      strcat(path, (fid) ? "/acqfil/fid" : "/datdir/data");

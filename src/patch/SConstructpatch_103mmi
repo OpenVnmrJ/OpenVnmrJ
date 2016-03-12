@@ -15,7 +15,7 @@ env = Environment(ENV = os.environ)
 
 # define the patch name
 patchTarget = datetime.date.today().strftime("custom_mmi_%Y-%m-%d")
-patchTarget = '4.2_LNX_MMI_108'
+patchTarget = '4.2_LNX_MMI_109'
 readmeFile = 'Readme.101mmi'
 
 
@@ -79,6 +79,11 @@ dest = os.path.join(binDir,'jdxfid')
 Execute(Copy(dest,src))
 Execute(Chmod(dest,0755))
 
+src  = os.path.join(swDir,'bin','chVJlist')
+dest = os.path.join(binDir,'chVJlist.new')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0755))
+
 src  = os.path.join(swDir,'stat','Infostat')
 dest = os.path.join(binDir,'Infostat')
 Execute(Copy(dest,src))
@@ -88,18 +93,6 @@ acqbinDir    = os.path.join(patchDir,'acqbin')
 if not os.path.exists(acqbinDir):
    os.makedirs(acqbinDir)
 
-src  = os.path.join(swDir,'scripts','vnmrseqgen.sh')
-dest = os.path.join(binDir,'vnmrseqgen')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','loginpasswordcheck.sh')
-dest = os.path.join(binDir,'loginpasswordcheck')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-# src  = os.path.join(swDir,'scripts','airjet.sh')
-# dest = os.path.join(binDir,'airjet')
-# Execute(Copy(dest,src))
-# Execute(Chmod(dest,0755))
 # src  = os.path.join(swDir,'scripts','99-CP210x.rules')
 # dest = os.path.join(acqbinDir,'99-CP210x.rules')
 # Execute(Copy(dest,src))
@@ -108,26 +101,24 @@ src  = os.path.join(swDir,'scripts','lsetacq.sh')
 dest = os.path.join(binDir,'setacq')
 Execute(Copy(dest,src))
 Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','S99pgsql.sh')
-dest = os.path.join(binDir,'S99pgsql')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','patchinstall.sh')
-dest = os.path.join(binDir,'patchinstall')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','patchuninstall.sh')
-dest = os.path.join(binDir,'patchuninstall')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','vnmrj.sh')
-dest = os.path.join(binDir,'vnmrj')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','vnmremail.sh')
-dest = os.path.join(binDir,'vnmremail')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
+
+scriptsList = [
+               'vnmrseqgen',
+               'loginpasswordcheck',
+               'S99pgsql',
+               'patchinstall',
+               'patchuninstall',
+               'patchmake',
+               'vnmrj',
+               'vnmremail',
+               'fixpsg',
+             ]
+
+for i in scriptsList:
+    dest = os.path.join(binDir,i)
+    src  = os.path.join(swDir,'scripts',i+'.sh')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0755))
 
 usertDir    = os.path.join(patchDir,'user_templates')
 if not os.path.exists(usertDir):
@@ -216,6 +207,28 @@ for i in cppsglibList:
     Execute(Chmod(dest,0644))
     dest = os.path.join(seqlibDir,i)
     src  = os.path.join(swDir,'psglib','icpseqlib',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0755))
+
+kcppsglibList = [
+               'CIGAR',
+               'wet1D',
+             ]
+kpsglibDir = os.path.join(patchDir,'kpsglib')
+if not os.path.exists(kpsglibDir):
+   os.makedirs(kpsglibDir)
+
+kseqlibDir = os.path.join(patchDir,'kseqlib')
+if not os.path.exists(kseqlibDir):
+   os.makedirs(kseqlibDir)
+
+for i in kcppsglibList:
+    dest = os.path.join(kpsglibDir,i+'.c')
+    src  = os.path.join(swDir,'kpsglib','seqlib',i+'.c')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+    dest = os.path.join(kseqlibDir,i)
+    src  = os.path.join(swDir,'kpsglib','seqlib',i)
     Execute(Copy(dest,src))
     Execute(Chmod(dest,0755))
 
@@ -387,6 +400,10 @@ maclibFileList = [
           'setp11svfdr2',
           'cpfixpar',
           'getdim',
+          'studyClusterAttr',
+          'getplC4dept',
+          'plh',
+          'plot1d',
           ]
 
 for i in maclibFileList:
@@ -461,6 +478,16 @@ cpmaclibFileList = [
           'putrefsamp',
           'emessage',
           'vnmremail',
+          'cprev',
+          'is_cpfid',
+          'makeStudy',
+          'svpdp',
+          'showmanual',
+          'pldept',
+          'wrsampdirchron',
+          'catprobe',
+          'xmhaha_calib',
+          'execpslabel',
           ]
 
 for i in cpmaclibFileList:
@@ -491,6 +518,21 @@ craftmaclibFileList = [
             'craft_readMarkInfo',
             'craft_reconcilePath',
             'craft_totamp',
+            'craft2_FreqAmpReport',
+            'craft2_LineList',
+            'craft2_loadSession',
+            'craft2_saveSession',
+            'craft2_svpdp',
+            'craft_autobox',
+            'craft_cluster',
+            'craft_mkCluster',
+            'craft_mkOrigSpec',
+            'craft_stackit',
+            'craft_svaddsub',
+            'craft_svpdp',
+            'craft_xmhaha',
+            'craftbox',
+            'craft_doBayesInit',
           ]
 
 craftsrc = os.path.join(swDir,os.pardir,os.pardir,'options','passworded','craft','craft','maclib')
@@ -860,11 +902,29 @@ manFileList = [
           'readfile',
           'lsfid',
           'dres',
+          'peak2d',
+          'disp3Dmap',
+          'dpf',
+          'ds',
           ]
 
 for i in manFileList:
     dest = os.path.join(manDir,i)
     src  = os.path.join(swDir,'manual',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+menujlibDir = os.path.join(patchDir,'menujlib')
+if not os.path.exists(menujlibDir):
+   os.makedirs(menujlibDir)
+
+menujlibFileList = [
+          'ds_1',
+          ]
+
+for i in menujlibFileList:
+    dest = os.path.join(menujlibDir,i)
+    src  = os.path.join(swDir,'menujlib',i)
     Execute(Copy(dest,src))
     Execute(Chmod(dest,0644))
 
@@ -1116,6 +1176,8 @@ cpdefFileList = [
                    'Lock.xml',
                    'Proc2Ddefault.xml',
                    'Standard.xml',
+                   'Proc1Ddefault.xml',
+                   'LineLists.xml',
                ]
 
 for i in cpdefFileList:
@@ -1264,6 +1326,9 @@ for i in nvpsgFileList:
 psgFileList = [
                    'abort.c',
                    'xmath.c',
+                   'treefuncs.c',
+                   'getparm.c',
+                   'setparm.c',
                  ]
 
 for i in psgFileList:
@@ -1289,6 +1354,8 @@ ipsgFileList = [
                    'initauto.c',
                    'makeuserpsg.lnx',
                    'cps.c',
+                   'sis_initpar.c',
+                   'acqparms.h',
                  ]
 
 for i in ipsgFileList:
@@ -1306,6 +1373,9 @@ kpsgFileList = [
                    'makeuserpsg.lnx',
                    'meat.c',
                    'initauto.c',
+                   'acqparms2.h',
+                   'autofuncs.c',
+                   'standard.h',
                  ]
 
 for i in kpsgFileList:

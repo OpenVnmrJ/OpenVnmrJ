@@ -23,7 +23,6 @@
 |
 |   Author Greg Brissey   4/28/86
 +---------------------------------------------------------------*/
-#define MAXSTR 256
 
 static int dowarn=1;
 void getparmnwarn()
@@ -36,7 +35,6 @@ int getparm(char *varname, char *vartype, int tree,
             void *varaddr, int size)
 {
     int ret;
-    char mess[MAXSTR];
 
     if ( (strcmp(vartype,"REAL") == 0) || (strcmp(vartype,"real") == 0) )
     {
@@ -44,8 +42,7 @@ int getparm(char *varname, char *vartype, int tree,
         {
            if (dowarn)
            {
-             sprintf(mess,"Cannot get parameter: %s\n",varname);
-             text_error(mess);
+             text_error("Cannot get parameter: %s\n",varname);
 	     if (bgflag)
 	         P_err(ret,varname,": ");
            }
@@ -65,8 +62,7 @@ int getparm(char *varname, char *vartype, int tree,
             {
               if (dowarn)
               {
-                sprintf(mess,"Cannot get parameter: %s\n",varname);
-                text_error(mess);
+                text_error("Cannot get parameter: %s\n",varname);
 		if (bgflag)
 	     	    P_err(ret,varname,": ");
               }
@@ -78,9 +74,8 @@ int getparm(char *varname, char *vartype, int tree,
             }
 	}
 	else
-	{   sprintf(mess,"Variable '%s' is neither a 'real' or 'string'.\n",
+	{   text_error("Variable '%s' is neither a 'real' or 'string'.\n",
 			vartype);
-            text_error(mess);
 	    return(1);
 	}
       }

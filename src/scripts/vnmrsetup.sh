@@ -374,14 +374,14 @@ if [ "x$distroType" = "xrhel" -a "x$rhelrlvl" = "x5" -o "x$distroType" = "xdebia
         echo " "
         echo "================================================================== "
         echo " "
-        echo "There are RHEL packages required by VnmrJ that are not installed"
+        echo "There are RHEL packages required by OpenVnmrJ that are not installed"
         echo " "
-        echo "VnmrJ Installation can not proceed until the required Linux packages are Installed. "
+        echo "OpenVnmrJ Installation can not proceed until the required Linux packages are Installed. "
         echo " "
         echo " "
         echo "Please following the instructions below to install the Linux packages: "
         echo " "
-        echo "Eject the VnmrJ Installation CD and go to the directory /tmp/agilent_preinstall"
+        echo "Eject the OpenVnmrJ Installation CD and go to the directory /tmp/agilent_preinstall"
         echo "Insert your systems RHEL 5 Installation DVD and run the installpkgs script"
         echo "e.g.: "
         echo " "
@@ -389,7 +389,7 @@ if [ "x$distroType" = "xrhel" -a "x$rhelrlvl" = "x5" -o "x$distroType" = "xdebia
         echo "./installpkgs"
         echo " "
         echo " "
-        echo "After completion Eject RHEL DVD, insert the VnmrJ CD and start the VnmrJ install."
+        echo "After completion Eject RHEL DVD, insert the OpenVnmrJ CD and start the OpenVnmrJ install."
         echo " "
         echo "================================================================== "
         echo " "
@@ -405,7 +405,7 @@ userId=`/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }'`
 if [ $userId != "uid=0(root)" ]; then
   notroot=1
   echo
-  echo "To install VnmrJ you will need to be the system's root user."
+  echo "To install OpenVnmrJ you will need to be the system's root user."
   echo "Or type cntrl-C to exit."
   echo
   #
@@ -578,7 +578,7 @@ then
   fi
 fi
 
-echo "Starting the VnmrJ installation program..."
+echo "Starting the OpenVnmrJ installation program..."
 
 jre_base_dir=$src_code_dir
 java_cmd=$jre_base_dir/${JRE}/bin/java

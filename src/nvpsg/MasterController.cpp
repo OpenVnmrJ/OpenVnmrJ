@@ -1294,6 +1294,11 @@ int MasterController::initializeExpStates(int setupflag)
     /* This is for the new SCARA robot */
     if ( (traymax == 12) || (traymax == 97) )
        buffer[1] = 2;
+    if ( (buffer[1] == 2) &&  ! P_getstring(GLOBAL,"sin",estring,1,MAXSTR))
+    {
+       if (estring[0] == 'y')
+          buffer[1] = 1;
+    }
     buffer[2] = ok2bumpflag;
  
     P2TheConsole->broadcastCodes(GETSAMP,3,buffer);
@@ -1337,6 +1342,11 @@ int MasterController::initializeExpStates(int setupflag)
     /* This is for the new SCARA robot */
     if ( (traymax == 12) || (traymax == 97) )
        buffer[1] = 2;
+    if ( (buffer[1] == 2) &&  ! P_getstring(GLOBAL,"sin",estring,1,MAXSTR))
+    {
+       if (estring[0] == 'y')
+          buffer[1] = 1;
+    }
 
     buffer[2] = spinactive;
     buffer[3] = ok2bumpflag;
@@ -2114,14 +2124,11 @@ void MasterController::setConsoleMap(int kind, int obschannel, int decchannel, i
 
 void MasterController::homospoilGradient(char axis, double value)
 {
-char mess[MAXSTR];
 int  ampI,codeStream[10];
   switch (axis)
   {
     case 'x': case 'X': case 'y': case 'Y':
-      sprintf(mess,"homospoil gradient %c not available\n",axis);
-      text_error(mess);
-      psg_abort(1);
+      abort_message("homospoil gradient %c not available\n",axis);
       break;
     case 'z': case 'Z': break;
     default: ;
@@ -2148,7 +2155,6 @@ int  ampI,codeStream[10];
 
 void MasterController::shimGradient(char axis, double value)
 {
-char   mess[MAXSTR];
 double shimD = 0.0;
 int    dac_num = 0;
 int    shimI,codeStream[10];
@@ -2169,9 +2175,7 @@ int    shimI,codeStream[10];
       }
       break;
   default:
-      sprintf(mess,"shimgradient %c not available\n",axis);
-      text_error(mess);
-      psg_abort(1);
+      abort_message("shimgradient %c not available\n",axis);
   }
 
   shimI = (shimD >= 0) ? (int)(shimD+0.5) :(int)(shimD-0.5);
@@ -2190,8 +2194,8 @@ int    shimI,codeStream[10];
 
 int MasterController::bound(char axis, int value, int limit)
 {
-int origValue,upper, lower, clip=0;
-char msg[80];
+  int origValue,upper, lower, clip=0;
+
   origValue = value;
   upper = (1<<(limit-1)) - 1;
   lower = -(1<<(limit-1));
@@ -2204,9 +2208,9 @@ char msg[80];
      clip = value = lower;
   }
   if (clip)
-  {  sprintf(msg,"Gradient %c set out of range, %d clipped  to %d\n",
+  {
+     text_error("Gradient %c set out of range, %d clipped  to %d\n",
 			axis,origValue,clip);
-   text_error(msg);
   }
   return(value);
 }
