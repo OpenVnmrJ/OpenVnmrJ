@@ -28,11 +28,11 @@ very helpful. See [Contributing](http://openvnmrj.org/Contributing/) for more in
 ## Contribute Appdirs
 
 We welcome pulse sequences, libraries of macros, UX improvments contributed as an Appdir. Check out the [OpenVnmrJ Appdirs](https://github.com/OpenVnmrJ/appdirs) 
-repository on how to download and install and how to contribute your appdir. 
+repository on how to download and install user contributed appdirs and how to contribute your appdir. 
 
 ## Building
 
-If you are interested in building the core of OpenVnmrJ, refer to the [ovjTools repository](https://github.com/OpenVnmrJ/ovjTools), which contains instructions and
+If you are interested in building OpenVnmrJ from source, refer to the [ovjTools repository](https://github.com/OpenVnmrJ/ovjTools), which contains instructions and
 all the tools and libraries necessary for building OpenVnmrJ.  
 
 ## LICENSE
