@@ -1,16 +1,20 @@
 # OpenVnmrJ
-Most of the code for OpenVnmrJ. If you want to use OpenVnmrJ, download the release appropriate for your OS.  
+
+OpenVnmrJ is the open-sources parts of Varian and Agilent's VnmrJ 4.2, now owned by the University of Oregon and is free and open source software.
+Read more about OpenVnmrJ and the history of VnmrJ at [Background](http://openvnmrj.org/Background).  
+
+OpenVnmrJ does not contain console software, example FIDs, NMRPipe or ChemPack, however during installation, these will be copied from your existing
+VnmrJ 4.2 into the OpenVnmrJ directory. The /vnmr symlink will be changed to point to OpenVnmrJ and your existing VnmrJ 4.2 installation will be untouched.  
+
+If you want to use or test OpenVnmrJ, download the release appropriate for your OS, see Releases below.  
 
 ## Releases
 
 The latest binary releases for OpenVnmrJ are available from [Releases](https://github.com/OpenVnmrJ/OpenVnmrJ/releases).  
 There are releases for:  
-- RHEL/CentOS 6.3
-- RHEL/CentOS 6.7
-- Ubuntu Trusty Tahr (14.04)
-- OS X 10.11 (El Capitan)
-- ? OS X 10.10 (Yosemite)
-- ? OS X 10.9 (Mavericks)
+- RHEL/CentOS: Built on CentOS 6.3, tested on 6.3 and 6.7
+- Ubuntu: Built and tested on Trusty Tahr (14.04)
+- OS X: Built on 10.11 (El Capitan) and tested on 10.11 and 10.10 (Yosemite)
 
 ## Read more
 
@@ -26,12 +30,10 @@ very helpful. See [Contributing](http://openvnmrj.org/Contributing/) for more in
 We welcome pulse sequences, libraries of macros, UX improvments contributed as an Appdir. Check out the [OpenVnmrJ Appdirs](https://github.com/OpenVnmrJ/appdirs) 
 repository on how to download and install and how to contribute your appdir. 
 
-
 ## Building
 
 If you are interested in building the core of OpenVnmrJ, refer to the [ovjTools repository](https://github.com/OpenVnmrJ/ovjTools), which contains instructions and
 all the tools and libraries necessary for building OpenVnmrJ.  
-
 
 ## LICENSE
 
