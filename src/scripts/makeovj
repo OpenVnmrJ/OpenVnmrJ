@@ -40,33 +40,37 @@ then
   if [ x$doGitClone = "xyes" ]
   then
     date=`date`
-    echo "===>>> $date Removing old git-repo <<<==="
-    rm -rf git-repo
-    echo "===>>> $date Clone git-repo <<<==="
-    git clone ssh://$gitUSER
+    echo "===>>> $date Removing old OpenVnmrJ <<<==="
+    rm -rf OpenVnmrJ
+    echo "===>>> $date Clone OpenVnmrJ <<<==="
+    #git clone ssh://$gitUSER
+    git clone ${gitURL}
 # To build from a branch, uncomment the next three lines, altering branch as needed
-#   cd $buildDir/git-repo
+#   cd $buildDir/OpenVnmrJ
 #   git branch --track VnmrJ_3.1 origin/VnmrJ_3.1
 #   git checkout VnmrJ_3.1
   fi
   if [ x$doGitClone = "xpull" ]
   then
-    cd $buildDir/git-repo
-    rm -rf src/*
-    git checkout src
-    echo "git pull src"
-    git pull
+    cd $buildDir/OpenVnmrJ
+    rm -rf src/* # src is mixed with copied files and build artifacts
+#   git checkout src
+    echo "git fetch origin master"
+#   git pull src
+    git fetch origin master
+    git checkout origin/master -- src
   fi
   if [ x$doGitClone = "xrebuild" ]
   then
-    cd $buildDir/git-repo
+    cd $buildDir/OpenVnmrJ
     rm -rf src/*
-    echo "git checkout software"
-    git checkout src
+    echo "git checkout -- src"
+    #git checkout src
+    git checkout -- src
   fi
 
   echo "===>>> $date Executing 'scons' <<<==="
-  cd $buildDir/git-repo
+  cd $buildDir/OpenVnmrJ
   # build status
   status="OK"
   SCONSFLAGS='--warn=no-duplicate-environment'
@@ -105,7 +109,7 @@ then
       else
          outFile=ovjddrout
       fi
-      cp $buildDir/git-repo/src/scripts/$outFile.sh .
+      cp $buildDir/OpenVnmrJ/src/scripts/$outFile.sh .
       make $outFile
       ./$outFile
       if [ x$dvdCopyDir1 != "x" -a x$dvdCopyName1 != "x" ]
@@ -136,7 +140,7 @@ then
    echo "===>>> $date Building OpenVnmrJ MI DVD <<<==="
    (cd $buildDir/bin;       \
       outFile=ovjmiout
-      cp $buildDir/git-repo/src/scripts/$outFile.sh .
+      cp $buildDir/OpenVnmrJ/src/scripts/$outFile.sh .
       make $outFile
       ./$outFile
       if [ x$dvdCopyDir2 != "x" -a x$dvdCopyName2 != "x" ]
