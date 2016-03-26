@@ -21,7 +21,7 @@ then
    dvdBuildName1=dvdimageOVJ
 fi
 
-gitdir=$workspacedir/git-repo
+gitdir=$workspacedir/OpenVnmrJ
 vnmrdir=$gitdir/../vnmr
 standardsdir=$gitdir/../options/standard
 optddrdir=$gitdir/../options/console/ddr
