@@ -52,7 +52,11 @@ unmrBgFileList = [
                   'wjunk.c']
 
 # Following defines for 32-bit compile
-compileFlag = "-m32"
+if (platform=="darwin"):
+    compileFlag = "-arch i386"
+    #compileFlag = "-arch i386 -arch x68_64"
+else:
+    compileFlag = "-m32"
 compileOption = "-DHAVE_LARGEFILE_SUPPORT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 compileLinuxDir = "linux"
 compileMacOsDir = "macos"
@@ -60,7 +64,8 @@ compileMacOsDir = "macos"
 # compileFlag = "-m64"
 # compileOption = ""
 # compileLinuxDir = "linux64"
-# compileMacOsDir = "macos64"
+# compileMacOsDir = "macos"
+# libraries can be fat (both i386 and x86_64) on Mac
 
 if (opensource=="false"):
     cOptFileList = ['vnmr_nr.c',
@@ -615,8 +620,14 @@ revdateFileList = ['revdate.c']
 interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
 interixgpp= os.path.join(os.sep,'opt','gcc.3.3','bin','g++')
 
-ccflags_32_64 = compileFlag +' -O2 -Wall -Wno-format-security ' + compileOption
-linkflags_32_64 = compileFlag +' -O -rdynamic'
+if (platform=="darwin"):
+    ccflags_32_64 = compileFlag +' -Os -Wall -Wno-format-security ' + compileOption
+    linkflags_32_64 = compileFlag +' -O '
+    env.Replace(CC = 'cc')
+else:
+    ccflags_32_64 = compileFlag +' -O2 -Wall -Wno-format-security ' + compileOption
+    linkflags_32_64 = compileFlag +' -O -rdynamic'
+
 # build environment
 vnmrBgCEnv = Environment(CCFLAGS    = ccflags_32_64,
                          CPPDEFINES = ['LINUX', 'VNMRJ', 'BSDACQ', 'SUN', 'X11',
@@ -799,7 +810,11 @@ magicComSpcObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, magicComSpcPath
 magicAllObjs = magicCObjs + magicComSpcObjs # MAGIC_ALL_OBJ
 
 if ('interix' not in platform):    # Interix
-   linkflags2_32_64 = compileFlag +' -O2 -rdynamic'
+    if (platform=="darwin"):
+        linkflags_32_64 = compileFlag +' -O '
+        env.Replace(CC = 'cc')
+    else:
+        linkflags2_32_64 = compileFlag +' -O2 -rdynamic'
    if (opensource=="false"):
        vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
                                    source    = [unmrAllObjs,
