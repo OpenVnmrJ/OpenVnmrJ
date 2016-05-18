@@ -1,0 +1,87 @@
+#! /bin/sh
+#
+#  Script to build an OVJ release.
+#  Make a directory and put this file (buildovj) and the makeovj
+#  script in a bin subdirectory
+#  Set the following 2 global parameters.
+#  ovjBuildDir defines where the git-repo will be built.
+#  workspacedir used by ovjdvd and defines where the DVD images will be built.
+#  dvdBuildName1 defines the name of the OVJ image
+#  dvdBuildName2 defines the name of the MI image
+#  dvdCopyDir1 defines where a copy of the OpenVnmrJ DVD image will be put.
+#  dvdCopyDir2 defines where a copy of the OpenVnmrJ MI DVD image will be put.
+#  set cdBuildDir[1,2] to null string to avoid the final copy
+#  dvdCopyName1 defines the name of the OVJ copy
+#  dvdCopyName2 defines the name of the MI copy
+#  buildOVJ specifies whether the OVJ DVD image will be made
+#  buildOVJMI specifies whether the OVJMI DVD image will be made
+#
+#  set doScons=yes to run scons
+#  set doScons=no to not run scons. This also avoids removing directories
+#              and does not change the git repo.
+#              Use this if you are just making a DVD from pre-built files
+#  set doGitClone=yes to get a new repo.
+#  set doGitClone=rebuild to do a new checkout of "src"
+#  set doGitClone=pull to pull recent changes to the repo and do a new checkout of "src"
+#  set doGitClone=no to leave the current repo alone
+#  set mail_list to addresses to email status of the build
+#  set gitUSER to user name and address for git repo.
+#  ovjAppName is only used by mac version to name /Applications/ovjAppName
+#  sconsJoption helps speed up the process. Typical value is #CPUs+1
+#
+
+# if this script is run like ./buildovj
+ovjBuildDir=$(dirname ${PWD})
+#ovjBuildDir=$HOME/vjbuild
+workspacedir=$ovjBuildDir
+OVJ_TOOLS=$ovjBuildDir/ovjTools
+
+dvdCopyDir1=/rdvnmr
+dvdCopyDir1=
+dvdCopyDir2=
+
+shortDate=`date +%F`
+dvdBuildName1=dvdimageOVJ
+dvdBuildName2=dvdimageOVJMI
+dvdCopyName1=OVJ_$shortDate
+dvdCopyName2=OVJ_MI_$shortDate
+ovjAppName=OpenVnmrJ_1.1.app
+if [ "$(uname -s)" == "Darwin" ]; then
+  nprocs=$(sysctl -n hw.ncpu)
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+  nprocs=$(nproc)   
+fi
+sconsJoption=$(( nprocs + 1 ))
+osxSDK='/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk'
+osxflags="-mmacosx-version-min=10.9 -isysroot ${osxSDK}"
+
+doGitClone=pull
+#gitUSER=$USER@130.27.97.223/export/swrepos/git-repo
+#gitUSER=git@github.com:OpenVnmrJ/OpenVnmrJ.git
+gitURL='https://github.com/OpenVnmrJ/OpenVnmrJ.git'
+doScons=yes
+buildOVJ=yes    # Build for Direct-Drive (VnmrS/DD2/ProPulse)
+buildOVJMI=yes  # Build for Mercury/Inova
+
+# Potential optional set of values
+# doGitClone=rebuild
+# doGitClone=pull
+# doGitClone=no
+# mail_list="dan.iverson@agilent.com"
+# gitUSER=dan@130.27.97.223/export/swrepos/git-repo
+# doScons=no
+# buildOVJ=no
+# buildOVJMI=no
+# ovjAppName=OpenVnmrJ.app
+# sconsJoption=5
+
+date=`date +%F_%T`
+if [ ! -d $ovjBuildDir/logs ]
+then
+   mkdir -p $ovjBuildDir/logs
+fi
+ovjLogFile=$ovjBuildDir/logs/makeovj.$date
+cd $ovjBuildDir
+export ovjBuildDir workspacedir OVJ_TOOLS dvdCopyDir1 dvdCopyDir2 dvdBuildName1 dvdBuildName2 dvdCopyName1 dvdCopyName2 ovjLogFile doScons doGitClone mail_list gitUSER ovjAppName buildOVJ buildOVJMI sconsJoption osxflags
+$ovjBuildDir/bin/makeovj > $ovjLogFile 2>&1
+
