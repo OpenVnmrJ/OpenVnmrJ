@@ -46,7 +46,12 @@ dvdBuildName2=dvdimageOVJMI
 dvdCopyName1=OVJ_$shortDate
 dvdCopyName2=OVJ_MI_$shortDate
 ovjAppName=OpenVnmrJ_1.1.app
-sconsJoption=2
+if [ "$(uname -s)" == "Darwin" ]; then
+  nprocs=$(sysctl -n hw.ncpu)
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+  nprocs=$(nproc)   
+fi
+sconsJoption=$(( nprocs + 1 ))
 osxSDK='/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk'
 osxflags="-mmacosx-version-min=10.9 -isysroot ${osxSDK}"
 
