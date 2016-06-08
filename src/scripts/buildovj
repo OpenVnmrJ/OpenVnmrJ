@@ -30,7 +30,9 @@
 #  sconsJoption helps speed up the process. Typical value is #CPUs+1
 #
 
-ovjBuildDir=$HOME/vjbuild
+# if this script is run like ./buildovj
+ovjBuildDir=$(dirname ${PWD})
+#ovjBuildDir=$HOME/vjbuild
 workspacedir=$ovjBuildDir
 OVJ_TOOLS=$ovjBuildDir/ovjTools
 
@@ -44,7 +46,14 @@ dvdBuildName2=dvdimageOVJMI
 dvdCopyName1=OVJ_$shortDate
 dvdCopyName2=OVJ_MI_$shortDate
 ovjAppName=OpenVnmrJ_1.1.app
-sconsJoption=2
+if [ "$(uname -s)" == "Darwin" ]; then
+  nprocs=$(sysctl -n hw.ncpu)
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+  nprocs=$(nproc)   
+fi
+sconsJoption=$(( nprocs + 1 ))
+osxSDK='/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk'
+osxflags="-mmacosx-version-min=10.9 -isysroot ${osxSDK}"
 
 doGitClone=pull
 #gitUSER=$USER@130.27.97.223/export/swrepos/git-repo
@@ -73,6 +82,6 @@ then
 fi
 ovjLogFile=$ovjBuildDir/logs/makeovj.$date
 cd $ovjBuildDir
-export ovjBuildDir workspacedir OVJ_TOOLS dvdCopyDir1 dvdCopyDir2 dvdBuildName1 dvdBuildName2 dvdCopyName1 dvdCopyName2 ovjLogFile doScons doGitClone mail_list gitUSER ovjAppName buildOVJ buildOVJMI sconsJoption
+export ovjBuildDir workspacedir OVJ_TOOLS dvdCopyDir1 dvdCopyDir2 dvdBuildName1 dvdBuildName2 dvdCopyName1 dvdCopyName2 ovjLogFile doScons doGitClone mail_list gitUSER ovjAppName buildOVJ buildOVJMI sconsJoption osxflags
 $ovjBuildDir/bin/makeovj > $ovjLogFile 2>&1
 
