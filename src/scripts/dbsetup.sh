@@ -1084,7 +1084,8 @@ echo "Using postgres path: $pgpath"
 if [ x$lflvr = "xdarwin" ]
 then
     # Remove launch file from postgres installation
-    oldfiles=`ls -1 /Library/LaunchDaemons/*postgresql-*` 
+    # TEB: should we really blow away another postgres?
+    oldfiles=`ls -1 /Library/LaunchDaemons/*postgresql-*`
     for file in $oldfiles; do 
         sudo rm -f $file 
     done 
@@ -1095,15 +1096,18 @@ then
         mkdir /vnmr/pgsql
         chown $vnmr_adm /vnmr/pgsql 
     fi
-    cd /vnmr/pgsql 
-    if [ -d bin ]; then 
-        if [ ! -d bin.sav ]; then
-            mv bin bin.sav 
-        else
-            rm -rf bin
+    if [ x$pgpath != x"/vnmr/pgsql/bin/" ]; then
+        cd /vnmr/pgsql
+        if [ -d bin ]; then 
+            if [ ! -d bin.sav ]; then
+                mv bin bin.sav 
+            else
+                rm -rf bin
+            fi
         fi
+        ln -s $pgpath bin
     fi
-    ln -s $pgpath bin
+    echo "login_user:.${login_user}. vnmr_adm:.${vnmr_adm}.\n"
 fi
 
 if [ x$osname = "xInterix" ]
