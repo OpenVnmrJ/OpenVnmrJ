@@ -57,6 +57,7 @@ extern double  bs;		/* Block Size */
 extern double  d1; 		/* delay */
 extern double  d2; 		/* A delay, used in 2D experiments */
 extern double  d3; 		/* A delay */
+extern double  d4; 		/* A delay */
 extern double  dfrq; 		/* Decoupler Frequency MHz */
 extern double  dhp; 		/* decoupler Power value dhp = dpwr */
 extern double  dpwr; 		/* decoupler Power value dpwr=dhp */

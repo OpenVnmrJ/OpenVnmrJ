@@ -1,0 +1,97 @@
+//@copy-c-declaration /*
+//@copy-c-declaration *
+//@copy-c-declaration * Varian,Inc. All Rights Reserved.
+//@copy-c-declaration * This software contains proprietary and confidential
+//@copy-c-declaration * information of Varian, Inc. and its contributors.
+//@copy-c-declaration * Use, disclosure and reproduction is prohibited without
+//@copy-c-declaration * prior consent.
+//@copy-c-declaration */
+//@copy-c-declaration /*
+//@copy-c-declaration *  Author: Greg Brissey  4/20/2004
+//@copy-c-declaration */
+
+//@copy-c-declaration #include "NDDS_Obj.h"
+
+//@copy-c-declaration /* cmd types */
+
+const long FLASH_DOWNLD_FILE = 1;
+const long FLASH_DWNLD_COMMIT = 2;
+const long FLASH_DELETE_FILEPAT = 3;
+const long FLASH_REPLY_ACK = 4;
+const long FLASH_XFER_NUMBER = 5;
+const long FLASH_XFER_ACK = 6;
+const long FLASH_XFER_ABORT = 7;
+const long FLASH_NAMEBUF_QUERY = 8;
+const long FLASH_QUERY_ACK = 9;
+const long FLASH_DWNLD_START = 10;
+const long FLASH_DWNLD_CMPLT = 11;
+ 
+
+//@copy-c-declaration /* topic name form */
+
+const string FLASH_HOST_PUB_TOPIC_STR = "h/flashdwnld/strm";
+const string FLASH_CNTLR_SUB_TOPIC_STR = "h/flashdwnld/strm";
+const string FLASH_CNTLR_SUB_TOPIC_PATTERN = "h/flashdwnld/*";
+
+const string FLASH_HOST_PUB_TOPIC_FORMAT_STR = "h/%s/flashdwnld/strm";
+const string FLASH_CNTLR_SUB_TOPIC_FORMAT_STR = "h/%s/flashdwnld/strm";
+const string FLASH_CNTLR_PUB_TOPIC_FORMAT_STR = "%s/h/flashdwnld/request";
+const string FLASH_HOST_SUB_TOPIC_FORMAT_STR = "%s/h/flashdwnld/request";
+const string FLASH_HOST_SUB_TOPIC_PATTERN     = "*/h/flashdwnld/request";
+
+const string FLASH_CNTLR_PUB_Q_SIZE = 1;	/* h/%s/flashdwnld/request */
+const string FLASH_CNTLR_PUB_HIWATERMARK = 1;	/* h/%s/flashdwnld/request */
+const string FLASH_CNTLR_PUB_LOWWATERMARK = 0;	/* h/%s/flashdwnld/request */
+const string FLASH_CNTLR_PUB_ACKS_PER_SENDQ = 1; /* h/%s/flashdwnld/request */
+const string FLASH_HOST_SUB_Q_SIZE = 2;	/* h/%s/flashdwnld/request */
+
+const string FLASH_HOST_PUB_Q_SIZE = 10;	/* h/%s/flashdwnld/strm */
+const string FLASH_HOST_PUB_HIWATERMARK = 2;
+const string FLASH_HOST_PUB_LOWWATERMARK = 0;
+const string FLASH_HOST_PUB_ACKS_PER_SENDQ = 10;
+const string FLASH_CNTLR_SUB_Q_SIZE = 10;
+ 
+const string MAX_IPv4_UDP_SIZE_BYTES  =  65535;   /* IPv4 UDP max Packet size */
+const string NDDS_MAX_Size_Serialize = 64512;    /* serialization for NDDS  63KB */
+const string MAX_FLASHDATA_SIZE = 16384;	  /* Max data size bytes */
+const string FLASH_MAX_NAME_SIZE = 64;
+const string FLASH_MAX_STR_SIZE = 512;
+const string FLASH_MAX_CNTLRID_SIZE = 12;
+const string FLASH_MAX_MD5_SIZE = 34;
+
+struct Flash_Downld {
+        char           cntlrId[FLASH_MAX_CNTLRID_SIZE];
+        long           cmd;     /* download command, 'downLoad', etc. */
+        long           status;     /* status */
+        unsigned long  totalBytes;  /* total size of data being transferred */
+        unsigned long  dataOffset;  /* for multi parts, offset into the buffer */
+        char           md5digest[FLASH_MAX_MD5_SIZE];  /* md5 digest of file */
+        char           filename[FLASH_MAX_NAME_SIZE];  /* reserved */
+        char           msgstr[FLASH_MAX_STR_SIZE];  /* reserved */
+        sequence<octet, MAX_FLASHDATA_SIZE> data;
+};
+
+
+//@copy-c-declaration 
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration     extern "C" {
+//@copy-c-declaration #endif
+//@copy-c-declaration 
+//@copy-c-declaration extern void getFlash_DownldInfo(NDDS_OBJ *pObj);
+//@copy-c-declaration 
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration }
+//@copy-c-declaration #endif
+//@copy-c-declaration 
+
+// //@copy-c  /* Direct Code from Codes_Downld.x */
+// //@copy-c void getFlash_DownldInfo(NDDS_OBJ *pObj)
+// //@copy-c {
+// //@copy-c     strcpy(pObj->dataTypeName,Flash_DownldNDDSType);
+// //@copy-c 
+// //@copy-c     pObj->TypeRegisterFunc = Flash_DownldNddsRegister;
+// //@copy-c     pObj->TypeAllocFunc = (DataTypeAllocate) Flash_DownldAllocate;
+// //@copy-c     pObj->TypeSizeFunc = Flash_DownldMaxSize;
+// //@copy-c }
+// //@copy-c 
+

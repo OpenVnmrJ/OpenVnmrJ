@@ -84,12 +84,18 @@ main(int argc, char *argv[])
         /* This section is to skip directories that change in normal use */
         if(strncmp(path, "/vnmr", 5) == 0) {
             for(i=0; i<nfiles; i++) {
-                if(strstr(files[i], "adm/users/profiles/") == NULL &&
-                   strstr(files[i], "adm/patch/") == NULL &&
-                   strstr(files[i], "tmp/") == NULL &&
-                   strstr(files[i], "pgsql/data/") == NULL &&
-                   strstr(files[i], "pgsql/persistence/") == NULL)
-                    fprintf(fp, "%s%s\n", path, files[i]);
+                if( (strstr(files[i], "adm/users/profiles/") == NULL) &&
+                    (strstr(files[i], "adm/patch/") == NULL) &&
+                    (strstr(files[i], "acqqueue/") == NULL) &&
+                    (strstr(files[i], "tmp/") == NULL) &&
+                    (strstr(files[i], "pgsql/data/") == NULL) &&
+                    (strstr(files[i], "pgsql/persistence/") == NULL) )
+                 {
+                    char tmpFile[1024];
+                    sprintf(tmpFile,"%s%s",path,files[i]);
+                    if ( strcmp(tmpFile,"/vnmr/bin/convert") )
+                       fprintf(fp, "%s%s\n", path, files[i]);
+                 }
             }
         } 
         else {

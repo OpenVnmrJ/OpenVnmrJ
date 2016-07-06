@@ -31,6 +31,15 @@
 
 #  Certain programs have to be present ...
 
+if [ x$vnmrsystem = "x" ]
+then
+   vnmrsystem=/vnmr
+fi
+if [ x$vnmruser = "x" ]
+then
+   source $vnmrsystem/user_templates/.vnmrenvsh
+fi
+
 osname=`vnmr_uname`
 verify_ccs()
 {

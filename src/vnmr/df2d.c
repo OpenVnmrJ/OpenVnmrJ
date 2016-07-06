@@ -214,7 +214,6 @@ static int convertblock(int *curfid, int blocknum, int *lastfid, int fidincr,
   register int          fidcnt;
   register float        *outp;
   dpointers             outblock;
-  extern void		zeroimag();
  
  
   outfile = D_DATAFILE;
@@ -579,7 +578,12 @@ int getfid(int curfid, float *outp, ftparInfo *ftpar, dfilehead *fidhead, int *l
       }
 
       if (ftpar->zeroflag)
-         zeroimag(outp, ftpar->np0 - ftpar->lsfid0, TRUE);
+      {
+         if (ftpar->zeroflag > 0)
+            zeroimag(outp, ftpar->np0 - ftpar->lsfid0, TRUE);
+         else
+            negateimaginary(outp, (ftpar->np0 - ftpar->lsfid0) / 2, COMPLEX);
+      }
 
       if ( (res = D_release(D_USERFILE, curfid)) )
       {

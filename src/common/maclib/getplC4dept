@@ -1,0 +1,40 @@
+"macro getplC4dept"
+
+$fidex=0 $filename=''
+
+exists('strtpar','parameter'):$parex
+if $parex then $strtpar=strtpar else $strtpar='' endif
+
+if $strtpar<>'' then
+   $archivesample='' $sample='' $archive=''
+   $archive=archivedir
+   $sample=sample
+   isnewexp:$new
+   if (auto='y') then $new=1 endif
+   if ($new=0) then
+   	shell('dirname '+file):$archivesample
+   	shell('basename '+$archivesample):$sample
+   	shell('dirname '+$archivesample):$archive
+   endif
+
+    $fc=''
+    substr($strtpar,1,1):$fc
+    if $fc<>'/' then
+	$filename=$archive+'/'+sample+'/'+$strtpar
+    else
+	$filename=$strtpar
+    endif
+
+    $ext='' $fidname=''
+    substr($filename,'dirname'):$d,$fidname,$ext
+    if $ext='' then
+    	$filename=$filename+'.fid'
+    endif
+    exists($filename,'directory'):$fidex
+    if $fidex then 
+	return($fidex,$filename)
+    endif
+endif
+
+AutoCheck('CARBON'):$fidex,$filename
+return($fidex,$filename)

@@ -15,7 +15,7 @@ env = Environment(ENV = os.environ)
 
 # define the patch name
 patchTarget = datetime.date.today().strftime("custom_%Y-%m-%d")
-patchTarget = '4.2_MAC_DDR_108'
+patchTarget = '4.2_MAC_DDR_109'
 readmeFile = 'Readme.macos'
 
 
@@ -79,50 +79,35 @@ dest = os.path.join(binDir,'jdxfid')
 Execute(Copy(dest,src))
 Execute(Chmod(dest,0755))
 
-src  = os.path.join(swDir,'scripts','vnmrseqgen.sh')
-dest = os.path.join(binDir,'vnmrseqgen')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','set_tunehw.sh')
-dest = os.path.join(binDir,'set_tunehw')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','loginpasswordcheck.sh')
-dest = os.path.join(binDir,'loginpasswordcheck')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','airjet.sh')
-dest = os.path.join(binDir,'airjet')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
 src  = os.path.join(swDir,'scripts','lnvsetacq.sh')
 dest = os.path.join(binDir,'setacq')
 Execute(Copy(dest,src))
 Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','S99pgsql.sh')
-dest = os.path.join(binDir,'S99pgsql')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','patchinstall.sh')
-dest = os.path.join(binDir,'patchinstall')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','patchuninstall.sh')
-dest = os.path.join(binDir,'patchuninstall')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','patchmake.sh')
-dest = os.path.join(binDir,'patchmake')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
+
 src  = os.path.join(swDir,'macos','vnmrj.sh')
 dest = os.path.join(binDir,'vnmrj')
 Execute(Copy(dest,src))
 Execute(Chmod(dest,0755))
-src  = os.path.join(swDir,'scripts','vnmremail.sh')
-dest = os.path.join(binDir,'vnmremail')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0755))
+
+
+scriptsList = [
+               'vnmrseqgen',
+               'set_tunehw',
+               'loginpasswordcheck',
+               'airjet',
+               'S99pgsql',
+               'patchinstall',
+               'patchuninstall',
+               'patchmake',
+               'vnmremail',
+               'fixpsg',
+             ]
+
+for i in scriptsList:
+    dest = os.path.join(binDir,i)
+    src  = os.path.join(swDir,'scripts',i+'.sh')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0755))
 
 usertDir    = os.path.join(patchDir,'user_templates')
 if not os.path.exists(usertDir):
@@ -346,6 +331,10 @@ maclibFileList = [
           'setp11svfdr2',
           'cpfixpar',
           'getdim',
+          'studyClusterAttr',
+          'getplC4dept',
+          'plh',
+          'plot1d',
           ]
 
 for i in maclibFileList:
@@ -420,6 +409,16 @@ cpmaclibFileList = [
           'putrefsamp',
           'emessage',
           'vnmremail',
+          'cprev',
+          'is_cpfid',
+          'makeStudy',
+          'svpdp',
+          'showmanual',
+          'pldept',
+          'wrsampdirchron',
+          'catprobe',
+          'xmhaha_calib',
+          'execpslabel',
           ]
 
 for i in cpmaclibFileList:
@@ -792,11 +791,29 @@ manFileList = [
           'readfile',
           'lsfid',
           'dres',
+          'peak2d',
+          'disp3Dmap',
+          'dpf',
+          'ds',
           ]
 
 for i in manFileList:
     dest = os.path.join(manDir,i)
     src  = os.path.join(swDir,'manual',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
+
+menujlibDir = os.path.join(patchDir,'menujlib')
+if not os.path.exists(menujlibDir):
+   os.makedirs(menujlibDir)
+
+menujlibFileList = [
+          'ds_1',
+          ]
+
+for i in menujlibFileList:
+    dest = os.path.join(menujlibDir,i)
+    src  = os.path.join(swDir,'menujlib',i)
     Execute(Copy(dest,src))
     Execute(Chmod(dest,0644))
 
@@ -969,6 +986,8 @@ cpdefFileList = [
                    'Lock.xml',
                    'Proc2Ddefault.xml',
                    'Standard.xml',
+                   'Proc1Ddefault.xml',
+                   'LineLists.xml',
                ]
 
 for i in cpdefFileList:
@@ -1099,7 +1118,7 @@ psgDir = os.path.join(patchDir,'psg')
 if not os.path.exists(psgDir):
    os.makedirs(psgDir)
 
-psgFileList = [
+nvpsgFileList = [
                    'solidelements.h',
                    'Bridge.h',
                    'Bridge.cpp',
@@ -1123,9 +1142,16 @@ psgFileList = [
                    'solidshapegen.h',
                    'makeuserpsg.lnx',
                    'spinfuncs.c',
+                   'Console.cpp',
+                   'Controller.cpp',
+                   'DDRController.cpp',
+                   'arrayfuncs.c',
+                   'cps.c',
+                   'nvstubs.c',
+                   'acqparms.h',
                  ]
 
-for i in psgFileList:
+for i in nvpsgFileList:
     dest = os.path.join(psgDir,i)
     src  = os.path.join(swDir,'nvpsg',i)
     Execute(Copy(dest,src))
@@ -1136,20 +1162,21 @@ src  = os.path.join(swDir,'vnmr','shims.h')
 Execute(Copy(dest,src))
 Execute(Chmod(dest,0644))
 
-dest = os.path.join(psgDir,'abort.c')
-src  = os.path.join(swDir,'psg','abort.c')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0644))
+psgFileList = [
+                   'abort.c',
+                   'xmath.c',
+                   'initauto.c',
+                   'treefuncs.c',
+                   'getparm.c',
+                   'setparm.c',
+                   'sis_initpar.c',
+                 ]
 
-dest = os.path.join(psgDir,'xmath.c')
-src  = os.path.join(swDir,'psg','xmath.c')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0644))
-
-dest = os.path.join(psgDir,'initauto.c')
-src  = os.path.join(swDir,'psg','initauto.c')
-Execute(Copy(dest,src))
-Execute(Chmod(dest,0644))
+for i in psgFileList:
+    dest = os.path.join(psgDir,i)
+    src  = os.path.join(swDir,'psg',i)
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0644))
 
 libDir = os.path.join(patchDir,'lib')
 if not os.path.exists(libDir):

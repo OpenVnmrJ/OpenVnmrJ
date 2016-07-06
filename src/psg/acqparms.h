@@ -600,6 +600,7 @@ extern double  nD;                  /* experiment dimensionality */
 extern double  ns;                  /* number of slices */
 extern double  ne;                  /* number of echoes */
 extern double  ni;                  /* number of standard increments */
+extern double  ni2;                 /* number of 3d increments */
 extern double  nv,nv2,nv3;          /* number of phase encode views */
 extern double  ssc;                 /* compressed ss transients */
 extern double  ticks;               /* external trigger counter */

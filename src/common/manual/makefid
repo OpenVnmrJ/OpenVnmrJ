@@ -1,9 +1,9 @@
 ****************************************************************************
-makefid( input text file <, element number, format > )
+makefid( input text file <, element number, format, 'add' > )
 	-  make a FID element using numeric text input
-makefid( input text file , 'calc'  <,element number > )
+makefid( input text file , 'calc'  <,element number, 'add', 'sub' > )
 	-  calculate a FID element
-makefid( 'calcstr','freq amp decay phase'  <,element number > )
+makefid( 'calcstr','freq amp decay phase'  <,element number, 'add', 'sub' > )
 	-  calculate a FID element
 writefid( output text file <, element number > )
 	-  write numeric text file using a FID element.
@@ -21,8 +21,15 @@ and may be entered in either order.
 The element number is any integer greater than or equal to 0.  If 0 is passed,
 the existing FID file is deleted and element 1 will be added. If the element
 number is greater than 0, then that element will be added.  If that element
-already exists in your FID file, the program will overwrite the old data.
-If not entered, the default is 1.
+already exists in your FID file, the program will overwrite the old data
+unless the optional 'add' argument is given as the last argument to makefid.
+If the 'add' argument is given, the FID will be added to the existing data.
+If element number is not entered, the default is 1.
+If the element number is larger than the existing number of elements,
+a new element is added at the specified element number. If the specified
+element number is greater the 1 more than the existing number of elements,
+the intervening elements will be zero filled.  Whenever a new element is created,
+the 'add' option can be given or not. 
 
 The format argument lets you select between single precision integer, double
 precision integer, or floating point data in the resulting FID file.
@@ -65,11 +72,28 @@ amplitude, decay rate, and phase of a spectral line. The first argument,
 which is required, is the name of the file containing input.  Arguments
 specifying the element number and the keyword 'calc' and may be entered
 in either order. The 'calc' keyword is not optional. The element number
-is optional. As above, using an element number of 0 will delete the current
-FID file before adding element 1.  Examples include:
+is optional. The default is element 1. With the 'calc' option, the data
+format will be the same as any pre-existing data. If no pre-existing data
+exists, either because the fid file was removed or because a 0 was supplied
+as the element number, the data format will be float.
+
+As above, using an element number of 0 will delete the current
+FID file before adding element 1. If the element number is larger than
+the existing number of elements, a new element is added at the specified
+element number. If the specified element number is greater the 1 more
+than the existing number of elements, the intervening elements will be
+zero filled. An optional 'add' or 'sub' as the last argument will
+add the FID to the existing FID as opposed to replacing it.  Whenever a
+new element is created, the 'add' option can be given or not. The 'sub'
+argument is the same as 'add' except the phase of the line is inverted
+by adding 180 deg.
+
+Examples include:
 
 makefid(curexp+'/fidlines','calc')
 makefid(curexp+'/fidlines','calc',1)
+makefid(curexp+'/fidlines','calc',1,'add')
+makefid(curexp+'/fidlines','calc',1,'sub')
 makefid(curexp+'/fidlines',1,'calc')
 
 The input file specifies the frequency, amplitude, decay rate and phase.
@@ -86,15 +110,24 @@ the dwell time and the number of points to calculate.  The frequencies
 range between -sw/2 and sw/2. A 0.0 frequency will give a peak in the
 middle of the spectrum.
 
-If only a single line is to be calculated, makefid can be called with
+makefid can be called with
 the keyword 'calcstr' and the  frequency, amplitude, decay rate and phase
 of that line can be passed as the second argument. The second argument must
 be a string of space separated list of the parameters. The optional element
-number can also be passed as the final argument. Examples include:
+number can also be passed as the third argument. The default is element 1.
+With the 'calcstr' option, the data format will be the same as any
+pre-existing data. If no pre-existing data exists, either because the fid
+file was removed or because a 0 was supplied as the element number, the
+data format will be float.
 
-makefid('calcstr','2500.0 10.0 0.1 0.0',0)
-makefid('calcstr','2500.0 10.0 0.1 0.0',2)
-makefid('calcstr','2500.0 10.0 0.1 0.0')
+The behavior of the element number, 'add' and 'sub' arguments is the same
+as for the 'calc' case.
+Examples include:
+
+makefid('calcstr','2500.0 10.0 0.1 0.0',0)  // Delete existing FID first
+makefid('calcstr','2500.0 10.0 0.1 0.0',2)  // Add a second FID
+makefid('calcstr','2500.0 10.0 0.1 0.0',4)  // Add a fourth FID, the third FID is added as zeros.
+makefid('calcstr','2000.0 20.0 0.1 0.0',2,'add')  // Add another component to the second FID
 
 
 writefid

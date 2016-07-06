@@ -596,6 +596,7 @@ double  nD;                  /* experiment dimensionality */
 double  ns;                  /* number of slices */
 double  ne;                  /* number of echoes */
 double  ni;                  /* number of standard increments */
+double  ni2;                 /* number of 3d increments */
 double  nv,nv2,nv3;          /* number of phase encode views */
 double  ssc;                 /* compressed ss transients */
 double  ticks;               /* external trigger counter */
@@ -805,11 +806,8 @@ sleep(30);
     /* ------- Check For GO - PSG Revision Clash ------- */
     if (Rev_Num != GO_PSG_REV )
     {
-        char msge[100];
-        sprintf(msge,"GO(%d) and PSG(%d) Revision Clash, PSG Aborted.\n",
+        abort_message("GO(%d) and PSG(%d) Revision Clash, PSG Aborted.\n",
           Rev_Num,GO_PSG_REV);
-        text_error(msge);
-        psg_abort(1);
     }
     if (P_rec_stat == -1 )
     {
@@ -2354,11 +2352,7 @@ static int setGflags()
       NUMch = (int) (tmpval + 0.0005);
       if (( NUMch < 1) || (NUMch > MAX_RFCHAN_NUM))
       {
-         char mess[256];
-         sprintf(mess,
-             "Number of RF Channels specified '%d' is too large.. PSG Aborted.\n",NUMch);
-         text_error(mess);
-         psg_abort(1);
+         abort_message("Number of RF Channels specified '%d' is too large.. PSG Aborted.\n",NUMch);
       }
       /* Fool PSG if numrfch is 1 */
       if ( NUMch < 2)

@@ -1,19 +1,31 @@
 "macro catprobe"
 
-$date=''
-shell('date +%Y-%m-%d'):$date
-$time=''
-shell('date +%H%M%S'):$time
 if ($# < 1) then $1=probe endif
-
+if $# < 3 then $3='n' endif
 getProbePath($1):$ex,$probe
 
 if ($ex=0) then $probe='' endif
 if ($ex) and ($## < 1) then
-  clear
-  write('alpha','********************************************')
-  write('alpha','Probe: %s; Date: %s; Time: %s',$1,$date,$time)
-  write('alpha','********************************************')
-  shell('cat '+$probe)
+  $date=''
+  shell('date +%Y-%m-%d'):$date
+  $time=''
+  shell('date +%H%M%S'):$time
+  $file=$probe+'_'+$date+'_'+$time
+  write('reset',$file)
+  write('file',$file,'********************************************')
+  write('file',$file,'Probe: %s; Date: %s; Time: %s',$1,$date,$time)
+  write('file',$file,'********************************************')
+  shell('cat '+$probe+' >> '+$file+';')
+  if ($# >= 2) then
+    write('line3','%s saved to file %s',$2,$file)
+  else
+    write('line3','Probe info saved to file %s',$file)
+  endif
+  if ($3='y') and (printer<>'') then
+    printon
+    shell('cat '+$file)
+    printoff
+  endif
+  
 endif
 return($probe)

@@ -15,11 +15,12 @@
 #include "rfconst.h"
 #include "acqparms2.h"
 #include "shims.h"
+#include "pvars.h"
+#include "abort.h"
+#include "cps.h"
 /* #include "macros.h" */
 
 
-extern double getval();
-extern double sign_add();
 extern int  bgflag;	/* debug flag */
 extern int newacq;
 extern int oldwhenshim;

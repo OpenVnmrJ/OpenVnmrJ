@@ -74,6 +74,15 @@ then
    rm -rf $vnmrsystem/templates/layout/Dproject_cc
    rm -rf $vnmrsystem/solidspack
    rm -f $vnmrsystem/user_templates/global
+   rm -f $vnmrsystem/psglib/HSQCADTOXY.c
+   rm -f $vnmrsystem/psglib/CIGAR.c
+   rm -f $vnmrsystem/psglib/wet1D.c
+   rm -f $vnmrsystem/seqlib/HSQCADTOXY
+   rm -f $vnmrsystem/seqlib/CIGAR
+   rm -f $vnmrsystem/seqlib/wet1D
+   mv $vnmrsystem/kpsglib/* $vnmrsystem/psglib
+   mv $vnmrsystem/kseqlib/* $vnmrsystem/seqlib
+   rm -rf $vnmrsystem/kseqlib $vnmrsystem/kpsglib
    mv $vnmrsystem/user_templates/global.merc $vnmrsystem/user_templates/global
    reboot="no"
 fi
@@ -120,6 +129,8 @@ then
       rm -rf $vnmrsystem/ilib
    fi
    rm -rf $vnmrsystem/kpsg
+   rm -rf $vnmrsystem/kpsglib
+   rm -rf $vnmrsystem/kseqlib
    rm -f $vnmrsystem/templates/layout/hsqcadtoxy.zip
    rm -f $vnmrsystem/user_templates/global.merc
    reboot="no"
@@ -188,6 +199,11 @@ then
      mkdir -p $tmp_save/veripulse/templates
   fi
   mv $vnmrsystem/veripulse/templates/layout $tmp_save/veripulse/templates/.
+fi
+
+if [ -d $vnmrsystem/jre/bin ]
+then
+  chmod +x $vnmrsystem/jre/bin/*
 fi
 
 if [ -f $vnmrsystem/gxyzshim/maclib/gxyzsetshimtype ]
@@ -320,6 +336,20 @@ else
   mv $vnmrsystem/lc2/TopPanel.xml $vnmrsystem/lc/templates/vnmrj/interface/. >& /dev/null
   rm -rf $vnmrsystem/lc2
 fi
+
+if [ -f $vnmrsystem/p11/part11Config ]
+then
+  lines=`grep "dir:checksum:/vnmr/bin:yes" $vnmrsystem/p11/part11Config | wc -l`
+  if [ $lines = 0 ]
+  then
+    echo "dir:checksum:/vnmr/bin:yes" >> $vnmrsystem/p11/part11Config
+  fi
+fi
+if [ -f $vnmrsystem/bin/chVJlist ]
+then
+  mv $vnmrsystem/bin/chVJlist $tmp_save/bin/. >& /dev/null
+fi
+mv $vnmrsystem/bin/chVJlist.new $vnmrsystem/bin/chVJlist >& /dev/null
 
 # The patchinstall script may run fixpsg and display messages about
 # rebooting the console or restarting the acquisition communication

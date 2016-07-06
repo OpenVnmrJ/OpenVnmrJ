@@ -1,0 +1,98 @@
+//@copy-c-declaration /* 
+//@copy-c-declaration * Copyright (c) 1999-2007 Varian,Inc. All Rights Reserved. 
+//@copy-c-declaration * This software contains proprietary and confidential
+//@copy-c-declaration * information of Varian, Inc. and its contributors.
+//@copy-c-declaration * Use, disclosure and reproduction is prohibited without
+//@copy-c-declaration * prior consent.
+//@copy-c-declaration *
+//@copy-c-declaration */
+
+//@copy-c-declaration #include "ndds/ndds_c.h"
+//@copy-c-declaration #include "NDDS_Obj.h"
+
+
+//@copy-c-declaration /* cmd types */
+const long C_UPLOAD = 1;
+const long C_RECVPROC_READY = 10;
+const long C_RECVPROC_DONE =  20;
+const long C_RECVPROC_CONTINUE_UPLINK = 30;
+
+const long NO_DATA = 0;
+const long ERROR_BLK = 11;
+const long COMPLETION_BLK = 22;
+const long DATA_BLK = 42;
+
+//@copy-c-declaration /* topic name form */
+//@copy-c-declaration /* topic names form: h/rf1/dwnld/strm, rf1/h/dwnld/reply */
+const string CNTLR_PUB_UPLOAD_TOPIC_FORMAT_STR = "%s/h/upload/strm";
+const string HOST_SUB_UPLOAD_TOPIC_FORMAT_STR = "%s/h/upload/strm";
+const string DATA_UPLOAD_M21TOPIC_STR = "upload/strm";
+
+const string CNTLR_SUB_UPLOAD_TOPIC_FORMAT_STR = "h/%s/upload/reply";
+const string HOST_PUB_UPLOAD_TOPIC_FORMAT_STR = "h/%s/upload/reply";
+
+const string CNTLR_SUB_UPLOAD_MCAST_TOPIC_FORMAT_STR = "h/ddr/upload/reply";
+const string HOST_PUB_UPLOAD_MCAST_TOPIC_FORMAT_STR = "h/ddr/upload/reply";
+ 
+//@copy-c-declaration /* download types */
+
+//@copy-c-declaration #ifndef VXWORKS
+//@copy-c-declaration #include "rcvrDesc.h"
+//@copy-c-declaration #include "workQObj.h"
+//@copy-c-declaration #include "errLogLib.h"
+//@copy-c-declaration #include "expDoneCodes.h"
+//@copy-c-declaration #include "memorybarrier.h"
+//@copy-c-declaration #include "rcvrDesc.h"
+
+//@copy-c-declaration extern membarrier_t TheMemBarrier;
+
+//@copy-c-declaration #endif
+
+
+const  long DATAUPLOAD_FIDSTATBLK = 1;
+const  long DATAUPLOAD_FID =  2;
+const  long DATA_FID =  1;
+
+const long MAX_IPv4_UDP_SIZE_BYTES  =  65535;   /* IPv4 UDP max Packet size */
+const long NDDS_MAX_Size_Serialize = 64512;    /* serialization for NDDS  63KB */
+const long MAX_FIXCODE_SIZE = 64000;		 /* Max data size bytes */
+const long MAX_STR_SIZE = 512;
+
+struct Data_Upload {
+        long key; //@key
+        long type;
+        long sn;
+        unsigned long elemId;
+        unsigned long totalBytes;
+        unsigned long  dataOffset;  /* for multi parts, offset into the buffer */
+	unsigned long crc32chksum;  /* CRC-32 checksum */
+        long          deserializerFlag;		    /* use this so that deserializer can mark this issue */
+        unsigned long pPrivateIssueData;	    /* private per Issue data, Deserializer use only */
+        sequence<octet, MAX_FIXCODE_SIZE> data;
+};
+
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration     extern "C" {
+//@copy-c-declaration #endif
+
+//@copy-c-declaration extern void getData_UploadInfo(NDDS_OBJ *pObj);
+
+//@copy-c-declaration #ifndef VXWORKS
+//@copy-c-declaration extern int getNewDataValPtr(Data_Upload *objp);
+//@copy-c-declaration #endif
+
+//@copy-c-declaration #ifdef __cplusplus
+//@copy-c-declaration }
+//@copy-c-declaration #endif
+
+// //@copy-c 
+// //@copy-c  /* Direct Code from Codes_Downld.x */
+// //@copy-c void getData_UploadInfo(NDDS_OBJ *pObj)
+// //@copy-c {
+// //@copy-c     strcpy(pObj->dataTypeName,Data_UploadNDDSType);
+// //@copy-c 
+// //@copy-c     pObj->TypeRegisterFunc = Data_UploadNddsRegister;
+// //@copy-c     pObj->TypeAllocFunc = (DataTypeAllocate) Data_UploadAllocate;
+// //@copy-c     pObj->TypeSizeFunc = Data_UploadMaxSize;
+// //@copy-c }
+// //@copy-c 

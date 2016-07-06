@@ -54,29 +54,32 @@ while ($j < $numexpts) do
           $fail=$fail+1
           write('file',$faillog,'failed experiment menu item: %s',$cmd1)
        endif
-       exec(`go('check','checksilent'):$res`):$e
-       if ($e) then
-          $gopass=$gopass+1
-       else
-          $gofail=$gofail+1
-          write('file',$gofaillog,`go('check') failed for %s`,$cmd1)
-       endif
-       $msg=''
-       exptime:$e,$msg
-       if ($e > 0) then
-          $timepass=$timepass+1
-       else
-          $timefail=$timefail+1
-          write('file',$timefaillog,`exptime failed for %s (%s)`,$cmd1,$msg)
-       endif
-       bgmode_is:$bg
-       if ($bg = 0 ) then
-         dps:$e
-         if ($e = 1) then
-            $dpspass=$dpspass+1
+       exists(seqfil,'seqlib'):$ex
+       if ($ex) then
+         exec(`go('check','checksilent'):$res`):$e
+         if ($e) then
+            $gopass=$gopass+1
          else
-            $dpsfail=$dpsfail+1
-            write('file',$dpsfaillog,`dps failed for %s`,$cmd1)
+            $gofail=$gofail+1
+            write('file',$gofaillog,`go('check') failed for %s`,$cmd1)
+         endif
+         $msg=''
+         exptime:$e,$msg
+         if ($e > 0) then
+            $timepass=$timepass+1
+         else
+            $timefail=$timefail+1
+            write('file',$timefaillog,`exptime failed for %s (%s)`,$cmd1,$msg)
+         endif
+         bgmode_is:$bg
+         if ($bg = 0 ) then
+           dps:$e
+           if ($e = 1) then
+              $dpspass=$dpspass+1
+           else
+              $dpsfail=$dpsfail+1
+              write('file',$dpsfaillog,`dps failed for %s`,$cmd1)
+           endif
          endif
        endif
     endif

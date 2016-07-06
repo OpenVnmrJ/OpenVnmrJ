@@ -12,47 +12,53 @@
 # Default Declarations
 #
 
-if [ x$workspacedir = "x" ]
+if [ "x${workspacedir}" = "x" ]
 then
    workspacedir=$HOME
 fi
-if [ x$dvdBuildName1 = "x" ]
+if [ "x${dvdBuildName1}" = "x" ]
 then
    dvdBuildName1=dvdimageOVJ
 fi
 
-gitdir=$workspacedir/git-repo
-vnmrdir=$gitdir/../vnmr
-standardsdir=$gitdir/../options/standard
-optddrdir=$gitdir/../options/console/ddr
-ddrconsoledir=$gitdir/../console/ddr
+gitdir="${workspacedir}/OpenVnmrJ"
+vnmrdir="${gitdir}/../vnmr"
+standardsdir="${gitdir}/../options/standard"
+optddrdir="${gitdir}/../options/console/ddr"
+ddrconsoledir="${gitdir}/../console/ddr"
 
 if [ x$ovjAppName = "x" ]
 then
    ovjAppName=OpenVnmrJ.app
 fi
 
+# TODO replace this with spiffy OS X app that does away with installer...
+packagedir="${workspacedir}/${dvdBuildName1}/Package_contents"
+resdir="${workspacedir}/${dvdBuildName1}/install_resources"
+mkdir -p "${packagedir}"
+mkdir "${resdir}"
 
-packagedir=$workspacedir/$dvdBuildName1/Package_contents
-resdir=$workspacedir/$dvdBuildName1/install_resources
-mkdir -p $packagedir
-mkdir $resdir
-
-cd $gitdir/src/macos
-cp -r VnmrJ.app $packagedir/$ovjAppName
+cd "${gitdir}/src/macos"
+cp -r VnmrJ.app "${packagedir}/$ovjAppName"
 rm -f VJ
-cc -m32 VJ.c -o VJ
-mkdir -p $packagedir/$ovjAppName/Contents/MacOS
-cp VJ $packagedir/$ovjAppName/Contents/MacOS/.
-rm -f $vnmrdir/bin/convert
-cp convert $vnmrdir/bin/.
+cc -Os -arch i386 -arch x86_64 VJ.c -o VJ
+mkdir -p "${packagedir}/$ovjAppName/Contents/MacOS"
+cp VJ "${packagedir}/$ovjAppName/Contents/MacOS/."
+rm -f "${vnmrdir}/bin/convert"
+#cp convert $vnmrdir/bin/.
+tar jxf ImageMagick.tar.bz2 -C $vnmrdir
+rm -rf "${vnmrdir}/jre"
+cp $JAVA_HOME/jre $vnmrdir/
+rm -rf $vnmrdir/pgsql
+cp -a "${workspacedir}/pgsql.osx" "${vnmrdir}"/
 
-vjdir=$packagedir/$ovjAppName/Contents/Resources/$dvdCopyName1
+vjdir="${packagedir}/${ovjAppName}/Contents/Resources/OVJ"
 
-mkdir -p $vjdir
-mkdir $vjdir/tmp $vjdir/acqqueue
-chmod 777 $vjdir/tmp $vjdir/acqqueue
+mkdir -p "${vjdir}"
+mkdir "${vjdir}/tmp $vjdir/acqqueue"
+chmod 777 "${vjdir}/tmp $vjdir/acqqueue"
 
+# backup for later copying useful dirs in existing /vnmr
 preinstall=$resdir/preinstall
 printf "#!/bin/sh\n" > $preinstall
 printf "orig=\`readlink /vnmr\`\n" >> $preinstall
@@ -69,7 +75,9 @@ printf "then\n" >> $preinstall
 printf "  (cd \$orig; zip -ryq nmrpipe.zip nmrPipe; mv nmrpipe.zip /tmp )\n" >> $preinstall
 printf "fi\n" >> $preinstall
 printf "rm -rf /Applications/$ovjAppName\n" >> $preinstall
+chmod +x $preinstall
 
+# setup the OpenVnmrJ environment and re-install any directories backup up above
 postinstall=$resdir/postinstall
 printf "#!/bin/sh\n" > $postinstall
 printf "rm -rf /vnmr\n" >> $postinstall
@@ -102,16 +110,16 @@ printf "fi\n" >> $postinstall
 
 chmod +x $postinstall
 
-cd $vnmrdir; tar cf - --exclude .gitignore --exclude "._*" . | (cd $vjdir; tar xpf -)
-cd $ddrconsoledir; tar cf - --exclude .gitignore --exclude "._*" . | (cd $vjdir; tar xpf -)
+cd "$vnmrdir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
+cd "$ddrconsoledir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
 
 optionslist=`ls $standardsdir`
 for file in $optionslist
 do
    if [ $file != "P11" ]
    then
-      cd $standardsdir/$file
-      tar cf - --exclude .gitignore --exclude "._*" . | (cd $vjdir; tar xpf -)
+      cd "${standardsdir}/${file}"
+      tar cf - --exclude .gitignore --exclude "._*" . | (cd "${vjdir}"; tar xpf -)
    fi
 done
 optionslist=`ls $optddrdir`
@@ -137,6 +145,6 @@ home    yes     no      /Users/$accname\
 rm -f userDefaults
 mv userDefaults.bak userDefaults
 mkdir profiles/system profiles/user
-cp $gitdir/src/macos/sys_tmplt profiles/system/.
-cp $gitdir/src/macos/user_tmplt profiles/user/.
+cp "${gitdir}/src/macos/sys_tmplt" profiles/system/.
+cp "${gitdir}/src/macos/user_tmplt" profiles/user/.
 

@@ -27,6 +27,21 @@ $s1='' $s2=''
 readfile($tmpfile,'$s1','$s2','','local'):$total
 rm('-f',$tmpfile):$dum
 if not $total then return endif
+$i=1
+repeat
+    // craft result is a softlink
+    substr($s1[$i],'dirname'):$dir,$name,$ext
+    pwd:$curdir
+    cd($dir):$dum
+    $bnameX=''
+    shell('(ls -1ld '+$name+'.'+$ext+' | awk \'{print $NF}\')'):$bnameX
+    cd($curdir):$dum
+    strstr($bnameX,'CRAFT'):$crft
+    if $crft then $s1[$i]='' endif
+    $i=$i+1
+until $i>$total
+array2array($s1):$s1
+$total=size('$s1')
 
 $archivedir='' $sample=''
 substr($1,'dirname'):$archivedir,$sample

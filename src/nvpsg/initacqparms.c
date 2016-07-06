@@ -362,7 +362,6 @@ void initacqparms(unsigned int fidn)
 int ra_initacqparms(unsigned int fidn)
 {
    Acqparams *lc,*ra_lc;
-   char msge[256];
    int len1,len2;
    int acqbuffer[512];
    struct datablockhead acqblockheader;
@@ -441,17 +440,15 @@ int ra_initacqparms(unsigned int fidn)
    else if ( lc->nt <= ra_lc->ct )
     {
       lc->nt = ra_lc->nt; /* nt can not be made <= to ct , for now. */
-      sprintf(msge,"WARNING: FID:%u  'nt' <= 'ct', original 'nt' used.\n",
+      text_error("WARNING: FID:%u  'nt' <= 'ct', original 'nt' used.\n",
 		fidn);
-      text_error(msge);
     }
 
    DPRINT2(PRTLEVEL,"nt=%d, ra nt=%d\n",lc->nt,ra_lc->nt);
    if (ra_lc->np != lc->np)
    {
-      sprintf(msge,"WARNING 'np' has changed from %d to %d.\n",
+      text_error("WARNING 'np' has changed from %d to %d.\n",
 		ra_lc->np,lc->np);
-      text_error(msge);
    }
    if (ra_lc->dpf != lc->dpf)
    {
