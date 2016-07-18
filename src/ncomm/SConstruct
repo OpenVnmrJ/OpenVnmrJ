@@ -13,6 +13,10 @@ ncommSharedTarget   = 'libncomm.so'
 acqcommStaticTarget = 'libacqcomm.a'
 acqcommSharedTarget = 'libacqcomm.so'
 
+if (platform=="darwin"):
+    ncommSharedTarget  = 'libncomm.dylib'
+    acqcommSharedTarget = 'libacqcomm.dylib'
+    
 # we need to specify an absolute path so this SConstruct file 
 # can be called from any other SConstruct file
 cwd = os.getcwd()
@@ -65,7 +69,10 @@ env = Environment(CCFLAGS    = '-fPIC -g -c -Wall -O -m32',
                   LINKFLAGS  = '-m32',
                   CPPPATH    = [cwd])
 if ('darwin' in platform):
+    env.Replace(CC = 'clang')
     env.Append(CPPDEFINES = 'MACOS')
+    env.Replace(CCFLAGS = '-Wall -Os -m32')
+    env.Replace(CPPFLAGS = '-Os -m32 -Wall -fPIC -Wno-format-security -Wno-return-type -mmacosx-version-min=10.8')
 
 if ('interix' in platform):
    interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
@@ -104,8 +111,18 @@ ncommStatic = env.StaticLibrary(ncommStaticTarget, [libncommList])
 if ('darwin' not in platform) and ('interix' not in platform):
     ncommShared = env.SharedLibrary(ncommSharedTarget, [libncommList])
 
+if (platform=="darwin"):
+    ncommSharedPath = os.path.join(os.sep, 'vnmr', 'lib', ncommSharedTarget)
+    env.Replace(LINKFLAGS = ['-install_name',ncommSharedPath,'-m32','-undefined','dynamic_lookup'])
+    ncommShared = env.SharedLibrary(ncommSharedTarget, [libncommList])
+    
 acqcommStatic = env.StaticLibrary(acqcommStaticTarget, [libacqcommList])
 if ('darwin' not in platform) and ('interix' not in platform):
+    acqcommShared = env.SharedLibrary(acqcommSharedTarget, [libacqcommList])
+
+if (platform=="darwin"):
+    acqcommSharedPath = os.path.join(os.sep, 'vnmr', 'lib', acqcommSharedTarget)
+    env.Replace(LINKFLAGS = ['-install_name',acqcommSharedPath,'-m32','-undefined','dynamic_lookup'])
     acqcommShared = env.SharedLibrary(acqcommSharedTarget, [libacqcommList])
 
 # define with absolute path where built files will be copied
@@ -118,12 +135,12 @@ if not os.path.exists(vnmrPath):
 # actions to be performed after targets are built
 env.AddPostAction(ncommStatic,
                   Action(Copy(vnmrPath, os.path.join(cwd, ncommStaticTarget))))
-if ('darwin' not in platform) and ('interix' not in platform):
+if ('interix' not in platform):
     env.AddPostAction(ncommShared,
                   Action(Copy(vnmrPath, os.path.join(cwd, ncommSharedTarget))))
 env.AddPostAction(acqcommStatic,
                   Action(Copy(vnmrPath, os.path.join(cwd, acqcommStaticTarget))))
-if ('darwin' not in platform) and ('interix' not in platform):
+if ('interix' not in platform):
     env.AddPostAction(acqcommShared,
                   Action(Copy(vnmrPath, os.path.join(cwd, acqcommSharedTarget))))
 
