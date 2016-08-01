@@ -1,5 +1,14 @@
 # OpenVnmrJ
 
+## DEVELOPMENT BRANCH	
+
+Use this for testing; consider it unstable
+
+README.ovj  
+v0.3  
+11 September 2015  
+Dan Iverson & John Ryan  
+
 OpenVnmrJ is the open-sourced parts of Varian and Agilent's VnmrJ 4.2, now owned by the University of Oregon and is free and open-source software.
 Read more about OpenVnmrJ and the history of VnmrJ at [Background](http://openvnmrj.org/Background).  
 
@@ -43,4 +52,3 @@ all the tools and libraries necessary for building OpenVnmrJ.
 This work is licensed under the Apachev2 license.  
 
 However, optionally linking to the Gnu Scientific Library (GSL) or to other GPLv3 components, will cause the deriviative work to be licensed under the GPLv3.  
-
