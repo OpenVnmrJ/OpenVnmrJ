@@ -43,3 +43,4 @@ all the tools and libraries necessary for building OpenVnmrJ.
 This work is licensed under the Apachev2 license.  
 
 However, optionally linking to the Gnu Scientific Library (GSL) or to other GPLv3 components, will cause the deriviative work to be licensed under the GPLv3.  
+
