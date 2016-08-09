@@ -12,6 +12,10 @@ psglibStaticTarget = 'libpsglib.a'
 psglibSharedTarget = 'libpsglib.so'
 s2pulTarget        = 's2pul'
 
+if (platform=="darwin"):
+    paramSharedTarget  = 'libparam.dylib'
+    psglibSharedTarget = 'libpsglib.dylib'
+    
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
 cwd = os.getcwd()
@@ -227,6 +231,12 @@ env = Environment(CCFLAGS    = '-c -O -m32 -Wall',
                   LINKFLAGS  = '-m32',
                   CPPPATH    = [cwd])
 
+if ( 'darwin' in platform ):
+    env.Replace(CC = 'clang')
+    env.Replace(LINKFLAGS = ['-install_name','@loader_path/../lib/library.dylib','-m32'])
+    env.Replace(CCFLAGS = '-c -Os -m32 -Wall -Wno-return-type')
+    env.Replace(CPPFLAGS = '-Os -m32 -Wall -fPIC -Wno-format-security -Wno-return-type -mmacosx-version-min=10.8')
+
 buildMethods.makeSymLinks(env, paramStaticTarget, cwd, vnmrPath, vnmrList)
 buildMethods.makeSymLinks(env, paramStaticTarget, cwd, vnmrPath, vnmrHdrList)
 
@@ -251,20 +261,37 @@ paramStatic = env.StaticLibrary(target  = paramStaticTarget,
                                 source  = vnmrList,
                                 LIBPATH = ncommPath,
                                 LIBS    = libLists)
-if ( ('darwin' not in platform) and ('interix' not in platform) ):
+if ( ( 'darwin' not in platform ) and ( 'interix' not in platform ) ):
     paramShared = env.SharedLibrary(target  = paramSharedTarget,
                                 source  = vnmrList,
                                 LIBPATH = ncommPath,
                                 LIBS    = libLists)
+if (platform=="darwin"):
+    paramSharedPath = os.path.join(os.sep, 'vnmr', 'lib', paramSharedTarget)
+    env.Replace(LINKFLAGS = ['-install_name',paramSharedPath,'-m32','-undefined','dynamic_lookup'])
+    paramShared = env.SharedLibrary(target  = paramSharedTarget,
+                                source  = vnmrList,
+                                LIBPATH = ncommPath,
+                                LIBS    = libLists)
+                                
 psglibStatic = env.StaticLibrary(target  = psglibStaticTarget,
                                  source  = psgLibList,
                                  LIBPATH = ncommPath,
                                  LIBS    = libLists)
-if ( ('darwin' not in platform) and ('interix' not in platform) ):
+if ( ( 'darwin' not in platform ) and ( 'interix' not in platform ) ):
     psglibShared = env.SharedLibrary(target  = psglibSharedTarget,
                                  source  = psgLibList,
                                  LIBPATH = ncommPath,
                                  LIBS    = libLists)
+if (platform=="darwin"):   
+    psgSharedPath = os.path.join(os.sep, 'vnmr', 'lib', psglibSharedTarget)
+    env.Replace(LINKFLAGS = ['-install_name',psgSharedPath,'-m32','-undefined','dynamic_lookup']) 
+    psglibShared = env.SharedLibrary(target  = psglibSharedTarget,
+                                 source  = psgLibList,
+                                 LIBPATH = ncommPath,
+                                 LIBS    = libLists)
+                                                              
+if ( 'interix' not in platform ):                                 
     s2pul = env.Program(target  = s2pulTarget,
                           source  = s2pulList,
                           LIBS    = ['psglib', 'param', 'acqcomm', 'm'],
@@ -282,14 +309,14 @@ if not os.path.exists(vnmrlibPath):
 env.AddPostAction(paramStatic,
                Action(Copy(vnmrlibPath, os.path.join(cwd, paramStaticTarget))))
 
-if ( ('darwin' not in platform) and ('interix' not in platform) ):
+if ( 'interix' not in platform ):
     env.AddPostAction(paramShared,
                Action(Copy(vnmrlibPath, os.path.join(cwd, paramSharedTarget))))
 
 env.AddPostAction(psglibStatic,
                Action(Copy(vnmrlibPath, os.path.join(cwd, psglibStaticTarget))))
 
-if ( ('darwin' not in platform) and ('interix' not in platform) ):
+if ( 'interix' not in platform ):
     env.AddPostAction(psglibShared,
                Action(Copy(vnmrlibPath, os.path.join(cwd, psglibSharedTarget))))
 
