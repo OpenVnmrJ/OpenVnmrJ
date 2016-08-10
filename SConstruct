@@ -109,6 +109,7 @@ buildList = string.split("""
                          bin
                          biopack
                          biosolidspack
+                         common
                          dicom_store
                          DOSY
                          ddr
@@ -261,9 +262,9 @@ if ( 'darwin' not in platform):
 # os.chmod(vnmrtmpPath,0777)
 
 vnmrPath    = os.path.join(cwd, os.pardir,'vnmr')
-cmd='cd src/common; zip -ryq tmp.zip *; mv tmp.zip '+vnmrPath+';cd '+vnmrPath+'; unzip -oq tmp.zip; rm -f tmp.zip'
-print "cmd: ",cmd
-os.system(cmd)
+# cmd='cd src/common; zip -ryq tmp.zip *; mv tmp.zip '+vnmrPath+';cd '+vnmrPath+'; unzip -oq tmp.zip; rm -f tmp.zip'
+# print "cmd: ",cmd
+# os.system(cmd)
 
 def runSconsPostAction(dir):
    dirList = os.listdir(dir)

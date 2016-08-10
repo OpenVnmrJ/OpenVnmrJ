@@ -1,0 +1,60 @@
+#
+
+import os
+import sys
+import glob
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+#Set file and directory permissions
+fileperm = '644'
+dirperm = '755'
+
+vnmrPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'vnmr')
+if not os.path.exists(vnmrPath) :
+    os.makedirs(vnmrPath)
+
+def copyItem(item):
+    dest = os.path.join(vnmrPath, item)
+    if os.path.isdir(item):
+       if not os.path.exists(dest) :
+           os.makedirs(dest)
+           cmd = 'chmod '+dirperm+' '+dest
+#          print "cmd: ",cmd
+           os.system(cmd)
+       dirList = glob.glob(item+"/*")
+       for dirItem in dirList:
+           copyItem(dirItem)
+       dirList = glob.glob(item+"/.??*")
+       for dirItem in dirList:
+           baseName = os.path.basename(dirItem)
+           if ( baseName != ".keep" ):
+               copyItem(dirItem)
+    else:
+       cmd = 'cp '+item+' '+dest+';chmod '+fileperm+' '+dest
+#      print "cmd: ",cmd
+       os.system(cmd)
+
+
+fileList = glob.glob("*")
+
+for item in fileList:
+    copyItem(item)
+
+# Special cases
+cmd = 'rm '+os.path.join(vnmrPath,'SConstruct')
+os.system(cmd)
+cmd = 'chmod 666 '+os.path.join(vnmrPath,'acq','info')
+os.system(cmd)
+cmd = 'chmod 777 '+os.path.join(vnmrPath,'adm','accounting')
+os.system(cmd)
+cmd = 'chmod +x '+os.path.join(vnmrPath,'adm','acq','testControllers')
+os.system(cmd)
+cmd = 'chmod +x '+os.path.join(vnmrPath,'adm','acq','verifyCntlrsFlash.py')
+os.system(cmd)
+cmd = 'chmod +x '+os.path.join(vnmrPath,'craft','bin')+'/*'
+os.system(cmd)
+cmd = 'chmod +x '+os.path.join(vnmrPath,'user_templates')+'/*.desktop'
+os.system(cmd)
