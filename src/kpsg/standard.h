@@ -25,6 +25,9 @@
 
 extern int initializeSeq;
 extern double getval(const char *name);
+extern double getvalnwarn(const char *variable);
+extern void   getstr(const char *variable, char buf[]);
+extern void   getstrnwarn(const char *variable, char buf[]);
 
 #define dcplrphase(phaseptr)					\
 			setSAP(phaseptr,DODEV)
