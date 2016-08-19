@@ -2667,12 +2667,14 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
                       &atTime, &uid, &gid, &umask4Vnmr, host, atUserDir,
                       user, &hr, &min, timespec, cmd) ) == 11)
          {
+            char cmdTest[MAXSTR];
             strcpy(cmd2do,cmd);
+            strcpy(cmdTest,cmd);
             strcat(cmd2do,"\n");
             res = sscanf(cmd2do,"%d %d %[^\n]\n", &port, &pid, cmd2);
             if (res == 3)
             {
-               strcpy(cmd,cmd2);
+               strcpy(cmdTest,cmd2);
             }
             else
             {
@@ -2681,10 +2683,10 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
                res = sscanf(cmd2do,"operator:%[^;]; %[^\n]\n", op, cmd2);
                if (res == 2)
                {
-                  strcpy(cmd,cmd2);
+                  strcpy(cmdTest,cmd2);
                }
             }
-            if ( strcmp(argv[1],cmd) )
+            if ( strcmp(argv[1],cmdTest) )
                fprintf(fdTmp,"%ld %d %d %d %s %s %s %d:%d%s; %s\n",
                       atTime, uid, gid, umask4Vnmr, host, atUserDir,
                       user, hr, min, timespec, cmd);
