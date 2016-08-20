@@ -644,8 +644,17 @@ public class Config extends JPanel {
         int result = pane.showConfirmDialog((JPanel)conf, cutString,
                         "Cutting Records",   JOptionPane.YES_NO_OPTION);
         if (result == JOptionPane.YES_OPTION) {
+           try {
+              String cmd;
               sourceFile.delete();
               reducedFile.renameTo(sourceFile);
+              cmd = new String("chmod 666 "+sb.toString()+".xml");
+              Runtime rt = Runtime.getRuntime();
+              rt.exec(cmd);
+           }
+           catch (IOException ioe) {
+              ioe.printStackTrace();
+           }
         }
         else {
               reducedFile.delete();
