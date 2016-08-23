@@ -47,16 +47,16 @@ cp VJ "${packagedir}/$ovjAppName/Contents/MacOS/."
 rm -f "${vnmrdir}/bin/convert"
 #cp convert $vnmrdir/bin/.
 tar jxf ImageMagick.tar.bz2 -C $vnmrdir
-rm -rf "${vnmrdir}/jre"
-cp $JAVA_HOME/jre $vnmrdir/
+# rm -rf "${vnmrdir}/jre"
+# cp $JAVA_HOME/jre $vnmrdir/
 rm -rf $vnmrdir/pgsql
-cp -a "${workspacedir}/pgsql.osx" "${vnmrdir}"/
+cp -a "${OVJ_TOOLS}/pgsql.osx" "${vnmrdir}"/
 
-vjdir="${packagedir}/${ovjAppName}/Contents/Resources/OVJ"
+vjdir="${packagedir}/${ovjAppName}/Contents/Resources/OpenVnmrJ"
 
 mkdir -p "${vjdir}"
-mkdir "${vjdir}/tmp $vjdir/acqqueue"
-chmod 777 "${vjdir}/tmp $vjdir/acqqueue"
+mkdir "${vjdir}/tmp" "$vjdir/acqqueue"
+chmod 777 "${vjdir}/tmp" "$vjdir/acqqueue"
 
 # backup for later copying useful dirs in existing /vnmr
 preinstall=$resdir/preinstall
@@ -81,7 +81,7 @@ chmod +x $preinstall
 postinstall=$resdir/postinstall
 printf "#!/bin/sh\n" > $postinstall
 printf "rm -rf /vnmr\n" >> $postinstall
-printf "ln -s /Applications/$ovjAppName/Contents/Resources/$dvdCopyName1 /vnmr\n" >> $postinstall
+printf "ln -s /Applications/$ovjAppName/Contents/Resources/OpenVnmrJ /vnmr\n" >> $postinstall
 printf "username=\$(/usr/bin/stat -f%%Su /dev/console)\n" >> $postinstall
 printf "echo $%s > /vnmr/adm/users/userlist\n" username >> $postinstall
 printf "echo \"vnmr:VNMR group:$%s\" > /vnmr/adm/users/group\n" username >> $postinstall
