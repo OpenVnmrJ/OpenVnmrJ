@@ -3743,6 +3743,7 @@ int setNameValuePair(char *paramName, char *name, char *value)
     vInfo paraminfo;
     int tree, i;
     char nameValuePair[MAXSTR], str[MAXSTR];
+    char tmpstr[MAXSTR];
     char *strptr, *tokptr;
 
     tree=CURRENT;
@@ -3778,10 +3779,11 @@ int setNameValuePair(char *paramName, char *name, char *value)
 
 	   strptr=str;
 	   tokptr = (char*) strtok(strptr, ":");
+           tmpstr[0]='\0';
 	   if(strlen(tokptr) > 0) {
-              strcpy(str, tokptr);
+              strcpy(tmpstr, tokptr);
 	   }
-	   if(strcmp(str,name) == 0) { 
+	   if(strcmp(tmpstr,name) == 0) { 
 	      P_setstring(tree, paramName, nameValuePair, i);
 	      RETURN;
 	   }
