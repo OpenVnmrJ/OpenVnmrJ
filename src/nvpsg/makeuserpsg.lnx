@@ -234,12 +234,12 @@ message :
 	( rm -f libpsglib*)
 
 maclib : macmessage Source
-	( $(MAKE) -f $(MAKEFILE) "CDEFINE= -DMACOS" maclibpsglib.a)
+	( $(MAKE) -f $(MAKEFILE) "CDEFINE= -DMACOS" "CC= clang" "CCC=clang++" macuserlibpsglib)
 	@echo
 	@echo PSG Library Complete.
 
 macfixlib : macmessage
-	( $(MAKE) -f $(MAKEFILE) "CDEFINE= -DMACOS" maclibpsglib.a)
+	( $(MAKE) -f $(MAKEFILE) "CDEFINE= -DMACOS" "CC= clang" "CCC=clang++" maclibpsglib)
 	@echo
 	@echo PSG Library Complete.
 
@@ -268,8 +268,13 @@ libpsglib.so : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
 	@(umask 2; $(LINK.c) -Wl,-soname,$@ -o $@.$(SHAREDLIB_VER) $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ);	\
 	ln -s $@.$(SHAREDLIB_VER) $@;)
 
-maclibpsglib.a : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
+maclibpsglib : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
 	@(umask 2; libtool -static -o libpsglib.a $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
+	@(umask 2; $(CCC) -o libpsglib.dylib -install_name /vnmr/lib/libpsglib.dylib -m32 -undefined dynamic_lookup -dynamiclib $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
+
+macuserlibpsglib : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
+	@(umask 2; libtool -static -o libpsglib.a $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
+	@(umask 2; $(CCC) -o libpsglib.dylib -install_name $(USR_PSG_DIR)/libpsglib.dylib -m32 -undefined dynamic_lookup -dynamiclib $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
 
 #------------------------------------------------------------------------
 #-----  Object dependencies
