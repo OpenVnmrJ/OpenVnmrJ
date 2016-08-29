@@ -9,6 +9,7 @@
 /*
  */
 
+
 package vnmr.apt;
 
 import java.io.BufferedReader;
@@ -174,6 +175,7 @@ public class ProbeTune implements Executer, AptDefs {
     private boolean m_sysInitialized = false;
 
     public int m_nExecThreadsRunning = 0;
+    private static boolean autoStartThread = true;
 
     /** Holds 5 calibration scans in order: open, load, short, probe, sigma. */
     private ReflectionData[] m_calData = new ReflectionData[5];
@@ -235,6 +237,7 @@ public class ProbeTune implements Executer, AptDefs {
             m_vnmrUserDir = userdir;
         }
 
+        autoStartThread = true;
         if (DebugOutput.isSetFor("Initialization")) {
             StringBuffer msg = new StringBuffer("Called with args:");
             for (String arg : args) {
@@ -490,8 +493,7 @@ public class ProbeTune implements Executer, AptDefs {
                     Messages.postDebug("Initialization", "Started ProTune GUI");
                 }
             } catch (Exception e) {
-                Messages.postDebugWarning("Exception starting GUI: " + e);
-                Messages.postStackTrace(e);
+                Messages.postDebugWarning("Cannot start ProTune GUI. See showprotunegui parameter");
             } catch (java.lang.InternalError e) {
                 Messages.postDebugWarning("Error starting GUI: "
                                           + e.getMessage());
@@ -617,6 +619,9 @@ public class ProbeTune implements Executer, AptDefs {
             displayStatus(STATUS_READY);
         } else {
             displayStatus(STATUS_READY);
+            if ( m_autoExit ) {
+                autoStartThread = false;
+            }
             // Execute args from command line
             // Commands are separated by semi-colons
             StringTokenizer toker = new StringTokenizer(m_commands, ";");
@@ -628,6 +633,7 @@ public class ProbeTune implements Executer, AptDefs {
             if (m_autoExit ) {
                 Messages.postDebug("Initialization", "ProbeTune<done>");
                 exec("setTuneMode 0");
+                autoStartThread = true;
                 exec("exit");
             }
         }
@@ -895,7 +901,8 @@ public class ProbeTune implements Executer, AptDefs {
                         Messages.postDebug("KillApp",
                                            "   Cannot talk to port " + port);
                     } finally {
-                        cmdSender.close();
+                        if (cmdSender != null)
+                           cmdSender.close();
                     }
                 }
 
@@ -1184,9 +1191,12 @@ public class ProbeTune implements Executer, AptDefs {
         setCancel(false);
         Messages.postDebug("exec", "queueCmd: \"" + cmd + "\"");
         m_commandList.add(cmd);
-        if (m_nExecThreadsRunning < 1) {
-            m_execThread  = new ExecTuneThread();
-            m_execThread.start();
+        if (autoStartThread)
+        {
+           if (m_nExecThreadsRunning < 1) {
+               m_execThread  = new ExecTuneThread();
+               m_execThread.start();
+           }
         }
     }
 

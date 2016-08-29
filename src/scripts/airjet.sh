@@ -8,10 +8,10 @@ exec tclsh "$0" "$@"
 # TCLTK script to control SOLO temperature controler found  #
 # on new AIRJET XR refrigeration unit                       #
 #                                                           #
-# Version 1                                                 #
+# Version 1.1                                               #
 #                                                           #
-# August 2013                                               #
-# last mod:  July 2014                                      #
+# June 2013                                                 #
+# last mod:  April 2016                                     #
 # written by Pierre Audet, Universite Laval, Qc, Canada     #
 # pierre.audet@chm.ulaval.ca                                #
 #                                                           #
@@ -73,10 +73,24 @@ Usage:  airjet [options]
 
 if { [catch {exec stty -F $port clocal}]} {
   if { $commflg != false } {
-    puts "Cannot open $port, exiting command"
+    # No answer from the USB dongle
+    # check for the correct rules.d file
+    if {![file exists "/etc/udev/rules.d/99-CP210x.rules"]} {
+    	puts "Airjet Fault:Cannot open $port, exiting"
+	puts "File /etc/udev/rules.d/99-CP210x.rules not found"
+	exit
+    }
+    set rc [catch { exec /sbin/udevadm info --query=path --name=$port } msg ]
+    if { [string compare $msg "device node not found"] == 0 } {
+    	puts "Airjet Fault: cannot open $port, exiting"
+	puts "The AutomationDirect USB-485M dongle not detected or not working"
+        exit
+    }
+    puts "Airjet Fault: unknow error, exiting"
     exit
   }
-} 
+}
+ 
 if {[llength $argv] > 0} {
   while {[llength $argv] > 0} {
     set arg [lshift argv]
@@ -177,6 +191,7 @@ proc getTemp {port} {
     global debugflg
     set readPV 010310000001
     set reply [ modbusasciicommand $readPV $port 1000]
+    CheckTimeoutError $reply
     if {$debugflg} {puts -nonewline "  > Register 1000: $reply  "}
     if { [expr 0x$reply >> 15]} {
       set temp [expr [scan "FFFF$reply" %x ] / 10.0]
@@ -189,6 +204,7 @@ proc getTempSetPoint {port} {
     global debugflg
     set readPV 010310010001
     set reply [ modbusasciicommand $readPV $port 1000]
+    CheckTimeoutError $reply
     if {$debugflg} {puts "Register 1001: $reply"}
     if { [expr 0x$reply >> 15]} {
       set temp [expr [scan "FFFF$reply" %x ] / 10.0]
@@ -208,6 +224,16 @@ proc setTempSetPoint { T port} {
     set setSV [string toupper $setSV]
     debugmsg "  > Writing to Register 1001: $setSV"
     modbusasciicommand $setSV $port 1000
+
+}
+
+proc CheckTimeoutError { str } {
+   if { [string compare $str "timeout"]  == 0 } {
+      puts "Airjet Fault:  Timeout Communication Error"
+      puts "Please check the cable between the Airjet unit and the host computer"
+      puts "or make sure the Airjet unit has a communication port (older unit doesn't have one)"
+      exit
+   }
 }
 
 if { $setpointflg } {
@@ -217,3 +243,4 @@ if { $setpointflg } {
 if { $gettempflg } {
    puts [expr int([getTemp $port] * 10)]
 }
+

@@ -175,7 +175,7 @@ int getPsgQentry(char *filename, PSG_Q_ENTRY *pPsgQentry)
 *
 *			Author Greg Brissey 11-9-94
 */
-void deletePsgQentry(char *filename,struct sample_info *s)
+static void deletePsgQentry(char *filename,struct sample_info *s)
 {
     char shellcmd[3*MAXPATHL];
     char tmp[91];
@@ -198,8 +198,8 @@ void deletePsgQentry(char *filename,struct sample_info *s)
      * 1 entry = (tail + (nlines+1))
      * nline = 1 (psg msge) + (index + 1) + 1
      */
-    sprintf(shellcmd,"tail +%d %s > /tmp/psgQtmp; mv -f /tmp/psgQtmp %s",
-        entryindex+3,filename,filename);
+    sprintf(shellcmd,"cd %s; tail -n +%d psgQ > psgQtmp; mv -f psgQtmp psgQ",
+        autodir,entryindex+3);
   
     DPRINT1(1,"Autoproc shellcmd to delete psgQ entry:'%s'\n",shellcmd);
  
@@ -259,6 +259,7 @@ int getEnterQentry(char *enterfile, struct sample_info *pQentry)
     return(ENTRY_PRESENT);
 }
 
+#ifdef XXX
 /****************************************************************
 *
 * deleteEnterQentry - delete entry from enterQ
@@ -300,6 +301,7 @@ void deleteEnterQentry(char *enterfile)
  
     unlockfile(enterfile);   /* unlock file */
 } 
+#endif
 
 /****************************************************************
 *
@@ -1004,7 +1006,7 @@ int Resume(char *argstr)
       if (stat(lastPath, &statbuf) == 0)
       {
           char shellcmd[2*strlen(lastPath)+100];
-          sprintf(shellcmd, "tail +2 %s > /tmp/entertmp; "
+          sprintf(shellcmd, "tail -n +2 %s > /tmp/entertmp; "
                             "mv -f /tmp/entertmp %s",
                      lastPath, lastPath);
           system(shellcmd);

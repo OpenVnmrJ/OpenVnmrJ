@@ -71,6 +71,7 @@ public class WPart11Dialog extends ModelessDialog implements ActionListener
 
      /** Property Change Support object.  */
     protected static PropertyChangeSupport m_pcsTypesMgr;
+    private String m_username = WUtil.getCurrentAdmin();
 
     /**
      *  Constructor
@@ -247,6 +248,36 @@ public class WPart11Dialog extends ModelessDialog implements ActionListener
         }
         else if (cmd.equals("help"))
             displayHelp();
+        else if (cmd.equals("switchFDA"))
+        {
+            Date date = new Date();
+            String tm = date.toString();
+            JComponent comp = null;
+            String strValue = null;
+            int i;
+
+            i = 0;
+            while (i < m_aListComp.size())
+            {
+                comp = (JComponent)m_aListComp.get(i);
+                if (comp != null)
+                {
+                   if (comp instanceof JComboBox)
+                   {
+                      strValue = (String)((JComboBox)comp).getSelectedItem();
+                   }
+                }
+                i++;
+            }
+            if (strValue != null)
+            {
+                String line = tm + " aaudit " + m_username + " data type "+
+                              " set to " +strValue;
+                String[] cmd2 = {WGlobal.SHTOOLCMD, "-c",
+                                 "/vnmr/p11/bin/writeAaudit -l \"" + line + "\""};
+                WUtil.runScriptInThread(cmd2);
+            }
+        }
     }
 
     protected void initBlink()
@@ -649,6 +680,8 @@ public class WPart11Dialog extends ModelessDialog implements ActionListener
 	if(!strText.equalsIgnoreCase(m_aStrMode[0]) && 
 	 	!strText.equalsIgnoreCase(m_aStrMode[1])) strText=m_aStrMode[0];	
         cmbMode.setSelectedItem(strText);
+        cmbMode.setActionCommand("switchFDA");
+        cmbMode.addActionListener(this);
         pnlDisplay.add(cmbMode);
         return cmbMode;
     }
