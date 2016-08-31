@@ -3,6 +3,8 @@
 import os
 import sys
 import glob
+import string
+import datetime
 
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
@@ -57,4 +59,21 @@ os.system(cmd)
 cmd = 'chmod +x '+os.path.join(vnmrPath,'craft','bin')+'/*'
 os.system(cmd)
 cmd = 'chmod +x '+os.path.join(vnmrPath,'user_templates')+'/*.desktop'
+os.system(cmd)
+
+token = ''
+revFile = os.path.join(cwd,os.pardir,'vnmr','revdate.c')
+f = open(revFile,'r')
+for line in f:
+    if (line.find('RevID') != -1):
+       lineParts = string.split(line,'"')
+       token = lineParts[1]
+f.close()
+
+vnmrrevFile=os.path.join(vnmrPath,'vnmrrev')
+f = open(vnmrrevFile,'w')
+f.write(token+'\n')
+f.write(datetime.datetime.now().strftime("%B %d, %Y")+'\n')
+f.close()
+cmd = 'chmod 644 '+os.path.join(vnmrPath,'vnmrrev')
 os.system(cmd)

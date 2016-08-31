@@ -9,9 +9,16 @@
 # Main MAIN main
 
 MAKEFILE= makeuserpsg.lnx
-CCC=g++
-CC=gcc
 
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S), Darwin)
+  CCC=clang++
+  CC=clang
+else
+  CCC=g++
+  CC=gcc
+endif
 #-----  The system and user PSG directories
 PSG_DIR= $(vnmrsystem)/psg/
 LIB_DIR= $(vnmrsystem)/lib/
@@ -20,8 +27,13 @@ USR_PSG_DIR= $(vnmruser)/psg/
 #-----  Normal operational compile flags
 CDEFINE = 
 NVFLAGS = -Dcodeint=int -Dcodelong=int
-CFLAGS= -O -fPIC -m32 
+ifeq ($(UNAME_S), Darwin)
+  CFLAGS= -Os -fPIC -m32 -Wall
+else
+  CFLAGS= -O -fPIC -m32 
+endif
 CPPFLAGS= -DSUN -DLINUX -DPSG_LC -DNVPSG -U_FORTIFY_SOURCE
+
 LDOPTIONS   = -O
 LDFLAGS= -shared -m32
 

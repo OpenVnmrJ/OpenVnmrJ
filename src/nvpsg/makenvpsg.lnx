@@ -9,9 +9,16 @@ MAKEFILE	=  makenvpsg.lnx
 ###
 ##GNUDIR		=  /usr/local
 GNUDIR	=  /usr
-CC		=  $(GNUDIR)/bin/gcc
+#CC		=  $(GNUDIR)/bin/gcc
 #CCC		=  $(GNUDIR)/bin/g++32
-CCC		=  $(GNUDIR)/bin/c++
+#CCC		=  $(GNUDIR)/bin/c++
+ifeq ($(UNAME_S), Darwin)
+  CCC=clang++
+  CC=clang
+else
+  CCC=g++
+  CC=gcc
+endif
 
 ## ORIGINAL SCCSDIR		=  $(sccsdir)
 SCCSDIR		=  $(sccsdir)
@@ -30,7 +37,11 @@ CINCLDIR    = -I./
 CDEFINE     = -DPSG_LC -DULONG
 CPPDEFINE   = -DSUN -DLINUX
 NVFLAGS = -Dcodeint=int -Dcodelong=int
-CFLAGS= -O -DPSG_LC -DULONG -w -m32 -Wall -fPIC -DNVPSG
+ifeq ($(UNAME_S), Darwin)
+  CFLAGS= -Os -DPSG_LC -DULONG -w -m32 -Wall -fPIC -DNVPSG -DMACOS
+else
+  CFLAGS= -O -DPSG_LC -DULONG -w -m32 -Wall -fPIC -DNVPSG
+endif
 CPPFLAGS=  -DSUN -DLINUX -m32
 
 LDOPTIONS   = -O
