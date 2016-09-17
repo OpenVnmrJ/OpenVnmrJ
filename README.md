@@ -31,8 +31,8 @@ very helpful. See [Contributing](http://openvnmrj.org/Contributing/) for more in
 ## Contributors
  * Timothy Burrow
  * Dan Iverson
- * Gareth Morris
- * 
+ * Gareth Morris  
+ 
 ## Contribution to Appdirs
 
 We welcome pulse sequences, libraries of macros, UX improvments contributed as an Appdir. Check out the [OpenVnmrJ Appdirs](https://github.com/OpenVnmrJ/appdirs) 
