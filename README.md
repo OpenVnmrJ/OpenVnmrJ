@@ -11,7 +11,7 @@ Never delete the Agilent supplied VnmrJ 4.2 on a spectrometer computer because A
 If you want to use or test OpenVnmrJ, download the release appropriate for your OS, see below.  
 
 ## Releases
-[![Github All Releases](https://img.shields.io/github/downloads/atom/atom/total.svg?maxAge=2592000)]() 
+[![Github All Releases](https://img.shields.io/github/downloads/OpenVnmrJ/OpenVnmrJ/total.svg?maxAge=2592000?style=flat-square)]()  
 
 The latest binary releases for OpenVnmrJ are available from [Releases](https://github.com/OpenVnmrJ/OpenVnmrJ/releases).  
 There are releases for:  
