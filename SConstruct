@@ -277,3 +277,20 @@ def runSconsPostAction(dir):
 
 runSconsPostAction(vnmrPath)
 runSconsPostAction(os.path.join(vnmrPath, 'craft'))
+
+vnmrSha1Path = os.path.join(cwd, os.pardir,'vnmr','adm','sha1')
+if not os.path.exists(vnmrSha1Path):
+   os.makedirs(vnmrSha1Path)
+
+print "Build ID file"
+command = 'cd scripts; ./genBuildId.pl'
+#output = os.popen(command).read()
+idproc = subprocess.Popen( command, shell=True)
+status = os.waitpid(idproc.pid, 0)
+
+# this must come last, since it creates sha1sum for all files
+print "Build Sha1 SnapShot of files"
+command = 'cd scripts; ./createSha1ChkList.sh'
+# output = os.popen(command).read()
+idproc = subprocess.Popen( command, shell=True)
+status = os.waitpid(idproc.pid, 0)

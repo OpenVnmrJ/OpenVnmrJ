@@ -137,8 +137,9 @@ psgFileList = ['abort.c',
                'sis_position.c',
                'treefuncs.c',
                'wetfuncs.c',
-               'xmath.c',
-               'x_ps.c']
+               'xmath.c']
+
+dummyFileList = ['x_ps.c']
 
 # specPsgPath     = os.path.join(cwd, os.pardir, 'psg')
 # this code is not built
@@ -343,8 +344,9 @@ cppEnv = Environment(CPPFLAGS   = '-O -m32 -Wall -fPIC -Wno-format-security',
                                    ])
 if (platform=="darwin"):
     cppEnv.Replace(CC = 'clang')
+    cppEnv.Replace(CXX = 'clang++')
     cppEnv.Append(CPPDEFINES = 'MACOS')
-    cppEnv.Replace(CPPFLAGS = '-Os -m32 -Wall -fPIC -Wno-format-security -Wno-return-type -mmacosx-version-min=10.8')
+    cppEnv.Replace(CPPFLAGS = '-Os -m32 -Wall -fPIC -Wno-format-security -Wno-return-type')
 
 if ('interix' in platform):    # Win7 SUA  or SFU XP Interix
    interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
@@ -368,6 +370,7 @@ if ('interix' in platform):    # Win7 SUA  or SFU XP Interix
 
 cEnv = cppEnv.Clone()
 cEnv.Append(CPPDEFINES = ['codeint=int', 'codelong=int'])
+cparamEnv = cEnv.Clone()
 
 # avoid dependenc cycles use a separate env to build sequence
 s2pulcEnv = cEnv.Clone()
@@ -388,26 +391,29 @@ buildMethods.makeSymLinks(cEnv, paramStaticTarget, cwd, vnmrPath, vnmrFileList)
 buildMethods.makeSymLinks(cEnv, paramStaticTarget, cwd, ncommPath, srcNcommHeaderList)
 
 if ( ( 'darwin' not in platform ) and ( 'interix' not in platform ) ):
-    paramShared = cEnv.SharedLibrary(target  = paramSharedTarget,
+    paramShared = cparamEnv.SharedLibrary(target  = paramSharedTarget,
                                  source  = vnmrFileList)
                                  
 if (platform=="darwin"):
     paramSharedPath = os.path.join(os.sep, 'vnmr', 'lib', paramSharedTarget)
     print "paramSharedPath = ",paramSharedPath
     print "vnmrPath = ", vnmrPath
-    cEnv.Replace(LINKFLAGS = ['-install_name',paramSharedPath,'-m32','-undefined','dynamic_lookup'])
-    paramShared = cEnv.SharedLibrary(target  = paramSharedTarget,
+    cparamEnv.Replace(LINKFLAGS = ['-install_name',paramSharedPath,'-m32','-undefined','dynamic_lookup'])
+    paramShared = cparamEnv.SharedLibrary(target  = paramSharedTarget,
                                  source  = vnmrFileList)
     
-buildMethods.makeSymLinks(cEnv, paramSharedTarget, cwd, vnmrPath, vnmrHdrList)
-buildMethods.makeSymLinks(cEnv, paramSharedTarget, cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(cparamEnv, paramSharedTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(cparamEnv, paramSharedTarget, cwd, vnmrPath, vnmrFileList)
 
 psglibStatic = cEnv.StaticLibrary(target  = psglibStaticTarget,
                                   source  = [psgFileList,
                                              nvpsgFileList,
                                              nvpsgCppObjs])
+dummyStatic = cEnv.StaticLibrary(target  = 'dummy.a',
+                                  source  = [dummyFileList])
 buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, psgPath, psgHdrList)
 buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, psgPath, psgFileList)
+buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, psgPath, dummyFileList)
 buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, expprocPath, srcExpprocHeaderList)
 buildMethods.makeSymLinks(cEnv, psglibStaticTarget, cwd, nvacqPath, srcNvacqHeaderList)
 
@@ -430,7 +436,7 @@ buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, psgPath, psgFileList)
 buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, expprocPath, srcExpprocHeaderList)
 buildMethods.makeSymLinks(cEnv, psglibSharedTarget, cwd, nvacqPath, srcNvacqHeaderList)
 
-s2pulcEnv.AppendUnique( LIBS    = ['psglib', 'param', 'acqcomm', 'stdc++', 'm'])
+s2pulcEnv.AppendUnique( LIBS    = ['psglib', 'param', 'acqcomm', 'dummy', 'stdc++', 'm'])
 s2pulcEnv.AppendUnique( LIBPATH = [cwd, psgPath, ncommPath] )
 s2pulcEnv.Append(LINKFLAGS  = ' -Wl,-rpath,/vnmr/lib ')
 
@@ -466,7 +472,7 @@ cEnv.AddPostAction(paramStatic,
               Action(Copy(vnmrlibPath, os.path.join(cwd, paramStaticTarget))))
 
 if ( 'interix' not in platform ):
-    cEnv.AddPostAction(paramShared,
+    cparamEnv.AddPostAction(paramShared,
               Action(Copy(vnmrlibPath, os.path.join(cwd, paramSharedTarget))))
 
 cEnv.AddPostAction(psglibStatic,
@@ -526,6 +532,7 @@ if not os.path.exists(vnmrPsgPath):
 
 #copyFilesThere(psgPath, vnmrPsgPath, psgFileList)
 buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, psgPath, psgFileList)
+buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, psgPath, dummyFileList)
 
 #copyFilesThere(cwd, vnmrPsgPath, nvpsgFileList)
 buildMethods.postBuildCopy(cEnv, psglibStatic, vnmrPsgPath, cwd, nvpsgFileList)
