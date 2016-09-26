@@ -11,8 +11,10 @@ my $descript;
 my $gitlog=`git log -1`;
 my $gitdescribe=`git describe --always`;
 my @linelist=split('\n', $gitlog);
+my $sha=`git rev-parse HEAD`;
 
 $descript="Desc: $gitdescribe";
+$sha1 = "SHA1: $sha";
 
 # file for CD BUIld Ref ID base on GIT SHA1
 open(OUTFILE, ">../../vnmr/adm/sha1/Build_Id.txt");
@@ -20,20 +22,7 @@ open(OUTFILE, ">../../vnmr/adm/sha1/Build_Id.txt");
 foreach my $elem (@linelist)
 {
    # print "$elem, \n";
-   # if commit line then extract the sha1
-   $pos = rindex($elem,"commit");
-   # print "$pos, \n";
-   if ($pos != -1) 
-   {
-      # split commit and sha1 into the array
-      @sha1line = split(' ',$elem);
-      # print "@sha1line,\n";
-      # print "SHA1: $sha1line[1] \n";
-      # seconds element is the sha1, discard 'commit'
-      $sha1 = "SHA1: $sha1line[1] \n"
-   }
-
-   # if Date line then grap it
+   # if Date line then grab it
    $pos = index($elem,"Date:");
    # print "$pos, \n";
    if ($pos != -1) 
