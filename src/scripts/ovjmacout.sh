@@ -136,8 +136,8 @@ cd $gitdir/src/macos
 rm -f $vjdir/bin/vnmrj
 cp vnmrj.sh $vjdir/bin/vnmrj
 chmod 755 $vjdir/bin/vnmrj
-
-echo "vnmrs" >> $vjdir/vnmrrev
+# append to file
+echo "vnmrs" >> $vjdir/vnmrrev 
 cd $vjdir/adm/users
 cat userDefaults | sed '/^home/c\
 home    yes     no      /Users/$accname\
