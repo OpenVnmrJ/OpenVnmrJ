@@ -329,7 +329,7 @@ endif
 " | owner - user 'owner' parameter, if present | "
 " +--------------------------------------------+ "
 $user=''
-exists('owner','parameter'):$e 
+exists('owner','parameter','global'):$e 
 if $e then
   if owner<>'' then 
     $user=owner
@@ -340,40 +340,6 @@ if $user='' then
   if $e then
     if operator_<>'' then 
       $user=operator_
-    endif
-  endif
-endif
-if $user='' then
-  shell(`finger | head -n 1; cat`):$hd
-  $ix=19 $ch='' $finger=''
-  repeat
-    $ix=1+$ix
-    substr($hd,$ix,1):$ch
-  until ($ix>32)or($ch<>' ')
-  $ixs=''
-  format($ix-1,1,0):$ixs
-  shell(`finger |`,$tail,`-n 1 | expand | cut -c1-`+$ixs+` | sed 's/ [ ]*/ /g'; cat`):$finger
-  length($finger):$len
-  $ix=2 $pos=0
-  repeat
-    $str=''
-    substr($finger,$ix):$str,$pos
-    if $str<>'' then
-      if $user='' then
-        $user=$str
-      else
-        $user=$user+' '+$str
-      endif
-    endif
-    $ix=1+$ix
-  until ($pos=$len)or($str='')
-  $str=''
-  substr($finger,1):$str
-  if $str<>'' then
-    if $user='' then
-      $user=$str
-    else
-      $user=$user+' ('+$str+')'
     endif
   endif
 endif
