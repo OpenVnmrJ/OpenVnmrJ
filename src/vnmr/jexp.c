@@ -528,7 +528,6 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
     cp $vnmrsystem/fidlib/fid1d.fid/text    exp1/.
     cp $vnmrsystem/fidlib/fid1d.fid/procpar exp1/.
     cp $vnmrsystem/fidlib/fid1d.fid/procpar exp1/curpar
-    ln -s $vnmrsystem/fidlib/fid1d.fid/fid     exp1/acqfil/fid
 */
   if ( access(exppath, R_OK) == 0)
   {
@@ -576,20 +575,6 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
   {
      sprintf(msg,"cannot create %s", path);
      goto abortCexp;
-  }
-  if (oldexpnum == 0)
-  {
-/*    ln -s $vnmrsystem/fidlib/fid1d.fid/fid     exp1/acqfil/fid */
-     strcpy(epath,systemdir);
-     strcat(epath,"/fidlib/fid1d.fid/fid");
-     strcat(path,"/fid");
-     if ( access(epath, R_OK) != 0)
-        Werrprintf("%s: %s does not exist", argv[0], epath);
-     else
-     {
-        if ( symlink( epath, path ) )
-           Werrprintf("%s: cannot create symbolic link to experiment fid",argv[0]);
-     }
   }
 
   strcpy(path, exppath);
