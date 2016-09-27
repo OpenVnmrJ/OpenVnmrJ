@@ -1,0 +1,1242 @@
+#!/bin/sh
+#
+# extract - script for the extraction / installation
+#           of software from the VNMR user library
+#
+# Usage:    extract dirname/itemname </vnmr>
+#           extract dirname itemname </vnmr>
+#           extract -r dirname/itemname
+#           extract -r dirname itemname
+#	    extract -v<ersion>
+#
+# Examples: extract psglib/ProteinPack
+#           extract psglib ProteinPack
+#           extract psglib/nosyhmqc3d /vnmr
+#           extract psglib nosyhmqc3d /vnmr
+#           extract -r psglib/nosyhmqc3d
+#           extract -r psglib nosyhmqc3d
+#	    extract -version
+#	    extract -v
+#
+# Revision History: (moved to the bottom of the file)
+
+version=2009-01-12
+
+
+# +-----------------------+
+# | Compatibility section |
+# +-----------------------+
+echo=`which echo`
+pwd=`which pwd`
+finger="finger -hlp"
+uncompress=uncompress
+gzcat=gzcat
+awk=awk
+os=`uname`
+binlink=""
+if [ "$os" = SunOS ]; then
+  awk=nawk
+elif [ "$os" = Linux ]; then
+  echo="$echo -e"
+  finger="finger -lp"
+  awk=gawk
+  uncompress=gunzip
+  gzcat=zcat
+fi
+
+
+# +----------------------------+
+# | secure runtime environment |
+# +----------------------------+
+# Check for SunOS (Solaris 1.x) vs. Solaris 2.x or later
+majorrev=`uname -r | $awk 'BEGIN {FS="."} {print $1}'`
+if [ $majorrev -ge 5 ]; then
+  sysV=y
+else
+  sysV=n
+fi
+
+
+# +-----------------------------------------------+
+# | source file location warning (-r option only) |
+# +-----------------------------------------------+
+locationwarning() {
+  fil=$1
+  cat << %
+ATTENTION: For the standard installation (e.g., using "extract") to work
+           the contribution file "$fil" must be installed
+           in "/vnmr/userlib" or one of its subdirectories!
+
+%
+
+}
+
+
+# +------------------------------------+
+# | check for "gunzip" in command path |
+# +------------------------------------+
+checkgunzip() {
+  extr=$1
+  shift
+  while [ $# -gt 0 ]; do
+    if [ "x$1" = "x-s" ]; then
+      silent="-s"
+      shift
+    elif [ "x$1" = "x-h" ]; then
+      hold="-h"
+      shift
+    elif [ "x$1" = "x-w" ]; then
+      window="-w"
+      hold="-h"
+      shift
+    else
+      dest=$1
+      shift
+    fi
+  done
+  isgunzip=`which gunzip | $awk '{print substr($0,1,2)}'`
+  if [ "x$isgunzip" = "xno" ]; then
+    if [ "x$silent" = "x" ]; then
+      $echo "File is compressed using gzip - installing gzip/gunzip first:"
+      $extr -s bin gzip $dest
+      $echo " ... done."
+    else
+      $extr -s bin gzip $dest
+    fi
+    # make sure installation of "gunzip" was successful
+    isgunzip=`which gunzip | $awk '{print substr($0,1,2)}'`
+    if [ "x$isgunzip" = "xno" ]; then
+      cat << %
+Installation of "gunzip" (needed for this contribution) was unsuccessful;
+install "bin/gzip" contribution manually first, or download and install
+"gzip" from freeware Internet sites such as
+	http://www.sunfreeware.com/
+Then re-try installing this contribution - sorry!
+
+%
+      if [ "x$hold" = "x-h" ]; then
+        $echo
+        if [ "x$window" = "x-w" ]; then
+          $echo 'Type [Return] to close this window: \c'
+        else
+          $echo 'Type [Return] to continue: \c'
+        fi
+        read a
+      fi
+      exit 1
+    fi
+  fi
+}
+
+
+# +------------------------------------------------------------+
+# | make sure "vnmruser" and "vnmrsystem" are defined properly |
+# +------------------------------------------------------------+
+vnmruserOK=1
+if [ "x$vnmruser" = x ]; then
+  vnmruserOK=0
+elif [ ! -w "$vnmruser" ]; then
+  vnmruserOK=0
+fi
+if [ $vnmruserOK -eq 0 ]; then
+  me="`id | tr '()' '  ' | cut -f2 -d' '`"
+  if [ "$me" != "`who am i | cut -f1 -d' '`" ]; then
+    HOME="`$finger $me | grep '^Directory' | head -n 1 | cut -f2 -d' '`"
+  elif [ "x$HOME" = x ]; then
+    HOME="`(cd; $pwd)`"
+  fi
+  vnmruser=$HOME/vnmrsys
+fi
+if [ "x$vnmrsystem" = x ]; then
+  vnmrsystem=/vnmr
+fi
+export HOME vnmruser vnmrsystem
+cmd=`basename $0`
+
+
+# +-----------------------------+
+# | Find out about VNMR version |
+# +-----------------------------+
+if [ -f "$vnmrsystem/vnmrrev" ]; then
+  sver=`head -n 1 < $vnmrsystem/vnmrrev`
+else
+  if [ -x "$vnmrsystem/bin/Vnmrbg" ]; then
+    sver=`strings $vnmrsystem/bin/Vnmrbg | grep VERSION`
+  elif [ -x "$vnmrsystem/bin/Vnmr" ]; then
+    sver=`strings "$vnmrsystem/bin/Vnmr" | grep VERSION`
+  else
+    sver=""
+  fi
+fi
+if [ `$echo $sver | grep -ci "VNMRJ VERSION"` -ne 0 ]; then
+  vnmrrev=`$echo $sver | cut -d ' ' -f3`
+  revision=`$echo $sver | cut -d ' ' -f5`
+  if [ "$os" = Linux ]; then
+    vnmr_base="VnmrJ_LX"
+  elif [ "$os" = Darwin ]; then
+    vnmr_base="VnmrJ_MAC"
+  else
+    vnmr_base="VnmrJ"
+  fi
+  vnmrj=1
+elif [ `$echo $sver | grep -ci "VNMRJ_LX VERSION"` -ne 0 ]; then
+  vnmrrev=`$echo $sver | cut -d ' ' -f3`
+  revision=`$echo $sver | cut -d ' ' -f5`
+  vnmr_base="VnmrJ_LX"
+  vnmrj=1
+elif [ `$echo $sver | grep -ci "VNMRJ_MAC VERSION"` -ne 0 ]; then
+  vnmrrev=`$echo $sver | cut -d ' ' -f3`
+  revision=`$echo $sver | cut -d ' ' -f5`
+  vnmr_base="VnmrJ_MAC"
+  vnmrj=1
+else
+  vnmrrev=`$echo $sver | cut -d ' ' -f2`
+  revision=`$echo $sver | cut -d ' ' -f4`
+  vnmrj=`$echo $vnmrrev | grep -ci vj`
+  if [ $vnmrj -eq 0 ]; then
+    vnmr_base="VNMR"
+  elif [ "$os" = Linux ]; then
+    vnmr_base="VnmrJ_LX"
+  elif [ "$os" = Darwin ]; then
+    vnmr_base="VnmrJ_MAC"
+  else
+    vnmr_base="VnmrJ"
+  fi
+fi
+vnmr_rev="$vnmr_base ${vnmrrev}${revision}"
+
+
+# +-----------------------------------------------------------+
+# | Check whether /vnmr/templates exists (VnmrJ 1.1B and up ) |
+# +-----------------------------------------------------------+
+if [ $vnmrj -eq 1 ]; then
+  if [ -d "$vnmrsystem/templates" ]; then
+    vnmrtemplates=1
+  else
+    vnmrtemplates=0
+  fi
+else
+  vnmrtemplates=0
+fi
+
+
+# +-----------------+
+# | check arguments |
+# +-----------------+
+error=0
+justreadme=0
+if [ $# -eq 0 ]; then
+  error=1
+elif [ "x$1" = x-s ]; then
+  silent="-s"
+  shift
+elif [ "x$1" = x-h ]; then
+  hold="-h"
+  shift
+elif [ "x$1" = x-r -o "x$1" = x-readme ]; then
+  justreadme=1
+  shift
+elif [ "x$1" = x-w ]; then
+  hold="-h"
+  window="-w"
+  shift
+fi
+if [ $# -eq 0 ]; then
+  error=1
+elif [ $# -eq 1 ]; then
+  if [ -d "$1" ]; then
+    error=1
+  else
+    directory=`dirname "$1"`
+    file=`basename "$1"`
+    destination="$vnmruser"
+  fi
+elif [ $# -eq 2 ]; then
+  if [ -d "$1" ]; then
+    directory="$1"
+    file="$2"
+    destination="$vnmruser"
+    if [ -h $vnmruser/bin ]; then
+      binlink=`ls -l $vnmruser/bin | $awk '{print $NF}'`
+    fi
+  else
+    directory="`dirname $1`"
+    file="`basename $1`"
+    destination="$2"
+    if [ $justreadme -ne 0 ]; then
+      error=1
+    fi
+  fi
+elif [ $justreadme -ne 0 -o $# -gt 3 ]; then
+  directory="$1"
+  file="$2"
+  destination="$3"
+  error=1
+else
+  directory="$1"
+  file="$2"
+  destination="$3"
+fi
+if [ ! -d "$directory" ]; then
+  error=1
+fi
+if [ -d "$directory/$file" ]; then
+  error=1
+fi
+
+
+# +--------------------------------------------------+
+# | for '-version' argument display version and exit |
+# +--------------------------------------------------+
+if [ "x$1" = x-version -o "x$1" = x-v ]; then
+  $echo "\"$cmd\" version $version"
+  if [ "x$hold" = "x-h" ]; then
+    $echo
+    if [ "x$window" = "x-w" ]; then
+      $echo 'Type [Return] to close this window: \c'
+    else
+      $echo 'Type [Return] to continue: \c'
+    fi
+    read a
+  fi
+  exit
+fi
+
+
+# +---------------------+
+# | Error output / exit |
+# +---------------------+
+if [ $error -ne 0 ]; then
+  cat << %
+
+Usage:  extract directory/file <destination>
+        extract directory file <destination>
+        extract -r directory/file
+        extract -r directory file
+Examples:
+        extract psglib/BioPack
+        extract psglib/nosyhmqc3d /vnmr
+        extract psglib nosyhmqc3d /vnmr
+        extract -r bin/sysprofiler
+        extract -r bin sysprofiler
+
+%
+  if [ "x$hold" = "x-h" ]; then
+    $echo
+    if [ "x$window" = "x-w" ]; then
+      $echo 'Type [Return] to close this window: \c'
+    else
+      $echo 'Type [Return] to continue: \c'
+    fi
+    read a
+  fi
+  exit
+fi
+sourcedir="`$pwd`/$directory"
+
+
+# +------------------------------+
+# | strip file name extension(s) |
+# +------------------------------+
+file="`basename $file '\.Z'`"
+file="`basename $file '\.tgz'`"
+file="`basename $file '\.gz'`"
+file="`basename $file '\.tar'`"
+
+
+# +----------------------------------------------+
+# | check for files, directories and permissions |
+# +----------------------------------------------+
+if [ ! -d "$sourcedir" ]; then
+  $echo "$cmd error: \"$sourcedir\" is not a directory"
+  error=1
+fi
+if [ ! -w "$destination" ]; then
+  if [ -d "$destination" ]; then
+    $echo
+    $echo "$cmd error: \"$destination\" is not writeable"
+  else
+    $echo
+    $echo "$cmd error: \"$destination\" not found"
+  fi
+  error=1
+fi
+if [ `ls $directory/$file $directory/$file.* 2>/dev/null | wc -l` -eq 0 ]
+then
+  $echo
+  $echo "$cmd error: file \"$directory/$file\" or \"$directory/$file.*\" not found"
+  error=1
+fi
+
+if [ $error -ne 0 ]; then
+  cat << %
+
+Usage:  extract directory/file <destination>
+        extract directory file <destination>
+        extract -r directory/file
+        extract -r directory file
+Examples:
+        extract psglib/BioPack
+        extract psglib/nosyhmqc3d /vnmr
+        extract psglib nosyhmqc3d /vnmr
+        extract -r bin/sysprofiler
+        extract -r bin sysprofiler
+
+%
+  if [ "x$hold" = "x-h" ]; then
+    $echo
+    if [ "x$window" = "x-w" ]; then
+      $echo 'Type [Return] to close this window: \c'
+    else
+      $echo 'Type [Return] to continue: \c'
+    fi
+    read a
+  fi
+  exit
+fi
+
+
+# +-------------------------------------------------+
+# | section for "-r" option                         |
+# |  (display built-in README file only, then exit) |
+# +-------------------------------------------------+
+if [ $justreadme -ne 0 ]; then
+  tmpdir=/vnmr/tmp
+  if [ ! -w $tmpdir ]; then
+    tmpdir=$HOME
+  fi
+  readme="$tmpdir/$file.README"
+  calldir="`$pwd`"
+  cd $tmpdir
+  if [ -r "$sourcedir/$file.Z" ]; then
+    src="$sourcedir/$file.Z"
+    readme=""
+    $echo "\"$src\" consists of a single file and"
+    $echo "   therefore does not include a built-in README file;"
+  elif [ -r "$sourcedir/$file.gz" ]; then
+    src="$sourcedir/$file.gz"
+    readme=""
+    $echo "\"$src\" consists of a single file and"
+    $echo "   therefore does not include a built-in README file;"
+  elif [ -r "$sourcedir/$file.tar" ]; then
+    src="$sourcedir/$file.tar"
+    rm=`tar tf "$src" | \
+	egrep '^\.\/[a-zA-Z0-9_\-]*.README$|^[a-zA-Z0-9_\-]*.README$'`
+    if [ "$rm" = "" ]; then
+      $echo "\"$src\" does not include a built-in README file;"
+      readme=""
+    else
+      tar xf "$src" "$rm"
+      mv "$rm" "$readme" 2>/dev/null
+      if [ -w "$sourcedir" ]; then
+        cp "$readme" "$sourcedir" 2>/dev/null
+      fi
+    fi
+  elif [ -r "$sourcedir/$file.tar.gz" ]; then
+    cd "$calldir"
+    checkgunzip $0 -s
+    cd $tmpdir
+    src="$sourcedir/$file.tar.gz"
+    rm=`$gzcat $src | tar tf - 2>/dev/null | \
+	egrep '^\.\/[a-zA-Z0-9_\-]*.README$|^[a-zA-Z0-9_\-]*.README$'`
+    if [ "$rm" = "" ]; then
+      $echo "\"$src\" does not include a built-in README file;"
+      readme=""
+    else
+      $gzcat "$src" | tar xf - "$rm" 2>/dev/null
+      mv "$rm" "$readme" 2>/dev/null
+      if [ -w "$sourcedir" ]; then
+        cp "$readme" "$sourcedir" 2>/dev/null
+      fi
+    fi
+  elif [ -r "$sourcedir/$file.tgz" ]; then
+    cd "$calldir"
+    checkgunzip $0 -s
+    cd $tmpdir
+    src="$sourcedir/$file.tgz"
+    rm=`$gzcat "$src" | tar tf - 2>/dev/null | \
+	egrep '^\.\/[a-zA-Z0-9_\-]*.README$|^[a-zA-Z0-9_\-]*.README$'`
+    if [ "$rm" = "" ]; then
+      $echo "\"$src\" does not include a built-in README file;"
+      readme=""
+    else
+      $gzcat "$src" | tar xf - "$rm" 2>/dev/null
+      mv "$rm" "$readme" 2>/dev/null
+      if [ -w "$sourcedir" ]; then
+        cp "$readme" "$sourcedir" 2>/dev/null
+      fi
+    fi
+  elif [ -r "$sourcedir/$file.tar.Z" ]; then
+    src="$sourcedir/$file.tar.Z"
+    rm=`zcat "$src" | tar tf - 2>/dev/null | \
+	egrep '^\.\/[a-zA-Z0-9_\-]*.README$|^[a-zA-Z0-9_\-]*.README$'`
+    if [ "$rm" = "" ]; then
+      $echo "\"$src\" does not include a built-in README file;"
+      readme=""
+    else
+      zcat "$src" | tar xf - "$rm" 2>/dev/null
+      mv "$rm" "$readme" 2>/dev/null
+      if [ -w "$sourcedir" ]; then
+        cp "$readme" "$sourcedir" 2>/dev/null
+      fi
+    fi
+  elif [ -r "$calldir/$file.gz" ]; then
+    src="$calldir/$file.gz"
+    locationwarning "$src"
+    readme=""
+    $echo "\"$src\" consists of a single file and"
+    $echo "   therefore does not include a built-in README file;"
+  elif [ -r "$calldir/$file.Z" ]; then
+    src="$calldir/$file.Z"
+    locationwarning "$src"
+    readme=""
+    $echo "\"$src\" consists of a single file and"
+    $echo "   therefore does not include a built-in README file;"
+  elif [ -r "$calldir/$file.tar" ]; then
+    src="$calldir/$file.tar"
+    locationwarning "$src"
+    rm=`tar tf "$src" | \
+	egrep '^\.\/[a-zA-Z0-9_\-]*.README$|^[a-zA-Z0-9_\-]*.README$'`
+    if [ "$rm" = "" ]; then
+      $echo "\"$src\" does not include a built-in README file;"
+      readme=""
+    else
+      tar xf "$src" "$rm"
+      mv "$rm" "$readme" 2>/dev/null
+      if [ -w "$calldir" ]; then
+        cp "$readme" "$calldir" 2>/dev/null
+      fi
+    fi
+  elif [ -r "$calldir/$file.tar.gz" ]; then
+    cd "$calldir"
+    checkgunzip $0 -s
+    cd $tmpdir
+    src="$calldir/$file.tar.gz"
+    locationwarning "$src"
+    rm=`$gzcat "$src" | tar tf - 2>/dev/null | \
+	egrep '^\.\/[a-zA-Z0-9_\-]*.README$|^[a-zA-Z0-9_\-]*.README$'`
+    if [ "$rm" = "" ]; then
+      $echo "\"$src\" does not include a built-in README file;"
+      readme=""
+    else
+      $gzcat "$src" | tar xf - "$rm" 2>/dev/null
+      mv "$rm" "$readme" 2>/dev/null
+      if [ -w "$calldir" ]; then
+        cp "$readme" "$calldir" 2>/dev/null
+      fi
+    fi
+  elif [ -r "$calldir/$file.tgz" ]; then
+    cd "$calldir"
+    checkgunzip $0 -s
+    cd $tmpdir
+    src="$calldir/$file.tgz"
+    locationwarning "$src"
+    rm=`$gzcat "$src" | tar tf - 2>/dev/null | \
+	egrep '^\.\/[a-zA-Z0-9_\-]*.README$|^[a-zA-Z0-9_\-]*.README$'`
+    if [ "$rm" = "" ]; then
+      $echo "\"$src\" does not include a built-in README file;"
+      readme=""
+    else
+      $gzcat "$src" | tar xf - "$rm" 2>/dev/null
+      mv "$rm" "$readme" 2>/dev/null
+      if [ -w "$calldir" ]; then
+        cp "$readme" "$calldir" 2>/dev/null
+      fi
+    fi
+  elif [ -r "$calldir/$file.tar.Z" ]; then
+    src="$calldir/$file.tar.Z"
+    locationwarning "$src"
+    rm=`zcat "$src" | tar tf - 2>/dev/null | \
+	egrep '^\.\/[a-zA-Z0-9_\-]*.README$|^[a-zA-Z0-9_\-]*.README$'`
+    if [ "$rm" = "" ]; then
+      $echo "\"$src\" does not include a built-in README file;"
+      readme=""
+    else
+      zcat "$src" | tar xf - "$rm" 2>/dev/null
+      mv "$rm" "$readme" 2>/dev/null
+      if [ -w "$calldir" ]; then
+        cp "$readme" "$calldir" 2>/dev/null
+      fi
+    fi
+  else
+    $echo "Contribution \"$file\" not found;"
+  fi
+  if [ "$readme" = "" ]; then
+    if [ -r "$sourcedir/$file.README" ]; then
+      $echo "   displaying $sourcedir/$file.README instead."
+      $echo
+      readme="$tmpdir/$file.README"
+      cp "$sourcedir/$file.README" . 2>/dev/null
+    elif [ -r "$calldir/$file.README" ]; then
+      $echo "   displaying $calldir/$file.README instead."
+      $echo
+      readme="$tmpdir/$file.README"
+      cp "$calldir/$file.README" . 2>/dev/null
+    else
+      $echo "Neither the contribution \"$file\" nor its README file found -"
+      $echo "   ... aborting."
+      $echo
+      exit
+    fi
+  fi
+  if [ ! -s "$readme" ]; then
+    $echo "\"$file.README\" empty or unreadable - aborting."
+    $echo
+    rm -f "$readme"
+    exit
+  fi
+  more "$readme"
+  rm -f "$readme"
+  exit
+fi
+
+
+# +---------------------------+
+# | determine log destination |
+# +---------------------------+
+me="`id | tr '()' '  ' | $awk '{print $2}'`"
+vnmradm="`ls -ld /vnmr/bin | $awk '{print $3}'`"
+timestamp="`date +%Y-%m-%d_%Hh%M`"
+if [ "$destination" = "/vnmr" ]; then
+  logdir=/vnmr/adm/log/userlib_installs/
+else
+  logdir="$vnmruser/userlib_installs/"
+fi
+if [ "$directory" = "." ]; then
+  logfile="$logdir/${timestamp}_${file}"
+  loglink="$logdir/${file}_${timestamp}"
+  linktarget="${timestamp}_${file}"
+else
+  logfile="$logdir/${timestamp}_${directory}-${file}"
+  loglink="$logdir/${directory}-${file}_${timestamp}"
+  linktarget="${timestamp}_${directory}-${file}"
+fi
+if [ ! -d "$logdir" ]; then
+  mkdir -p "$logdir"
+  if [ "$me" = root ]; then
+    chown "$vnmradm:nmr" "$logdir"
+  fi
+  if [ ! -w "$logdir" ]; then
+    logfile=""
+    $echo "$cmd error: could not create directory for installation log;"
+    $echo "               installation not logged."
+  else
+    touch "$logfile"
+    if [ ! -h "$loglink" ]; then
+      ln -s "$linktarget" "$loglink"
+    fi
+    if [ "$me" = root ]; then
+      chown -h "$vnmradm:nmr" "$logfile" "$loglink" 2>/dev/null
+    fi
+  fi
+elif [ ! -w "$logdir" ]; then
+  logfile=""
+  $echo "$cmd error: directory for installation log not writable;"
+  $echo "               installation not logged."
+else
+  ix=0
+  logf="$logfile"
+  while [ -f "$logf" ]; do
+    ix=`expr $ix + 1`
+    logf="$logfile.$ix"
+  done
+  if [ $ix -gt 0 ]; then
+    logfile="$logfile.$ix"
+    loglink="$loglink.$ix"
+    linktarget="$linktarget.$ix"
+  fi
+  touch "$logfile"
+  if [ ! -h "$loglink" ]; then
+    ln -s "$linktarget" "$loglink"
+  fi
+fi
+
+
+# +-----------------------------------------------------------+
+# | find file, determine whether decompression / extraction   |
+# | is required (and which type of decompression / unpacking) |
+# | and directly install the file(s)                          |
+# +-----------------------------------------------------------+
+if [ -r "$sourcedir/$file" ]; then
+  # +-----------------------+
+  # | Installing plain file |
+  # +-----------------------+
+  if [ ! -d "$destination/$directory" ]; then
+    mkdir "$destination/$directory"
+  fi
+  if [ "x$silent" = "x" ]; then
+    $echo "Copying file ..."
+    if [ "$logfile" != "" ]; then
+      $echo "cp \"$sourcedir/$file\" \"$destination/$directory\"" >> "$logfile"
+    fi
+  fi
+  cp "$sourcedir/$file" "$destination/$directory"
+
+elif [ -r "$sourcedir/$file.Z" ]; then
+  # +-----------------------------------+
+  # | Installing simple compressed file |
+  # +-----------------------------------+
+  if [ ! -d "$destination/$directory" ]; then
+    mkdir "$destination/$directory"
+  fi
+  if [ "x$silent" = "x" ]; then
+    $echo "Uncompressing file ..."
+    if [ "$logfile" != "" ]; then
+      $echo "Installing \"$destination/$directory/$file\"" >> $logfile
+    fi
+  fi
+  $uncompress -c "$sourcedir/$file.Z" > "$destination/$directory/$file"
+
+elif [ -r "$sourcedir/$file.tar" ]; then
+  # +-------------------------------------------------+
+  # | try finding installation script in contribution |
+  # +-------------------------------------------------+
+  if [ `wc -c < "$sourcedir/$file.tar"` -gt 500000 -a "x$silent" = "x" ]; then
+    $echo "Checking tar file ... "
+  fi
+  inst_script=`tar tf "$sourcedir/$file.tar" | grep -v '[a-zA-Z0-9]/' | \
+	grep '\.install'`
+  # +----------------------------------+
+  # | Installing uncompressed tar file |
+  # +----------------------------------+
+  if [ "x$silent" = "x" ]; then
+    if [ "$logfile" != "" ]; then
+      $echo "Extracting file ..." | tee -a "$logfile"
+    else
+      $echo "Extracting file ..."
+    fi
+  fi
+  if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+    if [ "$logfile" != "" ]; then
+      (cd "$destination"; tar xvf "$sourcedir/$file.tar") 2>&1 | \
+		egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*' |\
+		tee -a "$logfile"
+    else
+      (cd "$destination"; tar xvf "$sourcedir/$file.tar") 2>&1 | \
+		egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*'
+    fi
+  else
+    if [ "$logfile" != "" ]; then
+      (cd "$destination"; tar xf "$sourcedir/$file.tar") 2>&1 | \
+		egrep -iv '^tar: blocksize|^tar: Read [0-9]*' >> "$logfile"
+    else
+      (cd "$destination"; tar xf "$sourcedir/$file.tar") >/dev/null 2>&1
+    fi
+  fi
+
+elif [ -r "$sourcedir/$file.tgz" -o -r "$sourcedir/$file.tar.gz" ]; then
+  # +---------------------------------------------------------------------+
+  # | "gzipped" contribution: check whether "gzip"/"gunzip" are installed |
+  # +---------------------------------------------------------------------+
+  checkgunzip $0 "$silent" "$hold" "$window" "$destination"
+
+  # +-------------------------------------------------+
+  # | try finding installation script in contribution |
+  # +-------------------------------------------------+
+  if [ -r "$sourcedir/$file.tgz" ]; then
+    srcfil="$sourcedir/$file.tgz"
+  else
+    srcfil="$sourcedir/$file.tar.gz"
+  fi
+  if [ `wc -c < "$srcfil"` -gt 100000 -a "x$silent" = "x" ]; then
+    $echo "Checking gzipped tar file ... "
+  fi
+  inst_script="`gunzip -c $srcfil | tar tf - 2>/dev/null | \
+	  grep -v '[a-zA-Z0-9]/' | grep '\.install'`"
+  # +-------------------------------+
+  # | Installing "gzipped" tar file |
+  # +-------------------------------+
+  if [ "x$silent" = "x" ]; then
+    $echo "Uncompressing / extracting file ..."
+  fi
+  if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+    if [ "$logfile" != "" ]; then
+      gunzip -c "$srcfil" | (cd "$destination"; tar xvfB -) 2>&1 | \
+        	egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*' |\
+		tee -a $logfile
+    else
+      gunzip -c "$srcfil" | (cd "$destination"; tar xvfB -) 2>&1 | \
+        	egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*'
+    fi
+  else
+    if [ "$logfile" != "" ]; then
+      gunzip -c "$srcfil" | (cd "$destination"; tar xvfB -) 2>$logfile.err | \
+        	egrep -iv '^tar: blocksize|^tar: Read [0-9]*' >> $logfile
+      if [ -s "$logfile.err" ]; then
+	cat "$logfile.err" | \
+		egrep -iv '^tar: blocksize|^tar: Read [0-9]*' | tee -a $logfile
+      fi
+      rm -f "$logfile.err"
+    else
+      gunzip -c "$srcfil" | (cd "$destination"; tar xfB -) 2>&1 | \
+		egrep -iv '^tar: blocksize|^tar: Read [0-9]*'
+    fi
+  fi
+
+elif [ -r "$sourcedir/$file.tar.Z" ]; then
+  srcfil="$sourcedir/$file.tar.Z"
+  # +-------------------------------------------------+
+  # | try finding installation script in contribution |
+  # +-------------------------------------------------+
+  if [ `wc -c < "$srcfil"` -gt 100000 -a "x$silent" = "x" ]; then
+    $echo "Checking compressed tar file ... "
+  fi
+  inst_script=`zcat "$srcfil" | tar tf - 2>/dev/null | \
+	grep -v '[a-zA-Z0-9]/' | grep '\.install'`
+  # +--------------------------------+
+  # | Installing compressed tar file |
+  # +--------------------------------+
+  if [ "x$silent" = "x" ]; then
+    $echo "Uncompressing / extracting file ..."
+  fi
+  if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+    if [ "$logfile" != "" ]; then
+      zcat "$srcfil" | (cd "$destination"; tar xvfB -) 2>&1 | \
+        egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*' | \
+	tee -a $logfile
+    else
+      zcat "$srcfil" | (cd "$destination"; tar xvfB -) 2>&1 | \
+        egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*'
+    fi
+  else
+    if [ "$logfile" != "" ]; then
+      zcat "$srcfil" | (cd "$destination"; tar xvfB -) 2>$logfile.err | \
+        egrep -iv '^tar: blocksize|^tar: Read [0-9]*' >> $logfile
+      if [ -s "$logfile.err" ]; then
+	cat "$logfile.err" | \
+	  egrep -iv '^tar: blocksize|^tar: Read [0-9]*' | tee -a $logfile
+      fi
+      rm -f "$logfile.err"
+    else
+      zcat "$srcfil" | (cd "$destination"; tar xfB -) 2>&1 | \
+                egrep -iv '^tar: blocksize|^tar: Read [0-9]*'
+    fi
+  fi
+else
+  $echo "$cmd error: \"$sourcedir/$file\" not found"
+  if [ "x$hold" = "x-h" ]; then
+    $echo
+    if [ "x$window" = "x-w" ]; then
+      $echo 'Type [Return] to close this window: \c'
+    else
+      $echo 'Type [Return] to continue: \c'
+    fi
+    read a
+  fi
+  exit
+fi
+
+
+# +--------------------------------------------------------------+
+# | If the contribution contained "bin" or "binx" subdirectories |
+# | AND the installation was in the local "vnmrsys", move files  |
+# | from the "~/vnmrsys/bin" and/or "~/vnmrsys/binx" directories |
+# | into "~/bin" (which is in the path), remove "vnmrsys/bin*"   |
+# +--------------------------------------------------------------+
+cd "$destination";  destdir="`$pwd`"
+cd "$vnmrsystem";   vnmrdir="`$pwd`"
+cd "$vnmruser"; 	  homedir="`$pwd`"
+if [ "$destdir" = "$homedir" -a ! -h bin -a \
+     `ls bin/* 2>/dev/null | wc -l` -gt 0 ]; then
+  if [ ! -d "$HOME/bin" ]; then
+    mkdir "$HOME/bin"
+  fi
+  if [ `ls bin/* 2>/dev/null | wc -l` -gt 0 ]; then
+    if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+      if [ "$logfile" != "" ]; then
+        $echo "Moving files from vnmrsys/bin to $HOME/bin ..." | tee -a $logfile
+      else
+        $echo "Moving files from vnmrsys/bin to $HOME/bin ..."
+      fi
+      for f in bin/*; do
+        if [ "$logfile" != "" ]; then
+          $echo "mv \"$f\" \"$HOME/bin\"" | tee -a "$logfile"
+        fi
+        mv $f "$HOME/bin"
+      done
+    else
+      if [ "$logfile" != "" ]; then
+        $echo "Moving files from vnmrsys/bin to $HOME/bin ..." >> "$logfile"
+      fi
+      for f in bin/*; do
+        if [ "$logfile" != "" ]; then
+          $echo "mv \"$f\" \"$HOME/bin\"" >> "$logfile"
+        fi
+        mv "$f" "$HOME/bin"
+      done
+    fi
+  fi
+  rmdir bin 2> /dev/null
+elif [ "$destdir" = "$vnmrdir" -a "x$sysV" = xy -a -d /vnmr/binx ]; then
+  cd /vnmr
+  if [ `ls binx/* 2>/dev/null | wc -l` -gt 0 ]; then
+    if [ "x$silent" = x -a "x$inst_script" = x ]; then
+      if [ "$logfile" != "" ]; then
+        $echo "Moving files from /vnmr/binx to /vnmr/bin ..." |tee -a "$logfile"
+      else
+        $echo "Moving files from /vnmr/binx to /vnmr/bin ..."
+      fi
+      for f in binx/*; do
+        if [ "$logfile" != "" ]; then
+          $echo "mv -f \"$f\" bin" | tee -a "$logfile"
+        fi
+        mv -f "$f" bin
+      done
+    else
+      if [ "$logfile" != "" ]; then
+        $echo "Moving files from /vnmr/binx to /vnmr/bin ..." >> "$logfile"
+      fi
+      for f in binx/*; do
+        if [ "$logfile" != "" ]; then
+          $echo "mv -f \"$f\" bin" >> "$logfile"
+        fi
+        mv -f \"$f\" bin
+      done
+    fi
+  fi
+  rmdir binx 2> /dev/null
+fi
+
+
+# +---------------------------------------------------------+
+# | If the contribution contains a directory user_templates |
+# | and the installation is local, move it's subfiles into  |
+# | ~/vnmrsys/templates and remove ~/vnmrsys/user_templates |
+# +---------------------------------------------------------+
+if [ "$destdir" = "$homedir" -a -d "$homedir/user_templates" ]; then
+  cd "$homedir"
+  if [ ! -d templates ]; then
+    mkdir templates
+  fi
+  cd user_templates
+  if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+    if [ "$logfile" != "" ]; then
+      $echo "Moving vnmrsys/user_templates/* to vnmrsys/templates ..." |\
+	  tee -a "$logfile"
+      tar cf - . | (cd ../templates; tar xfB -) 2>&1 | \
+          egrep -iv '^tar: blocksize|^tar: Read [0-9]*' | \
+	  tee -a "$logfile"
+    else
+      $echo "Moving vnmrsys/user_templates/* to vnmrsys/templates ..."
+      tar cf - . | (cd ../templates; tar xfB -) 2>&1 | \
+          egrep -iv '^tar: blocksize|^tar: Read [0-9]*'
+    fi
+  else
+    if [ "$logfile" != "" ]; then
+      $echo "Moving vnmrsys/user_templates/* to vnmrsys/templates ..." \
+	  >> "$logfile"
+      tar cf - . | (cd ../templates; tar xvfB -) 2>"$logfile.err" | \
+          egrep -iv '^tar: blocksize|^tar: Read [0-9]*' >> "$logfile"
+      if [ -s "$logfile.err" ]; then
+        cat "$logfile.err" | \
+	  egrep -iv '^tar: blocksize|^tar: Read [0-9]*' | tee -a "$logfile"
+      fi
+      rm -f "$logfile.err"
+    else
+      tar cf - . | (cd ../templates; tar xfB -) 2>&1 | \
+          egrep -iv '^tar: blocksize|^tar: Read [0-9]*'
+    fi
+  fi
+  cd "$homedir"
+  rm -rf user_templates
+fi
+
+
+# +-------------------------------------------------------+
+# | If the contribution contains a directory templates    |
+# | and the installation is in /vnmr, move its subfiles   |
+# | into /vnmr/user_templates, and remove /vnmr/templates |
+# +-------------------------------------------------------+
+if [ "$destdir" = "$vnmrdir" -a -d "$vnmrdir/templates" ]; then
+  cd "$vnmrdir/templates"
+  if [ $vnmrtemplates -eq 0 ]; then
+    for f in layout themes vnmrj; do
+      if [ -d $f ]; then
+        if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+	  if [ "$logfile" != "" ]; then
+            $echo "Moving VnmrJ template files into /vnmr/user_templates/$f:" |\
+		tee -a "$logfile"
+            tar cf - "$f" | (cd ../user_templates; tar xvfB -) 2>&1 | \
+         	egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*' |\
+		tee -a "$logfile"
+	  else
+            $echo "Moving VnmrJ template files into /vnmr/user_templates/$f:"
+            tar cf - "$f" | (cd ../user_templates; tar xvfB -) 2>&1 | \
+         	egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*'
+	  fi
+        else
+	  if [ "$logfile" != "" ]; then
+	    $echo "Moving VnmrJ template files into /vnmr/user_templates/$f:" \
+		>> "$logfile"
+            tar cf - "$f" | \
+		(cd ../user_templates; tar xvfB -) 2>"$logfile.err" | \
+        	egrep -iv '^tar: blocksize|^tar: Read [0-9]*' >> "$logfile"
+            if [ -s "$logfile.err" ]; then
+              cat "$logfile.err" | \
+		egrep -iv '^tar: blocksize|^tar: Read [0-9]*' | \
+		tee -a "$logfile"
+            fi
+            rm -f "$logfile.err"
+	  else
+            tar cf - "$f" | (cd ../user_templates; tar xfB -) 2>&1 | \
+        	egrep -iv '^tar: blocksize|^tar: Read [0-9]*'
+          fi
+        fi
+        rm -rf "$f"
+      fi
+    done
+  fi
+  if [ `ls -d * 2>/dev/null | egrep -v '^layout|^themes|^vnmrj' | wc -l` \
+	-gt 0 ]; then
+    if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+      if [ "$logfile" != "" ]; then
+        $echo "Moving template file(s) into /vnmr/user_templates:" |\
+		tee -a "$logfile"
+      else
+        $echo "Moving template file(s) into /vnmr/user_templates:"
+      fi
+    fi
+    for f in `ls -d * | egrep -v '^layout|^themes|^vnmrj'`; do
+      if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+	if [ "$logfile" != "" ]; then
+          tar cf - "$f" | (cd ../user_templates; tar xvfB -) 2>&1 | \
+		egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*' |\
+		tee -a "$logfile"
+        else
+          tar cf - "$f" | (cd ../user_templates; tar xvfB -) 2>&1 | \
+		egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*'
+	fi
+      else
+	if [ "$logfile" != "" ]; then
+          tar cf - "$f" | \
+		(cd ../user_templates; tar xvfB -) 2>"$logfile.err" | \
+		egrep -iv '^tar: blocksize|^tar: Read [0-9]*' >> "$logfile"
+          if [ -s "$logfile.err" ]; then
+            cat "$logfile.err" |  \
+	        egrep -iv '^tar: blocksize|^tar: Read [0-9]*' | \
+		tee -a "$logfile"
+          fi
+          rm -f "$logfile.err"
+        else
+          tar cf - "$f" | (cd ../user_templates; tar xfB -) 2>&1 | \
+		egrep -iv '^tar: blocksize|^tar: Read [0-9]*'
+	fi
+      fi
+      rm -rf "$f"
+    done
+  fi
+  if [ $vnmrtemplates -eq 1 ]; then
+    cd "$vnmrdir/user_templates"
+    for f in layout themes vnmrj; do
+      if [ -d $f ]; then
+        if [ "x$silent" = "x" -a "x$inst_script" = x ]; then
+	  if [ "$logfile" != "" ]; then
+            $echo "Moving VnmrJ template files into /vnmr/templates/$f:" | \
+		tee -a "$logfile"
+            tar cf - $f | (cd ../templates; tar xvfB -) 2>&1 | \
+                egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*' |\
+		tee -a "$logfile"
+          else
+            $echo "Moving VnmrJ template files into /vnmr/templates/$f:"
+            tar cf - $f | (cd ../templates; tar xvfB -) 2>&1 | \
+                egrep -iv ', 0 tape blocks|^tar: blocksize|^tar: Read [0-9]*'
+	  fi
+        else
+	  if [ "$logfile" != "" ]; then
+            tar cf - $f | (cd ../templates; tar xvfB -) 2>"$logfile.err" | \
+                egrep -iv '^tar: blocksize|^tar: Read [0-9]*' >> "$logfile"
+	    if [ -s "$logfile.err" ]; then
+              cat "$logfile.err" | \
+		egrep -iv '^tar: blocksize|^tar: Read [0-9]*' | \
+		tee -a "$logfile"
+            fi
+            rm -f "$logfile.err"
+          else
+            tar cf - $f | (cd ../templates; tar xfB -) 2>&1 | \
+                egrep -iv '^tar: blocksize|^tar: Read [0-9]*'
+	  fi
+        fi
+        rm -rf $f
+      fi
+    done
+  else
+    cd "$vnmrdir"
+    rmdir templates 2> /dev/null
+  fi
+fi
+installed=1
+
+
+# +------------------------------------------------------+
+# | If the contribution contains an installation script, |
+# | execute that script, check for non-zero return code. |
+# | If the script hasn't removed itself, remove it after |
+# | the execution.                                       |
+# +------------------------------------------------------+
+cd "$destdir"
+script=0
+if [ "x$inst_script" != x ]; then
+  if [ -x "$inst_script" ]; then
+    script=1
+    if [ "x$silent" = "x" ]; then
+      if [ "$logfile" != "" ]; then
+        $echo "Executing file-specific installation script $inst_script ..." |\
+	  	tee -a "$logfile"
+        $echo "" | tee -a "$logfile"
+      else
+        $echo "Executing file-specific installation script $inst_script ..."
+        $echo ""
+      fi
+    fi
+    if [ "$logfile" != "" ]; then
+      ("./$inst_script"; $echo $? > "$logfile.tmp") 2>&1 | tee -a "$logfile"
+      res="`cat $logfile.tmp`"
+      rm -f "$logfile.tmp"
+    else
+      "./$inst_script"
+      res=$?
+    fi
+    if [ $res -ne 0 ]; then
+      installed=0
+      if [ "$logfile" != "" ]; then
+        $echo "" | tee -a "$logfile"
+        $echo "$file INSTALL SCRIPT ENCOUNTERED AN ERROR OR WAS ABORTED" | \
+		tee -a "$logfile"
+        $echo "" | tee -a "$logfile"
+      else
+        $echo ""
+        $echo "$file INSTALL SCRIPT ENCOUNTERED AN ERROR OR WAS ABORTED"
+        $echo ""
+      fi
+      rm -f "$file.README"
+    fi
+    if [ -f "$inst_script" ]; then
+      rm -f "$inst_script"
+    fi
+  fi
+fi
+
+
+# +----------------------------------------------+
+# | If not "silent" and installation successful, |
+# | display README file (if found) and report    |
+# | installation complete.                       |
+# +----------------------------------------------+
+if [ $installed -eq 1 ]; then
+  if [ "x$silent" = "x" ]; then
+    if [ -f "$file.README" ]; then
+      if [ -w "$sourcedir" ]; then
+        rm -f "$sourcedir/$file.README"
+        cp "$file.README" "$sourcedir"
+      fi
+      $echo
+      if [ "$logfile" != "" ]; then
+        $echo >> "$logfile"
+        $echo >> "$logfile"
+        cat "$file.README" >> "$logfile"
+      fi
+      more "$file.README"
+    elif [ -f "$sourcedir/$file.README" -a "x$window" = "x" ]; then
+      $echo
+      if [ "$logfile" != "" ]; then
+        $echo >> "$logfile"
+        $echo >> "$logfile"
+        cat "$sourcedir/$file.README" >> "$logfile"
+      fi
+      more "$sourcedir/$file.README"
+    fi
+    if [ "$logfile" != "" ]; then
+      $echo "" | tee -a "$logfile"
+      if [ $script -eq 0 ]; then
+        $echo "\"$file\" installed in \"$destination\"" | tee -a "$logfile"
+      else
+        $echo "\"$file\" installation complete" | tee -a "$logfile"
+      fi
+      $echo "" | tee -a "$logfile"
+    else
+      $echo ""
+      if [ $script -eq 0 ]; then
+        $echo "\"$file\" installed in \"$destination\""
+      else
+        $echo "\"$file\" installation complete"
+      fi
+      $echo ""
+    fi
+  elif [ "$logfile" != "" ]; then
+    $echo "" >> "$logfile"
+    if [ $script -eq 0 ]; then
+      $echo "\"$file\" installed in \"$destination\"" >> "$logfile"
+    else
+      $echo "\"$file\" installation complete" >> "$logfile"
+    fi
+    $echo "" >> "$logfile"
+  fi
+# if there is a postinstall file, show that
+# this would be any post install instruction
+  if [ -f $file.postinstall ]; then
+     cat $file.postinstall
+     rm $file.postinstall
+  fi
+fi
+cd $vnmruser
+if [ "x$binlink" != x ]; then
+  ln -s $binlink bin
+fi
+if [ "x$hold" = "x-h" ]; then
+  $echo
+  if [ "x$window" = "x-w" ]; then
+    $echo 'Type [Return] to close this window: \c'
+  else
+    $echo 'Type [Return] to continue: \c'
+  fi
+  read a
+fi
+
+#==============================================================================
+# REVISION HISTORY:
+#------------------------------------------------------------------------------
+# 1992-11-06  First version by Steve Patt
+# 1994-02-08  r.kyburz: Moves ~/vnmrsys/bin/* to ~/bin)
+# 1996-04-29  r.kyburz: Adjusted for VNMR 5.x/Solaris)
+# 1996-05-30  r.kyburz: Fixed bug with "bin" installations)
+# 1998-06-18  r.kyburz: Expanded for dg templates, display of README
+#                       file, execution of optional installation scripts)
+# 1999-05-10  r.kyburz: Expanded for gzipped files)
+# 1999-05-27  r.kyburz: Minor correction)
+# 2000-07-24  r.kyburz: Added "dirname/itemname" argument option;
+#                       "silent" option (undocumented) is "-s" as first arg)
+# 2000-11-26  r.kyburz: Does not display README file or report installation
+#	  		complete if a contribution-specific script returns
+#	  		an error [non-zero return code])
+# 2001-03-30  r.kyburz: Secured against incomplete / improper environment
+#			after "su <username>")
+# 2001-04-23  r.kyburz: Secured against renaming of contributions with
+#			installation script; secured against erroneously
+#			specified filename extensions)
+# 2002-04-10  r.kyburz: Made "tar" silent in presence of an install script
+#			handles co-packaged README file, if present)
+# 2002-05-04  r.kyburz: Added "-version" option)
+# 2002-05-30  r.kyburz: Made compatible with latest VnmrJ versions,
+#			suppressed output from small tar file extraction)
+# 2002-08-15  r.kyburz: Adjusted for VnmrJ 1.1B)
+# 2003-01-08  r.kyburz: Minor bug fix, added one more message)
+# 2003-03-06  r.kyburz: Improved message for calls in pop-up window)
+# 2004-06-15  r.kyburz: Logging to /vnmr/adm/log/userlib_installs or
+#			~/vnmrsys/userlib_installs)
+# 2004-09-02  r.kyburz: Added -r option, adjustments for Linux; fixed
+#                       permission issue with logging from calls as root)
+# 2004-09-03  r.kyburz: Fixed bug with "chown")
+# 2004-09-03  r.kyburz: Fixed priority of "tgz" vs. "tar.Z" in "-r" option)
+# 2004-11-04  r.kyburz: Fixed 2 bugs that caused errors in Linux)
+# 2005-01-13  r.kyburz: Fixed Linux issues with "echo" and "pwd")
+# 2005-02-01  r.kyburz: Fixed more Linux / MacOS X compatibility issues)
+# 2005-05-22  r.kyburz: Fixed Linux compatibility issue with "finger")
+# 2005-12-30  r.kyburz: Fixed typos in comments, minor changes)
+# 2006-03-29  r.kyburz: Protected against file names with blanks)
+# 2007-02-13  r.kyburz: Avoid moving "templates/themes" for installs in /vnmr
+# 2008-03-20  r.kyburz: Changed "head" calls to conform with RHEL 5.1
+# 2008-11-21  r.kyburz: Resolved RHEL 5.x issue with "uncompress" / "gzcat"
+# 2009-01-08  r.kyburz: Suppress "tar" feedback from small input batches
+# 2011-02-18  r.kyburz: Preserve symbolic link "~/vnmrsys/bin", if present
+# 2014-05-26  k.krish:  displays any post installation instructions
+#==============================================================================
