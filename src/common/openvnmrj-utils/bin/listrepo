@@ -1,0 +1,316 @@
+#!/bin/bash
+#
+# A script to list tags in a repository with tag description
+# for contributions to OpenVnmrJ
+#
+# Copyright 2016 Tim Burrow
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# This uses ONE repository (appdirs) in the GitHub OpenVnmrJ organization
+# It'll pull down or update the appdirs repository.
+
+# Each directory will hold one appdir, which then could be enabled or disabled
+
+set -o nounset
+#set -e
+
+function showhelp() {
+  cat <<-%
+Usage: `basename $0` [OPTIONS]
+or     `basename $0` -h to show this help
+
+OPTIONS
+=======
+    -r
+      repository to use. By default "appdirs" is the repository.
+    -b
+      branch to use. By default the master (stable) branch is used. See below.
+    -p
+      path to directory for repository. Default is ~/vnmrsys/openvnmrj
+    -u
+      github user name. Default is OpenVnmrJ. See below.
+    -H
+      use https URL; default is to use ssh URL. See below.
+    -h
+      show help and exit
+    -v
+      output list of application directories
+
+
+GITHUB USERNAME
+===============
+If the -u option is not used, the repository is 
+cloned from OpenVnmrJ.
+If you want to fix or add contributions, please fork one of
+the repositories on GitHub and specify your username.
+
+HTTPS v SSH URL
+===============
+The -H option uses https to access GitHub; you may need to enter
+your password. 
+By default the ssh protocol is used and
+keypairs must be set up.
+
+BRANCHES
+========
+If you intend to contribute an Application Directory, 
+start a new branch for your contribution. 
+Push your new branch to your forked repository on GitHub
+then make a pull request (in GitHub) to OpenVnmrJ
+
+FORKS
+====
+See the file "forking.md" about making a fork on GitHub
+to contribute application directories to OpenVnmrJ. 
+
+%
+}
+
+function installgit() {
+  cat <<-%%
+Git is required. Please install the latest version:
+
+On Ubuntu:
+sudo apt-get install git
+OR
+sudo apt-add-repository ppa:git-core/ppa
+sudo apt-get update
+sudo apt-get install git
+
+On RHEL or CentOS:
+sudo yum install git
+
+On OS X:
+Install Xcode from https://developer.apple.com
+or git from http://www.git-scm.com/
+
+then set up your git environment by setting your name and email:
+git config --global user.name "YOUR NAME"
+git config --global user.email "YOUR EMAIL ADDRESS"
+
+For further information, see:
+https://help.github.com/articles/set-up-git/
+
+Please fork the respositories at https://github.com/OpenVnmrJ on GitHub!
+
+%%
+}
+
+function badrepo() {
+  cat <<-%%
+Cannot access the repository ${1} 
+
+Check that the URL above is correct and you have correct permissions.
+If the URL starts with ssh, check this URL:
+https://help.github.com/articles/generating-ssh-keys/ 
+%%
+}
+
+function contains() {
+  local e
+  for e in "${@:2}"; do [[ "${e}" == "${1}" ]] && return 0; done 
+  return 1;
+}
+vusercheck=${vnmruser:-}
+if [[ ! -z ${vusercheck} ]]; then
+  ovjhome=${vnmruser}/openvnmrj
+else
+  ovjhome=~/vnmrsys/openvnmrj
+fi
+
+# by default clone from OpenVnmrJ, but if user forked, give them the option to clone their fork
+githubuser="OpenVnmrJ"
+#githubuser="gittim" # local debugging
+
+useHTTPS=0
+verbose=0 
+repo=appdirs
+localbranch=
+
+if [[ $? != 0 ]] ; then showhelp; exit 1 ; fi
+
+while getopts “hHr:u:p:b:v” option; do	
+  case $option in
+    r)
+      # repository to use, if not specified, uses appdirs
+      repo=${OPTARG}
+      ;;
+    b)
+      # branch to use, if not specified, uses "local" if not pulling from OpenVnmrJ
+      localbranch=${OPTARG}
+      ;;
+    p)
+      #  path to directory; not in help
+      ovjhome=${OPTARG}
+      ;;
+    u)
+      # github user name, expect  
+      githubuser=${OPTARG}
+      ;;
+    h)
+      # show help
+			showhelp; exit 0 
+			;;
+    H)
+			# use https URL; default is to use ssh URL
+			useHTTPS=1 
+			;;
+    v)
+			# verbose: output list at end
+			verbose=1 
+			;;
+    \?) 
+			# getopts invalid arg
+			echo -e "Invalid option: ${option}\n" 1>&2 
+			showhelp; exit 85 
+			;; 
+  esac
+done
+
+# check for git
+command -v git >/dev/null 2>&1 || { installgit; exit 1; }
+
+# https repo might ask for keys if credential helper is not available
+# ssh repo needs keypairs set up
+# specify the port because git 1.7.1 is broken and doesn't accept : ??
+if (( useHTTPS == 0 )); then
+  repo_url="ssh://git@github.com:22/${githubuser}/${repo}.git"
+  upstream_repo_url="ssh://git@github.com:22/OpenVnmrJ/${repo}.git"
+else
+  repo_url="https://github.com/${githubuser}/${repo}.git"
+  upstream_repo_url="https://github.com/OpenVnmrJ/${repo}.git"
+fi
+  
+repodir="${ovjhome}/${repo}"
+
+API_URL="https://api.github.com/users/${githubuser}/repos?type=owner"
+repos=($(curl -s "$API_URL" | grep -Eo '"git_url": "[^"]+"' | awk '{print $2}' | awk -F"/" '{print $NF}' | sed 's/\.git"//'))
+
+contains "${repo}" "${repos[@]}" || { echo -e "Cannot find ${repo} in list\n${repos[@]}"; showhelp ; exit 1; }
+
+# check for git repo again
+git ls-remote "${repo_url}" >/dev/null 2>&1 || { badrepo "${repo_url}"; exit 1; }
+
+if [[ -d "${repodir}"/.git ]]; then
+  if [[ ! -w "${repodir}" ]]; then
+    echo "${repodir} is not writable. Exiting."
+    exit 1
+  fi
+# repo exists already, just update
+  cd "${repodir}" || { echo "cd ${repodir} failed. Aborting"; exit 1; }
+  echo "Updating repository from origin"
+  git remote -v
+  git show-ref --verify --quiet refs/heads/"${localbranch}"
+  if [[ $? == 0 ]]; then
+    git pull origin ${localbranch} || { git pull origin master; }
+  else
+    git pull origin master || { badrepo "${repo_url}"; exit 1; }
+  fi
+  git fetch --all || { echo "error in git fetch" ; exit 1; }
+# do we already have a local branch
+  if [[ ! -z ${localbranch} ]]; then
+    git show-ref --verify --quiet refs/heads/"${localbranch}"
+    if [[ $? == 0 ]]; then
+      git checkout  ${localbranch} || { echo "error in making new branch ${localbranch}"; exit 1; }
+    else
+      git checkout -b ${localbranch} || { echo "error in changing to branch ${localbranch}"; exit 1; }
+    fi
+  fi
+else # make directory if necessary and clone
+  if [[ ! -d "${ovjhome}" ]]; then
+    echo "Making OpenVnmrJ directory at ${ovjhome}"
+    mkdir -p "${ovjhome}" || { echo "mkdir ${ovjhome} failed. Aborting"; exit 1; }
+  fi
+  if [[ ! -w "${ovjhome}" ]]; then
+    echo "${ovjhome} is not writable. Exiting."
+    exit 1
+  fi
+  cd "${ovjhome}" || { echo "cd ${ovjhome} failed. Aborting"; exit 1; }
+  echo "Cloning repository from ${repo_url}"
+  git clone ${repo_url} "${repodir}" || { badrepo "${repo_url}"; exit 1; }
+  cd "${repodir}"
+  git remote add upstream ${upstream_repo_url} || { echo "error in adding upstream ${upstream_repo_url}"; exit 1; }
+  git fetch --all
+  git fetch --tags
+  if [[ ! -z ${localbranch} ]]; then
+    git checkout -b ${localbranch} || { echo "error in making new branch ${localbranch}"; exit 1; }
+    #git branch --set-upstream-to=origin/${localbranch} ${localbranch} || { echo "error in tracking  branch ${localbranch}"; exit 1; }
+    git branch --set-upstream ${localbranch} origin/${localbranch}  || { echo "error in tracking  branch ${localbranch}"; exit 1; }
+  fi
+fi
+# at this point we have a repo in "${repodir}" and on the correct branch
+# All the appdirs are directories so get a lst of all directories
+cd "${repodir}"
+appdirs=$(find . -maxdepth 1 -type d -exec basename {} \; | grep -v "^\.")
+
+# Let's add the openvnmrj-utils appdir to the Application Directories
+appdirfile="${vnmruser}/persistence/appdir_${USER}"
+appmode="Spectroscopy"
+if [[ ! -f "${appdirfile}" ]]; then
+  cp "${vnmrsystem}/adm/users/userProfiles/appdir${appmode}.txt" "${appdirfile}"
+fi
+utildir="${ovjhome}/${repo}/openvnmrj-utils"
+appdiradded=$(grep openvnmrj-utils "${appdirfile}")
+if [[ -z ${appdiradded} && -d "${utildir}" ]]; then
+    title=$(head -1 "${utildir}/title")
+    echo "1;${ovjhome}/appdirs/openvnmrj-utils;${title}" >> "${appdirfile}"
+fi
+
+# copy license file (required for ovjsubmit)
+cp "${ovjhome}/${repo}/LICENSE" "${ovjhome}/"
+
+# Integration with Dan Iverson's UX
+extractdir=${ovjhome}/.extract
+if [[ -d "${extractdir}" ]]; then
+  rm -rf ${extractdir}
+fi
+mkdir ${extractdir}
+for dir in ${appdirs}; do
+  if [[ -f "${dir}/title" ]]; then
+    title=$(head -1 "${dir}/title")
+  else
+    title=${dir}
+  fi
+  echo -e "${dir} ${title}"  >> "${extractdir}/list"
+  if [[ -f "${dir}/description" ]]; then
+    cat "${dir}/description" > "${extractdir}/${title}"
+  else
+    echo -e "No description for ${title}\n" > "${extractdir}/${title}"
+  fi
+  if (( $verbose == 1 )); then
+    underline="====================================================================="
+    echo -e "\n\n${title}"
+    echo -e "${underline:0:${#title}}\n"
+    if [[ -f "${dir}/description" ]]; then
+      cat "${dir}/description"
+    fi
+  fi
+done
+
+if (( $verbose == 1 )); then
+  echo -e "\n${underline}\n"
+  cat <<-%
+The contributions of the repository are listed above with title and description.
+
+To access any contribution, enable the contribution within OpenVnmrJ by 
+selecting "edit>Applications…"
+
+If you have any questions, check the README.md file or check online
+https://github.com/OpenVnmrJ
+http://openvnmrj.org/
+
+%
+fi
+
+exit 0
