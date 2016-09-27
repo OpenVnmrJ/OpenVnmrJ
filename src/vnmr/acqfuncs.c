@@ -2638,6 +2638,93 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
       fclose(fd);
       unlockAtcmd(systemdir);
    }
+   else if ( (argc == 3) &&  ! strcmp(argv[2],"next") )
+   {
+      long curSec = -1;
+
+      if ( ! strcmp(argv[1],""))
+      {
+         Werrprintf("A macro name must be supplied when using the 'next' option for atcmd");
+         ABORT;
+      }
+      lockAtcmd(systemdir);
+      fd = fopen(atPath,"r");
+      if (fd == NULL)
+      {
+         if ( retc)
+            retv[0] = intString(-1);
+         else
+            Winfoprintf("atcmd: macro %s is not scheduled (return -1)",
+                        argv[1]);
+         unlockAtcmd(systemdir);
+         RETURN;
+      }
+      gettimeofday(&clock, NULL);
+      while ( (res = fscanf(fd,"%ld %d %d %d %s %s %s %d:%d%[^;]; %[^\n]\n",
+                      &atTime, &uid, &gid, &umask4Vnmr, host, atUserDir,
+                      user, &hr, &min, timespec, cmd) ) == 11)
+      {
+         strcpy(cmd2do,cmd);
+         strcat(cmd2do,"\n");
+         res = sscanf(cmd2do,"%d %d %[^\n]\n", &port, &pid, cmd2);
+         if (res == 3)
+         {
+            strcpy(cmd,cmd2);
+         }
+         else
+         {
+            char op[MAXPATH];
+
+            res = sscanf(cmd2do,"operator:%[^;]; %[^\n]\n", op, cmd2);
+            if (res == 2)
+            {
+               strcpy(cmd,cmd2);
+            }
+         }
+         if ( ! strcmp(argv[1],cmd) )
+         {
+            if (curSec == -1)
+               curSec = atTime;
+            else if (atTime < curSec)
+               curSec = atTime;
+         }
+      }
+      if (retc)
+      {
+         if (curSec == -1)
+         {
+            retv[0] = intString(-1);
+         }
+         else
+         {
+            curSec -= clock.tv_sec;
+            if (curSec <= 0)
+               retv[0] = intString(-2);
+            else
+               retv[0] = intString((int) curSec);
+         }
+      }
+      else
+      {
+         if (curSec == -1)
+         {
+            Winfoprintf("atcmd: macro %s is not scheduled (return -1)",
+                        argv[1]);
+         }
+         else
+         {
+            curSec -= clock.tv_sec;
+            if (curSec <= 0)
+               Winfoprintf("atcmd: macro %s is past scheduled time (return -2)",
+                           argv[1]);
+            else
+               Winfoprintf("atcmd: macro %s is scheduled time in %ld seconds",
+                           argv[1], curSec);
+         }
+      }
+      fclose(fd);
+      unlockAtcmd(systemdir);
+   }
    else if ( (argc == 3) &&  ! strcmp(argv[2],"cancel") )
    {
       matchOnly = strcmp(argv[1],"");
