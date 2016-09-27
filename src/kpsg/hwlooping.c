@@ -16,6 +16,7 @@
 #include "lc_gem.h"
 #include "shrexpinfo.h"
 #include "dsp.h"
+#include "abort.h"
 
 typedef	struct _aprecord {
         int		preg;	/* this is not saved */
@@ -43,7 +44,7 @@ extern SHR_EXP_STRUCT ExpInfo;
 /*          Hardware Looping Code	                       */
 /***************************************************************/
 
-static double looptime,fifostarttime; /* loop time of hardware loop */
+static double fifostarttime; /* loop time of hardware loop */
 static double prevlooptime = -1.0; /* loop time of previous hardware loop */
 
 /* time for word to be transfered from the pre-fifo to the looping fifo */
@@ -188,12 +189,13 @@ double dwell;
 int	ntwords;		/* number of timer words */
 int	pairs;			/* number of ctc's */
 int	fifowrds;		/* # fifo words required for acquire */
-int	implicitlpsize;		/* the implicit acquisition fifo looping size */
-int	nloops;
+int	implicitlpsize = 0;	/* the implicit acquisition fifo looping size */
+int	nloops = 0;
 int	explicit_acquire_flag;
+int     twords;
 
    if (bgflag)
-      fprintf(stderr,"acquire(): data pts: %lf, dwell: %le \n",datapts,dwell);
+      fprintf(stderr,"acquire(): data pts: %f, dwell: %12.10f \n",datapts,dwell);
    explicit_acquire_flag =
 	(!noiseflag && ((int) (datapts + 0.5) != (int) (np+0.5)));
    if (dsp_params.il_oversamp > 1)	/* In-line DSP */
@@ -209,7 +211,7 @@ int	explicit_acquire_flag;
          dwell   /= (double) dsp_params.il_oversamp;
       }
       if (bgflag)
-         fprintf(stdout, "after in-line DSP: datapts: %lf\n", datapts );
+         fprintf(stdout, "after in-line DSP: datapts: %f\n", datapts );
    }
 
    if (dwell < 2.0e-7)
@@ -224,7 +226,7 @@ int	explicit_acquire_flag;
    }
 
    dwell *= 1e3;			/* in msec */
-   ntwords = (dwell > 1.0) ? 2 : 1;
+   ntwords = (dwell > 1.6) ? 2 : 1;
    pairs = (int) (datapts + 0.005) / 2;
    acqtriggers++;			/* increment number acquisitions done */
 
@@ -289,18 +291,23 @@ int	explicit_acquire_flag;
    }
 
 
-   if (dwell > 1.0)
+   twords = 0;
+   if (dwell > 1.6)
    {  dwell -= 2e-4;
       putcode((int)(dwell-1.0) | TIME1MS);
+      twords++;
       dwell = dwell - (double) ((int)(dwell));
    }
    dwell *= 1e4;                  /* in 100 ns */
-   if (dwell > 2)
+   if (dwell > 1.5)
    {  dwell -= 2;
       putcode((int) (dwell + 0.5) );
+      twords++;
    }
-   if (ntwords == 1) putcode(0);
-
+   if ( (ntwords == 1) || (twords == 1) )
+   {
+      putcode(0);
+   }
 
 /* because we multiplied dwell to 0.1 usec, we now need to *1e-7 */
     totaltime += (datapts * dwell * 1e-7/ 2.0);
@@ -340,10 +347,11 @@ test4acquire()
    if (acqtriggers == 0)		/* No data acquisition yet? */
    {
 /*      if (nf > 1.0)
-/*      {
-/*         text_error("Number of FIDs (nf) Not Equal to One\n");
-/*	 psg_abort(0);
-/*      } */
+ *      {
+ *         text_error("Number of FIDs (nf) Not Equal to One\n");
+ *	 psg_abort(0);
+ *      }
+ */
       rcvron();				/* turn receiver on */
       setphase90(TODEV,zero);		/* tx phase to zero */
       delay(alfa+1.0/(2.0*fb));		/* alpha delay */

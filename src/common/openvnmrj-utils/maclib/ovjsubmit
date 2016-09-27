@@ -1,0 +1,113 @@
+" ovjsubmit - macro to handle OpenVnmrJ submissions"
+
+" Licensed under the Apache License, Version 2.0 (the 'License'); "
+" you may not use this file except in compliance with the License. "
+" You may obtain a copy of the License at "
+
+"  http://www.apache.org/licenses/LICENSE-2.0 "
+
+" Unless required by applicable law or agreed to in writing, software "
+" distributed under the License is distributed on an 'AS IS' BASIS, "
+" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. "
+" See the License for the specific language governing permissions and "
+" limitations under the License. "
+
+if ($# < 2) then
+  shell('which git 2>/dev/null'):$path
+  if ($path='') then
+    write('line3','The Linux utility git must be installed')
+    return
+  endif
+  exists('gitsubmit.xml','templates/vnmrj/interface'):$e,$xmlfile
+  if (not $e) then
+    write('line3','Warning: template missing for %s',$0)
+    return
+  endif
+  shell('git config user.name'):$github
+  if ( $github = '') then
+    write('line3','The github user is not defined. See man page for %s',$0)
+    return
+  endif
+  create('gitDir','string','global',''):$e
+  create('gitTitle','string','global',''):$e
+  create('gitUser','string','global',''):$e
+  create('gitTag','string','global',''):$e
+  setgroup('gitDir','display','global')
+  setgroup('gitTitle','display','global')
+  setgroup('gitUser','display','global')
+  setgroup('gitTag','display','global')
+  setprotect('gitDir','on',32768,'global')
+  setprotect('gitTitle','on',32768,'global')
+  setprotect('gitUser','on',32768,'global')
+  setprotect('gitTag','on',32768,'global')
+  if ($#=1) then
+    gitDir=$1
+    exists(gitDir+'/description','file'):$e
+    if ($e) then
+      copy(gitDir+'/description',curexp+'/description')
+    endif
+  endif
+  shell('head -1 ' + gitDir + '/title'):gitTitle
+  exists(curexp+'/submitlog','file'):$e
+  if ($e) then
+    delete(curexp+'/submitlog'):$e
+  endif
+  
+  vnmrjcmd('popup', 'mode:modeless', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', \
+   'pnewupdate:true', \
+   'close:'+$0+'(`close`,1)', \
+   'title:OpenVnmrJ Applications Submission')
+
+else
+  if ($1 = 'save') then
+    if (gitDir='') or (gitTitle='') then
+      if (gitDir='') then
+        write('line3','Applications directory for submission not specified')
+      endif
+      if (gitTitle='') then
+        write('line3','Submission Title not specified')
+      endif
+      return
+    endif
+    exists(gitDir,'directory'):$e
+    if ($e=0) then
+      write('line3','Applications directory for submission does not exist')
+      return
+    endif
+    exists(curexp+'/description','file'):$e
+    if ($e=0) then
+      write('line3','Description file for submission does not exist')
+      return
+    endif
+    exists(curexp+'/submitlog','file'):$e
+    if ($e) then
+      write('reset',curexp+'/submitlog')
+      vnmrjcmd('pnew','curexp')
+    endif
+    copy(curexp+'/description',gitDir+'/description')
+    $lpath=userdir+'/openvnmrj/LICENSE'
+    exists($lpath,'file'):$e
+    if ($e=0) then
+      write('line3','LICENSE file (%s) does not exist',$lpath)
+      return
+    endif
+    copy($lpath,gitDir+'/LICENSE')
+    write('reset',gitDir+'/title')
+    write('file',gitDir+'/title','%s',gitTitle)
+    getbinpath('submitcontribution'):$e,$path
+    shell($path + ' -u ' + gitUser + ' -t ' + gitTag + ' -p "'+gitDir+'" >& '+curexp+'/submitlog'):$dum
+    // The -v option turns on the verbose flag for submitcontribution
+    // shell($path + ' -u ' + gitUser + ' -t ' + gitTag + ' -v -p "'+gitDir+'" >& '+curexp+'/submitlog'):$dum
+    vnmrjcmd('pnew','curexp')
+  elseif ($1 = 'close') then
+    destroy('gitDir','global'):$e
+    destroy('gitTitle','global'):$e
+    destroy('gitUser','global'):$e
+    destroy('gitTag','global'):$e
+    exists(curexp+'/description','file'):$e
+    if ($e) then
+      delete(curexp+'/description'):$e
+    endif
+  endif
+endif

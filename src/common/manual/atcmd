@@ -6,24 +6,25 @@ atcmd('macro','timespec','active','start')
 atcmd('macro','cancel')
 atcmd('macro','list')
 atcmd('macro','list'):$timestamp,$user
+atcmd('macro','next'):$seconds
 atcmd
 
 The atcmd will call a macro at the specified time.  It only functions on a
 spectrometer. If the 'active' argument is given, the macro will be executed
 by the Vnmr process that specified the atcmd. If that process is no longer
 active, the macro will be removed from the database. If the 'active' argument
-is not give, then a background Vnmr will be started to execute
+is not given, then a background Vnmr will be started to execute
 the macro. This background Vnmr will not be started in an experiment.
 Therefore, the macro will need to execute a jexp or run commands or
 macros which do not need experiment parameters.  It will have access
 to global and systemglobal parameters.  The bootup macro will not be
 executed automatically. It can be called from the atcmd macro.
 
-When atcmd is called with arguments, it updates the database with the
-supplied information.  It does not start the process which will call
-the macros at the specified times, unless the 'start' option is given
+When atcmd is called with a timespec argument, it updates the database
+with the supplied information.  It does not start the process which will
+call the macros at the specified times, unless the 'start' option is given
 along with the 'timespec' option.  The atcmd with no arguments will also
-start the program which will call the macros at the specified times.
+start the program that will call the macros at the specified times.
 
 The timespec has two different formats. One specifies an hour and minute
 when the processing will occur. The other specifies the delay, in seconds,
@@ -56,6 +57,15 @@ the macro. For example, atcmd('cmda','list'):$timestamp,$user
 would set the macro parameters. If cmda has not been specified to
 at a specified time, empty strings will be returned.
 
+The 'next' option will return the number of seconds until the specified
+macro will run. A macro must be supplied as the first argument.
+If the supplied macro is not scheduled, a -1 will be returned.
+If the scheduled time for the macro has already past, a -2 will
+be returned. This can happen if the "procs" have been stopped or the
+atcmd process has not been started. Otherwise, the number of seconds
+from the current time until the macro will be executed will be
+returned.
+
 When the command specified by the atcmd is executed in background,
 it will be executed using the envirnoment of the user who requested
 the atcmd.  Also, the background Vnmr will initially not be joined
@@ -87,4 +97,8 @@ atcmd('','list')
    will list all scheduled commands
 
 atcmd('startNightQueue','list'):$time,$user
-   will return the timestamp and own to the calling macro
+   will return the timestamp and owner to the calling macro
+
+atcmd('dosomething','next'):$sec
+   will return number of seconds until the dosomething macro
+   will be executed.

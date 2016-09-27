@@ -41,7 +41,7 @@ mkdir "${resdir}"
 cd "${gitdir}/src/macos"
 cp -r VnmrJ.app "${packagedir}/$ovjAppName"
 rm -f VJ
-cc -Os -arch i386 -arch x86_64 VJ.c -o VJ
+cc -Os -mmacosx-version-min=10.8 -arch i386 -arch x86_64 VJ.c -o VJ
 mkdir -p "${packagedir}/$ovjAppName/Contents/MacOS"
 cp VJ "${packagedir}/$ovjAppName/Contents/MacOS/."
 rm -f "${vnmrdir}/bin/convert"
@@ -50,7 +50,7 @@ tar jxf ImageMagick.tar.bz2 -C $vnmrdir
 # rm -rf "${vnmrdir}/jre"
 # cp $JAVA_HOME/jre $vnmrdir/
 rm -rf $vnmrdir/pgsql
-cp -a "${OVJ_TOOLS}/pgsql.osx" "${vnmrdir}"/
+cp -a "${OVJ_TOOLS}/pgsql.osx" "${vnmrdir}"/pgsql
 
 vjdir="${packagedir}/${ovjAppName}/Contents/Resources/OpenVnmrJ"
 
@@ -137,7 +137,7 @@ rm -f $vjdir/bin/vnmrj
 cp vnmrj.sh $vjdir/bin/vnmrj
 chmod 755 $vjdir/bin/vnmrj
 
-echo "vnmrs" >> $vjdir/vnmrrev
+echo "vnmrs" >> $vjdir/vnmrrev 
 cd $vjdir/adm/users
 cat userDefaults | sed '/^home/c\
 home    yes     no      /Users/$accname\
@@ -148,3 +148,6 @@ mkdir profiles/system profiles/user
 cp "${gitdir}/src/macos/sys_tmplt" profiles/system/.
 cp "${gitdir}/src/macos/user_tmplt" profiles/user/.
 
+#Following need a certificate issued by Apple to developer
+echo "Code signing requires a certificate issued by Apple. Check for any errors and fix for OS X El Capitan or macOS Sierra"
+codesign -s "3rd Party Mac Developer Application:" --entitlements "${gitdir}/src/macos/entitlement.plist" "${packagedir}/${ovjAppName}"
