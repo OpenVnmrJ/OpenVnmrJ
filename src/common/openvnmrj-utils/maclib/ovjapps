@@ -1,0 +1,295 @@
+" ovjapps - macro to handle OpenVnmrJ contributions"
+
+" Licensed under the Apache License, Version 2.0 (the 'License'); "
+" you may not use this file except in compliance with the License. "
+" You may obtain a copy of the License at "
+
+"  http://www.apache.org/licenses/LICENSE-2.0 "
+
+" Unless required by applicable law or agreed to in writing, software "
+" distributed under the License is distributed on an 'AS IS' BASIS, "
+" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. "
+" See the License for the specific language governing permissions and "
+" limitations under the License. "
+
+$xmlfile=curexp+'/tmpapp.xml'
+$dir=userdir+'/openvnmrj/.extract'
+if ($# = 0) then
+  $path=''
+  shell('which git 2>/dev/null'):$path
+  if ($path='') then
+    write('line3','The Linux utility git must be installed')
+    return
+  endif
+  $file=$dir+'/list'
+  " rm('-rf',userdir+'/openvnmrj'):$e "
+  getbinpath('listrepo'):$e,$path
+  write('line3','Retrieving OpenVnmrJ appdirs')
+  $dum=''
+  shell($path +' -H 2>/dev/null'):$dum
+
+  exists($file,'file'):$i
+  if ($i=0) then
+    write('line3','No OpenVnmrJ contributions have been found')
+    return
+  endif
+  destroy('appdirpath'):$e
+  destroy('appdirlabel'):$e
+  destroy('appdirexists'):$e
+  destroy('appdirpreexists'):$e
+  destroy('appdirlocal'):$e
+  create('appdirpath','string')
+  create('appdirlabel','string')
+  create('appdirexists','integer')
+  create('appdirpreexists','integer')
+  create('appdirlocal','integer')
+  setgroup('appdirpath','display')
+  setgroup('appdirlabel','display')
+  setgroup('appdirexists','display')
+  setgroup('appdirpreexists','display')
+  setgroup('appdirlocal','display')
+  $path=userdir+'/appdirs'
+  exists($path,'directory'):$e
+  if not $e then
+    mkdir($path)
+  endif
+  appdir('file'):$appfile
+  strstr($appfile,'persistence'):appdirlocal
+  if not appdirlocal then
+    copy($appfile,userdir+'/persistence/appdir_'+owner)
+  endif
+
+  $title=''
+  appdir('info'):$num
+  lookup('mfile',$file,'read','readline','filekey'):$path,$title,$key,$ret
+  $i = 0
+  $ch = ''
+  $flag = ''
+  while ($ret = 3) do
+    if ($path <> '') then
+      $i=$i+1
+      chkname($path,'alnum-'):appdirpath[$i]
+      $testpath=userdir+'/appdirs/'+appdirpath[$i]
+      appdirlabel[$i]=$title
+      appdirexists[$i]=0
+      appdirpreexists[$i]=0
+      $j=0
+      while ($j < $num) and (appdirexists[$i]=0) do
+        $j=$j+1
+        $alabel = ''
+        $apath = ''
+        appdir('info',$j):$alabel,$apath
+        if ($apath = $testpath ) then
+          appdirexists[$i]=1
+          appdirpreexists[$i]=1
+        endif
+      endwhile
+    endif
+    lookup('mfile',$key,'read','readline','filekey'):$path,$title,$key,$ret
+  endwhile
+
+  exists(systemdir+'/adm/users/userProfiles/appdirExperimental.txt',\
+         'file','rw'):$perm
+// 50 for label on top. 26 for each appdir row; 30 for each radio or check box
+  $ysize = 50 + $i*26 + 4*30 + $perm*30
+  $ysize = 50 + $i*26 + 4*30
+  $ysize = 50 + $i*26 + 26
+  $ys = ''
+  format($ysize,0,0):$ys
+  write('reset',$xmlfile)
+
+  write('file',$xmlfile,`<?xml version="1.0" encoding="UTF-8" standalone="yes"?> \n\
+<template name="Flags" element="pages" type="acquisition" >  \n\
+  <group size="500 `+$ys+`"  \n\
+    style="Heading2"  \n\
+    label="Appdir"  \n\
+    vq="panellevel"  \n\
+    bg="transparent"  \n\
+    border="None"  \n\
+    side="Top"  \n\
+    justify="Left"  \n\
+    tab="yes"  \n\
+    enable="no"  \n\
+    reference="Flags"  \n\
+    useref="no"  \n\
+    subtype="Convenience"  \n\
+    expanded="yes"  \n\
+    >  \n\
+    <label loc="20 30" size="160 20" \n\
+      style="PlainText" \n\
+      label="Application Description" \n\
+      justify="Left" \n\
+      /> \n`)
+  $num = 0
+  $yp=''
+  $numch=''
+  while ($num < $i) do
+    $num=$num + 1
+    $ypos = 30 + $num * 26
+    format($ypos,0,0):$yp
+    format($num,0,0):$numch
+    $line=appdirlabel[$num]
+    $path=appdirpath[$num]
+    write('file',$xmlfile,`\n
+    <button loc="10 `+$yp+`" size="350 25"
+      style="PlainText"
+      label="`+appdirlabel[$num]+`"
+      vc="`+$0+`('show','`+$line+`')"
+      /> `)
+    write('file',$xmlfile,`\n
+      <group loc="370 `+$yp+`" size="130 25"
+        vq="appdirexists"
+        show="$SHOW=(appdirexists[`+$numch+`] = 1)"
+      >
+        <button loc="10 0" size="110 25"
+          style="PlainText"
+          label="Remove  Appdir"
+          vc="`+$0+`('remove',`+$numch+`)"
+        />
+       </group>`)     
+    write('file',$xmlfile,`\n
+      <group loc="370 `+$yp+`" size="130 25"
+        vq="appdirexists"
+        show="$SHOW=(appdirexists[`+$numch+`] = 0)"
+      >
+        <button loc="10 0" size="110 25"
+        style="PlainText"
+        label="Install Appdir"
+        vc="`+$0+`('install',`+$numch+`)"
+        />
+       </group>`)     
+  endwhile
+/*
+  if ($perm = 1) then
+    $ypos = $ypos + 30
+    format($ypos,0,0):$yp
+    write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as global applications directories" \n\
+      vc="appdirsave[1]='2'" \n\
+      set="$VALUE=(appdirsave[1]='2')" \n\
+      /> \n\
+    <entry loc="340 `+$yp+`" size="140 20" \n\
+      style="PlainText" \n\
+      vq="appdirsave" \n\
+      vc="appdirs('set',1,'save','$VALUE')" \n\
+      set="appdirs('get',1,'save'):$VALUE" \n\
+      disable="Grayed out" \n\
+      />`)
+  endif
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Save as private applications directories" \n\
+      vq="appdirsave[1]" \n\
+      vc="appdirsave[1]='0'" \n\
+      set="$VALUE=(appdirsave[1]='0')" \n\
+      />`)
+  $ypos = $ypos + 30
+  format($ypos,0,0):$yp
+  write('file',$xmlfile,` \
+    <radio loc="30 `+$yp+`" size="310 20" \n\
+      style="PlainText" \n\
+      label="Reset to system default applications directories" \n\
+      vq="appdirsave[1]" \n\
+      vc="appdirsave[1]='1'" \n\
+      set="$VALUE=(appdirsave[1]='1')" \n\
+      />`)  
+
+  if (appdirsave[3]<>'1') and (owner=operator) then
+    $ypos=$ypos+30
+    format($ypos,0,0):$yp
+    write('file',$xmlfile,` \
+      <label loc="50 `+$yp+`" size="150 20" \n\
+        style="Heading2" \n\
+        label="Apply to operators: " \n\
+        />`)
+    write('file',$xmlfile,` \
+      <filemenu loc="205 `+$yp+`" size="140 20" \n\
+        style="Heading2" \n\
+        vq="appdirsave[4]" \n\
+        vq2="appdirsave[4]" \n\
+        vc="appdirsave[4]='$VALUE'" \n\
+        file="$VALUE=userdir+'/persistence/appdirs_oplist'" \n\
+        set="$VALUE=appdirsave[4]" \n\
+        />`)
+  endif
+*/
+  
+  write('file',$xmlfile,'\n</group>\n</template>\n')
+  vnmrjcmd('popup', 'mode:modeless', 'file:'+$xmlfile, 'rebuild:yes', \
+   'location:topMenuBar', \
+   'pnewupdate:true', 'close:'+$0+'(`close`)', 'ok:'+$0+'(`ok`)', \
+   'title:OpenVnmrJ Application Directories')
+
+elseif ($1 = 'show') then
+  $show=$dir+'/'+$2
+  shell('gnome-terminal -x tail -f "'+$show+'" &'):$dum
+
+elseif ($1 = 'remove') then
+  $out=userdir+'/appdirs/'+appdirpath[$2]
+  $cmd='rm -rf "'+$out+'"'
+  shell($cmd):$e
+  $file=userdir+'/persistence/appdir_'+owner
+  rename($file,$file+'.bk')
+  $ret=0
+  lookup('mfile',$file+'.bk','readline','filekey'):$line,$key,$ret
+  while ($ret = 2) do
+    $path=''
+    substr($line,2,'delimiter',';'):$path
+    if ($path <>  $out) then
+      write('file',$file,'%s',$line)
+    endif
+    lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
+  endwhile
+  delete($file+'.bk')
+  appdirexists[$2]=0
+elseif ($1 = 'install') then
+  $in=userdir+'/openvnmrj/appdirs/'+appdirpath[$2]
+  $out=userdir+'/appdirs/'+appdirpath[$2]
+  $cmd='cp -r "'+$in+'" "'+$out+'"'
+  shell($cmd):$e
+  $file=userdir+'/persistence/appdir_'+owner
+  write('file',$file,'1;%s;%s', $out,appdirlabel[$2])
+  appdirexists[$2]=1
+elseif ($1 = 'ok') then
+  $num=size('appdirflag')
+  $i=0
+  while $i < $num do
+    $i=$i+1
+    if (appdirflag[$i]='y') then
+       write('line3','install: %s',appdirlabel[$i])
+    endif
+  endwhile
+//  delete($xmlfile)
+//  destroy('appdirflag'):$e
+//  destroy('appdirlabel'):$e
+//  destroy('appdirexists'):$e
+elseif ($1 = 'close') then
+  $updated=0
+  $num=size('appdirexists')
+  $i=0
+  while $i < $num do
+    $i=$i+1
+    if (appdirexists[$i] <> appdirpreexists[$i]) then
+      $updated=1
+    endif
+  endwhile
+  delete($xmlfile)
+  destroy('appdirpath'):$e
+  destroy('appdirlabel'):$e
+  destroy('appdirexists'):$e
+  destroy('appdirpreexists'):$e
+  $local=appdirlocal
+  destroy('appdirlocal'):$e
+  if ($updated = 1) then
+    appdirs
+  elseif not $local then
+    delete(userdir+'/persistence/appdir_'+owner)
+  endif
+else
+  return(-1)
+endif

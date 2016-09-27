@@ -1,0 +1,518 @@
+#!/bin/bash
+#
+# A script to make a branch and tag in a repository with tag description
+# for contributions to OpenVnmrJ
+#
+# Copyright 2016 Tim Burrow
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+set -o nounset
+#set -e
+
+function showhelp {
+    cat <<-%
+Thank you for contributing to OpenVnmrJ!
+This macro will create your submission and is for
+any contribution to OpenVnmrJ. 
+
+Usage: `basename $0` [OPTIONS]
+or     `basename $0` -h
+
+Options
+=======
+    -b
+      branch to use. By default the development (unstable) branch is used. See below.
+    -h
+      Show this help and exits
+    -p
+      Path to directory containing contribution *required*
+    -r
+      Repository to use, if not specified, uses appdirs 
+    -t
+      tag for your version of software. e.g. 1.0 or 0.9; 1.0 is default
+    -u
+      Github user name, *required* (your username on GitHub)
+    -v
+    	Verbose
+    -H
+      Use https URL. The default is ssh, which requires ssh keys. https will not work with 2FA
+      
+License
+=======
+All submissions must be licensed under the Apache v2 license, which can be
+read at http://www.apache.org/licenses/LICENSE-2.0.html
+Additionally, a Contributor License Agreement must be completed prior to a
+pull-request to the OpenVnmrJ repository, giving the University of Oregon 
+rights to use and distribute your contributions. A copy may be read at
+https://gist.github.com/ekpaulson/73530dfe735fa54d81fa
+
+You must include a file called LICENSE in your contribution and it must
+be the Apachev2 license for inclusion in the OpenVnmrJ repository.
+
+Repositories
+============
+The repository by default is "appdirs" which contains a directory for each user
+contributed appdir. This appdir is "openvnmrj-utils" in the appdirs repository.
+
+Fork on GitHub
+==============
+If you have not done so, fork https://github.com/OpenVnmrJ/appdirs.git on GitHub. 
+You will need a free GitHub account, then click on the "Fork" icon on the top right
+of the repository. See https://help.github.com/articles/fork-a-repo/ for more
+information.
+
+Branches
+========
+Use either the "development" branch or your own branch to submit your contribution.
+If you used a branch other than development, specify it using the -b switch.
+
+Updating
+========
+If an application directory with the same name already exists, this script will
+update the repository.
+
+Please update the tag to indicate a new version, for example -t 1.1
+
+Submitting
+==========
+Make a fork of the OpenVnmrJ repository on GitHub.com first
+
+On your OpenVnmrJ computer:
+1. Make a directory with the name of your submission. Let's call it "mysub". 
+   The name must not have any spaces or special characters.
+2. Make subdirectories maclib, manual, etc inside this directory mysub
+3. Put your files in the appropriate folders
+4. Make a file called description, with a text based description of your contribution.
+5. Make a file called title with a readable name of the contribution.
+6. Copy the Apache License file into the directory. It must named "LICENSE"
+
+You will have some or all of these:
+mysub----maclib--macro files
+.......|-manual--manual files
+.......|-psglib--pulse sequences (.c files)
+.......|-parlib--parameter files for pulse sequences
+.......|-bin--executables
+.......|-templates--UX xml files
+.......|-data--test data (FIDs)
+.......|-LICENSE--(Apachev2 for inclusion into OpenVnmrJ)
+.......|-description--(multiple lines with description of your appdir)
+.......|-title--(single line with a human readable name)
+
+In this example, run the script like:
+./submitcontribution -p pathto/mysub -u your-github-name
+
+This script will clone your fork from GitHub, check your files, then add them to the repository.
+Finally, the repository will be pushed back to GitHub using your credentials.
+
+Pull request
+============
+When your contribution is in your fork on GitHub, make a pull request by going to 
+your repository on GitHub then clicking on the green Pull Request button.
+
+See http://openvnmrj.org for more information or help.
+
+BUGS
+====
+Check the TODOs in the script
+
+%
+}
+
+function installgit() {
+  cat <<-%%
+Git is required. Please install by:
+
+On Ubuntu:
+sudo apt-get install git
+OR
+sudo apt-add-repository ppa:git-core/ppa
+sudo apt-get update
+sudo apt-get install git
+
+On RHEL or CentOS:
+sudo yum install git
+
+On OS X:
+Install Xcode from https://developer.apple.com
+or execute xcode-select --install
+or install git from http://www.git-scm.com/
+
+then set up your git environment by setting your name and email:
+git config --global user.name "YOUR NAME"
+git config --global user.email "YOUR EMAIL ADDRESS"
+
+For further information, see:
+https://help.github.com/articles/set-up-git/
+
+Please fork the respositories at https://github.com/OpenVnmrJ on GitHub!
+Pull requests welcome—Check the documentation to contribute.
+%%
+}
+
+function setupgit() {
+  cat <<-%%
+Please set up your git environment by setting your name and email:
+git config --global user.name "YOUR NAME"
+git config --global user.email "YOUR EMAIL ADDRESS"
+
+For further information, see:
+https://help.github.com/articles/set-up-git/
+
+%%
+}
+
+function badrepo() {
+  cat <<-%%
+Cannot access the repository ${1} 
+
+Check that the URL above is correct and you have correct permissions.
+If the URL starts with ssh, check this website:
+https://help.github.com/articles/generating-ssh-keys/ 
+
+To submit an appdir, you must first submit to your fork, not to OpenVnmrJ
+then make a pull request to the OpenVnmrJ repository.
+
+%%
+}
+
+
+# function to see if array contains a string
+function contains() {
+  local e
+  for e in "${@:2}"; do [[ "${e}" == "${1}" ]] && return 0; done 
+  return 1;
+}
+
+checkifgit() {
+  local curdir=$(pwd)
+
+  if (( $verbose == 1 )); then
+    echo -e "In ${curdir}\n"
+  fi
+
+  cd "${1}"/
+  if (( $verbose == 1 )); then
+    echo -e "Move to ${curdir}\n"
+  fi
+  if [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) == "true" ]]; then
+    # we are inside a git repository; perhaps an appdir clone?
+    # TODO check if a fork of appdirs, if so push?
+    # For now ignore and just work independently, but DO NOT COPY .git!
+    if (( $verbose == 1 )); then
+      echo "Directory ${1} is under git control"
+      remotegit=$(git config --get remote.origin.url 2> /dev/null&)
+      echo "Checking"
+      if [[ -z ${remotegit:-} ]]; then
+        echo "No remote"
+      else
+        echo "Remote is ${remotegit}"
+      fi
+    fi
+  else
+    if (( $verbose == 1 )); then
+      echo "Directory ${1} NOT under git control"
+    fi
+  fi
+  cd "${curdir}"
+  if (( $verbose == 1 )); then
+    echo -e "Back to ${curdir}\n"
+  fi
+}
+
+docopy() {
+  local src=${1}
+  local dest=${2}
+  local reponame=${3}
+
+# first check if dest already exists
+  if [[ -d "${dest}/${reponame}" ]]; then
+    if (( $verbose == 1 )); then
+      echo "Directory with name ${reponame} already exists: Updating. Please use a new tag"
+    fi
+      # update using rsync (no / at end of src!)
+    if (( $verbose == 1 )); then
+      echo "Updating extant ${dest}"
+      echo "rsync -av --exclude='.git*' --delete ${src} ${dest}"
+      rsync -av --exclude='.git*' --delete "${src}" "${dest}"
+    else
+      rsync -a --exclude='.git*' --delete "${src}" "${dest}"
+    fi
+  else
+    if (( $verbose == 1 )); then
+      echo "Copying new ${dest}"
+      echo "rsync -av --exclude='.git*'  ${src} ${dest}"
+      rsync -av --exclude='.git*' "${src}" "${dest}"
+    else
+      rsync -a --exclude='.git*' "${src}" "${dest}"
+    fi
+  fi
+}
+
+# this is the version tag on the repository, not the version of this script
+version="1.0"
+useHTTPS=0
+localbranchmade=0
+verbose=0
+repo="appdirs"
+localbranch="development"
+quiet="--quiet"
+
+if [[ ! -z ${vnmruser:-} ]]; then
+  ovjhome=${vnmruser}/openvnmrj
+else
+  ovjhome=~/vnmrsys/openvnmrj
+fi
+
+if [[ $? != 0 ]] ; then showhelp; exit 1 ; fi
+
+while getopts “b:r:p:u:vhHt:” option; do
+  case "$option" in
+    b)
+      # branch to use, if not specified, uses development
+      localbranch=${OPTARG}
+      ;; 
+    r)
+      # repository to use, if not specified, uses appdirs 
+      repo=${OPTARG}
+      ;;
+    p)
+      #  path to directory containing contribution *required*
+      dirpath=${OPTARG}
+      ;;
+    u)
+      # github user name, *required*
+      githubuser=${OPTARG}
+      ;;
+    t)
+      # tag version of software. e.g. 1.0 or 0.9. 1.0 is default. Combined with submission name.
+      version=${OPTARG}
+      ;;
+    h)
+      # show this help and exits
+      showhelp; exit 0 
+      ;;
+    H)
+      # use https URL. The default is ssh.
+      useHTTPS=1
+      ;;
+    v)
+      verbose=1
+      quiet=""
+      echo -e "Verbose output turned on"
+      ;;     
+    /?) 
+    	echo -e "Invalid option: ${option}\n" 1>&2
+    	exit 85 
+    	;;
+  esac
+done
+
+# check for git
+command -v git >/dev/null 2>&1 || { installgit; exit 1; }
+gitusername=$(git config user.name 2> /dev/null)
+gitemail=$(git config user.email 2> /dev/null)
+if [[ -z ${gitusername:-} || -z ${gitemail:-} ]]; then
+  setupgit
+  exit 1
+fi
+
+if [[ -z ${githubuser:-} ]]; then
+  echo -e "Missing -u GITHUBUSER!\n"
+  showhelp
+  exit 85
+fi
+
+if (( $verbose == 1 )); then
+  echo "Using githubuser: ${githubuser}"
+fi
+
+if [[ -z ${dirpath:-} ]]; then
+  echo -e "Missing -p path to directory!\n"
+  showhelp
+  exit 85
+fi
+
+#remove trailing slash (we'll put it on when checking)
+dirpath=${dirpath%/}
+if (( $verbose == 1 )); then
+  echo -e "Directory: ${dirpath}"
+fi
+reponame=$(basename "${dirpath}")
+
+API_URL="https://api.github.com/users/${githubuser}/repos?type=owner"
+repos=($(curl -s "$API_URL" | grep -Eo '"git_url": "[^"]+"' | awk '{print $2}' | awk -F"/" '{print $NF}' | sed 's/\.git"//'))
+
+contains "${repo}" "${repos[@]}" || { echo -e "Cannot find ${repo} in list\n${repos[@]}"; showhelp ; exit 1; }
+
+if [[ "OpenVnmrJ" ==  $githubuser ]]; then
+  echo -e "Please fork the OpenVnmrJ repository on GitHub\n"
+  showhelp
+  exit 1
+fi
+
+if [[ ! -d "${dirpath}"/ ]]; then
+  echo "Directory ${dirpath} not found"
+  exit 1
+fi
+
+if [[ ! -f "${dirpath}"/description ]]; then
+  echo "Error: description file not found within ${dirpath}"
+  exit 1
+fi
+
+if [[ ! -f "${dirpath}"/title ]]; then
+  echo "Error: title file not found within ${dirpath}"
+  exit 1
+fi
+
+if [[ ! -f "${dirpath}"/LICENSE ]]; then
+  echo "Error: Apache license not found within ${dirpath}"
+  echo -e "\nPlease include one file named LICENSE containing the Apache v2 license"
+  exit 1
+fi
+
+curdir="$(pwd)"
+
+# check state of directory; it is a clone of appdirs?
+checkifgit "${dirpath}"
+
+# see if we have an ovjhome
+if [[ ! -d "${ovjhome}" ]]; then
+	echo "Making OpenVnmrJ directory at ${ovjhome}"
+	mkdir -p "${ovjhome}" || { echo "mkdir ${ovjhome} failed. Aborting"; exit 1; }
+fi  
+cd "${ovjhome}" || { echo "cd ${ovjhome} failed. Aborting"; exit 1; }
+
+# Checking done, we'll clone the forked repo locally
+
+if (( useHTTPS == 0 )); then
+  repo_url="ssh://git@github.com:22/${githubuser}/${repo}.git"
+  upstream_repo_url="ssh://git@github.com:22//OpenVnmrJ/${repo}.git"
+else
+  repo_url="https://github.com/${githubuser}/${repo}.git"
+  upstream_repo_url="https://github.com/OpenVnmrJ/${repo}.git"
+fi
+
+# Clone the forked appdir in a new (hidden directory) in ovjhome
+repodir="${ovjhome}/.${repo}-${localbranch}"
+
+if [[ -d "${repodir}" ]]; then
+  if (( verbose ==1 )); then
+    echo "DELETING existing ${repodir}"
+  fi
+	rm -rf "${repodir}"
+fi
+
+if (( $verbose == 1 )); then
+  echo "Cloning repository from ${repo_url} into ${repodir}"
+  echo "git clone ${repo_url} ${repodir} "
+fi
+git clone ${quiet} ${repo_url} ${repodir} >/dev/null 2>&1 || { badrepo "${repo_url}"; exit 1; }
+cd "${repodir}"/
+git fetch --all >/dev/null 2>&1
+git fetch --tags >/dev/null 2>&1
+
+# check if the branch aready exists
+if (( $verbose == 1 )); then
+  echo "In $(pwd) with git show-ref --verify refs/heads/${localbranch}"
+fi
+git show-ref --verify --quiet refs/heads/"${localbranch}"
+if [[ $? != 0 ]]; then
+  if (( $verbose == 1 )); then
+    echo "checking out new branch ${localbranch}"
+  fi
+  git checkout ${quiet} -b ${localbranch} >/dev/null 2>&1 || { echo "Making branch ${localbranch} failed. Aborting"; exit 1; }
+  git pull origin ${localbranch} >/dev/null 2>&1
+  localbranchmade=1
+else
+	git checkout  ${localbranch} >/dev/null 2>&1 || { echo "Checking out branch ${localbranch} failed. Aborting"; exit 1; }
+	localbranchmade=0 
+fi
+
+# TODO some diagnostics
+if (( $verbose == 1 )); then
+  git remote -v
+  git tag -l
+  git branch -v
+fi
+
+
+# We're in the repo now, so must have a path back to the submitted directory
+# docopy "${curdir}/${dirpath}" "${repodir}" "${reponame}" ${update}
+docopy "${dirpath}" "${repodir}" "${reponame}"
+
+# sign our commit and tag if possible
+gitsignkey=$(git config --global --get user.signingkey)
+if [[ -z ${gitsignkey} ]]; then
+  tagswitch="-a"
+  commitswitch="-a "
+else
+  tagswitch="-s" # -s for pgp
+  commitswitch="-S -a " # -S -m for pgp
+fi
+title=$(cat "${dirpath}/title")
+description=$(cat "${dirpath}/description")
+
+if [[ -f "${dirpath}/README.md" ]]; then
+	cat  >> README.md <<-%
+## ${title}
+*Version ${version} submitted by ${githubuser}*
+
+>${description}
+
+%
+
+  git add README.md
+fi
+
+git add "${reponame}"
+if (( $verbose == 1 )); then
+  echo -e "git commit ${commitswitch} ${reponame} -m ${title}\n"
+fi
+
+git commit ${commitswitch} ${quiet} -m "${reponame} ${title} ${version}"  >/dev/null || { echo "git commit could not be made. Please look at the error message"; exit 1; }
+
+git tag ${tagswitch} "${reponame}-${version}" -m "${description}"
+
+if (( $localbranchmade == 1 )); then
+  if (( $verbose == 1 )); then
+    echo "git push --set-upstream origin ${localbranch}"
+    git push --set-upstream origin ${localbranch} \
+      || { echo "git push branch could not be made. Please look at the error message"; exit 1; }
+  else
+    git push --set-upstream origin ${localbranch} >/dev/null \
+        || { echo "git push branch could not be made. Please look at the error message"; exit 1; }
+  fi
+fi
+
+git push ${quiet} >/dev/null || { echo "git push could not be made. Please look at the error message"; exit 1; }
+git push --tags ${quiet} >/dev/null
+
+cat<<-%
+
+A branch ${localbranch} has been pushed into the
+repository at ${repo_url}
+
+Please go to github to open a pull request!
+Thank you for contributing to OpenVnmJ.
+
+If you have any questions, check out
+http://openvnmrj.org/
+
+%
+
+#TODO update a list of submissions?
+
+exit 0
+
