@@ -137,7 +137,7 @@ rm -f $vjdir/bin/vnmrj
 cp vnmrj.sh $vjdir/bin/vnmrj
 chmod 755 $vjdir/bin/vnmrj
 
-echo "vnmrs" > $vjdir/vnmrrev
+echo "vnmrs" >> $vjdir/vnmrrev 
 cd $vjdir/adm/users
 cat userDefaults | sed '/^home/c\
 home    yes     no      /Users/$accname\
