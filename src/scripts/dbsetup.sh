@@ -1007,7 +1007,7 @@ then
 
     dirlist=`ls -1 /usr/lib/postgresql`
 
-    echo $dirlist
+    echo "dirlist: $dirlist"
     version="0.0"
     for dir in $dirlist
     do
@@ -1017,6 +1017,8 @@ then
     done
 
     pgpath="/usr/lib/postgresql/"$version/bin/
+    # needed to run postgresql as other user on Ubuntu14
+    chmod a+rw /var/run/postgresql
 fi
 if [ x$lflvr = "xdarwin" ]
 then
