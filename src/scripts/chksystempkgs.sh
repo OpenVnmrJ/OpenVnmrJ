@@ -42,7 +42,9 @@ else
    distrover=`lsb_release -rs`
    #   12
    distmajor=`expr substr $distrover 1 2`
-   if [ $distmajor -ge 14 ] ; then
+   if [ $distmajor -ge 16 ] ; then
+     packagelist='openjdk-8-jre bc csh libmotif-dev make gcc expect ethtool tcl8.4-dev tk8.4-dev rarpd rsh-server tftpd openssh-server mutt sharutils sendmail-cf gnome-power-manager k3b kdiff3 ghostscript imagemagick'
+   elif [ $distmajor -ge 14 ] ; then
      packagelist='openjdk-6-jre csh libmotif-dev make gcc expect ethtool tcl8.4-dev tk8.4-dev rarpd rsh-server tftpd openssh-server mutt sharutils sendmail-cf gnome-power-manager k3b kdiff3 ghostscript imagemagick'
    elif [ $distmajor -gt 10 ] ; then
      packagelist='openjdk-6-jre ia32-libs csh lesstif2-dev make gcc expect ethtool tcl8.4-dev tk8.4-dev rarpd rsh-server tftpd openssh-server mutt sharutils sendmail-cf gnome-power-manager k3b kdiff3 ghostscript imagemagick'
