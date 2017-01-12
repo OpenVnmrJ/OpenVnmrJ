@@ -47,6 +47,8 @@ void AspDataInfo::initDataInfo() {
 	haxis.rev=0;
 	haxis.npts=0;
 	haxis.orient=0;
+	haxis.ydataMax=-1.0;
+	haxis.ydataMin=0.0;
 
  	vaxis.name="?";
 	vaxis.label="?";
@@ -60,6 +62,8 @@ void AspDataInfo::initDataInfo() {
 	vaxis.rev=0;
 	vaxis.npts=0;
 	vaxis.orient=0;
+	vaxis.ydataMax=-1.0;
+	vaxis.ydataMin=0.0;
 }
 
 void AspDataInfo::updateDataInfo() {
@@ -125,6 +129,7 @@ void AspDataInfo::getYminmax(string nucleus, double &ymin, double &ymax) {
      int i;
      for(i=0;i<npts;i++) {
 
+
         data = SpecDataMgr::get()->getTrace("SPEC", i, 1.0, haxis.npts);
         if(!data) continue;
 
@@ -141,6 +146,11 @@ void AspDataInfo::getYminmax(string nucleus, double &ymin, double &ymax) {
 //Winfoprintf("ymin ymax %f %f",ymin,ymax);
 }
 
+void AspDataInfo::resetYminmax() {
+   vaxis.ydataMin=0.0;
+   vaxis.ydataMax=-1.0;
+}
+
 void AspDataInfo::init1D_vaxis() {
 
    vaxis.orient=VERT;
@@ -152,13 +162,25 @@ void AspDataInfo::init1D_vaxis() {
    vaxis.npts=getNtraces(haxis.name);
    string aig = AspUtil::getString("aig","ai");
    if(aig == "nm") {
-      double ymin=0, ymax=0;
-      getYminmax(haxis.name, ymin, ymax);
-      vaxis.minfirst = ymin;
-      vaxis.maxwidth = ymax - ymin;
+      if ( (vaxis.ydataMin == 0.0) && (vaxis.ydataMax < vaxis.ydataMin) )
+      {
+         double ymin=0, ymax=0;
+         getYminmax(haxis.name, ymin, ymax);
+         vaxis.minfirst = ymin;
+         vaxis.maxwidth = ymax - ymin;
+         vaxis.ydataMin=ymin;
+         vaxis.ydataMax=ymax;
+      }
+      else
+      {
+         vaxis.minfirst = vaxis.ydataMin;
+         vaxis.maxwidth = vaxis.ydataMax - vaxis.ydataMin;
+      }
    } else {
       vaxis.maxwidth = 0.0; 
       vaxis.minfirst = 0.0;
+      vaxis.ydataMin=0.0;
+      vaxis.ydataMax=-1.0;
    }
 
    vaxis.scale = getVscale();

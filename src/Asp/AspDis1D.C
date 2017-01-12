@@ -607,7 +607,7 @@ int AspDis1D::mspec(spAspFrame_t frame, int argc, char *argv[]) {
       if(maxTraces < 1) return 0;
    }
 
-   int i, count=0, npts, ind, iColor, jk=0;
+   int i=0, count=0, npts, ind, iColor, jk=0;
    double minX, maxX,scale=1.0;
    char str[16];
    char color[16];

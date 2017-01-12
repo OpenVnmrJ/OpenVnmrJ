@@ -167,7 +167,7 @@ static double  lvltlt_sense;
 static double  phasefine;
 static float  *cur_scl,scl_spec2;
 static float  *phase_data;
-static float  *curspec;
+static float  *curspec = NULL;
 static float  *spectrum;
 static float  *spec2ptr;
 static float  *spec3ptr;
@@ -519,7 +519,8 @@ static void m_newcursor(int butnum, int x, int y, int moveflag)
 {
   (void) moveflag;
   int dez = getDscaleDecimal(0)+2;
-  if (get_dis_setup() != 1)
+  if (get_dis_setup() != 1) 
+  {
     select_init(
         0,
         GRAPHICS,
@@ -530,6 +531,7 @@ static void m_newcursor(int butnum, int x, int y, int moveflag)
         NO_BLOCKPARS,
         NO_PHASEFILE
     );
+  }
   Wgmode();
   if ((butnum==3) && (ds_mode!=BOX_MODE))	/*  box button */
   {
@@ -697,7 +699,7 @@ static void newspec(int inset, int fp, int np, int dfp, int dnp)
      Wturnoff_buttons();
      set_turnoff_routine(turnoff_ds);
   }
-  else if ((spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
+  else if ((curspec = spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
   {
      Wturnoff_buttons();
      set_turnoff_routine(turnoff_ds);
@@ -754,7 +756,8 @@ static int exit_phase()
   }
   else if (phaseflag)
   {
-    if ((spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
+    aspFrame("resetVscale",0,0,0,0,0);
+    if ((curspec = spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
       return(ERROR);
     Wclear_graphics();
     show_plotterbox();
@@ -1118,7 +1121,10 @@ static void b_phase()
    update_ycursor(1, threshY);
    activate_mouse(m_newphase, exit_phase);
    if ( ! this_is_addi)
+   {
       aspFrame("ds",0,0,0,0,0);
+      aspFrame("resetVscale",0,0,0,0,0);
+   }
 }
 
 
@@ -1577,7 +1583,8 @@ static int m_lvltlt(int butnum, int x, int y, int moveflag)
       }
       P_setreal(CURRENT,"lvl",lvl,0);
       DispField2(FIELD3,-PARAM_COLOR, lvl, 1);
-      if ((spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
+      aspFrame("resetVscale",0,0,0,0,0);
+      if ((curspec = spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
         return(ERROR);
       if (intflag)
         intdisp();
@@ -2088,6 +2095,8 @@ static void ds_multiply(int x, int y)
   } 
 
 
+  if ((curspec = spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
+     return;
   if(get_drawVscale()) new_dscale(TRUE,FALSE);
   if (intflag)
   {
@@ -2135,7 +2144,9 @@ static void ds_multiply(int x, int y)
     if(!isInset()) redo_dpf_dpir();
     ds_sendVs();
     if ( ! this_is_addi)
+    {
        aspFrame("ds",0,0,0,0,0);
+    }
 #endif
   }
 }
@@ -2331,7 +2342,6 @@ static void mspecdisp() {
 static void specdisp()
 /****************/
 {
-
   if(getShowMspec() > 0) mspecdisp();
   else if(getOverlayMode() == OVERLAID_ALIGNED) overlayspecdisp();
   else {
@@ -2414,6 +2424,8 @@ static void intdisp()
         Wturnoff_buttons();
         return;
       }
+    if ((curspec = spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
+       return;
     integ(spectrum,integral,fn / 2);
     updateflag = FALSE;
   }
@@ -2741,6 +2753,7 @@ static int init_vars2()
   dispcalib = (float) (mnumypnts-ymin) / (float) wc2max;
   integral = 0;
 
+  aspFrame("resetVscale",0,0,0,0,0);
   if ((curspec = spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&updateflag))==0)
     return(ERROR);
   scale = dispcalib;
@@ -2776,7 +2789,10 @@ static int init_ds(int argc, char *argv[], int retc, char *retv[])
   start_from_ft = 0;
   ds_sendSpecInfo(1);
   if ( ! this_is_addi)
+  {
      aspFrame("clearAspSpec",0,0,0,0,0);
+     aspFrame("resetVscale",0,0,0,0,0);
+  }
   return(COMPLETE);
 }
 

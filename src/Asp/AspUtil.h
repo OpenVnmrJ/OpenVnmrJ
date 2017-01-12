@@ -194,6 +194,8 @@ typedef struct aspiAxisInfo {
    double minfirst; // rflrfp+sw (note, from left to right) in default units
    double width; // wp
    double start; // sp+sw 
+   double ydataMax; // max y value for vertical scale display
+   double ydataMin; // min y value for vertical scale display
    int rev;
    int npts;
    int orient;

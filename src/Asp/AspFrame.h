@@ -41,6 +41,7 @@ public:
     double pstx,pwd,psty,pht; // pixels of FOV 
 
         void setDefaultFOV();
+        void resetYminmax();
         void setCellFOV(int rows, int cols);
         void setFullSize();
 
