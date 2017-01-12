@@ -44,6 +44,7 @@ public:
 	string getFidPath();
         int getNtraces(string nucleus);
 	void getYminmax(string nucleus, double &ymin, double &ymax);
+	void resetYminmax();
 
 	void dprint(aspAxisInfo_t *axis);
 

@@ -241,6 +241,12 @@ void AspFrame::setDefaultFOV() {
    cellList->addCell(0,cell); 
 }
 
+void AspFrame::resetYminmax() {
+
+   spAspDataInfo_t dataInfo = getDefaultDataInfo(true);
+   dataInfo->resetYminmax();
+}
+
 void AspFrame::draw() {
 
      if(annoTop) set_top_frame_on_top(1);

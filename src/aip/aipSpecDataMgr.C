@@ -21,6 +21,7 @@ SpecDataMgr *SpecDataMgr::specDataMgr = NULL;
 SpecDataMgr::SpecDataMgr() {
     specDataMap = new SpecDataMap;
     selData = NULL;
+    selDatanpt = 0;
 }
 
 SpecDataMgr *SpecDataMgr::get()
@@ -160,8 +161,17 @@ float *SpecDataMgr::getTrace(string key, int ind, double scale, float *outData, 
 // note, fpt and npt are for real data. So multiple 2 for complex data. 
 // selData is a member variable.
 float *SpecDataMgr::getTrace(string key, int ind, double scale, int npt) {
-    if(selData != NULL) delete[] selData;
-    selData = new float[npt];
+    if ((selData != NULL) && (selDatanpt != npt) )
+    {
+       delete[] selData;
+       selData = NULL;
+    }
+    if (selData == NULL)
+    {
+       selData = new float[npt];
+       selDatanpt = npt;
+    }
+
     return getTrace(key, ind, scale, selData, npt);
 }
 
@@ -226,8 +236,16 @@ float *SpecDataMgr::getTrace4ComboKey(string key, int ind, double scale, int npt
 	  delete[] trace2;
 	  return data1;
 	}
-        if(selData != NULL) delete[] selData;
-        selData = new float[npt];
+        if ((selData != NULL) && (selDatanpt != npt) )
+        {
+           delete[] selData;
+           selData = NULL;
+        }
+        if (selData == NULL)
+        {
+           selData = new float[npt];
+           selDatanpt = npt;
+        }
 	if(add) {
 	  for(int i=0; i<npt; i++) selData[i]=data1[i]+data2[i];
 	} else {
@@ -252,8 +270,16 @@ float *SpecDataMgr::getTrace4ComboKey(string key, int ind, double scale, int npt
 	   scale1 = atof(num.c_str());
 	   key1 = key1.substr(0,pos);
 	}
-        if(selData != NULL) delete[] selData;
-        selData = new float[npt];
+        if ((selData != NULL) && (selDatanpt != npt) )
+        {
+           delete[] selData;
+           selData = NULL;
+        }
+        if (selData == NULL)
+        {
+           selData = new float[npt];
+           selDatanpt = npt;
+        }
 	return getTrace(key1, ind1, scale1, selData, npt);
     }
 }

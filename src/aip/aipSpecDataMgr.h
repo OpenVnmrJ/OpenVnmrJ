@@ -56,6 +56,7 @@ private:
 
     SpecDataMap *specDataMap;
     float *selData;
+    int selDatanpt;
 
     SpecDataMgr();
     
