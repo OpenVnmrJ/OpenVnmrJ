@@ -736,7 +736,7 @@ static void getname(char t16[], char na[], char t6[])
           ch=t16[cntr];
           na[cntr] = ch;
           if ((!digit(ch)) && (!letter(ch)) && (ch!=' ')) err *= err;
-        } while ((cntr<8) && (ch!=' '));
+        } while ((cntr<12) && (ch!=' '));
       na[cntr] = '\0';                			   /* STM:  terminate na */
       while  ((t16[cntr]==' ') && (cntr<15)) ++cntr;
       while (((t16[cntr]==' ') || (t16[cntr]=='"')) && (cntr<15)) ++cntr;
