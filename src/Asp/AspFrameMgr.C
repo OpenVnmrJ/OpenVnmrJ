@@ -569,6 +569,9 @@ int AspFrameMgr::frameFunc(char *keyword, int frameID, int x, int y, int w, int 
 	frame->setDefaultFOV();
 	frame->displayTop();
 	return 0;
+    } else if(key=="resetVscale") {
+	frame->resetYminmax(); // clear data min max for vertical display
+	return 0;
     } else if(key=="redraw") {
 	frame->draw(); 
 	return frame->ownScreen();
