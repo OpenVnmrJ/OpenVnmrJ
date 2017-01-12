@@ -3290,6 +3290,7 @@ MPSEQ getlg(char *seqName, int iph, double p, double phint, int iRec, int calc)
    }
    sprintf(f.seqName,"%s",seqName);
    f.calc = calc;
+   f.iSuper = iph;
    f.array = parsearry(f.array);
 
 // Obtain Phase Arguments
