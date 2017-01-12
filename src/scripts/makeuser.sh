@@ -1108,7 +1108,7 @@ fi
 
 #  make some subdirectories of the user's VNMR directory
 
-dirlist="help maclib manual menulib parlib probes psglib seqlib shapelib shims \
+dirlist="help maclib manual menujlib parlib probes psglib seqlib shapelib shims \
 	tablib imaging templates templates/layout mollib"
 for subdir in $dirlist
 do
