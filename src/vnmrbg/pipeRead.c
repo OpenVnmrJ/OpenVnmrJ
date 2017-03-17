@@ -319,6 +319,7 @@ static int setFidFile1D(int npval)
   datahead.vers_id = VERSION;
   datahead.vers_id += FID_FILE;
   datahead.vers_id |= S_JEOL;
+  datahead.vers_id |= S_MAKEFID;
   datahead.nbheaders = 1;
   datahead.ebytes  = 4;
   datahead.tbytes  = datahead.ebytes * datahead.np;

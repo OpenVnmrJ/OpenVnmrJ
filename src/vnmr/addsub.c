@@ -787,7 +787,11 @@ static int addfid(int argc, char *argv[], int retc, char *retv[],
   }
   newptr = (float *)new_fid.data;
   if (newbuf)
+  {
+     if (new_fid.head->ctcount == 0)
+        new_fid.head->ctcount = 1;
      new_fid.head->lpval = get_dsp_lp();
+  }
   if (debug1)
      Wscrprintf("first of %d fid points are %g and %g\n",np,*fidptr,*newptr);
 
