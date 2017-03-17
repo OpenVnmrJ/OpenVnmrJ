@@ -281,7 +281,7 @@ static void close_input_fd (int fd)
      if (fd < 0)
          return;
      close(fd);
-     if (fd == acceptsocketfd) /* fd to java program has closed */
+     if ( (fd == acceptsocketfd) && !Bserver) /* fd to java program has closed */
         for (k=0; k < 10; k++)
         {
            stat = kill( getppid(), 0);  /* If java program is gone, exit */
