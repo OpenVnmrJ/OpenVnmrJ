@@ -1113,6 +1113,7 @@ int vnmr(int argc, char *argv[])
 		fprintf(stderr,"executing command line %s\n",initCommand);
             strcpy(tmpStr,initCommand);
             strcat(tmpStr,"\n");
+            working = 1;
             loadAndExec(tmpStr);
 	}
 	nmr_exit(vnMode);
