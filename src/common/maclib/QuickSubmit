@@ -1,5 +1,4 @@
 "macro QuickSubmit"
-" Varian"
 
 "*********************************************************************"
 if ($0 <> 'QuickSubmit') then
@@ -238,6 +237,7 @@ ELSEIF ($arg='setupparammenu') THEN
    substr(QSpar[1],1):QSpar[6]
    QSpar[14]=text_string
    jexp($exp)
+   flush
    DELEXP($nexp):$cok,$cmsg
 //   shell('rm -rf '+userdir+'/exp'+$n):$dum
    if (QSpar[17]<>'') and ($# > 1) then
@@ -350,7 +350,9 @@ ELSEIF ($arg='NewStudy') then
 	endif
    elseif (QSpar[16]='bgauto') then
         $isinqueue=0
-        shell('(cat '+autodir+'/enterQ | grep -w SAMPLE#: | grep -vw 0 | wc -l)'):$isinqueue
+        if (autodir <> '') then
+          shell('(cat '+autodir+'/enterQ | grep -w SAMPLE#: | grep -vw 0 | wc -l)'):$isinqueue
+        endif
         if ($isinqueue>0) then
             $msg='There are samples in current autodir'
 	    QuickSubmit('Write','',$msg)
@@ -1720,6 +1722,11 @@ ELSEIF ($arg='submit') THEN
      write('reset',$talk2j)
      write('reset',$msgfile)
      write('file',$talk2j,'%s',vnmraddr)
+     bgmode_is:$bg
+     if not $bg and QSpar[16]='autodir' then
+	write('reset',userdir+'/persistence/.talk2j')
+	write('file',userdir+'/persistence/.talk2j','%s',vnmraddr)
+     endif
      write('line3',`Vnmrbg -mback -n%d "DELEXP('auto') QuickSubmit('csv2cpQ','%s')" > %s &`,$nexp,QSpar[16],$vbgacqlog):$cmd
      write('file',$vbgacqlog+'_bgp.log','%s',$cmd)
      write('file',$msglog,'%s',$cmd)
