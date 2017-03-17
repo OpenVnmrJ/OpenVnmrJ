@@ -369,7 +369,7 @@ int getdatadim(int argc, char *argv[], int retc, char *retv[])
 {
   int e;
   dfilehead dhd;
-  char outfidpath[MAXPATHL];
+  char outfidpath[MAXPATH];
   int f = D_USERFILE;
   int ret = 0;
 
@@ -441,7 +441,7 @@ int noise(int argc, char *argv[], int retc, char *retv[])
   int li;
   dfilehead dhd;
   dpointers block;
-  char outfidpath[MAXPATHL];
+  char outfidpath[MAXPATH];
   int calcflag = 0;
   int f;
   float dataval;
@@ -912,7 +912,7 @@ int ilfid(int argc, char *argv[], int retc, char *retv[])
 {
   char arrayname[3][17];
   char na[17];
-  char oldfidpath[MAXPATHL];
+  char oldfidpath[MAXPATH];
   int arraynum,arraysize;
   int dpflag = 0;
   int e,i,r,blocknumber;
@@ -1113,7 +1113,7 @@ int quadtt(int argc, char *argv[], int retc, char *retv[])
                    lastfrac,
                    newfrac = 0.0,
                    length;
-   char            oldfidpath[MAXPATHL];
+   char            oldfidpath[MAXPATH];
 
    (void) retc;  /* suppress warning message */
    (void) retv;  /* suppress warning message */
@@ -1330,7 +1330,7 @@ int
 make_copy_fidfile()
 {
         int     diskFull, ival;
-        char    fidpath[ MAXPATHL ], tmppath[ MAXPATHL ];
+        char    fidpath[ MAXPATH ], tmppath[ MAXPATH ];
 
         ival = D_getfilepath( D_USERFILE, &fidpath[ 0 ], curexpdir );
         if (ival != 0) {
@@ -1595,7 +1595,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
         {
            fn_addr = argv[ FILE_NAME_ARG ];        /* address of (input) file name */
            nlines = strlen( fn_addr );             /* borrow `nlines' */
-           if (nlines > MAXPATHL) {
+           if (nlines >= MAXPATH) {
                 Werrprintf(
             "%s:  too many characters in file name", cmd_name
                 );
@@ -2035,7 +2035,7 @@ static void make_empty_fhead(dfilehead *fh_ref )
 static int makefid_getfhead(char *cmd_name, dfilehead *fh_ref, int *update_fh_ref, int force )
 {
         int     ival;
-        char    fidpath[ MAXPATHL ];
+        char    fidpath[ MAXPATH ];
 
 /*  Close user file if previous application left it open.  */
 
@@ -2124,7 +2124,7 @@ static int makefid_getfhead(char *cmd_name, dfilehead *fh_ref, int *update_fh_re
 
 static int count_lines(char *fn_addr )
 {
-        char     wc_command[ MAXPATHL+6 ];
+        char     wc_command[ MAXPATH+8 ];
         int      ival, nlines;
         FILE    *pfile;
 
@@ -2132,7 +2132,7 @@ static int count_lines(char *fn_addr )
     this check should be successful.  Done here to be complete.  */
 
         ival = strlen( fn_addr );
-        if (ival < 0 || ival > MAXPATHL)
+        if (ival < 0 || ival >= MAXPATH)
           return( -1 );
 
         sprintf( &wc_command[ 0 ], "wc -l %s", fn_addr );
@@ -2276,7 +2276,7 @@ static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
 
 static int fix_phasefile(char *cmd_name, int element_number, int np_makefid )
 {
-        char            phasefilepath[ MAXPATHL ];
+        char            phasefilepath[ MAXPATH];
         int             ival;
         dfilehead       phasehead;
         dpointers       data_addr;
@@ -2468,7 +2468,7 @@ static int writefid_args(int argc, char *argv[], int *element_addr )
 static int writefid_getfhead(char *cmd_name, dfilehead *fh_ref )
 {
         int     ival;
-        char    fidpath[ MAXPATHL ];
+        char    fidpath[ MAXPATH ];
 
 /*  Close user file if previous application left it open.  */
 
@@ -2527,7 +2527,7 @@ static int writefid_getfhead(char *cmd_name, dfilehead *fh_ref )
 static int write_numbers_ascii(char *cmd_name, char *fn_addr, void *mem_buffer,
                                int np, int cur_format )
 {
-        char     over_write_prompt[ MAXPATHL + 20 ], over_write_ans[ 4 ];
+        char     over_write_prompt[ MAXPATH + 20 ], over_write_ans[ 4 ];
         int      iter, ival;
         short   *short_addr = NULL;
         int     *int_addr = NULL;

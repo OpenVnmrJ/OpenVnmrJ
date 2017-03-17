@@ -778,7 +778,7 @@ static void remove_data(char *exppath)
  *      $curexp/coef							*/
 
 /***********************/
-static void remove_3d(char *exppath )
+void remove_3d(char *exppath )
 /***********************/
 {
 	char	subdirpath[ MAXPATH+10 ], remove_it_cmd[ MAXPATH+10 ];
@@ -837,7 +837,7 @@ static void remove_3d(char *exppath )
 }
 
 /************************************/
-static void remove_shapelib(char *exppath )
+void remove_shapelib(char *exppath )
 /************************************/
 {
 	char	subdirpath[ MAXPATH+10 ], remove_it_cmd[ MAXPATH+10 ];
