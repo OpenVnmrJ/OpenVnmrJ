@@ -113,16 +113,6 @@ then
     cp -r kermit $newdir/.
   fi
 fi
-if [ -d $prev/craft -a -d $ovj/craft -a ! -d $ovj/craft/Bayes3 ]
-then
-  echo "Collecting craft files"
-  cd $prev/craft
-  newdir=$ovj/craft
-  zip -ryq $newdir/b.zip Bayes3 clusterlib fidlib
-  cd $newdir
-  unzip -qn b.zip
-  rm b.zip
-fi
 if [ -d $prev/biopack -a -d $ovj/biopack -a ! -d $ovj/biopack/fidlib ]
 then
   echo "Collecting biopack files"
