@@ -79,7 +79,7 @@ static int makefid_args(int argc, char *argv[], int *element_addr, int *format_a
 static int report_data_format_inconsistent(char *cmd_name, int old_format );
 static int makefid_getfhead(char *cmd_name, dfilehead *fh_ref, int *update_fh_ref, int force );
 static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
-                              int max_lines, int cur_format );
+                              int max_lines, int cur_format, int revFlag );
 static int fix_phasefile(char *cmd_name, int element_number, int np_makefid );
 static int writefid_args(int argc, char *argv[], int *element_addr );
 static int writefid_getfhead(char *cmd_name, dfilehead *fh_ref );
@@ -1547,9 +1547,10 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
         int              forceUpdate = 0;
         int              addFlag = 0;
         int              phaseInvert = 0;
+        int              revFlag = 0;  /* Flag for spectral reverse */
 
         cmd_name = argv[ 0 ];
-        if (argc < COUNT_REQUIRED_ARGS || argc > MAX_NUMBER_MAKEFID_ARGS+1) {
+        if (argc < COUNT_REQUIRED_ARGS || argc > MAX_NUMBER_MAKEFID_ARGS+2) {
                 Werrprintf(
             "Usage:  %s( 'file_name' [, element number, format ] )", cmd_name
                 );
@@ -1570,7 +1571,9 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
            new_fid_format = REAL_NUMBERS;
            calcFID = 2;
         }
-        if ( ! strcmp(argv[argc-1],"add"))
+        if ( ! strcmp(argv[argc-1],"rev") || ! strcmp(argv[argc-2],"rev") )
+           revFlag = 1;
+        if ( ! strcmp(argv[argc-1],"add") || ! strcmp(argv[argc-2],"add") )
            addFlag = 1;
         if ( ! strcmp(argv[argc-1],"sub"))
         {
@@ -1708,8 +1711,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
                 fn_addr,
                 mem_buffer,
                 nlines,
-                new_fid_format
-        );
+                new_fid_format, revFlag);
       }
         if (np_makefid < 0) {           /* load_ascii_numbers */
                 release( mem_buffer );  /* displays the error */
@@ -2158,7 +2160,7 @@ static int count_lines(char *fn_addr )
  *  by the value of cur_format
  */
 static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
-                              int max_lines, int cur_format )
+                              int max_lines, int cur_format, int revFlag )
 {
         char     cur_line[ 122 ];
         short   *short_addr = NULL;
@@ -2167,9 +2169,16 @@ static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
         float   *float_addr = NULL;
         double   dval1, dval2;
         FILE    *tfile;
+        double   drevMult = 1.0;
+        int      revMult = 1;
 
 /*  Transfer buffer address to selected type so address arithmetic works right.  */
 
+        if (revFlag)
+        {
+           drevMult = -1.0;
+           revMult = -1;
+        }
         if (cur_format == REAL_NUMBERS)
           float_addr = (float *)mem_buffer;
         else if (cur_format == SINGLE_PREC)
@@ -2245,7 +2254,7 @@ static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
 
                 if (cur_format == REAL_NUMBERS) {
                         *(float_addr++) = (float) dval1;
-                        *(float_addr++) = (float) dval2;
+                        *(float_addr++) = (float) (dval2 * drevMult);
                 }
                 else if (cur_format == SINGLE_PREC) {
                         if (exceeds_16bits( jval1 ) || exceeds_16bits( jval2 )) {
@@ -2257,11 +2266,11 @@ static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
                                 return( -1 );
                         }
                         *(short_addr++) = (short) jval1;
-                        *(short_addr++) = (short) jval2;
+                        *(short_addr++) = (short) (jval2 * revMult);
                 }
                 else {
                         *(int_addr++) = jval1;
-                        *(int_addr++) = jval2;
+                        *(int_addr++) = jval2 * revMult;
                 }
 
                 np_loaded += 2;

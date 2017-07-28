@@ -3932,7 +3932,7 @@ int encipher(int argc, char *argv[], int retc, char *retv[])
       ABORT;
    }
 
-   if ( strcmp(argv[1],"bin") && strcmp(argv[1],"text") )
+   if ( strcmp(argv[1],"bin") && strcmp(argv[1],"text") && strcmp(argv[1],"status") )
    {
       Werrprintf("Usage -- %s first argument must be 'bin' or 'text'",argv[0]);
       ABORT;
@@ -3955,6 +3955,15 @@ int encipher(int argc, char *argv[], int retc, char *retv[])
       read( binfile, &ch,  sizeof(int));
       if (ch == 1954)
          origIsText = 0;
+   }
+   if ((argc == 3) && ! strcmp(argv[1],"status") )
+   {
+      if (retc)
+         retv[0] = intString(origIsText == 0);
+      else
+         Winfoprintf( "File is %s", origIsText ? "text" : "bin" );
+      close(binfile);
+      RETURN;
    }
    
    if ( origIsText )
