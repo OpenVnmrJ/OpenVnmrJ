@@ -5010,15 +5010,16 @@ static int checkChar( register int ptr, int charType, register char *defChars, i
 |       character for disallowed characters (default _)
 +-----------------------------------------------------------------------------*/
 
+#define MAXCHKNAME 512
 int chkname(int argc, char *argv[], int retc, char *retv[])
 {
    char *ptr;
-   char parlist[MAXSTR];
-   char reqlist[MAXSTR];
-   char parstr[MAXSTR];
-   char reqstr[MAXSTR];
-   char search_str[MAXSTR];
-   char tmp2Str[MAXSTR];
+   char parlist[MAXCHKNAME];
+   char reqlist[MAXCHKNAME];
+   char parstr[MAXCHKNAME];
+   char reqstr[MAXCHKNAME];
+   char search_str[MAXCHKNAME];
+   char tmp2Str[MAXCHKNAME];
    char dateChar[MAXSTR];
    static char fileChars[MAXSTR] = "_.-";
    static char extraChars[MAXSTR];
@@ -5135,17 +5136,17 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
                else
                   rchar = '$';
                sptr = search_str;
-               if (rlen < MAXSTR)
+               if (rlen < MAXCHKNAME)
                   *rptr++ = rchar;
                rlen++;
                while(*sptr != '\000')
                {
-                  if (rlen < MAXSTR)
+                  if (rlen < MAXCHKNAME)
                      *rptr++ = *sptr;
                   sptr++;
                   rlen++;
                }
-               if (rlen < MAXSTR)
+               if (rlen < MAXCHKNAME)
                   *rptr++ = rchar;
                rlen++;
                *rptr='\000';
@@ -5158,14 +5159,14 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
                   int newChar;
 
                   newChar = checkChar( *sptr, charType, defChars, replaceChar );
-                  if ( (plen < MAXSTR) && newChar &&
+                  if ( (plen < MAXCHKNAME) && newChar &&
                        ( (plen == 1) || (*(pptr-1) != newChar) || (newChar != replaceChar) ) )
                   {
                      *pptr++ = newChar;
                      plen++;
                      *pptr='\000';
                   }
-                  if ( replacePair && (rlen < MAXSTR) && newChar &&
+                  if ( replacePair && (rlen < MAXCHKNAME) && newChar &&
                        ( (rlen == 1) || (*(rptr-1) != newChar) || (newChar != replaceChar) ) )
                   {
                      *rptr++ = newChar;
@@ -5176,17 +5177,17 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
                if ( ! replacePair)
                {
                   sptr = search_str;
-                  if (rlen < MAXSTR)
+                  if (rlen < MAXCHKNAME)
                      *rptr++ = '$';
                   rlen++;
                   while(*sptr != '\000')
                   {
-                     if (rlen < MAXSTR)
+                     if (rlen < MAXCHKNAME)
                         *rptr++ = *sptr;
                      sptr++;
                      rlen++;
                   }
-                  if (rlen < MAXSTR)
+                  if (rlen < MAXCHKNAME)
                      *rptr++ = '$';
                   rlen++;
                   *rptr='\000';
@@ -5204,14 +5205,14 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
                   int newChar;
 
                   newChar = checkChar( *sptr, charType, defChars, replaceChar );
-                  if ( (plen < MAXSTR) && newChar &&
+                  if ( (plen < MAXCHKNAME) && newChar &&
                        ( (plen == 1) || (*(pptr-1) != newChar) || (newChar != replaceChar) ) )
                   {
                      *pptr++ = newChar;
                      plen++;
                      *pptr='\000';
                   }
-                  if ( replacePair && (rlen < MAXSTR) && newChar &&
+                  if ( replacePair && (rlen < MAXCHKNAME) && newChar &&
                        ( (rlen == 1) || (*(rptr-1) != newChar) || (newChar != replaceChar) ) )
                   {
                      *rptr++ = newChar;
@@ -5225,7 +5226,7 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
 
                   for (tmp=0; tmp < slen+2; tmp++)
                   {
-                     if (rlen < MAXSTR)
+                     if (rlen < MAXCHKNAME)
                         *rptr++ = *(ptr+tmp);
                      rlen++;
                   }
@@ -5239,10 +5240,10 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
 
                for (tmp=0; tmp < 2-slen; tmp++)
                {
-                  if (plen < MAXSTR)
+                  if (plen < MAXCHKNAME)
                      *pptr++ = *(ptr+tmp);
                   plen++;
-                  if (rlen < MAXSTR)
+                  if (rlen < MAXCHKNAME)
                      *rptr++ = *(ptr+tmp);
                   rlen++;
                }
@@ -5256,14 +5257,14 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
             int newChar;
 
             newChar = checkChar( *ptr, charType, defChars, replaceChar );
-            if ( (plen < MAXSTR) && newChar &&
+            if ( (plen < MAXCHKNAME) && newChar &&
                  ( (plen == 1) || (*(pptr-1) != newChar) || (newChar != replaceChar) ) )
             {
                *pptr++ = newChar;
                plen++;
                *pptr='\000';
             }
-            if ( (rlen < MAXSTR) && newChar &&
+            if ( (rlen < MAXCHKNAME) && newChar &&
                  ( (rlen == 1) || (*(rptr-1) != newChar) || (newChar != replaceChar) ) )
             {
                *rptr++ = newChar;
