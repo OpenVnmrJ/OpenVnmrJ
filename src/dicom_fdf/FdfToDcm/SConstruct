@@ -1,0 +1,139 @@
+#
+#
+
+import os
+import sys
+import glob
+
+cwd = os.getcwd()
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+#   Try default location
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, os.pardir, 'ovjTools')
+    if not os.path.exists(ovjtools):
+       print "OVJ_TOOLS env not found."
+       print "For bash and variants, use export OVJ_TOOLS=<path>"
+       print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+       sys.exit(1)
+
+
+sys.path.append(os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
+
+# define target file names
+FdfToDcmTarget = 'FdfToDcm'
+
+
+# source list
+FdfToDcmSrcList = ['FdfToDcm.cpp',
+                   'ConvertFdfFieldToTag.cpp',
+                   'GetScaleFactor.cpp',
+                   'ProcessFdfHeader.cpp',
+                   'ProcessCustomTags.cpp',
+                   'ProcessFidData.cpp',
+                   'ProcessProcpar.cpp',
+                   'ProcessTagfile.cpp']
+
+# includes
+
+#locinclList = ['mesgtext.h']
+#dctinclList = ['attr.h',
+#               'attrtype.h',
+#               'attrtype.h',
+#               'attrtypt.h',
+#               'attrtyps.h',
+#               'attrtypf.h',
+#               'attrtypn.h',
+#               'attrtypo.h',
+#               'attrothr.h',
+#               'attrtypb.h',
+#               'attrxmls.h',
+#               'dcopt.h',
+#               'transynu.h']
+#pdatinclList = ['rawsrc.h',
+#               'srcsink.h']
+
+
+geninclPath = os.path.join(ovjtools, 'dicom3tools','libsrc','include','generic')
+locinclPath = os.path.join(ovjtools, 'dicom3tools','libsrc','include','locale')
+dctinclPath = os.path.join(ovjtools, 'dicom3tools','libsrc','include','dctool')
+pdatinclPath = os.path.join(ovjtools, 'dicom3tools','libsrc','include','pixeldat')
+
+os.chdir(geninclPath)
+geninclList = glob.glob("*.h")
+os.chdir(locinclPath)
+locinclList = glob.glob("*.h")
+os.chdir(dctinclPath)
+dctinclList = glob.glob("*.h")
+os.chdir(pdatinclPath)
+pdatinclList = glob.glob("*.h")
+
+# go back
+os.chdir(cwd)
+
+if (platform=="darwin"):
+	d3LibPath = os.path.join(ovjtools,'dicom3tools','libsrc_mac','lib')
+else:
+	d3LibPath = os.path.join(ovjtools,'dicom3tools','libsrc','lib')
+
+
+d3LibList = [ os.path.join(d3LibPath,'libdctl.a'), os.path.join(d3LibPath,'libdlcl.a'), os.path.join(d3LibPath,'libgener.a')]
+
+
+# build environments
+
+
+env= Environment(CC         = 'g++',
+                     CCFLAGS    = '-Wno-deprecated -Wno-write-strings -O -g',
+#debug: -g 
+#profile: -pg
+                     CPPDEFINES = ['DDEFAULTUIDROOT=\"1.3.6.1.4.1.670589.1\"', 
+                                   'DEFAULTINSTANCECREATORUID=\"1.3.6.1.4.1.670589.3\"',
+                                   'DEFAULTIMPLEMENTATIONCLASSUID=\"1.3.6.1.4.1.670589.2\"',
+                                   'DEFAULTIMPLEMENTATIONVERSIONNAME=\"DCTOOL100\"',
+                                   'DEFAULTSOURCEAPPLICATIONENTITYTITLE=\"VARIAN1\"',
+                                   'USEGLIBCTIMEZONE=1',
+                                   'USEDUMBINFINITYANDNAN=1',
+                                   'HASSTDNAMESPACEFORSTREAMPOS=1',
+                                   'HASGETHOSTID=1',
+                                   'HASGETHOSTIDPROTOTYPE=1',
+                                   'USEXMITSHMEXTENSION=1'])
+
+if (platform=="darwin"):
+    env.Append(CCFLAGS = ' -arch i386')
+    env.Append(LINKFLAGS = ' -arch i386')
+
+
+buildMethods.makeSymLinks(env, FdfToDcmTarget, cwd, geninclPath, geninclList)
+buildMethods.makeSymLinks(env, FdfToDcmTarget, cwd, locinclPath, locinclList)
+buildMethods.makeSymLinks(env, FdfToDcmTarget, cwd, dctinclPath, dctinclList)
+buildMethods.makeSymLinks(env, FdfToDcmTarget, cwd, pdatinclPath, pdatinclList)
+
+
+
+
+# actual builds
+FdfToDcm_prog = env.Program(target = FdfToDcmTarget,
+                             source = [FdfToDcmSrcList,d3LibList],
+                             LIBS   = 'm')
+
+  
+installPath    = os.path.join(cwd, os.pardir, os.pardir,os.pardir, os.pardir,
+                                 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+      os.makedirs(installPath)
+
+   
+# actions to be performed after targets are built  
+env.AddPostAction(FdfToDcm_prog,
+                     Action(Copy(installPath, os.path.join(cwd, FdfToDcmTarget))))
+
+
+
+#OBJFILES := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
+
