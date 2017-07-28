@@ -56,7 +56,6 @@ buildList = string.split("""
                          app-defaults
                          acq
                          adm
-                         dicom_djsm
                          Diffusion
                          fidlib
                          fiddle
@@ -110,6 +109,7 @@ buildList = string.split("""
                          biopack
                          biosolidspack
                          common
+                         dicom_fdf
                          dicom_store
                          DOSY
                          ddr
