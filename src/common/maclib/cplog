@@ -261,7 +261,7 @@ ELSEIF ($arg2='wrxml') THEN
 		if ($ret=0) then $pslabel=$cpname endif
 		$path=''
 	    endif
-		$tt='' shell('basename '+$archsamp):$tt
+		$tt='' substr($archsamp,'basename'):$tt
         	$atx=1 $attr=''
         	$attr[$atx]='status','Completed' $atx=$atx+2
 		if $spec then
@@ -366,7 +366,6 @@ ELSEIF ($arg2='last') or ($arg2 = 'first') THEN
 	   $lastname=''
 	   substr($lname,2):$lastname
            substr($lastname,'basename','.fid .REC .rec'):$lastname,$ext
-//         shell('basename '+$lastname,' .fid'):$lastname
            exists($archsamp+'/'+$lastname+'.REC','directory'):$isthere
            if (not $isthere) then
                 exists($archsamp+'/'+$lastname+'.rec','directory'):$isthere
@@ -480,8 +479,12 @@ ELSEIF ($arg2='lastcraft') THEN
     $s1='' $s2=''
     readfile($log,'$s1','$s2',$b+':','local'):$tot
     if $tot then
-    	$dir=$d+'/CRAFT/'+$s2[$tot]+'.crft'
-    	exists($dir,'directory'):$direx
+        $dir=$d+'/CRAFT/'+$s2[$tot]+'.cfat'
+        exists($dir,'directory'):$direx
+	if not $direx then
+    	    $dir=$d+'/CRAFT/'+$s2[$tot]+'.crft'
+    	    exists($dir,'directory'):$direx
+	endif
 	if $direx then
 	    $name=$dir
 	endif

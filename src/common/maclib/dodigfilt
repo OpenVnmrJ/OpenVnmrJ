@@ -1,12 +1,34 @@
-"macro dodigfilt"
+// Chempacker macro
 // arg1 is the new experiment
 // make sure to save the fid in curexp
 
+if $# < 1 then $1=0 endif
+if $# < 2 then $2=1 endif
+if $# < 3 then $3=999 endif
+if $# < 4 then $4=5 endif
+
+if $1=0 then newexp:$1 endif
+
+tmpsqcopy($0)
+$cr=cr $delta=delta
 f full
+cr=$cr delta=$delta
 pards movedssw
-dscoef=999
+dscoef=$3
 dsfb=sw/2/downsamp
-downsamp=1
-if $# > 1 then downsamp=$2 endif
+downsamp=$2
 digfilt($1)
+tmpsqreturn($0)
+write('line3','jexp%d',$1):$jexp
+{$jexp}
+lb=1/at fn='n' wft
+if $4 then 
+    setLP($4)
+    lb=1/at fn='n' wft
+    lp
+    rt(curexp+'/lp')
+endif
+proc='ft' wft f full dc
+file='exp'
+setvalue('file',file,'processed')
 

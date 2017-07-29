@@ -1,0 +1,129 @@
+// Chempacker macro
+"**************************************************************"
+"pi4ssbsq - macro to set both F1 and F2 windows to be          "
+"           pi/4 shifted sine-bell squared functions           "
+"usage    - pi4ssbsq(<number of increments used>)              "
+"**************************************************************"
+
+$acq='acq' $f1='f1' $f2='f2'
+$at=at $ni=0 $ni2=0
+
+getdim:$dim
+
+if ($# < 1) then write('error','minimum one argument must be supplied') return endif
+
+if ($# > 3) then 
+    write('error','Only 3 arguments are supported')
+    return
+endif
+$shift=$1
+
+$arg1='real'
+IF ($# > 1) THEN
+    if typeof('$2') then $arg1='string' endif
+ENDIF
+
+IF ($arg1='string') THEN
+    $f1='n' $f2='n' $acq='n'
+    if ($2 = 'f1') then 
+    	$f1='f1' 
+    	if ($# < 3) then
+      	    exists('proc1','parameter'):$ex
+      	    if ($ex) then
+      		if (proc1 = 'lp') and (lpopt1='f') then
+        	    $ni = strtext1+lpext1-1
+      		endif
+      	    endif
+    	else
+      	    $ni=$3
+    	endif
+
+    elseif ($2 = 'f2') then
+    	if ($dim=2) then $acq='acq' $f2='n'
+	    if ($# > 2) then $at=$3 endif
+    	elseif ($dim=3) then 
+      	    $f2='f2' 
+      	    if ($# < 3) then
+       		exists('proc2','parameter'):$ex
+       		if ($ex) then
+       		    if (proc2 = 'lp') and (lpopt2='f') then
+         		$ni2 = strtext2+lpext2-1
+        	    endif
+       		endif
+      	    else
+       		$ni2=$3
+      	    endif
+    	endif
+
+    elseif ($2 = 'acq') then
+    	$acq='acq'
+        if ($# > 2) then $at=$3 endif
+    elseif ($2 = 'f3') and ($dim=3) then 
+    	$acq='acq'
+        if ($# > 2) then $at=$3 endif
+    endif
+
+ELSE
+
+    if ($# < 3) then
+ 	exists('proc2','parameter'):$ex
+ 	if ($ex) then
+ 	    if (proc2 = 'lp') and (lpopt2='f') then
+   		$ni2 = strtext2+lpext2-1
+ 	    endif
+ 	endif
+    else
+ 	$ni2=$3
+    endif
+
+    if ($# < 2) then
+ 	exists('proc1','parameter'):$ex
+ 	if ($ex) then
+ 	    if (proc1 = 'lp') and (lpopt1='f') then
+   		$ni = strtext1+lpext1-1
+ 	    endif
+ 	endif
+    else
+ 	$ni=$2
+    endif
+
+ENDIF
+
+if ($dim = 1) then $f1='n' $f2='n' endif
+if ($dim = 2) then $f2='n' endif
+
+if ($acq='acq') then
+    gf='n' lb='n' awc='n' 
+    if not $shift then sb=-$at/2 sbs='n'
+    else 
+	sb=-$at*(0.5 + (1/$shift))
+	sbs=-$at*2/$shift
+    endif
+    $np=$at*sw*2
+    on('fn'):$fnon if ($fnon) and ($np > fn) then sb=sb*fn/$np sbs=sbs*fn/$np endif
+    if $0='piNssb' then sb=-1*sb endif
+endif
+
+if $f1='f1' then
+    if ($ni=0) then $ni=ni endif
+    $at1=$ni/sw1
+    gf1='n' lb1='n' awc1='n' 
+    if not $shift then sb1=-$at1/2 sbs1='n'
+    else
+	sb1=-$at1*(0.5 + (1/$shift))
+	sbs1=-$at1*2/$shift
+    endif
+    if $0='piNssb' then sb1=-1*sb1 endif
+endif
+if $f2='f2' then
+    if ($ni2=0) then $ni2=ni2 endif
+    $at2=$ni2/sw2
+    gf2='n'  lb2='n' awc2='n' 
+    if not $shift then sb2=-$at2/2 sbs2='n'
+    else
+	sb2=-$at2*(0.5 + (1/$shift))
+	sbs2=-$at2*2/$shift
+    endif
+    if $0='piNssb' then sb2=-1*sb2 endif
+endif
+

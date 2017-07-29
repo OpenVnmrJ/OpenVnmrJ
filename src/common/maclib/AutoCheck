@@ -1,4 +1,4 @@
-"macro AutoCheck"
+// Chempacker macro
 "************************************************************"
 " AutoCheck  - Checks for the presence of a fid file         "
 "		(Glide use)   If the fid exists returns	     "
@@ -9,8 +9,8 @@ $filename='' $fidexists=0 $fidname=''
 $archivesample='' $sample='' $archive=''
 $name=$1
 if ($# >2) then
-   shell('dirname '+$3):$archive
-   shell('basename '+$3):$sample
+   substr($3,'dirname'):$archive
+   substr($3,'basename'):$sample
 else
    $archive=archivedir
    $sample=sample
@@ -18,9 +18,10 @@ else
    isnewexp:$new
    if (auto='y') then $new=1 endif
    if ($new=0) then
-   	shell('dirname '+file):$archivesample
-   	shell('basename '+$archivesample):$sample
-   	shell('dirname '+$archivesample):$archive
+   	substr(file,'dirname'):$archivesample
+   	substr($archivesample,'basename'):$sample
+   	substr($archivesample,'dirname'):$archive
+
    endif
    archivedir=$archive
 endif
@@ -32,9 +33,17 @@ endif
  cplog($name,'last',$archive+'/'+$sample):$name
 
  $filename=$archive+'/'+$sample+'/'+$name
- $fidname=$name+'.fid'
 
- exists($filename+'.fid','file'):$fidexists
+    $fidname=$name+'.REC'
+    exists($archive+'/'+$sample+'/'+$fidname,'directory'):$fidexists
+    if not $fidexists then
+	$fidname=$name+'.rec'
+	exists($archive+'/'+$sample+'/'+$fidname,'directory'):$fidexists
+    endif
+    if not $fidexists then
+	$fidname=$name+'.fid'
+	exists($archive+'/'+$sample+'/'+$fidname,'directory'):$fidexists
+    endif
 
  if ($# > 1) then
   if ($2 <> 'fid') then

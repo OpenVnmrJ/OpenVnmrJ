@@ -7,6 +7,7 @@
 getvalue('arraydim','processed'):$arraydim
 $basecorr=''
 $t1=''
+$spwp=''
 $ix=1
 while $ix<=$# do
   if ${$ix} = 'dc' then
@@ -25,6 +26,8 @@ while $ix<=$# do
     $basecorr=${$ix}
   elseif ${$ix} = 't1' then
     $t1='t1'
+  elseif ${$ix} = 'spwp' then
+    $spwp='spwp'
   else
     write('error','Usage:  %s<(<\'bc\'|\'dc\'><,\'t1\'>)>',$0)
     return
@@ -45,7 +48,8 @@ if $t1='t1' then
 endif
 
 "set display parameters - only works on full display!"
-s1 f
+s1
+if $spwp<>'spwp' then f endif
 
 "find integrals on displayed area"
 numreg:$regs
@@ -86,17 +90,19 @@ endif
 $ix=1
 while $ix<=$regs do
   getreg($ix):$hi,$low
-  if $axis='p' then
-    write('file',$outfile,'%5d     %12.3f       %12.3f',$ix,
-	  $low/$reffrq,$hi/$reffrq)
-  else
-    write('file',$outfile,'%5d     %12.1f       %12.1f',$ix,$low,$hi)
-  endif
-  if $t1='t1' then
+  if $hi>=sp and $low<=sp+wp then
     if $axis='p' then
-      write('file',$outfile2,'%4d      %12.3f',$ix,($low+$hi)/(2*$reffrq))
+      write('file',$outfile,'%5d     %12.3f       %12.3f',$ix,
+	  $low/$reffrq,$hi/$reffrq)
     else
-      write('file',$outfile2,'%4d      %12.1f',$ix,($low+$hi)/2)
+      write('file',$outfile,'%5d     %12.1f       %12.1f',$ix,$low,$hi)
+    endif
+    if $t1='t1' then
+      if $axis='p' then
+        write('file',$outfile2,'%4d      %12.3f',$ix,($low+$hi)/(2*$reffrq))
+      else
+        write('file',$outfile2,'%4d      %12.1f',$ix,($low+$hi)/2)
+      endif
     endif
   endif
   $ix=$ix+1
@@ -114,10 +120,12 @@ repeat
   $ix=1
   while $ix<=$regs do
     getreg($ix):$hi,$low
-    integ($hi,$low):$int
-    write('file',$tmpfile,'%5d  %12d %12.3f',$ix,$spec,$int)
-    if $t1='t1' then
-      write('file',$tmpfile2,'%4d %11d %12.3f',$ix,$spec,$int)
+    if $hi>=sp and $low<=sp+wp then
+        integ($hi,$low):$int
+    	write('file',$tmpfile,'%5d  %12d %12.3f',$ix,$spec,$int)
+    	if $t1='t1' then
+      	write('file',$tmpfile2,'%4d %11d %12.3f',$ix,$spec,$int)
+        endif
     endif
     $ix=$ix+1
   endwhile
