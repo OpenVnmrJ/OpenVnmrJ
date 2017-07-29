@@ -5,22 +5,27 @@
 
 if ($# < 1) then 
     write('error','Usage: convertbru(filename, <options>)')
-    ABORT
+    return
+endif
+$cbx=0 $convertbru=''
+// Always work based on appdir/bin
+exists($0,'bin'):$cbx,$convertbru
+if not $cbx then
+    getbinpath($0):$cbx,$convertbru
+endif
+if not $cbx then
+    write('error','%s script not found',$0)
+    return
 endif
 
-if ($# = 1) then
-   shell('convertbru','"'+$1+'"')
-else
-   if (($# > 1) and ($# < 8)) then
-      $arglist = $2
-      $i = 3
-      while ($i <= $#) do
-	$arglist = $arglist + ' ' + ${$i}
+$arglist=''
+if $# > 1 then
+    $arglist = $2
+    $i = 3
+    while $i <= $# do
+	$arglist= $arglist+' '+${$i}
 	$i=$i+1
-      endwhile
-      shell('convertbru','"'+$1+'"',$arglist)
-   else
-      write('error','Maximum number of arguments is 7.')
-      ABORT
-   endif
+    endwhile
 endif
+
+shell('('+$convertbru+' "'+$1+'" '+$arglist+')')

@@ -1,14 +1,21 @@
-"macro newexp"
+// Chempacker macro
 
 $quiet='no'
 if ($# > 0) then $quiet=$1 endif
 $expi=2
 nextexp:$expi
 if ($expi<>0) then
-    if ($quiet='quiet') then
-	cexp($expi):$dum
-    else
-	cexp($expi)
+    $msg='' $stat=0
+    cexp($expi):$stat,$msg
+    if ($quiet<>'quiet') then
+	write('line3','%s',$msg)
+    endif
+    if $stat then
+        $fid='' write('line3','%s/exp%d/acqfil/fid',userdir,$expi):$fid
+    	exists($fid,'file'):$fidex
+    	if $fidex then
+	    rm('-f',$fid):$dum
+    	endif
     endif
 endif
 return($expi)

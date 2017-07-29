@@ -262,9 +262,9 @@ if ( 'darwin' not in platform):
 # os.chmod(vnmrtmpPath,0777)
 
 vnmrPath    = os.path.join(cwd, os.pardir,'vnmr')
-# cmd='cd src/common; zip -ryq tmp.zip *; mv tmp.zip '+vnmrPath+';cd '+vnmrPath+'; unzip -oq tmp.zip; rm -f tmp.zip'
-# print "cmd: ",cmd
-# os.system(cmd)
+vnmrSha1Path = os.path.join(vnmrPath,'adm','sha1')
+if not os.path.exists(vnmrSha1Path):
+   os.makedirs(vnmrSha1Path)
 
 def runSconsPostAction(dir):
    dirList = os.listdir(dir)
@@ -275,22 +275,20 @@ def runSconsPostAction(dir):
          print "cmd: ",cmd
          os.system(cmd)
 
-runSconsPostAction(vnmrPath)
-runSconsPostAction(os.path.join(vnmrPath, 'craft'))
-
-vnmrSha1Path = os.path.join(cwd, os.pardir,'vnmr','adm','sha1')
-if not os.path.exists(vnmrSha1Path):
-   os.makedirs(vnmrSha1Path)
-
-print "Build ID file"
-command = 'cd scripts; ./genBuildId.pl'
-#output = os.popen(command).read()
-idproc = subprocess.Popen( command, shell=True)
-status = os.waitpid(idproc.pid, 0)
-
 # this must come last, since it creates sha1sum for all files
-print "Build Sha1 SnapShot of files"
-command = 'cd scripts; ./createSha1ChkList.sh'
-# output = os.popen(command).read()
-idproc = subprocess.Popen( command, shell=True)
-status = os.waitpid(idproc.pid, 0)
+def afterScons():
+   runSconsPostAction(vnmrPath)
+   runSconsPostAction(os.path.join(vnmrPath, 'craft'))
+
+   print "Build ID file"
+   command = 'cd scripts; ./genBuildId.pl'
+   idproc = subprocess.Popen( command, shell=True)
+   status = os.waitpid(idproc.pid, 0)
+
+   print "Build Sha1 SnapShot of files"
+   command = 'cd scripts; ./createSha1ChkList.sh'
+   idproc = subprocess.Popen( command, shell=True)
+   status = os.waitpid(idproc.pid, 0)
+
+import atexit
+atexit.register(afterScons)

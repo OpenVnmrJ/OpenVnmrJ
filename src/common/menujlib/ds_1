@@ -4,260 +4,85 @@
 "  ********************************  "
 exists('buttonMode','parameter','global'):$e
 if (not $e) then
-   mfpars
+    mfpars
 endif
 
 graphis:$vjmgd
 if ($vjmgd <> 'ds') then
-  if (lastmenu<>'') then
-    menu(lastmenu) lastmenu=''
-  else
-    menu('display_1D')
-  endif
+    if (lastmenu<>'') then
+    	menu(lastmenu) lastmenu=''
+    else
+    	menu('display_1D')
+    endif
 else
 
-  mlabel=''
-  mstring=''
-  micon=''
+    mlabel=''
+    mstring=''
+    micon=''
 
-exists('craft_is','maclib'):$macex
-$crft1=0 if ($macex) then craft_is:$crft1 endif
+    exists('craft_is','maclib'):$macex
+    $crft1=0 if ($macex) then craft_is:$crft1 endif
 
-dssi:$arraydim
-IF ($crft1) THEN
-// The following section for craft
+    dssi:$arraydim
 
-  $vjm=1
+    $vjm=0
+    if $arraydim>1.5 then
+	$vjm=$vjm+1
+    	mlabel[$vjm]='Increment'
+    	mstring[$vjm]='select:$vjms $vjms=$vjms+1 $vjms=trunc($vjms) ds_dim:$vjmdim if $vjms<0.9 then $vjms=1 elseif $vjms>$vjmdim then $vjms=$vjmdim endif ftproc[2]=$vjms ds($vjms)'
+    	micon[$vjm]='nextfid.gif'
 
-  if $arraydim>1.5 and ($crft1<0.5) then
-    mlabel[$vjm]='Increment'
-    mstring[$vjm]='select:$vjms $vjms=$vjms+1 $vjms=trunc($vjms) ds_dim:$vjmdim if $vjms<0.9 then $vjms=1 elseif $vjms>$vjmdim then $vjms=$vjmdim endif ftproc[2]=$vjms ds($vjms)'
-    micon[$vjm]='nextfid.gif'
-    $vjm=$vjm+1
-    mlabel[$vjm]='Decrement'
-    mstring[$vjm]='select:$vjms $vjms=$vjms-1 $vjms=trunc($vjms) ds_dim:$vjmdim if $vjms<0.9 then $vjms=1 elseif $vjms>$vjmdim then $vjms=$vjmdim endif ftproc[2]=$vjms ds($vjms)'
-    micon[$vjm]='prevfid.gif'
-    $vjm=$vjm+1
-  endif
+    	$vjm=$vjm+1
+    	mlabel[$vjm]='Decrement'
+    	mstring[$vjm]='select:$vjms $vjms=$vjms-1 $vjms=trunc($vjms) ds_dim:$vjmdim if $vjms<0.9 then $vjms=1 elseif $vjms>$vjmdim then $vjms=$vjmdim endif ftproc[2]=$vjms ds($vjms)'
+    	micon[$vjm]='prevfid.gif'
 
-  if (crmode = 'b') then
-    mlabel[$vjm]='One Cursor'
-    micon[$vjm]='1D1cur.gif'
-  else
-    mlabel[$vjm]='Two Cursors'
-    micon[$vjm]='1D2cur.gif'
-  endif
-  mstring[$vjm]='ds(`toggle`) craftbox'
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Show Full Spectrum'
-  micon[$vjm]='1Dfull.gif'
-  mstring[$vjm]='mfaction(\'mfzoom\',0) craftbox' 
-
-  if ($crft1) then
-        $vjm=$vjm+1
-        mlabel[$vjm]='Show ROIs'
-        micon[$vjm]='aipbox.gif'
-        mstring[$vjm]='craftbox(\'force\')'
-  endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Reset to Full Display'
-  micon[$vjm]='FullScale.gif'
-  mstring[$vjm]='mfaction(\'fullzoom\') craftbox'
-  $vjm=$vjm+1
-
-  mlabel[$vjm]='Zoom in'
-  micon[$vjm]='1Dexpand.gif'
-  mstring[$vjm]='if(buttonMode<2) then mfaction(\'mfzoom\',1) craftbox else setButtonMode(0) endif' 
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Zoom out'
-  micon[$vjm]='1Dzoomout.gif'
-  mstring[$vjm]='mfaction(\'mfzoom\',-1) craftbox' 
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Zoom mode'
-  if(buttonMode=2) then
-    mstring[$vjm]='setButtonMode(0) menu(`ds_1`) craftbox'
-    micon[$vjm]='ZoomMode.gif:on'
-  else
-    mstring[$vjm]='ds setButtonMode(2) menu(`ds_1`)' 
-    micon[$vjm]='ZoomMode.gif'
-  endif
-
-	exists('dssi','maclib'):$dssex
-	mspec:$r1
-        if ($arraydim>1) and ($dssex) then
-	  if ($r1) then
-            $vjm=$vjm+1
-            mlabel[$vjm]='VertOffset out'
-            micon[$vjm]='voMore.gif'
-            mstring[$vjm]='dssi(\'voup\') craftbox'
-
-            $vjm=$vjm+1
-            mlabel[$vjm]='VertOffset in'
-            micon[$vjm]='voLess.gif'
-            mstring[$vjm]='dssi(\'vodown\') craftbox'
-
-            $vjm=$vjm+1
-            mlabel[$vjm]='VertOffset zero'
-            micon[$vjm]='voZero.gif'
-            mstring[$vjm]='vo=0 dssi craftbox'
-
-            $vjm=$vjm+1
-            mlabel[$vjm]='1D Spectrum'
-            micon[$vjm]='dspec.gif'
-            mstring[$vjm]='ds(1)'
-	  else
-	    $vjm=$vjm+1
-	    mlabel[$vjm]='Interactive array spectra'
-	    micon[$vjm]='dssinteractive.gif'
-	    mstring[$vjm]='dssi craftbox'
-	  endif
-	endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Pan & Stretch Mode'
-  if(buttonMode=3) then
-     micon[$vjm]='1Dspwp.gif:on'
-     mstring[$vjm]='setButtonMode(0) menu(`ds_1`) craftbox'
-  else
-     micon[$vjm]='1Dspwp.gif'
-     mstring[$vjm]='ds setButtonMode(3) menu(`ds_1`)'
-  endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Show/Hide Axis'
-  mstring[$vjm]='if(mfShowAxis=1) then mfShowAxis=0 else mfShowAxis=1 endif craftbox repaint'
-  if(mfShowAxis=1) then
-    micon[$vjm]='1Dscale.gif:on'
-  else 
-    micon[$vjm]='1Dscale.gif'
-  endif 
-
-  if(appmode = 'imaging') then
-
-    $vjm=$vjm+1
-    mlabel[$vjm]='Measure Linewidth'
-    mstring[$vjm]='nl dres'
-    micon[$vjm]='i_nldres.gif'
-
-    $vjm=$vjm+1
-    mlabel[$vjm]='Frequency at Cursor'
-    mstring[$vjm]='nl offset'
-    micon[$vjm]='i_offset.gif'
-
-    $vjm=$vjm+1
-    mlabel[$vjm]='Magnitude/Phase Mode'
-    mstring[$vjm]='if(dmg=`ph`) then av else ph endif repaint'
-    micon[$vjm]='i_avph.gif'
-
-  endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Show/Hide Threshhold'
-  mstring[$vjm]='ds(`thresh`) ds(`again`)'
-  micon[$vjm]='1Dth.gif'
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Pick and display peaks above threshhold'
-  mstring[$vjm]='ds(`dpf`):$on if($on) then dpf(`turnoff`) ds pkpick=`` else nll exists(`dpf_wc2`,`parameter`):$e if($e) then dpf_wc2=wc2 endif dpf pkpick=`ppf` endif'
-  micon[$vjm]='1Dpeak.png'
-
-  if (dmg='ph') or (dmg1='ph1') then
-    $vjm=$vjm+1
-    mlabel[$vjm]='Phase Mode'
-    mstring[$vjm]='ds(`phase`)'
-    micon[$vjm]='1Dphase.gif'
-  endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Redraw'
-  mstring[$vjm]='ds craftbox'
-  micon[$vjm]='recycle.gif'
-
-  if(appmode = 'imaging' and jviewport > 2) then
-    aipShowSpec:$n,$n2
-    if($n2>0) then
-      $vjm = $vjm+1
-      mlabel[$vjm]='Split canva to display images'
-      mstring[$vjm]='jFunc(88,0) ds'
-      micon[$vjm]='noImage.png'
-    else
-      $vjm = $vjm+1
-      mlabel[$vjm]='Split canva to display images'
-      mstring[$vjm]='jFunc(88,1) aipRedisplay aipShowCSIData(`SPEC`,`grid`,`frame:all`)'
-      micon[$vjm]='2Dimage.gif'
     endif
-  endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Return'
-  micon[$vjm]='return.gif'
-  if (lastmenu<>'') then
-       mstring[$vjm]='menu(lastmenu) lastmenu=``'
-  else
-       mstring[$vjm]='menu(`display_1D`)'
-  endif
-
-ELSE
-
-  $vjm=1
-  if $arraydim>1.5 then
-    mlabel[$vjm]='Increment'
-    mstring[$vjm]='select:$vjms $vjms=$vjms+1 $vjms=trunc($vjms) ds_dim:$vjmdim if $vjms<0.9 then $vjms=1 elseif $vjms>$vjmdim then $vjms=$vjmdim endif ftproc[2]=$vjms ds($vjms)'
-    micon[$vjm]='nextfid.gif'
     $vjm=$vjm+1
-    mlabel[$vjm]='Decrement'
-    mstring[$vjm]='select:$vjms $vjms=$vjms-1 $vjms=trunc($vjms) ds_dim:$vjmdim if $vjms<0.9 then $vjms=1 elseif $vjms>$vjmdim then $vjms=$vjmdim endif ftproc[2]=$vjms ds($vjms)'
-    micon[$vjm]='prevfid.gif'
+    if (crmode = 'b') then
+    	mlabel[$vjm]='One Cursor'
+    	micon[$vjm]='1D1cur.gif'
+    else
+    	mlabel[$vjm]='Two Cursors'
+    	micon[$vjm]='1D2cur.gif'
+    endif
+    mstring[$vjm]='ds(`toggle`)'
+
     $vjm=$vjm+1
-  endif
+    mlabel[$vjm]='Show Full Spectrum'
+    micon[$vjm]='1Dfull.gif'
+    mstring[$vjm]='mfaction(\'mfzoom\',0)' 
 
-  if (crmode = 'b') then
-    mlabel[$vjm]='One Cursor'
-    micon[$vjm]='1D1cur.gif'
-  else
-    mlabel[$vjm]='Two Cursors'
-    micon[$vjm]='1D2cur.gif'
-  endif
-  mstring[$vjm]='ds(`toggle`)'
+    $vjm=$vjm+1
+    mlabel[$vjm]='Reset to Full Display'
+    micon[$vjm]='FullScale.gif'
+    mstring[$vjm]='mfaction(\'fullzoom\')'
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Show Full Spectrum'
-  micon[$vjm]='1Dfull.gif'
-  mstring[$vjm]='mfaction(\'mfzoom\',0)' 
+    $vjm=$vjm+1
+    mlabel[$vjm]='Zoom in'
+    micon[$vjm]='1Dexpand.gif'
+    mstring[$vjm]='if(buttonMode<2) then mfaction(\'mfzoom\',1) else setButtonMode(0) endif' 
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Reset to Full Display'
-  micon[$vjm]='FullScale.gif'
-  mstring[$vjm]='mfaction(\'fullzoom\')'
-  $vjm=$vjm+1
+    $vjm=$vjm+1
+    mlabel[$vjm]='Zoom out'
+    micon[$vjm]='1Dzoomout.gif'
+    mstring[$vjm]='mfaction(\'mfzoom\',-1)' 
 
-  mlabel[$vjm]='Zoom in'
-  micon[$vjm]='1Dexpand.gif'
-  mstring[$vjm]='if(buttonMode<2) then mfaction(\'mfzoom\',1) else setButtonMode(0) endif' 
+    $vjm=$vjm+1
+    mlabel[$vjm]='Zoom mode'
+    if(buttonMode=2) then
+    	mstring[$vjm]='setButtonMode(0) menu(`ds_1`)'
+    	micon[$vjm]='ZoomMode.gif:on'
+    else
+    	mstring[$vjm]='setButtonMode(2) menu(`ds_1`)' 
+    	micon[$vjm]='ZoomMode.gif'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Zoom out'
-  micon[$vjm]='1Dzoomout.gif'
-  mstring[$vjm]='mfaction(\'mfzoom\',-1)' 
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Zoom mode'
-  if(buttonMode=2) then
-    mstring[$vjm]='setButtonMode(0) menu(`ds_1`)'
-    micon[$vjm]='ZoomMode.gif:on'
-  else
-    mstring[$vjm]='setButtonMode(2) menu(`ds_1`)' 
-    micon[$vjm]='ZoomMode.gif'
-  endif
-
-        exists('dssi','maclib'):$dssex
-        mspec:$r1
-        if ($arraydim>1) and ($dssex) then
-          if ($r1) then
+    exists('dssi','maclib'):$dssex
+    mspec:$msr1
+    if ($arraydim>1) and ($dssex) then
+        if ($msr1) then
             $vjm=$vjm+1
             mlabel[$vjm]='VertOffset out'
             micon[$vjm]='voMore.gif'
@@ -277,253 +102,269 @@ ELSE
             mlabel[$vjm]='1D Spectrum'
             micon[$vjm]='dspec.gif'
             mstring[$vjm]='ds(1)'
-          else
+        else
             $vjm=$vjm+1
             mlabel[$vjm]='Interactive array spectra'
             micon[$vjm]='dssinteractive.gif'
             mstring[$vjm]='dssi'
-          endif
         endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Pan & Stretch Mode'
-  if(buttonMode=3) then
-     micon[$vjm]='1Dspwp.gif:on'
-     mstring[$vjm]='setButtonMode(0) menu(`ds_1`)'
-  else
-     micon[$vjm]='1Dspwp.gif'
-     mstring[$vjm]='setButtonMode(3) menu(`ds_1`)'
-  endif
-
-  $vjm=$vjm+1
-  if (intmod = 'full') then
-    mlabel[$vjm]='Hide Integral'
-    mstring[$vjm]='intmod=`off`'
-    micon[$vjm]='1Dnoint.gif'
-    $vjm=$vjm+1
-    mlabel[$vjm]='Delete All Integral Regions'
-    mstring[$vjm]='cz'
-    micon[$vjm]='1Dintclear.gif'
-    $vjm=$vjm+1
-    mlabel[$vjm]='Integral Lvl/Tlt'
-    mstring[$vjm]='ds(`lvltlt`)'
-    micon[$vjm]='1Dintlvltlt.gif'
-  else
-    if (intmod = 'partial') then
-      mlabel[$vjm]='Show Full Integral'
-      mstring[$vjm]='intmod=`full`'
-      micon[$vjm]='1Dfullint.gif'
-      $vjm=$vjm+1
-      mlabel[$vjm]='Define Integral Regions'
-      mstring[$vjm]='ds(`z`)'
-      micon[$vjm]='1Dintresets.gif'
-      $vjm=$vjm+1
-      mlabel[$vjm]='Integral Lvl/Tlt'
-      mstring[$vjm]='ds(`lvltlt`)'
-      micon[$vjm]='1Dintlvltlt.gif'
-    else
-      mlabel[$vjm]='Show Integral Regions'
-      mstring[$vjm]='intmod=`partial`'
-      micon[$vjm]='1Dpartint.gif'
     endif
-  endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Show/Hide Axis'
-  mstring[$vjm]='if(mfShowAxis=1) then mfShowAxis=0 else mfShowAxis=1 endif repaint'
- // mstring[$vjm]='ds(`dscale`)'
-  if(mfShowAxis=1) then
-    micon[$vjm]='1Dscale.gif:on'
-  else 
-    micon[$vjm]='1Dscale.gif'
-  endif 
-
-  if(appmode = 'imaging') then
 
     $vjm=$vjm+1
-    mlabel[$vjm]='Measure Linewidth'
-    mstring[$vjm]='nl dres'
-    micon[$vjm]='i_nldres.gif'
-
-    $vjm=$vjm+1
-    mlabel[$vjm]='Frequency at Cursor'
-    mstring[$vjm]='nl offset'
-    micon[$vjm]='i_offset.gif'
-
-    $vjm=$vjm+1
-    mlabel[$vjm]='Magnitude/Phase Mode'
-    mstring[$vjm]='if(dmg=`ph`) then av else ph endif repaint'
-    micon[$vjm]='i_avph.gif'
-
-  endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Show/Hide Threshhold'
-  mstring[$vjm]='ds(`thresh`) ds(`again`)'
-  micon[$vjm]='1Dth.gif'
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Pick and display peaks above threshhold'
-  mstring[$vjm]='ds(`dpf`):$on if($on) then dpf(`turnoff`) ds pkpick=`` else nll exists(`dpf_wc2`,`parameter`):$e if($e) then dpf_wc2=wc2 endif dpf pkpick=`ppf` endif'
-  micon[$vjm]='1Dpeak.png'
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Display integral values'
-  mstring[$vjm]='ds(`dpir`):$on if($on) then vp=0 dpir(`turnoff`) ds elseif(vp<24) then vp=24 ds dpir else ds dpir endif'
-  micon[$vjm]='1DintegValue.png'
-
-  if (dmg='ph') or (dmg1='ph1') then
-    $vjm=$vjm+1
-    mlabel[$vjm]='Phase Mode'
-    mstring[$vjm]='ds(`phase`)'
-    micon[$vjm]='1Dphase.gif'
-  endif
-
-  $vjm=$vjm+1
-  mlabel[$vjm]='Redraw'
-  mstring[$vjm]='ds'
-  micon[$vjm]='recycle.gif'
-
-  if(appmode = 'imaging' and jviewport > 2) then
-    aipShowSpec:$n,$n2
-    if($n2>0) then
-      $vjm = $vjm+1
-      mlabel[$vjm]='Split canva to display images'
-      mstring[$vjm]='jFunc(88,0) ds'
-      micon[$vjm]='noImage.png'
+    mlabel[$vjm]='Pan & Stretch Mode'
+    if(buttonMode=3) then
+     	micon[$vjm]='1Dspwp.gif:on'
+     	mstring[$vjm]='setButtonMode(0) menu(`ds_1`)'
     else
-      $vjm = $vjm+1
-      mlabel[$vjm]='Split canva to display images'
-      mstring[$vjm]='jFunc(88,1) aipRedisplay aipShowCSIData(`SPEC`,`grid`,`frame:all`)'
-      micon[$vjm]='2Dimage.gif'
+     	micon[$vjm]='1Dspwp.gif'
+     	mstring[$vjm]='setButtonMode(3) menu(`ds_1`)'
     endif
-  endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Return'
-  micon[$vjm]='return.gif'
-  if (lastmenu<>'') then
-       mstring[$vjm]='menu(lastmenu) lastmenu=``'
-  else
-       mstring[$vjm]='menu(`display_1D`)'
-  endif
+    if not $crft1 then
+  	if (intmod = 'full') then
+	    $vjm=$vjm+1
+    	    mlabel[$vjm]='Hide Integral'
+    	    mstring[$vjm]='intmod=`off`'
+    	    micon[$vjm]='1Dnoint.gif'
 
-ENDIF
-  
+    	    $vjm=$vjm+1
+    	    mlabel[$vjm]='Delete All Integral Regions'
+    	    mstring[$vjm]='cz'
+    	    micon[$vjm]='1Dintclear.gif'
+
+    	    $vjm=$vjm+1
+    	    mlabel[$vjm]='Integral Lvl/Tlt'
+    	    mstring[$vjm]='ds(`lvltlt`)'
+    	    micon[$vjm]='1Dintlvltlt.gif'
+  	else
+    	    if (intmod = 'partial') then
+		$vjm=$vjm+1
+      		mlabel[$vjm]='Show Full Integral'
+      		mstring[$vjm]='intmod=`full`'
+      		micon[$vjm]='1Dfullint.gif'
+
+      		$vjm=$vjm+1
+      		mlabel[$vjm]='Define Integral Regions'
+      		mstring[$vjm]='ds(`z`)'
+      		micon[$vjm]='1Dintresets.gif'
+
+      		$vjm=$vjm+1
+      		mlabel[$vjm]='Integral Lvl/Tlt'
+      		mstring[$vjm]='ds(`lvltlt`)'
+      		micon[$vjm]='1Dintlvltlt.gif'
+    	    else
+		$vjm=$vjm+1
+      		mlabel[$vjm]='Show Integral Regions'
+      		mstring[$vjm]='intmod=`partial`'
+      		micon[$vjm]='1Dpartint.gif'
+     	    endif
+  	endif
+    endif
+
+    $vjm=$vjm+1
+    mlabel[$vjm]='Show/Hide Axis'
+    mstring[$vjm]='if(mfShowAxis=1) then mfShowAxis=0 else mfShowAxis=1 endif repaint'
+    if(mfShowAxis=1) then
+    	micon[$vjm]='1Dscale.gif:on'
+    else 
+    	micon[$vjm]='1Dscale.gif'
+    endif 
+
+    if(appmode = 'imaging') then
+
+    	$vjm=$vjm+1
+    	mlabel[$vjm]='Measure Linewidth'
+    	mstring[$vjm]='nl dres'
+    	micon[$vjm]='i_nldres.gif'
+
+    	$vjm=$vjm+1
+    	mlabel[$vjm]='Frequency at Cursor'
+    	mstring[$vjm]='nl offset'
+    	micon[$vjm]='i_offset.gif'
+
+    	$vjm=$vjm+1
+    	mlabel[$vjm]='Magnitude/Phase Mode'
+    	mstring[$vjm]='if(dmg=`ph`) then av else ph endif repaint'
+    	micon[$vjm]='i_avph.gif'
+
+    endif
+
+    $vjm=$vjm+1
+    mlabel[$vjm]='Show/Hide Threshhold'
+    mstring[$vjm]='ds(`thresh`) ds(`again`)'
+    micon[$vjm]='1Dth.gif'
+
+    if not $crft1 then
+  	$vjm=$vjm+1
+  	mlabel[$vjm]='Pick and display peaks above threshhold'
+  	mstring[$vjm]='ds(`dpf`):$on if($on) then dpf(`turnoff`) ds pkpick=`` else nll exists(`dpf_wc2`,`parameter`):$e if($e) then dpf_wc2=wc2 endif dpf pkpick=`ppf` endif'
+  	micon[$vjm]='1Dpeak.png'
+
+  	$vjm=$vjm+1
+  	mlabel[$vjm]='Display integral values'
+  	mstring[$vjm]='ds(`dpir`):$on if($on) then vp=0 dpir(`turnoff`) ds elseif(vp<24) then vp=24 ds dpir else ds dpir endif'
+  	micon[$vjm]='1DintegValue.png'
+    endif
+
+    if (dmg='ph') or (dmg1='ph1') then
+    	if $crft1 then
+	    if $arraydim=1 or procdim>1.5 or $msr1<0.5 then
+    	    	$vjm=$vjm+1
+    	    	mlabel[$vjm]='Phase Mode'
+    	    	mstring[$vjm]='ds(`phase`)'
+    	    	micon[$vjm]='1Dphase.gif'
+	    endif
+    	else
+            $vjm=$vjm+1
+            mlabel[$vjm]='Phase Mode'
+            mstring[$vjm]='ds(`phase`)'
+            micon[$vjm]='1Dphase.gif'
+    	endif
+    endif
+
+    $vjm=$vjm+1
+    mlabel[$vjm]='Redraw'
+    mstring[$vjm]='ds'
+    micon[$vjm]='recycle.gif'
+
+    if(appmode = 'imaging' and jviewport > 2) then
+    	aipShowSpec:$n,$n2
+    	if($n2>0) then
+      	    $vjm = $vjm+1
+      	    mlabel[$vjm]='Split canva to display images'
+      	    mstring[$vjm]='jFunc(88,0) ds'
+      	    micon[$vjm]='noImage.png'
+    	else
+      	    $vjm = $vjm+1
+      	    mlabel[$vjm]='Split canva to display images'
+      	    mstring[$vjm]='jFunc(88,1) aipRedisplay aipShowCSIData(`SPEC`,`grid`,`frame:all`)'
+      	    micon[$vjm]='2Dimage.gif'
+    	endif
+    endif
+
+    $vjm=$vjm+1
+    mlabel[$vjm]='Return'
+    micon[$vjm]='return.gif'
+    if (lastmenu<>'') then
+       	mstring[$vjm]='menu(lastmenu) lastmenu=``'
+    else
+       	mstring[$vjm]='menu(`display_1D`)'
+    endif
+
   // separator
-  $vjm=$vjm+1
-  mlabel[$vjm]=''
-  mstring[$vjm]=''
-  micon[$vjm]='blackHorBumps.gif'
+    $vjm=$vjm+1
+    mlabel[$vjm]=''
+    mstring[$vjm]=''
+    micon[$vjm]='blackHorBumps.gif'
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='show/hide annotations'
-  aspAnno:$e,$n
-  if($e>0 and $n>0) then
-     mstring[$vjm]='aspAnno(`save`) aspAnno(`clear`)'
-     micon[$vjm]='Annotations_down.png'
-  else
-     mstring[$vjm]='aspAnno(`load`)'
-     micon[$vjm]='Annotations_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='show/hide annotations'
+    aspAnno:$e,$n
+    if($e>0 and $n>0) then
+     	mstring[$vjm]='aspAnno(`save`) aspAnno(`clear`)'
+     	micon[$vjm]='Annotations_down.png'
+    else
+     	mstring[$vjm]='aspAnno(`load`)'
+     	micon[$vjm]='Annotations_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='select'
-  mstring[$vjm]='aspSetState(1)'
-  if(aspMode=1) then
-    micon[$vjm]='Select_down.png'
-  else
-    micon[$vjm]='Select_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='select'
+    mstring[$vjm]='aspSetState(1)'
+    if(aspMode=1) then
+    	micon[$vjm]='Select_down.png'
+    else
+    	micon[$vjm]='Select_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Peak Annotation'
-  mstring[$vjm]='aspSetState(18)'
-  if(aspMode=18) then
-    micon[$vjm]='Peaks_down.png'
-  else
-    micon[$vjm]='Peaks_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Peak Annotation'
+    mstring[$vjm]='aspSetState(18)'
+    if(aspMode=18) then
+    	micon[$vjm]='Peaks_down.png'
+    else
+    	micon[$vjm]='Peaks_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Text'
-  mstring[$vjm]='aspSetState(28)'
-  if(aspMode=28) then
-    micon[$vjm]='Text_down.png'
-  else
-    micon[$vjm]='Text_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Text'
+    mstring[$vjm]='aspSetState(28)'
+    if(aspMode=28) then
+    	micon[$vjm]='Text_down.png'
+    else
+    	micon[$vjm]='Text_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Line'
-  mstring[$vjm]='aspSetState(20)'
-  if(aspMode=20) then
-    micon[$vjm]='Line_down.png'
-  else
-    micon[$vjm]='Line_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Line'
+    mstring[$vjm]='aspSetState(20)'
+    if(aspMode=20) then
+    	micon[$vjm]='Line_down.png'
+    else
+    	micon[$vjm]='Line_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Arrow'
-  mstring[$vjm]='aspSetState(22)'
-  if(aspMode=22) then
-    micon[$vjm]='Arrow_down.png'
-  else
-    micon[$vjm]='Arrow_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Arrow'
+    mstring[$vjm]='aspSetState(22)'
+    if(aspMode=22) then
+    	micon[$vjm]='Arrow_down.png'
+    else
+    	micon[$vjm]='Arrow_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Box'
-  mstring[$vjm]='aspSetState(5)'
-  if(aspMode=5) then
-    micon[$vjm]='Rectangle_down.png'
-  else
-    micon[$vjm]='Rectangle_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Box'
+    mstring[$vjm]='aspSetState(5)'
+    if(aspMode=5) then
+    	micon[$vjm]='Rectangle_down.png'
+    else
+    	micon[$vjm]='Rectangle_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Oval'
-  mstring[$vjm]='aspSetState(24)'
-  if(aspMode=24) then
-    micon[$vjm]='Circle_down.png'
-  else
-    micon[$vjm]='Circle_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Oval'
+    mstring[$vjm]='aspSetState(24)'
+    if(aspMode=24) then
+    	micon[$vjm]='Circle_down.png'
+    else
+    	micon[$vjm]='Circle_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Polygon'
-  mstring[$vjm]='aspSetState(26)'
-  if(aspMode=26) then
-    micon[$vjm]='Polygon_down.png'
-  else
-    micon[$vjm]='Polygon_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Polygon'
+    mstring[$vjm]='aspSetState(26)'
+    if(aspMode=26) then
+    	micon[$vjm]='Polygon_down.png'
+    else
+    	micon[$vjm]='Polygon_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Polyline'
-  mstring[$vjm]='aspSetState(36)'
-  if(aspMode=36) then
-    micon[$vjm]='Open_Poly_down.png'
-  else
-    micon[$vjm]='Open_Poly_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Polyline'
+    mstring[$vjm]='aspSetState(36)'
+    if(aspMode=36) then
+    	micon[$vjm]='Open_Poly_down.png'
+    else
+     	micon[$vjm]='Open_Poly_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='X Bar'
-  mstring[$vjm]='aspSetState(30)'
-  if(aspMode=30) then
-    micon[$vjm]='X_bar_down.png'
-  else
-    micon[$vjm]='X_bar_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='X Bar'
+    mstring[$vjm]='aspSetState(30)'
+    if(aspMode=30) then
+    	micon[$vjm]='X_bar_down.png'
+    else
+    	micon[$vjm]='X_bar_up.png'
+    endif
 
-  $vjm=$vjm+1
-  mlabel[$vjm]='Y Bar'
-  mstring[$vjm]='aspSetState(32)'
-  if(aspMode=32) then
-    micon[$vjm]='Y_bar_down.png'
-  else
-    micon[$vjm]='Y_bar_up.png'
-  endif
+    $vjm=$vjm+1
+    mlabel[$vjm]='Y Bar'
+    mstring[$vjm]='aspSetState(32)'
+    if(aspMode=32) then
+    	micon[$vjm]='Y_bar_down.png'
+    else
+    	micon[$vjm]='Y_bar_up.png'
+    endif
 
 endif
