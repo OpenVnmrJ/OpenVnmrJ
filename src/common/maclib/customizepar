@@ -1,4 +1,4 @@
-"macro customizepar"
+// Chempacker macro
 "***************************************************************"
 "customizepar - Macro to start a customization 			"
 "***************************************************************"
@@ -237,6 +237,16 @@ IF ($arg='start') or ($arg='updateacqpars') THEN
 	exec($macro)
 	purge($macfile)
    endif
+//  Write out text_string into curexp/text (so the panels display it)
+   write('reset',curexp+'/text')
+   $tsize=size('text_string')
+   if $tsize=1 and text_string[1]='' then $tsize=0 endif
+   $t=1
+   while $t<=$tsize do
+        write('file',curexp+'/text','%s',text_string[$t])
+        $t=$t+1
+   endwhile
+
    customizedtext('read',$maclibdir,$2)
 //  This section makes sure that sampling.sch from previous
 //   customization (if any) is written back in curexp

@@ -1492,6 +1492,23 @@ ELSEIF ($1='addstudy') or ($1='addcluster') THEN
 ELSEIF ($1='add') THEN
 // arg2 can be an absolute path OR relative path w.r.t. userdir/data
     $fidname=$2
+    substr($fidname,'wc'):$w
+    if $w>1 then
+	write('error','%s - illegal name. Multiple words are not allowed in fidname',$fidname)
+	return
+    endif
+    $e='' $b='' $d=''
+    substr($fidname,'dirname'):$d,$b,$e
+    if $e<>'fid' and $e<>'REC' and $e<>'rec' and $e<>'' then
+	write('error','%s - illegal name. Wrong extension %s',$fidname,$e)
+	return
+    endif
+    chkname($d+'/'+$b,'alnum_/-','str'):$nfidname
+    if $d+'/'+$b<>$nfidname then
+	write('error','%s - illegal name.  Only alphanumeric, slash, dash, and underscore are allowed',$fidname)
+	return
+    endif
+
     $firstchar=''
     substr($fidname,1,1):$firstchar
     if ($firstchar<>'/') then

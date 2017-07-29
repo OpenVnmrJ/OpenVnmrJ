@@ -102,6 +102,31 @@ void satpulse(double saturation, codeint phase, double rx1, double rx2)
        obspower(tpwr);
 }
 
+// Usage: CPMG(realtime variable of representing the phase of the excitation pulse, spare realtime variable to hold the loop counter)
+// // John Ryan
+// // Jan 2015
+//
+void cpmg(codeint cpmgph, codeint cpmgct)
+{
+  double cpmgpw = getval("cpmgpw"),
+         cpmgbt = getval("cpmgbt"),
+         cpmglt = getval("cpmglt"),
+         counter = (double)((int)(((cpmgbt/(2.0*cpmglt))/2.0) + 0.5)) * 2.0;
+
+         initval(counter,cpmgct);
+
+         mod2(cpmgph,cpmgph);
+         incr(cpmgph);
+
+         obspower(tpwr);
+         starthardloop(cpmgct);
+         delay(cpmglt - cpmgpw/2.0 - rof2);
+         rgpulse(cpmgpw,cpmgph,rof2,rof2);
+         delay(cpmglt - cpmgpw/2.0 - rof2);
+         endhardloop();
+         obspower(tpwr);
+}
+
 double syncGrad(char *gT, char *gL, double Mf,char *sR, char *Rv)
 {
    double tt, ll, sr, garea, reps;
@@ -149,6 +174,220 @@ double syncGradLvl(char *gTime, char *gLevel, double Mfactor)
    if (!strcmp(probetype,"nano"))
         Ll = syncGrad(gTime,gLevel,Mfactor,"srate","level");
    return(Ll);
+}
+
+void WGsimpulse(codeint phase, codeint phaseinc, codeint Gsign, char *dshape, double dpw, codeint dphase)
+{
+   double  wgtau = getval("wgtau"),
+           wgspw = getval("wgspw"),
+           wgspwr = getval("wgspwr"),
+           wgspwrf= getval("wgspwrf"),
+           wgpw180 = getval("wgpw180"),
+           gzlvlwg = getval("gzlvlwg"),
+           gtwg = getval("gtwg"),
+           gstabwg = getval("gstabwg");
+   char flag3919[MAXSTR],
+        flagW5[MAXSTR],
+        wgsshape[MAXSTR];
+    getstr("flag3919",flag3919);
+    getstr("flagW5",flagW5);
+    getstr("wgsshape",wgsshape);
+
+    gtwg = syncGradTime("gtwg","gzlvlwg",1.0);
+    gzlvlwg = syncGradLvl("gtwg","gzlvlwg",1.0);
+
+        ifzero(Gsign);
+            zgradpulse(gzlvlwg,gtwg);
+        elsenz(Gsign);
+            zgradpulse(-1*gzlvlwg,gtwg);
+        endif(Gsign);
+        delay(gstabwg);
+
+   if (flagW5[0] == 'y')
+     {
+        rgpulse(wgpw180*0.087/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.206/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.413/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.778/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*1.491/2,phase,rof1,rof1);
+        add(phase,two,phase);
+	delay(wgtau/2 - dpw/2 - rof1);
+	decshaped_pulse(dshape,dpw,dphase,rof1,rof1);
+        delay(wgtau/2 - dpw/2 - rof1);
+        rgpulse(wgpw180*1.491/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.778/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.413/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.206/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.087/2,phase,rof1,rof1);
+        sub(phase,two,phase);
+     }
+   else
+   {
+     if (flag3919[0] == 'y')
+     {
+        rgpulse(wgpw180*0.231/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.692/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*1.462/2,phase,rof1,rof1);
+        add(phase,two,phase);
+        delay(wgtau/2 - dpw/2 - rof1);
+        decshaped_pulse(dshape,dpw,dphase,rof1,rof1);
+        delay(wgtau/2 - dpw/2 - rof1);
+        rgpulse(wgpw180*1.462/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.692/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.231/2,phase,rof1,rof1);
+        sub(phase,two,phase);
+      }
+    else
+    {
+
+       obsstepsize(1.0);
+       delay(gstabwg-2.0*SAPS_DELAY);
+       obspower(wgspwr+6);
+       obspwrf(wgspwrf);
+       xmtrphase(phaseinc);
+       add(phase,two,phase);
+       shaped_pulse(wgsshape,wgspw,phase,rof1,rof1);
+       sub(phase,two,phase);
+       obspower(tpwr);
+       obspwrf(4095.0);
+       xmtrphase(zero);
+       simshaped_pulse("",dshape,wgpw180,dpw,phase,dphase,rof1,rof1);
+       obspower(wgspwr+6);
+       obspwrf(wgspwrf);
+       add(phase,two,phase);
+       shaped_pulse(wgsshape,wgspw,phase,rof1,rof1);
+       sub(phase,two,phase);
+       obspower(tpwr);
+       obspwrf(4095.0);
+       delay(SAPS_DELAY);
+     }
+   }
+        ifzero(Gsign);
+            zgradpulse(gzlvlwg,gtwg);
+        elsenz(Gsign);
+            zgradpulse(-1*gzlvlwg,gtwg);
+        endif(Gsign);
+        delay(gstabwg);
+
+}
+
+
+void WGpulse(codeint phase, codeint phaseinc, codeint Gsign)
+
+{
+   double  wgtau = getval("wgtau"),
+           wgspw = getval("wgspw"),
+           wgspwr = getval("wgspwr"),
+           wgspwrf= getval("wgspwrf"),
+           wgpw180 = getval("wgpw180"),
+           gzlvlwg = getval("gzlvlwg"),
+           gtwg = getval("gtwg"),
+           gstabwg = getval("gstabwg");
+   char flag3919[MAXSTR],
+        flagW5[MAXSTR],
+        wgsshape[MAXSTR];
+    getstr("flag3919",flag3919);
+    getstr("flagW5",flagW5);
+    getstr("wgsshape",wgsshape);
+
+//synchronize gradients to srate for probetype='nano'
+//  Preserve gradient "area"
+    gtwg = syncGradTime("gtwg","gzlvlwg",1.0);
+    gzlvlwg = syncGradLvl("gtwg","gzlvlwg",1.0);
+
+        ifzero(Gsign);
+            zgradpulse(gzlvlwg,gtwg);
+        elsenz(Gsign);
+            zgradpulse(-1*gzlvlwg,gtwg);
+        endif(Gsign);
+        delay(gstabwg);
+
+   if (flagW5[0] == 'y')
+     {
+        rgpulse(wgpw180*0.087/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.206/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.413/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.778/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*1.491/2,phase,rof1,rof1);
+        add(phase,two,phase);
+        delay(wgtau);
+        rgpulse(wgpw180*1.491/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.778/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.413/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.206/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.087/2,phase,rof1,rof1);
+        sub(phase,two,phase);
+     }
+   else
+   {
+     if (flag3919[0] == 'y')
+     {
+        rgpulse(wgpw180*0.231/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.692/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*1.462/2,phase,rof1,rof1);
+        add(phase,two,phase);
+        delay(wgtau);
+        rgpulse(wgpw180*1.462/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.692/2,phase,rof1,rof1);
+        delay(wgtau);
+        rgpulse(wgpw180*0.231/2,phase,rof1,rof1);
+        sub(phase,two,phase);
+      }
+    else
+    {
+
+       obsstepsize(1.0);
+       delay(gstabwg-2.0*SAPS_DELAY);
+       obspower(wgspwr+6);
+       obspwrf(wgspwrf);
+       xmtrphase(phaseinc);
+       add(phase,two,phase);
+       shaped_pulse(wgsshape,wgspw,phase,rof1,rof1);
+       sub(phase,two,phase);
+       obspower(tpwr);
+       obspwrf(4095.0);
+       xmtrphase(zero);
+       rgpulse(wgpw180,phase,rof1,rof1);
+       obspower(wgspwr+6);
+       obspwrf(wgspwrf);
+       add(phase,two,phase);
+       shaped_pulse(wgsshape,wgspw,phase,rof1,rof1);
+       sub(phase,two,phase);
+       obspower(tpwr);
+       obspwrf(4095.0);
+       delay(SAPS_DELAY);
+     }
+   }
+        ifzero(Gsign);
+            zgradpulse(gzlvlwg,gtwg);
+        elsenz(Gsign);
+            zgradpulse(-1*gzlvlwg,gtwg);
+        endif(Gsign);
+        delay(gstabwg);
+
 }
 
 void ExcitationSculpting(codeint esph1, codeint esph2, codeint esph3)

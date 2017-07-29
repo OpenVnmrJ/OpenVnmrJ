@@ -27,25 +27,35 @@ if $direx then
     write('error','%s could not be overwritten',$1)
     return
 endif
-mkdir('-p',$1):$dum
-exists($1,'directory'):$direx
-if not $direx then
-    write('error','%s could not be created',$1)
-    return
+
+    // Use svf/svp to make sure the procpar 
+    // is based on appropriate acquisition/processing/display groups
+if ($3='fid') then
+    Svfname($d+'/'+$b+'_%R2%','.fid','.fid, .par'):$tmpfid
+    svf($tmpfid,'nodb')
+else
+    Svfname($d+'/'+$b+'_%R2%','.par','.fid, .par'):$tmpfid
+    svp($tmpfid,'nodb')
 endif
+rename($tmpfid,$1):$dum
 
 flush
 mkdir($1+'/datdir'):$dum
 mkdir($1+'/acqfil'):$dum
 copy(curexp+'/curpar',$1):$dum
-copy(curexp+'/procpar',$1):$dum
-copy(curexp+'/text',$1):$dum
 copy(curexp+'/datdir/data',$1+'/datdir'):$dum
 copy(curexp+'/datdir/phasefile',$1+'/datdir'):$dum
 if ($3='fid') then
-    exists(curexp+'/acqfil/fid','file'):$fidex
+    exists($1+'/fid','file'):$fidex
     if $fidex then
-	copy(curexp+'/acqfil/fid',$1+'/acqfil'):$dum
+	rename($1+'/fid',$1+'/acqfil/fid'):$dum
     endif
+    exists($1+'/sampling.sch','file'):$schex
+    if $schex then
+	cp($1+'/sampling.sch',$1+'/acqfil/sampling.sch'):$dum
+    endif
+else
+    rm('-f',$1+'/fid'):$dum
+    rm('-f',$1+'/sampling.sch'):$dum
 endif
 return(1)

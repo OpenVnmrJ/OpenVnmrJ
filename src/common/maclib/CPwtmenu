@@ -1,8 +1,11 @@
-"macro CPwtmenu"
+// Chempacker macro
 " CPwtmenu(dimension,'get'):$VALUE "
 " CPwtmenu(dimension,'set',$VALUE) "
 " CPwtmenu(dimension,'save'<,directory>) "
+" CPwtmenu(dimension,'savefile',file)"
+" CPwtmenu(dimension,'readfile',file) "
 " CPwtmenu(dimension,'read'<,directory>) "
+" CPwtmenu(dimension,'copy',fromdim)"
 "       arg1 is typically 'acq' or 'f1' or 'f2' or 'f3' "
 "	arg3 for set option can be 'none' - "
 "		- turns off all window functions"
@@ -12,7 +15,7 @@ if $#<1.5 then
   write('line3','%s requires at least two arguments',$0)
   return('')
 endif
-
+$ret=''
 $arg1=$1
 $arg2=$2
 
@@ -27,6 +30,20 @@ $arg2=$2
 	write('error','Argument %s not supported',$arg1)
 	return($ret)
   endif
+  if $arg2='copy' then
+    $arg3=$3
+    if ($dim=2) and ($arg3='f2') then
+	$arg3='acq'
+    endif
+    if ($dim=3) and ($arg3='f3') then
+	$arg3='acq'
+    endif
+    if ($arg3<>'acq') and ($arg3<>'f1') and ($arg3<>'f3') then
+        write('error','Argument %s not supported',$arg3)
+        return($ret)
+    endif
+    if $arg1=$arg3 then return($ret) endif
+  endif
 
     if $arg1='acq' then
 	$lb='lb' $gf='gf' $gfs='gfs' $sb='sb' $sbs='sbs' $awc='awc'
@@ -39,6 +56,7 @@ $arg2=$2
         $pars='lb2 gf2 gfs2 sb2 sbs2 awc2'
     endif
 
+    
 IF ($arg2='set') THEN
         if ($3='none') then
 		off($lb) off($gf) off($gfs) off($sb) off($sbs) off($awc)
@@ -88,36 +106,44 @@ ELSEIF ($arg2='get') THEN
     endif
     return($ret)
 
-ELSEIF ($arg2 = 'save') THEN
+ELSEIF ($arg2 = 'save') or ($arg2='savefile') THEN
 
-  if ($# < 3) then $3='' endif
-  if ($3<>'') then
-    exists($3,'directory'):$direx
-    if ($direx=0) then
-	$3=''
-    endif
+  if ($arg2='save') then
+  	if ($# < 3) then $3='' endif
+  	if ($3<>'') then
+    	    exists($3,'directory'):$direx
+    	    if ($direx=0) then
+		$3=''
+    	    endif
+  	endif
+  	if ($3='') then
+            if (auto='y') then $3=autodir
+            else $3=curexp endif
+  	endif
+  	$parfile=$3+'/windowpars_'+$arg1
+  else
+     $parfile=$3
   endif
-  if ($3='') then
-        if (auto='y') then $3=autodir
-        else $3=curexp endif
-  endif
-  $parfile=$3+'/windowpars_'+$arg1
   writeparam($parfile,$pars,'current')
 
-ELSEIF ($arg2 = 'read') THEN
+ELSEIF ($arg2 = 'read') or ($arg2='readfile') THEN
 
-  if ($# < 3) then $3='' endif
-  if ($3<>'') then
-    exists($3,'directory'):$direx
-    if ($direx=0) then
-        $3=''
+   if ($arg2='read') then
+  	if ($# < 3) then $3='' endif
+  	if ($3<>'') then
+    	    exists($3,'directory'):$direx
+    	    if ($direx=0) then
+        	$3=''
+    	    endif
+  	endif
+  	if ($3='') then
+            if (auto='y') then $3=autodir
+            else $3=curexp endif
+  	endif
+  	$parfile=$3+'/windowpars_'+$arg1
+    else
+	$parfile=$3
     endif
-  endif
-  if ($3='') then
-        if (auto='y') then $3=autodir
-        else $3=curexp endif
-  endif
-  $parfile=$3+'/windowpars_'+$arg1
   shell('touch '+$parfile):$dum
   fread($parfile)
 	"Now update panel pages"
@@ -150,6 +176,43 @@ ELSEIF ($arg2 = 'purge') THEN
   endif
   $parfile=$3+'/windowpars_'+$arg1
   shell('rm -f '+$parfile):$dum
+
+ELSEIF ($arg2 = 'copy') THEN
+
+    $arg3=$3
+    if ($dim=2) and ($arg3='f2') then
+        $arg3='acq'
+    endif
+    if ($dim=3) and ($arg3='f3') then
+        $arg3='acq'
+    endif
+    if ($arg3<>'acq') and ($arg3<>'f1') and ($arg3<>'f3') then
+        write('error','Argument %s not supported',$arg3)
+        return
+    endif
+    if $arg1=$arg3 then return endif
+
+    if $arg3='acq' then
+        $pars3='lb gf gfs sb sbs awc'
+    elseif ($arg3='f1') then
+        $pars3='lb1 gf1 gfs1 sb1 sbs1 awc1'
+    elseif ($arg3='f2') then
+        $pars='lb2 gf2 gfs2 sb2 sbs2 awc2'
+    endif
+
+    string2array($pars):$pars
+    string2array($pars3):$pars3
+    $psize=size('$pars')
+    $i=1
+    while $i<=$psize do
+	$thispars1=$pars[$i]
+	$thispars3=$pars3[$i]
+	on($thispars3):$on
+	if $on>0.5 then 
+	    {$thispars1}={$thispars3}
+	endif
+	$i=$i+1
+    endwhile
 
 ENDIF
 

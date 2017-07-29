@@ -1,4 +1,4 @@
-"macro NUSprocIST"
+// Chempacker macro
 "Process NUS data with IST"
 
 
@@ -38,6 +38,21 @@ if $words=3 then
 endif
 // $f1window section is done
 
+//  An optional 3rd argument can be supplied to reverse (or not)
+//	F1 frequency direction
+//	This argument will override an optional pipeistF1rev parameter
+if $# < 3 then
+    exists('pipeistF1rev','parameter'):$parex
+    if $parex then $3=pipeistF1rev else $3='' endif
+endif
+$f1negate=$3
+if $f1negate='neg' or $f1negate='none' then
+    $f1negate='-yFTARG '+$f1negate
+else
+    $f1negate=''
+endif
+// F1 negate section done
+
 getbinpath('vj2pipe.com'):$pipeex,$pipe
 getbinpath('vnmrpipe'):$ok,$prg
 strstr(file,'enterQ.macdir'):$current
@@ -55,7 +70,12 @@ if (wexp='chempackQ' and $current) then wft(1) vsadj return endif
 // for legacy data:
 module('add','par2D') // we are always at least in 2D mode
 
-flush
+        wft(1) flush    // This is important thing to do. in the event curpar has some acquisition 
+                        // group parameter (such as np) different due to workstation conpar
+                        // One major culprit is reading both acquisition and processing groups
+                        // from curpar. Alternative is to direct pipe to read processing group
+                        // from curpar and acquisition group from procpar.  We see this 
+                        // particularly with invade'd data.
 
 // if experiment is run in studyQ, do processing inside actual .fid directory
 // otherwise, use curexp for processing
@@ -133,6 +153,8 @@ $nDIM=2 if ( ($ni>1 ) and ($ni2>1) ) then $nDIM=3 endif
 $option=''
 
 if $mode='quiet' then $progress='-noprogress' else $progress='' endif
+bgmode_is:$bg
+if $bg then $progress='-noprogress' endif
 
 // Check if this is an ni2 2D plane
 if ( ($ni<2 ) and ($ni2>1) )   then 
@@ -173,11 +195,17 @@ if ($nDIM < 3) then
 	    return
 	endif
 
+    $f2window=' '
+    if dmg='av' then
+	write('line3',' -xVJSB %0.4f -xVJSBS %0.4f',sb,sbs):$f2window
+    endif
+
        // data is in experiment - all processing done in curexp/pipe directory:
         
 	$pipe_cmd=' xterm -iconic -geom 30x20 -bg dodgerblue3 -fg white -cr white   -T NMRPipe -e " '\
                   + $prg +' vj2pipe.com    -nograph  -clean -cd '+curexp+ ' -vjfid ' + curexp+  '/acqfil/fid '\
-		  + ' '+$f1window+' -istTMult '+pipeistTMult+' -istCMult '+pipeistCMult+' -istIter '+pipeistIter+' -istMaxRes '+pipeistMaxRes\
+		  + ' '+$f1negate+' '+$f1window+' '+$f2window+' -istTMult '+pipeistTMult+' -istCMult '+pipeistCMult\
+		  + ' -istIter '+pipeistIter+' -istMaxRes '+pipeistMaxRes\
                   + '  -pipeDir '+  curexp+ '/pipe '  + ' -procpar ' +  curexp+ '/curpar'\
                   + $xZFarg + $yZFarg + $zZFarg + $progress + $option +'; sleep 5" '
  
@@ -189,10 +217,13 @@ if ($nDIM < 3) then
 	shell($pipe_cmd)
 	wft(1)
 	pread(curexp+'/pipe/spec_ist.ft2')
+		// Always set procdim via setvalue - avoid potential panel panic
+		// And before doing nm2d or dconi
+        setvalue('procdim',2)
+	setvalue('procdim',2,'processed')
 	nm2d
 	dconi
-	procdim=2
-	setvalue('procdim',procdim,'processed')
+
 // record some key values in the pipe directory
 // This helps to decide (by other macros) if reprocessing is required
 // For now record fn,fn1,fn2 and file parameters
