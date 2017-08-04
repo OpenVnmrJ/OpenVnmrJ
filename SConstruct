@@ -109,7 +109,6 @@ buildList = string.split("""
                          biopack
                          biosolidspack
                          common
-                         dicom_fdf
                          dicom_store
                          DOSY
                          ddr
@@ -153,6 +152,7 @@ acqBuildList = string.split("""
                          bootpd.rh51
                          cgl
                          ddl
+                         dicom_fdf
                          expproc
                          ib
                          infoproc
