@@ -697,6 +697,11 @@ log_this "PART IV -- INSTALLATION FILES -- $dest_dir"
                              rht/mercplus.rht
        rm $Tarfiles/jre.tar     # exception
 
+   if [ -d $OVJ_TOOLS/linux ]
+   then
+      cp $OVJ_TOOLS/linux/* $dest_dir_code/linux
+      chmod 644 $dest_dir_code/linux/*
+   fi
 #
 #  VJ cdrom only
 #
