@@ -2213,20 +2213,20 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
    if [ x$os_version = "xrht" ]
    then
       #special precaution for Linux
-      /usr/bin/file /usr/local/bin/sudo | grep Intel 2>&1 >/dev/null
-      if [ $? -ne 0 ]
-      then
-         rm -f /usr/local/bin/sudo
-      fi
+#     /usr/bin/file /usr/local/bin/sudo | grep Intel 2>&1 >/dev/null
+#     if [ $? -ne 0 ]
+#     then
+#        rm -f /usr/local/bin/sudo
+#     fi
 
-      if [ -f /etc/redhat-release ]
-      then
-         lv=`/bin/cat /etc/redhat-release | grep 4` 
-         if [ x"$lv" != "x" ]
-         then
-            rm -f /usr/local/bin/sudo
-         fi
-      fi
+#     if [ -f /etc/redhat-release ]
+#     then
+#        lv=`/bin/cat /etc/redhat-release | grep 4` 
+#        if [ x"$lv" != "x" ]
+#        then
+#           rm -f /usr/local/bin/sudo
+#        fi
+#     fi
 
       # for debian these packages would need to be already installed (tftp, rarpd)
       if [ x$lflvr != "xsuse" -a x$lflvr != "xdebian" ]
@@ -2492,49 +2492,49 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
 #  debain releases depend on its own sudo for many operations, so don't add another one for VnmrJ
 #  VnmrJ admin invokes sudo from /usr/local/bin  so if it does not exist we need to copy it
 #  otherwise VnmrJ admin will not be able to function properly    GMB 5/1/2009
-   if [ ! -f "$sudofile" ]
-   then
-      case x$os_version in
-         "xrht") 
-                 if [ x$lflvr != "xdebian" ]
-                 then
-                   logmsg "cp -rf /vnmr/sudo.lnx/usr/local /usr"
-                   cp -rf /vnmr/sudo.lnx/usr/local /usr
-               # else
-                   # copy sudo over to /usr/local/bin for VNmrJ admin to use, should be fixed in VnmrJ
-                   # echo "sudo mkdir -p /usr/local/bin"
-                   # echo "sudo cp -p /usr/bin/sudo /usr/local/bin"
-                 fi
-                 ;;
+#  if [ ! -f "$sudofile" ]
+#  then
+#     case x$os_version in
+#        "xrht") 
+#                if [ x$lflvr != "xdebian" ]
+#                then
+#                  logmsg "cp -rf /vnmr/sudo.lnx/usr/local /usr"
+#                  cp -rf /vnmr/sudo.lnx/usr/local /usr
+#              # else
+#                  # copy sudo over to /usr/local/bin for VNmrJ admin to use, should be fixed in VnmrJ
+#                  # echo "sudo mkdir -p /usr/local/bin"
+#                  # echo "sudo cp -p /usr/bin/sudo /usr/local/bin"
+#                fi
+#                ;;
 
-         "xsol") cp -rf /vnmr/sudo/usr/local /usr ;;
-              *) ;;
-      esac
-   fi
+#        "xsol") cp -rf /vnmr/sudo/usr/local /usr ;;
+#             *) ;;
+#     esac
+#  fi
 #  debain release will always have /etc/sudoers file, so this is skipped
-   if [ ! -f "$sudoers" -a x$os_version != "xwin" ]
-   then
-       logmsg "cp -f $dest_dir/sudo/etc/sudoers /etc"
-       cp -f "$dest_dir"/sudo/etc/sudoers /etc
-   fi
+#  if [ ! -f "$sudoers" -a x$os_version != "xwin" ]
+#  then
+#      logmsg "cp -f $dest_dir/sudo/etc/sudoers /etc"
+#      cp -f "$dest_dir"/sudo/etc/sudoers /etc
+#  fi
 
 #  debain releases depend on its own sudo for many operations, so don't mess with it!
 #  VnmrJ admin invokes sudo from /usr/local/bin  so if it does not exist we need to copy it
 #  otherwise VnmrJ admin will not be able to function properly    GMB 5/1/2009
-   if [ x$os_version = "xrht" -a x$lflvr != "xdebian" ]
-   then
-       if [ ! -x /usr/local/bin/sudo ]
-       then
-           logmsg "cp /usr/bin/sudo /usr/local/bin/sudo"
-           cp /usr/bin/sudo /usr/local/bin/sudo
-       fi
+#  if [ x$os_version = "xrht" -a x$lflvr != "xdebian" ]
+#  then
+#      if [ ! -x /usr/local/bin/sudo ]
+#      then
+#          logmsg "cp /usr/bin/sudo /usr/local/bin/sudo"
+#          cp /usr/bin/sudo /usr/local/bin/sudo
+#      fi
 
-       if [ ! -x /usr/local/sbin/visudo ]
-       then
-          logmsg "cp /usr/sbin/visudo /usr/local/sbin/visudo"
-          cp /usr/sbin/visudo /usr/local/sbin/visudo
-       fi
-   fi
+#      if [ ! -x /usr/local/sbin/visudo ]
+#      then
+#         logmsg "cp /usr/sbin/visudo /usr/local/sbin/visudo"
+#         cp /usr/sbin/visudo /usr/local/sbin/visudo
+#      fi
+#  fi
 
    if [ x$os_version != "xwin" ]
    then
@@ -2546,16 +2546,16 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       chown $rootuser "$dest_dir"/bin/sudoins
       chmod 500 "$dest_dir"/bin/sudoins
   
-      if [ x$lflvr != "xdebian" ]
-      then
-         chmod 4111 /usr/local/bin/sudo
-         chmod 111 /usr/local/sbin/visudo
-   
-         chmod 440 "$sudoers"
-         chown $rootuser "$sudoers"
-         chgrp $rootuser "$sudoers"
-         rm -rf "$dest_dir"/sudo
-      fi
+#     if [ x$lflvr != "xdebian" ]
+#     then
+#        chmod 4111 /usr/local/bin/sudo
+#        chmod 111 /usr/local/sbin/visudo
+#  
+#        chmod 440 "$sudoers"
+#        chown $rootuser "$sudoers"
+#        chgrp $rootuser "$sudoers"
+#        rm -rf "$dest_dir"/sudo
+#     fi
       logmsg "sudoers script complete"
    fi
 
@@ -2660,14 +2660,17 @@ then
    if [ x$lflvr = "xrhat" ]
    then
       cd /etc/init.d
-      if [ ! -f ./Varian_kudzu.safe-mode ]
+      if [ -f ./kudzu ]
       then
-        logmsg "modify RHEL Kudzu to not interogate serial ports"
-        cat kudzu | sed s/KUDZU_ARGS=$/KUDZU_ARGS=\"-s\"/ > ./Varian_kudzu.safe-mode
-        mv kudzu kudzu.orig
-        cp Varian_kudzu.safe-mode kudzu
-      else
-        cp Varian_kudzu.safe-mode kudzu
+         if [ ! -f ./Varian_kudzu.safe-mode ]
+         then
+           logmsg "modify RHEL Kudzu to not interogate serial ports"
+           cat kudzu | sed s/KUDZU_ARGS=$/KUDZU_ARGS=\"-s\"/ > ./Varian_kudzu.safe-mode
+           mv kudzu kudzu.orig
+           cp Varian_kudzu.safe-mode kudzu
+         else
+           cp Varian_kudzu.safe-mode kudzu
+         fi
       fi
    fi
 fi

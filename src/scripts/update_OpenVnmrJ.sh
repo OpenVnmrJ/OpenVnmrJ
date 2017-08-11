@@ -88,10 +88,6 @@ then
   echo "Collecting misc programs"
   cd $prev
   newdir=$ovj
-  if [ -f bin/wkhtmltopdf -a ! -f $newdir/bin/wkhtmltopdf ]
-  then
-    cp bin/wkhtmltopdf $newdir/bin/wkhtmltopdf
-  fi
   if [ -f bin/dcdump -a ! -f $newdir/bin/dcdump ]
   then
     cp bin/dcdump $newdir/bin/dcdump
@@ -99,10 +95,6 @@ then
   if [ -f bin/dciodvfy -a ! -f $newdir/bin/dciodvfy ]
   then
     cp bin/dciodvfy $newdir/bin/dciodvfy
-  fi
-  if [ -f bin/FdfToDcm -a ! -f $newdir/bin/FdfToDcm ]
-  then
-    cp bin/FdfToDcm $newdir/bin/FdfToDcm
   fi
   if [ -f bin/vjLCAnalysis -a ! -f $newdir/bin/vjLCAnalysis ]
   then
@@ -274,14 +266,4 @@ then
         cp dicom/bin/$def $newdir/dicom/bin/$def
       fi
   done
-fi
-if [ -d $prev/sudo.lnx -a ! -d $ovj/sudo.lnx ]
-then
-  echo "Collecting sudo files"
-  cd $prev
-  newdir=$ovj
-  zip -ryq $newdir/b.zip sudo.lnx
-  cd $newdir
-  unzip -qn b.zip
-  rm b.zip
 fi
