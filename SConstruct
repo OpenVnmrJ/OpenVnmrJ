@@ -232,6 +232,8 @@ if ( os.path.exists(os.path.join('/usr','lib','libgsl.so')) or
 else:
    print "gsl library not found. Skipping compiles requiring that library"
 
+vnmrPath    = os.path.join(cwd, os.pardir,'vnmr')
+
 if ( 'darwin' not in platform):
    for i in acqBuildList:
       SConscript(os.path.join('src',i, 'SConstruct'))
@@ -239,6 +241,18 @@ if ( 'darwin' not in platform):
    if os.path.exists(javaLink):
       for i in javaAcqBuildList:
          SConscript(os.path.join('src',i, 'SConstruct'))
+
+   wkLink = os.path.join(ovjtools, 'wkhtmltopdf')
+   if os.path.exists(wkLink):
+      binPath = os.path.join(vnmrPath, 'bin')
+      if not os.path.exists(binPath):
+         os.makedirs(binPath)
+      cmd = 'cp '+wkLink+'/wkhtmltopdf '+binPath+';chmod 755 '+binPath+'/wkhtmltopdf'
+#     print "cmd: ",cmd
+      os.system(cmd)
+      cmd = 'cp '+wkLink+'/wkhtmltopdf-i386 '+binPath+';chmod 755 '+binPath+'/wkhtmltopdf-i386'
+#     print "cmd: ",cmd
+      os.system(cmd)
 
 # end of if platform group
 
@@ -261,7 +275,6 @@ if ( 'darwin' not in platform):
 # os.chmod(vnmracqueuPath,0777)
 # os.chmod(vnmrtmpPath,0777)
 
-vnmrPath    = os.path.join(cwd, os.pardir,'vnmr')
 vnmrSha1Path = os.path.join(vnmrPath,'adm','sha1')
 if not os.path.exists(vnmrSha1Path):
    os.makedirs(vnmrSha1Path)
