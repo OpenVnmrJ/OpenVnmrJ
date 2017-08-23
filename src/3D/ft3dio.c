@@ -23,6 +23,7 @@
 #define FT3D
 #include "command.h"
 #include "data.h"
+#include "wjunk.h"
 #ifdef LINUX
 #include "datac.h"
 #endif
@@ -40,7 +41,7 @@ static int      firstFID = TRUE;
 
 extern char	*userdir;
 extern int	maxfn12;	/* maximum F1-F2 real Fourier number	*/
-extern void	Werrprintf();
+extern int      mapFIDblock(int block_no);
 
 /*---------------------------------------
 |                                       |

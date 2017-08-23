@@ -93,8 +93,8 @@ def symLinkHeader(env, cSourceFileList, destPath, headerSourcePath, headerFileLi
 
       # make explicit dependency between C file list and header list (after symlinking)
       for k in cSourceFileList:
-         env.Depends(target     = linkTargetFile,
-                     dependency = k)
+         env.Depends(target     = k,
+                     dependency = linkTargetFile)
 
 # method that creates links at interpretation time with no association with a build target
 # this shouldn't be used if it can be helped because this will execute during a "clean"
