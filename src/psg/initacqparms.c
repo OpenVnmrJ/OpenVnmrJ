@@ -34,8 +34,10 @@
 #include "group.h"
 #include "acodes.h"
 #include "rfconst.h"
+#include "abort.h"
 #include "acqparms.h"
 #include "dsp.h"
+#include "pvars.h"
 
 /*  PSG_LC  conditional compiles lc.h properly for PSG */
 #ifndef  PSG_LC
@@ -1062,12 +1064,12 @@ int calcdspskip()
   double osskipdly=30.0e-6;
 
   dsposskipdelay=0.0;
-  if ( P_getstring(GLOBAL,"dsp",&dspflg,1,2) == 0 )
+  if ( P_getstring(GLOBAL,"dsp",dspflg,1,2) == 0 )
   {
     if ((dspflg[0] != 'r') && (dspflg[0] != 'i')) return (0);
 
     if (dspflg[0] == 'r') {
-      if ( P_getstring(GLOBAL,"fsq",&fsqflg,1,2) == 0 )
+      if ( P_getstring(GLOBAL,"fsq",fsqflg,1,2) == 0 )
       {
         if (fsqflg[0] != 'y') return (0);
       }
@@ -1249,7 +1251,7 @@ double maxlbsw;
    }
 
    ExpInfo.DspOsskippts = 0;
-   if ( P_getstring(GLOBAL,"qcomp",&osskip,1,2) == 0 )
+   if ( P_getstring(GLOBAL,"qcomp",osskip,1,2) == 0 )
    {
      if ((osskip[0] == 'y'))
      {

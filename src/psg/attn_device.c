@@ -14,6 +14,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 
+#include "abort.h"
 #include "acodes.h"
 #include "oopc.h"
 #include "acqparms.h"
