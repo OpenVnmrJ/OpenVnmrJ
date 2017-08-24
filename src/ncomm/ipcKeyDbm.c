@@ -330,7 +330,7 @@ int ipcKeySet(IPC_KEY_DBM_ID dbmId, char* idstr, int maxlen, int pid,int keyinde
         /* Lock down structure then update it */
         shrmTake(dbmId->dbmdata);
         strncpy(key[free].idstr,idstr,sizeof(k.idstr));
-        key[free].idstr[size] = '\0';
+        key[free].idstr[size-1] = '\0';
         /* besure option filename is present before copy */
         if ( filename != NULL)
         {
@@ -342,7 +342,7 @@ int ipcKeySet(IPC_KEY_DBM_ID dbmId, char* idstr, int maxlen, int pid,int keyinde
              errLogRet(ErrLogOp,debugInfo, "ipcKeySet: The string will be truncated\n");
           }
            strncpy(key[free].path,filename,sizeof(k.path));
-           key[free].path[size2] = '\0';
+           key[free].path[size2-1] = '\0';
         }
         else
 	{
@@ -505,6 +505,7 @@ int ipcKeySetAsync(IPC_KEY_DBM_ID dbmId, char* idstr)
 void  ipcKeyDbmShow(IPC_KEY_DBM_ID dbmId)
 /* IPC_KEY_DBM_ID dbmId - IPC Key Dbm Id */
 {
+#ifdef DEBUG
    int i;
    IPC_KEY_DBM_DATA *key;
    if (dbmId != NULL)
@@ -517,6 +518,6 @@ void  ipcKeyDbmShow(IPC_KEY_DBM_ID dbmId)
 		i,key[i].idstr, key[i].pid, key[i].pidActive, 
 		key[i].ipcKey, key[i].ipcKey, key[i].path);
    }
- 
+#endif
    return;
 }
