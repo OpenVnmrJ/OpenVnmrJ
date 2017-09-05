@@ -9,16 +9,37 @@ atcmd('macro','list'):$timestamp,$user
 atcmd('macro','next'):$seconds
 atcmd
 
-The atcmd will call a macro at the specified time.  It only functions on a
-spectrometer. If the 'active' argument is given, the macro will be executed
+The atcmd will call a macro at the specified time.  It only functions
+on a spectrometer.
+
+When an atcmd is executed, a background Vnmr is started. It reads the
+command to execute from the atcmd database. This background Vnmr will
+not be started in an experiment. Therefore, the macro will need to execute
+a jexp or run commands or macros which do not need experiment parameters.
+It will have access to global and systemglobal parameters.  The bootup macro
+will not be executed automatically. It can be called from the atcmd macro.
+
+If the 'active' argument is given, the macro will be executed
 by the Vnmr process that specified the atcmd. If that process is no longer
-active, the macro will be removed from the database. If the 'active' argument
-is not given, then a background Vnmr will be started to execute
-the macro. This background Vnmr will not be started in an experiment.
-Therefore, the macro will need to execute a jexp or run commands or
-macros which do not need experiment parameters.  It will have access
-to global and systemglobal parameters.  The bootup macro will not be
-executed automatically. It can be called from the atcmd macro.
+active, the macro will be removed from the database. If that Vnmr process
+is still active, then the background Vnmr sends a message to the "active"
+foreground Vnmr with the write('net',....) command. The actual format is
+
+write('net',<host>,<port>,`<atCommand>`)
+
+where <host> and <port> identify where to send the <atCommand>.  Note the
+back-quotes around the <atCommand>. If the command line specified to atcmd
+uses quotes, it should use forward quotes. Otherwise, the write command
+will give a syntax error. For example, if one uses the command
+  atcmd(`echo('good morning')`,<timespec>,'active')
+the write command will be
+  write('net',<host>,<port>,`echo('good morning')`)
+which is correct. However, if one reversed the use of forward and
+backward quotes, as in:
+  atcmd('echo(`good morning`)',<timespec>,'active')
+the write command will be
+  write('net',<host>,<port>,`echo(`good morning`)`)
+which will give a syntax error.
 
 When atcmd is called with a timespec argument, it updates the database
 with the supplied information.  It does not start the process which will
@@ -73,10 +94,10 @@ to a specific experiment.
 
 Examples:
 
-atcmd('echo(`good morning`)','8:00 mon tue wed thu fri')
+atcmd(`echo('good morning')`,'8:00 mon tue wed thu fri')
    will display a welcome message every weekday at 8:00 am.
 
-atcmd('echo(`What are you doing here on a weekend?`)','8:00 Sat Sun')
+atcmd(`echo('What are you doing here on a weekend?')`,'8:00 Sat Sun')
    will question your intentions on the weekend.
 
 atcmd('startNightQueue','22:00')
