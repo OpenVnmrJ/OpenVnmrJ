@@ -2950,7 +2950,7 @@ public class ExpViewArea extends  ExpViewIF implements VnmrKey,
 			if (prtOrient != null)
 				sb.append(",'-orient','").append(prtOrient).append("'");
 			if (prtPlotter != null && (prtPlotter.length() > 0))
-				sb.append(",'-plotter','").append(prtPlotter).append("'");
+				sb.append(",'-plotter',`").append(prtPlotter).append("`");
 			if (prtPaper != null)
 				sb.append(",'-paper','").append(prtPaper).append("'");
 			sb.append(",'-iformat','").append(pltFormat).append("'");
@@ -4506,7 +4506,8 @@ public class ExpViewArea extends  ExpViewIF implements VnmrKey,
         }
         prtPlotter = (String) sshare.getProperty(VjPrintDef.PRINTER_NAME);
         // windows plotter names can have \ chars which need to be "escaped" in order to work with c-strings
-        prtPlotter=prtPlotter.replace("\\", "\\\\");
+	if (prtPlotter != null && (prtPlotter.length() > 0))
+           prtPlotter=prtPlotter.replace("\\", "\\\\");
 
         if (prtOrient == null) { 
             mess = (String) sshare.getProperty(VjPrintDef.PRINT_ORIENTATION);
