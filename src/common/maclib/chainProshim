@@ -1,0 +1,73 @@
+"macro chainProshim"
+if ($# = 0) then
+  write('error','%s requires at least one ProShim method as an argument',$0)
+  return
+endif
+$bg=0
+$arg=1
+if (typeof('$1')) then
+  if ($1 = 'bg') then
+    $bg=1  
+    if ($# < 2) then
+      write('error',`In addition to the 'bg' argument, %s requires at least one ProShim method`,$0)
+      return
+    endif
+    $arg=2
+  endif
+endif
+$Arg='' format($arg,'lower'):$Arg
+$Arg='$'+$Arg
+if ( not typeof($Arg) ) then
+  write('error','%s requires at least one ProShim method as an argument',$0)
+  return
+endif
+$path=userdir+'/proshimmethods'
+exists($path,'directory'):$ok
+if (not $ok) then
+  mkdir($path)
+endif
+$method='chainedProshim'
+$chained=$path+'/'+$method
+exists({$Arg},'proshimmethods'):$e,$path
+if not $e then
+  write('error','Method %s does not exist',{$Arg})
+  return
+endif
+cp($path,$chained)
+while ($arg < $#) do
+  $arg=$arg+1
+  format($arg,'lower'):$Arg
+  $Arg='$'+$Arg
+  if ( not typeof($Arg) ) then
+    $num={$Arg}
+    if ($path<>'') then
+      $i=1
+      while ($i < $num) do
+        $i=$i+1
+        shell('cat '+$path+' >> '+$chained+';cat'):$e
+      endwhile
+    endif
+  else
+    exists({$Arg},'proshimmethods'):$e,$path
+    if not $e then
+      write('error','Method %s does not exist',{$Arg})
+      $path=''
+    else
+      shell('cat '+$path+' >> '+$chained+';cat'):$e
+    endif
+  endif
+endwhile
+
+method=$method
+wshim='s'
+if ($bg=0) then
+  readhw('status'):$ok
+  if ($ok>0) then
+    psMain('psPshim')
+  else
+    write('error','Acquisition is not active')
+  endif
+else
+  doifidle('doproshim')
+endif
+
