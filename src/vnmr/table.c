@@ -129,6 +129,7 @@ extern int cmdlineOK(int argc, char *argv[], int retc, char *retv[]);
 extern int clear();
 extern int continprepare();
 extern int continread();
+extern int convertbruker(int argc, char *argv[], int retc, char *retv[]);
 extern int convertdelta(int argc, char *argv[], int retc, char *retv[]);
 extern int cpFilesInFile();
 extern int create();
@@ -625,6 +626,7 @@ static cmd_t vnmr_table[] = {
 	{"copy"	     , shellcmds,	NO_REEXEC, 0},
         {"continprepare", continprepare,NO_REEXEC, 0},
         {"continread" , continread,     NO_REEXEC, 0},
+        {"convertbruker", convertbruker,NO_REEXEC, 0},
         {"convertdelta", convertdelta,  NO_REEXEC, 0},
 	{"cos"	     , ln,		NO_REEXEC, 10},
 	{"cp"	     , shellcmds,	NO_REEXEC, 0},

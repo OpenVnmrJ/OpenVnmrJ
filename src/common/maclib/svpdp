@@ -14,13 +14,6 @@ if ($1='nolog') then
 endif
 
 isnewexp:$isnew
-isFDAdata:$p11
-if($p11>0 and $isnew=0 and procdim>0) then
-  // save changes with svr command
-  CPdndfid_process
-  saveREC
-endif
-
 canWrite(file):$e
 // if (auto='y') then $isnew=1 endif
 if (($isnew or $e<0.5) and ($1<>'nolog') and ($##<1)) then
@@ -38,6 +31,13 @@ if ((studyowner<>operator) and
 	write('error','Study owned by %s.  %s does not have rights to update',studyowner,operator)
 	return
     endif
+endif
+
+isFDAdata:$p11
+if($p11>0 and $isnew=0 and procdim>0) then
+  // save changes with svr command
+  CPdndfid_process
+  saveREC
 endif
 
 $archsamp='' $name=''
