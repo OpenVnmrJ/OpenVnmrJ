@@ -1,0 +1,79 @@
+language: java
+
+compiler:
+- gcc
+
+git:
+  depth: 3
+
+sudo: required
+
+dist: trusty
+
+os:
+- linux
+- osx
+
+osx_image: xcode7.3
+
+#jdk:
+#- openjdk6
+
+cache: ccache
+
+addons:
+  apt:
+    sources:
+    - r-packages-trusty
+    packages:
+    - scons
+    - fort77
+    - libglu1-mesa-dev
+    - lib32stdc++-4.8-dev
+    - libc6-dev-i386
+    - gcc-multilib
+
+before_install:
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install scons gcc ; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then jdk_switcher use openjdk6; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo dpkg --add-architecture i386; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get -qq update; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get install -y libmotif-dev:i386 ; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get install -y libxt-dev:i386 ; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get install -y libx11-dev:i386 ; fi
+- java -version
+
+install:
+- pwd
+- cd ..
+- git config --global core.pager ''
+- GITHUB_USER=`dirname ${TRAVIS_REPO_SLUG}`
+- git clone https://github.com/${GITHUB_USER}/ovjTools.git --branch development
+
+script:
+- echo ${TRAVIS_BRANCH} ${TRAVIS_BUILD_DIR} ${TRAVIS_BUILD_ID} ${TRAVIS_BUILD_NUMBER} ${TRAVIS_COMMIT} ${TRAVIS_COMMIT_RANGE} ${TRAVIS_EVENT_TYPE} ${TRAVIS_JOB_ID} ${TRAVIS_JOB_NUMBER} ${TRAVIS_OS_NAME} ${TRAVIS_PULL_REQUEST} ${TRAVIS_PULL_REQUEST_BRANCH} ${TRAVIS_PULL_REQUEST_SHA} ${TRAVIS_REPO_SLUG} ${TRAVIS_SECURE_ENV_VARS} ${TRAVIS_SUDO} ${TRAVIS_TEST_RESULT} ${TRAVIS_TAG}
+- export OVJ_BUILDDIR=$(pwd)
+- export OVJ_ROOT=${OVJ_BUILDDIR}/OpenVnmrJ
+- export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
+- cd ${OVJ_ROOT}
+- cp -a ${OVJ_TOOLS}/bin ${OVJ_BUILDDIR}
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cd ${OVJ_BUILDDIR}/bin && ./build_release.sh --inova no build package; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then cd ${OVJ_BUILDDIR}/bin && ./build_release.sh build package; fi
+
+after_failure:
+- cd ${OVJ_ROOT}
+- find ${OVJ_ROOT} -name build.log
+- find . -name 'build*' -exec tail -100 {} \;
+
+before_deploy:
+- export RELEASE_PKG_FILE=${OVJ_BUILDDIR}/OpenVnmrJ_${TRAVIS_TAG}_${TRAVIS_OS_NAME}.tgz
+- cd ${OVJ_BUILDDIR} && tar czf ${RELEASE_PKG_FILE} dvdimage*
+
+deploy:
+  skip_cleanup: true
+  provider: releases
+  api_key:
+    secure: moZsGzDeQkqsEROCzN0HE+Obmt813bNt9nOX1jNtuJP3giz31w8xBwyu2sf6nea7tN5IopUlWIg5AF9UhvcHLyXYEZRwsvyZNmkn9s7fg8CFtRZekS5fU8+UbNMay2qgXeSe7LbwpQYYhibcG685BPs4ifAgey40JknUCXnTeXeSOrkEZ/zbSNwzpHKFr+MXolhS0j05izhNlF6Haf2SE/BJzyZOdxpiC6JaXhedzMyaHRBBsKS4ZHl1ByVtpAO3L5n7D8q2DKsK7fvrKWNGCpXezzdjxAIwT9niM/DJ0nDMa2rUBBP5+GbC18WKn30q7pRKgtbU6pBig99qFp/MomoOcZTp/MFQld/fX66YQCeU8FIGQdKs9kV17NOnVW4pf6OBL5FD17qed5nS72xWdAkuT+j4e2bDXWjRCqt5MVz3w62ZrJvTeC5LS4buCINWcsT8AY9lMtF39NHtn54Yx6at+YFrOFafLuJS80X+yJGsPsLgKOjow+ImYppZ9EltEeWj1sy61ny0lHPFggU6rp+dGV5Kc6bQV+WzT8Lhb/4gZ5xgSxFLrMC+7VxK2fbtggO/dW3xeYkGMSUR6/eZhB6n9mwE9OUw9yNUT/7NKE970obwHaWhb/AnobAO4H6FjBMJQOxFFs/TNJjaFg1stEhJPlcVA/QsRQoNl0K11Ig=
+  file: "${RELEASE_PKG_FILE}"
+  on:
+    tags: true

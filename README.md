@@ -46,6 +46,11 @@ Feel free to use [Slack](https://openvnmrj.slack.com/messages/appdirs/) if you n
 
 ## Building
 
+master branch:
+[![Build Status](https://travis-ci.org/tesch1/OpenVnmrJ.svg?branch=master)](https://travis-ci.org/tesch1/OpenVnmrJ)
+development branch:
+[![Build Status](https://travis-ci.org/tesch1/OpenVnmrJ.svg?branch=development)](https://travis-ci.org/tesch1/OpenVnmrJ)
+
 If you are interested in building OpenVnmrJ from source, refer to the [ovjTools repository](https://github.com/OpenVnmrJ/ovjTools), which contains instructions and
 all the tools and libraries necessary for building OpenVnmrJ.  
 
