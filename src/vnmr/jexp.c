@@ -1358,6 +1358,12 @@ int leftshiftfid(int argc, char *argv[], int retc, char *retv[])
    RETURN;
 }
 
+int scalefid(int argc, char *argv[], int retc, char *retv[])
+{
+   Werrprintf("%s: not yet implemented",argv[0]);
+   RETURN;
+}
+
 int replacetraces(int argc, char *argv[], int retc, char *retv[])
 {
     dfilehead phasehead;

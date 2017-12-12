@@ -290,6 +290,12 @@ static int setdatafile(int *fnval)
   RETURN;
 }
 
+int readspectrum(int argc, char *argv[], int retc, char *retv[])
+{
+   Werrprintf("%s: not yet implemented",argv[0]);
+   RETURN;
+}
+
 /*******************************/
 static int calculate(double scalefactor, int fitspecflag, int fnval)
 /*******************************/
