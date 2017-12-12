@@ -370,6 +370,7 @@ extern int readfile();
 extern int readhw();
 extern int readlk();
 extern int readparam();
+extern int readspectrum(int argc, char *argv[], int retc, char *retv[]);
 extern int real();
 extern int recon();
 extern int recon_all();
@@ -391,6 +392,7 @@ extern int Rinput();
 extern int s_cmd();
 extern int savecolors();
 extern int savefdfspec();
+extern int scalefid(int argc, char *argv[], int retc, char *retv[]);
 extern int selbuf();
 extern int selecT();
 #ifdef VNMRJ
@@ -780,6 +782,7 @@ static cmd_t vnmr_table[] = {
 	{"getMaxIndex", getMaxIndex,	NO_REEXEC, 0},
 	{"readpars",    readpars,	NO_REEXEC, 0},
 	{"readpar",     readpar,	NO_REEXEC, 0},
+	{"readspectrum",readspectrum,	NO_REEXEC, 0},
 	{"getstatus"  , getstatus,	NO_REEXEC, 0},
 	{"getlimit"   , gettype,	NO_REEXEC, 10},
 	{"getll"      , dll,		NO_REEXEC, 10},
@@ -1013,6 +1016,7 @@ static cmd_t vnmr_table[] = {
 	{"sa"         , acqproc_msge,	NO_REEXEC, 0},
 	{"savecolors" , savecolors,	NO_REEXEC, 0},
 	{"savefdfspec" , savefdfspec,	NO_REEXEC, 0},
+	{"scalefid"   , scalefid,	NO_REEXEC, 0},
 	{"selbuf"     , selbuf,		NO_REEXEC, 0},
 	{"select"     , selecT,		NO_REEXEC, 0},
 #ifdef VNMRJ
