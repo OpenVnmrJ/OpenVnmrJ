@@ -6,20 +6,6 @@ import shutil
 
 platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
 
-def isUbuntuVersion():
-   if os.path.exists("/etc/debian_version"):
-      value=1
-      f=open("/etc/issue",'r')
-      for line in f:
-         if (line.find("Ubuntu") > -1):
-            print line
-            break
-      f.close()
-   else:
-      value=0
-   return(value)
-
-
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
 cwd = os.getcwd()
@@ -29,20 +15,13 @@ dosyFileList = ['contin.for',
                 'splmodNUG.for']
 
 fenv = Environment(FORTRANFLAGS = '-fno-f2c -ffast-math -O',
-                   FORTRAN = 'g77')
-
-if (isUbuntuVersion()==1):
-   fenv.Replace( FORTRAN='f77' )
+                   FORTRAN = 'gfortran')
 
 skipBuild='false'
-if ('darwin' in platform):    # Interix
-   libFile=os.path.join(os.sep,'usr','local','lib','libg2c.a')
+if ('darwin' in platform):
+   libFile=os.path.join(os.sep,'usr','local','gfortran','lib','libgfortran.a')
    if not os.path.exists(libFile):
        skipBuild='true'
-   else:
-       LIBG2C=File(libFile)
-       fenv.Replace(  LIBS=LIBG2C )
-
 
 dosyBinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir, 'options','standard','DOSY','bin')
 if not os.path.exists(dosyBinPath):

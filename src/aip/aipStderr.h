@@ -37,17 +37,17 @@
 	}
 #define	PERROR_1(str,arg1)\
 	{  char err_buf[256]; \
-	   (void)sprintf(err_buf,"%s: %d: "str,__FILE__, __LINE__, arg1);\
+	   (void)sprintf(err_buf,"%s: %d: " str,__FILE__, __LINE__, arg1);\
 	   perror(err_buf);\
 	}
 #define	PERROR_2(str,arg1,arg2)\
 	{  char err_buf[256]; \
-	   (void)sprintf(err_buf,"%s: %d: "str,__FILE__, __LINE__, arg1, arg2);\
+	   (void)sprintf(err_buf,"%s: %d: " str,__FILE__, __LINE__, arg1, arg2);\
 	   perror(err_buf);\
 	}
 #define	PERROR_3(str,arg1,arg2,arg3)\
 	{  char err_buf[256]; \
-	   (void)sprintf(err_buf,"%s: %d: "str,__FILE__, __LINE__, arg1, arg2, arg3);\
+	   (void)sprintf(err_buf,"%s: %d: " str,__FILE__, __LINE__, arg1, arg2, arg3);\
 	   perror(err_buf);\
 	}
 
@@ -55,13 +55,13 @@
 	   (void)fprintf(stderr,"%s: %d: %s\n",__FILE__, __LINE__, str);
 
 #define	STDERR_1(str,arg1)\
-	   (void)fprintf(stderr,"%s: %d: "str"\n",__FILE__, __LINE__, arg1);
+	   (void)fprintf(stderr,"%s: %d: " str "\n",__FILE__, __LINE__, arg1);
 
 #define	STDERR_2(str,arg1,arg2)\
-	   (void)fprintf(stderr,"%s: %d: "str"\n",__FILE__, __LINE__, arg1, arg2);
+	   (void)fprintf(stderr,"%s: %d: " str "\n",__FILE__, __LINE__, arg1, arg2);
 
 #define	STDERR_3(str,arg1,arg2,arg3)\
-	   (void)fprintf(stderr,"%s: %d: "str"\n",__FILE__, __LINE__, arg1, arg2, arg3);
+	   (void)fprintf(stderr,"%s: %d: " str "\n",__FILE__, __LINE__, arg1, arg2, arg3);
 
 int aipSetDebug(int argc, char *argv[], int retc, char *retv[]);
 int aipGetDebug();
