@@ -2126,33 +2126,33 @@ static int makefid_getfhead(char *cmd_name, dfilehead *fh_ref, int *update_fh_re
 
 static int count_lines(char *fn_addr )
 {
-        char     wc_command[ MAXPATH+8 ];
-        int      ival, nlines;
+        int      ival;
         FILE    *pfile;
+        int ch = 0;
+        int lines = 0;
 
 /*  Calling routine is expected to check the string length, so
     this check should be successful.  Done here to be complete.  */
 
         ival = strlen( fn_addr );
         if (ival < 0 || ival >= MAXPATH)
+        {
           return( -1 );
+        }
+        pfile = fopen(fn_addr,"r");
+        if (pfile == NULL)
+        {
+           return(-1);
+        }
+        while ( !feof(pfile) )
+        {
+           ch = fgetc(pfile);
+           if (ch == '\n')
+              lines++;
+        }
+        fclose(pfile);
+        return( lines );
 
-        sprintf( &wc_command[ 0 ], "wc -l %s", fn_addr );
-
-/*  `popen' operation should also succeed.  Most likely
-     cause for failure is the Process Table is full.    */
-
-        if ((pfile = popen_call( &wc_command[ 0 ], "r" )) == NULL)
-          return( -1 );
-
-/*   If a Failure occurs, here is the most likely spot.  */
-
-        ival = fscanf( pfile, "%d", &nlines );
-        if (ival != 1)
-          nlines = -1;
-
-        pclose_call( pfile );
-        return( nlines );
 }
 
 /*  mem_buffer expected to be the address of
