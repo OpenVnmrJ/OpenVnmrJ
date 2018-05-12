@@ -591,10 +591,21 @@ char          **argv;
    }
 
    unlink(tmp_source);
-   sprintf(input, "cat %s %s %s > %sdps.c",rptr,tmp_file2,time_file2,baseName);
+   fout = fopen(tmp_file1, "w");
+   if (fout == NULL)
+   {
+      fprintf(stderr, "dps_ps_gen(2):  can not open file %s. \n", tmp_file1);
+      exit(0);
+   }
+   fprintf(fout, "\n#pragma GCC diagnostic ignored \"-Wunused-variable\"\n");
+   fprintf(fout, "#pragma GCC diagnostic ignored \"-Wreturn-type\"\n");
+   fprintf(fout, "#pragma GCC diagnostic ignored \"-Wunused-but-set-variable\"\n");
+   fclose(fout);
+   sprintf(input, "cat %s %s %s %s > %sdps.c",rptr,tmp_file1,tmp_file2,time_file2,baseName);
    if (debug)
 	fprintf(stderr, "%s \n", input);
    system(input);
+   unlink(tmp_file1);
    unlink(tmp_file2);
    unlink(time_file2);
    if (!debug)
