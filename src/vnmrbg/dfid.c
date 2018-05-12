@@ -2000,6 +2000,7 @@ int fidmax(int argc, char *argv[], int retc, char *retv[])
   int doNF = 0;
   int argnum = 0;
   double tmp;
+  int tmpFn;
 
   revflag = 0;
   if(initfid(1)) return(ERROR);
@@ -2024,6 +2025,7 @@ int fidmax(int argc, char *argv[], int retc, char *retv[])
      }
   }
 
+  tmpFn = -fn;
   if (doNF)
   {
      char *argv1[4];
@@ -2044,7 +2046,7 @@ int fidmax(int argc, char *argv[], int retc, char *retv[])
         cttemp = 1;
      datamax /= (double) cttemp;
   }
-  else if ((spectrum = get_one_fid(trace-1,&fn,&c_block, dcflag)) == 0)
+  else if ((spectrum = get_one_fid(trace-1,&tmpFn,&c_block, dcflag)) == 0)
   {
      datamax = 0.0;
   }
