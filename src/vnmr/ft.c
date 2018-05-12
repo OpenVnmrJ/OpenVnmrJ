@@ -296,6 +296,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
 		dsnpx,
 		dsnpadj,
 		dspwr,
+		fnActive,
 		realt2data;
   int		inverseWT;
   float		*outp,
@@ -305,6 +306,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
 		*wtfunc;
   short		*ptr2s;
   double	rx,
+		fnSave,
 		tmp;
   dpointers	outblock,
 		fidoutblock;
@@ -350,6 +352,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
   ftpar.dspar.newpath[0] = '\0';
   ftpar.ftarg.useFtargs = 0;
   sprintf(newfidpath,"%s/fidproc.fid",curexpdir);
+
 
 /*********************************
 *  Parse STRING arguments first  *
@@ -540,6 +543,17 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
   ftflag = nfft = FALSE;
   ftpar.dspar.dsflag = FALSE;
   do_ds = FALSE;
+  if ( (fnActive = P_getactive(CURRENT, "fn")) )
+  {
+     double rval;
+
+     P_getreal(CURRENT,"fn", &fnSave, 1);
+     P_getreal(PROCESSED, "np", &rval, 1);
+     if (fnSave < rval)
+        P_setactive(CURRENT, "fn", ACT_OFF);
+     else
+        fnActive = 0;
+  }
 
 /******************************
 *  Adjust parameters for FT.  *
@@ -622,6 +636,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
 ***************************************************/
 
   lsfidx = ftpar.lsfid0;
+// fprintf(stderr,"lsfidx= %d fn0= %d np0= %d\n",lsfidx, ftpar.fn0, ftpar.np0);
 
   if (ftpar.dspar.dsflag)
   {
@@ -655,6 +670,8 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
     pwr = dspwr = fnpower(ftpar.fn0);
     dsfn0 = ftpar.fn0;
   }
+// fprintf(stderr,"npx= %d npadj= %d np0= %d\n",npx, npadj, ftpar.np0);
+
 /*
   fpointmult = (ftpar.wtflag) ? getfpmult(S_NP, fidhead.status & S_DDR) : 1.0;
  */
@@ -1503,6 +1520,11 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
   D_flush(D_DATAFILE);
   D_trash(D_DATAFILE);
   D_trash(D_PHASFILE);
+  if (fnActive)
+  {
+     P_setactive(CURRENT, "fn", ACT_ON);
+     P_setreal(CURRENT,"fn", fnSave, 1);
+  }
 
   // save procpar
   strcpy(filepath,newfidpath);
