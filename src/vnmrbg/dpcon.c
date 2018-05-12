@@ -41,6 +41,7 @@ extern int dcon_displayparms();
 extern void setcolormap(int firstcolor, int numcolors, int th, int phcolor);
 extern int currentindex();
 extern void set_spectrum_thickness(char *min, char *max, double ratio);
+extern int      interuption;	/* flag for "cancel command "		*/
 
 static int b_colors;
 static int colors,numcont;
@@ -798,6 +799,10 @@ int phase_display;
     I cannot explain this and find that a value of "l" works.	*/
 
 	  if (colorflag) changecolor(l,plusminus,phase_display);
+	  if (  interuption )
+           {  release(pbuf[0]); release(pbuf[1]); release(fulltrace);
+	     ABORT;
+	   }
 	  if ((phasfl=gettrace(f1,fpnt))==0)
            {  release(pbuf[0]); release(pbuf[1]); release(fulltrace);
 	     ABORT;

@@ -1099,6 +1099,8 @@ writeSocket( Socket *pSocket, const char *datap, int bcount )
 /* char *datap */
 /* int bcount */
 {
+        ssize_t written = 0;
+        ssize_t nwrite;
 	if (pSocket == NULL) {
 		errno = EFAULT;
 		return( -1 );
@@ -1107,8 +1109,23 @@ writeSocket( Socket *pSocket, const char *datap, int bcount )
 		errno = EBADF;
 		return( -1 );
 	}
+        while (written < bcount)
+        {
+           nwrite = write( pSocket->sd, datap+written, bcount - written );
+           if (nwrite < 0)
+           {
+              if (errno != EINTR)
+                 return(-1);
+           }
+           else
+           {
+              written += nwrite;
+           }
+              
+        }
 
-	return( write( pSocket->sd, datap, bcount ) );
+//	return( write( pSocket->sd, datap, bcount ) );
+        return(bcount);
 }
 
 int
