@@ -1,0 +1,44 @@
+
+******************************************************************************
+scalefid(scaleFactor<,datapath>):$ok - multiply an FID by a scaling factor
+******************************************************************************
+  
+scalefid will multiply an FID by a scaling factor.
+
+"scaleFactor" is the multiplier and is a required parameter. 
+If there is no second argument, scalefid will scale the FID
+in the current experiment.  This command will overwrite acqfil/fid
+and acqfil/procpar in the current experiment.  If acqfil/fid is linked
+to a saved fid file, the link will be replaced by a copy, so the original
+fid will not be overwritten.
+A processing parameter scalefid will be created and set to the value of scaleFactor.
+If scalefid is called multiple times, the value of the scalefid will be the
+cumulative value of all the FID scaling. That is, it will be the product of
+all the scaleFactor values.
+If the FID file has multiple traces, all traces will be scaled.
+
+In order to maintain data precision, the scaleFactor is represented as factor*(2**n)
+The actual data points are multiplied by "factor" and the scale parameter in the
+data block header is incremented by "n". For example, if scaleFactor=16, it is
+represented as 1.0*(2**4). Since the "factor" is 1.0, the actual data points are
+not changed. The "scale" parameter in the block header is incremented by 4.
+If scaleFactor=1/16, it is represented as 1.0*(2**(-4)). Again, since the "factor"
+is 1.0, the actual data points are not changed. The "scale" parameter in the block
+header is decremented by 4.
+
+If an optional second argument is given, it specifies the filename of an FID file.
+If a procpar file exists in the same directory as the fid file, the scalefid
+parameter will be created and set to the value of scaleFactor. If that data had
+already been scaled, the value of scalefid will be set to the cumulative value of
+all the FID scaling. That is, it will be the product of all the scaleFactor values.
+
+In both cases, scalefid may return a 1 to the calling macro if successful.
+It will return a 0 if it fails.
+
+Examples:
+
+// Multiple all FID data points in the current experiment by 10
+scalefid(10)
+
+// Multiply the data in the named second argument by 1000
+scalefid(1000,'/home/vnmr1/vnmrsys/data/mydata.fid/fid')

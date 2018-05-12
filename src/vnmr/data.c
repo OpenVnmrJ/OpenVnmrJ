@@ -3261,3 +3261,206 @@ int D_leftshiftfid(int lsFID, char *datapath, int *newnp)
    releaseAllWithId("downsize");
    return(COMPLETE);
 }
+
+int D_scalefid(double scaling, char *datapath)
+{
+   char			tmpdatapath[MAXPATH];
+   int			i,
+			fd,
+			np,
+			tmpfd,
+			nblocks,
+			bbytesOrig,
+			nbheader;
+   int cnt;
+   int ebyte;
+   short stat;
+   dfilehead		datafilehead;
+   dpointers		datablock;
+   float *ptr;
+   int *iptr;
+   short *sptr;
+   int ival;
+   short sval;
+   union u_tag {
+      float fval;
+      int   ival;
+   } uval;
+   int scale;
+   double inScale;
+
+
+   if ( (fd = open(datapath, O_RDONLY)) < 0 )
+      return(D_OPENERR);
+
+/***********************************
+*  Read in file header and modify  *
+*  for the downsized file.        *
+***********************************/
+
+   if ( read(fd, (char *)(&datafilehead), sizeof(dfilehead))
+		!= sizeof(dfilehead) )
+   {
+      close(fd);
+      return(D_READERR);
+   }
+
+   nblocks = ntohl(datafilehead.nblocks);
+   bbytesOrig = ntohl(datafilehead.bbytes);
+   np = ntohl(datafilehead.np);
+   nbheader = ntohl(datafilehead.nbheaders);
+   nbheader = nbheader & NBMASK;
+   ebyte = ntohl(datafilehead.ebytes);
+   stat = ntohs(datafilehead.status);
+
+   sprintf(tmpdatapath,"%s.tmp",datapath);
+   if ( (tmpfd = open(tmpdatapath, O_WRONLY | O_CREAT, 0666)) < 0 )
+   {
+      close(fd);
+      return(D_OPENERR);
+   }
+
+/************************************
+*  Seek to start of file and write  *
+*  out the new file header.         *
+************************************/
+
+   if ( write(tmpfd, (char *)(&datafilehead), sizeof(dfilehead) )
+		!= sizeof(dfilehead) )
+   {
+      close(fd);
+      close(tmpfd);
+      return(D_WRITERR);
+   }
+
+/******************************
+*  Allocate memory for data.  *
+******************************/
+
+   if ( (datablock.head = (dblockhead *) allocateWithId(bbytesOrig,
+		"downsize")) == NULL )
+   {
+      close(fd);
+      close(tmpfd);
+      return(D_NOALLOC);
+   }
+
+   datablock.data = (float *) (datablock.head + nbheader);
+
+//  read original data and write out scaled data
+
+   inScale = scaling;
+   scale = 0;
+   while (inScale >= 2.0)
+   {
+      scale++;
+      inScale /= 2.0;
+   }
+   while (inScale <= 0.5)
+   {
+      scale--;
+      inScale *= 2.0;
+   }
+   for (i = 0; i < nblocks; i++)
+   {
+      if ( read(fd, (char *)datablock.head, bbytesOrig) != bbytesOrig )
+      {
+         close(fd);
+         close(tmpfd);
+         releaseAllWithId("downsize");
+         return(D_READERR);
+      }
+
+      if (ebyte == 2)
+      {
+
+         sptr = (short *) datablock.data;
+         if (inScale != 1.0)
+         {
+            for (cnt=0; cnt<np; cnt++)
+            {
+               sval = *sptr;
+               sval = ntohs(sval);
+               sval = (short) ((double)sval * inScale);
+               sval = htons(sval);
+               *sptr = sval;
+               sptr++;
+            }
+         }
+         if (scale)
+         {
+            sval = ntohs(datablock.head->scale);
+            sval += scale;
+            datablock.head->scale = ntohs(sval);
+         }
+      }
+      else if ((stat & S_FLOAT) == 0)
+      {
+         iptr = (int *) datablock.data;;
+         if (inScale != 1.0)
+         {
+            for (cnt=0; cnt<np; cnt++)
+            {
+               ival = *iptr;
+               ival = ntohl(ival);
+               ival = (int) ((double)ival * inScale);
+               ival = htonl(ival);
+               *iptr = ival;
+               iptr++;
+            }
+         }
+         if (scale)
+         {
+            sval = ntohs(datablock.head->scale);
+            sval += scale;
+            datablock.head->scale = ntohs(sval);
+         }
+         // Also handle offsets from noise check
+         uval.fval = datablock.head->lvl;
+         uval.ival = ntohl(uval.ival);
+         uval.fval = (float) (uval.fval * scaling);
+         uval.ival = htonl(uval.ival);
+         datablock.head->lvl = uval.fval;
+         uval.fval = datablock.head->tlt;
+         uval.ival = ntohl(uval.ival);
+         uval.fval = (float) (uval.fval * scaling);
+         uval.ival = htonl(uval.ival);
+         datablock.head->tlt = uval.fval;
+      }
+      else // floating point data
+      {
+         ptr = datablock.data;
+         if (inScale != 1.0)
+         {
+            for (cnt=0; cnt<np; cnt++)
+            {
+               uval.fval = *ptr;
+               uval.ival = ntohl(uval.ival);
+               uval.fval = (float) (uval.fval * inScale);
+               uval.ival = htonl(uval.ival);
+               *ptr = uval.fval;
+               ptr++;
+            }
+         }
+         if (scale)
+         {
+            sval = ntohs(datablock.head->scale);
+            sval += scale;
+            datablock.head->scale = ntohs(sval);
+         }
+      }
+      if ( write(tmpfd, (char *)datablock.head, bbytesOrig) != bbytesOrig )
+      {
+         close(fd);
+         close(tmpfd);
+         releaseAllWithId("downsize");
+         return(D_WRITERR);
+      }
+   }
+   close(fd);
+   close(tmpfd);
+   rename(tmpdatapath,datapath);
+   releaseAllWithId("downsize");
+   return(COMPLETE);
+}
+
