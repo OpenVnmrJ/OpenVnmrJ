@@ -4333,7 +4333,15 @@ public class FillDBManager {
         catch (SQLException e) {
             /* Avoid a lot of these messages */
             if (connectMessage == 1) {
-               Messages.postError("makeDBConnection failed on " + dbHost +
+               // If the postmaster.pid file does not exist, postgres
+               // is off.
+               String filepath = FileUtil.openPath(FileUtil.sysdir()
+                         + "/pgsql/data/postmaster.pid");
+               if(filepath==null) {
+                  locatoroff = true;
+               } else {
+
+                  Messages.postError("makeDBConnection failed on " + dbHost +
                             " port " + port + ",\n   be sure database " +
                             "exists and that " + user +
                             " has access to it.\n   Try having the " +
@@ -4345,7 +4353,7 @@ public class FillDBManager {
                             " correctly.\n   Is it possible that a specific" +
                             " error can be found in the log file:\n" +
                             "      /vnmr/pgsql/pgsql.log");
-               Messages.writeStackTrace(e);
+               }
             }
 
 
@@ -4369,7 +4377,6 @@ public class FillDBManager {
             Messages.postMessage(OTHER|ERROR|LOG|MBOX,
                                  "Problem connecting to DB.  The locator will" +
                                  " not function.");
-            Messages.writeStackTrace(e, "Error caught in makeDBConnection");
             inUse=false;
             return false;
         }
