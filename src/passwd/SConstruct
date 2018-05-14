@@ -1,0 +1,96 @@
+#
+
+import os
+import sys
+import datetime
+
+# current working directory
+cwd = os.getcwd()
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# obtain system platform
+platform = sys.platform
+
+# target
+target = 'passwd.jar'
+
+# paths
+classPath = cwd
+
+env = Environment()
+# platform = env['PLATFORM']
+
+if ( 'linux' in platform):
+   javaBinPath = os.path.join(ovjtools, 'java', 'bin')
+   jarBin = os.path.join(javaBinPath, 'jar')
+elif ( 'darwin' in platform):
+   javaBinPath = os.path.join('/', 'usr', 'bin')
+   jarBin = os.path.join(javaBinPath, 'jar')
+else:
+   print "Unknown Platform: ", platform
+   sys.exit()
+
+print javaBinPath
+print jarBin
+
+
+# make sure the path(s) exist
+classesPath = os.path.join(cwd, 'classes')
+if not os.path.exists(classesPath):
+   os.makedirs(classesPath)
+
+# jarBin = os.path.join(javaBinPath, 'jar')
+
+# define build environment
+if ( 'linux' in platform):
+   jEnv = Environment(ENV = {'JAVA_HOME' : javaBinPath,
+                          'CLASSPATH' : classesPath,
+                          'PATH' : javaBinPath + ':' + os.environ['PATH']})
+else:
+   jEnv = Environment(ENV = {'CLASSPATH' : classesPath,
+                          'PATH' : javaBinPath + ':' + os.environ['PATH']})
+
+
+# actual builds
+srcPath = os.path.join(cwd, 'src')
+jEnv.Java(JAVACFLAGS = '-J-mx128m',
+          target     = classesPath,
+          source     = srcPath)
+
+todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+manifestFile = os.path.join(cwd, 'Manifest')
+f = open(manifestFile, 'w')
+f.write('Manifest-Version: 1.0 ')
+f.write(todaysDate)
+f.write('\n')
+f.write('Main-Class: passwd\n')
+f.close()
+
+jarBuildObject = jEnv.Jar(JAR      = jarBin,
+                          target   = target,
+                          source   = [classesPath,
+                                      manifestFile],
+                          JARCHDIR = classesPath)
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(installPath, os.path.join(cwd, target))))
+

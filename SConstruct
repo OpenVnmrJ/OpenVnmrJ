@@ -120,6 +120,7 @@ buildList = string.split("""
                          license
                          LCNMR
                          p11
+                         passwd
                          psglib
                          roboproc
                          scripts
