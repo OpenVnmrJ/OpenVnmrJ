@@ -7,8 +7,16 @@ import sys
 sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import buildMethods
 
+# current working directory
+cwd = os.getcwd()
+
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
     print "OVJ_TOOLS env not found."
     print "For bash and variants, use export OVJ_TOOLS=<path>"
     print "For csh and variants,  use setenv OVJ_TOOLS <path>"
@@ -19,17 +27,6 @@ platform = sys.platform
 
 # target
 managedbTarget = 'managedb.jar'
-managedbDashOTarget = 'managedb.jar.dasho'
-managedbProGuardTarget = 'managedb.jar.pro'
-
-# current working directory
-cwd = os.getcwd()
-
-# get options environment
-boFile=os.path.join(cwd, os.pardir, os.pardir, 'buildoptions.py')
-if not os.path.exists(boFile):
-   boFile=os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py')
-execfile(boFile)
 
 # paths
 if (platform!="darwin"):
@@ -117,13 +114,11 @@ else:
                                         os.path.join(cwd, 'postgresql.jar'),
                           'PATH' : javaPath + ':' + os.environ['PATH']})
 
-# create source hardlinks at scons interpretation time
-# in java SDK 1.3+ javac doesn't follow symlinks
-buildMethods.hardLinkNow(jEnv, vnmrShufDstPath, vnmrShufPath, VnmrShufFileList);
-buildMethods.hardLinkNow(jEnv, vnmrXmlDstPath, vnmrXmlPath, VnmrXmlFileList);
-buildMethods.hardLinkNow(jEnv, vnmrBoDstPath, vnmrBoPath, VnmrBoFileList);
-buildMethods.hardLinkNow(jEnv, vnmrUiDstPath, vnmrUiPath, VnmrUiFileList);
-buildMethods.hardLinkNow(jEnv, vnmrUtilDstPath, vnmrUtilPath, VnmrUtilFileList);
+buildMethods.symLinkNow(jEnv, vnmrShufDstPath, vnmrShufPath, VnmrShufFileList);
+buildMethods.symLinkNow(jEnv, vnmrXmlDstPath, vnmrXmlPath, VnmrXmlFileList);
+buildMethods.symLinkNow(jEnv, vnmrBoDstPath, vnmrBoPath, VnmrBoFileList);
+buildMethods.symLinkNow(jEnv, vnmrUiDstPath, vnmrUiPath, VnmrUiFileList);
+buildMethods.symLinkNow(jEnv, vnmrUtilDstPath, vnmrUtilPath, VnmrUtilFileList);
 
 # actual builds
 srcPath = os.path.join(cwd, 'src')
@@ -154,15 +149,6 @@ if not os.path.exists(installPath):
    os.makedirs(installPath)
 
 # actions to be performed after targets are built
-if boEnv['dasho'] == 'y' or boEnv['managedb_O'] == 'y':
-   jEnv.AddPostAction(jarBuildObject,
-                      Action(os.path.join(cwd,'ManageDBProGuard.sh')))
-#                      Action(os.path.join(cwd,'ManageDBDasho.sh')))
-if boEnv['managedb_O'] == 'y':
-   jEnv.AddPostAction(jarBuildObject,
-                      Action(Copy(os.path.join(installPath,managedbTarget),
-                                  os.path.join(cwd, managedbProGuardTarget))))
-else:
-   jEnv.AddPostAction(jarBuildObject,
+jEnv.AddPostAction(jarBuildObject,
                       Action(Copy(installPath, os.path.join(cwd, managedbTarget))))
 
