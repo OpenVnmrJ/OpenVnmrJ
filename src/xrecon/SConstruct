@@ -6,8 +6,17 @@ import sys
 sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import buildMethods
 
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
     print "OVJ_TOOLS env not found."
     print "For bash and variants, use export OVJ_TOOLS=<path>"
     print "For csh and variants,  use setenv OVJ_TOOLS <path>"
@@ -16,14 +25,16 @@ if not ovjtools:
 # MAC -> darwin, Linux -> linux2
 platform = sys.platform
 
-# we need to specify an absolute path so this SConstruct file
-# can be called from any other SConstruct file
-cwd = os.getcwd()
-
 XreconTarget = 'Xrecon'
 # IreconTarget = 'libIrecon.so'
 
-# source files
+tiffWriter = "false"
+# There is code for writing tiff files, but nothing calls it
+# Requires compilation with libtiff
+# source files. Uncomment the following line to compile the tiff file
+# tiffWriter = "true"
+
+
 senseFilesList = ['COPYING',
                   'INSTALL',
                   'Makefile',
@@ -60,7 +71,6 @@ senseSrcFilesList = ['common/dhead.c',
                      'common2D/dproc2D.c',
                      'common2D/dutils2D.c',
                      'common2D/noise2D.c',
-                     'common2D/tifwrite2D.c',
                      'common3D/dproc3D.c',
                      'common3D/fdfwrite3D.c',
                      'common3D/rawIO3D.c',
@@ -88,8 +98,8 @@ senseSrcFilesList = ['common/dhead.c',
                      'reconEPI/prescanEPI.c',
                      'reconEPI/reconEPI.c']
 
-# IreconSrcFilesList = ['Irecon.c']                     
 
+tifFileList = ['common2D/tifwrite2D.c']
 XreconSrcFilesList = ['Xrecon.c']                       
 
 dataPath = os.path.join(cwd, os.pardir, 'vnmr')
@@ -103,8 +113,7 @@ else:
 
 inclPath = os.path.join(ovjtools, 'fftw', 'fftw-3.1.2', 'api')
 
-env = Environment(CCFLAGS   = '-O2 -Wall -I' + inclPath,
-                  LINKFLAGS = '-Wl,-rpath,/vnmr/lib -L' + librPath)
+env = Environment(CCFLAGS   = '-O2 -Wall -I' + inclPath)
 
 fftstatic=os.path.join(librPath,'libfftw3.a')
 libffts=File(fftstatic)
@@ -120,9 +129,14 @@ if not os.path.exists(optionsSensePath):
 
 
 # actual builds
-xreconBuildObj = env.Program(target = XreconTarget,
-                             source = senseSrcFilesList + XreconSrcFilesList,
+if (tiffWriter=="true"):
+   xreconBuildObj = env.Program(target = XreconTarget,
+                             source = senseSrcFilesList + XreconSrcFilesList + tifFileList,
                              LIBS   = [libffts, 'gsl', 'gslcblas', 'tiff', 'm'])
+else:
+   xreconBuildObj = env.Program(target = XreconTarget,
+                             source = senseSrcFilesList + XreconSrcFilesList,
+                             LIBS   = [libffts, 'gsl', 'gslcblas', 'm'])
                              
 # ireconBuildObj = env.SharedLibrary(target = IreconTarget,
 #                              source = senseSrcFilesList + IreconSrcFilesList,
