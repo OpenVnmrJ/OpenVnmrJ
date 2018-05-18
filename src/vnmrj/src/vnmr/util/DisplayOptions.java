@@ -1738,7 +1738,6 @@ public class DisplayOptions extends ModelessDialog
                     else{
                         String type=optionType(symbol);
                         if(type !=null){
-                            setDebug("Adding Style Variable: "+symbol+" "+val);
                             var=new DVar(symbol,type,m_tabsType,val);
                             var.obj=obj;
                             vars.put(symbol,var);
