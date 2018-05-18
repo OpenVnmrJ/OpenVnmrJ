@@ -14,7 +14,7 @@ os:
 - linux
 - osx
 
-osx_image: xcode7.3
+osx_image: xcode9.3
 
 #jdk:
 #- openjdk6
@@ -29,12 +29,16 @@ addons:
     - scons
     - fort77
     - libglu1-mesa-dev
+    - liblapack-dev
+    - liblapacke-dev
+    - libfftw3-dev
     - lib32stdc++-4.8-dev
     - libc6-dev-i386
     - gcc-multilib
 
 before_install:
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install scons gcc ; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew cask uninstall oclint ; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install scons fftw ; fi
 - if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then jdk_switcher use openjdk6; fi
 - if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo dpkg --add-architecture i386; fi
 - if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get -qq update; fi
@@ -47,18 +51,20 @@ install:
 - pwd
 - cd ..
 - git config --global core.pager ''
-- GITHUB_USER=`dirname ${TRAVIS_REPO_SLUG}`
-- git clone https://github.com/${GITHUB_USER}/ovjTools.git --branch development
+- GITHUB_USER=$(dirname ${TRAVIS_REPO_SLUG})
+- git clone --depth 3 --branch master https://github.com/${GITHUB_USER}/ovjTools.git
+#- git clone --depth 3 --branch ${TRAVIS_BRANCH} https://github.com/${GITHUB_USER}/ovjTools.git
 
 script:
-- echo ${TRAVIS_BRANCH} ${TRAVIS_BUILD_DIR} ${TRAVIS_BUILD_ID} ${TRAVIS_BUILD_NUMBER} ${TRAVIS_COMMIT} ${TRAVIS_COMMIT_RANGE} ${TRAVIS_EVENT_TYPE} ${TRAVIS_JOB_ID} ${TRAVIS_JOB_NUMBER} ${TRAVIS_OS_NAME} ${TRAVIS_PULL_REQUEST} ${TRAVIS_PULL_REQUEST_BRANCH} ${TRAVIS_PULL_REQUEST_SHA} ${TRAVIS_REPO_SLUG} ${TRAVIS_SECURE_ENV_VARS} ${TRAVIS_SUDO} ${TRAVIS_TEST_RESULT} ${TRAVIS_TAG}
+- echo ${TRAVIS_BRANCH} ${TRAVIS_BUILD_DIR} ${TRAVIS_BUILD_ID} ${TRAVIS_BUILD_NUMBER} ${TRAVIS_COMMIT} ${TRAVIS_COMMIT_RANGE} ${TRAVIS_EVENT_TYPE} ${TRAVIS_JOB_ID} ${TRAVIS_JOB_NUMBER} ${TRAVIS_OS_NAME} ${TRAVIS_PULL_REQUEST} ${TRAVIS_PULL_REQUEST_BRANCH} ${TRAVIS_PULL_REQUEST_SHA} ${TRAVIS_REPO_SLUG} ${TRAVIS_SUDO} ${TRAVIS_TEST_RESULT} ${TRAVIS_TAG}
 - export OVJ_BUILDDIR=$(pwd)
 - export OVJ_ROOT=${OVJ_BUILDDIR}/OpenVnmrJ
 - export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
 - cd ${OVJ_ROOT}
 - cp -a ${OVJ_TOOLS}/bin ${OVJ_BUILDDIR}
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cd ${OVJ_BUILDDIR}/bin && ./build_release.sh --inova no build package; fi
-- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then cd ${OVJ_BUILDDIR}/bin && ./build_release.sh build package; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cd ${OVJ_BUILDDIR}/bin && ${OVJ_ROOT}/scripts/build_release.sh --inova no build package; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then cd ${OVJ_BUILDDIR}/bin && ${OVJ_ROOT}/scripts/build_release.sh build package; fi
+- ${OVJ_TOOLS}/bin/whatsin $(ls -t ${OVJ_BUILDDIR}/logs/build* | head -1) | tail -60
 
 after_failure:
 - cd ${OVJ_ROOT}
