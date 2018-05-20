@@ -11,14 +11,6 @@ alias ll ls -l
 
 set path=($path /usr/sbin $HOME/bin /etc)
 
-if ( -e .vnmrsilent ) then
-    rm .vnmrsilent
-else if ( ${?SSH_TTY} ) then
-    echo -n 'Input display server name: '
-    set server=($<)
-    setenv DISPLAY $server":0.0"
-endif
-
 setenv graphics sun
 set term=xterm
 
