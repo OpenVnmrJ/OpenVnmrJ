@@ -102,6 +102,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   int f;
   int btype = 0; /* This flags that a vers_id is requested */
   int jtype = 0; /* This asks if vers_id is S_JEOL */
+  int qtype = 0; /* This asks if vers_id is S_QONE */
   int itype = 0; /* This asks for vers_id */
 
   if ((argc >= 2) && ! strcmp(argv[1],"B") )
@@ -116,6 +117,15 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   else if ((argc >= 2) && ! strcmp(argv[1],"J") )
   {
     jtype = btype=1;
+    if (argc == 3)
+    {
+      strcpy(outfidpath, argv[2]);
+      btype = 2;     
+    }
+  }
+  else if ((argc >= 2) && ! strcmp(argv[1],"Q") )
+  {
+    qtype = btype=1;
     if (argc == 3)
     {
       strcpy(outfidpath, argv[2]);
@@ -203,6 +213,8 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
             retv[0] = intString( dhd.vers_id );
          else if (jtype)
             retv[0] = intString( (dhd.vers_id & S_JEOL) ? 1 : 0 );
+         else if (qtype)
+            retv[0] = intString( (dhd.vers_id & S_QONE) ? 1 : 0 );
          else
             retv[0] = intString( (dhd.vers_id & S_BRU) ? 1 : 0 );
      }

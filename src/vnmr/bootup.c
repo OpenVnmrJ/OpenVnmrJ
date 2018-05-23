@@ -1033,7 +1033,7 @@ int fix_automount_dir(char *input, char *output )
 |	     getbufscale()/0		|
 |					|
 +--------------------------------------*/
-#define MINMEMSIZE 128
+#define MINMEMSIZE 256
 static int getbufscale()
 {
    char		*memsize_cptr;	/* character pointer to "memsize" */

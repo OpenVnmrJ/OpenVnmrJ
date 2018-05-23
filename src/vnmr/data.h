@@ -513,8 +513,7 @@ typedef struct hypercmplxbhead	hycmplxhead;
 +------------------------------*/
 
 /* Bits 11-14 */
-#define S_CM		0x800   /* 1 = Chem. Magnetics data   	*/ 
-#define S_GE		0x1000  /* 1 = GE data (obsolete)	*/ 
+#define S_QONE		0x800   /* 1 = Q-One data           	*/ 
 #define S_MAKEFID	0x1000  /* 1 = data from makefid        */
 #define S_JEOL		0x2000  /* 1 = JEOL data		*/ 
 #define S_BRU		0x4000  /* 1 = Bruker data		*/ 
