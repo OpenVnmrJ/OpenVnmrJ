@@ -40,6 +40,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #include "data.h"
@@ -61,6 +62,11 @@
 #define zerofill(data_pntr, npoints_to_fill)			\
 			datafill(data_pntr, npoints_to_fill,	\
 				 0.0)
+
+#define MAX2DFTSIZE     16384           /* 2D (max FT number)/bufferscale  */
+#define BUFWORDS        65536           /* words/bufferscale in buffer     */
+
+extern int      bufferscale;            /* scaling factor for Vnmr buffers */
 
 static float frequency[MAXLINES];	/* list of frequencies */
 static float intensity[MAXLINES];	/* list of intensities */
@@ -225,6 +231,133 @@ static int readinput(char *filename)
 }
 
 /**********************/
+static int set2Ddatafile(int fn0, int fn1Val)
+/**********************/
+{ char path[MAXPATHL];
+  dfilehead datahead;
+  dpointers block;
+  double rfn;
+  int r;
+  int sperblock0;
+  int sperblock1;
+  int nblks;
+
+  if (fn0 > (MAX2DFTSIZE*bufferscale))
+  {
+         Werrprintf("fn too large,  max = %d", bufferscale*MAX2DFTSIZE);
+         ABORT;
+  }
+  else if (fn1Val > (MAX2DFTSIZE*bufferscale))
+  {
+         Werrprintf("fn1 too large,  max = %d", bufferscale*MAX2DFTSIZE);
+         ABORT;
+  }
+
+  if ( (r=P_getreal(CURRENT,"fn",&rfn,1)) )
+    { P_err(r,"fn",":");
+      ABORT;
+    }
+  P_setreal(PROCESSED,"fn",rfn,0);
+  if ( (r=P_getreal(CURRENT,"fn1",&rfn,1)) )
+    { P_err(r,"fn1",":");
+      ABORT;
+    }
+  P_setreal(PROCESSED,"fn1",rfn,0);
+  D_trash(D_DATAFILE);
+  D_trash(D_PHASFILE);
+
+  if ( (r = D_getfilepath(D_DATAFILE, path, curexpdir)) )
+  {
+     D_error(r);
+     ABORT;
+  }
+
+  sperblock0 = (BUFWORDS/fn0) * bufferscale;
+      if ( sperblock0 > (fn1Val/2) )
+         sperblock0 = fn1Val/2;
+      if ( sperblock0 < 4 )
+         sperblock0 = 4;
+
+      nblks =fn1Val/(2 *sperblock0);
+
+      if (nblks == 0)          /* must be at least one block */
+         nblks = 1;
+
+/*****************************************
+ * *  If two blocks, make one larger block  *
+ * *  for in-core transposition.            *
+ * *****************************************/
+
+      if (nblks == 2)
+      {
+        nblks = 1;
+        sperblock0 *= 2;
+      }
+
+      sperblock1 = fn0/(2*nblks);
+
+// fprintf(stderr,"sperblock0=%d specblock1= %d nblks= %d\n",sperblock0, sperblock1, nblks);
+
+  
+
+  datahead.nblocks = 1;
+  datahead.ntraces = fn0;
+  datahead.np      = fn1Val;
+  datahead.vers_id = VERSION;
+  datahead.vers_id += DATA_FILE;
+  datahead.vers_id |= S_MAKEFID;
+  datahead.nbheaders = 1;
+  datahead.ebytes  = 4;
+  datahead.tbytes  = datahead.ebytes * datahead.np;
+  datahead.bbytes  = datahead.tbytes * datahead.ntraces +
+                       sizeof(dblockhead) * datahead.nbheaders;
+  datahead.status  = (S_DATA|S_SPEC|S_FLOAT|S_NP|S_NI|S_TRANSF|S_SECND);
+
+#ifdef DEBUG
+     Wscrprintf("\nDATA FILE HEADER:\n");
+     Wscrprintf("  status  = %8x,  nbheaders       = %8x\n", datahead.status,
+        datahead.nbheaders);
+     Wscrprintf("  nblocks = %8d,  bytes per block = %8d\n", datahead.nblocks,
+        datahead.bbytes);
+     Wscrprintf("  ntraces = %8d,  bytes per trace = %8d\n", datahead.ntraces,
+        datahead.tbytes);
+     Wscrprintf("  npoints = %8d,  bytes per point = %8d\n", datahead.np,
+        datahead.ebytes);
+     Wscrprintf("  vers_id = %8d\n", datahead.vers_id);
+#endif
+
+  if ( (r=D_newhead(D_DATAFILE,path,&datahead)) )
+    { D_error(r); ABORT;
+    }
+  if ( (r=D_allocbuf(D_DATAFILE,0,&block)) )
+    { D_error(r); ABORT;
+    }
+
+  block.head->scale  = 0;
+  block.head->status = (S_DATA|S_SPEC|S_FLOAT);
+  block.head->index  = 1;
+  block.head->mode   = 0;	/* COULD BE A PROBLEM HERE??   S.F. */
+  block.head->rpval  = 0;
+  block.head->lpval  = 0;
+  block.head->lvl    = 0;
+  block.head->tlt    = 0;
+  block.head->ctcount= 1;
+  data = block.data;
+
+  if ( (r = D_getfilepath(D_PHASFILE, path, curexpdir)) )
+  {
+     D_error(r);
+     ABORT;
+  }
+
+  datahead.vers_id += PHAS_FILE - DATA_FILE;
+  if ( (r=D_newhead(D_PHASFILE,path,&datahead)) )
+    { D_error(r); ABORT;
+    }
+  RETURN;
+}
+
+/**********************/
 static int setdatafile(int *fnval)
 /**********************/
 { char path[MAXPATHL];
@@ -290,9 +423,170 @@ static int setdatafile(int *fnval)
   RETURN;
 }
 
+/**************************/
 int readspectrum(int argc, char *argv[], int retc, char *retv[])
+/**************************/
 {
-   Werrprintf("%s: not yet implemented",argv[0]);
+   int i,r,argnum;
+   float scalefactor;
+   int   fntmp;
+   int   do_ds = 1;
+   FILE *f1;
+   register float *rdata;
+   struct stat buf;
+   int ibuf;
+   float fbuf;
+   int wordSize;
+   int intType;  // 1 for integer, 0 for float
+   int fnVal;
+   int fn1Val = 0;
+   int f2 = 1;
+
+   Wturnoff_buttons();
+   D_allrelease();
+   argnum = 1;
+   if (argc < 2)
+   {
+      Werrprintf("%s: requires file name as first argument",argv[0]);
+      ABORT;
+   }
+   argnum = 2;
+   scalefactor = 1.0;
+   wordSize = sizeof(int);
+   intType=1; // defines integer type
+   while (argc>argnum)
+   {
+      if (isReal(argv[argnum]))
+      { scalefactor = stringReal(argv[argnum]);
+      }
+      else if (strcmp(argv[argnum],"int") == 0)
+      {
+         intType=1; // defines integer type
+      }
+      else if (strcmp(argv[argnum],"float") == 0)
+      {
+         intType=0; // defines float type
+      }
+      else if (strcmp(argv[argnum],"nods") == 0)
+      {
+         do_ds = 0;
+      }
+      else if ( ! strcmp(argv[argnum],"f1") )
+         f2 = 0;
+      else if ( ! strcmp(argv[argnum],"f2") )
+         f2 = 1;
+      else if (strcmp(argv[argnum],"incr") == 0)
+      {
+         if ( (argnum+1 < argc)  && isReal(argv[argnum+1]) ) 
+         {
+            argnum++;
+            fn1Val = atoi(argv[argnum]);
+         }
+         else
+         {
+            Werrprintf("%s: fn1 argument must be followed by the number of f1 traces",argv[0]);
+            ABORT;
+         }
+      }
+      argnum++;
+   }
+   if (!(f1 = fopen(argv[1],"r")))  {
+      Werrprintf("%s: Error - file \"%s\" not found",argv[0], argv[1]);
+      ABORT;
+   }
+   stat(argv[1],&buf);
+   fnVal = buf.st_size / wordSize;
+   if (fn1Val)
+   {
+      int j;
+      if (fnVal % fn1Val)
+      {
+         Werrprintf("%s: Error - fn1 value inconsistent with data",argv[0]);
+         fclose(f1);
+         ABORT;
+      }
+      fnVal /= fn1Val;
+      P_setreal(CURRENT,"fn1", (double) fn1Val*2, 0);
+      P_setreal(CURRENT,"fn", (double) fnVal*2, 0);
+      P_setreal(CURRENT,"procdim", (double) 2, 0);
+      P_setreal(PROCESSED,"procdim", (double) 2, 0);
+      if (set2Ddatafile(fnVal, fn1Val))
+      {
+         fclose(f1);
+         ABORT;
+      }
+      rdata = data;
+      if (intType)
+      {
+         for (j=0; j<fnVal; j++)
+         for (i=0; i<fn1Val; i++)
+         {
+            if (f2)
+            {
+               fseek(f1,(long) (j+i*fnVal)*sizeof(int), SEEK_SET);
+            }
+            fread(&ibuf,sizeof(int),1,f1);
+            *rdata++ = (float) ibuf * scalefactor;
+         }
+      }
+      else
+      {
+         for (j=0; j<fnVal; j++)
+         for (i=0; i<fn1Val; i++)
+         {
+            if (f2)
+            {
+               fseek(f1,(long) (j+i*fnVal)*sizeof(float), SEEK_SET);
+            }
+            fread(&fbuf,sizeof(float),1,f1);
+            *rdata++ = fbuf * scalefactor;
+         }
+      }
+   }
+   else
+   {
+   P_setreal(CURRENT,"fn", (double) fnVal*2, 0);
+      P_setreal(CURRENT,"procdim", (double) 1, 0);
+      P_setreal(PROCESSED,"procdim", (double) 1, 0);
+   if (setdatafile(&fntmp))
+   {
+      fclose(f1);
+      ABORT;
+   }
+   rdata = data;
+   if (intType) // integer
+   {
+      for (i=0; i<fnVal; i++)
+      {
+         fread(&ibuf,sizeof(int),1,f1);
+         *rdata++ = (float) ibuf * scalefactor;
+      }
+   }
+   else  // float
+   {
+      for (i=0; i<fnVal; i++)
+      {
+         fread(&fbuf,sizeof(float),1,f1);
+         *rdata++ = fbuf * scalefactor;
+      }
+   }
+   }
+   fclose(f1);
+   if ( (r=D_markupdated(D_DATAFILE,0)) )
+   { D_error(r); ABORT;
+   }
+   if ( (r=D_release(D_DATAFILE,0)) )
+   { D_error(r); ABORT;
+   }
+   P_setstring(CURRENT,"file",argv[0],0);
+   P_setstring(PROCESSED,"file",argv[0],0);
+   if (!Bnmr && do_ds)
+   {
+      releasevarlist();
+      appendvarlist("cr");
+      Wsetgraphicsdisplay("ds");		/* activate the ds program */
+      start_from_ft = 1;
+   }
    RETURN;
 }
 

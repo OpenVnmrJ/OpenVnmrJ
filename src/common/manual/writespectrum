@@ -1,12 +1,13 @@
 ****************************************************************************
 writespectrum -  write a spectrum to a binary file 
+readspectrum  -  read a spectrum from a binary file 
 ****************************************************************************
 
 writespectrum will write out the current spectrum as a binary file.
 The file has no header information and will be written in the native
 format (little-endian on Linux; big-endian on Solaris).
 
-writespectrum will write whatever would be displayed by ds.  That is,
+writespectrum will write whatever would be displayed by ds or dcon. That is,
 is looks whether ph, av, or pwr mode is selected.  It looks at ai versus
 nm mode.  It scales the data by vs. It writes the file in the
 current experiment as specN, where N is the element number. A
@@ -21,9 +22,24 @@ while ($i < arraydim) do
 endwhile
 
 will write files spec1, spec2, spec3 ... spec{arraydim} in
-the current experiment directory.
+the current experiment directory.  If the first argument is a path name,
+it will be used rather than the default spec1, spec2, etc. in the current
+experiment directory.
 
-the following macro illustrates how to write the real and imaginary
+If the first argument is the pathname, additional optional arguments
+may be supplied.
+If a real number follows the path name, it will be used as a scaling
+factor to override the normal scaling based on vs and ai or nm mode.
+An optional keyword 'all' will cause all elements to be written to a
+single binary output file. This can be used to write out a complete
+2D data set.  For 2D data, the argument 'f1' will cause each f1 trace
+to be written consecutively. The argument 'f2' will cause each f2 trace
+to be written consecutively.  The default is 'f2'.
+An optional keyword 'int' will cause the spectra to be written as
+integer data. The default is to write the data as floating point data.
+The keyword 'float' can also be used. It just selects the default.
+
+The following macro illustrates how to write the real and imaginary
 components if phase mode is selected.
 
 wft
@@ -42,3 +58,56 @@ while ($i < arraydim) do
   rp = rp - 90
 endwhile
 
+The Bruker "r" (1D) and "rr" (2D) file formats may be created with the
+writespectrum command. These binary files are typically integer files.
+A convenient scaling factor for converting the OpenVnmrJ floating point
+numbers to integer values is 1048576.0, which is the hexadecimal
+value 0x100000.  The 2D "rr" files are "f2" style.
+The command for 1D data would be
+  writespectrum('<path>/pdata/1/1r',1048576.0,'int')
+The command for 2D data would be
+  writespectrum('<path>/pdata/1/2rr',1048576.0,'int','all','f2')
+  
+
+
+
+readspectrum will read a spectrum from a binary file into the current
+experiment. The first argument is the path name of the binary file. 
+Following the path name, an optional real number will be used as a scaling
+factor.
+The optional 'float' keyword specifies the data in the binary file
+are floating point numbers. The optional 'int' keyword specifies the data
+in the binary file are integer numbers. The default is 'int'.
+The optional 'nods' keyword will suppress display of the spectrum after
+it is read into the experiment.
+If a 2D data file is being read, the readspectrum needs to know the dimensions
+of the 2D matrix. The 'incr' keyword, followed by the number of f1 increments
+defines the number of elements in the indirect dimension. The number of
+elements in the direct dimension (fn) will be calculated based on the size
+of the binary file and the supplied value of 'incr'. For 2D data, the argument
+'f1' will cause readspectrum to interpret the binary file as if each f1 trace
+had been written consecutively. The argument 'f2' will cause readspectrum
+to interpret the binary file as if each f2 trace to be written consecutively.
+The default is 'f2'.
+
+The Bruker "r" (1D) and "rr" (2D) file formats may be imported with the
+readspectrum command. These binary files are typically integer files.
+A convenient scaling factor for converting the integer values to the
+OpenVnmrJ floating point value is 1.0/1048576.0, which is the hexadecimal
+value 1.0/0x100000.  The 2D "rr" files are "f2" style.
+The command for 1D data would be
+  readspectrum('<path>/pdata/1/1r',1.0/1048576.0,'int')
+The command for 2D data would be
+  readspectrum('<path>/pdata/1/2rr',1.0/1048576.0,'int','incr',<FTSIZE>,'f2')
+where FTSIZE is the value from Bruker's "proc2s" file.
+
+Note: The current implementation of readspectrum imports data into a single
+OpenVnmrJ data block. The current data block maximum size for 2D data will
+support an "rr" file that is 1k x 8k. Theat would correspond to OpenVnmrJ
+values of fn=16k and fn1=2k. If larger data sets are being used, set the
+Linux environmental variable memsize to 512 or larger, as in
+  setenv memsize 512
+prior to starting OpenVnmrJ.  The readspectrum command will read any size data.
+If the memsize is too small, when you try to display the data with dconi, you
+will get the message
+  "2D blocksize too large for local configuration.  Reprocess on current host."
