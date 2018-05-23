@@ -29,7 +29,7 @@ if [ ! -d $dir ]; then
 fi
 file=$dir/$name
 if [ ! -f $file ]; then
-  cat <<- EOF | sed -e s/USER/$name/ | tee $file
+  cat <<- EOF | sed -e s/USER/$name/ > $file
 	update	Yes
 	home	/home/USER
 	name	
@@ -47,7 +47,7 @@ if [ ! -d $dir ]; then
 fi
 file=$dir/$name
 if [ ! -f $file ]; then
-  cat <<- EOF | sed -e s/USER/$name/g | tee $file
+  cat <<- EOF | sed -e s/USER/$name/g > $file
 	appdir	Spectroscopy
 	accname	USER
 	sysdir	/vnmr

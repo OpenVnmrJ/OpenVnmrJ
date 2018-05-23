@@ -131,6 +131,7 @@ extern int continprepare();
 extern int continread();
 extern int convertbruker(int argc, char *argv[], int retc, char *retv[]);
 extern int convertdelta(int argc, char *argv[], int retc, char *retv[]);
+extern int convertqone(int argc, char *argv[], int retc, char *retv[]);
 extern int cpFilesInFile();
 extern int create();
 extern int createparams();
@@ -336,6 +337,7 @@ extern int mstat();
 extern int mspec();
 int mvCmd();
 int listvnmrcmd();
+extern int nextexp(int argc, char *argv[], int retc, char *retv[]);
 extern int noise();
 extern int nmrExit();
 extern int nmr_draw();
@@ -630,6 +632,7 @@ static cmd_t vnmr_table[] = {
         {"continread" , continread,     NO_REEXEC, 0},
         {"convertbruker", convertbruker,NO_REEXEC, 0},
         {"convertdelta", convertdelta,  NO_REEXEC, 0},
+        {"convertqone", convertqone,  NO_REEXEC, 0},
 	{"cos"	     , ln,		NO_REEXEC, 10},
 	{"cp"	     , shellcmds,	NO_REEXEC, 0},
 	{"cpFilesInFile", cpFilesInFile, NO_REEXEC, 0},
@@ -902,6 +905,7 @@ static cmd_t vnmr_table[] = {
 	{"ndps"       , dps,	        NO_REEXEC, 0},
 #endif
 	{"newmenu"    , menu,		NO_REEXEC, 0},
+	{"nextexp"    , nextexp,	NO_REEXEC, 0},
 	{"nl"         , dll,		NO_REEXEC, 10},
 	{"nl2"        , dll,		NO_REEXEC, 10},
 	{"nli"        , dli,		NO_REEXEC, 10},
