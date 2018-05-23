@@ -1,96 +1,10 @@
-"macro _selbwPS"
+// Chempacker macro
 
-   if (selwavePS='') then selwavePS='rsnob' endif
+if selwavePS='' then RETURN  endif
 
 // If selwavePS is a double repeating word,
 //   assume that it is PSYCHE experiment.  
 //   2 shapes, one reverse sweep with respect to the other
 //   and the two shapes are added together
-
 substr(selwavePS,'wc'):$totwaves
-if $totwaves>1 then
-    // make sure that both are the same waveforms
-    substr(selwavePS,1):$wave
-    selwavePS=$wave+' '+$wave
-    $totwaves=2
-endif
-
-if $totwaves=1 then
-	// This is PS1D
-   $iswave=0
-   shell('(ls -1 '+systemdir+'/wavelib/*/'+selwavePS+' | wc -l)'):$iswave
-   if ($iswave=0) then 
-      getfilepath(pslabel,'parlib'):$parex,$parpath
-      if ($parex) then
-        rtv($parpath,'selwavePS'):selwavePS
-	if (selwavePS='') then selwavePS='rsnob' endif
-   	shell('(ls -1 '+systemdir+'/wavelib/*/'+selwavePS+' | wc -l)'):$iswave
-      endif
-   endif
-   if ($iswave=0) then selwavePS='rsnob' endif
-   if (selshapePS=selwavePS) then
-	assignshapename(pslabel):selshapePS
-   endif
-   opx(selshapePS+'.RF')
-   putwave(selwavePS,selbwPS)
-   cpx(pw90*tpwr_cf,tpwr):$dum
-   pbox_pwr(selshapePS+'.RF'):selpwrPS
-   pbox_pw(selshapePS+'.RF'):selpwPS
-else
-   // This is PSYCHE
-   substr(selwavePS,1):$wave
-   $iswave=0
-   shell('(ls -1 '+systemdir+'/wavelib/*/'+$wave+' | wc -l)'):$iswave
-   if ($iswave=0) then $wave='chirp' endif
-   assignshapename(pslabel):selshapePS
-
-   //Set up gradient for adiabatic sweeps
-   $rfsize=18
-   getparam('rfsize','Probe'):$rfsize
-   if ($rfsize=0) then $rfsize=18 endif
-   $gammaH=2.67522e8
-   getgamma(tn):$gammaH
-   $bwg=sw
-   //fixgrd($bwg*2*3.1416*1e4/$gammaH/($rfsize/10)):gzlvlPS
-   //fixgrd(0.75):gzlvlPS
-   fixgrd(1):gzlvlPS
-
-   //Now adiabatics
-   //$pw=0.015
-   $pw=0.015
-   $steps=10000
-   $bw=10k
-   $shape1=selshapePS
-   $shape2=selshapePS+'R'
-   opx($shape1+'.RF')
-   $entry=''
-   write('line3','%s %d/%g 0 0 0 %0.1f',$wave,$bw,$pw,pfla):$entry
-   setwave($entry)
-   write('line3','%s %d/%g 0 0 0 %0.1f',$wave,-1*$bw,$pw,pfla):$entry
-   setwave($entry)
-   write('file',userdir+'/shapelib/Pbox.inp','steps=%d',$steps)
-   cpx(pw90*tpwr_cf,tpwr):$dum
-   pbox_pwr($shape1+'.RF'):selpwrPS
-   pbox_pw($shape1+'.RF'):selpwPS
-
-   if pfla=180 then
-     write('line3','Reducing shaped pulse power by 25 dB')
-     selpwrPS=selpwrPS-25
-   endif
-
-   opx($shape2+'.RF')
-   $entry=''
-   write('line3','%s %d/%g 0 0 0 %0.1f',$wave,-1*$bw,$pw,pfla):$entry
-   setwave($entry)
-   write('line3','%s %d/%g 0 0 0 %0.1f',$wave,$bw,$pw,pfla):$entry
-   setwave($entry)
-   write('file',userdir+'/shapelib/Pbox.inp','steps=%d',$steps)
-   cpx(pw90*tpwr_cf,tpwr):$dum
-   shell('(cat '+userdir+'/shapelib/'+$shape2+'.RF >> '+userdir+'/shapelib/'+$shape1+'.RF)'):$devnull
-   selpwPS=2*selpwPS
-   rm('-f',userdir+'/shapelib/'+$shape2+'.RF'):$dum
-
-endif
-   saveshapes('add','tnshapes','selshapePS','selpwrPS','selpwPS')
-
-
+if $totwaves=1 then mkPS1Dshape else mkPSYCHEshape endif

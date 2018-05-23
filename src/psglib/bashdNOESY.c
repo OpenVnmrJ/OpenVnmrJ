@@ -10,6 +10,8 @@
 Updated for CP4 Jan, 2008
 	- phase cycling similar to NOESY
 	- Includes all CP options
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 */
 
 
@@ -166,7 +168,13 @@ pulsesequence()
      wet4(zero,one);
 
    status(B);
-      rgpulse(pw, v1, rof1, 1.0e-6);
+      if (getflag("cpmgflg"))
+      {
+         rgpulse(pw, v1, rof1, 0.0);
+         cpmg(v1, v15);
+      }
+      else
+         rgpulse(pw, v1, rof1, 1.0e-6);
 
       if (getflag("homodec"))
        {

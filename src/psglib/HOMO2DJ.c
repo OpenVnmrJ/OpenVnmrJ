@@ -27,6 +27,8 @@
    VnmrJ compatible B. Heise  Feb 2007
 Chempack compatible B. Heise  Jun 2009
 Echo family - NM (April 19, 2007)
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 */
 
 #include <standard.h>
@@ -107,7 +109,13 @@ pulsesequence()
      wet4(zero,one);
 
    status(B);
-      rgpulse(pw, v1, rof1, rof1);
+      if (getflag("cpmgflg"))
+      {
+         rgpulse(pw, v1, rof1, 0.0);
+         cpmg(v1, v15);
+      }
+      else
+         rgpulse(pw, v1, rof1, rof1);
       delay(d2/2);
       rgpulse(2.0*pw, v2, rof1, 2*rof1);
       delay(d2/2 + 2*pw/PI);

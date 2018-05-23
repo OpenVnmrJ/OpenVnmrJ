@@ -33,6 +33,8 @@ KrishK  -       Revised         : July 2004
 KrishK  -       Includes slp saturation option : July 2005
 KrishK - includes purge option : Aug. 2006
 ****v17,v18,v19 are reserved for PURGE ***
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -190,7 +192,13 @@ status(A);
       delay(1e-3);
     }
 
-    rgpulse(pw, v6, rof1, rof1);
+    if (getflag("cpmgflg"))
+    {
+      rgpulse(pw, v6, rof1, 0.0);
+      cpmg(v6, v15);
+    }
+    else
+      rgpulse(pw, v6, rof1, rof1);
     delay(tau);
     decpower(pwxlvl180);
     decshaped_pulse(pwx180ad, pwx180, zero, rof1, rof1);

@@ -39,6 +39,8 @@ Parameters:
 
 KrishK - Aug. 2006
 PeterS - Excitation Sculpting added 2012
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -148,7 +150,13 @@ pulsesequence()
    if (getflag("lkgate_flg"))  lk_hold(); /* turn lock sampling off */
 
    status(B);
-      rgpulse(pw, v1, rof1, 2.0e-6);
+      if (getflag("cpmgflg"))
+      {
+        rgpulse(pw, v1, rof1, 0.0);
+        cpmg(v1, v15);
+      }
+      else
+        rgpulse(pw, v1, rof1, 2.0e-6);
       if (d2>0)
        delay(d2- rof1 -(4*pw/PI));  /*corrected evolution time */
       else
