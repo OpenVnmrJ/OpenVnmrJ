@@ -12,6 +12,8 @@ KrishK - includes purge option : Oct. 2007
   KrishK - single slice selective pulse (2nd gen seqeunce from GM)
 2012-08-06
   KrishK - Modified to behave like 2D (using 2D parameters)
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -110,7 +112,13 @@ pulsesequence()
 
    status(B);
       obspower(tpwr);
-      rgpulse(pw, v1, rof1, rof2);
+        if (getflag("cpmgflg"))
+        {
+          rgpulse(pw, v1, rof1, 0.0);
+          cpmg(v1, v15);
+        }
+        else
+          rgpulse(pw, v1, rof1, rof2);
 
 	delay(d2/2.0);
 

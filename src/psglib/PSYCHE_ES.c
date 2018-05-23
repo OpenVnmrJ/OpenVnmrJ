@@ -6,8 +6,11 @@
 /*   PSYCHE_ES
      PureShift Yielded by CHirp Excitation with Excitation Sculpting
      Reference:
- 	Foroozandeh, M; Adams, RW; Meharry, NJ; Jeannerat, D, Nilsson, M; Morris, GA, Angew. Chem., Int. Ed., 2014, 53, 6990.
+	Foroozandeh, M; Adams, RW; Meharry, NJ; Jeannerat, D, Nilsson, M; Morris, GA, Angew. Chem., Int. Ed., 2014, 53, 6990.
  
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
+
 */
 
 #include <standard.h>
@@ -86,7 +89,13 @@ pulsesequence()
 
    status(B);
       obspower(tpwr);
-      rgpulse(pw, v1, rof1, rof2);
+        if (getflag("cpmgflg"))
+        {
+	  rgpulse(pw, v1, rof1, 0.0);
+	  cpmg(v1, v15);
+        }
+        else
+          rgpulse(pw, v1, rof1, rof2);
 
 	delay(d2/2.0);
 

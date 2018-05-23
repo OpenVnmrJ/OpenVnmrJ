@@ -50,6 +50,8 @@ KrishK	-	Revised		: July 2004
 KrishK  -       Includes slp saturation option : July 2005
 KrishK - includes purge option : Aug. 2006
 ****v17,v18,v19 are reserved for PURGE ***
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -196,6 +198,12 @@ status(A);
 
    status(B);
 
+      if (getflag("cpmgflg"))
+      {
+        rgpulse(pw, v14, rof1, 0.0);
+        cpmg(v14, v15);
+      }
+      else
         rgpulse(pw, v14, rof1, rof1);
 
       if (selfrq != tof)

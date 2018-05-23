@@ -66,6 +66,8 @@ manually.
 
 KrishK : Aug. 2006
 PeterS - Excitation Sculpting added 2012
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 */
 
 #include <standard.h>
@@ -192,6 +194,12 @@ status(A);
 
    status(B);
 
+      if (getflag("cpmgflg"))
+      {
+        rgpulse(pw, v14, rof1, 0.0);
+        cpmg(v14, v15);
+      }
+      else
         rgpulse(pw, v14, rof1, rof1);
 
       if (selfrq != tof)

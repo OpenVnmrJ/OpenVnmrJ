@@ -23,6 +23,8 @@
 
 haitao -  first revision        : Sep 2005
 haitao -  revised		: Mar 2006
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 */
 
 #include <standard.h>
@@ -159,7 +161,13 @@ pulsesequence()
 
   status(B);
 
-    rgpulse(pw, zero, rof1, rof1);
+   if (getflag("cpmgflg"))
+   {
+      rgpulse(pw, zero, rof1, 0.0);
+      cpmg(zero, v15);
+   }
+   else
+      rgpulse(pw, zero, rof1, rof1);
    if (getflag("dmct"))
    {
     decpower(dpwrct);

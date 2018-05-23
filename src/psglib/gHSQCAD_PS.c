@@ -60,6 +60,8 @@ KrishK  -       Revised         : July 2004
 KrishK  -       Includes slp saturation option : July 2005
 KrishK - includes purge option : Aug. 2006
 ****v17,v18,v19 are reserved for PURGE ***
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -67,7 +69,7 @@ KrishK - includes purge option : Aug. 2006
 #include <chempack.h>
 
 /*------------------------------------------
-Phase tables for Varian gHSQC
+Phase tables for gHSQC
 --------------------------------------------*/
 static int ph1[4]  = {1,1,3,3},  //v1 - proton 90 at the end of first inept
            ph2[2]  = {0,2},   //v2 - X 90 at the end of first inept
@@ -252,7 +254,13 @@ status(A);
 
 /*********gHSQC or gHSQC part of pure shift starts here *****/
 
-    rgpulse(pw, v6, rof1, rof1);
+    if (getflag("cpmgflg"))
+    {
+      rgpulse(pw, v6, rof1, 0.0);
+      cpmg(v6, v15);
+    }
+    else
+      rgpulse(pw, v6, rof1, rof1);
     delay(tau);
     decpower(pwxlvl180);
     decshaped_pulse(pwx180ad, pwx180, zero, rof1, rof1);

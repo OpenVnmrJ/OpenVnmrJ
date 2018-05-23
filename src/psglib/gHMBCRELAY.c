@@ -5,6 +5,10 @@
 /*  HMBCRELAY - From T. Spang & P. Bigler, MRC 2004; 42 p 55-60 */
 /* R Crouch  10 June 2004 */
 /* B Heise  07 April 2010 - include multi-freq. PRESAT */
+/*
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
+*/
 
 /* Process as sum [ wft2d(1,0,1,0,0,1,0,1) ] for nJch or as
     difference [ wft2d(1,0,-1,0,0,1,0,-1) ] for 2Jch
@@ -146,7 +150,13 @@ pulsesequence()
   txphase(zero);
   decphase(zero);
   
-  rgpulse(pw, zero, rof1, rof1);
+  if (getflag("cpmgflg"))
+  {
+     rgpulse(pw, zero, rof1, 0.0);
+     cpmg(zero, v15);
+  }
+  else
+     rgpulse(pw, zero, rof1, rof1);
   if (shapedpulse[0] == 'y')
      decpower(shapedpower);
   delay(tau4);
