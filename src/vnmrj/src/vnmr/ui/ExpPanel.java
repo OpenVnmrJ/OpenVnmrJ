@@ -3916,6 +3916,25 @@ public class ExpPanel extends JPanel
                 vjCmd(str, cmd, tok);
             return;
         }
+        if (cmd.equals("WINDOW"))
+        {
+            if (!tok.hasMoreTokens())
+                return;
+            cmd = tok.nextToken().trim();
+            if (cmd.equalsIgnoreCase("hide")) {
+               VNMRFrame.getVNMRFrame().setVisible(false);
+            }
+            else if (cmd.equalsIgnoreCase("icon")) {
+               VNMRFrame.getVNMRFrame().setState(Frame.ICONIFIED);
+            }
+            else if (cmd.equalsIgnoreCase("normal")) {
+               VNMRFrame.getVNMRFrame().setState(Frame.NORMAL);
+            }
+            else if (cmd.equalsIgnoreCase("show")) {
+               VNMRFrame.getVNMRFrame().setVisible(true);
+            }
+            return;
+        }
         if (cmd.equals("RQ")) {
             RQPanel rq=Util.getRQPanel();
             if(rq!=null && tok.hasMoreTokens()){
