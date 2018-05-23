@@ -75,13 +75,15 @@ public class VNMRFrame extends JFrame implements AppInstaller {
         }
 
         String persona = getPersona();
-        SplashScreen splash = SplashScreen.getSplashScreen();
-        if (splash == null) {  // command line does not define splash
-           ImageIcon background = Util.getImageIcon("Splash_VnmrJ.png");
-           Font msgFont = new Font( "SansSerif", Font.PLAIN, 18);
-           Color msgColor = Color.WHITE;
-           m_splashFrame = Splash.getFrame(background, persona,
+        if ( ! m_persona.equalsIgnoreCase("hide")) {
+           SplashScreen splash = SplashScreen.getSplashScreen();
+           if (splash == null) {  // command line does not define splash
+              ImageIcon background = Util.getImageIcon("Splash_VnmrJ.png");
+              Font msgFont = new Font( "SansSerif", Font.PLAIN, 18);
+              Color msgColor = Color.WHITE;
+              m_splashFrame = Splash.getFrame(background, persona,
                                         msgFont, msgColor, false);
+           }
         }
 
         SwingUtilities.invokeLater(new Runnable() {
@@ -262,7 +264,14 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             // cause an update of the ES when it is finished
             Util.getAppIF().sendToVnmr("updateExpSelector");
 
-            vnmrFrame.setVisible(true);
+            if (m_persona.equalsIgnoreCase("hide")) {
+               vnmrFrame.setVisible(false);
+            } else {
+               vnmrFrame.setVisible(true);
+            }
+            if (m_persona.equalsIgnoreCase("icon")) {
+                  vnmrFrame.setState(Frame.ICONIFIED);
+            }
             if (m_splashFrame != null)
                 m_splashFrame.dispose();
 
@@ -272,6 +281,12 @@ public class VNMRFrame extends JFrame implements AppInstaller {
                         showLoginBox();
                     }
                 });
+            } else {
+               String cmd = System.getProperty("cmd");
+               if (cmd != null) {
+	          if(cmd.length()>0)
+                     Util.getAppIF().sendToVnmr(cmd);
+               }
             }
         }
         catch (Exception e) {

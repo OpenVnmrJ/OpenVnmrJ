@@ -1,0 +1,75 @@
+
+******************************************************************
+vnmrj	Start the OpenVnmrJ application
+******************************************************************
+
+The OpenVnmrJ program can be started from a terminal window with the vnmrj command.
+Two other options are available.
+
+vnmrj icon  // starts OpenVnmrJ but the windows are iconified.
+vnmrj hide  // starts OpenVnmrJ but the windows are not visible at all
+
+The vnmrjcmd command can be used from macros to control the window state.
+vnmrjcmd('WINDOW icon')    // iconify the OpenVnmrJ window.
+vnmrjcmd('WINDOW normal')  // de-iconify the OpenVNmrJ window
+vnmrjcmd('WINDOW hide')    // hide the OpenVnmrJ windows
+vnmrjcmd('WINDOW show')    // show the OpenVnmrJ windows
+
+Note that the WINDOW keyword must be capitalized.  If OpenVnmrJ is in
+the 'hide' state and a maclib calls something that creates or displays
+a popup window, that popup window will appear.
+
+The vnmrj command takes an optional -exec  keyword. The macro following this
+keyword will be executed after the OpenVnmrJ starts. It will be executed after
+the bootup macro executes. This may be useful if the OpenVnmrJ starts in the
+'hide' state, which presents no command line or gui for interaction. The
+macro following the -exec argument could initialize things for communication
+from outside OpenVnmrJ. For example, if OpenVnmrJ is started with
+
+vnmrj -exec initComm hide
+
+The initComm macro (initialize communications) may be
+
+" macro initComm"
+create('ovjIP','string','global',''):$e
+create('ovjPort','string','global',''):$e
+serverport:ovjPort
+ovjIP=instrument
+fsave(userdir+'/global','global')
+
+The Vnmrbg command could then use the write('net',...) to send commands to
+the hidden OpenVNmrJ. Assument there is a sendMessage macro that sends its
+argument, via the write command, to the hidden OpenVnmrJ.
+
+"macro sendMessage"
+if ($# <> 1) then
+  write('line3','%s requires a single argument',$0)
+  return
+endif
+write('net',ovjIP,ovjPort,'%s\n',$1)
+
+A Vnmrbg can be executed from a terminal as in
+
+Vnmrbg -mback -n0 "sendMessage(msg)"
+This will call sendMessage, which will get the port and IP info from global and
+do the write('net',...).
+
+If the msg has quotes, the bash interpretation of back quotes becomes a problem.
+
+Vnmrbg -mback -n0 "sendMessage(`doStuff('something')`)" usually complains.
+A -s argument for Vnmrbg solves this. It is the name of a macro that will use
+the command as an argument. The result is
+Vnmrbg -mback -n0 -s sendMessage "doStuff('something')" . Internally, Vnmrbg will
+call the "-s" macro with back quotes around the command, i.e., sendMessage(`doStuff('something')`)
+
+In the example above, -n0 option caused sendMessage to be executed in "exp0". This will work as long
+the sendMessage command does not require "experiment" parameters. In the example above, it does not.
+However, the Vnmrbg command can call any macro and it may require access to experiment parameters.
+It is not always clear which experiments may be "locked" by other OpenVnmrJ programs. The -n option
+can also take a - as the value. For example,
+
+Vnmrbg -mback -n- -s sendMessage "doStuff('something')"
+
+This will cause Vnmrbg to will search for an available experiment number (nextexp), create that new experiment (cexp),
+join it (jexp), run the command, and then delete the experiment when it exits.
+
