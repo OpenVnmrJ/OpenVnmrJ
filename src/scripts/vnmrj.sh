@@ -39,16 +39,23 @@ squish=1.0
 #laf="metal"
 showmem="no"
 theme="ocean"
+cmd=""
+cmd_on="n"
 
 for arg in $*; do
     arg02=`echo $arg | cut -c1-2`
     if [ "x$debug_on" = "xyy" ]; then
         debug_on="y"
         debugargs=$arg
+    elif [ "x$cmd_on" = "xy" ]; then
+        cmd=$arg
+        cmd_on="n"
     elif test ${arg02} = "-D"; then
         dargs="$dargs $arg";
     elif test $arg = "-debug"; then
         debug_on="yy"
+    elif test $arg = "-exec"; then
+        cmd_on="y"
     else
         itype=$arg
     fi;
@@ -199,13 +206,14 @@ then
         -classpath $vjclasspath $dargs \
         -Ddbhost=$dbhost -Ddbport=$dbport -Dsysdir=$sysdir -Duserdir=$userdir \
         -Duser=$USER -Dfont="Dialog plain 14" -Dlookandfeel=$laf -Dtheme=$theme -DqueueArea=yes \
+        -Dcmd="$cmd" \
         -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" \
         -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dvjerrfile=custom \
         -Dbatchupdates=no -Dpersona=$itype -Dsavepanels=10 -DSQAllowNesting=false \
         -Djava.library.path="/vnmr/lib" \
         -Djogamp.gluegen.UseTempJarCache="false" \
         -Dsquish=$squish -DshowMem=$showmem -Ddebug="savedatasetup,$debugargs" -Ddbnet_server=$dbnet_server \
-        vnmr.ui.VNMRFrame &
+        vnmr.ui.VNMRFrame
 
 else
 
@@ -214,6 +222,7 @@ else
           -Ddbhost=$dbhost -Ddbport=$dbport -Dsysdir=$sysdir -Duserdir=$userdir \
           -Duser=$USER -Dfont="Dialog plain 14" -Dlookandfeel=$laf -Dtheme=$theme -DqueueArea=yes \
           -DcanvasFont="Dialog plain 12" \
+          -Dcmd="$cmd" \
           -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" \
           -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dvjerrfile=custom \
           -Dbatchupdates=no -Dpersona=$itype -Dsavepanels=10 -DSQAllowNesting=false \

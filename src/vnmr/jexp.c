@@ -152,6 +152,54 @@ void doingAutoExp()
    autoexp = 1;
 }
 
+int nextexp_d(int *expi, char *expn )
+{
+   double tmp;
+   int addsubexp = 5;
+   char path[MAXPATH];
+   int found = 0;
+
+   if (P_getreal(GLOBAL,"addsubexp", &tmp, 1) )
+      addsubexp = 5;
+   else
+      addsubexp = (int) (tmp+0.001);
+   *expi=1;
+   while ( !found  && ( *expi < 10000) )
+   {
+      *expi += 1;
+      if (*expi == addsubexp)
+         *expi += 1;
+      sprintf(expn,"exp%d",*expi);
+      sprintf(path,"%s/%s",userdir,expn);
+      if ( access(path, F_OK) )
+      {
+          found = 1;
+          break;
+      }
+   }
+   return(found);
+}
+
+/***************************/
+int nextexp(int argc, char *argv[], int retc, char *retv[])
+/***************************/
+{
+   int expi;
+   char expn[32];
+   int found;
+
+   found = nextexp_d( &expi, expn );
+   if (retc)
+   {
+      retv[ 0 ] = intString( (found) ? expi : 0 );
+      if (retc > 1)
+      {
+         retv[ 1 ] = newString( (found) ? expn : "" );
+      }
+   }
+   RETURN;
+}
+
 /*************************************/
 static int access_exp(char *exppath, char *estring)
 /*************************************/

@@ -550,24 +550,7 @@ else  #current user is root
         else
             /bin/cp /etc/passwd /etc/passwd.bk
             
-            if [ x$ostype = "xsolaris" ]
-            then
-
-                #  Put entry into shadow file on Solaris
-                #  but only if we have access to shadow file
-                #  Under normal circumstances, next person to log in
-                #  using this account gets to set the password
-                if touch /etc/shadow
-                then
-                    echo "$name_add:::0:::::" >>/etc/shadow
-                else
-                    echo "Cannot add $name_add to the shadow file"
-                fi
-
-                stuff="$name_add:x:$num:$nmrgnum:$name_add:$dir_name/$name_add:/bin/csh"
-            else
-                stuff="$name_add::$num:$nmrgnum:$name_add:$dir_name/$name_add:/bin/csh"
-            fi
+            stuff="$name_add::$num:$nmrgnum:$name_add:$dir_name/$name_add:/bin/csh"
 
             (sed '$i\
 '"$stuff"'' /etc/passwd >/tmp/newpasswd)
@@ -691,8 +674,6 @@ else  #current user is root
     fi
     if [ $# -ge 4 ]  #Called from Java
     then
-	touch "$cur_homedir"/.vnmrsilent   # this prevents .login from asking questions
-	chmod 666 "$cur_homedir"/.vnmrsilent
 	if [ x$user_update = "xy" -a x$ostype != "xInterix" ]
 	then
 	    if test -s "$cur_homedir"/.login
@@ -773,24 +754,9 @@ fi
 fi
 
 cd "$cur_homedir"
-if [ x$ostype = "xIRIX" -o x$ostype = "xLinux" -o x$ostype = "xDarwin" ]
+if [ x$ostype = "xInterix" ]
 then
-   intera_CDE="n"
-elif [ x$ostype = "xInterix" ]
-then
-   intera_CDE="n"
    intera_unix="n"
-else
-   intera_CDE="y"
-   if [ $# -lt 4 ]
-   then
-      nnl_echo  "Configure the CDE environment? (y or n) [y]: "
-      read yesno
-      if test x$yesno = "xn" -o x$yesno = "xno"
-      then
-         intera_CDE="n"
-      fi
-   fi
 fi
 
 if [ x$ostype = "xDarwin" ]
@@ -892,29 +858,18 @@ do
     echo "  $file updated from templates."
 done
 
-if [ x$ostype = "xIRIX" ]
+if test -f .bash_profile
 then
-  for file in ".sgisession" ".xsession"
-  do
-  if test -f $file
-  then
-    if test $intera_unix = "y"
-    then
-      nnl_echo  "OK to backup $file (y or n) [y]: "
-      read yesno
-      if test x$yesno = "xn" -o x$yesno = "xno"
-      then
-        continue
-      else
-        mv $file $file.bkup.$date
-        echo "  $file backed up in $file.bkup.$date"
-      fi
-    else
-      mv $file $file.bkup.$date
-      echo "  $file backed up in $file.bkup.$date"
-    fi
-  fi
-  done
+   envFound=`grep vnmrenvbash .bash_profile`
+   if [ -z "$envFound" ] ; then
+      cat "$vnmrsystem"/user_templates/profile >> .bash_profile
+   fi
+elif test -f .profile
+then
+   envFound=`grep vnmrenvbash .profile`
+   if [ -z "$envFound" ] ; then
+      cat "$vnmrsystem"/user_templates/profile >> .profile
+   fi
 fi
 
 if test ! -d vnmrsys
@@ -1108,7 +1063,7 @@ fi
 
 #  make some subdirectories of the user's VNMR directory
 
-dirlist="help maclib manual menujlib parlib probes psglib seqlib shapelib shims \
+dirlist="help maclib manual menujlib parlib persistence probes psglib seqlib shapelib shims \
 	tablib imaging templates templates/layout mollib"
 for subdir in $dirlist
 do
@@ -1366,28 +1321,6 @@ fi
 if [ x$ostype = "xInterix" ]
 then
    chmod -R 775 "$cur_homedir"/vnmrsys
-fi
-
-if [ $# -lt 4 -o x$user_update = "xy" ]
-then
-
-   if [ x$intera_CDE = "xy" ]
-   then
-      cd "$cur_homedir"
-      file=dt2.tar
-   
-      echo "Updating CDE"
-      if test $as_root = "y"
-      then
-         su $name_add -c "tar xf /vnmr/user_templates/$file"
-      else
-         tar xf /vnmr/user_templates/$file
-      fi
-      cd .dt/
-      rm -f sessions/sessionexit sessions/sessionetc
-      echo "CDE files updated from templates"
-   fi
-
 fi
 
 if test -d templates/vnmrj/properties

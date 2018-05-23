@@ -17,3 +17,9 @@ int convertbruker(int argc, char *argv[], int retc, char *retv[])
    Werrprintf("%s: not yet implemented",argv[0]);
    RETURN;
 }
+
+int convertqone(int argc, char *argv[], int retc, char *retv[])
+{
+   Werrprintf("%s: not yet implemented",argv[0]);
+   RETURN;
+}
