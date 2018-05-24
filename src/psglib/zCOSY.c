@@ -35,7 +35,10 @@ Parameters:
  limited to 60 kHZ to prevent dangerously high gradient levels to be set.
 
 p.s. Aug. 2004.
-b.h. Aug. 2010. */
+b.h. Aug. 2010.
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
+*/
 
 #include <standard.h>
 #include <chempack.h>
@@ -148,8 +151,21 @@ pulsesequence()
       initval(7.0,v7);
       xmtrphase(v7);
    status(B);
-      if (antiz_flg[0] == 'n') rgpulse(flip1*pw/90.0,v1,rof1,1.0e-6);
-                         else rgpulse(flip1*pw/90.0+2.0*pw,v1,rof1,1.0e-6);
+      if (getflag("cpmgflg"))
+      {
+        if (antiz_flg[0] == 'n')
+          rgpulse(flip1*pw/90.0, v1, rof1, 0.0);
+        else
+          rgpulse(flip1*pw/90.0+2.0*pw, v1, rof1, 0.0);
+        cpmg(v1, v15);
+      }
+      else
+      {
+        if (antiz_flg[0] == 'n')
+          rgpulse(flip1*pw/90.0, v1, rof1, 1.0e-6);
+        else
+          rgpulse(flip1*pw/90.0+2.0*pw, v1, rof1, 1.0e-6);
+      }
       xmtrphase(zero);
       if (d2 > 0.0)
         {

@@ -30,6 +30,8 @@ KrishK - includes purge option : Aug. 2006
 ****v17,v18,v19 are reserved for PURGE ***
 
 KrishK - derived from zTOCSY - Jan.2008
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 */
 
 
@@ -191,7 +193,13 @@ pulsesequence()
      wet4(zero,one);
 
    status(B);
-      rgpulse(pw, v1, rof1, 2.0e-6);
+      if (getflag("cpmgflg"))
+      {
+         rgpulse(pw, v1, rof1, 0.0);
+         cpmg(v1, v15);
+      }
+      else
+         rgpulse(pw, v1, rof1, 2.0e-6);
 
       if (getflag("homodec"))
        {

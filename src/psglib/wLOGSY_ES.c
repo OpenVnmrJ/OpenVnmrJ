@@ -54,6 +54,8 @@ to be created manually.
 
 p. sandor, darmstadt june 2003
 b. heise, oxford may 2012 (Chempack/VJ3 version)
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */	  
 
@@ -125,7 +127,13 @@ status(A);
 status(B);
  if (getflag("ESmode")) 
  {
-   rgpulse(pw,zero,rof1,rof1);
+   if (getflag("cpmgflg"))
+   {
+     rgpulse(pw, zero, rof1, 0.0);
+     cpmg(zero, v15);
+   }
+   else
+     rgpulse(pw, zero, rof1, rof1);
      ifzero(v6); zgradpulse(gzlvl1,gt1);
        elsenz(v6); zgradpulse(-1.0*gzlvl1,gt1); endif(v6);
    obspower(wselpwr);
@@ -154,6 +162,12 @@ status(B);
        else delay(rof2);
  }
  else
-	rgpulse(pw,v1,rof1,rof2);
+      if (getflag("cpmgflg"))
+      {
+        rgpulse(pw, v1, rof1, 0.0);
+        cpmg(v1, v15);
+      }
+      else
+	rgpulse(pw, v1, rof1, rof2);
 status(C);
 }

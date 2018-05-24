@@ -1,0 +1,109 @@
+// Chempacker macro
+
+$DMG='ph'
+if dmg='av' or dmg1='av1' then $DMG='av' endif
+
+if ($# < 1) then if $DMG<>'av' then $1='crftaph' else $1='crft' endif endif
+if $1='y' then $1='aph' endif
+
+if $1=curexp then
+    if $# > 1 then
+	write('line3','%s/exp%d',userdir,$2):$filedir
+    else
+    	$filedir=curexp
+    endif
+else
+    $d='' $b='' $e=''
+    substr(file,'dirname','.fid .vfs'):$d,$b,$e
+    if $e<>'' then
+    	$filedir=file
+    else
+    	$filedir=file+'.fid'
+    endif
+endif
+
+$fidf1=$filedir+'/fidf1r'
+exists($fidf1,'file'):$fex
+if $fex then
+    exists('readf1','command'):$fex
+endif
+
+// Back compatibility
+exists($fidf1+'_crft_aph','file'):$ex2
+if $ex2 then rename($fidf1+'_crft_aph',$fidf1+'_crftaph'):$dum endif
+// Done
+
+if $1<>curexp and $1<>'' then
+    exists($fidf1+'_'+$1,'file'):$fex1
+    if $fex1 then $fidf1=$fidf1+'_'+$1 endif
+endif
+
+//if $fex and $1<>curexp then
+//    exists('craft_extend_F1np','parameter'):$fex
+//endif
+if $fex then
+    exists('readheader','command'):$fex
+endif
+
+if $fex then
+    readheader($fidf1):$f1np,$f2np
+    $f2np=2*$f2np
+    if fn<>$f2np then
+	write('line3','Warning: fn (%d) mismatch with the dimension (%d) of fidf1. fn reset to %d',fn,$f2np,$f2np)
+	fn=$f2np
+    endif
+    if $filedir<>curexp then
+    	copy($fidf1,curexp+'/fidf1r'):$dum
+    endif
+    $origni=ni 
+    readheader(curexp+'/acqfil/fid'):$np,$origdim
+//getvalue('arraydim','processed'):$origdim
+    $mult=$origdim/$origni
+//    fn1=$f1np
+//    trace='f1'
+    pmode='partial'
+    if $1<>curexp then
+        setLP1(0)
+    endif
+    $nus=0
+    is_NUS2d:$nus
+    if $nus then
+	$ni=ni
+	$psize=size('phase')
+	$mult=$psize
+	ni=$origdim/$psize
+	setvalue('ni',ni,'processed')
+	setvalue('arraydim',$origdim)
+	setvalue('arraydim',$origdim,'processed')
+	wft1da
+	ni=$ni
+	setvalue('ni',ni,'processed')
+	setvalue('arraydim',$origdim,'processed')
+	setvalue('arraydim',$origdim,'processed')
+    else
+    	wft1da
+    endif
+    if fn1<$f1np then
+	downsizefid(fn1,curexp+'/fidf1r')
+    elseif fn1>$f1np then
+	zerofillfid(fn1,curexp+'/fidf1r')
+    endif
+    readf1
+    ni=$f1np/2
+    setvalue('ni',ni,'processed')
+    setvalue('arraydim',ni*$mult)
+    setvalue('arraydim',ni*$mult,'processed')
+    if $0='cft1da' then return endif
+    lp1=0 rp1=0
+    wft2da
+    ni=$origni
+    setvalue('ni',ni,'processed')
+    setvalue('arraydim',$origdim)
+    setvalue('arraydim',$origdim,'processed')
+    if $1<>curexp then
+        rm('-f',curexp+'/fidf1r'):$dum
+    endif
+else
+    wft2da
+endif
+

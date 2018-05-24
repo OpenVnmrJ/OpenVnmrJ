@@ -19,6 +19,8 @@
    KrishK - Modified to work with chempack
 KrishK - includes purge option : Aug. 2006
 ****v17,v18,v19 are reserved for PURGE ***
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -173,7 +175,13 @@ pulsesequence()
 
    status(B);
       xmtrphase(v3);
-      rgpulse(pw, v14, rof1, 2.0e-6);
+      if (getflag("cpmgflg"))
+      {
+         rgpulse(pw, v14, rof1, 0.0);
+         cpmg(v14, v15);
+      }
+      else
+         rgpulse(pw, v14, rof1, 2.0e-6);
       if (d2 > 0.0)
          delay(d2 - (4.0*pw/PI) - 4.0e-6);
       else

@@ -55,6 +55,9 @@
 	Igor Goljer June 9 2003
         Peter Sandor Nov. 2003
         Bert Heise Feb. 2012 [Chempack/VJ3.x version]
+        JohnR - includes CPMG option : Jan 2015
+        ****v15 is reserved for CPMG ***
+
 */
 
 #include <standard.h>
@@ -193,10 +196,18 @@ status(A);
    if (getflag("lkgate_flg"))  lk_hold(); /* turn lock sampling off */
 
 status(B);
-      if ((prg_flg[0] == 'n')&&(ES_flg[0]=='n'))
-         rgpulse(pw, v1, rof1, rof2);
-      else rgpulse(pw, v1, rof1, 2.0e-6);
-
+      if (getflag("cpmgflg"))
+      {
+        rgpulse(pw, v1, rof1, 0.0);
+        cpmg(v1, v15);
+      }
+      else
+      {
+        if ((prg_flg[0] == 'n')&&(ES_flg[0]=='n'))
+          rgpulse(pw, v1, rof1, rof2);
+        else
+          rgpulse(pw, v1, rof1, 2.0e-6);
+      }
     if (ES_flg[0] == 'y') /*  solvent suppression using excitation sculpting    */
       {
          ExcitationSculpting(v3,v5,v10);

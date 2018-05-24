@@ -19,6 +19,9 @@ KrishK  -       Last revision   : June 1997
 KrishK  -       Revised         : July 2004
 haitao  -	Revised		: March 2006
 KrishK	-	Includes purge option : Jan 2008
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
+KrishK  -	corrected the decoupler pulse shapes for mult=0 : March 2015
 */
 
 #include <standard.h>
@@ -184,7 +187,13 @@ status(A);
       delay(1e-3);
     }
 
-    rgpulse(pw, v6, rof1, rof1);
+    if (getflag("cpmgflg"))
+    {
+       rgpulse(pw, v6, rof1, 0.0);
+       cpmg(v6, v15);
+    }
+    else
+       rgpulse(pw, v6, rof1, rof1);
     obspower(tpwr180);
     shaped_pulse(pw180ad,pw180,zero,rof1,rof1);
     delay(tau+2.0*POWER_DELAY+2.0*rof1);
@@ -203,26 +212,22 @@ status(A);
     delay(d2 / 2);
 
     delay(taug - POWER_DELAY);
-    decpower(pwxlvl180r);
-    decshaped_pulse(pwx180ref, pwx180r, zero, rof1, rof1);
 
-    if(mult < 1.5)
-      {
-       obspower(tpwr);
-       if (mult <0.5)
-         delay(2*rof1);
-       else
-         rgpulse(mult*pw,zero,rof1,rof1);
-      }
+    if (mult < 1.5) 
+    {
+    	decpower(pwxlvl180);
+    	decshaped_pulse(pwx180ad, pwx180, zero, rof1, rof1);
+        delay(4*pwx/PI + 4.0e-6 + taug + WFG_START_DELAY + pw180 +WFG_STOP_DELAY + 2*rof1);
+	decshaped_pulse(pwx180ad, pwx180, zero, rof1, rof1);
+    }
     else
-      shaped_pulse(pw180ad,pw180,zero,rof1,rof1);
-
-    if(mult < 1.5)
-      delay(4*pwx/PI + 4.0e-6 + taug + WFG_START_DELAY + pw180 +WFG_STOP_DELAY - mult*pw);
-    else
-      delay(4*pwx/PI + 4.0e-6 + POWER_DELAY + taug);
-
-    decshaped_pulse(pwx180ref, pwx180r, zero, rof1, rof1);
+    {
+	decpower(pwxlvl180r);
+	decshaped_pulse(pwx180ref, pwx180r, zero, rof1, rof1);
+	shaped_pulse(pw180ad,pw180,zero,rof1,rof1);
+	delay(4*pwx/PI + 4.0e-6 + POWER_DELAY + taug);
+	decshaped_pulse(pwx180ref, pwx180r, zero, rof1, rof1);
+    }
     decpower(pwxlvl);
 
     decrgpulse(pwx, v4, 2.0e-6, rof1);
