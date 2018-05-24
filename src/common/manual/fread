@@ -7,23 +7,33 @@ fread	- 	read in variables from a file and load them in a tree
   a tree.  The variable trees are 'current', 'global', 'processed',
   'systemglobal', and 'usertree'.  It can read from any file that has
   variables stored in the correct vnmr format.  The default tree is 'current'.
+  NOTE: if variables are read into the 'global' tree, certain parameters
+  will not be loaded.  These are important system parameters that should
+  not be changed.  These parameters are: userdir, systemdir, curexp, autodir,
+  auto, operator, vnmraddr, and acqaddr.  If a tree is provided, it must
+  be the second argument.
+
   A "reset" option causes the variable tree to first be cleared before
   the new variable file is read. Without this option, variables read from
   a file are added to the existing preloaded variables.  In order to
   use the 'reset' option, the tree must also be specified.
+
   A "value" option causes only the values of the variables in the file to
   be loaded.  If a preloaded variable does not already exist, a new one
   is not created.  Parameter attributes are not changed. Enumerated
   values are not changed. In order to use the 'value' option, the tree
   must also be specified.
+
   A "newonly" option causes only those variables in the file which do not
   already exist in the tree to be loaded. In order to use the 'newonly'
   option, the tree must also be specified.
   The 'reset', 'newonly', and 'value' options are mutually exclusive.
-  NOTE: if variables are read into the 'global' tree, certain parameters
-  will not be loaded.  These are important system parameters that should
-  not be changed.  These parameters are: userdir, systemdir, curexp, autodir,
-  auto, operator, vnmraddr, and acqaddr.
+
+  A group type option causes only those variables in the file of that group
+  to be loaded. The available group types are 'all', 'sample', 'acquisition',
+  'processing', and 'display'. The group type may be used in conjunction with
+  one of the 'reset', 'newonly', or 'value' options. In order to use the
+  group type option, the tree must also be specified.
 
   The 'usertree' is available for use. By default, it has no parameters
   stored in it. It would typically be used by a macro for temporary
@@ -38,11 +48,14 @@ fread	- 	read in variables from a file and load them in a tree
   work with 'usertree'.  In the case of fread, this means that the
   'reset', 'value', and 'newonly' options are valid for 'usertree'.
  
-  Usage -- fread(filename[,tree[,'reset', 'value', 'newonly']])
+  Usage -- fread(filename[,tree[,'reset', 'value', 'newonly', <group> ]])
               filename is a valid file with proper variable format.
               tree can be  current,global,processed, systemglobal,
               or usertree.
-              'reset' keyword can only be used if tree is specified.
+              'reset', 'value', 'newonly', and <group>  keywords can
+              only be used if tree is specified.
+              Available <group> values are 'all', 'sample', 'acquisition',
+              'processing', and 'display'.
                
 
   Examples:
@@ -51,3 +64,10 @@ fread	- 	read in variables from a file and load them in a tree
 				 current tree.
     fread('sampvar','global')    read in variables from file sampvar into
 			         global tree.
+    fread(curexp+'/somepars','usertree','reset') read variables from file
+                                 into usertree, after first clearing the usertree.
+    fread(curexp+'/disppars','usertree','display','value') read only the values
+                                 of all "display" type variables into the usertree.
+    fread(curexp+'/disppars','usertree','newonly','processing') read all the
+                                 "processing" type variables into the usertree that
+                                 do not already exist in usertree..
