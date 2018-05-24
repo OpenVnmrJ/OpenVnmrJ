@@ -97,6 +97,9 @@ extern int storeOnDisk(char *name, varInfo *v, FILE *stream);
 extern int readvaluesfromdisk(symbol **root, FILE *stream);
 extern int readNewVarsfromdisk(symbol **root, FILE *stream);
 extern int readfromdisk(symbol **root, FILE *stream);
+extern int readGroupvaluesfromdisk(symbol **root, FILE *stream, int groupIndex);
+extern int readGroupNewVarsfromdisk(symbol **root, FILE *stream, int groupIndex);
+extern int readGroupfromdisk(symbol **root, FILE *stream, int groupIndex);
 extern int copytodisk(symbol **root, FILE *stream);
 extern void setGlobalPars();
 extern int goodGroup(char *group);
@@ -962,25 +965,57 @@ int f_read(int argc, char *argv[], int retc, char *retv[])
     int  reset_tree = 0;
     int  value_only = 0;
     int  new_only = 0;
+    int  groupIndex = -1;
     char *tree;
     int   tIndex;
 
    (void) retc;
    (void) retv;
     tree = "current";
-    if ((argc == 3) || (argc == 4) )
+    if ((argc == 3) || (argc == 4) || (argc == 5) )
     {
+       int tmp;
        tree = argv[2];
        sys_global = (strcmp(argv[2],"systemglobal") == 0);
-       if ( (argc == 4) && (strcmp(argv[3],"reset") == 0) )
-          reset_tree = 1;
-       if ( (argc == 4) && (strcmp(argv[3],"value") == 0) )
-          value_only = 1;
-       if ( (argc == 4) && (strcmp(argv[3],"newonly") == 0) )
-          new_only = 1;
+       if (argc >= 4)
+       {
+          if ( ! strcmp(argv[3],"reset"))
+             reset_tree = 1;
+          else if ( ! strcmp(argv[3],"value"))
+             value_only = 1;
+          else if ( ! strcmp(argv[3],"newonly") )
+             new_only = 1;
+          else if ( (tmp = goodGroup(argv[3])) >= 0 )
+             groupIndex = tmp;
+          else
+          {
+             Werrprintf("fread: illegal argument %s", argv[3]);
+             ABORT;
+          }
+       }
+       if (argc == 5)
+       {
+          if ( ! strcmp(argv[4],"reset"))
+             reset_tree = 1;
+          else if ( ! strcmp(argv[4],"value"))
+             value_only = 1;
+          else if ( ! strcmp(argv[4],"newonly") )
+             new_only = 1;
+          else if ( (tmp = goodGroup(argv[4])) >= 0 )
+             groupIndex = tmp;
+          else
+          {
+             Werrprintf("fread: illegal argument %s", argv[4]);
+             ABORT;
+          }
+       }
     }
     else if (argc != 2)
     {   Werrprintf("Usage -- fread(filename[,tree])");
+	ABORT;
+    }
+    if (reset_tree + value_only + new_only > 1 )
+    {   Werrprintf("Usage -- fread options reset, value, and newonly are mutually exclusive");
 	ABORT;
     }
 
@@ -1012,12 +1047,24 @@ int f_read(int argc, char *argv[], int retc, char *retv[])
         {
            P_treereset(tIndex); /* clear tree */
         }
-        if (value_only)
-	   ret = readvaluesfromdisk(getTreeRootByIndex(tIndex),stream); 
-        else if (new_only)
-	   ret = readNewVarsfromdisk(getTreeRootByIndex(tIndex),stream); 
+        if ( groupIndex == -1 )
+        {
+           if (value_only)
+	      ret = readvaluesfromdisk(getTreeRootByIndex(tIndex),stream); 
+           else if (new_only)
+   	      ret = readNewVarsfromdisk(getTreeRootByIndex(tIndex),stream); 
+           else
+	      ret = readfromdisk(getTreeRootByIndex(tIndex),stream); 
+        }
         else
-	   ret = readfromdisk(getTreeRootByIndex(tIndex),stream); 
+        {
+           if (value_only)
+	      ret = readGroupvaluesfromdisk(getTreeRootByIndex(tIndex),stream,groupIndex); 
+           else if (new_only)
+   	      ret = readGroupNewVarsfromdisk(getTreeRootByIndex(tIndex),stream,groupIndex); 
+           else
+	      ret = readGroupfromdisk(getTreeRootByIndex(tIndex),stream,groupIndex); 
+        }
 	fclose(stream);
         if  (strcmp(tree,"global") == 0)
         {
