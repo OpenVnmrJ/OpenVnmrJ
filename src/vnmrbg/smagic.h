@@ -17,7 +17,7 @@ extern int get_vnmrj_port();
 extern int get_vnmrj_socket();
 extern int init_vnmrj_comm(char *hostname, int port_num);
 extern void openVSocket(int fd);
-extern void net_write(char *netAddr, char *netPort, char *message);
+extern int net_write(char *netAddr, char *netPort, char *message);
 extern int smagicSendJvnmraddr(int portno); /* send Java vnmraddr */
 extern int vnmr(int argc, char *argv[]);
 extern char *getInputBuf(char *buf, int len);

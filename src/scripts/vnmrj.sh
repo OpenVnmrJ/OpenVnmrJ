@@ -43,7 +43,7 @@ cmd=""
 cmd_on="n"
 
 for arg in $*; do
-    arg02=`echo $arg | cut -c1-2`
+    arg02=$(echo $arg | cut -c1-2)
     if [ "x$debug_on" = "xyy" ]; then
         debug_on="y"
         debugargs=$arg
@@ -70,7 +70,7 @@ fi
 
 if [ $itype = "adm" -o $itype = "admin" ]
 then
-    admin=`$vnmrsystem/bin/fileowner $vnmrsystem/vnmrrev`
+    admin=$($vnmrsystem/bin/fileowner $vnmrsystem/vnmrrev)
     itype="adm"
     if [ $USER != $admin ]
     then
@@ -89,7 +89,7 @@ else
        su - $id -c "$vnmrsystem/bin/vnmrj"
        exit
     fi
-    if [ -d $vnmrsystem/p11 ]
+    if [[ -d $vnmrsystem/p11 ]] || [[ -f $vnmruser/persistence/singleSession ]]
     then
        session=`ls $vnmruser/lock_*.primary >& /dev/null`
        if [ $? -eq 0 ]
@@ -97,26 +97,9 @@ else
           cvnmr=`ps -ef | grep "/java/vnmrj.jar" | grep -v grep | awk '{print $1}'`
           if [ x$cvnmr = x$id ]
           then
-             sel=`/usr/bin/zenity --info --text="A VnmrJ session is already active"`
+             sel=`/usr/bin/zenity --info --text="An OpenVnmrJ session is already active"`
              exit
           fi
-       fi
-    fi
-    if [ -f $vnmruser/persistence/singleSession ]
-    then
-       session=`ls $vnmruser/lock_*.primary >& /dev/null`
-       if [ $? -eq 0 ]
-       then
-          cvnmr=`pgrep -u $id Vnmrbg`
-          for pid in $cvnmr
-          do
-             grep -w $pid $vnmruser/lock_*.primary >& /dev/null
-             if [ $? -eq 0 ]
-             then
-                sel=`/usr/bin/zenity --info --text="A VnmrJ session is already active"`
-                exit
-             fi
-          done
        fi
     fi
 fi
