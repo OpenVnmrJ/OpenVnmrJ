@@ -75,7 +75,7 @@ extern double yppmm;
 extern void plotpage(int n, char *filename, int retc, char *retv[]);
 extern void getMouse(int event_type, int button_ask, int *retX, int *retY,
          int *b1, int *b2, int *b3);
-extern void net_write(char *netAddr, char *netPort, char *message);
+extern int  net_write(char *netAddr, char *netPort, char *message);
 extern void toggleBackingStore(int onoff);
 extern void popBackingStore();
 extern void autoRedisplay();
@@ -1437,10 +1437,18 @@ int nmr_write(int argc, char *argv[], int retc, char *retv[])
                      break;
       case ERROR:    Werrprintf("%s",tptr);
                      break;
-      case NET:
+      case NET:      {
+                        int res = -1;
 #ifdef VNMRJ
-                     net_write(argv[2],argv[3], tptr);
+                        res = net_write(argv[2],argv[3], tptr);
 #endif
+                        if (retc > 0)
+                        {
+	                   retv[0] = intString( (res) ? 0 : 1);
+                           if (retc > 1)
+	                      retv[1] = intString(res);
+                        }
+                     }
                      break;
       case PRINTER:  Werrprintf("write(printer,..) not yet implemented");
                      ABORT;
