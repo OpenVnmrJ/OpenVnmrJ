@@ -75,7 +75,7 @@ public class VNMRFrame extends JFrame implements AppInstaller {
         }
 
         String persona = getPersona();
-        if ( ! m_persona.equalsIgnoreCase("hide")) {
+        if ( ! m_persona.equalsIgnoreCase("hideNoSplash")) {
            SplashScreen splash = SplashScreen.getSplashScreen();
            if (splash == null) {  // command line does not define splash
               ImageIcon background = Util.getImageIcon("Splash_VnmrJ.png");
@@ -264,7 +264,8 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             // cause an update of the ES when it is finished
             Util.getAppIF().sendToVnmr("updateExpSelector");
 
-            if (m_persona.equalsIgnoreCase("hide")) {
+            if (m_persona.equalsIgnoreCase("hide") ||
+                m_persona.equalsIgnoreCase("hideNoSplash")) {
                vnmrFrame.setVisible(false);
             } else {
                vnmrFrame.setVisible(true);
