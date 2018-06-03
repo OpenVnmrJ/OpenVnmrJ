@@ -1,0 +1,44 @@
+version: 2 # use CircleCI 2.0
+jobs: # a collection of steps
+  build: # runs not using Workflows must have a `build` job as entry point
+    
+    working_directory: ~/OpenVnmrJ # directory where steps will run
+
+    docker: # run the steps with Docker
+      - image: circleci/openjdk:8-jdk-browsers
+
+    steps: # a collection of executable commands
+      - checkout # check out source code to working directory
+      - run:
+          name: Install System Dependencies
+          command: |
+            lsb_release -a
+            sudo apt-get install -y gcc g++ gfortran gcc-multilib scons
+            sudo apt-get install -y libc6-dev-i386 lib32stdc++-6-dev libglu1-mesa-dev
+            sudo apt-get install -y liblapack-dev liblapacke-dev libfftw3-dev
+            sudo dpkg --add-architecture i386
+            sudo apt-get -qq update
+            sudo apt-get install -y libmotif-dev:i386 libxt-dev:i386 libx11-dev:i386
+            java -version
+            gcc --version
+            g++ --version
+            gfortran --version
+      - run:
+          name: Checkout ovjTools
+          command: |
+            cd $HOME
+            git clone --depth 3 --branch master https://github.com/${CIRCLE_USERNAME}/ovjTools.git
+      - run:
+          name: Build OpenVnmrJ
+          command: |
+            export OVJ_BUILDDIR=$HOME
+            export OVJ_ROOT=${OVJ_BUILDDIR}/OpenVnmrJ
+            export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
+            ls
+            gcc --version
+            g++ --version
+            cd ${OVJ_ROOT}
+            cp -a ${OVJ_TOOLS}/bin ${OVJ_BUILDDIR}
+            OVJ_SCONSFLAGS='-j2' ${OVJ_ROOT}/scripts/build_release.sh build package
+            ${OVJ_TOOLS}/bin/whatsin $(ls -t ${OVJ_BUILDDIR}/logs/build* | head -1) | tail -60
+            ls -l ${OVJ_BUILDDIR}/dvdimage*
