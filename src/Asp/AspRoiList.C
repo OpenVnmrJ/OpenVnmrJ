@@ -272,23 +272,21 @@ void AspRoiList::saveRois(char *path) {
       fprintf(fp,"# in PPM\n");
       fprintf(fp,"# rank name ppm1 ppm2 ... color\n");
 
-      AspRoiMap::iterator ri;
       spAspRoi_t roi;
-      int i;
       char name[64];
 
-      //for (roi= getFirstRoi(ri), i=0; roi != nullAspRoi; roi= getNextRoi(ri), i++) {
-
-      // get sorted freqs
-      getRoiFreqs(HORIZ);
-      list<double>::iterator itr;
+      AspRoiMap::iterator itr1;
       double freq1, freq2;
-      for(itr=roiFreqs->begin(), i=0; itr != roiFreqs->end(); ++itr, i++) {
-	freq1=*itr;
-	++itr;
-	freq2=*itr;
+      int i=0;
+      for (itr1 = roiList->begin(); itr1 != roiList->end(); ++itr1, i++) {
+	freq1 = itr1->second->cursor1->resonances[0].freq;
+	freq2 = itr1->second->cursor2->resonances[0].freq;
+
 	roi = getRoi(freq1,freq2);
-	if(roi == nullAspRoi) continue;
+	if(roi == nullAspRoi)
+        {
+           continue;
+        }
 
 	if(roi->label == "") sprintf(name,"Roi%d",i);
 	else strcpy(name,roi->label.c_str());
