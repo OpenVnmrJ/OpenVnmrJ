@@ -17,7 +17,7 @@ import javax.swing.table.*;
 
 public class Accounting extends JPanel {
     
-  Billing bill;
+  private static Billing bill;
   Accounts2 stp;
   public Config conf;
   AbstractTableModel atm;
@@ -55,7 +55,7 @@ public class Accounting extends JPanel {
     });
   }
   
-  Billing getBilling() {
+  public static Billing getBilling() {
       return (bill);
   }
 

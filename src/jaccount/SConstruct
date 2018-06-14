@@ -4,26 +4,23 @@ import os
 import datetime
 import shutil
 
+# current working directory
+cwd = os.getcwd()
+
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
     print "OVJ_TOOLS env not found."
     print "For bash and variants, use export OVJ_TOOLS=<path>"
     print "For csh and variants,  use setenv OVJ_TOOLS <path>"
     sys.exit(1)
 
-# current working directory
-cwd = os.getcwd()
-
-# get options environment
-boFile = os.path.join(cwd, os.pardir, os.pardir, 'buildoptions.py')
-if not os.path.exists(boFile):
-   boFile = os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py')
-execfile(boFile)
-
 # target
 accountTarget = 'account.jar'
-accountDashOTarget = 'account.jar.dasho'
-accountProGuardTarget = 'account.jar.pro'
 
 # paths
 javaPath = os.path.join(ovjtools, 'java', 'bin')
@@ -77,16 +74,6 @@ if not os.path.exists(vnmrIconlibPath):
 shutil.copy('vnmr_account.gif', os.path.join(vnmrIconlibPath, 'accounting.gif'))
 shutil.copy('loggingParamList', os.path.join(vnmrAccountingPath, 'loggingParamList'))
 
-# actions to be performed after targets are built
-if boEnv['dasho']=='y' or boEnv['jaccount_O']=='y':
-   jEnv.AddPostAction(jarBuildObject,
-                   Action(os.path.join(cwd,'AccountingProGuard.sh')))
-#                   Action(os.path.join(cwd,'AccountingDasho.sh')))
-if boEnv['jaccount_O']=='y':
-   jEnv.AddPostAction(jarBuildObject,
-                   Action(Copy(os.path.join(vnmrJavaPath,accountTarget),
-                               os.path.join(cwd, accountProGuardTarget))))
-else:
-   jEnv.AddPostAction(jarBuildObject,
+jEnv.AddPostAction(jarBuildObject,
                    Action(Copy(vnmrJavaPath, os.path.join(cwd, accountTarget))))
 

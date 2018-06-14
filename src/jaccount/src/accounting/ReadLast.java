@@ -103,9 +103,6 @@ public class ReadLast {
         if (billMode.compareToIgnoreCase("goes") == 0) {
             readGoesFile();
         }
-        else if (billMode.compareToIgnoreCase("macros") == 0) {
-            readLoginFile();
-        }
         else if (billMode.compareToIgnoreCase("login") == 0) { 
             readGoesFile();
         }
@@ -134,7 +131,7 @@ public class ReadLast {
         String  errMsg = null;
         GoesContentHandler xmlHandler;
 
-        goesFile = new String(AProps.getInstance().getRootDir() + "/adm/accounting/acctLog.xml");
+        goesFile = new String(AProps.getInstance().getInFile());
         File xmlFile = new File(goesFile);
         sdf = new SimpleDateFormat("EEE MMM d HH:mm:ss zzz yyyy");
         if ( ! xmlFile.exists() ) {
@@ -194,112 +191,6 @@ public class ReadLast {
         }
     }
        
-    private void readLoginFile() {
-        lines = new ArrayList();
-        BufferedReader in = null;
-        File loginRecords = new File(AProps.getInstance().getRootDir()+"/adm/accounting/loginrecords.txt");
-        if ( ! loginRecords.exists() ) {
-            Accounting.showErrorMsg("Cannot find "+AProps.getInstance().getRootDir()+"/adm/accounting/loginrecords.txt.\nPlease check Billing Mode setting in the Accounting Properties window.");
-            lines.clear();
-            bGoodList = false;
-            return;
-        }
-        
-        String oneLine= new String("  "); // non-null seed
-        try {
-            in = new BufferedReader(new FileReader(loginRecords));
-            while (oneLine != null) {
-                 oneLine = in.readLine();
-                 if ( (oneLine!=null) && (oneLine.length()>5) )
-                     lines.add(oneLine);
-            }
-        }
-         catch (IOException ioe) {
-             ioe.printStackTrace();
-            bGoodList = false;
-       }
-       finally {
-           try {
-               if (in != null)
-                   in.close();
-           }
-           catch (Exception e2) {}
-       }
-    }
-
-/**********************************************************
-    
-    private void readLastFile() {
-        // Check if Linux. 
-        String os = System.getProperty("os.name");
-        String cmd;
-        BufferedReader in = null;
-        StringBuilder cmdBldr = null;
-        cmdBldr = new StringBuilder(AProps.getInstance().getRootDir());
-        cmdBldr.append("/bin/vnmr_last");
-        cmd = new String(cmdBldr);
-        if (os.compareToIgnoreCase("Linux") == 0) {
-            File wtmp = new File("/var/log/wtmp");
-            if ( ! wtmp.exists() ) {
-                Accounting.showErrorMsg("Cannot find /var/log/wtmp.\nPlease create as root. It is where Linux records are stored.");
-                // JOptionPane.showMessageDialog(null,
-                //     "Cannot find /var/log/wtmp.\nPlease create as root. It is where Linux records are stored.",
-                //     "Error",
-                //     JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            try {
-                Runtime rt = Runtime.getRuntime();
-                Process proc = rt.exec(cmd);
-                InputStream istrm = proc.getInputStream();
-                BufferedReader bfr = new BufferedReader(new InputStreamReader(istrm));
-                String str =  bfr.readLine();
-                while ( ! (str.contains("Done") && str.contains("vnmr_last")) ) {
-                    System.out.println(str);
-                }
-            } catch (IOException ioe) { 
-               System.out.println("vnmr_last ioexception");
-            }
-            
-        }
-        StringBuilder fileBldr = null;
-        fileBldr = new StringBuilder(AProps.getInstance().getRootDir());
-        fileBldr.append("/adm/tmp/last.txt");
-        String file = new String(fileBldr);
-        File wtmp = new File(file);
-        if ( ! wtmp.exists() ) {
-            Accounting.showErrorMsg("Cannot find "+file+".\n Possibly the command "+cmd+" failed.");
-            return;
-        }
-        sdf = new SimpleDateFormat("EEE MMM d HH:mm zzz yyyy");
-        // thisYear = (new GregorianCalendar()).get(Calendar.YEAR);
-        String oneLine= new String("  "); // non-null seed
-
-        lines = new ArrayList();
-        try {
-            in = new BufferedReader(new FileReader(AProps.getInstance().getRootDir()+"/adm/tmp/last.txt"));
-            while (oneLine != null) {
-                 oneLine = in.readLine();
-//  System.out.println(oneLine);
-                 if ( (oneLine!=null) && (oneLine.length()!=0) )
-                     lines.add(oneLine);
-            }
-        }
-        catch (IOException ioe) {
-             ioe.printStackTrace();
-       }
-       finally {
-            try {
-               if (in != null)
-                   in.close();
-            }
-            catch (Exception e2) {}
-       }
-
-       // System.out.println(":lastRecords file read and closed:");
-    }
-**********************************************************/
-
     public ArrayList getLines(String owner, String operator) {
         String billMode = AProps.getInstance().getBillingMode();
         if (billMode.compareToIgnoreCase("goes") == 0) {

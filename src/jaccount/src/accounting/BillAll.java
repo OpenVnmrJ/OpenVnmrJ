@@ -384,6 +384,57 @@ public class BillAll extends JPanel implements Printable {
       return Printable.PAGE_EXISTS;
     } 
 
+    public int printTxt(PrintWriter fd) {
+      if (billList == null)
+          return -1;
+
+      int i;
+      int lines;
+
+      NumberFormat nf = aProps.getNumberFormat();
+      lines = 0;
+      int col1 = 0;
+      int col2 = "acquisition time".length();
+      int col3 = "total charge".length();
+      for (i = 0; i < billList.size(); i++) {
+          BillOne bill = billList.elementAt(i);
+          if (bill != null) {
+              String str = bill.getAccountName();
+              if (str.length() > col1)
+                 col1 = str.length();
+          }
+      } 
+      String str;
+      for (i = 0; i < billList.size(); i++) {
+          BillOne bill = billList.elementAt(i);
+          if (bill != null) {
+              str = String.format("%"+col1+"s", bill.getAccountName() );
+              if (str != null)
+                  fd.print(str +"   ");
+              if (bGoes) {
+                  str = String.format("%"+col2+"s",bill.getMinuteTime(bill.getGoesTotalTime()) );
+                  fd.print(str);
+                  str = String.format("%"+col3+"s",nf.format(bill.getGoesTotalCharge()) );
+                  fd.print(str);
+              }
+              if (bLogin) {
+                  str = String.format("%"+col2+"s",bill.getMinuteTime(bill.getLoginTotalTime()) );
+                  fd.print(str +"   ");
+                  str = String.format("%"+col3+"s",nf.format(bill.getLoginTotalCharge()) );
+                  fd.print(str +"   ");
+              }
+              str = String.format("%"+col3+"s",nf.format(bill.getTotalCharge()) );
+              fd.println(str);
+              lines++;
+              if (lines >= MAX_LINES) {
+                 i++;
+                 break;
+              }
+          }   
+      } 
+      return Printable.PAGE_EXISTS;
+    } 
+
     public void writeToCsv(PrintWriter fd) {
         if (billList == null)
             return;

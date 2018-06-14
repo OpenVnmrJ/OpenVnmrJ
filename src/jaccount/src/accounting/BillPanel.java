@@ -19,9 +19,10 @@ import javax.swing.*;
 public class BillPanel extends JPanel {
 
   private AProps aProps;
+  private static BillPanel billPanel;
   private static PrinterJob pj = null;
   private static JFileChooser fileChooser = null;
-  BillAll allBillPane = null;
+  public static BillAll allBillPane = null;
   BillOne oneBillPane = null;
   private JScrollPane jsp;
   private Date startDate;
@@ -32,14 +33,22 @@ public class BillPanel extends JPanel {
   private boolean bSummary = false;
   private boolean bAllSummary = false;
   private JButton bXls;
+  private boolean doS, doSCsv, doUCsv;
+  String saveDir;
 
 
-  public BillPanel(AccountJCB cb, boolean bOne, boolean bSum, Date sDate, Date eDate) {
+  public BillPanel(AccountJCB cb, boolean bOne, boolean bSum, Date sDate, Date eDate,
+                   boolean iDoS, boolean iDoSCsv, boolean iDoUCsv, String svDir) {
     this.accJCB = cb;
     this.bOneUser = bOne;
     this.bSummary = bSum;
     this.startDate = sDate;
     this.endDate = eDate;
+    billPanel = this;
+    doS = iDoS;
+    doSCsv = iDoSCsv;
+    doUCsv = iDoUCsv;
+    saveDir = svDir;
 
     setLayout( new BorderLayout() );
     
@@ -66,6 +75,14 @@ public class BillPanel extends JPanel {
     build();
   }
 
+  static public BillPanel getInstance() {
+     return(billPanel);
+  }
+
+  public BillAll getAllBillPane() {
+     return(allBillPane);
+  }
+
   private void build() {
      if (accJCB == null)
          return;
@@ -79,7 +96,7 @@ public class BillPanel extends JPanel {
      else
         bAllSummary = false;
      k = 0;
-     if (bOneUser)
+     if (bOneUser && !doUCsv)
          k = accJCB.getSelectedIndex();
      for (i = k; i < num; i++) {
          String user = (String) accJCB.getItemAt(i);
@@ -96,10 +113,21 @@ public class BillPanel extends JPanel {
                oneBillPane = bill;
                jsp.setViewportView(bill);
             }
-            break;
+            if ( doUCsv) {
+               PrintCsv(saveDir+"/"+user+".csv");
+            } else {
+               break;
+            }
          }
          else
+         {
             allBillPane.addBill(bill);
+         }
+     }
+     if (doSCsv && !bOneUser)
+        PrintCsv(saveDir+"/summary.csv");
+     if (doS && !bOneUser) {
+        PrintSummary(saveDir+"/summary.txt");
      }
   }
 
@@ -125,6 +153,48 @@ public class BillPanel extends JPanel {
             }
             catch (PrinterException pe) { }
         }
+   }
+
+   private void PrintSummary(String filePath) {
+      PrintWriter fout = null;
+      try {
+         fout = new PrintWriter(new FileWriter(filePath));
+         if (fout != null) {
+            if (allBillPane != null)
+               allBillPane.printTxt(fout);
+         }
+      }
+      catch(IOException er) { }
+
+      finally {
+         try {
+            if (fout != null)
+               fout.close();
+         } catch (Exception e) {}
+      }
+
+   }
+
+   private void PrintCsv(String filePath) {
+      PrintWriter fout = null;
+      try {
+         fout = new PrintWriter(new FileWriter(filePath));
+         if (fout != null) {
+            if (oneBillPane != null)
+               oneBillPane.writeToCsv(fout, true);
+            else if (allBillPane != null)
+               allBillPane.writeToCsv(fout);
+         }
+      }
+      catch(IOException er) { }
+
+      finally {
+         try {
+            if (fout != null)
+               fout.close();
+         } catch (Exception e) {}
+      }
+
    }
 
    private class XlsBill implements ActionListener {
@@ -162,24 +232,8 @@ public class BillPanel extends JPanel {
                 if (v != JOptionPane.YES_OPTION)
                     return;
             }
-            PrintWriter fout = null;
-            try {
-                fout = new PrintWriter(new FileWriter(filePath));
-                if (fout != null) {
-                     if (oneBillPane != null)
-                         oneBillPane.writeToCsv(fout, true);
-                     else if (allBillPane != null)
-                         allBillPane.writeToCsv(fout);
-                }
-            }
-            catch(IOException er) { }
-
-            finally {
-                try {
-                    if (fout != null)
-                        fout.close();
-                } catch (Exception e) {}
-            }
+            PrintCsv(filePath);
         }
    }
+
 }
