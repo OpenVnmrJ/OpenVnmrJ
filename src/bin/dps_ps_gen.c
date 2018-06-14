@@ -277,6 +277,7 @@ char	       *psi = "psi";
 char	       *phi = "phi";
 char	       *theta = "theta";
 char           *str_in;
+char           *cur_line;
 char           *tempnam();
 char            s_token[5120];
 char            argArray[2048];
@@ -362,9 +363,7 @@ print_usage()
 }
 
 int
-main(argc, argv)
-int             argc;
-char          **argv;
+main(int argc, char *argv[])
 {
    char            tmp_file1[MAXPATH], tmp_file2[MAXPATH];
    char            time_file1[MAXPATH], time_file2[MAXPATH];
@@ -522,7 +521,7 @@ char          **argv;
    s_rout = NULL;
    s_def = NULL;
    s_token[0] = '\0';
-   parsesource(tmp_source, 1);
+   parsesource(tmp_source);
 
    fprintf(fout, "\n#endif\n");
    fclose(fout);
@@ -539,7 +538,7 @@ char          **argv;
 	 exit(0);
       }
 	/* change all subroutine names */
-      parsesource(tmp_file1, 0);
+      parsesource(tmp_file1);
       fclose(fout);
       if (!debug)
          unlink(tmp_file1);
@@ -599,7 +598,9 @@ char          **argv;
    }
    fprintf(fout, "\n#pragma GCC diagnostic ignored \"-Wunused-variable\"\n");
    fprintf(fout, "#pragma GCC diagnostic ignored \"-Wreturn-type\"\n");
+#ifndef MACOS
    fprintf(fout, "#pragma GCC diagnostic ignored \"-Wunused-but-set-variable\"\n");
+#endif
    fclose(fout);
    sprintf(input, "cat %s %s %s %s > %sdps.c",rptr,tmp_file1,tmp_file2,time_file2,baseName);
    if (debug)
@@ -615,9 +616,7 @@ char          **argv;
 
 
 /*  print argument excluded '"' */
-char *clean_print(str, do_print)
-char   *str;
-int	do_print;
+char *clean_print(char *str, int do_print)
 {
 	int   n, len, quota;
 	char  *data;
@@ -662,9 +661,7 @@ int	do_print;
 	return(tstr);
 }
 
-char *clean_print_int(str, do_print)
-char   *str;
-int	do_print;
+char *clean_print_int(char *str, int do_print)
 {
 	int   len;
 	char  *data;
@@ -876,17 +873,14 @@ print_str(int ival, ...)
 
 
 void
-print_code(code, name)
-int	code;
-char    *name;
+print_code(int code, char *name)
 {
 	sprintf(argStr, "%d %s ",code, name);
 	timeCode = code;
 }
 
 void
-print_dummy_code(name)
-char    *name;
+print_dummy_code(char *name)
 {
 	print_code(DUMMY, name);
 	strcat(argStr, " 0 0 0 \\n\"");
@@ -1011,9 +1005,7 @@ print_statement()
 }
 
 void
-change_code(pname, name, code, arg_num)
-char    *pname, *name;
-int	code, arg_num;
+change_code(char *pname, char *name, int code, int arg_num)
 {
 	int       num, n;
 	char     *str;
@@ -1104,8 +1096,7 @@ int	code, arg_num;
 }
 
 void
-print_pesh_code(name)
-char  *name;
+print_pesh_code(char *name)
 {
      int k;
 // char   *grad_name[] = {"x", "y", "z", "z" };
@@ -1162,8 +1153,7 @@ char  *name;
 }
 
 void
-print_oblsh_code(name)
-char  *name;
+print_oblsh_code(char *name)
 {
     print_code(OBLSHGR, name);
     strcat(argStr, " 12 2 3 x ?%s ");
@@ -1203,9 +1193,7 @@ char  *name;
 
 
 void
-obl_code(name, code, arg_num, arg_num2)
-char    *name;
-int	code, arg_num, arg_num2;
+obl_code(char *name, int code, int arg_num, int arg_num2)
 {
 	int       num;
 	char     *str;
@@ -1250,9 +1238,7 @@ int	code, arg_num, arg_num2;
 }
 
 void
-pe_obl_code(name, code, arg_num)
-char    *name;
-int	code, arg_num;
+pe_obl_code(char *name, int code, int arg_num)
 {
 	int       num;
 	char     *str;
@@ -1303,12 +1289,8 @@ int	code, arg_num;
 	fprintf(fout, "%s)", argStr);
 }
 
-
-
 void
-pe_oblshaped_code(name, code, arg_num)
-char    *name;
-int	code, arg_num;
+pe_oblshaped_code(char *name, int code, int arg_num)
 {
 	int       num;
 	char     *str;
@@ -1368,8 +1350,7 @@ get_parallel_chan_id(int n)
 }
 
 void
-gen_shapedPulseWithOffset(name)
-char  *name;
+gen_shapedPulseWithOffset(char *name)
 {
       timeIndex = 2;
       if (timeMode)
@@ -1393,9 +1374,7 @@ char  *name;
 
 
 void
-poffset_list_code(name, code, arg_num)
-char    *name;
-int	code, arg_num;
+poffset_list_code(char *name, int code, int arg_num)
 {
 	int       num;
 	char     *str;
@@ -1457,9 +1436,7 @@ int	code, arg_num;
 }
 
 void
-pbox_code(fname, name, dev, arg_num)
-char    *fname, *name;
-int	dev, arg_num;
+pbox_code(char *fname, char *name, int dev, int arg_num)
 {
 	int       num;
 	char     *str;
@@ -1552,8 +1529,7 @@ loadtable_code()
 }
 
 void
-insert_angles(index)
-int   index;
+insert_angles(int index)
 {
      int  k, d1, d2;
 
@@ -1572,9 +1548,7 @@ int   index;
 }   
 
 void
-insert_arg(s, index)
-char  *s;
-int   index;
+insert_arg(char *s, int index)
 {
      int  k, d1, d2;
 
@@ -1601,8 +1575,7 @@ dump_previous()
 }
 
 void
-phase_encode3_oblshapedgradient(token)
-char  *token;
+phase_encode3_oblshapedgradient(char *token)
 {
     timeFnum = 1;
     timeFvals[0] = 4;
@@ -1650,9 +1623,7 @@ char  *token;
 }
 
 void
-gen_shapelist_init(token, chan)
-char  *token;
-int   chan;
+gen_shapelist_init(char *token, int chan)
 {
     if (argNum < 6) {
         print_dummy_code(token);
@@ -1675,17 +1646,13 @@ int   chan;
 }
 
 void
-gen_shapelistpw(token, chan)
-char  *token;
-int   chan;
+gen_shapelistpw(char *token)
 {
     print_dummy_code(token);
 }
 
 void
-gen_shapedpulselist(token, chan)
-char  *token;
-int   chan;
+gen_shapedpulselist(char *token, int chan)
 {
     if (argNum < 7) {
         print_dummy_code(token);
@@ -1708,9 +1675,7 @@ int   chan;
 }
 
 void
-gen_shapedpulseoffset(token, chan)
-char  *token;
-int   chan;
+gen_shapedpulseoffset(char *token, int chan)
 {
     if (argNum < 6) {
         print_dummy_code(token);
@@ -1726,9 +1691,7 @@ int   chan;
 }
 
 int
-compare_3(token, fin)
-char  *token;
-FILE  *fin;
+compare_3(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -1790,9 +1753,7 @@ FILE  *fin;
 
 
 int
-compare_4(token, fin)
-char  *token;
-FILE  *fin;
+compare_4(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -1922,9 +1883,7 @@ FILE  *fin;
 
 
 int
-compare_5(token, fin)
-char  *token;
-FILE  *fin;
+compare_5(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -2112,9 +2071,7 @@ FILE  *fin;
 }
 
 int
-compare_6(token, fin)
-char  *token;
-FILE  *fin;
+compare_6(char *token, FILE *fin)
 {
 	int	loop, k;
 
@@ -2467,9 +2424,7 @@ FILE  *fin;
 
 
 int
-compare_7(token, fin)
-char  *token;
-FILE  *fin;
+compare_7(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -2681,9 +2636,7 @@ FILE  *fin;
 
 
 int
-compare_8(token, fin)
-char  *token;
-FILE  *fin;
+compare_8(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -2938,9 +2891,7 @@ FILE  *fin;
 
 
 int
-compare_9(token, fin)
-char  *token;
-FILE  *fin;
+compare_9(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -3371,9 +3322,7 @@ FILE  *fin;
 
 
 int
-compare_10(token, fin)
-char  *token;
-FILE  *fin;
+compare_10(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -3618,9 +3567,7 @@ FILE  *fin;
 
 
 int
-compare_11(token, fin)
-char  *token;
-FILE  *fin;
+compare_11(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -3989,9 +3936,7 @@ FILE  *fin;
 }
 
 int
-compare_12(token, fin)
-char  *token;
-FILE  *fin;
+compare_12(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -4397,9 +4342,7 @@ FILE  *fin;
 
 
 int
-compare_13(token, fin)
-char  *token;
-FILE  *fin;
+compare_13(char *token, FILE *fin)
 {
 	int	loop;
         int     k;
@@ -4530,9 +4473,7 @@ FILE  *fin;
 
 
 int
-compare_14(token, fin)
-char  *token;
-FILE  *fin;
+compare_14(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -4696,9 +4637,7 @@ FILE  *fin;
 
 
 int
-compare_15(token, fin)
-char  *token;
-FILE  *fin;
+compare_15(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -4834,13 +4773,13 @@ FILE  *fin;
 			print_fargs(2, 2, 3, 4, 0);
 			break;
 		case  11:     /* gen_shapelistpw */
-	      		gen_shapelistpw(token, TODEV);
+	      		gen_shapelistpw(token);
 			break;
 		case  12:     /* dec2shapelistpw */
-	      		gen_shapelistpw(token, DO2DEV);
+	      		gen_shapelistpw(token);
 			break;
 		case  13:     /* dec3shapelistpw */
-	      		gen_shapelistpw(token, DO3DEV);
+	      		gen_shapelistpw(token);
 			break;
 		 default:
 	      		print_dummy_code(token);
@@ -4855,9 +4794,7 @@ FILE  *fin;
 
 
 int
-compare_16(token, fin)
-char  *token;
-FILE  *fin;
+compare_16(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -5109,9 +5046,7 @@ FILE  *fin;
 
 
 int
-compare_17(token, fin)
-char  *token;
-FILE  *fin;
+compare_17(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -5336,9 +5271,7 @@ FILE  *fin;
 
 
 int
-compare_18(token, fin)
-char  *token;
-FILE  *fin;
+compare_18(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -5641,9 +5574,7 @@ FILE  *fin;
 
 
 int
-compare_19(token, fin)
-char  *token;
-FILE  *fin;
+compare_19(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -5967,9 +5898,7 @@ FILE  *fin;
 
 
 int
-compare_20(token, fin)
-char  *token;
-FILE  *fin;
+compare_20(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6075,9 +6004,7 @@ FILE  *fin;
 
 
 int
-compare_21(token, fin)
-char  *token;
-FILE  *fin;
+compare_21(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6147,9 +6074,7 @@ FILE  *fin;
 
 
 int
-compare_22(token, fin)
-char  *token;
-FILE  *fin;
+compare_22(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6227,9 +6152,7 @@ FILE  *fin;
 
 
 int
-compare_23(token, fin)
-char  *token;
-FILE  *fin;
+compare_23(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6348,9 +6271,7 @@ FILE  *fin;
 
 
 int
-compare_24(token, fin)
-char  *token;
-FILE  *fin;
+compare_24(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6502,9 +6423,7 @@ FILE  *fin;
 }
 
 int
-compare_25(token, fin)
-char  *token;
-FILE  *fin;
+compare_25(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6531,9 +6450,7 @@ FILE  *fin;
 
 
 int
-compare_26(token, fin)
-char  *token;
-FILE  *fin;
+compare_26(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6591,9 +6508,7 @@ FILE  *fin;
 
 
 int
-compare_27(token, fin)
-char  *token;
-FILE  *fin;
+compare_27(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6734,9 +6649,7 @@ FILE  *fin;
 
 
 int
-compare_28(token, fin)
-char  *token;
-FILE  *fin;
+compare_28(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6797,9 +6710,7 @@ FILE  *fin;
 
 
 int
-compare_29(token, fin)
-char  *token;
-FILE  *fin;
+compare_29(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6854,9 +6765,7 @@ FILE  *fin;
 }
 
 int
-compare_30(token, fin)
-char  *token;
-FILE  *fin;
+compare_30(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6910,9 +6819,7 @@ FILE  *fin;
 }
 
 int
-compare_31(token, fin)
-char  *token;
-FILE  *fin;
+compare_31(char *token, FILE *fin)
 {
 	int	loop;
 
@@ -6982,9 +6889,7 @@ FILE  *fin;
 
 
 int
-cmdcheck(fin, str)
-FILE	*fin;
-char    *str;
+cmdcheck(FILE *fin, char *str)
 {
    char            token[CMDLEN];
    int             length;
@@ -7120,9 +7025,7 @@ char    *str;
 
 
 int
-IsCfile(data, prog)
-char  *data;
-int    prog;
+IsCfile(char *data)
 {
    int    inlen;
    char  *inptr1, *inptr2;
@@ -7168,9 +7071,7 @@ int    prog;
 
 
 static int
-is_good_name(name, num)
-char    **name;
-int	num;
+is_good_name(char **name, int num)
 {
 
 	int	k;
@@ -7185,9 +7086,7 @@ int	num;
 
 
 static int
-is_real_proc(s_str, ptr1, ptr2)
-char   *s_str;
-int	ptr1, ptr2;
+is_real_proc(char *s_str, int ptr1, int ptr2)
 {
 	char  *buf;
 	int   blen, k, ret;
@@ -7255,8 +7154,7 @@ int is_proc_char(char c) {
 }
 
 void
-change_proc_name(source)
-char  *source;
+change_proc_name(char *source)
 {
      char *ptr, *src;
      char ch;
@@ -7299,9 +7197,7 @@ char  *source;
 }
 
 void
-parsesource(filename, flag)
-char  *filename;
-int    flag;
+parsesource(char *filename)
 {
    int   ptrn, insert, exist, newline;
    int   p_flag, ptri;
@@ -7347,7 +7243,7 @@ int    flag;
    while (fgets(input, 1023, fin) != NULL)
    {
       line_num++;
-      str_in = input;
+      cur_line = str_in = input;
       Define = 0;
       Include = 0;
       other_def = 0;
@@ -7435,7 +7331,7 @@ int    flag;
 		if (Include)
 	    	{
 		    s_token[ptri] = '\0';
-		    if(!IsCfile(s_token, prog))
+		    if(!IsCfile(s_token))
 		    {
 		        if (compilePhase || prog)
 			   fprintf(fout, "%s", s_token);
@@ -7758,9 +7654,7 @@ int    flag;
 
 
 void
-eat_quot(fin, ptr)
-FILE	*fin;
-int	*ptr;
+eat_quot(FILE *fin, int *ptr)
 {
 	int	 index, slash;
 
@@ -7806,9 +7700,7 @@ int	*ptr;
 	}
 }
 
-void eat_singleQuote(fin, ptr)
-FILE    *fin;
-int     *ptr;
+void eat_singleQuote(FILE *fin, int *ptr)
 {
         int      index, slash;
 
@@ -7856,9 +7748,7 @@ int     *ptr;
 
 
 void
-eat_bracket(fin, ptr)
-FILE	*fin;
-int	*ptr;
+eat_bracket(FILE *fin, int *ptr)
 {
 	int	 index, bracket, slash, quot;
 
@@ -7953,9 +7843,7 @@ remove_comment()
 
 /*   add "X_"  to the subroutine name  */
 void
-changename(source, index)
-char  *source;
-int   *index;
+changename(char *source, int *index)
 {
    int             count;
    int             pn;
@@ -7997,13 +7885,17 @@ int   *index;
 
 /*   to retrieve the arguments of the PSG function  */
 void
-get_args(fin)
-FILE   *fin;
+get_args(FILE *fin)
 {
    int  argptr;
    int  pl, pr;
    int	bl, br;
    int  quot, slash;
+   char *cmd;
+   char tmp_input[2048];
+
+   cmd=str_in;
+   tmp_input[0] = '\0';
 
    argNum = 0;
    argptr = 0;
@@ -8066,14 +7958,12 @@ FILE   *fin;
 	    break;
 	 case '\0':
 	 case '\n':
+            if ( tmp_input[0] == '\0' )
+               strcpy(tmp_input,input);
 	    if (fgets(input, 1023, fin) == NULL)
 	    {
-                if (debug)
-                {
-		   // fprintf(stderr, " syntax error in  %d\n", argPtrs[argNum]);
-		   fprintf(stderr, " syntax error in line %d, %d\n", line_num, argPtrs[argNum] - argArray);
-		   fprintf(stderr, " abort!\n");
-                }
+		fprintf(stderr, " unexpected end-of-line at %s\n", tmp_input);
+		fprintf(stderr, " abort!\n");
 		exit(0);
 	    }
 	    str_in = input;
@@ -8133,9 +8023,7 @@ FILE   *fin;
 
 
 void
-adjustment(source, ptr)
-char   *source;
-int    *ptr;
+adjustment(char *source, int *ptr)
 {
    int             loop,
                    index;
@@ -8167,9 +8055,7 @@ int    *ptr;
 
 /* collect all defined variables */
 void
-add_def_list(token, index, len)
-char    *token;
-int	*index, len;
+add_def_list(char *token, int *index, int len)
 {
 	int  n, insert, ptr;
 	
@@ -8223,9 +8109,7 @@ int	*index, len;
 
 /* check variables if it is a defined var then change it's name */
 void
-chk_def(source, token, ptr)
-char   *source, *token;
-int    *ptr;
+chk_def(char *source, char *token, int *ptr)
 {
 	int  exist;
 	struct routine *pp_def;
@@ -8248,9 +8132,7 @@ int    *ptr;
 
 
 void
-cleansource(filename, exit_flag)
-char  *filename;
-int   exit_flag;
+cleansource(char *filename, int exit_flag)
 {
    int   	newline, bslash;
    int   	comment, ptri, Include;
@@ -8353,7 +8235,7 @@ int   exit_flag;
 		s_token[ptri] = '\0';
 		if (Include)
 	    	{
-		    if(!IsCfile(s_token, 0))
+		    if(!IsCfile(s_token))
 			   fprintf(fout, "%s", s_token);
 	  	    ptri = 0;
 		    s_token[0] = '\0';
@@ -8378,8 +8260,7 @@ int   exit_flag;
 
 
 int
-Is_zero_arg(para)
-char  *para;
+Is_zero_arg(char *para)
 {
 	int	len, nlen, count;
 	char    *np;
@@ -8887,8 +8768,7 @@ G_simpulse()
 
 
 int
-query_device(num)
-int	num;
+query_device(int num)
 {
 	char   *par;
 	int	dev;
