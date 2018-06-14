@@ -17,6 +17,7 @@ public class AProps extends Properties {
   private NumberFormat printNumber = null;
   private ImageIcon logo;
   private static String rootDir = null;
+  private static String inFile = null;
   private String[] tableHeaders = null;
   private String billingMode = null;
   private String goesBillingMode = null;
@@ -139,15 +140,20 @@ public class AProps extends Properties {
       System.out.println("New logo is "+newLogo);
   }
 
+  public void setInFile(String in) {
+      inFile = in;
+  }
+
+  static public String getInFile() {
+      if (inFile == null)
+         inFile = getRootDir() + "/adm/accounting/acctLog.xml";
+      return(inFile);
+  }
+
   static public String getRootDir()  {
       if (rootDir == null) {
           rootDir = new String("./");
-          String os = System.getProperty("os.name");
-          if ( ( os.compareToIgnoreCase("SunOS") == 0) ||
-               ( os.compareToIgnoreCase("Linux") == 0) )
-              rootDir = System.getenv("vnmrsystem");
-          if (os.compareToIgnoreCase("Windows XP") == 0)
-              rootDir = System.getenv("vnmrsystem_win");
+          rootDir = System.getenv("vnmrsystem");
       }
       return(rootDir);
   }
