@@ -12,7 +12,7 @@ dist: trusty
 
 os:
 - linux
-- osx
+#- osx
 
 osx_image: xcode9.3
 
@@ -27,7 +27,7 @@ addons:
     - r-packages-trusty
     packages:
     - scons
-    - fort77
+    - gfortran
     - libglu1-mesa-dev
     - liblapack-dev
     - liblapacke-dev
@@ -46,6 +46,7 @@ before_install:
 - if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get install -y libxt-dev:i386 ; fi
 - if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then sudo apt-get install -y libx11-dev:i386 ; fi
 - java -version
+- gfortran --version
 
 install:
 - pwd
@@ -53,18 +54,21 @@ install:
 - git config --global core.pager ''
 - GITHUB_USER=$(dirname ${TRAVIS_REPO_SLUG})
 - git clone --depth 3 --branch master https://github.com/${GITHUB_USER}/ovjTools.git
-#- git clone --depth 3 --branch ${TRAVIS_BRANCH} https://github.com/${GITHUB_USER}/ovjTools.git
 
 script:
-- echo ${TRAVIS_BRANCH} ${TRAVIS_BUILD_DIR} ${TRAVIS_BUILD_ID} ${TRAVIS_BUILD_NUMBER} ${TRAVIS_COMMIT} ${TRAVIS_COMMIT_RANGE} ${TRAVIS_EVENT_TYPE} ${TRAVIS_JOB_ID} ${TRAVIS_JOB_NUMBER} ${TRAVIS_OS_NAME} ${TRAVIS_PULL_REQUEST} ${TRAVIS_PULL_REQUEST_BRANCH} ${TRAVIS_PULL_REQUEST_SHA} ${TRAVIS_REPO_SLUG} ${TRAVIS_SUDO} ${TRAVIS_TEST_RESULT} ${TRAVIS_TAG}
+- echo ${TRAVIS_BRANCH} ${TRAVIS_BUILD_DIR} ${TRAVIS_BUILD_ID} ${TRAVIS_BUILD_NUMBER} 
+  ${TRAVIS_COMMIT} ${TRAVIS_COMMIT_RANGE} ${TRAVIS_EVENT_TYPE} ${TRAVIS_JOB_ID} 
+  ${TRAVIS_JOB_NUMBER} ${TRAVIS_OS_NAME} ${TRAVIS_PULL_REQUEST} ${TRAVIS_PULL_REQUEST_BRANCH}
+  ${TRAVIS_PULL_REQUEST_SHA} ${TRAVIS_REPO_SLUG} ${TRAVIS_SUDO} ${TRAVIS_TEST_RESULT} ${TRAVIS_TAG}
 - export OVJ_BUILDDIR=$(pwd)
 - export OVJ_ROOT=${OVJ_BUILDDIR}/OpenVnmrJ
 - export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
 - cd ${OVJ_ROOT}
 - cp -a ${OVJ_TOOLS}/bin ${OVJ_BUILDDIR}
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cd ${OVJ_BUILDDIR}/bin && ${OVJ_ROOT}/scripts/build_release.sh --inova no build package; fi
-- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then cd ${OVJ_BUILDDIR}/bin && ${OVJ_ROOT}/scripts/build_release.sh build package; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then ${OVJ_ROOT}/scripts/build_release.sh --inova no build package; fi
+- if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then ${OVJ_ROOT}/scripts/build_release.sh build package; fi
 - ${OVJ_TOOLS}/bin/whatsin $(ls -t ${OVJ_BUILDDIR}/logs/build* | head -1) | tail -60
+- ls -l ${OVJ_BUILDDIR}/dvdimage*
 
 after_failure:
 - cd ${OVJ_ROOT}
@@ -76,10 +80,11 @@ before_deploy:
 - cd ${OVJ_BUILDDIR} && tar czf ${RELEASE_PKG_FILE} dvdimage*
 
 deploy:
-  skip_cleanup: true
   provider: releases
   api_key:
-    secure: moZsGzDeQkqsEROCzN0HE+Obmt813bNt9nOX1jNtuJP3giz31w8xBwyu2sf6nea7tN5IopUlWIg5AF9UhvcHLyXYEZRwsvyZNmkn9s7fg8CFtRZekS5fU8+UbNMay2qgXeSe7LbwpQYYhibcG685BPs4ifAgey40JknUCXnTeXeSOrkEZ/zbSNwzpHKFr+MXolhS0j05izhNlF6Haf2SE/BJzyZOdxpiC6JaXhedzMyaHRBBsKS4ZHl1ByVtpAO3L5n7D8q2DKsK7fvrKWNGCpXezzdjxAIwT9niM/DJ0nDMa2rUBBP5+GbC18WKn30q7pRKgtbU6pBig99qFp/MomoOcZTp/MFQld/fX66YQCeU8FIGQdKs9kV17NOnVW4pf6OBL5FD17qed5nS72xWdAkuT+j4e2bDXWjRCqt5MVz3w62ZrJvTeC5LS4buCINWcsT8AY9lMtF39NHtn54Yx6at+YFrOFafLuJS80X+yJGsPsLgKOjow+ImYppZ9EltEeWj1sy61ny0lHPFggU6rp+dGV5Kc6bQV+WzT8Lhb/4gZ5xgSxFLrMC+7VxK2fbtggO/dW3xeYkGMSUR6/eZhB6n9mwE9OUw9yNUT/7NKE970obwHaWhb/AnobAO4H6FjBMJQOxFFs/TNJjaFg1stEhJPlcVA/QsRQoNl0K11Ig=
+    secure: cejxwSd/ur2kP/Y0aJOFuxn9auvac/qY5ElOaryrplupnkfBNdgYTunqH8FL9/ZB11PuRAByi3uJaxvpSMNKYcf8x9Waf4fYJ0Vat7bv2EBKEcFY1Zqt5yetYrccxYPuJ/xXESWRqBH3usTqGaj/AW/RPHrjvht1Oz6/iCc1bMIgnlCbVaJcT4dTegGZ53xz2spGpPwaOs9uE+MKA3r1eJSuVMVx/QQce2QuaGsTI81IYHFeMYtbvgHlcetu/p/AIzFDHqz3oVerZlXCdLBRDDQvsu45I5cPAnlzXS78hFHTbxe8wdnk8XdQ3GbB4KoclrFJRKKYNyFzWffnvnLYh4FYN/ILdvpB+I19O94AA5C91LwjKQVLeW+rJ8mCap9xeoesPGEfwEptyRpGaDbLnt3ZLUo1sZDilpZtms9l2lpn4H4cYdYLKv9j36JEqDAO8/IZByRBXZD3RYmgh4HeXRqCS1KI/6cnfMrb9P/xFNEMzzhwD+oCSfUYm6WvBSv3e2nittSycc4x8GvX2Y3kBTebPQTU53TkdApbMhVW1QT7rjyz3r40Q0HjiLUumXryRcJ0ZfAqat4O8zoZJmm7QQ+/ndizmdE2YMRnW1W7GvZk92THExnlX9UoqJ9c4CmOB95gj07zkeqqGIJIy8vt8fRZvDObfe30Dccz8Y4wqHg=
   file: "${RELEASE_PKG_FILE}"
+  skip_cleanup: true
+  overwrite: true
   on:
     tags: true
