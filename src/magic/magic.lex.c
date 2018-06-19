@@ -94,6 +94,7 @@ extern struct yysvf yysvec[], *yybgin;
 # line 3 "magic.lex.l"
 /*
 */
+#pragma GCC diagnostic ignored "-Wmissing-braces"
 
 # line 10 "magic.lex.l"
 /*-------------------------------------------------------------------------
@@ -121,6 +122,7 @@ extern struct yysvf yysvec[], *yybgin;
 
 extern int input(void);
 extern void unput(int);
+extern void output(int);
 
 #ifdef LINUX
 #ifndef YYLMAX
@@ -168,21 +170,16 @@ extern int      Lflag;
 extern YYSTYPE  yylval;
 
 # define YYNEWLINE 10
-yylex(){
-int nstr; extern int yyprevious;
+int yylex(){
+int nstr;
 #ifdef LINUX
   if ( ! yyin)
     yyin = stdin;
   if ( ! yyout)
     yyout = stdout;
 #endif
-#ifdef __cplusplus
-/* to avoid CC and lint complaining yyfussy not being used ...*/
-static int __lex_hack = 0;
-if (__lex_hack) goto yyfussy;
-#endif
 while((nstr = yylook()) >= 0)
-yyfussy: switch(nstr){
+ switch(nstr){
 case 0:
 if(yywrap()) return(0); break;
 case 1:
@@ -2050,8 +2047,6 @@ char yyextra[] = {
 /*	THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T	*/
 /*	The copyright notice above does not evidence any   	*/
 /*	actual or intended publication of such source code.	*/
-
-#pragma ident	"@(#)ncform	6.12	97/12/08 SMI"
 
 int yylineno =1;
 # define YYU(x) x
