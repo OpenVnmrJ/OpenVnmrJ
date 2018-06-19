@@ -15,8 +15,6 @@
 
 #define SIZEOF_ARRAY( array )	( sizeof( array ) / sizeof( array[ 0 ] ) )
 
-static int	signal_stuff_setup = 0;
-
 static struct {
 	int			signal;
 	struct sigaction	oldaction;

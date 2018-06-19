@@ -75,10 +75,12 @@ typedef int socklen_t;
 #include "errLogLib.h"
 #include "sockets.h"
 
+#ifndef VNMRJ
 #ifndef NOASYNC
 extern int setFdAsync( int fd, void *clientData, void (*callback)() );
 extern int setFdNonAsync( int fd );
 extern int setFdDirectAsync( int fd, void *clientData, void (*callback)() );
+#endif
 #endif
 
 
@@ -573,9 +575,9 @@ connectSocket( Socket *pSocket, char *hostName, int portAddr )
 /* char *hostName  -  name of (perhaps) remote host */
 /* int portAddr    -  port address of remote socket */
 {
-	int			 result;
 	struct hostent		*hp;
 #if  !defined(__INTERIX) && !defined(MACOS)
+	int			 result;
 	struct hostent		hpstruct;
         int    hp_errno;
         char   hpIPBuffer[256];
@@ -1208,6 +1210,7 @@ int flushSocket( Socket *pSocket)
    return( rcount );
 }
 
+#ifndef VNMRJ
 #ifndef NOASYNC
 
 int
@@ -1273,6 +1276,7 @@ registerSocketDirectAsync( Socket *pSocket, void (*callback)() )
 
 	return( ival );
 }
+#endif
 #endif
 
 #ifdef FT3DIO

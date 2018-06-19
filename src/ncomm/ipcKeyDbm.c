@@ -210,8 +210,8 @@ int ipcKeyGet(IPC_KEY_DBM_ID dbmId, char* idstr,IPC_KEY_DBM_DATA* entry)
     if ( strlen(idstr) > (size_t) IPCKEY_MAXSTR_LEN )
     {
        errLogRet(ErrLogOp,debugInfo,
-        "ipcKeyGet: Warning, search string '%s' (%d chars) is too long, maximum is %d\n",
-	 idstr,strlen(idstr),IPCKEY_MAXSTR_LEN);
+        "ipcKeyGet: Warning, search string '%s' is too long, maximum is %d\n",
+	 idstr,IPCKEY_MAXSTR_LEN);
        errLogRet(ErrLogOp,debugInfo, "ipcKeyGet: The string will be truncated for search\n");
     }
     /* Now search List */
@@ -279,8 +279,8 @@ int ipcKeySet(IPC_KEY_DBM_ID dbmId, char* idstr, int maxlen, int pid,int keyinde
     if ( strlen(idstr) > (size_t) IPCKEY_MAXSTR_LEN )
     {
        errLogRet(ErrLogOp,debugInfo,
-        "ipcKeySet: Warning, key string '%s' (%d chars) is too long, maximum is %d\n",
-	 idstr,strlen(idstr),IPCKEY_MAXSTR_LEN);
+        "ipcKeySet: Warning, key string '%s' is too long, maximum is %d\n",
+	 idstr,IPCKEY_MAXSTR_LEN);
        errLogRet(ErrLogOp,debugInfo, "ipcKeySet: The string will be truncated for search\n");
     }
     /* Now search List for Non-Active Entry with idstr */
@@ -337,8 +337,8 @@ int ipcKeySet(IPC_KEY_DBM_ID dbmId, char* idstr, int maxlen, int pid,int keyinde
           if ( strlen(filename) > (size_t) IPCKEY_MAXSTR_LEN )
           {
              errLogRet(ErrLogOp,debugInfo,
-                 "ipcKeySet: Warning, filepath string '%s' (%d chars) is too long, maximum is %d\n",
-	      filename,strlen(filename),IPCKEY_MAXSTR_LEN);
+                 "ipcKeySet: Warning, filepath string '%s' is too long, maximum is %d\n",
+	      filename,IPCKEY_MAXSTR_LEN);
              errLogRet(ErrLogOp,debugInfo, "ipcKeySet: The string will be truncated\n");
           }
            strncpy(key[free].path,filename,sizeof(k.path));
