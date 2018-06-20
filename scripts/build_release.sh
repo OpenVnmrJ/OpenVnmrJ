@@ -43,35 +43,38 @@ numcpus() {
 : ${OVJ_VERBOSE=2}
 
 # remember how we were called
-CMDLINE="$0 $@"
+CMDLINE="$0 $*"
 SCRIPT=$(basename "$0")
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 xUNAMEs=x$(uname -s)
+LOGFILE=
 
 usage() {
-    if [ -t 3 ]; then echo "$SCRIPT failed, see log" >&3 ; fi
+    if [ -t 3 ]; then echo "$SCRIPT failed, see log '$LOGFILE'" >&3 ; fi
     cat <<EOF
 
 Either of the environment variables OVJ_TOOLS or ovjBuildDir MUST be set.
 
 usage:
- ${SCRIPT} [checkout] [build] [package] [options...]
+  ${SCRIPT} [checkout] [build] [package] [options...]
+
 where [options...] are:
-      -d|--bindir dir                - target directory for build [\$ovjBuildDir]
-      -u|--gitname github_username   - github account to clone from [${OVJ_DEVELOPER}]
-      -b|--branch branch_name        - branch to clone, [${OVJ_GITBRANCH}]
-      -g|--giturl url                - url for OpenVnmrJ git repository, overrides -u/-b
-                                       [${OVJ_GITURL}]
-      --tbranch branch_name          - branch to clone for ovjTools, ie [${OVJT_GITBRANCH}]
-      -t|--tgiturl url               - url for ovjTools git repository, overrides -u/-b
-                                       [${OVJT_GITURL}]
-      --gitdepth num                 - argument for --depth in git clone [${OVJ_GITDEPTH}]
-      -r|--srcreset                  - reset the OpenVnmr/src directory before compiling
-      --ddr yes|no                   - enable Direct-Drive (VnmrS/DD2/ProPulse) DVD build
-                                       [${OVJ_PACK_DDR}]
-      --inova yes|no                 - enable Mercury/Inova DVD build [${OVJ_PACK_MINOVA}]
-      -s scons_options               - flags to pass to scons [${OVJ_SCONSFLAGS}]
-      -v|--verbose                   - be more verbose (can add multiple times)
-      -q|--quiet                     - be more quiet   (can add multiple times)
+  -d|--bindir dir               - target directory for build [\$ovjBuildDir]
+  -u|--gitname github_username  - github account to clone from [${OVJ_DEVELOPER}]
+  -b|--branch branch_name       - branch to clone, [${OVJ_GITBRANCH}]
+  -g|--giturl url               - url for OpenVnmrJ git repository, overrides -u/-b
+                                  [${OVJ_GITURL}]
+  --tbranch branch_name         - branch to clone for ovjTools, ie [${OVJT_GITBRANCH}]
+  -t|--tgiturl url              - url for ovjTools git repository, overrides -u/-b
+                                  [${OVJT_GITURL}]
+  --gitdepth num                - argument for --depth in git clone [${OVJ_GITDEPTH}]
+  -r|--srcreset                 - reset the OpenVnmr/src directory before compiling
+  --ddr yes|no                  - enable Direct-Drive (VnmrS/DD2/ProPulse) DVD build
+                                  [${OVJ_PACK_DDR}]
+  --inova yes|no                - enable Mercury/Inova DVD build [${OVJ_PACK_MINOVA}]
+  -s scons_options              - flags to pass to scons [${OVJ_SCONSFLAGS}]
+  -v|--verbose                  - be more verbose (can add multiple times)
+  -q|--quiet                    - be more quiet   (can add multiple times)
 
 EOF
     exit 1
@@ -98,8 +101,8 @@ while [ $# -gt 0 ]; do
         --ddr)                  OVJ_PACK_DDR="$2"; shift      ;;
         --inova)                OVJ_PACK_MINOVA="$2"; shift   ;;
         -h|--help)              usage                         ;;
-        -v|--verbose)           OVJ_VERBOSE=$(( ${OVJ_VERBOSE} + 1 )) ;;
-        -q|--quiet)             OVJ_VERBOSE=$(( ${OVJ_VERBOSE} - 1 )) ;;
+        -v|--verbose)           OVJ_VERBOSE=$(( OVJ_VERBOSE + 1 )) ;;
+        -q|--quiet)             OVJ_VERBOSE=$(( OVJ_VERBOSE - 1 )) ;;
         *)
             # unknown option
             echo "unrecognized arg: $key"
@@ -119,7 +122,7 @@ done
 if test -t 1; then
     # see if it supports colors...
     ncolors=$(tput colors)
-    if test -n "$ncolors" && test $ncolors -ge 8; then
+    if test -n "$ncolors" && test "$ncolors" -ge 8; then
         bold="$(tput bold)"
         underline="$(tput smul)"
         standout="$(tput smso)"
@@ -141,14 +144,14 @@ log_msg () {
     local level=$1
     shift
     #local datestring=$(date +"%Y-%m-%d %H:%M:%S")
-    local message="$@"
+    local message="$*"
     echo "${LEVELNAMES[level]}:$message"
-    if [ ${OVJ_VERBOSE} -ge $level -a -t 3 ]; then
+    if [ ${OVJ_VERBOSE} -ge "$level" ] && [ -t 3 ]; then
         echo "${LEVELCOLOR[level]}${LEVELNAMES[level]}$normal:$message" >&3
     fi
 }
 log_error () {
-    log_msg 0 "$@"
+    log_msg 0 "$*"
 }
 onerror() {
     log_error "$SCRIPT: Error on line ${BASH_LINENO[0]}, exiting."
@@ -166,13 +169,13 @@ log_debug () {
 }
 log_cmd () {
     # log it
-    log_info "\$ $@"
+    log_info "\$ $*"
     # execute it
     eval "$@"
 }
 cmdspin () {
-    log_info $(date)
-    log_info "\$ $@"
+    log_info "Cmd started $(date)"
+    log_info "\$ $*"
     # spinner
     local sp='/-\|'
     if [ -t 3 ]; then printf ' ' >&3 ; fi
@@ -191,31 +194,32 @@ cmdspin () {
     kill $SPINNER_PID
     trap " " EXIT
     if [ -t 3 ]; then echo "" >&3 ; fi
-    log_info $(date)
+    log_info "Cmd finished $(date), returned: $CMDRET"
     return $CMDRET
 }
 # call this before calling any log commands
 setup_logfile () {
-    local LOGFILE="$1" # typically $(basename "$0")
+    LOGFILE="$1"       # typically $(basename "$0")
     local LOGDIR="$2"  # directory for log files, will try to mkdir -p if non-existant
-    local date="$(date +%F_%T)"
+    local date
+    date="$(date +%F_%T)"
     if [ ! -d "$LOGDIR" ]; then
         echo "creating log directory '$LOGDIR'"
-        mkdir -p "$LOGDIR"
+        mkdir -p "$LOGDIR" || return $?
     fi
     if [ ! -d "$LOGDIR" ]; then
         echo "${red}Unable to create log directory '$LOGDIR':${normal}"
         echo "${red}  log messages will be printed to the terminal.${normal}"
         return
     fi
-    LOGFILE="${LOGDIR}/build.$date"
+    LOGFILE="${LOGDIR}/build.${date}.txt"
     exec 3>&1 4>&2
     trap 'exec 1>&3 2>&4' 0 1 2 3
     if [ ${OVJ_VERBOSE} -gt 2 ]; then
         # at VERBOSE >= DEBUG level, also send cmd output to terminal
-        exec 1> >(tee -a ${LOGFILE}) 2>&1
+        exec 1> >(tee -a "${LOGFILE}") 2>&1
     else
-        exec 1> $LOGFILE 2>&1
+        exec 1> "$LOGFILE" 2>&1
     fi
     # how this script was called
     log_debug "$CMDLINE"
@@ -232,22 +236,22 @@ do_checkout () {
     # make directory if necessary, then cd there
     if [ ! -d "${OVJ_BUILDDIR}" ]; then
         log_info "checkout: build directory ${OVJ_BUILDDIR} doesnt exist, creating..."
-        log_cmd mkdir -p "${OVJ_BUILDDIR}"
+        log_cmd mkdir -p "${OVJ_BUILDDIR}" || return $?
     fi
-    log_cmd cd "${OVJ_BUILDDIR}"
+    log_cmd cd "${OVJ_BUILDDIR}" || return $?
 
     # check if the OpenVnmrJ directory already exists in ${OVJ_BUILDDIR}
     if [ -d "${OVJ_BUILDDIR}/OpenVnmrJ" ]; then
         log_info "checkout: OpenVnmrJ source directory: ${OVJ_BUILDDIR}/OpenVnmrJ already exists."
         log_info "checkout: checking out requested branch '${OVJ_GITBRANCH}'"
-        log_cmd cd "${OVJ_BUILDDIR}/OpenVnmrJ"
-        log_cmd git checkout "${OVJ_GITBRANCH}"
+        log_cmd cd "${OVJ_BUILDDIR}/OpenVnmrJ" || return $?
+        log_cmd git checkout "${OVJ_GITBRANCH}" || return $?
         log_cmd cd "${OVJ_BUILDDIR}"
         # do something, like delete it?
         #log_error "checkout: source directory ${OVJ_BUILDDIR}/OpenVnmrJ already exists"
     else
         # clone the requested git repo 
-        log_cmd git clone --branch ${OVJ_GITBRANCH} --depth ${OVJ_GITDEPTH} ${OVJ_GITURL}
+        log_cmd git clone --branch "${OVJ_GITBRANCH}" --depth "${OVJ_GITDEPTH}" "${OVJ_GITURL}" || return $?
     fi
 
     # check that the thing actually checked out an OpenVnmrJ directory
@@ -258,11 +262,11 @@ do_checkout () {
 
     # clone the requested git repo -- if ovjTools doesnt exist, clone it too
     if [ ! -d "${OVJ_BUILDDIR}/ovjTools" ]; then
-        log_cmd git clone --branch ${OVJT_GITBRANCH} --depth ${OVJT_GITDEPTH} ${OVJT_GITURL}
+        log_cmd git clone --branch "${OVJT_GITBRANCH}" --depth "${OVJT_GITDEPTH}" "${OVJT_GITURL}" || return $?
     fi
 
     # get the git tag for ovjTools
-    log_cmd cd "${OVJ_BUILDDIR}/ovjTools/"
+    log_cmd cd "${OVJ_BUILDDIR}/ovjTools/" || return $?
     log_info "building with ovjTools: $(git describe --exact-match --tags 2>/dev/null || git log -n1 --pretty='%h')"
 
     # ok done
@@ -281,20 +285,27 @@ do_build () {
     fi
 
     # go where the action is
-    log_cmd cd "${OVJ_BUILDDIR}/OpenVnmrJ/"
+    log_cmd cd "${OVJ_BUILDDIR}/OpenVnmrJ/" || return $?
 
     # if src/ reset requested, reset it
-    if [ ${OVJ_SRCRESET} = yes ]; then
+    if [ "${OVJ_SRCRESET}" = yes ]; then
         log_info "build: Removing: ===>>> dvdimage* options vnmr console <<<==="
+        log_cmd cd "${OVJ_BUILDDIR}/" || return $?
         log_cmd rm -rf dvdimage* options vnmr console
 
         log_warn "build: wiping OpenVnmrJ/src directory to fresh state"
+        log_cmd cd "${OVJ_BUILDDIR}/OpenVnmrJ/" || return $?
         log_cmd rm -rf src
-        log_cmd git checkout ./src
+        log_cmd git checkout ./src || return $?
     fi
 
     # run scons
-    cmdspin time scons ${OVJ_SCONSFLAGS} || return $?
+    if ! cmdspin scons ${OVJ_SCONSFLAGS} ; then
+        # scons failed, dump a little something useful
+        fail=$?
+        if [ -t 3 ]; then tail -20 "${LOGFILE}" >&3 ; fi
+        return $fail
+    fi
     log_info "build done."
 }
 
@@ -319,7 +330,8 @@ do_package () {
     local dvdBuildName1=${OUTPUT_PREFIX}_${OVJ_VERSION_STR}  # used in ovjmacout.sh,ovjddrout.sh
     local dvdBuildName2=${OUTPUT_PREFIX}_${OVJ_VERSION_STR}  # used in ovjmiout.sh
     local ovjAppName=OpenVnmrJ_${OVJ_VERSION_STR}.app
-    local shortDate=$(date +%F)
+    #local shortDate
+    #shortDate=$(date +%F)
 
     if [ ! -x "${PACK_SCRIPT_SRC}" ]; then
         log_error "package: invalid packaging script requeted: '${PACK_SCRIPT_SRC}'"
@@ -327,19 +339,19 @@ do_package () {
     fi
 
     # copy and run the packing script
-    log_cmd mkdir -p ${OVJ_BUILDDIR}/bin/
-    log_cmd cd ${OVJ_BUILDDIR}/bin/
-    log_cmd cp ${PACK_SCRIPT_SRC} ./
+    log_cmd mkdir -p "${OVJ_BUILDDIR}/bin/"
+    log_cmd cd "${OVJ_BUILDDIR}/bin/"
+    log_cmd cp "${PACK_SCRIPT_SRC}" ./
     #log_cmd make ${PACK_SCRIPT} # what does this do?
 
-    # export vars used by the ovj???out.sh scripts
+    # export vars used by the ovj???out.sh ($PACK_SCRIPT) scripts
     export workspacedir dvdBuildName1 dvdBuildName2 ovjAppName OVJ_TOOLS
-    cmdspin ./${PACK_SCRIPT} || return $?
+    cmdspin "./${PACK_SCRIPT}" || return $?
 
     # make a second copy? make an iso? todo...
-    dvdCopyName1=OVJ_$shortDate
-    dvdCopyName2=OVJ_MI_$shortDate
-    log_info "package [${PACK_SCRIPT} -> ${OVJ_VERSION_STR}] done."
+    #dvdCopyName1=OVJ_$shortDate
+    #dvdCopyName2=OVJ_MI_$shortDate
+    log_info "package [${PACK_SCRIPT} -> ${dvdBuildName1}] done."
 }
 
 #######################################################################
@@ -350,26 +362,41 @@ do_package () {
 #
 # check validity of arguments
 #
-# create OVJ_BUILDDIR if it's set and doesn't exist
-if [ x"${OVJ_BUILDDIR}" = x ]; then
-    OVJ_BUILDDIR=$(dirname ${OVJ_TOOLS})
+
+# it's ok to run this command without setting either OVJ_TOOLS or
+# OVJ_BUILDDIR is from OpenVnmrJ/ or ovjTools/, but we might guess
+# what you really want...
+if [ x"${OVJ_BUILDDIR}" = x ] && [ x"${OVJ_TOOLS}" = x ]; then
+    if [ -d OpenVnmrJ ] && [ -d ovjTools ] ; then
+        OVJ_BUILDDIR="$(pwd)"
+    else
+        OVJ_BUILDDIR="$(dirname "$(dirname "$SCRIPTDIR")")"
+    fi
+    OVJ_TOOLS="${OVJ_BUILDDIR}/ovjTools"
+    echo "${yellow}OVJ_BUILDDIR=${OVJ_BUILDDIR}${normal}"
+    echo "${yellow}OVJ_TOOLS=${OVJ_TOOLS}${normal}"
+elif [ -d "${OVJ_BUILDDIR}" ] && [ -d "${OVJ_TOOLS}" ]; then
+    echo "OVJ_BUILDDIR=${OVJ_BUILDDIR}"
+    echo "OVJ_TOOLS=${OVJ_TOOLS}"
+elif [ x"${OVJ_BUILDDIR}" = x ] && [ -d "${OVJ_TOOLS}" ]; then
+    # create OVJ_BUILDDIR if it's set and doesn't exist
+    OVJ_BUILDDIR=$(dirname "${OVJ_TOOLS}")
+elif [ -d "${OVJ_BUILDDIR}" ] && [ x"${OVJ_TOOLS}" = x ]; then
+    echo "OVJ_TOOLS not set, assuming OVJ_TOOLS=[${OVJ_TOOLS}]"
+    OVJ_TOOLS="${OVJ_BUILDDIR}/ovjTools"
 fi
+
 if [ ! -d "${OVJ_BUILDDIR}" ]; then
-    log_warn "OVJ_BUILDDIR [${OVJ_BUILDDIR}] doesn't exist, creating..."
+    echo "OVJ_BUILDDIR [${OVJ_BUILDDIR}] doesn't exist, creating..."
     echo mkdir -p "OVJ_BUILDDIR"
 fi
 
-if [ x"${OVJ_TOOLS}" != x ]; then
-    # make sure OVJ_TOOLS is a subdir of OVJ_BUILDDIR
-    if [ "${OVJ_BUILDDIR}/ovjTools" != "${OVJ_TOOLS}" ]; then
-        log_error "\$OVJ_TOOLS must be a direct subdir of \$OVJ_BUILDDIR"
-        exit 1
-    fi
-else
-    # if OVJ_TOOLS isnt' set, but OVJ_BUILDDIR is, then set OVJ_TOOLS to ${OVJ_BUILDDIR}/ovjTools
-    OVJ_TOOLS="${OVJ_BUILDDIR}/ovjTools"
-    log_warn "OVJ_TOOLS not set, assuming [${OVJ_TOOLS}]"
+if [ "${OVJ_BUILDDIR}/ovjTools" != "${OVJ_TOOLS}" ]; then
+    echo "\$OVJ_TOOLS must be a direct subdir of \$OVJ_BUILDDIR"
+    exit 1
 fi
+
+export OVJ_TOOLS
 
 #
 # setup log file
@@ -377,7 +404,7 @@ fi
 setup_logfile "$SCRIPT" "${OVJ_BUILDDIR}/logs"
 
 # disallow Mercury/Inova build
-if [ $xUNAMEs = "xDarwin" ]; then
+if [ "$xUNAMEs" = "xDarwin" ]; then
     log_warn todo
 fi
 
@@ -399,7 +426,8 @@ fi
 
 # make sure the checkout is ok
 if [ ! -f "${OVJ_TOOLS}/OSX.md" ]; then
-    log_error 'ERROR: directory configuration not correct, missing OSX.md from "${OVJ_TOOLS}/"'
+    log_warn "variable OVJ_TOOLS set to '${OVJ_TOOLS}'"
+    log_error 'check environment: missing OSX.md from "${OVJ_TOOLS}/"'
     usage
 fi
 
@@ -409,7 +437,7 @@ fi
 if [ "${OVJ_DO_PACKAGE}" = yes ]; then
     if [ "${OVJ_PACK_DDR}" = yes ]; then
         log_info "Packaging DDR/DDR2"
-        if [ $xUNAMEs = "xDarwin" ]; then
+        if [ "$xUNAMEs" = "xDarwin" ]; then
             do_package ovjmacout.sh dvdimageOVJ
         else
             do_package ovjddrout.sh dvdimageOVJ
