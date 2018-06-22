@@ -1,0 +1,103 @@
+
+vnmr_accounting  -   Shell script to start the accounting package
+doAcct           -   Sample shell script for running accounting in a
+                     non-interactive way.
+
+The vnmr_accounting script calls the OpenVnmrJ accounting package.
+See the VnmrJ Administration Guide for details on setting up the
+accounting for login accounting and / or data acquisition accounting.
+
+This manual documents new arguments that have been introduced to allow
+one to run the accounting package in a non-interactive way. It also
+documents a sample doAcct script for routine accounting. The doAcct
+script might be called from a "cron" job once a month to do the accounting.
+
+Several new arguments are supported by vnmr_accounting and the accounting
+program.  The arguments are all case-insensitive.
+
+  -saveDir <dirName>  Specify the directory into which the monthly
+                      acctLog.xml, CSV and summary files will be put.
+                      The directory will be created if it does not exist.
+
+  -cut                Cut records from /vnmr/adm/accounting/acctLog.xml.
+                      If a -saveDir argument is present, it will copy the
+                      file before cutting the records.
+                      If an -endDate  is specified, any records older than
+                      that date will be cut. The default is to use the
+                      "today" date.
+ 
+  -startDate <date>   Can be used optionally to select a beginning date for
+                      operations that require a range of dates. It defaults
+                      to Jan 1 2001, which should be older that all records
+                      in the acctLog.xml file. The format is "mmm dd yyyy"
+                      or "today". For example, "Oct 14 2014" or
+                      "Feb 03 2018" or "today"
+
+  -endDate  <date>    Can be used optionally to select the end date for
+                      operations that require a range of dates. It defaults
+                      to the "today" date. The format is the same as for
+                      the -startDate argument.
+
+  -in  <fileName>     This will use an acctLog.xml file other than the one
+                      in /vnmr/adm/accounting. This can be used to select
+                      a previously saved acctLog.xml.
+
+  -summary            Generate a summary of the month's account as a text file.
+                      This will be similar to the view one sees when one clicks
+                      the "Display all summary" button. It will be called
+                      summary.txt in the directory specified by the -saveDir
+                      argument.  See doAcct below for details on how this
+                      text file may be converted into a png file.
+
+  -summaryCsv         Generate the CSV file one gets when one clicks the
+                      "Display all summary" followed by clicking the
+                      "Save for Excel"  button. It will be called summary.csv
+                      in the directory specified by the -saveDir argument.
+
+  -acctCsv            Generate a CSV file one gets when one clicks the
+                      "Display this invoice"  followed by clicking
+                      "Save for Excel"  for each operator.  The files will be
+                      named <operator>.csv in the directory specified by
+                      the -saveDir argument.  
+
+If the -saveDir argument is not specified, then if the "cut" operation is
+performed, the acctLog.xml will not be saved prior to cutting the records.
+If the -saveDir argument is not specified, then if the "summary", "summaryCsv",
+or "acctCsv" operations are performed, the resulting files will be saved
+in /vnmr/adm/accounting.
+
+If any argument other than the "-in" argument is specified, the accounting
+program will run in a non-interactive background mode. If only the "-in"
+argument is specified, the accounting interface will display the results
+for the specified acctLog.xml file.
+
+
+doAcct  - sample script to generate accounting records.
+
+The doAcct script might be called once a month by a cron job.  It collects
+the accounting records in the vnmrsys directory of the OpenVnmrJ admin
+account (vnmr1). It sets the saveDir argument to
+~/vnmrsys/accounting/yyyy_mm_dd where yyyy_mm_dd represents the day the
+doAcct script was called.
+
+The first step is to copy the current /vnmr/adm/accounting/acctLog.xml file
+to the "saveDir" directory.  The script will then "cut" all records from
+the /vnmr/adm/accounting/acctLog.xml file that are older than the current day.
+The cutting step is to prepare the acctLog.xml for the next month's accounting.
+It is also an accounting maintenance step to prevent the acctLog.xml file
+from growing to a very large size.
+
+The next step is to generate the summary, summaryCsv, and acctCsv files from
+the saved acctLog.xml file. These files are also saved in the "saveDir"
+directory.
+
+The final step in to convert the summary.txt file into a complete record as
+a png file. The summary.txt file only contains the raw information. This is
+combined with the files acctHeader.ps and acctTail.ps in /vnmr/adm/accounting
+to generate a PostScript file. The convert program then converts the
+PostScript file into a png file.
+
+Examples of the calls are:
+
+vnmr_accounting -saveDir $HOME/vnmrsys/accounting/2018_07_01 -cut
+vnmr_accounting -saveDir $HOME/vnmrsys/accounting/2018_07_01 -in $HOME/vnmrsys/accounting/2018_07_01/acctLog.xml -summary -summaryCsv -acctCsv

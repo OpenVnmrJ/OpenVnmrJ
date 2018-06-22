@@ -31,6 +31,7 @@
 * 									 *
 *************************************************************************/
 
+#include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
@@ -1064,13 +1065,13 @@ file_info_struct *file_info;
       if (file_info->spectrometer == AM_SPEC)  {
         if ((file_info->word_size == FILE_INFO_UNSET) ||
           (file_info->byte_order == FILE_INFO_UNSET))  {
-	  printf("parse_args: Error - need to specify \"-s\" and \"-o\" arguments with \"-tdata\"\n",argv[i]);
+	  printf("parse_args: Error - need to specify \"-s\" and \"-o\" arguments with \"-tdata\"\n");
 	  return(ERROR);
 	  }
 	}
       else  {
         if (file_info->byte_order == FILE_INFO_UNSET)  {
-	  printf("parse_args: Error - need to specify \"-o\" arguments with \"-tdata\"\n",argv[i]);
+	  printf("parse_args: Error - need to specify \"-o\" arguments with \"-tdata\"\n");
 	  return(ERROR);
 	  }
 	}
@@ -1290,7 +1291,7 @@ FILE *ifp, *ofp;
 {
     param_struct params;
     char c_data[9], *char_ptr, str[133];
-    int done, i_data, dummy, *i_ptr, num_p, i;
+    int done, i_data, dummy, num_p, i;
     float f_data;
     double d_data;
 
@@ -1538,9 +1539,9 @@ int  read_amx_header(file_info,data)
 file_info_struct *file_info;
 data_struct *data;
 {
-   FILE		*fopen(), *f1,*f2,*f3;
-   int		i, done, lb_count, ch_count, bin_file;
-   char		ch,str[MAXPATHL],filename[MAXPATHL];
+   FILE		*f1,*f2,*f3;
+   int		done, lb_count, ch_count, bin_file;
+   char		ch,filename[MAXPATHL];
 
 
     bin_file = FALSE;
@@ -1819,24 +1820,26 @@ data_struct *data;
       return(ERROR);
    }
 
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
      fprintf(f2, "datatype  = 3\n");
    else
      fprintf(f2, "datatype  = 1\n");
    fprintf(f2, "system    = bruker\n");
-   if (file_info->twod)  {
+   if ( (file_info->twod) && (data->ni > 1) )
+   {
      fprintf(f2, "dim1      = 2\n");
      fprintf(f2, "dim2      = %d\n", data->ni/2);
-     }
-   else  {
+   }
+   else
+   {
      fprintf(f2, "dim1      = 1\n");
      fprintf(f2, "dim2      = 1\n");
-     }
+   }
    fprintf(f2, "dim3      = 1\n");
    fprintf(f2, "np        = %d\n", data->np);
    fprintf(f2, "sw        = %.7f\n", data->sw);
    fprintf(f2, "sfrq      = %.7f\n", data->sfrq);
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
      fprintf(f2, "sw1       = %.7f \n", data->sw1);
    fprintf(f2, "dfrq      = %.7f\n", data->dfrq);
    fprintf(f2, "bytes     = 4\n");
@@ -1845,7 +1848,7 @@ data_struct *data;
      fprintf(f2, "acqtyp    = 1\n");
    else
      fprintf(f2, "acqtyp    = 0\n");
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
      fprintf(f2, "abstype   = 1\n");
 
    fprintf(f2, "#TEXT:\n");
@@ -1872,7 +1875,7 @@ data_struct *data;
    else
      fprintf(f2, "proc      = ft\n");
 
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
    {
       fprintf(f2, "ni        = %d\n", data->ni/2);
       fprintf(f2, "sw1       = %.7f\n", data->sw1);
@@ -1908,7 +1911,7 @@ data_struct *data;
    fprintf(f2, "wp        = %.7f\n", data->sw);
    fprintf(f2, "sp        = %f\n", 0.0);
 
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
    {
       fprintf(f2, "proc1     = rft\n");
       fprintf(f2, "fn1       = n\n");
@@ -1966,8 +1969,7 @@ data_struct *data;
 {
    char		dirname[MAXPATHL],
 		buf[(HDR_SIZE+HDR_SHIFT)*X32_SIZE];
-   FILE		*fopen(),
-		*f1;
+   FILE		*f1;
    int		i, dummy;
    char		*char_ptr;
    struct stat	unix_fab; /* unix_fab.st_size is file size */
@@ -2180,15 +2182,16 @@ data_struct *data;
       return(ERROR);
    }
 
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
      fprintf(f2, "datatype  = 3\n");
    else
      fprintf(f2, "datatype  = 1\n");
    fprintf(f2, "system    = bruker\n");
-   if (file_info->twod)  {
+   if ( (file_info->twod) && (data->ni > 1) )
+   {
      fprintf(f2, "dim1      = 2  \n");
      fprintf(f2, "dim2      = %d  \n", data->ni/2);
-     }
+   }
    else   {
      fprintf(f2, "dim1      = 1  \n");
      fprintf(f2, "dim2      = 1  \n");
@@ -2197,7 +2200,7 @@ data_struct *data;
    fprintf(f2, "np        = %d \n", data->np);
    fprintf(f2, "sw        = %.7f \n", data->sw);
    fprintf(f2, "sfrq      = %.7f \n", data->sfrq+(data->tof/1.0e+6));
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
      fprintf(f2, "sw1       = %.7f \n", data->sw1);
    fprintf(f2, "dfrq      = %.7f \n", data->dfrq+(data->dof/1.0e+6));
    fprintf(f2, "bytes     = 4  \n");
@@ -2206,7 +2209,7 @@ data_struct *data;
      fprintf(f2, "acqtyp    = 1  \n");
    else
      fprintf(f2, "acqtyp    = 0  \n");
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
       fprintf(f2, "abstype   = 1  \n");
 
    fprintf(f2, "#TEXT:\n");
@@ -2245,7 +2248,7 @@ data_struct *data;
    fprintf(f2, "proc      = rft\n");
    
 
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
    {
       fprintf(f2, "ni        = %d\n", data->ni/2);
       fprintf(f2, "sw1       = %.7f\n", data->sw1);
@@ -2283,7 +2286,7 @@ data_struct *data;
    fprintf(f2, "wp        = %.7f\n", data->sw);
    fprintf(f2, "sp        = %f\n", 0.0);
 
-   if (file_info->twod)
+   if ( (file_info->twod) && (data->ni > 1) )
    {
       fprintf(f2, "proc1     = rft\n");
       fprintf(f2, "fn1       = n\n");
@@ -2297,7 +2300,7 @@ data_struct *data;
       fprintf(f2, "awc1      = n\n");
       fprintf(f2, "wp1       = %.7f\n", data->sw1);
       fprintf(f2, "sp1       = 0.0\n");
-      fprintf(f2, "id        = %d\n",data->in);
+      fprintf(f2, "id        = %.7f\n",data->in);
       fprintf(f2, "arraydim  = %d\n",data->ni);
       fprintf(f2, "arraye    = 2\n");
       fprintf(f2, "phase\"array1\"=\n");
@@ -2356,8 +2359,7 @@ data_struct *data;
         done,
 	totpts,
 	factor;
-   FILE *fopen(),
-        *f1,
+   FILE *f1,
         *f2;
  
    strcpy(outname, file_info->out_dir);

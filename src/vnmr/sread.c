@@ -1670,7 +1670,10 @@ static int storedata(char *filepath) /* for compressed fids */
           bpntrs.head->lvl   = 0.0;
           bpntrs.head->tlt   = 0.0;
           
-          r = (getbytes(fr,(short *)bpntrs.data,(bi)*fid_sectors,
+          if (bruflag)
+             r = (read(fr,(void *) bpntrs.data,(int) datahead.tbytes*nf) != datahead.tbytes*nf);
+          else
+             r = (getbytes(fr,(short *)bpntrs.data,(bi)*fid_sectors,
                           datahead.tbytes*nf)==0);
           if (r)
           { Werrprintf("cannot read data file of old fid");

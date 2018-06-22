@@ -49,6 +49,9 @@ using the "make_es_shape" and "make_es_flipshape" macros, respectively. For
 multiple frequency solvent suppression the esshape file needs to be created
 manually.
 PeterS - Excitation Sculpting added 2012
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
+
 */
 
 #include <standard.h>
@@ -156,7 +159,13 @@ pulsesequence()
 
    status(B);
 
-      rgpulse(pw, v1, rof1, 2.0e-6);
+      if (getflag("cpmgflg"))
+      {
+        rgpulse(pw, v1, rof1, 0.0);
+        cpmg(v1, v15);
+      }
+      else
+        rgpulse(pw, v1, rof1, 2.0e-6);
 
       if (d2>d2corr)
         delay(d2 - d2corr); /*corrected evolution time */

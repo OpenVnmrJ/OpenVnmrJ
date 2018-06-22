@@ -12,7 +12,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#pragma GCC diagnostic ignored "-Warray-bounds"
+
 extern int yylex(void);
+extern int yyparse(void);
 
 # define YYLMAX BUFSIZ
 
@@ -113,7 +116,7 @@ YYSTYPE yylval, yyval;
 # line 810 "magic.gram.y"
 
 
-void yyerror(const char *m)
+static void yyerror(const char *m)
 {   extern int  ignoreEOL;
     node        N;
     node       *oldNode;
@@ -278,7 +281,6 @@ short yydef[]={
 /*
 */
 #define YYFLAG    -1000
-#define YYERROR   goto yyerrlab
 #define YYACCEPT  return(0)
 #define YYABORT   return(1)
 
@@ -392,7 +394,9 @@ yynewstate:
    if (yyn <= YYFLAG )
       goto yydefault;			/* simple state */
    if (yychar < 0)
+#ifdef SUSP
 yySusp1:
+#endif
          if ((yychar=yylex()) < 0)	/* go to lexer... */
          {
 #ifdef SUSP
@@ -426,7 +430,9 @@ yydefault:				/* default state action */
 
    if ((yyn=yydef[yystate]) == -2)
    {  if (yychar<0)
+#ifdef SUSP
 yySusp2:
+#endif 
          if ((yychar=yylex()) < 0)	/* go to lexer... */
          {
 #ifdef SUSP
@@ -461,7 +467,7 @@ yySusp2:
    if (yyn == 0 )			/* error */
    {  switch (yyerrflag)		/* ... attempt to resume parsing */
       { case 0:   yyerror("syntax error");/* brand new error */
-	yyerrlab: yynerrs += 1;
+	          yynerrs += 1;
 	case 1:
 	case 2:   yyerrflag = 3;	/* incompletely recovered error ... try again */
 

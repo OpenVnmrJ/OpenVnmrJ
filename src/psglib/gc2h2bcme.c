@@ -24,6 +24,8 @@
 KrishK  -       First Rivision		: Jul 2005
 haitao -  Last revision         : Mar 2006
 KrishK	- Includes purge option : Jan 2008
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -204,8 +206,13 @@ pulsesequence()
     }
 
   status(B);
-
-    rgpulse(pw, zero, rof1, rof1);
+    if (getflag("cpmgflg"))
+    {
+      rgpulse(pw, zero, rof1, 0.0);
+      cpmg(zero, v15);
+    }
+    else
+      rgpulse(pw, zero, rof1, rof1);
   if (getflag("dmct"))
   {
     decpower(dpwrct);

@@ -27,6 +27,8 @@ KrishK  -       Includes slp saturation option : July 2005
 KrishK  -       Includes purge option : Aug. 2006
 BHeise  -       Revised (fixed spinlock phase) : Jul 2010
 ****v17,v18,v19 are reserved for PURGE ***
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -176,7 +178,13 @@ status(B);
            delay(null);
       }
     
-      rgpulse(pw, v1, rof1, rof1);
+     if (getflag("cpmgflg"))
+     {
+        rgpulse(pw, v1, rof1, 0.0);
+        cpmg(v1, v15);
+     }
+     else
+         rgpulse(pw, v1, rof1, rof1);
       delay(2*tau - (2*pw/PI) - 2*rof1);
 
       decrgpulse(pwx, v3, rof1, 1.0e-6);

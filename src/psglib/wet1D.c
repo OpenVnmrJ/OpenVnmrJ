@@ -5,6 +5,11 @@
 
 /*  wet1d - standard two-pulse sequence */
 
+/*
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
+*/
+
 #include <standard.h>
 #include <chempack.h>
 
@@ -47,9 +52,21 @@ pulsesequence()
    hsdelay(d2); 
 
    if (composit[0] == 'y')
-          shaped_pulse(compshape,4.0*pw+0.8e-6,v1,rof1,rof2);
+      if (getflag("cpmgflg"))
+      {
+         shaped_pulse(compshape, 4.0*pw+0.8e-6, v1, rof1, rof2);
+         cpmg(v1, v15);
+      }
+      else
+         shaped_pulse(compshape, 4.0*pw+0.8e-6, v1, rof1, rof2);
    else
-      rgpulse(pw,v1,rof1,rof2);
+      if (getflag("cpmgflg"))
+      {
+         rgpulse(pw, v1, rof1, 0.0);
+         cpmg(v1, v15);
+      }
+      else
+         rgpulse(pw, v1, rof1, rof2);
 
    status(C);
 }

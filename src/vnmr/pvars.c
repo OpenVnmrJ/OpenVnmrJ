@@ -2185,6 +2185,231 @@ int readfromdisk(symbol **root, FILE *stream)
 
 /*------------------------------------------------------------------------------
 |
+|	skipVar/3
+|
+|	This function reads and dumps values and enumerals of a variables
+|       The stream will then point to the next variable.
+|
++-----------------------------------------------------------------------------*/
+
+static void skipVar(char *name, int basicType, FILE *stream)
+{
+    int num;
+    int i;
+    double doub;
+    char   buf[1025];
+
+    if (fscanf(stream,"%d",&num)== EOF)
+       return;
+    TPRINT1(2,"skipVar: num of values =%d\n",num);
+    switch (basicType)
+    { case T_REAL:
+    	/*  Read the values */
+    	for (i=1; i<num+1; i++)
+    	{
+    	    if (fscanf(stream,"%lg",&doub)==EOF)
+    		return;
+    	}
+    	/*  Read the enumeration values */
+    	if (fscanf(stream,"%d",&num)== EOF)
+    	    return;
+    	TPRINT1(2,"skipVar: num of enums =%d\n",num);
+    	for (i=1; i<num+1; i++)
+    	{
+    	    if (fscanf(stream,"%lg",&doub)==EOF)
+    		return;
+    	}
+    	break;
+      case T_STRING:
+    	/*  Read values */
+    	for (i=1; i<num+1; i++)
+    	{   if (rscanf(stream,buf,1024)<0)
+    	    {	Werrprintf("skipVar: premature EOF\n");
+    		return;
+    	    }
+    	}
+    	/*  Read the enumeration values */
+    	if (fscanf(stream,"%d",&num)== EOF)
+    	    return;
+    	TPRINT1(2,"skipVar: num of enums =%d\n",num);
+    	for (i=1; i<num+1; i++)
+    	{   if (rscanf(stream,buf,1024)<0)
+    	    {	Werrprintf("skipVar: premature EOF\n");
+    		return;
+    	    }
+    	}
+    	break;
+      default:
+    	Werrprintf("skipVar: %s has nonexistent type\n", name);
+    	return;
+	}
+}
+
+/*------------------------------------------------------------------------------
+|
+|	readGroupfromdisk/3
+|
+|	This function reads in variables of the given group off a stream and stores
+|	them in a tree. It only reads variables of the specified group.
+|
++-----------------------------------------------------------------------------*/
+
+int readGroupfromdisk(symbol **root, FILE *stream, int groupIndex)
+{
+    char        buf[1025];
+    char        name[256];
+    double      doub;
+    int		active;
+    int         i;
+    int         intptr;
+    int         num;
+    int         ret;
+    varInfo    *v;
+    varInfo    tmp;
+
+    ret = -1;
+    for(;;)
+    {	if(fscanf(stream,"%s",name)==EOF)
+	    break;
+	TPRINT1(2,"readfromdisk: reading variable \"%s\"\n",name);
+	ret =fscanf(stream,"%hd %hd %lf %lf %lf %hd %hd %d %hd %x",
+	    &tmp.subtype,&tmp.T.basicType,&tmp.maxVal,&tmp.minVal,
+	    &tmp.step,&tmp.Ggroup,&tmp.Dgroup,&tmp.prot,&tmp.active,&intptr);
+	TPRINT1(2,"readfromdisk: we read  %d things \n",ret);
+	TPRINT1(2,"readfromdisk: var name \"%s\"\n",name);
+	TPRINT2(2,"readfromdisk:%d %d\n",tmp.subtype,tmp.T.basicType);
+	TPRINT3(2,"readfromdisk:%g %g %g\n",tmp.maxVal,tmp.minVal,tmp.step);
+	TPRINT5(2,"readfromdisk:%d %d %d %d %x\n",
+	    tmp.Ggroup,tmp.Dgroup,tmp.prot,tmp.active,intptr);
+        if (tmp.Ggroup != groupIndex)
+        {
+            skipVar(name, tmp.T.basicType, stream);
+            continue;
+        }
+	if ( (v = rfindVar(name,root)) ) /* does variable already exist */
+	{
+	    TPRINT1(2,"readfromdisk: found variable %s\n",name);
+            /* remove old values now since the new parameter may have
+             * a different type, masking the original value type.
+             * A core dump can occur if the original type is real and
+             * new type is string and system tries to free() a real
+             */
+	    if (v->T.basicType == T_REAL)
+            {
+		disposeRealRvals(v->R);
+		v->T.size = 0;
+		v->R      = NULL;
+            }
+            else if (v->T.basicType == T_STRING)
+            {
+		disposeStringRvals(v->R);
+		v->T.size = 0;
+		v->R      = NULL;
+            }
+	}
+	else 	/* create variable */
+	{   v = RcreateUVar(name,root,T_UNDEF);
+	    TPRINT1(2,"readfromdisk: creating variable '%s'\n",name);
+	}
+	if (v == NULL)
+	{   Werrprintf("fread:Variable \"%s\" could not be found or created\n",name);
+	    return(0);
+	}
+        v->subtype = tmp.subtype;
+        v->T.basicType = tmp.T.basicType;
+        v->maxVal = tmp.maxVal;
+        v->minVal = tmp.minVal;
+        v->step = tmp.step;
+        v->Ggroup = tmp.Ggroup;
+        v->Dgroup = tmp.Dgroup;
+        v->prot = tmp.prot;
+	active = v->active = tmp.active; /* store this because of active kludge */
+	if (fscanf(stream,"%d",&num)== EOF)
+	    break;
+	TPRINT1(2,"readfromdisk: num of values =%d\n",num);
+	switch (v->T.basicType)
+	{ case T_REAL:
+		/*  Read the values */
+		for (i=1; i<num+1; i++)
+		{
+		    if (fscanf(stream,"%lg",&doub)==EOF)
+			break;
+		    if (i == 1) /* is this first element */
+			assignReal(doub,v,0); /* clear and set new variable */
+		    else
+			assignReal(doub,v,i);
+		    TPRINT1(2,"readfromdisk: read T_REAL %g\n",doub);
+		}
+		/* since assignReal turns active ON, we must turn it back off
+		     if necessary */
+		if (active == ACT_OFF)
+		    v->active = ACT_OFF;
+		disposeRealRvals(v->E); /* clear all enumeration values */
+		v->ET.size = 0;
+		v->E = NULL;
+		/*  Read the enumeration values */
+		if (fscanf(stream,"%d",&num)== EOF)
+		    break;
+		TPRINT1(2,"readfromdisk: num of enums =%d\n",num);
+		for (i=1; i<num+1; i++)
+		{
+		    if (fscanf(stream,"%lg",&doub)==EOF)
+			break;
+		    if (i == 1) /* is this first element */
+			assignEReal(doub,v,0); /* clear and set new variable */
+		    else
+			assignEReal(doub,v,i);
+		    TPRINT1(2,"readfromdisk: read T_REAL %g\n",doub);
+		}
+		break;
+	  case T_STRING:
+		/*  Read values */
+		for (i=1; i<num+1; i++)
+		{   if (rscanf(stream,buf,1024)<0)
+		    {	Werrprintf("readfromdisk: premature EOF\n");
+			return(0);
+		    }
+		    else
+		     	if (i == 1) /* is this first element ? */
+			    assignString(buf,v,0);
+			else
+			    assignString(buf,v,i);
+		    TPRINT1(2,"readfromdisk: read T_STRING %s\n",buf);
+		}
+		/* since assignString turns active ON, we must turn it back off
+		     if necessary */
+		if (active == ACT_OFF)
+		    v->active = ACT_OFF;
+		disposeStringRvals(v->E); /* clear all enumeration values */
+		v->ET.size = 0;
+		v->E = NULL;
+		/*  Read the enumeration values */
+		if (fscanf(stream,"%d",&num)== EOF)
+		    break;
+		TPRINT1(2,"readfromdisk: num of enums =%d\n",num);
+		for (i=1; i<num+1; i++)
+		{   if (rscanf(stream,buf,1024)<0)
+		    {	Werrprintf("readfromdisk: premature EOF\n");
+			return(0);
+		    }
+		    else
+		     	if (i == 1) /* is this first element ? */
+			    assignEString(buf,v,0);
+			else
+			    assignEString(buf,v,i);
+		    TPRINT1(2,"readfromdisk: read T_STRING %s\n",buf);
+		}
+		break;
+	  default:
+		Werrprintf("readfromdisk: %s has nonexistent type\n", name);
+		return(0);
+	}
+    }
+    return -1;
+}
+
+/*------------------------------------------------------------------------------
+|
 |	readNamesFromDisk/2
 |
 |	This function reads in variables off a stream and stores
@@ -2277,7 +2502,7 @@ static char *readNamesFromDisk(FILE *stream)
 |	readNewVarsfromdisk/2
 |
 |	This function reads in variables off a stream and stores
-|	them in a tree. As distinct from readfrom disk, this
+|	them in a tree. As distinct from readfromdisk, this
 |       procedure will not create new parameters nor change parameter
 |       attributes.  If parameter types are different, the original
 |       is kept.
@@ -2434,6 +2659,291 @@ int readNewVarsfromdisk(symbol **root, FILE *stream)
 		Werrprintf("readfromdisk: %s has nonexistent type\n", name);
 		return(0);
 	}
+    }
+    return -1;
+}
+
+/*------------------------------------------------------------------------------
+|
+|	readGroupNewVarsfromdisk/2
+|
+|	This function reads in variables off a stream and stores
+|	them in a tree. As distinct from readfromdisk, this
+|       procedure will not create new parameters nor change parameter
+|       attributes.  If parameter types are different, the original
+|       is kept.
+|
++-----------------------------------------------------------------------------*/
+
+int readGroupNewVarsfromdisk(symbol **root, FILE *stream, int groupIndex)
+{
+    char        buf[1025];
+    char        name[256];
+    double      doub;
+    int         i;
+    int         intptr;
+    int         num;
+    int         ret;
+    int         active;
+    varInfo    *v;
+    varInfo     tmp;
+    int         skip;
+
+    ret = -1;
+    for(;;)
+    {	if(fscanf(stream,"%s",name)==EOF)
+	    break;
+	TPRINT1(2,"readfromdisk: reading variable \"%s\"\n",name);
+	ret =fscanf(stream,"%hd %hd %lf %lf %lf %hd %hd %d %hd %x",
+	    &tmp.subtype,&tmp.T.basicType,&tmp.maxVal,&tmp.minVal,
+	    &tmp.step,&tmp.Ggroup,&tmp.Dgroup,&tmp.prot,&tmp.active,&intptr);
+	TPRINT1(2,"readfromdisk: we read  %d things \n",ret);
+	TPRINT1(2,"readfromdisk: var name \"%s\"\n",name);
+	TPRINT2(2,"readfromdisk:%d %d\n",tmp.subtype,tmp.T.basicType);
+	TPRINT3(2,"readfromdisk:%g %g %g\n",tmp.maxVal,tmp.minVal,tmp.step);
+	TPRINT5(2,"readfromdisk:%d %d %d %d %x\n",
+	    tmp.Ggroup,tmp.Dgroup,tmp.prot,tmp.active,intptr);
+        if (tmp.Ggroup != groupIndex)
+        {
+            skipVar(name, tmp.T.basicType, stream);
+            continue;
+        }
+	if ( (v = rfindVar(name,root)) ) /* does variable already exist */
+        {
+           v = &tmp;
+           skip = 1;
+        }
+	else 	/* create variable */
+	{  v = RcreateUVar(name,root,T_UNDEF);
+	   TPRINT1(2,"readfromdisk: creating variable '%s'\n",name);
+           skip = 0;
+	}
+	if (v == NULL)
+	{   Werrprintf("fread:Variable \"%s\" could not be created\n",name);
+	    return(0);
+	}
+        v->subtype = tmp.subtype;
+        v->T.basicType = tmp.T.basicType;
+        v->maxVal = tmp.maxVal;
+        v->minVal = tmp.minVal;
+        v->step = tmp.step;
+        v->Ggroup = tmp.Ggroup;
+        v->Dgroup = tmp.Dgroup;
+        v->prot = tmp.prot;
+	active = v->active = tmp.active; /* store this because of active kludge */
+	if (fscanf(stream,"%d",&num)== EOF)
+	    break;
+	TPRINT1(2,"readfromdisk: num of values =%d\n",num);
+	switch (v->T.basicType)
+	{ case T_REAL:
+		/*  Read the values */
+		for (i=1; i<num+1; i++)
+		{
+		    if (fscanf(stream,"%lg",&doub)==EOF)
+			break;
+                    if (!skip)
+                    {
+	  	      if (i == 1) /* is this first element */
+			assignReal(doub,v,0); /* clear and set new variable */
+		      else
+			assignReal(doub,v,i);
+                    }
+		    TPRINT1(2,"readfromdisk: read T_REAL %g\n",doub);
+		}
+		/* since assignReal turns active ON, we must turn it back off
+		     if necessary */
+		if (!skip)
+                {
+		   if (active == ACT_OFF)
+		      v->active = ACT_OFF;
+		   disposeRealRvals(v->E); /* clear all enumeration values */
+		   v->ET.size = 0;
+		   v->E = NULL;
+                }
+		/*  Read the enumeration values */
+		if (fscanf(stream,"%d",&num)== EOF)
+		    break;
+		TPRINT1(2,"readfromdisk: num of enums =%d\n",num);
+		for (i=1; i<num+1; i++)
+		{
+		    if (fscanf(stream,"%lg",&doub)==EOF)
+			break;
+                    if (!skip)
+                    {
+		      if (i == 1) /* is this first element */
+			assignEReal(doub,v,0); /* clear and set new variable */
+		      else
+			assignEReal(doub,v,i);
+                    }
+		    TPRINT1(2,"readfromdisk: read T_REAL %g\n",doub);
+		}
+		break;
+	  case T_STRING:
+		/*  Read values */
+		for (i=1; i<num+1; i++)
+		{   if (rscanf(stream,buf,1024)<0)
+		    {	Werrprintf("readfromdisk: premature EOF\n");
+			return(0);
+		    }
+		    else if (!skip)
+                    {
+		     	if (i == 1) /* is this first element ? */
+			    assignString(buf,v,0);
+			else
+			    assignString(buf,v,i);
+                    }
+		    TPRINT1(2,"readfromdisk: read T_STRING %s\n",buf);
+		}
+		/* since assignString turns active ON, we must turn it back off
+		     if necessary */
+		if (!skip)
+                {
+		  if (active == ACT_OFF)
+		    v->active = ACT_OFF;
+		  disposeStringRvals(v->E); /* clear all enumeration values */
+		  v->ET.size = 0;
+		  v->E = NULL;
+                }
+		/*  Read the enumeration values */
+		if (fscanf(stream,"%d",&num)== EOF)
+		    break;
+		TPRINT1(2,"readfromdisk: num of enums =%d\n",num);
+		for (i=1; i<num+1; i++)
+		{   if (rscanf(stream,buf,1024)<0)
+		    {	Werrprintf("readfromdisk: premature EOF\n");
+			return(0);
+		    }
+		    else if (!skip)
+                    {
+		     	if (i == 1) /* is this first element ? */
+			    assignEString(buf,v,0);
+			else
+			    assignEString(buf,v,i);
+                    }
+		    TPRINT1(2,"readfromdisk: read T_STRING %s\n",buf);
+		}
+		break;
+	  default:
+		Werrprintf("readfromdisk: %s has nonexistent type\n", name);
+		return(0);
+	}
+    }
+    return -1;
+}
+
+/*------------------------------------------------------------------------------
+|
+|	readGroupvaluesfromdisk/2
+|
+|	This function reads in variables off a stream and stores
+|	them in a tree. As distinct from readfrom disk, this
+|       procedure will not create new parameters nor change parameter
+|       attributes.  If parameter types are different, the original
+|       is kept.
+|
++-----------------------------------------------------------------------------*/
+
+int readGroupvaluesfromdisk(symbol **root, FILE *stream, int groupIndex)
+{
+    char        buf[1025];
+    char        name[256];
+    double      doub;
+    int         i;
+    int         intptr;
+    int         setvalue;
+    int         num;
+    int         ret;
+    varInfo    *v;
+    varInfo    tmp;
+
+    ret = -1;
+    for(;;)
+    {	if(fscanf(stream,"%s",name)==EOF)
+	    break;
+	TPRINT1(2,"readvaluesfromdisk: reading variable \"%s\"\n",name);
+	ret =fscanf(stream,"%hd %hd %lf %lf %lf %hd %hd %d %hd %x",
+	    &tmp.subtype,&tmp.T.basicType,&tmp.maxVal,&tmp.minVal,
+	    &tmp.step,&tmp.Ggroup,&tmp.Dgroup,&tmp.prot,&tmp.active,&intptr);
+	TPRINT1(2,"readfromdisk: we read  %d things \n",ret);
+	TPRINT1(2,"readfromdisk: var name \"%s\"\n",name);
+	TPRINT2(2,"readfromdisk:%d %d\n",tmp.subtype,tmp.T.basicType);
+	TPRINT3(2,"readfromdisk:%g %g %g\n",tmp.maxVal,tmp.minVal,tmp.step);
+	TPRINT5(2,"readfromdisk:%d %d %d %d %x\n",
+	    tmp.Ggroup,tmp.Dgroup,tmp.prot,tmp.active,intptr);
+        if (tmp.Ggroup != groupIndex)
+        {
+            skipVar(name, tmp.T.basicType, stream);
+            continue;
+        }
+	if ( (v = rfindVar(name,root)) ) /* does variable already exist */
+	{
+	   TPRINT1(2,"readvaluesfromdisk: found variable %s\n",name);
+	   if (fscanf(stream,"%d",&num)== EOF)
+	      break;
+	   TPRINT1(2,"readvaluesfromdisk: num of values =%d\n",num);
+           setvalue = (v->T.basicType == tmp.T.basicType);
+	   switch (v->T.basicType)
+	   { case T_REAL:
+		/*  Read the values */
+		for (i=1; i<num+1; i++)
+		{
+		    if (fscanf(stream,"%lg",&doub)==EOF)
+			break;
+                    if (setvalue)
+                    {
+		    if (i == 1) /* is this first element */
+			assignReal(doub,v,0); /* clear and set new variable */
+		    else
+			assignReal(doub,v,i);
+                    }
+		    TPRINT1(2,"readvaluesfromdisk: read T_REAL %g\n",doub);
+		}
+		/*  Read the enumeration values */
+		if (fscanf(stream,"%d",&num)== EOF)
+		    break;
+		TPRINT1(2,"readvaluesfromdisk: num of enums =%d\n",num);
+		for (i=1; i<num+1; i++)
+		{
+		    if (fscanf(stream,"%lg",&doub)==EOF)
+			break;
+		}
+		break;
+	     case T_STRING:
+		/*  Read values */
+		for (i=1; i<num+1; i++)
+		{   if (rscanf(stream,buf,1024)<0)
+		    {	Werrprintf("readvaluesfromdisk: premature EOF\n");
+			return(0);
+		    }
+		    else if (setvalue)
+                    {
+		     	if (i == 1) /* is this first element ? */
+			    assignString(buf,v,0);
+			else
+			    assignString(buf,v,i);
+                    }
+		    TPRINT1(2,"readvaluesfromdisk: read T_STRING %s\n",buf);
+		}
+		/*  Read the enumeration values */
+		if (fscanf(stream,"%d",&num)== EOF)
+		    break;
+		TPRINT1(2,"readvaluesfromdisk: num of enums =%d\n",num);
+		for (i=1; i<num+1; i++)
+		{   if (rscanf(stream,buf,1024)<0)
+		    {	Werrprintf("readvaluesfromdisk: premature EOF\n");
+			return(0);
+		    }
+		}
+		break;
+	     default:
+		Werrprintf("readvaluesfromdisk: %s has nonexistent type\n", name);
+		return(0);
+	   }
+	}
+        else
+        {
+           skipVar(name, tmp.T.basicType, stream);
+        }
     }
     return -1;
 }

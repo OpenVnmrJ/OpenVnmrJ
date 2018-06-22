@@ -3629,7 +3629,7 @@ C-----------------------------------------------------------------------    3564
       DOUBLE PRECISION A, ABS, ALPHA, ASAVE, B, CC, DIFF, DUMMY,            3566
      1 FACTOR, RANGE, RNORM, SM, SQRT, SS, T, TWO, UNORM, UP, W,            3567
      2 WMAX, X, ZERO, ZTEST, ZZ                                             3568
-      DIMENSION A(MDA,N), B(1), X(1), W(1), ZZ(1)                           3569
+      DIMENSION A(MDA,N), B(1), X(1), W(1), ZZ(1), DUMMY(1)                 3569
       INTEGER INDEX(N)                                                      3570
       ABS(T)=DABS(T)                                                        3571
       SQRT(T)=DSQRT(T)                                                      3572

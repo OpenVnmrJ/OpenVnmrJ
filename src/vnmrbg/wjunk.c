@@ -879,8 +879,8 @@ void jmouse_spwp(int butnum, int x, int y, int mask){
 	static int initx,inity;
 	extern int get_frame_width();
 	extern int get_frame_height();
-	double dx=x-oldx;
-	double dy=y-oldy;
+	int dx=x-oldx;
+	int dy=y-oldy;
 	int ww=get_frame_width();
 	int wh=get_frame_height();
 

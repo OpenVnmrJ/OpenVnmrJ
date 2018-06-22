@@ -26,6 +26,8 @@ haitao -  first revision        : Sep 2005
 haitao -  revised		: Mar 2006
 KrishK - includes purge option : Aug. 2006
 ****v17,v18,v19 are reserved for PURGE ***
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -173,7 +175,13 @@ pulsesequence()
 
   status(B);
 
-    rgpulse(pw, v6, rof1, rof1);
+    if (getflag("cpmgflg"))
+    {
+      rgpulse(pw, v6, rof1, 0.0);
+      cpmg(v6, v15);
+    }
+    else
+      rgpulse(pw, v6, rof1, rof1);
 
     delay(bigT/2 - d2/2  - tau - 2*gtE - 2*gstab - 2*pwx );
     rgpulse(2*pw,zero,rof1,rof1);

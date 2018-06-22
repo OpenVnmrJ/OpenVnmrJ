@@ -573,7 +573,6 @@ ncommFileList = ['sockets.c',
                  'ipcMsgQLib.c',
                  'semLib.c',
                  'msgQLib.c',
-                 'asyncIo.c',
                  'eventHandler.c',
                  'eventQueue.c',
                  'listObj.c',
@@ -585,7 +584,7 @@ yaccSrcFileList = ['magic.gram.y',
                    'magic.parser']
 
 yaccSrcCPath     = os.path.join(cwd, os.pardir, 'magic')
-yaccSrcCFileList = ['magic.gram.c']
+yaccSrcCFileList = ['magic.gram.c', 'magic.lex.c']
 yaccSrcCHdrList  = ['magic.gram.h']
 
 lexSrcPath      = os.path.join(cwd, os.pardir, 'vnmr')
@@ -670,22 +669,22 @@ if (opensource=="true"):
         vnmrBgCppEnv.Append(CPPDEFINES = 'VNMR_GPL')
 
 # copy and process the magic.lex.c file
-srcFile    = os.path.join(lexSrcCPath, 'magic.lex.c')
-targetFile = os.path.join(cwd, 'magic.lex.c.orig')
-vnmrBgCppEnv.Command(target = targetFile,
-                     source = srcFile,
-                     action = 'cp ' + srcFile + ' ' + targetFile)
+# srcFile    = os.path.join(lexSrcCPath, 'magic.lex.c')
+# targetFile = os.path.join(cwd, 'magic.lex.c.orig')
+# vnmrBgCppEnv.Command(target = targetFile,
+#                      source = srcFile,
+#                      action = 'cp ' + srcFile + ' ' + targetFile)
 
-srcFile    = os.path.join(cwd, 'magic.lex.c.orig')
-targetFile = os.path.join(cwd, 'magic.lex.c')
-vnmrBgCppEnv.Command(target = targetFile,
-                     source = srcFile,
-                     action = "cd " + cwd + \
-                              " && cat magic.lex.c.orig | sed 's/{stdin}/(FILE *) 0/g' " + \
-                              "| sed 's/{stdout}/(FILE *) 0/g' > magic.lex.c")
+# srcFile    = os.path.join(cwd, 'magic.lex.c.orig')
+# targetFile = os.path.join(cwd, 'magic.lex.c')
+# vnmrBgCppEnv.Command(target = targetFile,
+#                      source = srcFile,
+#                      action = "cd " + cwd + \
+#                               " && cat magic.lex.c.orig | sed 's/{stdin}/(FILE *) 0/g' " + \
+#                               "| sed 's/{stdout}/(FILE *) 0/g' > magic.lex.c")
 
-vnmrBgCppEnv.Depends(target     = 'magic.lex.o',
-                     dependency = 'magic.lex.c')
+# vnmrBgCppEnv.Depends(target     = 'magic.lex.o',
+#                      dependency = 'magic.lex.c')
 
 # define to get tokens from, a file
 def getTokenValue(str,file):
@@ -799,14 +798,13 @@ yaccSrcCObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, yaccSrcCPath, yacc
 buildMethods.symLinkHeader(vnmrBgCEnv, yaccSrcCFileList, cwd, yaccSrcCPath, yaccSrcCHdrList)
 
 # already local
-lexSrcCObjs = vnmrBgCEnv.StaticObject(source = lexSrcCFileList)  # LEX_OBJ
+# lexSrcCObjs = vnmrBgCEnv.StaticObject(source = lexSrcCFileList)  # LEX_OBJ
 
 magicCObjs = magicComObjs + \
-             yaccSrcCObjs + \
-             lexSrcCObjs
+             yaccSrcCObjs
 
-vnmrBgCEnv.Depends(target     = magicCObjs,
-                   dependency = lexSrcCFileList)
+#vnmrBgCEnv.Depends(target     = magicCObjs,
+#                   dependency = lexSrcCFileList)
 
 magicComSpcObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, magicComSpcPath, magicComSpcFileList)
 

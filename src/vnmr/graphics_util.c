@@ -4205,10 +4205,8 @@ int iplot(int argc, char *argv[], int retc, char *retv[])
     dv = dv * 25.4 + 0.5;
     fprintf(iplotFd, "#dpi  %d\n", (int) dv);
     fprintf(iplotFd, "#noUi  %d\n", origBnmr);
-    if (userdir != NULL)
-        fprintf(iplotFd, "#userdir  %s\n", userdir);
-    if (systemdir != NULL)
-        fprintf(iplotFd, "#systemdir  %s\n", systemdir);
+    fprintf(iplotFd, "#userdir  %s\n", userdir);
+    fprintf(iplotFd, "#systemdir  %s\n", systemdir);
     fprintf(iplotFd, "#operator  %s\n", operatorName);
     if (P_getreal(GLOBAL,"pslw" ,&dv, 1))
         dv = 1.0;

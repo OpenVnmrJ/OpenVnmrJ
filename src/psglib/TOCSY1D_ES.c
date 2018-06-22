@@ -47,6 +47,8 @@ created manually.
 
 KrishK  Aug. 2006
 PeterS - Excitation Sculpting added 2012
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 */
 
 #include <standard.h>
@@ -155,7 +157,13 @@ pulsesequence()
    if (getflag("lkgate_flg"))  lk_hold(); /* turn lock sampling off */
 
    status(B);
-      rgpulse(pw, v1, rof1, rof1);
+      if (getflag("cpmgflg"))
+      {
+        rgpulse(pw, v1, rof1, 0.0);
+        cpmg(v1, v15);
+      }
+      else
+        rgpulse(pw, v1, rof1, rof1);
 
       if (selfrq != tof)
 	obsoffset(selfrq);

@@ -41,6 +41,8 @@ manually.
 
 p. sandor, darmstadt june 2003.
 b. heise, oxford february 2012 [Chempack/VJ3.x version]
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
  
 */ 
 #include <standard.h> 
@@ -111,7 +113,13 @@ pulsesequence()
       {
       	if (flipback[A] == 'y') 
             FlipBack(v1,v9);            /* water flipback pulse */
-      	rgpulse(pw, v1, rof1, rof1); 
+        if (getflag("cpmgflg"))
+        {
+          rgpulse(pw, v1, rof1, 0.0);
+          cpmg(v1, v15);
+        }
+        else
+      	  rgpulse(pw, v1, rof1, rof1); 
       	ExcitationSculpting(v2,v4,v6);
        	if (prg_flg[A] == 'y')    /* optional purge pulse */
            { obspower(prgpwr);
@@ -122,6 +130,12 @@ pulsesequence()
 	    delay(rof2);
       }
       else
-	rgpulse(pw,v1,rof1,rof2); 
+        if (getflag("cpmgflg"))
+        {
+          rgpulse(pw, v1, rof1, 0.0);
+          cpmg(v1, v15);
+        }
+        else
+	  rgpulse(pw ,v1 ,rof1, rof2); 
      status(C);
 } 

@@ -26,14 +26,14 @@ public class Billing extends JPanel{
     Date eDate = new Date();
     JButton displayOne, printOne;
     JButton displayOneSum;
-    JButton displayAll, displayAllSum;
+    static JButton displayAll, displayAllSum;
     JButton printAll;
     AccountJCB accJCB;
     JLabel accL, nameL, addressL, address2L, cityL, stateL, countryL;
     JLabel nameTF,addressTF, address2TF, cityTF, stateTF, countryTF;
     // JLabel startOfBilling, endOfBilling;
     DateChooser startOfBilling, endOfBilling;
-    JPanel billPanel;
+    static JPanel billPanel;
     JPanel hostPanel, selectPanel;
     JPanel p1,p2,p3,p4;
     JSeparator js1,js2,js3;
@@ -42,6 +42,12 @@ public class Billing extends JPanel{
     String [] accounts;
     AccountingTab  billJsp;
     PrinterJob pj = null;
+    boolean doS = false;
+    boolean doSCsv = false;
+    boolean doUCsv = false;
+    String saveDir = null;
+    Date iStartDate = null;
+    Date iEndDate = null;
     
     public Billing(File accountsDir, AccountingTab jsp) {
         billing=this;
@@ -166,6 +172,21 @@ public class Billing extends JPanel{
         return (ai);
     }
 
+    public void acctOutput(Date startDate, Date endDate, String svDir,
+                         boolean summary, boolean sumCsv, boolean userCsv) {
+        saveDir = svDir;
+        doS = summary;
+        doSCsv = sumCsv;
+        doUCsv = userCsv;
+        iStartDate = startDate;
+        iEndDate = endDate;
+        if (userCsv)
+           displayOne.doClick();
+        if (sumCsv || summary)
+           displayAllSum.doClick();
+        
+    }
+
     private void updateAccountInfo() {
             ai = accJCB.read();
             nameTF.setText(ai.name());
@@ -183,9 +204,11 @@ public class Billing extends JPanel{
          if (type.startsWith("DisplayOne")) {
              String name = (String)accJCB.getSelectedItem();
              if (name == null || (name.length() == 0)) {
+                 if ( ! doUCsv ) {
                  JOptionPane pane = new JOptionPane();
                  pane.showMessageDialog(billing, "Please choose an account first");
                  return;
+                 }
              }
              if (type.equals("DisplayOneSum"))
                  bSum = true;
@@ -195,8 +218,14 @@ public class Billing extends JPanel{
              if (type.equals("DisplayAllSum"))
                  bSum = true;
          }
-         sDate = startOfBilling.getDate();
-         eDate = endOfBilling.getDate();
+         if (iStartDate != null)
+            sDate = iStartDate;
+         else
+            sDate = startOfBilling.getDate();
+         if (iEndDate != null)
+            eDate = iEndDate;
+         else
+            eDate = endOfBilling.getDate();
          ReadLast readLast = ReadLast.getAndCheckInstance(ai);
          if (!readLast.isGoodRecords())
                return;
@@ -206,6 +235,7 @@ public class Billing extends JPanel{
          // billPanel = new Bill(ai);
 
          String tabStr = "All";
+         if ( !doUCsv) {
          if (bOneUser) {
              tabStr = (String)accJCB.getSelectedItem().toString().trim();
              if (bSum)
@@ -215,8 +245,10 @@ public class Billing extends JPanel{
              if (bSum)
                  tabStr = "Summary of All";
          }
+         }
 
-         billPanel = new BillPanel(accJCB, bOneUser, bSum, sDate, eDate);
+         billPanel = new BillPanel(accJCB, bOneUser, bSum, sDate, eDate,
+                           doS, doSCsv, doUCsv, saveDir);
 
          JTabbedPane pane = (JTabbedPane)billJsp.getBillTabs();
          pane.addTab(tabStr, billPanel);
@@ -227,87 +259,7 @@ public class Billing extends JPanel{
     }
 
     private void printAllBill(String type) {
-         AccountInfo2 tmpAi = ai;
-         int n = accJCB.getItemCount();
-         billPanel = new SummaryLines();
-         JTabbedPane pane = (JTabbedPane)billJsp.getBillTabs();
-         pane.addTab("Summary", billPanel);
-         pane.setTabComponentAt(pane.getTabCount()-1, new ButtonTabComponent(pane));
-         billJsp.setDividerLocation(420);
-         pane.setSelectedIndex(pane.getTabCount()-1);
-         String[] tmp;
-         File CSV_bool = new File(AProps.getInstance().getRootDir()+
-                                            "/adm/accounting/accounts/CSV_yes");
-         if ( CSV_bool.exists() ) {
-              String CSV_name = null;
-              BufferedWriter CSV_file = null;
-              JFileChooser jfc = new JFileChooser();
-              int returnVal = jfc.showOpenDialog(billing);
-              if (returnVal == JFileChooser.APPROVE_OPTION) {
-                   CSV_name = jfc.getSelectedFile().getAbsolutePath();
-              }
-              else {
-                  return;
-              }
-              try {
-                   CSV_file = new BufferedWriter(new FileWriter(CSV_name));
-              } catch (IOException ioe) {
-                    ioe.getStackTrace();
-              }
-              for (int i=0; i<n; i++) {
-                        accJCB.setSelectedIndex(i);
-                        ai = accJCB.read();
-                        if (ai==null) break;
-                        sDate = startOfBilling.getDate();
-                        eDate = endOfBilling.getDate();
-                        ReadLast.getInstance(ai).startDate(sDate);
-                        ReadLast.getInstance(ai).endDate(eDate);
-                        CSVOneBill csvbill = new CSVOneBill(CSV_file, ai);
-                        tmp = csvbill.summaryLine();
-                        ((SummaryLines)billPanel).add( tmp );
-              }
-              try {
-                    CSV_file.close();
-              } catch (IOException ioe) {
-                        ioe.getStackTrace();
-              }
-         }
-         else {
-              if (pj == null)
-                   pj = PrinterJob.getPrinterJob();
-              if (! pj.printDialog() )
-                   return;
-              for (int i=0; i<n; i++) {
-                   accJCB.setSelectedIndex(i);
-                   ai = accJCB.read();
-                   if (ai==null) break;
-                   sDate = startOfBilling.getDate();
-                   eDate = endOfBilling.getDate();
-                   ReadLast.getInstance(ai).startDate(sDate);
-                   ReadLast.getInstance(ai).endDate(eDate);
-                   PrintOneBill pob = new PrintOneBill(ai);
-                   PageFormat pf = pj.defaultPage();
-                   pj.setPrintable( pob, pf);
-                   try {
-                            pj.print();
-                            tmp = pob.summaryLine();
-                            ((SummaryLines)billPanel).add( tmp );
-                   } catch (PrinterException pe) { }
-              }
-         }
-         File lastBillDates = new File(AProps.getInstance().getRootDir()+"/adm/accounting/last_bill_dates.txt");
-         try {
-              BufferedWriter bw = new BufferedWriter( new FileWriter(lastBillDates));
-              bw.write("from ");
-              bw.write( sDate.toString() );
-              bw.write(" to ");
-              bw.write( eDate.toString() );
-              bw.newLine();
-              bw.close();
-         } catch (IOException ioe) {
-              ioe.printStackTrace();
-         }
-         ai = tmpAi;
+         System.out.println("Error printAllBill not dead code. type = "+type);
     }
     
     public class BillingLayout implements LayoutManager {
@@ -497,69 +449,7 @@ public class Billing extends JPanel{
 
     class PrintBill implements ActionListener {
         public void actionPerformed(ActionEvent ae) {
-            if ( (nameTF.getText() == null) || (nameTF.getText().length() == 0)) {
-                JOptionPane pane = new JOptionPane();
-                pane.showMessageDialog(billing, "Please choose an account first");
-                return;
-            }
-            updateAccountInfo();
-            sDate = startOfBilling.getDate();
-            eDate = endOfBilling.getDate();
-            ReadLast.getInstance(ai).startDate(sDate);
-            ReadLast.getInstance(ai).endDate(eDate);
-            File CSV_bool = new File(AProps.getInstance().getRootDir()+
-                                            "/adm/accounting/accounts/CSV_yes");
-            if ( CSV_bool.exists() ) {
-                String CSV_name = null;
-                BufferedWriter CSV_file = null;
-                JFileChooser jfc = new JFileChooser();
-                int returnVal = jfc.showOpenDialog(billing);
-                if(returnVal == JFileChooser.APPROVE_OPTION) {
-                    CSV_name = jfc.getSelectedFile().getAbsolutePath();
-//                    System.out.println("You chose to open this file: "+CSV_name);
-                }
-                else {
-                    return;
-                }
-                try {
-                    CSV_file = new BufferedWriter(new FileWriter(CSV_name));
-                } catch (IOException ioe) {
-                    ioe.getStackTrace();
-                }
-                new CSVOneBill(CSV_file, ai);
-                try {
-                    CSV_file.close();
-                } catch (IOException ioe) {
-                    ioe.getStackTrace();
-                }
-            }
-            else {
-                if (pj == null)
-                    pj = PrinterJob.getPrinterJob();
-                if (! pj.printDialog() )
-                    return;
-                PageFormat pf = pj.defaultPage();
-    //      AccountInfo2 ai = acc.getBilling().getAccountInfo();
-                PrintOneBill pob = new PrintOneBill(ai);
-                pj.setPrintable( pob, pf);
-                try {
-                    pj.print();
-                } catch (PrinterException pe) {
-                }
-            }
-            File lastBillDates = new File(AProps.getInstance().getRootDir()+"/adm/accounting/last_bill_dates.txt");
-            try {
-                BufferedWriter bw = new BufferedWriter( new FileWriter(lastBillDates));
-                bw.write("from ");
-                bw.write( (ReadLast.getInstance(ai).startDate()).toString() );
-                bw.write(" to ");
-                bw.write( ReadLast.getInstance(ai).endDate().toString() );
-                bw.newLine();
-                bw.close();
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
-//      System.out.println("PrintBill.actionPerformed(): Done");
+System.out.println("Error PrintBill ActionListened called");
         }
     }
 }

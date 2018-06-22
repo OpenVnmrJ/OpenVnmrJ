@@ -2,22 +2,26 @@
 // You may distribute under the terms of either the GNU General Public
 // License or the Apache License, as specified in the LICENSE file.
 // For more information, see the LICENSE file.
-/*   PSYCHE 
+/*   PSYCHE
 
 PureShift Yielded by CHirp Excitation
 
      Reference:
- 	Foroozandeh, M; Adams, RW; Meharry, NJ; Jeannerat, D, Nilsson, M; Morris, GA, Angew. Chem., Int. Ed., 2014, 53, 6990.
+        Foroozandeh, M; Adams, RW; Meharry, NJ; Jeannerat, D, Nilsson, M; Morris, GA, Angew. Chem., Int. Ed., 2014, 53, 6990.
+
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
 #include <standard.h>
 #include <chempack.h>
 
-static int	ph1[8] = {0,2,0,2,0,2,0,2},
-		ph2[8] = {0,0,0,0,0,0,0,0},
-		ph3[8] = {0,0,1,1,2,2,3,3},
-		ph4[8] = {0,2,2,0,0,2,2,0};
+static int      ph1[8] = {0,2,0,2,0,2,0,2},
+                ph2[8] = {0,0,0,0,0,0,0,0},
+                ph3[8] = {0,0,1,1,2,2,3,3},
+                ph4[8] = {0,2,2,0,0,2,2,0};
+
 
 pulsesequence()
 {
@@ -109,7 +113,13 @@ pulsesequence()
 
    status(B);
       obspower(tpwr);
-      rgpulse(pw, v1, rof1, rof2);
+        if (getflag("cpmgflg"))
+        {
+	  rgpulse(pw, v1, rof1, 0.0);
+	  cpmg(v1, v15);
+        }
+        else
+          rgpulse(pw, v1, rof1, rof2);
 
 	delay(d2/2.0);
 

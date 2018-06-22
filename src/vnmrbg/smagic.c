@@ -651,14 +651,14 @@ static int sendToVnmrJinit(int nodelay, Socket *pSD )
     return (-1);
 }
 
-void net_write(char *netAddr, char *netPort, char *message)
+int net_write(char *netAddr, char *netPort, char *message)
 {
      int  bNew, port, k, len;
      char *d;
      char addr[128];
 
      if (netAddr == NULL || netPort == NULL || message == NULL)
-        return;
+        return(-1);
 /*
      if (sscanf(netAddr, "%s%d", addr, &port) != 2)
         return;
@@ -669,29 +669,32 @@ void net_write(char *netAddr, char *netPort, char *message)
      d = netPort;
      while (*d == ' ') d++;
      port = atoi(d);
+     if ( (strlen(addr) < 2) || (port == 0) )
+        return(-2);
      if (debug)
         fprintf(stderr, " net_write  host: %s   port: %d \n", addr, port);
      if (sVnmrNet.sd > 0)
         closeSocket(&sVnmrNet);
      if (openSocket(&sVnmrNet) == -1)
-        return;
+        return(-3);
      setsockopt(sVnmrNet.sd,SOL_SOCKET,(~SO_LINGER),(char *)&k,sizeof(k));
      setsockopt(sVnmrNet.sd,SOL_SOCKET,TCP_NODELAY,(char *)&k,sizeof(k));
      bNew = 0;
-     while (bNew < 8) {
+     while (bNew < 6) {
          k = connectSocket(&sVnmrNet,addr,port);
          if (k == 0)
              break;
-         if (bNew > 6)
-             return;
+         if (bNew > 4)
+             return(-4);
          bNew++;
          sleep(1);
      }
      if (sVnmrNet.sd < 0)
-         return;
+         return(-5);
      len = strlen(message);
      k =  writeSocket( &sVnmrNet, message, len);
      closeSocket(&sVnmrNet);
+     return(0);
 }
 
 static int getJfile(char *vstr )

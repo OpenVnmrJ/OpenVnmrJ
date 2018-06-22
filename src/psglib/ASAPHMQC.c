@@ -22,9 +22,11 @@
 		tpwr_cf :       H1 amplifier compression factor
 		lkgate_flg:	Lock gating flag
 
-Eriks Kupce, Agilent UK 11 Nov. 2006: Original pulse sequence
-Bert Heise, Agilent UK Feb. 2008: Chempack compatible version
-Bert Heise, Agilent UK Jul. 2010: Lock gating added for better peak shapes
+Eriks Kupce, 11 Nov. 2006: Original pulse sequence
+Bert Heise, Feb. 2008: Chempack compatible version
+Bert Heise, Jul. 2010: Lock gating added for better peak shapes
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 */
 
 #include <standard.h>
@@ -162,9 +164,15 @@ pulsesequence()
   status(B);
      decpower(pwxlvl);
 
+      if (getflag("cpmgflg"))
+      {
+        rgpulse(pw, zero, rof1, 0.0);
+        cpmg(zero, v15);
+      }
+      else
+        rgpulse(pw, zero, rof1, rof1);
       if (asap[0] == 'y')
       {
-        rgpulse(pw,zero,rof1,rof1);
         delay(taua/2.0 - pw - 2.0*rof1 + pw180/2.0);
 	if(adiabatic[A] == 'y')
 	{
@@ -178,7 +186,6 @@ pulsesequence()
       }
       else
       {
-        rgpulse(pw,zero,rof1,rof1);
         delay(taua - rof1 - (2*pw/PI));
         decrgpulse(pwx,v1,rof1,1.0e-6);
       }

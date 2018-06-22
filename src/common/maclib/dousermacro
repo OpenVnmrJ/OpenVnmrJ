@@ -1,4 +1,4 @@
-"macro dousermacro"
+// Chempacker macro
 
 if ($# < 1) then
   write('line3','%s requires an argument',$0)
@@ -8,23 +8,61 @@ $usermacro='user'+$1
 exists($usermacro,'maclib'):$macex
 // Allow for multiple arguments to be passed
 if ($macex > 0) then
-  if $# > 1 then
-    $arg=''
-    $usermacro=$usermacro+'('
-    $i=2
-    repeat
-      format(${$i},'isreal'):$s
-      if ($s=1) then
-        format(${$i},'lower'):$arg
-        $usermacro=$usermacro+$arg
-      else
-        $arg=${$i}
-        $usermacro=$usermacro+'\''+$arg+'\''
-      endif
-      if ($i < $#) then $usermacro=$usermacro+',' endif
-      $i=$i+1
-    until $i > $#
-    $usermacro=$usermacro+')'
-  endif
-  exec($usermacro):$e
+    if $## > 0 then
+		// Return argument is expected
+		// The first return value is always real
+		// The (optional) 2nd return value is string
+		// The user macro MUST not abort
+		// One could use aborton/abortoff sandwich
+		// upto 10 arguments are supported
+	$n=$#
+	$rval=0 $sval=''
+	if $n=1 then
+	    {$usermacro}:$rval,$sval
+	elseif $n=2 then
+            {$usermacro}($2):$rval,$sval
+        elseif $n=3 then
+            {$usermacro}($2,$3):$rval,$sval
+        elseif $n=4 then
+            {$usermacro}($2,$3,$4):$rval,$sval
+        elseif $n=5 then
+            {$usermacro}($2,$3,$4,$5):$rval,$sval
+        elseif $n=6 then
+            {$usermacro}($2,$3,$4,$5,$6):$rval,$sval
+        elseif $n=7 then
+            {$usermacro}($2,$3,$4,$5,$6,$7):$rval,$sval
+        elseif $n=8 then
+            {$usermacro}($2,$3,$4,$5,$6,$7,$8):$rval,$sval
+        elseif $n=9 then
+            {$usermacro}($2,$3,$4,$5,$6,$7,$8,$9):$rval,$sval
+        elseif $n=10 then
+            {$usermacro}($2,$3,$4,$5,$6,$7,$8,$9,$10):$rval,$sval
+	elseif $n=11 then
+            {$usermacro}($2,$3,$4,$5,$6,$7,$8,$9,$10,$11):$rval,$sval
+	endif
+	return($rval,$sval)
+    else
+	        // No return argument is expected
+		// use exec tool just so the user macro
+		// will not abort
+  	if $# > 1 then
+    	    $arg=''
+    	    $usermacro=$usermacro+'('
+    	    $i=2
+    	    repeat
+      		format(${$i},'isreal'):$s
+      		if ($s=1) then
+        	    format(${$i},'lower'):$arg
+        	    $usermacro=$usermacro+$arg
+      	 	else
+        	    $arg=${$i}
+        	    $usermacro=$usermacro+'\''+$arg+'\''
+      		endif
+      		if ($i < $#) then $usermacro=$usermacro+',' endif
+      		$i=$i+1
+    	    until $i > $#
+   	    $usermacro=$usermacro+')'
+  	endif
+  	exec($usermacro):$e
+    endif
 endif

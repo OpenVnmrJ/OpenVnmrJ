@@ -71,6 +71,8 @@ INOVA implementation: Norbert Zimmermann, BASF AG 08.08.96
       modified: Bert Heise, Darmstadt, 2006 - made VnmrJ compliant
       modified: Bert Heise, Oxford, 2009 - made Chempack compliant
 Echo family - NM (April 19, 2007)
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 */
 
 #include <standard.h>
@@ -217,7 +219,14 @@ pulsesequence()
 
  status(B);
    rcvroff(); 
-   rgpulse(pw,t1,1.0e-6,0.0);    
+   if (getflag("cpmgflg"))
+   {
+      rgpulse(pw, t1, rof1, 0.0);
+      cpmg(t1, v15);
+   }
+   else
+      rgpulse(pw, t1, 1.0e-6, 0.0);
+
    txphase(t1); decphase(t1);
    delay(tauxh-15.0*pwx);                        /* delay=1/4J(XH) */
    simshaped_pulse("","ad180",2*pw,30*pwx,t1,t1,0.0,0.0);

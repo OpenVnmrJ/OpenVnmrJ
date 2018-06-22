@@ -27,6 +27,8 @@ haitao -  	First revision		: Feb 2006
 haitao -  	Revised			: Mar 2006
 KrishK - includes purge option : Aug. 2006
 ****v17,v18,v19 are reserved for PURGE ***
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -177,7 +179,13 @@ pulsesequence()
 
   status(B);
 
-    rgpulse(pw, v6, rof1, rof2);
+   if (getflag("cpmgflg"))
+   {
+     rgpulse(pw, v6, rof1, 0.0);
+     cpmg(v6, v15);
+   }
+   else
+     rgpulse(pw, v6, rof1, rof2);
 
 /* Start of J filter  */
 

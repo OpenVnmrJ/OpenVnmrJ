@@ -27,6 +27,8 @@ KrishK  -       Revised         : July 2004
 haitao  - 	Revised		: May 2005
 haitao  - 	Revised		: March 2006
 KrishK	-	Includes purge option : Jan 2008
+JohnR - includes CPMG option : Jan 2015
+****v15 is reserved for CPMG ***
 
 */
 
@@ -209,7 +211,13 @@ status(A);
       delay(1e-3);
     }
 
-    rgpulse(pw, v6, rof1, rof1);
+    if (getflag("cpmgflg"))
+    {
+      rgpulse(pw, v6, rof1, 0.0);
+      cpmg(v6, v15);
+    }
+    else
+      rgpulse(pw, v6, rof1, rof1);
     obspower(tpwr180);
     shaped_pulse(pw180ad,pw180,zero,rof1,rof1);
     delay(tau+2.0*POWER_DELAY+2.0*rof1);

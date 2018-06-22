@@ -64,6 +64,7 @@ extern void clearMspec();
 extern double getPlotMargin();
 extern void setArraydis(int);
 extern int aspFrame(char *, int, int, int, int, int);
+extern int Mv(int argc, char *argv[], int retc, char *retv[]);
 
 #define CALIB 		1000.0
 #define COMPLETE 	0
@@ -1016,6 +1017,8 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
 {
    int dummy, specI;
    char filename[MAXSTR];
+   char tmpFilename[MAXSTR];
+   char *argv2[4];
    float *ptr;
    int i;
    int ibuf;
@@ -1026,6 +1029,7 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
    int intType = 0;
    char traceVal[16];
    int f2 = 1;
+   int doMove = 0;
 
    if(init2d(1,1)) return(ERROR);
    if (argc >=2)
@@ -1033,7 +1037,6 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
    else
       sprintf(filename,"%s/spec%d",curexpdir,specIndex);
    unlink(filename);
-   fd = open(filename, ( O_CREAT | O_WRONLY ), 0666 );
    for (i=2; i<argc; i++)
    {
       if (isReal(argv[i]))
@@ -1063,12 +1066,31 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
          if(init2d(1,1)) return(ERROR);
       }
    }
+   strcpy(tmpFilename,"/dev/shm");
+   if ( ! access(tmpFilename,W_OK) )
+   {
+      sprintf(tmpFilename,"/dev/shm/spec%d", (int) getpid());
+      unlink(tmpFilename);
+      doMove = 1;
+      argv2[0] = "Mv";
+      argv2[1] = tmpFilename;
+      argv2[2] = filename;
+      argv2[3] = NULL;
+   }
+   else
+   {
+      strcpy(tmpFilename,filename);
+   }
+   fd = open(tmpFilename, ( O_CREAT | O_WRONLY ), 0666 );
    if ( doAll )
    {
       for (specI = 0; specI < nblocks * specperblock; specI++)
       {
          if ((spectrum = calc_spec(specI,0,FALSE,TRUE,&dummy))==0)
+         {
+            close(fd);
             return(ERROR);
+         }
          scale = vs;
          if (normflag)
             scale *= normalize;
@@ -1096,6 +1118,8 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
          rel_spec();
       }
       close(fd);
+      if (doMove)
+         Mv(3,argv2,0,NULL);
       RETURN;
    }
    else
@@ -1103,10 +1127,14 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
       if ((specIndex < 1) || (specIndex > nblocks * specperblock))
       {
          Werrprintf("spectrum %d does not exist",specIndex);
+         close(fd);
          return(ERROR);
       }
       if ((spectrum = calc_spec(specIndex-1,0,FALSE,TRUE,&dummy))==0)
+      {
+         close(fd);
          return(ERROR);
+      }
       scale = vs;
       if (normflag)
          scale *= normalize;
@@ -1132,9 +1160,9 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
          }
       }
       close(fd);
+      if (doMove)
+         Mv(3,argv2,0,NULL);
       return(rel_spec());
    }
-   if (d2flag)
-      P_setstring(CURRENT,"trace", traceVal, 1);
 }
 

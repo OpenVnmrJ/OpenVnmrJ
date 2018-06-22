@@ -27,6 +27,7 @@ package accounting;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.lang.*;
 import java.text.*;
 import java.util.*;
 import javax.swing.*;
@@ -43,7 +44,7 @@ public class Config extends JPanel {
     private final static int ACQ_REDUCE_FILE = 0;
     private final static int LOGIN_REDUCE_FILE = 1;
     
-    private Config conf;
+    private static Config conf;
     private AProps prop;
     private JCheckBox[] activeCB = new JCheckBox[2];
     private JLabel[] activeLabel = new JLabel[2];
@@ -272,6 +273,13 @@ public class Config extends JPanel {
         add(p3);
     }
     
+   public static Config  getInstance() {
+    if (conf == null) {
+      conf = new Config(null, null);
+    }
+    return conf;
+   }
+
     public class ConfigLayout implements LayoutManager {
         public void addLayoutComponent(String str, Component c) {
         }
@@ -438,8 +446,6 @@ public class Config extends JPanel {
         }
     }
         
-//    private class SaveEar implements ActionListener {
-//        public void actionPerformed(ActionEvent ae) {
       public void saveProperties() {
             String tmpStr;
             File prop = new File(AProps.getInstance().getRootDir()+"/adm/accounting/accounts/accounting.prop");
@@ -577,19 +583,62 @@ public class Config extends JPanel {
         }
     }
 
-    private void reduceRecords(StringBuffer sb, Date reduceDate) {
+    public void reduceRecords(StringBuffer sb, Date reduceDate, String saveDir, boolean show) {
         Date tmpDate = null;;
         File sourceFile, reducedFile;
         BufferedWriter fOut = null;
         boolean bError = false;
         String errMsg = null;
         SaxContentHandler xmlHandler = null;
+        String src = null;
+        String backupDir = null;
 
-        sb.append("accounting/acctLog");
-        sourceFile = new File( sb.toString() + ".xml");
+        sourceFile = new File( sb.toString() + "acctLog.xml");
         if ( ! sourceFile.exists() ) {
              System.out.println("File: "+sourceFile.getName() +" does not exist");
              return;
+        }
+        String vjCmd = new String( AProps.getInstance().getRootDir() +"/bin/Vnmrbg");
+        ProcessBuilder pb = new ProcessBuilder(vjCmd, "-mback", "-n0" ,"autoq('locklog')" );
+        Process p;
+        try {
+           p = pb.start();
+           p.waitFor();
+        }
+        catch (Exception e2) {}
+        if ( saveDir != null )
+        {
+            String oneLine;
+            BufferedReader br = null;
+            BufferedWriter bw = null;
+            String fromFile = sb.toString() + "acctLog.xml";
+            String toFile = saveDir + "/acctLog.xml";
+            File toDir = new File(saveDir);
+            if (!toDir.exists())
+              toDir.mkdirs();
+            try {
+                br = new BufferedReader (new FileReader (fromFile) );
+                bw = new BufferedWriter (new FileWriter (toFile) );
+                oneLine = br.readLine();
+                while (oneLine != null) {
+                   bw.write(oneLine);
+                   bw.newLine();
+                   oneLine = br.readLine();
+                }
+            }
+            catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+
+            finally {
+            try {
+               if (br != null)
+                   br.close();
+               if (bw != null)
+                   bw.close();
+            }
+            catch (Exception e2) {}
+            }
         }
         reducedFile = new File( sb.toString() + ".sml");
         reduceTimeMills = reduceDate.getTime();
@@ -628,21 +677,28 @@ public class Config extends JPanel {
             catch (Exception e2) {}
         }
 
+        boolean ok = true;
         if (bError) {
             if (errMsg != null) {
                JOptionPane.showMessageDialog(null,
                    errMsg, "Error", JOptionPane.ERROR_MESSAGE);
             }
-            return;
+            ok = false;;
         }
         if (xmlHandler == null)
-            return;
+        {
+            ok = false;;
+        }
+        if (ok) {
         int total = xmlHandler.getEntryNumber();;
         int remain = xmlHandler.getValidEntryNumber();
         String cutString = new String("Cutting "+Integer.toString(total-remain)+" records");
-        JOptionPane pane = new JOptionPane();
-        int result = pane.showConfirmDialog((JPanel)conf, cutString,
+        int result = JOptionPane.YES_OPTION;
+        if (show) {
+           JOptionPane pane = new JOptionPane();
+           result = pane.showConfirmDialog((JPanel)conf, cutString,
                         "Cutting Records",   JOptionPane.YES_NO_OPTION);
+        }
         if (result == JOptionPane.YES_OPTION) {
            try {
               String cmd;
@@ -659,6 +715,13 @@ public class Config extends JPanel {
         else {
               reducedFile.delete();
         }
+        }
+        pb = new ProcessBuilder(vjCmd, "-mback", "-n0" ,"autoq('unlocklog')" );
+        try {
+        p = pb.start();
+        p.waitFor();
+        }
+        catch (Exception e2) {}
     }
 
     private class ActiveGoEar implements ItemListener {
@@ -812,211 +875,11 @@ public class Config extends JPanel {
         public void actionPerformed(ActionEvent ae) {
             Date d = reduceToDate.getDate();
             System.out.println("Up to date: '"+d.toString());
-            StringBuffer sb = new StringBuffer( AProps.getInstance().getRootDir()+"/adm/");
+            StringBuffer sb = new StringBuffer( AProps.getInstance().getRootDir()+"/adm/accounting/");
 
-             /*************
-//            if (reduceMode == Config.LOGIN_REDUCE_FILE) {
-//                loginReduce(sb,d);
-//            }
-//            else {
-            goesReduce(sb,d);
-//            }
-             *************/
-
-              reduceRecords(sb,d);
+              reduceRecords(sb,d,null,true);
         }
         
-        private void loginReduce(StringBuffer sb, Date d) {
-            long uptoTime, tmpTime;
-            Date tmpDate;
-            File largeFile, smallFile;
-            String oneLine,dateString;
-            int i, j,k;
-            int total=0, remain=0;
-            uptoTime = d.getTime()/1000;
-//            System.out.println("Upto: "+ uptoTime);
-            sb.append("accounting/loginrecords");
-            largeFile = new File( sb.toString() + ".txt");
-            if ( ! largeFile.exists() ) return;
-            smallFile = new File( sb.toString() + ".sml");
-            try {
-                BufferedReader br = new BufferedReader (new FileReader (largeFile) );
-                BufferedWriter bw = new BufferedWriter (new FileWriter (smallFile) );
-                oneLine = br.readLine();
-                System.out.println(oneLine);
-                while (oneLine != null) {
-                    total++;
-                    i = oneLine.indexOf("start");
-                    if (i == -1)
-                        i = oneLine.indexOf("done");
-                    i = oneLine.indexOf((int)'\"',i);
-                    j = oneLine.indexOf((int)'\"',i+1);
-                    if ((i>-1) && (j>-1)) {
-                        dateString = oneLine.substring(i+1,j);
-                        tmpTime = Long.parseLong(dateString);
-                        if (tmpTime >= uptoTime) {
-                            System.out.print(" keeper ! ");
-                            bw.write(oneLine); bw.newLine();
-                            remain++;
-                        }
-                        System.out.println(dateString); 
-                    }
-                    oneLine = br.readLine();
-                    System.out.println(oneLine);
-                }
-                br.close();
-                bw.close();
-                String cutString = new String("Cutting "+Integer.toString(total-remain)+" login records");
-                JOptionPane pane = new JOptionPane();
-                int result = pane.showConfirmDialog((JPanel)conf, cutString,
-                        "Cutting Records",   JOptionPane.YES_NO_OPTION);
-//        System.out.println("result="+result);
-               if (result == JOptionPane.YES_OPTION) {
-//                  System.out.println("Renaming "+smallFile.getName()+" to "+largeFile.getName());
-                  largeFile.delete();
-                  boolean a = smallFile.renameTo(largeFile);
-//                  System.out.println("Renaming returned "+ a);
-               }
-               else {
-                    smallFile.delete();
-               }
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        
-        private void goesReduce(StringBuffer sb, Date reduceDate) {
-            ArrayList aList = new ArrayList();
-            Date tmpDate = null;;
-            File largeFile, smallFile;
-            String oneLine,tmpString,dateString, str;
-            StringTokenizer tok;
-            boolean include;
-            int i,j;
-            int total=0, remain=0;
-            BufferedReader br = null;
-            BufferedWriter bw = null;
-    
-//            System.out.println("Upto: "+ reduceDate.toString());
-            sb.append("accounting/acctLog");
-            SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM d HH:mm:ss zzz yyyy");
-            largeFile = new File( sb.toString() + ".xml");
-            if ( ! largeFile.exists() ) {
-                System.out.println("File: "+largeFile.getName() +" does not exist");
-                return;
-            }
-            smallFile = new File( sb.toString() + ".sml");
-            try {
-                br = new BufferedReader (new FileReader (largeFile) );
-                bw = new BufferedWriter (new FileWriter (smallFile) );
-                oneLine = br.readLine();
-                while (oneLine != null) { //copy header stuff
-                    if ( ! oneLine.startsWith("<entry") ) {
-                        bw.write(oneLine);    bw.newLine();
-                        // System.out.println(oneLine);
-                        oneLine = br.readLine();
-                    }
-                    else {
-                        break;
-                    }
-                }
-                include = false;
-                while (oneLine != null) {
-                   if (!include) {
-                      i = oneLine.indexOf("start");
-                      if (i >= 0) {
-                         str = oneLine.substring(i);
-                         tok = new StringTokenizer(str, " =\n");
-                         str = tok.nextToken().trim();
-                         if (!str.equals("start"))
-                             i = -1;
-                      }
-                      else {
-                         i = oneLine.indexOf("end");
-                         if (i >= 0) {
-                             str = oneLine.substring(i);
-                             tok = new StringTokenizer(str, " =\n");
-                             str = tok.nextToken().trim();
-                             if (!str.equals("end"))
-                                 i = -1;
-                         }
-                      }
-                      if (i >= 0) {
-                         i = oneLine.indexOf((int)'\"',i);
-                         j = oneLine.indexOf((int)'\"',i+1);
-                         if ((i>-1) && (j>-1)) {
-                            dateString = oneLine.substring(i+1,j);
-                            ParsePosition pp = new ParsePosition(0);
-                            tmpDate = sdf.parse(dateString,pp);
-                            if (reduceDate.compareTo(tmpDate) <= 0)
-                                include = true;
-                         }
-                      }
-                    }
-                    if ( oneLine.startsWith("<entry") ) {
-                        total++;
-                        if ( include ) {
-                            for (i=0; i< aList.size(); i++) {
-                                bw.write((String)aList.get(i));   bw.newLine();
-                            }
-                            remain++;
-                            include = false;
-                        }
-                        aList.clear();
-                    }
-                    aList.add(oneLine);
-                    oneLine = br.readLine();
-                }
-                // check the last one, includes trailing lines
-                str = null;
-                if ( include && aList.size() > 0) {
-                    remain++;
-                    for (i=0; i< aList.size(); i++) {
-                        bw.write((String)aList.get(i));   bw.newLine();
-                    }
-                    str = (String)aList.get(aList.size() - 1);
-                }
-                // Terminate xml file with closing line
-                if (str == null && aList.size() > 0) {
-                    str = (String)aList.get(aList.size() - 1);
-                }
-                if (str != null) {
-                     if (str.indexOf("</accounting") < 0)
-                         str = null;
-                }
-                if (str == null)
-                    bw.write("</accounting>\n");
-                br.close();
-                br = null;
-                bw.close();
-                bw = null;
-                String cutString = new String("Cutting "+Integer.toString(total-remain)+" records");
-                JOptionPane pane = new JOptionPane();
-                int result = pane.showConfirmDialog((JPanel)conf, cutString,
-                        "Cutting Records",   JOptionPane.YES_NO_OPTION);
-                if (result == JOptionPane.YES_OPTION) {
-                    largeFile.delete();
-                    smallFile.renameTo(largeFile);
-                }
-                else {
-                    smallFile.delete();
-                }
-            }
-            catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
-
-            finally {
-            try {
-               if (br != null)
-                   br.close();
-               if (bw != null)
-                   bw.close();
-            }
-            catch (Exception e2) {}
-        }
-      }
     }
 
     private class SaxContentHandler extends DefaultHandler  {
