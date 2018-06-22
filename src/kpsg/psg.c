@@ -6,8 +6,7 @@
  *
  * For more information, see the LICENSE file.
  */
-/* 
- */
+
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -27,6 +26,8 @@
 #include "abort.h"
 #include "vfilesys.h"
 #include "cps.h"
+#include "arrayfuncs.h"
+#include "CSfuncs.h"
  
 /* #define TESTING  */   /* use for stand alone dbx testing */
 
@@ -156,7 +157,9 @@ static char	infopath[256];
        double	exptime; 		/* total time for an exp estimate */
 double  sw1,sw2,sw3;
        double	inc2D;			/* t1 dwell time in a 2D/3D/4D exp */
+       double   d2_init = 0.0;          /* Initial value of d2 delay, used in 2D/3D/4D experiments */
        double	inc3D;			/* t2 dwell time in a 3D/4D exp */
+       double   d3_init = 0.0;          /* Initial value of d3 delay, used in 2D/3D/4D experiments */
        double	inc4D;			/* t3 dwell time in a 4D exp */
        double	totaltime; 		/* total timer events for a fid */
        double	usertime = -1.0;	/* if user defines time, -1=psg does */
@@ -165,6 +168,7 @@ double  sw1,sw2,sw3;
 
        FILE *dpsdata;			/* display pulse sequence data file */
 
+       int     nth2D;                  /* 2D Element currently in Acode generation (VIS usage)*/
        int	acqiflag = 0;		/* TRUE if 'acqi' was an argument */
        int	fidscanflag = 0;	/* 'fidscan' is argument, for vnmrj */
        int	tuneflag = 0;    	/* 'tune' is argument, for vnmrj */
@@ -191,6 +195,7 @@ int DEC2ch=3;                   /* The Acting 2nd Decoupler Channel */
 int DEC3ch=4;                   /* The Acting 3rd Decoupler Channel */
 int DEC4ch=5;                   /* The Acting 4th Decoupler Channel */
        int   d2_index = 0;      /* d2 increment (from 0 to ni-1) */
+       int   d3_index = 0;      /* d3 increment (from 0 to ni2-1) */
        int	NUMch=2;		/* Number of channels configured */
        int	ok;			/* global error flag */
        int	ok2bumpflag;
@@ -682,15 +687,15 @@ main(argc,argv) 	int argc; char *argv[];
     Codeptr = (short *)init_acodes(Codes);
 
     /* Set up Acode pointers */
-/*    Alc = (Acqparams *) Codes;	/* start of low core */
-/*    lc_stadr = Codes;
-/*    Aauto = (autodata *) (Alc + 1) ;/* start of auto struc */
-/*    Aacode = (short *) (Aauto + 1);
-/*    Codeptr = Aacode;
+/*    Alc = (Acqparams *) Codes; */	/* start of low core */
+/*    lc_stadr = Codes; */
+/*    Aauto = (autodata *) (Alc + 1) ; *//* start of auto struc */
+/*    Aacode = (short *) (Aauto + 1); */
+/*    Codeptr = Aacode; */
 /* */
-/*    fidctr = (short) (((short *) &(Alc->elemid)) - lc_stadr);/*offsetelemid*/
-/*    fidctr += 1;/* since real time offset are used as integers & */
-/*		/* fidctr is long we must shift the offset by 1 word */
+/*    fidctr = (short) (((short *) &(Alc->elemid)) - lc_stadr); *//*offsetelemid*/
+/*    fidctr += 1; *//* since real time offset are used as integers & */
+/*	 */	/* fidctr is long we must shift the offset by 1 word */
 
     if (bgflag)
     {	fprintf(stderr,"Code address:  0x%lx \n",Codes);
@@ -724,7 +729,7 @@ main(argc,argv) 	int argc; char *argv[];
        init_global_list(ACQ_XPAN_GSEG);
 
     setupPsgFile();
-    ix = 0;
+    ix = nth2D = 0;
     if (bgflag)
        fprintf(stderr,"arraydim = %f\n",arraydim);
     init_compress((int) arraydim);
@@ -735,10 +740,11 @@ main(argc,argv) 	int argc; char *argv[];
        checkflag = 1;
     }
 
+    ni=0; ni2=0; ni3=0;
     if (arraydim <= 1.5)
     {
         totaltime  = 0.0; /* total timer events for a fid */
-	ix = /*  nth2D = FV */ 1;		/* make Acodes for FID 1 */
+	ix = nth2D =  1;		/* make Acodes for FID 1 */
 	if (dps_flag && ! checkflag)
         {
               createDPS(argv[0], curexp, arraydim, 0, NULL, pipe2[1]);
@@ -764,6 +770,7 @@ main(argc,argv) 	int argc; char *argv[];
     {
         /* --- initial global variables value pointers that can be arrayed */
         initglobalptrs();
+        initlpelements();
 
     	/* --- malloc space for structure and arrayes --- */
         narrays = arrayelements = initlpelements();  /* return # of array elements */
@@ -772,25 +779,19 @@ main(argc,argv) 	int argc; char *argv[];
 	    psg_abort(1);
     	if (bgflag)
 	    fprintf(stderr,"array: '%s' \n",array);
+        strcpy(parsestring,array);
         /*----------------------------------------------------------------
         |	test for presence of ni, ni2, and ni3
 	|	generate the appropriate 2D/3D/4D experiment
         +---------------------------------------------------------------*/
-        ni=0; ni2=0; ni3=0;
 	P_getreal(CURRENT, "ni",   &ni, 1);
 	P_getreal(CURRENT, "ni2",  &ni2, 1);
 	P_getreal(CURRENT, "ni3", &ni3, 1);
         if (bgflag)
            fprintf(stderr,"ni=%f\n",ni);
 
-        if (  setup4D(ni3, ni2, ni, parsestring)  )
+        if (  setup4D(ni3, ni2, ni, parsestring, array)  )
            psg_abort(0);
-	if (array[0] != '\0')    /* array is NULL, don't include , */
-        {       
-           if (strcmp(parsestring, "") != 0)
-              strcat(parsestring, ",");
-           strcat(parsestring, array);
-        }
 	
 	if (dps_flag)
            strcpy(arrayStr, parsestring);
@@ -799,12 +800,13 @@ main(argc,argv) 	int argc; char *argv[];
 
 	if (bgflag)
 	  fprintf(stderr,"parsestring: '%s' \n",parsestring);
-    	if (parse(parsestring,0))  /* parse 'array' setup looping elements */
+    	if (parse(parsestring, &narrays))  /* parse 'array' setup looping elements */
           psg_abort(1);
+        arrayelements = narrays;
 
 	if (bgflag)
         {
-          printlpel(narrays);
+          printlpel();
         }
 	if (dps_flag)
         {
@@ -1150,6 +1152,24 @@ int setGflags()
     return(OK);
 }
 
+static int findWord(const char *key, char *instr)
+{
+    char *ptr;
+    char *nextch;
+
+    ptr = instr;
+    while ( (ptr = strstr(ptr, key)) )
+    {
+       nextch = ptr + strlen(key);
+       if ( ( *nextch == ',' ) || (*nextch == ')' ) || (*nextch == '\0' ) )
+       {
+          return(1);
+       }
+       ptr += strlen(key);
+    }
+    return(0);
+}
+
 /*--------------------------------------------------------------------------
 |
 |       setup4D(ninc_t3, ninc_t2, ninc_t1, parsestring, arraystring)/5
@@ -1159,21 +1179,121 @@ int setGflags()
 |       and then d4.
 |
 +-------------------------------------------------------------------------*/
-int setup4D(ni3, ni2, ni, parsestr)
+int setup4D(ni3, ni2, ni, parsestr, arraystr)
 char    *parsestr;
+char    *arraystr;
 double  ni3,
         ni2,
         ni;
 {
-   int          index,
+   int          index = 0,
                 i,
-                num;
-   double       d2,
+                num = 0;
+   int          elCorr = 0;
+   double       sw1,
+                sw2,
+                sw3,
+                d2,
                 d3,
                 d4;
+   int          sparse = 0;
+   int          CStype = 0;
+   int          arrayIsSet;
 
+   if ( ! CSinit("sampling", curexp) )
+   {
+      int res;
+      res =  CSgetSched(curexp);
+      if (res)
+      {
+         if (res == -1)
+            abort_message("Sparse sampling schedule not found");
+         else if (res == -2)
+            abort_message("Sparse sampling schedule is empty");
+         else if (res == -3)
+            abort_message("Sparse sampling schedule columns does not match sparse dimensions");
+      }
+      else
+         sparse =  1;
+   }
+   arrayIsSet = 0;
 
    strcpy(parsestr, "");
+   if (sparse)
+   {
+      num = getCSdimension();
+      if (num == 0)
+         sparse = 0;
+   }
+
+   if (sparse)
+   {
+      int narray;
+      int lps;
+      int i;
+      int j,k;
+      int found = -1;
+      int chk[CSMAXDIM];
+
+      strcpy(parsestr, arraystr);
+      if (parse(parsestr, &narray))
+         abort_message("array parameter is wrong");
+      strcpy(parsestr, "");
+      lps = numLoops();
+      CStype = CStypeIndexed();
+      for (i=0; i < num; i++)
+         chk[i] = 0;
+      for (i=0; i < lps; i++)
+      {
+         for (j=0; j < varsInLoop(i); j++)
+         {
+            for (k=0; k < num; k++)
+            {
+               if ( ! strcmp(varNameInLoop(i,j), getCSpar(k) ) )
+               {
+                  chk[k] = 1;
+                  found = i;
+               }
+            }
+         }
+      }
+      k = 0;
+      for (i=0; i < num; i++)
+         if (chk[i])
+            k++;
+      if (k > 1)
+      {
+         abort_message("array parameter is inconsistent with sparse data acquisition");
+      }
+      if (found != -1)
+      {
+         i = 0;
+            for (j=0; j < varsInLoop(found); j++)
+            {
+               for (k=0; k < num; k++)
+               {
+                  if ( ! strcmp(varNameInLoop(found,j), getCSpar(k) ) )
+                     i++;
+               }
+            }
+         if (i != num)
+            abort_message("array parameter is inconsistent with sparse data acquisition");
+      }
+
+      if (num == 1)
+         strcpy(parsestr, getCSpar(0));
+      else
+      {
+         strcpy(parsestr, "(");
+         for (k=0; k < num-1; k++)
+         {
+           strcat(parsestr, getCSpar(k));
+           strcat(parsestr, ",");
+         }
+         strcat(parsestr, getCSpar(num-1));
+         strcat(parsestr, ")");
+      }
+   }
 
    if (ni3 > 1.5)
    {
@@ -1228,31 +1348,85 @@ double  ni3,
 
    if (ni > 1.5)
    {
+      int sparseDim;
       if (getparm("sw1", "real", CURRENT, &sw1, 1))
            return(ERROR);
-      if (getparm("d2","real",CURRENT,&d2,1))
+      if (getparm("d2","real",CURRENT,&d2_init,1))
            return(ERROR);
 
-      if (strcmp(parsestr, "") == 0)
+      sparseDim = (sparse && ( (index = getCSparIndex("d2")) != -1) );
+      if ( ! findWord("d2",arraystr))
       {
-         strcpy(parsestr, "d2");
+         if ( ! sparseDim )
+         {
+         if (strcmp(parsestr, "") == 0)
+         {
+            strcpy(parsestr, "d2");
+         }
+         else
+         {
+            strcat(parsestr, ",d2");
+         }
+         }
       }
       else
       {
-         strcat(parsestr, ",d2");
+         elCorr++;
       }
 
-     inc2D = 1.0/sw1;
-      num = (int) (ni - 1.0 + 0.5);
-      for (i = 0, index = 2; i < num; i++, index++)
+      inc2D = 1.0/sw1;
+      if (sparseDim)
       {
-         d2 = d2 + inc2D;
-         if ((P_setreal(CURRENT, "d2", d2, index)) == ERROR)
+         num  = getCSnum();
+         for (i = 0;  i < num; i++)
          {
-            text_error("Could not set d2 values");
-            return(ERROR);
+            if (CStype)
+            {
+               int csIndex;
+
+               csIndex = (int) getCSval(index, i);
+               d2 = d2_init + csIndex * inc2D;
+            }
+            else
+            {
+               d2 = d2_init + getCSval(index, i);
+            }
+            if ((P_setreal(CURRENT, "d2", d2, i+1)) == ERROR)
+            {
+               text_error("Could not set d2 values");
+               return(ERROR);
+            }
          }
       }
+      else
+      {
+         num = (int) (ni - 1.0 + 0.5);
+         d2 = d2_init;
+         for (i = 0, index = 2; i < num; i++, index++)
+         {
+            d2 = d2 + inc2D;
+            if ((P_setreal(CURRENT, "d2", d2, index)) == ERROR)
+            {
+               text_error("Could not set d2 values");
+               return(ERROR);
+            }
+         }
+      }
+   }
+
+   if (elCorr)
+   {
+      double arrayelemts;
+      P_getreal(CURRENT, "arrayelemts", &arrayelemts, 1);
+      arrayelemts -= (double) elCorr;
+      P_setreal(CURRENT, "arrayelemts", arrayelemts, 1);
+   }
+
+   if (arraystr[0] != '\0')
+   {
+      if (strcmp(parsestr, "") != 0)
+         strcat(parsestr, ",");
+      strcat(parsestr, arraystr);
    }
 
    return(OK);
