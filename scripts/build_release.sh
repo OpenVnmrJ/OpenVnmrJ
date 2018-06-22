@@ -191,7 +191,7 @@ cmdspin () {
     eval "$@"
     CMDRET=$?
     # Kill the loop and unset the EXIT trap
-    kill $SPINNER_PID
+    kill -PIPE $SPINNER_PID
     trap " " EXIT
     if [ -t 3 ]; then echo "" >&3 ; fi
     log_info "Cmd finished $(date), returned: $CMDRET"
@@ -300,11 +300,12 @@ do_build () {
     fi
 
     # run scons
-    if ! cmdspin scons ${OVJ_SCONSFLAGS} ; then
+    cmdspin scons ${OVJ_SCONSFLAGS}
+    retval=$?
+    if [ $retval -ne 0 ]; then
         # scons failed, dump a little something useful
-        fail=$?
         if [ -t 3 ]; then tail -20 "${LOGFILE}" >&3 ; fi
-        return $fail
+        return $retval
     fi
     log_info "build done."
 }
