@@ -6,8 +6,7 @@
  *
  * For more information, see the LICENSE file.
  */
-/* 
- */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +14,11 @@
 #include "group.h"
 #include "variables.h"
 #include "acqparms2.h"
+#include "pvars.h"
 #include "shims.h"
+#include "abort.h"
+#include "cps.h"
+#include "CSfuncs.h"
 #ifndef PSG_LC
 #define PSG_LC
 #endif
@@ -61,10 +64,15 @@ extern int	rtinit_count;
 extern double   cur_dpwrf, cur_tpwrf;
 extern double **cvals;		/* pointer array to variable values */
 extern double   exptime;
+
+extern double  d2_init;         /* Initial value of d2 delay, used in 2D/3D/4D experiments */
+
 extern double   preacqtime;
 
 extern Acqparams *Alc;
 extern autodata *Aauto;
+
+extern void reset();
 
 /*-----------------------------------------------------------------------
 |  structure loopelemt:
@@ -80,7 +88,7 @@ extern autodata *Aauto;
 |	5. The array of indecies  into the global structure for the updateing
 |	    of the global values
 +------------------------------------------------------------------------*/
-typedef struct _loopelemt
+struct _loopelemt
 {
    int	numvar;		  /* # of variables in loop element */
    int	numvals;	  /* # of values, vars must have same #, chk in go */
@@ -88,9 +96,13 @@ typedef struct _loopelemt
    char	*lpvar[MAXVAR];	  /* pointers to variable name */
    char	*varaddr[MAXVAR]; /* pointers to where the variable's  value ptr goes */
    int	glblindex[MAXVAR];/* indexs of variable in to global structure */
-} loopelemt;
+};
+
+typedef struct _loopelemt loopelemt;
 
 static loopelemt *lpel[MAXLOOPS];/* An array of pointers to looping elements */
+
+static int numberLoops = 0;
 static void setup(char *varptr, int lpindex, int varindex);
 static int srchglobal(char *name);
 
@@ -105,15 +117,15 @@ static int srchglobal(char *name);
 |	   of translation, or addition information that depends on this
 |	   variable.
 +------------------------------------------------------------------------*/
-typedef struct _glblvar
+struct _glblvar
 {
    char            gnam[MAXGVARLEN];
    double         *glblvalue;
    int             (*funcptr) ();
-} glblvar;
+};
+typedef struct _glblvar glblvar;
 
 static glblvar  glblvars[MAXGLOBALS];
-static int	curarrayindex = 0;
 
 static int     func4alock();
 static int     func4d2();
@@ -140,58 +152,62 @@ static int     func4tof();
 static int     func4tpwrf();
 static int     func4wshim();
 static int     func4pplvl();
-static         initglblstruc();
+static void    initglblstruc();
 
+int numLoops()
+{
+   return(numberLoops);
+}
+
+int varsInLoop(int index)
+{
+   return( (lpel[index]) ? lpel[index]->numvar : 0);
+}
+
+int valuesInLoop(int index)
+{
+   return( (lpel[index]) ? lpel[index]->numvals : 0);
+}
+
+char *varNameInLoop(int index, int index2)
+{
+   return( (lpel[index] && lpel[index]->lpvar[index2]) ? lpel[index]->lpvar[index2] : NULL);
+}
 /*------------------------------------------------------------------
 |  initlpelements()  -  malloc space for the loop elements required
-|			Author: Greg Brissey 6/2/89
 +------------------------------------------------------------------*/
-initlpelements()
+void initlpelements()
 {
    int             i;
-   int             narrays;
-   double          arrayelemts;
-   char           *tmpptr;
 
    for (i = 0; i < MAXLOOPS; i++)
       lpel[i] = (loopelemt *) 0;
-
-   if (getparm("arrayelemts", "real", CURRENT, &arrayelemts, 1))
-      psg_abort(1);
-   if (bgflag)
-      fprintf(stderr, "arrayelements = %5.0lf \n", arrayelemts);
-   narrays = (int) arrayelemts; 
-   for (i = 0; i < narrays; i++)/* malloc space for each structure */
-   {
-      tmpptr = (char *) malloc(MAXLOOPS * sizeof(loopelemt));
-      if (tmpptr == 0L)
-      {
-	 text_error("insuffient memory for loop elements.");
-	 reset();
-	 psg_abort(1);
-      }
-      lpel[i] = (loopelemt *) tmpptr;
-      if (bgflag)
-	 fprintf(stderr, "lpel[%d] = %lx \n", i, lpel[i]);
-   }
-   return (narrays);
+   return;
 }
 
 /*------------------------------------------------------------------
 |  printlpel()  -  print lpel strcuture contents
-|			Author: Greg Brissey 6/2/89
 +------------------------------------------------------------------*/
-printlpel(number)
-int             number;
+void printlpel()
 {
    int             i;
+   int             j;
 
-   fprintf(stderr, "cvals address = %lx \n", cvals);
-   for (i = 0; i < number; i++)
+   for (i = 0; i < MAXLOOPS; i++)
    {
-      fprintf(stderr,
-	      "lpel[%d] contains: numvar = %d, name = '%s', addrs = %lx\n",
-	      i, lpel[i]->numvar, lpel[i]->lpvar[0], lpel[i]->varaddr[0]);
+      if (lpel[i])
+      {
+         int num;
+
+         num = lpel[i]->numvar;
+         fprintf(stderr, "lpel[%d] contains: numvar= %d with numvalues= %d\n",
+              i, lpel[i]->numvar, lpel[i]->numvals);
+         for (j=0; j<num; j++)
+         {
+            fprintf(stderr, "Loop element %d: Variable[%d] '%s'\n",
+              i, j, lpel[i]->lpvar[j]);
+         }
+      }
    }
 }
 
@@ -207,20 +223,21 @@ int             number;
 #define LPRIN 0x28	/* left  parenthesis */
 /*--------------------------------------------------------------------------
 +--------------------------------------------------------------------------*/
-parse(string, lpindex)
-char           *string;
-int             lpindex;
+int parse(char *string, int *narrays)
 {
 int             state;
 int             varindex;
 char           *ptr;
 char           *varptr;
+int             lpindex = 0;
    state = 0;
+   *narrays = 0;
    ptr = string;
    varindex = 0;
+   varptr = NULL;
    if (bgflag) fprintf(stderr, "parse(): string: '%s' -----\n", string);
    /* ---  test the variables as we parse them --- */
-   /* ---  This is a 4 state parser, 0-1: separate variables 
+   /* ---  This is a 4 state parser, 0-1: separate variables     */
    /* --- 			     2-4: diagonal set variables */
    while (1)
    {  switch (state)
@@ -228,17 +245,22 @@ char           *varptr;
 	 case 0:
 	    if (bgflag)
 	    {  fprintf(stderr, "Case 0: ");
-	       fprintf(stderr, "letter: '%c', ", *ptr);
+	       if (*ptr == NULLCHAR)
+	          fprintf(stderr, "letter: NULL, ");
+               else
+	          fprintf(stderr, "letter: '%c', ", *ptr);
 	    }
 	    if (letter(*ptr))	/* 1st letter go to state 1 */
 	    {  varptr = ptr;
 	       state = 1;
 	       ptr++;
+               *narrays += 1;
 	    }
 	    else
 	    {  if (*ptr == LPRIN)	/* start of diagnal arrays */
 	        { state = 2;
 		  ptr++;
+                  *narrays += 1;
 	       }
 	       else
 	       {  if (*ptr == NULLCHAR) return (0); /* error? */
@@ -252,7 +274,10 @@ char           *varptr;
 	 case 1:
 	    if (bgflag)
 	    {  fprintf(stderr, "Case 1: ");
-	       fprintf(stderr, "letter: '%c', ", *ptr);
+	       if (*ptr == NULLCHAR)
+	          fprintf(stderr, "letter: NULL, ");
+               else
+	          fprintf(stderr, "letter: '%c', ", *ptr);
 	    }
 	    if (letter(*ptr) || digit(*ptr)) ptr++;
 	    else
@@ -366,7 +391,7 @@ int             ret;
 char            mess[MAXSTR];
 vInfo           varinfo;	/* variable information structure */
    /* --- variable info  --- */
-   if (ret = P_getVarInfo(CURRENT, varptr, &varinfo))
+   if ( (ret = P_getVarInfo(CURRENT, varptr, &varinfo)) )
    {  sprintf(mess, "Cannot find the variable: '%s'", varptr);
       text_error(mess);
       if (bgflag) P_err(ret, varptr, ": ");
@@ -381,21 +406,30 @@ vInfo           varinfo;	/* variable information structure */
    }
    if (bgflag)
    {  fprintf(stderr,
-	      "SETUP: variable: '%s', lpindex = %d, varindex = %d, &varindex = %lx, index = %d \n",
-	      varptr, lpindex, varindex, &varindex, index);
+	      "SETUP: variable: '%s', lpindex = %d, varindex = %d, index = %d \n",
+	      varptr, lpindex, varindex, index);
       if (type == ST_REAL)
       {
 	 fprintf(stderr,
-	  "SETUP: cname[%d]: '%s', cvals[%d] = %5.2lf, &cvals[%d] = %lx \n",
-	  index, cnames[index], index, *cvals[index], index, &cvals[index]);
+	  "SETUP: cname[%d]: '%s', cvals[%d] = %5.2lf \n",
+	  index, cnames[index], index, *cvals[index]);
       }
       else
       {
 	 fprintf(stderr,
-	    "SETUP: cname[%d]: '%s', cvals[%d] = '%s', &cvals[%d] = %lx \n",
-	   index, cnames[index], index, cvals[index], index, &cvals[index]);
+	    "SETUP: cname[%d]: '%s', cvals[%d] = '%s' \n",
+	   index, cnames[index], index, cvals[index]);
    }  }
 
+   if ( ! lpel[lpindex] )
+   {
+      if ( (lpel[lpindex] = (loopelemt *) malloc(MAXLOOPS * sizeof(loopelemt))) == 0L)
+      {
+         text_error("insuffient memory for loop elements.");
+         reset();
+         psg_abort(1);
+      }
+   }
 /* --- number of variables --- */
    lpel[lpindex]->numvar = varindex + 1;
 /* --- number values for loopelement --- */
@@ -418,20 +452,16 @@ vInfo           varinfo;	/* variable information structure */
 	 lpel[lpindex]->lpvar[varindex]);
       if (type == ST_REAL)
       {  fprintf(stderr,
-		" value = %5.2lf, &value = 0x%lx \n",
-		 *(*((double **) lpel[lpindex]->varaddr[varindex])),
-		 (lpel[lpindex]->varaddr[varindex]));
+		" value = %5.2lf \n",
+		 *(*((double **) lpel[lpindex]->varaddr[varindex])) );
       }
       else
       {  fprintf(stderr,
- 		" value = '%s', &value = 0x%lx \n",
-		 *((char **) lpel[lpindex]->varaddr[varindex]),
-		 (lpel[lpindex]->varaddr[varindex]));
+ 		" value = '%s' \n",
+		 *((char **) lpel[lpindex]->varaddr[varindex]) );
       }
-      fprintf(stderr,
-      "SETUP: global index:%d, gobal var addr:0x%lx, gobal var func:0x%lx \n",
-	   gindx,glblvars[gindx].glblvalue, glblvars[gindx].funcptr);
    }
+   numberLoops = lpindex+1;
 }
 
 /*-----------------------------------------------------------------------
@@ -455,7 +485,14 @@ vInfo           varinfo;	/* variable information structure */
 |			  3. Use global strcuture for updateing global parameters
 |
 +-----------------------------------------------------------------------*/
-arrayPS(index, numarrays)
+static int curarrayindex = 0;
+
+int get_curarrayindex()
+{
+   return(curarrayindex);
+}
+
+void arrayPS(index, numarrays)
 int             index;
 int             numarrays;
 {
@@ -468,8 +505,6 @@ int             nvals,
 int             ret;
 int             gindx;
 double         *temptr;
-double		sign_add();
-double		getval();
 char            mess[MAXSTR];
 
    name = lpel[index]->lpvar[0];
@@ -479,7 +514,7 @@ char            mess[MAXSTR];
    for (valindx = 1; valindx <= nvals; valindx++)
    {
       nvars = lpel[index]->numvar;
-/*      if (index == 0)
+      if (index == 0)
          nth2D++;	/* if first arrayed variable (i.e. 2D variable) inc. */
 /* --- for each of the arrayed variable(s) get its value --- */
       for (varindx = 0; varindx < nvars; varindx++)
@@ -498,10 +533,12 @@ char            mess[MAXSTR];
 	       psg_abort(1);
 	    }
 	    gindx = lpel[index]->glblindex[varindx];
-	    if (glblvars[gindx].glblvalue)
-	       *(glblvars[gindx].glblvalue) = *((double *) *parmptr);
-	    if (glblvars[gindx].funcptr)
-	       (*glblvars[gindx].funcptr) (*((double *) *parmptr));
+            if (gindx >= 0) {
+	        if (glblvars[gindx].glblvalue)
+	           *(glblvars[gindx].glblvalue) = *((double *) *parmptr);
+	        if (glblvars[gindx].funcptr)
+	           (*glblvars[gindx].funcptr) (*((double *) *parmptr));
+            }
 	 }
 	 else
 	 {
@@ -514,8 +551,10 @@ char            mess[MAXSTR];
 	       psg_abort(1);
 	    }
 	    gindx = lpel[index]->glblindex[varindx];
-	    if (glblvars[gindx].funcptr)
-	       (*glblvars[gindx].funcptr) (((char *) *parmptr));
+            if (gindx >= 0) {
+	        if (glblvars[gindx].funcptr)
+	           (*glblvars[gindx].funcptr) (((char *) *parmptr));
+            }
 	 }
 
 	 temptr = (double *) *parmptr;
@@ -525,14 +564,12 @@ char            mess[MAXSTR];
 			index, varindx, name);
 	    if (lpel[index]->vartype[varindx] != T_STRING)
 	    {
-	       fprintf(stderr,"value[%d] = %10.4lf,",valindx,(double) *temptr); 
+	       fprintf(stderr,"value[%d] = %10.4lf\n",valindx,(double) *temptr); 
 	    }
 	    else
 	    {
-	       fprintf(stderr,"value[%d] = '%s',",valindx, (char *) temptr);
+	       fprintf(stderr,"value[%d] = '%s'\n",valindx, (char *) temptr);
 	    }
-	    fprintf(stderr," g_addr: 0x%lx, g_func: 0x%lx\n", 
-	               glblvars[gindx].glblvalue, glblvars[gindx].funcptr);
 	 }
       }
       if (numarrays > 1)
@@ -603,9 +640,7 @@ void setGlobalDouble(const char *name, double val)
 |			second argument	to first
 |	returns new value (double)
 +------------------------------------------------------------------*/
-double sign_add(arg1,arg2)
-double arg1;
-double arg2;
+double sign_add(double arg1, double arg2)
 {
     if (arg1 >= 0.0)
 	return(arg1 + arg2);
@@ -667,15 +702,16 @@ double          value;
    DPRINT(DPRTLEVEL,"func for loc called\n");
    return (0);
 }
-static
-func4d2(value)
-double          value;
+static int func4d2(double value)
 {
-short	*ptr;
+   short	*ptr;
    ptr = (short *)Alc;
    ptr = ptr + id2;
-   *ptr = (short) curarrayindex;
-   d2_index = curarrayindex;
+   if (getCSparIndex("d2") == -1)
+      d2_index = get_curarrayindex();
+   else
+      d2_index = (int) ( (d2 - d2_init) / inc2D + 0.5);
+   *ptr = (short) d2_index;
    DPRINT(DPRTLEVEL,"func for d2 to set id2\n");
    return (0);
 }
@@ -775,14 +811,15 @@ char           *value;
    return (0);
 }
 /* static
-/* func4homo(value)
-/* char           *value;
-/* {
-/*    strcpy(homo, value);
-/*    homosize = strlen(homo);
-/*    DPRINT1(DPRTLEVEL,"func for homo called value='%s'\n", value);
-/*    return (0);
-/* } */
+ * func4homo(value)
+ * char           *value;
+ * {
+ *    strcpy(homo, value);
+ *    homosize = strlen(homo);
+ *    DPRINT1(DPRTLEVEL,"func for homo called value='%s'\n", value);
+ *    return (0);
+ * }
+ */
 static
 func4alock(value)
 char           *value;
@@ -797,7 +834,7 @@ func4wshim(value)
 char           *value;
 {
    strcpy(wshim, value);
-/*   whenshim = setshimflag(wshim,&shimatanyfid); /* when to shim */
+/*   whenshim = setshimflag(wshim,&shimatanyfid); */ /* when to shim */
    DPRINT1(DPRTLEVEL,"func for wshim called value='%s'\n", value);
    return (0);
 }
@@ -831,7 +868,7 @@ func4rcgain(value)
 double          value;
 {
    Aauto->recgain = (codeint) sign_add(gain,0.0005);
-/*   gainactive = TRUE; /* non arrayable */
+/*   gainactive = TRUE; */ /* non arrayable */
    return (0);
 }
 static
@@ -845,8 +882,7 @@ double          value;
 /*----------------------------------------------------
 |  initglblstruc - load up a global structure element
 +----------------------------------------------------*/
-static
-initglblstruc(index, name, glbladdr, function)
+static void initglblstruc(index, name, glbladdr, function)
 int             index;
 char           *name;
 double         *glbladdr;
@@ -871,8 +907,7 @@ int             (*function) ();
 |
 |                       Author Greg Brissey   6/5/87
 +------------------------------------------------------------------------*/
-elemvalues(elem)
-int             elem;
+int elemvalues(int elem)
 {
    char           *name;
    char            mess[MAXSTR];
@@ -888,7 +923,7 @@ int             elem;
    }
 
    name = lpel[elem - 1]->lpvar[0];
-   if (ret = P_getVarInfo(CURRENT, name, &varinfo))
+   if ( (ret = P_getVarInfo(CURRENT, name, &varinfo)) )
    {
       sprintf(mess, "Cannot find the variable: '%s'", name);
       text_error(mess);
@@ -906,9 +941,7 @@ int             elem;
 |
 |                       Author Greg Brissey   6/5/87
 +------------------------------------------------------------------------*/
-elemindex(fid, elem)
-int             fid;
-int             elem;
+int elemindex(int fid, int elem)
 {
    int             i,
                    nvalues,
@@ -951,7 +984,7 @@ int             elem;
 |		     initparms() for each fid
 |			Author: Greg Brissey 6/2/89
 +-------------------------------------------------------*/
-initglobalptrs()
+void initglobalptrs()
 {
    int index;
    int shim_index;
