@@ -8,12 +8,12 @@
 # For more information, see the LICENSE file.
 #
 # set -x
-if [ x$vnmrsystem = "x" ]
+if [ x"$vnmrsystem" = "x" ]
 then
    vnmrsystem=/vnmr
 fi
 admin=$($vnmrsystem/bin/fileowner $vnmrsystem/vnmrrev)
-if [ $USER != $admin ]
+if [ "$USER" != "$admin" ]
 then
    echo "OpenVnmrj accounting tool can only be used by the"
    echo "OpenVnmrJ administrator account $admin"

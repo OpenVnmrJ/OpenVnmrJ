@@ -71,8 +71,21 @@ program will run in a non-interactive background mode. If only the "-in"
 argument is specified, the accounting interface will display the results
 for the specified acctLog.xml file.
 
+Examples of the calls vnmr_accounting are:
 
-doAcct  - sample script to generate accounting records.
+vnmr_accounting -saveDir $HOME/vnmrsys/accounting/2018_07_01 -cut
+vnmr_accounting -saveDir $HOME/vnmrsys/accounting/2018_07_01 \
+       -in $HOME/vnmrsys/accounting/2018_07_01/acctLog.xml -summary -summaryCsv -acctCsv
+or
+
+vnmr_accounting -saveDir $HOME/vnmrsys/accounting/2018_07_01 \
+       -startDate "<startDate>" -endDate "today" -summary -summaryCsv -acctCsv
+where <startDate> is one month prior to "today"
+
+
+
+doAcct      - sample script to generate accounting records.
+doAcct cut  - sample script remove old records and to generate accounting records.
 
 The doAcct script might be called once a month by a cron job.  It collects
 the accounting records in the vnmrsys directory of the OpenVnmrJ admin
@@ -80,7 +93,21 @@ account (vnmr1). It sets the saveDir argument to
 ~/vnmrsys/accounting/yyyy_mm_dd where yyyy_mm_dd represents the day the
 doAcct script was called.
 
-The first step is to copy the current /vnmr/adm/accounting/acctLog.xml file
+The doAcct script can be run in two ways, either with or without an argument.
+If executed without an argument, as in, for example
+
+doAcct
+
+it will set the endDate to the current date and set the startDate to one
+month prior. It will generate the summary, summaryCsv, and acctCsv files
+from the /vnmr/adm/accounting/acctLog.xml file.  These files are saved in
+the "saveDir" directory.
+
+If the doAcct script is called with an argument, as in, for example
+
+doAcct cut
+
+it will first copy the current /vnmr/adm/accounting/acctLog.xml file
 to the "saveDir" directory.  The script will then "cut" all records from
 the /vnmr/adm/accounting/acctLog.xml file that are older than the current day.
 The cutting step is to prepare the acctLog.xml for the next month's accounting.
@@ -91,13 +118,9 @@ The next step is to generate the summary, summaryCsv, and acctCsv files from
 the saved acctLog.xml file. These files are also saved in the "saveDir"
 directory.
 
-The final step in to convert the summary.txt file into a complete record as
-a png file. The summary.txt file only contains the raw information. This is
-combined with the files acctHeader.ps and acctTail.ps in /vnmr/adm/accounting
-to generate a PostScript file. The convert program then converts the
-PostScript file into a png file.
+The final step in both cases is to convert the summary.txt file into a complete
+record as a png file. The summary.txt file only contains the raw information.
+This is combined with the files acctHeader.ps and acctTail.ps in
+/vnmr/adm/accounting to generate a PostScript file. The convert program then
+converts the PostScript file into a png file.
 
-Examples of the calls are:
-
-vnmr_accounting -saveDir $HOME/vnmrsys/accounting/2018_07_01 -cut
-vnmr_accounting -saveDir $HOME/vnmrsys/accounting/2018_07_01 -in $HOME/vnmrsys/accounting/2018_07_01/acctLog.xml -summary -summaryCsv -acctCsv
