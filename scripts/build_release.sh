@@ -59,22 +59,22 @@ usage:
   ${SCRIPT} [checkout] [build] [package] [options...]
 
 where [options...] are:
-  -d|--bindir dir               - target directory for build [\$ovjBuildDir]
-  -u|--gitname github_username  - github account to clone from [${OVJ_DEVELOPER}]
-  -b|--branch branch_name       - branch to clone, [${OVJ_GITBRANCH}]
-  -g|--giturl url               - url for OpenVnmrJ git repository, overrides -u/-b
-                                  [${OVJ_GITURL}]
-  --tbranch branch_name         - branch to clone for ovjTools, ie [${OVJT_GITBRANCH}]
-  -t|--tgiturl url              - url for ovjTools git repository, overrides -u/-b
-                                  [${OVJT_GITURL}]
-  --gitdepth num                - argument for --depth in git clone [${OVJ_GITDEPTH}]
-  -r|--srcreset                 - reset the OpenVnmr/src directory before compiling
-  --ddr yes|no                  - enable Direct-Drive (VnmrS/DD2/ProPulse) DVD build
-                                  [${OVJ_PACK_DDR}]
-  --inova yes|no                - enable Mercury/Inova DVD build [${OVJ_PACK_MINOVA}]
-  -s scons_options              - flags to pass to scons [${OVJ_SCONSFLAGS}]
-  -v|--verbose                  - be more verbose (can add multiple times)
-  -q|--quiet                    - be more quiet   (can add multiple times)
+  -d|--bindir dir           - target directory for build [\$ovjBuildDir]
+  -u|--gitname github_user  - github account to clone from [${OVJ_DEVELOPER}]
+  -b|--branch branch_name   - branch to clone, [${OVJ_GITBRANCH}]
+  -g|--giturl url           - url for OpenVnmrJ git repository, overrides -u/-b
+                              [${OVJ_GITURL}]
+  --tbranch branch_name     - branch to clone for ovjTools, ie [${OVJT_GITBRANCH}]
+  -t|--tgiturl url          - url for ovjTools git repository, overrides -u/-b
+                              [${OVJT_GITURL}]
+  --gitdepth num            - argument for --depth in git clone [${OVJ_GITDEPTH}]
+  -r|--srcreset             - reset the OpenVnmr/src directory before compiling
+  -s scons_options          - flags to pass to scons [${OVJ_SCONSFLAGS}]
+  --ddr yes|no              - enable Direct-Drive (VnmrS/DD2/ProPulse) DVD build
+                              [${OVJ_PACK_DDR}]
+  --inova yes|no            - enable Mercury/Inova DVD build [${OVJ_PACK_MINOVA}]
+  -v|--verbose              - be more verbose (can add multiple times)
+  -q|--quiet                - be more quiet   (can add multiple times)
 
 EOF
     exit 1
@@ -97,6 +97,8 @@ while [ $# -gt 0 ]; do
         --tbranch)              OVJT_GITBRANCH="$2"; shift    ;;
         -g|--giturl)            OVJ_GITURL="$2"; shift        ;;
         -d|--bindir)            OVJ_BUILDDIR="$2"; shift      ;;
+        --gitdepth)             OVJ_GITDEPTH="$2"; shift      ;;
+        -r|--srcreset)          OVJ_SRCRESET=yes              ;;
         -s)                     OVJ_SCONSFLAGS="$2"; shift    ;;
         --ddr)                  OVJ_PACK_DDR="$2"; shift      ;;
         --inova)                OVJ_PACK_MINOVA="$2"; shift   ;;
@@ -304,7 +306,11 @@ do_build () {
     retval=$?
     if [ $retval -ne 0 ]; then
         # scons failed, dump a little something useful
-        if [ -t 3 ]; then tail -20 "${LOGFILE}" >&3 ; fi
+        if [ -t 3 ]; then
+            echo "--- scons failed. tail LOGFILE: ---" >&3
+            tail -30 "${LOGFILE}" >&3 ;
+            echo "--- --- --- --- --- --- --- --- ---" >&3
+        fi
         return $retval
     fi
     log_info "build done."
