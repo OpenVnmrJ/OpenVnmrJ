@@ -174,33 +174,35 @@ copyFilesHere(ThirdPartyJarPath, ThirdPartyList)
 
 # actions to perform at interpretation time
 for i in jarFileList:
-   Execute('cd ' + classesPath + '; ' + jarBin + ' -xf ' + i)
+   Execute('cd ' + classesPath + ' && ' + jarBin + ' -xf ' + i)
 for i in jarHelpFileList:
-   Execute('cd ' + classesPath + '; ' + jarBin + ' -xf ' + i)
+   Execute('cd ' + classesPath + ' && ' + jarBin + ' -xf ' + i)
 
 # Remove manifest stuff, if gets in the way
 Execute('rm -rf ' + os.path.join(classesPath, 'META-INF'))
 
 # copy properties files to classes/properties directory
-Execute('rm -rf ' + os.path.join(classesPath, 'vnmr') + '; ' + \
+Execute('rm -rf ' + os.path.join(classesPath, 'vnmr') + ' && ' + \
         'cp -r ' + os.path.join(cwd, 'src', 'vnmr') + ' ' + classesPath)
 
 # define vjmol environment
 vjmolPath = os.path.join(cwd, 'vjmol')
+Execute(Mkdir(vjmolPath))
+
 if ((platform!="darwin") and ('interix' not in platform) ):
    vjmolEnv  = Environment(ENV = {'JAVA_HOME' : javaBinDir,
-                               'CLASSPATH' : os.path.join(cwd, 'jmol.jar'),
-                               'PATH' : javaBinDir + ':' + os.environ['PATH']})
+                                  'CLASSPATH' : os.path.join(cwd, 'jmol.jar'),
+                                  'PATH' : javaBinDir + ':' + os.environ['PATH']})
 
-# define build environment
+   # define build environment
    jEnv = Environment(ENV = {'JAVA_HOME' : javaBinDir,
-                          'CLASSPATH' : classesPath,
-                          'PATH' : javaBinDir + ':' + os.environ['PATH']})
+                             'CLASSPATH' : classesPath,
+                             'PATH' : javaBinDir + ':' + os.environ['PATH']})
 elif (platform=="darwin"):
    vjmolEnv  = Environment(ENV = {'CLASSPATH' : os.path.join(cwd, 'jmol.jar'),
                                   'PATH' : javaBinDir + ':' + os.environ['PATH']})
 
-# define build environment
+   # define build environment
    jEnv = Environment(ENV = {'CLASSPATH' : classesPath,
                              'PATH' : javaBinDir + ':' + os.environ['PATH']})
 
@@ -215,14 +217,14 @@ elif ( 'interix' in platform ):
                                   'CLASSPATH' : os.path.join(fbpath, 'jmol.jar'),
                                   'PATH' : javaBinDir + ':' + os.environ['PATH']})
 
-# define build environment
+   # define build environment
    jEnv = Environment( JAVAC = os.path.join(javaBinDir,'javac.exe'),
                        JAVACLASSPATH = [ 
                                          os.path.join(fbpath, 'classes'), 
                                        ],
                        ENV = {'SYSTEMROOT' : 'C:\WINDOWS',
-                             'CLASSPATH' : [ 'classes', os.path.join(fbpath, 'classes') ],
-                             'PATH' : javaBinDir + ':' + os.environ['PATH']})
+                              'CLASSPATH' : [ 'classes', os.path.join(fbpath, 'classes') ],
+                              'PATH' : javaBinDir + ':' + os.environ['PATH']})
 
                        #JAVACLASSPATH = [ 'classes', 
                        #                  '\'' + os.path.join(fbpath, 'classes') + '\'', 
@@ -244,24 +246,24 @@ if ( 'interix' not in platform):
 
 # actual VJMol.jar build
 javaBuildVJMol = vjmolEnv.Java(source = os.path.join(cwd, 'vjmol_src'),
-              target = vjmolPath)
+                               target = vjmolPath)
 
 findAction = 'find ' + os.path.join(cwd,'classes') + ' \( -name "*.java" -o -name "*.out" \) -exec rm -f {} \;'
 
 # print findAction
-jEnv.AddPostAction(javaBuildVJMol,
-                   Action(findAction))
+vjmolEnv.AddPostAction(javaBuildVJMol,
+                       Action(findAction))
 if ( 'interix' not in platform):
   vjmolBuildObject = vjmolEnv.Jar(JAR      = jarBin,
-                                source   = vjmolPath,
-                                target   = vjmolTarget,
-                                JARCHDIR = vjmolPath)
+                                  source   = vjmolPath,
+                                  target   = vjmolTarget,
+                                  JARCHDIR = vjmolPath)
 
 # actual builds
 srcPath = os.path.join(cwd, 'src')
 javaBuildObject = jEnv.Java(JAVACFLAGS = '-J-mx256m',
-          target     = classesPath,
-          source     = srcPath)
+                            target     = classesPath,
+                            source     = srcPath)
 
 todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
 manifestFile = os.path.join(cwd, 'Manifest')
@@ -283,19 +285,19 @@ if ( 'interix' in platform):
   cdCmd = 'cd ' + cwd + ' ; '
   jarCmd = cdCmd + jarBin + ' -cfm vnmrj.jar ' + Sua2WinPath(manifestFile) + ' -C ' + Sua2WinPath(classesPath) + ' .'
   jarBuildObject = jEnv.Command(target = vnmrjTarget,
-               source = [ classesPath, manifestFile],
-               action = jarCmd,
-              )
+                                source = [ classesPath, manifestFile],
+                                action = jarCmd,
+  )
   jEnv.Depends( target = vnmrjTarget,
                 dependency = [ classesPath, manifestFile],
               ) 
 
 else:
   jarBuildObject = jEnv.Jar(JAR      = jarBin,
-                          target   = vnmrjTarget,
-                          source   = [classesPath,
-                                      manifestFile],
-                          JARCHDIR = classesPath)
+                            target   = vnmrjTarget,
+                            source   = [classesPath,
+                                        manifestFile],
+                            JARCHDIR = classesPath)
 
 # define with absolute path where built files will be copied
 installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
@@ -313,27 +315,27 @@ Execute(Copy(os.path.join(installPath,'simplemovie.jar'), moviePath))
 # actions to be performed after targets are built
 if boEnv['dasho']=='y' or boEnv['vnmrj_O']=='y':
    jEnv.AddPostAction(jarBuildObject,
-                   Action(os.path.join(cwd,'VnmrJProGuard.sh')))
+                      Action(os.path.join(cwd,'VnmrJProGuard.sh')))
 
 #                   Action(os.path.join(cwd,'VnmrJDasho.sh')))
 
 if boEnv['vnmrj_O']=='y':
    jEnv.AddPostAction(jarBuildObject,
-                   Action(Copy(os.path.join(installPath,vnmrjTarget),
-                               os.path.join(cwd, vnmrjProGuardTarget))))
+                      Action(Copy(os.path.join(installPath,vnmrjTarget),
+                                  os.path.join(cwd, vnmrjProGuardTarget))))
 else:
    jEnv.AddPostAction(jarBuildObject,
-                   Action(Copy(installPath, os.path.join(cwd, vnmrjTarget))))
+                      Action(Copy(installPath, os.path.join(cwd, vnmrjTarget))))
 
 # finally copy vjmol.jar
 if ( 'interix' not in platform):
   vjmolEnv.AddPostAction(vjmolBuildObject,
-                   Action(Copy(installPath, os.path.join(cwd, vjmolTarget))))
+                         Action(Copy(installPath, os.path.join(cwd, vjmolTarget))))
 else:
   for i in JSmoothFileList:
     jEnv.AddPostAction(jarBuildObject,
-             Action(os.path.join(JSmoothPath,'jsmoothcmd.exe') + ' "' + i +'"'))
+                       Action(os.path.join(JSmoothPath,'jsmoothcmd.exe') + ' "' + i +'"'))
   for i in JSmoothExecList:
     jEnv.AddPostAction(jarBuildObject,
-             Action(Copy(binPath, os.path.join(cwd, i))))
+                       Action(Copy(binPath, os.path.join(cwd, i))))
              

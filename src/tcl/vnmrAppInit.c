@@ -27,6 +27,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
+#if defined(__sun) && defined(__SVR4)
 /*
  * The following variable is a special hack that is needed in order for
  * Sun shared libraries to be used for Tcl.
@@ -34,6 +35,7 @@
 
 extern int matherr();
 int *tclDummyMathPtr = (int *) matherr;
+#endif
 
 #ifdef TK_TEST
 EXTERN int		Tktest_Init _ANSI_ARGS_((Tcl_Interp *interp));

@@ -11,7 +11,7 @@
 
 #include "imagemath.h"
 #include <stdarg.h>
-#include <bits/nan.h>
+#include <math.h>
 
 /* Gets the element row,col from a lower triangular matrix "m" that
  * is stored in the order m00, m10, m11, m20, m21, m22, m30, ...

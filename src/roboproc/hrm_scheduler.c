@@ -797,7 +797,7 @@ void HrmSendRobotCmd(HRM_ROBOT_CMD *cmd)
         if ((smsDev <= 0) ||
             (ioctl_lan(smsDev, IO_FLUSH) < 0)) {
             DPRINT(0, "HrmSendRobotCmd ERROR: offline?\r\n");
-            DPRINT1(0, "  command attempted: %s\r\n", cmd);
+            DPRINT1(0, "  command attempted: %s\r\n", cmd->cmdStr);
             cmd->errVal = SMPERROR+HRM_COMMERROR;
             cmd->commErr = errno;
             return;
@@ -813,7 +813,7 @@ void HrmSendRobotCmd(HRM_ROBOT_CMD *cmd)
             ReconnectDevice(&smsDev, "HRM_ROBOT");
             if (smsDev <= 0) {
                 DPRINT(0, "HrmSendRobotCmd ERROR: offline?\r\n");
-                DPRINT1(0, "  command attempted: %s\r\n", cmd);
+                DPRINT1(0, "  command attempted: %s\r\n", cmd->cmdStr);
                 cmd->errVal = SMPERROR+HRM_COMMERROR;
                 cmd->commErr = errno;
                 return;
@@ -1365,8 +1365,8 @@ void record_error(int smp, int stat)
             return;
         }
     }
-    DPRINT2(0, "Roboproc: cannot record error condition (%s) "
-            "for sample %s.\r\n", stat, smp);
+    DPRINT2(0, "Roboproc: cannot record error condition (%d) "
+            "for sample %d.\r\n", stat, smp);
 }
 
 
@@ -3946,7 +3946,7 @@ int hermes_get_sample(int smp, int pcsSlot)
         robotError = SMPERROR+HRM_MAGTORACK;
 
         DPRINT1(0, "Roboproc doesn't know what preconditioner slot "
-                   "sample %s belongs in.  Manually clear the magnet and "
+                   "sample %d belongs in.  Manually clear the magnet and "
                    "robot.  Then re-start Roboproc to recover.\r\n", smp);
 
         WriteCompletionValues(NULL, smp, NULL, -1, -1, -1, -1,
@@ -4533,7 +4533,7 @@ int hermes_put_sample(int smp, int *pcsSlot)
     }
 
     /* Time to Notify Autoproc of Barcode for this Sample */
-    if (barcodeUse && (sample[pcs].barcode != '\0') &&
+    if (barcodeUse && (sample[pcs].barcode[0] != '\0') &&
         (strncmp(sample[pcs].barcode, "<NONE>", 6) != 0) &&
         (strncmp(sample[pcs].barcode, "NOREAD", 6) != 0)) {
         MSG_Q_ID pMsgQ;
@@ -4623,7 +4623,7 @@ void StartBatch()
             sprintf(path, "%s%s", sysFname, "/asm/racksetup_768AS");
             if (readRacks(path) != 0) {
                 errLogRet(LOGOPT, debugInfo,
-                          "\'%s\': Rack Initialization Failed\n");
+                          "\'%s\': Rack Initialization Failed\n", path);
             }
             else {
                 FILE *stream;

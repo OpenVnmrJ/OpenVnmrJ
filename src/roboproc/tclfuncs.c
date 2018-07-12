@@ -2654,9 +2654,10 @@ int gCommand(dummy, interp, argc, argv)
  * The following variable is a special hack that is needed in order for
  * Sun shared libraries to be used for Tcl.
  */
-
+#if defined(__sun) && defined(__SVR4)
 extern int matherr();
 int *tclDummyMathPtr = (int *) matherr;
+#endif
 
 #ifdef XXXXX
 /*
