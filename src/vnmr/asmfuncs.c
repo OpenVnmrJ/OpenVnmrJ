@@ -953,6 +953,33 @@ void sleepMilliSeconds(int msecs)
 }
 
 #ifdef VNMRJ
+int vnmrSleep(int argc, char *argv[], int retc, char *retv[])
+{
+   struct timespec req;
+   double sTime = 0.0;
+   req.tv_sec = 1;
+   req.tv_nsec = 0;
+   if (argc > 1)
+   {
+      sTime= atof(argv[1]);
+      if (sTime >= 60.0)
+      {
+         req.tv_sec = 60;
+      }
+      else
+      {
+         if (sTime <= 0.0)
+            RETURN;
+         int sec = (int) (sTime*1000.0 + 0.1);
+         req.tv_sec = sec / 1000;
+         req.tv_nsec = (sec % 1000) * 1000000 ;
+      }
+   }
+// printf(stderr,"sleep sec= %d nano= %ld\n", (int) req.tv_sec, req.tv_nsec);
+   nanosleep( &req, NULL);
+   RETURN;
+}
+
 static void blockedByGet(char *dir, char *name)
 {
    struct timespec req;
