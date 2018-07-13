@@ -305,7 +305,7 @@ do_build () {
     cmdspin scons ${OVJ_SCONSFLAGS}
     retval=$?
     if [ $retval -ne 0 ]; then
-        # scons failed, dump a little something useful
+        # scons failed, dump a little something useful to stdout
         if [ -t 3 ]; then
             echo "--- scons failed. tail LOGFILE: ---" >&3
             tail -30 "${LOGFILE}" >&3 ;
