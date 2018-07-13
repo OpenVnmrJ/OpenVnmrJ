@@ -50,7 +50,7 @@ Current Travis-CI build status:
 [![Travis-CI Build](https://travis-ci.org/tesch1/OpenVnmrJ.svg?branch=master)](https://travis-ci.org/tesch1/OpenVnmrJ)
 
 Current Circle CI build status:
-[![Circle CI Build](https://circleci.com/gh/tesch1/OpenVnmrJ.svg?&style=shield&circle-token=43b262352b794300ba603dafbf6fc054e828e8b3)(https://circleci.com/gh/tesch1/OpenVnmrJ)
+[![Circle CI Build](https://circleci.com/gh/tesch1/OpenVnmrJ.svg?&style=shield&circle-token=43b262352b794300ba603dafbf6fc054e828e8b3)](https://circleci.com/gh/tesch1/OpenVnmrJ)
 
 If you are interested in building OpenVnmrJ from source, refer to the
 [ovjTools repository](https://github.com/OpenVnmrJ/ovjTools), which
