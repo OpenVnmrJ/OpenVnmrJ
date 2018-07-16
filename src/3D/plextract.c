@@ -86,14 +86,14 @@ struct _hdrInfo
 
 typedef struct _hdrInfo hdrInfo;
 
+datafileheader *readDATAheader(int fd);
+
 /*---------------------------------------
 |                                       |
 |             parseplane()/2            |
 |                                       |
 +--------------------------------------*/
-void parseplane(plinfo, plane_argv)
-char		*plane_argv;
-planeInfo	*plinfo;
+void parseplane(planeInfo *plinfo, char *plane_argv)
 {
    int	nplanetypes,
 	f1,
@@ -250,13 +250,12 @@ planeInfo	*plinfo;
 |            readselect()/2             |
 |                                       |
 +--------------------------------------*/
-ipar readselect(argstr, pinfo)
-char    *argstr;
-comInfo	*pinfo;
+ipar readselect(char *argstr, comInfo *pinfo)
 {
    ipar	tmp;
 
 
+   tmp.vset = ERROR;
    if (*argstr++ == '-')
    {
       switch (*argstr)
@@ -299,10 +298,7 @@ comInfo	*pinfo;
 |            setselect()/3              |
 |                                       |
 +--------------------------------------*/
-static int setselect(argstr, selection, pinfo)
-char    *argstr;
-int     selection;
-comInfo *pinfo;
+static int setselect(char *argstr, int selection, comInfo *pinfo)
 {      
    switch (selection)
    {
@@ -336,8 +332,7 @@ comInfo *pinfo;
 |            initPLinfo()/1             |
 |                                       |
 +--------------------------------------*/
-void initPLinfo(pinfo)
-comInfo	*pinfo;
+void initPLinfo(comInfo *pinfo)
 {
    pinfo->overwrite.pmode = SELECT;
    pinfo->curexp.pmode = SET;
@@ -364,21 +359,13 @@ comInfo	*pinfo;
 |            parseinput()/3             |
 |                                       |
 +--------------------------------------*/
-comInfo *parseinput(argc, argv, plinfo)
-char   		*argv[];
-int    		argc;
-planeInfo	*plinfo;
+comInfo *parseinput(int argc, char *argv[], planeInfo *plinfo)
 {
    char		*vnmruser;
    int          argno = 1,
                 mode = SELECT;
-   ipar		selection,
-		readselect();
+   ipar		selection;
    comInfo      *pinfo;
-   void		initPLinfo(),
-		parseplane();
-   extern char	*getenv();
-   extern int   errno;
  
  
 /*****************************************
@@ -406,7 +393,7 @@ planeInfo	*plinfo;
 /**********************************
 *  Parse the input command line.  *
 **********************************/
-
+   selection.ival = ERROR;
    while (argno < argc)
    {
       switch (mode)
@@ -583,10 +570,7 @@ planeInfo	*plinfo;
 |         createDATAheader()/3          |
 |                                       |
 +--------------------------------------*/
-hdrInfo *createDATAheader(fileinfo, datahead, pltype)
-int		pltype;
-filepar		*fileinfo;
-datafileheader	*datahead;
+hdrInfo *createDATAheader(filepar *fileinfo, datafileheader *datahead, int pltype)
 {
    int		nbheaders;
    hdrInfo	*hdrinfo;
@@ -703,8 +687,7 @@ datafileheader	*datahead;
 |	      initDLinfo()/1		|
 |					|
 +--------------------------------------*/
-void initDLinfo(dlist)
-filedesc	*dlist;
+void initDLinfo(filedesc *dlist)
 {
    dlist->ndatafd    = 0;
    dlist->dataexists = FALSE;
@@ -719,8 +702,7 @@ filedesc	*dlist;
 |	      initFHinfo()/1		|
 |					|
 +--------------------------------------*/
-void initFHinfo(dhead)
-datafileheader	*dhead;
+void initFHinfo(datafileheader *dhead)
 {
    dhead->Vfilehead.nblocks   = 0;
    dhead->Vfilehead.ntraces   = 0;
@@ -753,8 +735,7 @@ datafileheader	*dhead;
 |	      initFPinfo()/1		|
 |					|
 +--------------------------------------*/
-void initFPinfo(info)
-info3D	*info;
+void initFPinfo(info3D *info)
 {
    info->fileinfo->nF3points    = info->filehead->Vfilehead.np;
    info->fileinfo->ndatafiles   = info->filehead->ndatafiles;
@@ -775,8 +756,7 @@ info3D	*info;
 |	    closeDATAfiles()/1		|
 |					|
 +--------------------------------------*/
-void closeDATAfiles(dlist)
-filedesc	*dlist;
+void closeDATAfiles(filedesc *dlist)
 {
    int	i;
 
@@ -799,8 +779,7 @@ filedesc	*dlist;
 |	     openDATAfiles()/1		|
 |					|
 +--------------------------------------*/
-info3D *openDATAfiles(indirpath)
-char	*indirpath;
+info3D *openDATAfiles(char *indirpath)
 {
    char			basedatapath[MAXPATHL],
 			datapath[MAXPATHL],
@@ -808,11 +787,6 @@ char	*indirpath;
    int			i,
 			fd,
 			*fdlist;
-   void			initDLinfo(),
-			initFHinfo(),
-			initFPinfo(),
-			closeDATAfiles();
-   datafileheader       *readDATAheader();
    info3D		*info;
 
 
@@ -916,8 +890,7 @@ char	*indirpath;
 |          readDATAheader()/1           |
 |                                       |
 +--------------------------------------*/
-datafileheader *readDATAheader(fd)
-int     fd;
+datafileheader *readDATAheader(int fd)
 {
    int                  nbytes;
    datafileheader       *datahead;
@@ -955,9 +928,7 @@ int     fd;
 |	       copypar()/2		|
 |					|
 +--------------------------------------*/
-int copypar(indirpath, outdirpath)
-char	*indirpath,
-	*outdirpath;
+int copypar(char *indirpath, char *outdirpath)
 {
    char	infilepath[MAXPATHL],
 	outfilepath[MAXPATHL],
@@ -995,14 +966,8 @@ char	*indirpath,
 |	    readFiF3plane()/7		|
 |					|
 +--------------------------------------*/
-int readFiF3plane(finfo, data, wspace, Fjtrace, F3file, nfheadbytes, plane)
-int	F3file,
-	Fjtrace,
-	nfheadbytes,
-	plane;
-float	*data,
-	*wspace;
-filepar	*finfo;
+int readFiF3plane(filepar *finfo, float *data, float *wspace, int Fjtrace,
+                  int F3file, int nfheadbytes, int plane)
 {
    int			ntrbytes,
 			nFitraces,
@@ -1093,12 +1058,8 @@ filepar	*finfo;
 |	     skylineproj()/5		|
 |					|
 +--------------------------------------*/
-void skylineproj(destpntr, srcpntr, npnts, plane_no, datatype)
-int	npnts,
-	plane_no,
-	datatype;
-float	*destpntr,
-	*srcpntr;
+void skylineproj(float *destpntr, float *srcpntr, int npnts,
+                 int plane_no, int datatype)
 {
    register int		i,
 			j;
@@ -1148,13 +1109,8 @@ float	*destpntr,
 |	     getF2trace()/6		|
 |					|
 +--------------------------------------*/
-void getF2trace(data, wspace, F2traceno, nF3pts, nF2traces, datatype)
-int	F2traceno,
-	nF3pts,		/* total points */
-	nF2traces,
-	datatype;
-float	*data,
-	*wspace;
+void getF2trace(float *data, float *wspace, int F2traceno, int nF3pts,
+                int nF2traces, int datatype)
 {
    register int		i,
 			j,
@@ -1205,11 +1161,7 @@ static void convertProj(int *tmpprojbuffer, int np)
 |	     writeplanes()/4		|
 |					|
 +--------------------------------------*/
-int writeplanes(info, outdirpath, plane, f1f2flag)
-char	*outdirpath;
-int	plane,
-	f1f2flag;
-info3D	*info;
+int writeplanes(info3D *info, char *outdirpath, int plane, int f1f2flag)
 {
    char		basefilepath[MAXPATHL],
 		basefilepathF1F2[MAXPATHL],
@@ -1217,27 +1169,22 @@ info3D	*info;
 		fext[10];
    int		i,
 		j,
-		m,
 		fdw,
 		nFj_traces,
 		nbytes,
-		nF1F2files,
-		wrF1F2bytes,
-		wrF1F2words,
+		nF1F2files = 0,
+		wrF1F2bytes = 0,
+		wrF1F2words = 0,
 		nbheaderbytes,
 		nheaderbytes,
 		worksize;
    off_t        fOffset;
    float	*buffer,
 		*workspace,
-		*projbuffer,
-		*projf1f2buffer;
-   void		closeDATAfiles(),
-		getF2trace(),
-		skylineproj();
+		*projbuffer = NULL,
+		*projf1f2buffer = NULL;
    hdrInfo	*hdrinfo,
-		*hdrinfof1f2,
-		*createDATAheader();
+		*hdrinfof1f2 = NULL;
    dfilehead    *pFilehead;
    dblockhead   *pBlockhead;
    char         *pBuffer;
@@ -1648,10 +1595,7 @@ info3D	*info;
 |	    checkdiskspace()/3		|
 |					|
 +--------------------------------------*/
-int checkdiskspace(finfo, outputdir, plselect)
-char		*outputdir;
-filepar		*finfo;
-planeInfo	plselect;
+int checkdiskspace(filepar *finfo, char *outputdir, planeInfo plselect)
 {
    int			req_kbytes = 100,
 			free_kbytes,
