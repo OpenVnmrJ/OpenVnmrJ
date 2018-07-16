@@ -38,8 +38,7 @@ extern int createlock(char *filepath, int type);
 |          copyinfofiles()/1            |
 |                                       |
 +--------------------------------------*/
-int copyinfofiles(pinfo)
-comInfo	*pinfo;
+int copyinfofiles(comInfo *pinfo)
 {
    char	newinfodir[MAXPATHL],
 	foutpath[MAXPATHL],
@@ -299,8 +298,9 @@ char    *infodir;
             }
 	    if (debug){
 		fprintf(stderr,"    parLP[%d]:\n", j);
-		fprintf(stderr,"      lstrace=%g\n, *lppntr=(%g, %g)\n",
-			lpdata->lstrace, lpdata->lppntr[0], lpdata->lppntr[1]);
+		fprintf(stderr,"      lstrace=%g\n", lpdata->lstrace);
+		// fprintf(stderr,"      lstrace=%g\n, *lppntr=(%g, %g)\n",
+		// 	lpdata->lstrace, lpdata->lppntr[0], lpdata->lppntr[1]);
 		/* MORE ... */
 	    }
          }
@@ -357,8 +357,7 @@ char    *infodir;
 |            check3Dinfo()/1            |
 |                                       |
 +--------------------------------------*/
-int check3Dinfo(infopntr)
-proc3DInfo      *infopntr;
+int check3Dinfo(proc3DInfo *infopntr)
 {
    int          i;
    dimenInfo    *dinfo;
@@ -466,7 +465,6 @@ int     arraydim;
          case 1:   tmpflag = &(coef3d->f3t2.ir_nzero); break;
          case 2:   tmpflag = &(coef3d->f3t2.ri_nzero); break;
          case 3:   tmpflag = &(coef3d->f3t2.ii_nzero); break;
-         default:  break;
       }
 
       *tmpflag = FALSE;

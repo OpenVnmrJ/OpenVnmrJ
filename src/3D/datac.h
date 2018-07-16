@@ -16,13 +16,9 @@
 
 #ifdef LINUX
 
-#ifdef __INTERIX
 #include <arpa/inet.h>
-#else
-#include <netinet/in.h>
-#endif
 
-static struct dbh_swap
+struct dbh_swap
 {
    short s1;
    short s2;

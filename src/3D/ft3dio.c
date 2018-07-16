@@ -42,27 +42,30 @@ static int      firstFID = TRUE;
 extern char	*userdir;
 extern int	maxfn12;	/* maximum F1-F2 real Fourier number	*/
 extern int      mapFIDblock(int block_no);
+extern int removelock(char *filepath);
+extern int createlock(char *filepath, int type);
 
 /*---------------------------------------
 |                                       |
 |           readFIDdata()/12            |
 |                                       |
 +--------------------------------------*/
-int readFIDdata(fd, data, wspace, filehead, nfidbytes, npadj, lsfval,
-                        lastfid, fid_nbr, dpflag, fidmap, pf3acq, lpval)
-char            *wspace;	/* pointer to workspace memory		*/
-int             fd,		/* FID file descriptor			*/
-		pf3acq,		/* Acq-F3proc flag			*/
-                nfidbytes,	/* bytes per t3 FID			*/
-                *lastfid,	/* last FID currently processed		*/
-		fid_nbr,	/* which FID to get (first=0) */
-                npadj,		/* number of adjusted complex td points	*/
-                lsfval,		/* complex points to be left-shifted	*/
-                dpflag,		/* double-precision flag for FID data	*/
-		fidmap;		/* flag for using FID map		*/
-float           *data;		/* pointer to converted FID data	*/
-dfilehead	*filehead;	/* pointer to FID file header		*/
-float		*lpval;		/* lpval from FID block header (DSP)	*/
+int readFIDdata(int fd, float *data, char *wspace, dfilehead *filehead,
+                int nfidbytes, int npadj, int lsfval, int *lastfid,
+                int fid_nbr, int dpflag, int fidmap, int pf3acq, float *lpval)
+/* char            *wspace;	 pointer to workspace memory		*/
+/* int             fd,		 FID file descriptor			*/
+/* 		   pf3acq,	 Acq-F3proc flag			*/
+/*                 nfidbytes,	 bytes per t3 FID			*/
+/*                 *lastfid,	 last FID currently processed		*/
+/* 		   fid_nbr,	 which FID to get (first=0) 		*/
+/*                 npadj,	 number of adjusted complex td points	*/
+/*                 lsfval,	 complex points to be left-shifted	*/
+/*                 dpflag,	 double-precision flag for FID data	*/
+/* 		   fidmap;	 flag for using FID map			*/
+/* float           *data;	 pointer to converted FID data		*/
+/* dfilehead	   *filehead;	 pointer to FID file header		*/
+/* float	   *lpval;	 lpval from FID block header (DSP)	*/
 {
    int skip_blks;		/* Nbr of blocks before FID we want */
    int skip_fids;		/* Nbr of FIDs to skip at front of block */
@@ -217,9 +220,7 @@ comInfo		*pinfo;
 |         writeDATAheader()/2           |
 |                                       |
 +--------------------------------------*/
-int writeDATAheader(dfd, dataheader)
-int		dfd;
-datafileheader	*dataheader;
+int writeDATAheader(int dfd, datafileheader *dataheader)
 {
    int	nbytes;
 
@@ -429,8 +430,7 @@ comInfo		*pinfo;
 |           readFIDheader()/1           |
 |                                       |
 +--------------------------------------*/
-dfilehead *readFIDheader(fd)
-int     fd;		/* file descriptor for FID file	*/
+dfilehead *readFIDheader(int fd)
 {
    dfilehead        *fidfilehead;
  
@@ -616,8 +616,7 @@ dfilehead	*fidheader;	/* pointer to FID file header		*/
 comInfo		*pinfo;		/* pointer to command structure		*/
 proc3DInfo      *info3D;	/* pointer to 3D information structure	*/
 {
-   int          i,
-		hcptspertrace,
+   int          hcptspertrace,
                 nblocks,
                 bytesperfid,
 		nhcF3pts;
@@ -685,8 +684,6 @@ int calcmaxwords()
    char 	*memsize;
    int  	bufscale,
        		tmpivar;
-   extern char	*getenv();
- 
  
    if ( (memsize = getenv("memsize")) == NULL )
    {
@@ -761,23 +758,24 @@ int f3block_wr(filedesc *datafinfo, char *data, off_t stbyte, int iobytes)
 |            f21block_io()/10           |
 |                                       |
 +--------------------------------------*/
-int f21block_io(fd, data, wspace, f12block, nf3pts, ioop, dimen,
-                        datatype, p3Dinfo, nfheadbytes)
-int             fd,             /* file descriptor for 3D data file     */
-                f12block,       /* (t1,f1) or (t2,f2) block number      */
-                nf3pts,         /* number of hypercomplex F3 points     */
-                ioop,           /* I/O operation:  read or write        */
-                dimen,          /* F1 or F2 dimension                   */
-		datatype,	/* type of data to read or write	*/
-		nfheadbytes;	/* size of the DATA file header (bytes)	*/
-float           *data,          /* pointer to t2 interferogram data     */
-                *wspace;        /* pointer to work space                */
-proc3DInfo      *p3Dinfo;       /* pointer to 3D processing information */
+int f21block_io(int fd, float *data, float *wspace,
+                int f12block, int nf3pts, int ioop, int dimen,
+                int datatype, proc3DInfo *p3Dinfo, int nfheadbytes)
+/* int             fd,              file descriptor for 3D data file     */
+/*                 f12block,        (t1,f1) or (t2,f2) block number      */
+/*                 nf3pts,          number of hypercomplex F3 points     */
+/*                 ioop,            I/O operation:  read or write        */
+/*                 dimen,           F1 or F2 dimension                   */
+/* 		   datatype,	    type of data to read or write	 */
+/* 		   nfheadbytes;	    size of the DATA file header (bytes) */
+/* float           *data,           pointer to t2 interferogram data     */
+/*                 *wspace;         pointer to work space                */
+/* proc3DInfo      *p3Dinfo;        pointer to 3D processing information */
 {
    int                  nf21pts,
                         iobytes;
    off_t                stbytes;
-   off_t                skbytes;
+   off_t                skbytes = 0;
    register int         i,
                         j,
                         k,

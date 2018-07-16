@@ -51,7 +51,11 @@
 #define OS_MAX_NTAPS		50000
 #define OS_MIN_NTAPS		3
 
+#ifdef FT3D
+extern void fidrotate(float *data, int npts, float pc0, float pc1, int datatype);
+#else
 extern void rotate_fid(float *fidptr, double ph0, double ph1, int np, int datatype);
+#endif
 
 static int	calcfidss = TRUE;
 int coefcalc(dcomplex *scratch, dcomplex *lpcoef, lpinfo lppar, dcomplex *roots);

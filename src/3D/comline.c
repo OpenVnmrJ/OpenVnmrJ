@@ -387,6 +387,7 @@ procMode	*prcinfo;
 *  Parse the input command line.  *
 **********************************/
 
+   selection.ival = ERROR;
    while (argno < argc)
    {
       switch (mode)
