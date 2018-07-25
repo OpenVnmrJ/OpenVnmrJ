@@ -1704,7 +1704,7 @@ int getfidblockheadforwrite()
 		else P_setreal(TEMPORARY,"arraydim",arraydim/2.0,1);
 	}
 	if ( (r = P_save(TEMPORARY,sysstr)) ) Wscrprintf("P_save error %s\n",sysstr);
-	sprintf(writename,"%s/fid",writename); /* set name to fid! */
+	strcat(writename,"/fid"); /* set name to fid! */
 	return(COMPLETE);
 }
 
@@ -1750,7 +1750,7 @@ int getfidblockheadforcf()
 		else P_setreal(TEMPORARY,"arraydim",arraydim/2.0,1);
 	}
 	if ( (r = P_save(TEMPORARY,sysstr)) ) Wscrprintf("P_save error %s\n",sysstr);
-	sprintf(writecfname,"%s/fid",writecfname); /* set name to fid! */
+	strcat(writecfname,"/fid"); /* set name to fid! */
 	return(COMPLETE);
 }
 
@@ -1772,7 +1772,7 @@ void readincf()
 int setupreadcf()
 {  
 	int bytes;
-		sprintf(readcfname,"%s/fid",readcfname); /* set name to /fid! */
+		strcat(readcfname,"/fid"); /* set name to /fid! */
 		if ((readcffile=fopen(readcfname,"r"))==NULL)
 		{
 			Werrprintf("Error opening correction function file\n");

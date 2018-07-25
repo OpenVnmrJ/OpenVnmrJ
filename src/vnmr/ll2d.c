@@ -5002,6 +5002,8 @@ static void get_formats(char *line1, char *line2, char *line3,
 	get_scale_axis(HORIZ,&h_ch_l);
 	get_display_label(VERT,&v_ch);
 	get_scale_axis(VERT,&v_ch_l);
+        h_label[0] = '\0';
+        v_label[0] = '\0';
 	get_label(HORIZ,UNIT4,h_label);
 	get_label(VERT,UNIT4,v_label);
 	if (h_ch < v_ch)  {

@@ -488,6 +488,12 @@ static int save_range_data(char *exppath, float *spec1, double mult1, float *spe
         return(ERROR);
      }
   }
+  else
+  {
+     Werrprintf("cannot get addsub experiment data file");
+     D_trash(D_USERFILE);
+     return(ERROR);
+  }
 
 /* freeze the display mode of the addsub data
    file if any non-phaseable data is added in */
@@ -629,6 +635,12 @@ int save_data(char *exppath, float *spec1, double mult1, float *spec2,
         D_trash(D_USERFILE);
         return(ERROR);
      }
+  }
+  else
+  {
+     Werrprintf("cannot get addsub experiment data file");
+     D_trash(D_USERFILE);
+     return(ERROR);
   }
 
 /* freeze the display mode of the addsub data
@@ -901,6 +913,7 @@ static int correct_fn_sw(char *exppath )
 
 	get_ref_pars( HORIZ, &swval, &ref, &fnval );
 
+        fnparam = 0;
 	r = P_getreal( TEMPORARY, "fn", &qval, 1 );
 	if (r == 0)
 	  fnparam = (int) (qval+0.5);

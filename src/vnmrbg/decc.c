@@ -305,7 +305,7 @@ FILE *fd;
    else
    {
       dotflag=1;
-      sprintf(fullpath,"%s%s", fullpath, filename);
+      strcat(fullpath,filename);
    }
    Winfoprintf("decc_load: loading '%s'",fullpath);
    fd = fopen(fullpath, "r");

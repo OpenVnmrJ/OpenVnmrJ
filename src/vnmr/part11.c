@@ -873,6 +873,7 @@ void writeAuditMenu()
     	fprintf(fp, "%s%s | %s | %s\n", auditDir, "aaudit", "auditing audit trails", 
 		"a_auditTrailFiles");
         fclose(fp);
+        fp = NULL;
     }
 
 /* write RecordAuditMenu */
@@ -2328,11 +2329,15 @@ static void save_datdir(char* orig, char* dest)
         }
         while(fileExist(path1) && !(fp = fopen(path1, "r"))) {
             sleep(1);
+            fp = NULL;
         }
         if(fileExist(path1) && fp) {
             safecp_file(safecpPath, path1, path2);
             fclose(fp);
+            fp = NULL;
         }
+        if (fp)
+           fclose(fp);
     }
 #ifdef VNMRJ
     writeLineForLoc(dest, "vnmr_rec_data");
@@ -4227,9 +4232,11 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
 
         /* if only a name, add rootPath */
         if(filepath[0] != '/' && filepath[0] != '~') {
-	     if (P_getstring(GLOBAL,"svfdir",a_name,1,MAXPATH))
+             char tmpstr[MAXPATH];
+
+	     if (P_getstring(GLOBAL,"svfdir",tmpstr,1,MAXPATH))
 		sprintf(a_name,"%s/data/%s",userdir,filepath);
-	     else sprintf(a_name,"%s/%s",a_name,filepath); 
+	     else sprintf(a_name,"%s/%s",tmpstr,filepath); 
 	     if(makeautoname("Svfname",a_name,"",path,FALSE,FALSE,recsuffix,recsuffix))
 	        sprintf(path,"%s/data/%s",userdir,filepath);	     
         } else strcpy(path, filepath);
@@ -5434,6 +5441,7 @@ int deleteREC(int argc, char *argv[], int retc, char *retv[])
            unlink(tmpfile);
 	} else {
       	   Winfoprintf("Cannot delete %s: failed to record audit trail.", path);
+           fclose(fpp);
       	   ABORT;
 	}
         fclose(fpp);
@@ -5593,7 +5601,7 @@ int save_optFilesInParam(char* dest, char *param, char *type)
         } else if(processed && strcmp(name,"snapshot") == 0 && !Bnmr) {
            int sec = 0;
 	   string path1;
-	   FILE *fp;
+	   FILE *fp = NULL;
 	   sprintf(destpath, "%s%s", dest, "/spec.jpeg");
     	   if(fileExist(destpath)) unlink(destpath);
            sprintf(cmd, "%s%s%s", "vnmrjcmd('GRAPHICS', 'cdump', '", dest, "/spec.', 'jpeg')\n");
@@ -5607,7 +5615,10 @@ int save_optFilesInParam(char* dest, char *param, char *type)
            }
            while(fileExist(path1) && !(fp = fopen(path1, "r"))) {
             sleep(1);
+            fp = NULL;
            }
+           if (fp)
+              fclose(fp);
         } else if(all && strcmp(name,"usermaclib") == 0) {
            sprintf(origpath,"%s/%s",curexpdir, "maclib");
            sprintf(destpath,"%s/%s",dest, "maclib");

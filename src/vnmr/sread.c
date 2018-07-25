@@ -861,7 +861,9 @@ static int convertline(int grident)
       parlibfound = 0;
 
   if ( (strncmp(t6,"array",5) == 0) && (sscanf(t6,"array%d", &pindex) == 1) )
-  {   arrayflag=1;
+  {
+      char tmpStr[STR128];
+      arrayflag=1;
       getstr(t16b,&end,'\n');
       if (debug1) Wscrprintf("array identifier, name=%s\n",name);
 
@@ -871,7 +873,8 @@ static int convertline(int grident)
 	  return 1;
       }
       strcpy(arrayn[pindex-1],name);
-      sprintf(arraystring,"%s %d %s",arraystring,pindex,name);
+      sprintf(tmpStr,"%s %d %s",arraystring,pindex,name);
+      strcpy(arraystring,tmpStr);
 
       return 1;
   }

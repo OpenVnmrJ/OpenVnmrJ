@@ -1104,6 +1104,12 @@ disp_status("decaygen");
 			if(interuption)
 			{
 				Werrprintf("decay_gen halted\n");
+	#ifdef DEBUG_GRADFIT
+	                	fclose(debug);
+	#endif
+	                	fclose(in);
+	                	fclose(out);
+                		fclose(gradfile);
 				return(ERROR);
 			}	
 			S[i]=0.0;
@@ -1197,6 +1203,7 @@ highfrq = atof(argv[2]);
         strcat(rubbish,"/dosy/NUG/Normalised_profile");
 	if ((profileout = fopen(rubbish,"w")) == NULL) {
         Werrprintf("Error opening Normalised_profile in profile_int.\n");
+        fclose(profilein);
         return(ERROR);
         }
 
@@ -1220,6 +1227,8 @@ if((fscanf(profilein,"exp %d \n",&expnum) == EOF)
    || (fscanf(profilein,"1  0  0  0\n") == EOF))	
 	{
 	Werrprintf("Reached end of Signal profile file\n");
+        fclose(profilein);
+        fclose(profileout);
 	return(ERROR);
 	}
 i=0;

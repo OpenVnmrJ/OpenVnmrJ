@@ -3544,6 +3544,7 @@ int initacqqueue(int argc, char *argv[])
                 strcpy(optParams[i].tree,word);
                 i++;
             }
+            fclose(paramListFD);
         }
         else
             Werrprintf("Cannot open: %s", paramListPath);

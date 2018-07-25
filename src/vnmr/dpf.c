@@ -665,11 +665,21 @@ int dpf(int argc, char *argv[], int retc, char *retv[])
       if(argc > 1) {
         if (isReal(argv[1]) ) sprintf(cmd,"%s(%s",argv[0],argv[1]);
 	else sprintf(cmd,"%s('%s'",argv[0],argv[1]);
-	for(i=2;i<argc;i++) {
-           if (isReal(argv[i]) ) sprintf(cmd,"%s,%s",cmd,argv[i]);
-	   else sprintf(cmd,"%s,'%s'",cmd,argv[i]);
+	for(i=2;i<argc;i++)
+        {
+           if (isReal(argv[i]) )
+           {
+	      strcat(cmd,",");
+              strcat(cmd,argv[i]);
+           }
+	   else
+           {
+	      strcat(cmd,",'");
+              strcat(cmd,argv[i]);
+	      strcat(cmd,"'");
+           }
 	}
-	sprintf(cmd,"%s)\n",cmd);
+	strcat(cmd,")\n");
       } else sprintf(cmd,"%s\n",argv[0]);
       Wsetgraphicsdisplay("ds");
       set_dpf_flag(1, cmd);
@@ -683,7 +693,7 @@ int dpf(int argc, char *argv[], int retc, char *retv[])
 }
 
 /***************************************************/
-static void label_pirv(int index, int ysize)
+static void label_pirv(int index)
 /***************************************************/
 {
   char label[MAXPATHL];
@@ -993,7 +1003,7 @@ int dpir(int argc, char *argv[], int retc, char *retv[])
                   (gb[i].below) ? "true" : "false");
   }
   if(vertflag) {
-    for (i = 1; i <= groups; i++) label_pirv(i, ysize);
+    for (i = 1; i <= groups; i++) label_pirv(i);
   } else {
     for (i = 1; i <= groups; i++) label_pir(i, ysize);
   }
@@ -1002,11 +1012,21 @@ int dpir(int argc, char *argv[], int retc, char *retv[])
       if(argc > 1) {
         if (isReal(argv[1]) ) sprintf(cmd,"%s(%s",argv[0],argv[1]);
 	else sprintf(cmd,"%s('%s'",argv[0],argv[1]);
-	for(i=2;i<argc;i++) {
-           if (isReal(argv[i]) ) sprintf(cmd,"%s,%s",cmd,argv[i]);
-	   else sprintf(cmd,"%s,'%s'",cmd,argv[i]);
+	for(i=2;i<argc;i++)
+        {
+           if (isReal(argv[i]) )
+           {
+	      strcat(cmd,",");
+              strcat(cmd,argv[i]);
+           }
+	   else
+           {
+	      strcat(cmd,",'");
+              strcat(cmd,argv[i]);
+	      strcat(cmd,"'");
+           }
 	}
-	sprintf(cmd,"%s)\n",cmd);
+	strcat(cmd,")\n");
       } else sprintf(cmd,"%s\n",argv[0]);
       Wsetgraphicsdisplay("ds");
       set_dpir_flag(1,cmd);
