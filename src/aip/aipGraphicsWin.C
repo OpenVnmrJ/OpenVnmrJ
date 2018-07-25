@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <float.h>
 #if defined (MOTIF) && (ORIG)
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -1822,11 +1823,7 @@ line_compress (float *indata, char *outdata)
     int    i;
     float max_val;
     int cmi;
-#if defined(SOLARIS) || defined(__INTERIX)
-    float inf = HUGE_VAL;
-#else 
-    float inf = HUGE;
-#endif 
+    float inf = FLT_MAX;
 
     max_val = -inf;
 

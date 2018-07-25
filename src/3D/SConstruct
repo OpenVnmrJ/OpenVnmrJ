@@ -7,7 +7,6 @@ sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import buildMethods
 
 # define target file names
-nautoProcTarget   = 'Autoproc'
 ft3dTarget        = 'ft3d'
 getplaneTarget    = 'getplane'
 compressfidTarget = 'compressfid'
@@ -59,25 +58,26 @@ cmprsFidFileList = ['compressfid.c']
 
 # build environments
 largeFileFlags = '-DHAVE_LARGEFILE_SUPPORT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE'
-env = Environment(CCFLAGS    = '-O2 -Wall -m32 ' + largeFileFlags,
+env = Environment(CCFLAGS    = '-O3 -Wall -m32 ' + largeFileFlags,
                   CPPDEFINES = ['LINUX','FT3DIO','NOASYNC'],
                   LINKFLAGS  = '-m32 -DLINUX ' + largeFileFlags,
                   CPPPATH    = cwd)
 
 if (platform=="darwin"):
+    env.Replace(CC = 'clang')
     env.Append(CPPDEFINES = 'MACOS')
+
 if ('interix' in platform):    # Interix
    env.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','_REENTRANT','USE_HTONS','WINDRIDGE','NO_WIN_MMAP','BSDACQ','NESSIE','LINUX','VNMRJ','SUN','X11','NOMOTIF']  )
 
 
-lpEnv = env.Copy(CCFLAGS = '-O4 -m32 ' + largeFileFlags)
+buildMethods.makeSymLinks(env, getplaneTarget, cwd, vnmrPath, vnmrHdrList)
+
+lpEnv = env.Clone(CCFLAGS = '-O3 -m32 -Wall ' + largeFileFlags)
 lpEnv.Append(CPPDEFINES = ['FT3D'])
 
-buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, vnmrPath, vnmrHdrList)
 buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, ncommPath, ncommFileList)
-buildMethods.makeSymLinks(env, getplaneTarget, cwd, vnmrPath, vnmrHdrList)
-buildMethods.makeSymLinks(env, compressfidTarget, cwd, vnmrPath, vnmrHdrList)
-buildMethods.makeSymLinks(env, compressfidTarget, cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, vnmrPath, vnmrFileList)
 
 # objects
 vnmrObj   = lpEnv.Object(vnmrFileList)

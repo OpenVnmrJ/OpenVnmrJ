@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <sys/file.h>
 #include <sys/types.h>
+#include <signal.h>
 #include <arpa/inet.h>
 #include <sys/param.h>
 #include <math.h>
@@ -62,6 +63,26 @@ extern void	Werrprintf(char *format, ...),
 
 extern void	fiddc(),
 		specdc();
+extern int removelock(char *filepath);
+extern void net_write(char *netAddr, char *netPort, char *message);
+extern int lpz(int trace, float *data, int nctdpts, lpinfo lpparvals);
+extern int fidss(ssparInfo sspar, float *data, int ncdpts, int nclspts);
+extern int checkforanylocks(char *datadirpath, int ndatafd);
+extern int calcmaxwords();
+extern int createFIDmap();
+extern int f3block_wr(filedesc *datafinfo, char *data, off_t stbyte, int iobytes);
+extern int copyinfofiles(comInfo *pinfo);
+extern int check3Dinfo(proc3DInfo *infopntr);
+extern int checkt2np(int nt2inc, proc3DInfo *p3Dinfo);
+extern int setftpar(proc3DInfo *infopntr);
+extern int writeDATAheader(int dfd, datafileheader *dataheader);
+extern int f21block_io(int fd, float *data, float *wspace,
+                int f12block, int nf3pts, int ioop, int dimen,
+                int datatype, proc3DInfo *p3Dinfo, int nfheadbytes);
+extern int readFIDdata(int fd, float *data, char *wspace, dfilehead *filehead,
+                int nfidbytes, int npadj, int lsfval, int *lastfid,
+                int fid_nbr, int dpflag, int fidmap, int pf3acq, float *lpval);
+
 
 
 /*---------------------------------------
@@ -164,11 +185,11 @@ f3blockpar	*f3block;	/* pointer to F3 block information	*/
             if ( (totalcount & 255) == 0 )
                Wlogdateprintf("FT(t3) of FID number %d:", totalcount);
 
-            if ( res = readFIDdata(fid_fd, data, scratch, fidheader,
+            if ( ( res = readFIDdata(fid_fd, data, scratch, fidheader,
 			f3block->bytesperfid, p3Dinfo->f3dim.scdata.npadj,
 			p3Dinfo->f3dim.scdata.lsfid, &lastfid, fidblock_no,
 			f3block->dpflag, pinfo->fidmapfilepath.vset,
-			pinfo->procf3acq.ival,&(p3Dinfo->f3dim.scdata.lpval)) )
+			pinfo->procf3acq.ival,&(p3Dinfo->f3dim.scdata.lpval)) ) )
             {
                if (res == LASTFID)
                {
@@ -353,8 +374,7 @@ proc3DInfo	*p3Dinfo;	/* pointer to 3D information structure	*/
 f3blockpar	*f3block;	/* pointer to F3 block information	*/
 datafileheader	*datahead;	/* pointer to DATA3D file header	*/
 {
-   int		i,
-		j,
+   int		j,
 		k,
 		m,
 		totalcount = 1,
@@ -552,8 +572,7 @@ f3blockpar	*f3block;	/* pointer to F3 block information	*/
 comInfo		*pinfo;		/* pointer to command line structure	*/
 datafileheader	*datahead;	/* pointer to DATA3D file header	*/
 {
-   int		i,
-		j,
+   int		j,
 		k,
 		m,
 		wrdatatype,
@@ -837,7 +856,6 @@ static void vnmrMsg(comInfo *pinfo, char *msg)
       char port[MAXPATHL];
       char dmsg[MAXPATHL];
       int  ppid;
-      int  err;
 
       if ( (sscanf(pinfo->hostAddr.sval,"%s %s %d",host, port, &ppid) == 3) && !kill(ppid,0) )
       {
@@ -846,14 +864,12 @@ static void vnmrMsg(comInfo *pinfo, char *msg)
       }
       else
       {
-         printf(msg);
-         printf("\n");
+         printf("%s\n",msg);
       }
    }
    else
    {
-      printf(msg);
-      printf("\n");
+      printf("%s\n",msg);
    }
 }
 
@@ -865,9 +881,11 @@ static void vnmrMsg(comInfo *pinfo, char *msg)
 int main(int argc, char *argv[])
 {
    char				*mempntr,
-				*pwdir,
 				*username,
+#ifndef LINUX
+				*pwdir,
 				workingdirpath[ MAXPATHL ],
+#endif
 				hostname[MAXPATHL];
    char *fdf_plane = "f1f3";
    int				add_fdf_plane,
@@ -880,15 +898,14 @@ int main(int argc, char *argv[])
 				ndatafiles,
 				nmembytes;
    float			*sinetab;
-   dfilehead			*fidheader;
-   datafileheader		*datahead;
+   dfilehead			*fidheader = NULL;
+   datafileheader		*datahead = NULL;
    coef3D			*coef;
    comInfo			*pinfo;
    proc3DInfo			*p3Dinfo;
-   f3blockpar			*f3block;
+   f3blockpar			*f3block = NULL;
    filedesc			*datafinfo;
    procMode			procinfo;
-   extern char			*getcwd();
    extern float			*create_sinetable();
    extern void			pathadj(),
 #ifndef LINUX
@@ -921,6 +938,7 @@ int main(int argc, char *argv[])
    doft = ( strstr(argv[0], "noft3d") == NULL );
    master_ft3d = !( strcmp(argv[0], "ftr3d") == 0 );
    hdr_bytes = 0;
+   fid_fd = -1;
 
    if ( (pinfo = parseinput(argc, argv, &procinfo, master_ft3d)) == NULL )
       return ERROR;
@@ -996,7 +1014,8 @@ int main(int argc, char *argv[])
 
    if ( (sinetab = create_sinetable(p3Dinfo)) == NULL )
    {
-      (void) close(fid_fd);
+      if (fid_fd >= 0)
+         (void) close(fid_fd);
       return ERROR;
    }
 

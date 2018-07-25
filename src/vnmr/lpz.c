@@ -32,8 +32,10 @@
 
 #define LD_SMALL_NUMBER		1e-15
 
+#ifndef FT3D
 static char	lpfilename[MAXPATHL];	/* file name for external LP
 					   analysis */
+#endif
 static int	dbgtrace = -1;		/* for external LP analysis */
 
 static FILE	*fdanlyz = NULL;	/* file descriptor for external

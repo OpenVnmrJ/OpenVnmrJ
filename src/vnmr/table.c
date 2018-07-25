@@ -460,6 +460,7 @@ extern int trackCursor();
 extern int tune();
 extern int unit();
 extern int unixtime();
+extern int vnmrSleep(int argc, char *argv[], int retc, char *retv[]);
 extern int vnmr_unlock();
 extern int vnmrInfo();
 #ifdef VNMRJ
@@ -1063,6 +1064,7 @@ static cmd_t vnmr_table[] = {
 	{"show_remote_files", show_remote_files,  NO_REEXEC, 0},
 	{"showbuf"    , showbuf,	NO_REEXEC, 0},
 	{"sin"        , ln,	 	NO_REEXEC, 10},
+	{"sleep"      , vnmrSleep,	NO_REEXEC, 0},
 	{"small"      , small,		NO_REEXEC, 0},
 	{"solvinfo"   , solvinfo,	NO_REEXEC, 0},
 	{"spa"        , spa,		NO_REEXEC, 0},

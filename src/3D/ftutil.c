@@ -38,9 +38,7 @@ extern void	Werrprintf(char *format, ...);
 |             checkt2np()/2             |
 |                                       |
 +--------------------------------------*/
-int checkt2np(nt2inc, p3Dinfo)
-int		nt2inc;
-proc3DInfo	*p3Dinfo;
+int checkt2np(int nt2inc, proc3DInfo *p3Dinfo)
 {
    int	diffpts;
 
@@ -323,8 +321,7 @@ int	nhcpts,
 	dsplymode;
 float	*data;
 {
-   register int		i,
-			iskip;
+   register int		i;
    register float	tmp1,
 			tmp2,
 			tmp3,
@@ -371,8 +368,7 @@ int	nhcpts,
 	f1dsplymode;
 float	*data;
 {
-   register int		i,
-			iskip;
+   register int		i;
    register float	tmp1,
 			tmp2,
 			tmp3,
@@ -614,12 +610,12 @@ hypercmplx	*in1;           /* input data vector			*/
 |            fidrotate()/5              |
 |                                       |
 +--------------------------------------*/
-void fidrotate(data, npts, pc0, pc1, datatype)
-int	npts,		/* number of "datatype" points in the data	*/
-	datatype;	/* type of data, e.g., complex			*/
-float	*data,		/* pointer to data				*/
-	pc0,		/* zero-order FID phasing constant		*/
-	pc1;		/* first-order FID phasing constant		*/
+void fidrotate(float *data, int npts, float pc0, float pc1, int datatype)
+/* int	npts,		 number of "datatype" points in the data	*/
+/* 	datatype;	 type of data, e.g., complex			*/
+/* float *data,		 pointer to data				*/
+/* 	pc0,		 zero-order FID phasing constant		*/
+/* 	pc1;		 first-order FID phasing constant		*/
 {
    
    fcomplex	phs,
@@ -718,10 +714,10 @@ float	*data;	/* pointer to time-domain data			*/
    pntr = data + dtype*npts;
    i = j = (npts - lspts)/16;
    ftmp1 = ftmp2 = 0.0;
+   ftmp3 = ftmp4 = 0.0;
  
    if (dtype == HYPERCOMPLEX)
    {
-      ftmp3 = ftmp4 = 0.0;
       while (i--)
       {
          ftmp4 += *(--pntr);
@@ -860,8 +856,8 @@ static float aver(float *data, int npts, int dtype)
 |             setftpar()/1              |
 |                                       |
 +--------------------------------------*/
-int setftpar(infopntr)
-proc3DInfo      *infopntr;	/* pointer to 3D information structure	*/
+int setftpar(proc3DInfo *infopntr)
+/* proc3DInfo      *infopntr;	pointer to 3D information structure	*/
 {
    int  	i,
 		j,
