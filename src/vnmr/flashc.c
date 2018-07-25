@@ -586,6 +586,7 @@ pni	     :  (I/O)  Ditto.
 	    fclose ( fid_file );
 	    fclose ( tmp_file );
 	    unlink ( temp_fid );
+            free(ptrace);
 	    ABORT;
 	 }
 
@@ -601,6 +602,7 @@ pni	     :  (I/O)  Ditto.
 		fclose ( fid_file );
 		fclose ( tmp_file );
 		unlink ( temp_fid );
+                free(ptrace);
 	        ABORT;
 	     }
 
@@ -610,6 +612,7 @@ pni	     :  (I/O)  Ditto.
 		fclose ( fid_file );
 		fclose ( tmp_file );
 		unlink ( temp_fid );
+                free(ptrace);
 	        ABORT;
 	     }
 	     break;
@@ -627,6 +630,7 @@ pni	     :  (I/O)  Ditto.
 		    fclose ( fid_file );
 		    fclose ( tmp_file );
 		    unlink ( temp_fid );
+                    free(ptrace);
 	            ABORT;
 	         }
 
@@ -637,6 +641,7 @@ pni	     :  (I/O)  Ditto.
 		    fclose ( fid_file );
 		    fclose ( tmp_file );
 		    unlink ( temp_fid );
+                    free(ptrace);
 	            ABORT;
 	         }
 	     }
@@ -659,6 +664,7 @@ pni	     :  (I/O)  Ditto.
 		    fclose ( fid_file );
 		    fclose ( tmp_file );
 		    unlink ( temp_fid );
+                    free(ptrace);
 	            ABORT;
 	         }
 
@@ -669,6 +675,7 @@ pni	     :  (I/O)  Ditto.
 		    fclose ( fid_file );
 		    fclose ( tmp_file );
 		    unlink ( temp_fid );
+                    free(ptrace);
 	            ABORT;
 	         }
 	     }
@@ -680,6 +687,7 @@ pni	     :  (I/O)  Ditto.
 	    fclose ( fid_file );
 	    fclose ( tmp_file );
 	    unlink ( temp_fid );
+            free(ptrace);
 	    ABORT;
 	 }
 
@@ -692,6 +700,7 @@ pni	     :  (I/O)  Ditto.
    /* Clear display of slice or echo number */
    disp_index ( 0 );
 
+   free(ptrace);
    /* Close the files */
    if ( fclose ( fid_file ) != 0 )
    {  (void)fclose ( tmp_file );

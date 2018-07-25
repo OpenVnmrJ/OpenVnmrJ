@@ -11145,9 +11145,9 @@ open_var_font(fname, index, which, size)
 
      if (index >= FONTNUM)
         return;
-     if ((fin = fopen(fname, "r")) == NULL)
-        return;
      if (stat (fname, &fStatus) < 0)
+        return;
+     if ((fin = fopen(fname, "r")) == NULL)
         return;
      ok = 0;
      while ((pixdata = fgets(fontData, 80, fin)) != NULL)

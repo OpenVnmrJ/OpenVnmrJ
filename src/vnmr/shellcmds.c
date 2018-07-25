@@ -1194,16 +1194,13 @@ int del_file2(int argc, char *argv[], int retc, char *retv[])
 	if (filename[i] != '\0')
 	    filename[i] = '\0';
     }
-#ifdef VNMRJ
-    sprintf(jstr,"%s %s %s",hostarg,objtype,filename);
-#endif 
 
        for (j=0; j<strlen(filename); j++)
           if (filename[j] == '*')
           {
              Werrprintf("No wildcards are permitted in the %s command", argv[0]);
 #ifdef VNMRJ
-	     sprintf(jstr,"noWildcards %s",jstr);
+	     sprintf(jstr,"noWildcards %s %s %s",hostarg,objtype,filename);
 	     writelineToVnmrJ("noRmFile",jstr);
 #endif 
              ABORT;
@@ -1223,6 +1220,9 @@ int del_file2(int argc, char *argv[], int retc, char *retv[])
              TPRINT1("rmfile: command string \"%s\"\n",cmdstr);
              system_call(cmdstr);
           }
+#ifdef VNMRJ
+          sprintf(jstr,"%s %s %s",hostarg,objtype,filename);
+#endif 
           if ( access(filename,F_OK) == 0)
 	  {
              Werrprintf("cannot remove %s",filename);
@@ -1241,7 +1241,7 @@ int del_file2(int argc, char *argv[], int retc, char *retv[])
        {
 	  Werrprintf("file not found: cannot remove %s",filename);
 #ifdef VNMRJ
-	  sprintf(jstr,"noFind %s",jstr);
+	  sprintf(jstr,"noFind %s %s %s",hostarg,objtype,filename);
 	  writelineToVnmrJ("noRmFile",jstr);
 #endif 
        }

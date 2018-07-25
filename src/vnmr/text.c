@@ -977,7 +977,7 @@ int menu(int argc, char *argv[], int retc, char *retv[])
 
   menuon = 1;
   strcpy(savemenuname,menuname);
-  sprintf(tmpmenu,"%s\n",tmpmenu);
+  strcat(tmpmenu,"\n");
   execString(tmpmenu);
 
   sprintf(tmpmenu,"%s_menu",menuname);

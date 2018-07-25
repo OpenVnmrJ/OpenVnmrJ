@@ -1343,7 +1343,8 @@ static void listnames(symbol **root, char *list)
    {  if (p->name)
       {
 	 DPRINT1(3,"listnames:  working on var \"%s\"\n",p->name);
-         sprintf(list,"%s %s",list,p->name);
+         strcat(list," ");
+         strcat(list,p->name);
       }
       if (p->left)
       {

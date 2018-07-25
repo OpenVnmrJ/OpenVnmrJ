@@ -1860,7 +1860,10 @@ get_gradient_shape(SRC_NODE *node, char *shapeName)
    capacity = 256;
    amp = (double *) malloc(sizeof(double) * capacity);
    if (amp == NULL)
+   {
+       fclose(fd);
        return(1);
+   }
    count = 0;
    min = 32767.0;
    max = -32767.0;

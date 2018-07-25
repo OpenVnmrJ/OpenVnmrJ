@@ -4411,7 +4411,10 @@ plot_multi_column_table(char *fpath, int isPeak) {
     columnLocx[n] = x0 + w - xcharpixels;
     i = (columnLocx[n] - columnLocx[0]) / n;
     if (i < (xcharpixels * 4))
+    {
+        fclose(fd);
         return;
+    }
     for (n = 1; n < tableColumns - 1; n++)
         columnLocx[n] = columnLocx[n-1] + i;
     n = strlen(tableHeaders[0]);

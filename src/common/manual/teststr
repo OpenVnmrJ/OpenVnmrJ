@@ -1,12 +1,23 @@
 ****************************************************************************
 teststr(parameter,string <,tree>):$ret - find which array element matches string
+teststr(parameter,string ,tree,'nocase'):$ret - find which array element
+                                                    matches string (case insensitive)
+teststr(parameter,string ,tree,'starts'):$ret - find which array element
+                                                    starts with string
+teststr(parameter,string ,tree,'startsNocase'):$ret - find which array element
+                                                    starts with string (case insensitive)
 ****************************************************************************
 
   The teststr command requires at least two arguments. The first is the
   name of a string parameter.  The first argument must generally be enclosed
   in single quotes.  The teststr command needs the name of the parameter, not
   its values.  The second is a string.  The optional third
-  argument is the parameter tree. The default is current. 
+  argument is the parameter tree. The default is current.  An optional fourth
+  argument is the keyword 'nocase', 'starts', or 'startsnocase'.  These select
+  a case-insensitive match, a match that starts with the string, and a
+  case-insensitive match that starts with the string, respectively. The keywords
+  themselves are case-insensitve.  The parameter tree argument must be supplied
+  in order to use one of these three keywords.
 
   Macro parameters can be used as the first argument.  In this case, the
   third argument must be 'local'.
@@ -34,6 +45,23 @@ teststr(parameter,string <,tree>):$ret - find which array element matches string
   teststr('n1','gute nacht'):r1
 
   will set r1=0, since the lower case n in nacht does not match the upper case N in Nacht.
+  However, if the case-insensitive match is selected,
+
+  teststr('n1','gute nacht','current','nocase'):r1
+
+  will set r1=4.
+
+  The 'starts' match 
+
+  teststr('n1','laba','current','starts'):r1
+
+  will set r1=2, matching the 'labanaktis' entry.
+
+  Finally, the 'startsNocase' match 
+
+  teststr('n1','gute n','current','startsnocase'):r1
+
+  will set r1=4, matching the 'gute Nacht' entry.
 
   For local dollar variables,  the 'local' argument must be used.  Again, enclose the
   name of the local parameter in single quotes.

@@ -341,7 +341,8 @@ static int check_autoqueue(char *cmdptr, char *autoqptr, char *macdirptr )
               strcpy(basename,bPtr);
            }
            sprintf(macdirptr,"%s/%s.macdir",autoqptr,basename);
-           sprintf(autoqptr,"%s/%s",autoqptr,basename);
+           strcat(autoqptr,"/");
+           strcat(autoqptr,basename);
         }
 	quein = fopen( autoqptr, "r" );
 	if (quein == NULL) {

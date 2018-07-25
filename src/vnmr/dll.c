@@ -2375,11 +2375,6 @@ int drawxy(int argc, char *argv[], int retc, char *retv[])
    {
       Werrprintf("Usage: %s('datapath','infopar' <,'noclear'><,color>)",argv[0]);
    }
-   if ((datafile=fopen(argv[1],"r"))==0)
-   {
-      Werrprintf("%s: cannot open file %s",argv[0], argv[1]);
-      ABORT;
-   }
    if (argv[0][0]=='p')
       setplotter();
    else
@@ -2484,6 +2479,11 @@ fprintf(stderr,"ySlope= %g yIntercept= %g\n", ySlope, yIntercept);
 fprintf(stderr,"angle= %d orient= %d\n", angle, orient);
 fprintf(stderr,"ydim= %d\n", ydim);
  */
+   if ((datafile=fopen(argv[1],"r"))==0)
+   {
+      Werrprintf("%s: cannot open file %s",argv[0], argv[1]);
+      ABORT;
+   }
 
    checkreal(&xy_wc,WCMIN,wcmax);   
    checkreal(&xy_sc,0.0,wcmax-xy_wc);	       

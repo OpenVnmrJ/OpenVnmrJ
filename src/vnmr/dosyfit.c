@@ -394,13 +394,13 @@ dosyfit (int argc, char *argv[], int retc, char *retv[])
 
 
 
+  avnoise = 0.0;
 
 
 /*{{{*/
 /*if 3D data setup the peak_table*/
   if (ll2dflg)
     {
-      avnoise = 0.0;
       if (argc > 2)
 	{
 	  avnoise = atof (argv[2]);

@@ -778,6 +778,7 @@ int writeparam(int argc, char *argv[], int retc, char *retv[] )
       /* This function returns a space separated list of all the parameters
          in the tree.  The second argument must be large enough to hold the answer.
        */
+      pParList[0] = '\0';
       P_listnames(TEMPORARY, pParList);
    }
    if ((type == 3) || (type == 2))
@@ -2085,22 +2086,34 @@ int teststr(int argc, char *argv[], int retc, char *retv[])
     symbol **root;
     varInfo *v;
     int      index;
+    int nocase = 0;
+    int starts = -1;
+    int startsnocase = -1;
 
 #ifdef DEBUG
     if (Tflag)
       for (index=0; index<argc ;index++)
         TPRINT3("%s: argv[%d] = \"%s\"\n",argv[0],index,argv[index]);
 #endif 
-    if ((argc < 3) || (argc > 4))
+    if ((argc < 3) || (argc > 5))
     {
-      Werrprintf("Usage -- %s(name,key[,tree])",argv[0]);
+      Werrprintf("Usage -- %s(name,key[,tree[,<'nocase', 'starts' or 'startsNocase'> ]])",argv[0]);
       ABORT;
     }
     index = 0;
     tree = "current";
-    if (argc == 4)
+    if (argc >= 4)
     {
        tree = argv[3];
+    }
+    if (argc == 5)
+    {
+       if (!strcasecmp(argv[4],"nocase") )
+          nocase = 1;
+       if (!strcasecmp(argv[4],"starts") )
+          starts = (int) strlen(argv[2]);
+       if (!strcasecmp(argv[4],"startsnocase") )
+          startsnocase = (int) strlen(argv[2]);
     }
     if (strcmp(tree,"local") == 0)
     {
@@ -2128,10 +2141,37 @@ int teststr(int argc, char *argv[], int retc, char *retv[])
        {
 	   if (r)	
 	   {
-               if (strcmp(argv[2],r->v.s) == 0)   
-               {   
-	          index = i;
-	          i = v->T.size + 1;
+               if (nocase)
+               {
+                  if (strcasecmp(argv[2],r->v.s) == 0)   
+                  {   
+	             index = i;
+	             i = v->T.size + 1;
+                  }
+               }
+               else if (starts >= 0)
+               {
+                  if (strncmp(argv[2],r->v.s, starts) == 0)   
+                  {   
+	             index = i;
+	             i = v->T.size + 1;
+                  }
+               }
+               else if (startsnocase >= 0)
+               {
+                  if (strncasecmp(argv[2],r->v.s, startsnocase) == 0)   
+                  {   
+	             index = i;
+	             i = v->T.size + 1;
+                  }
+               }
+               else
+               {
+                  if (strcmp(argv[2],r->v.s) == 0)   
+                  {   
+	             index = i;
+	             i = v->T.size + 1;
+                  }
                }
 	       r = r->next;
 	   }

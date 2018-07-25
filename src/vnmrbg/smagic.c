@@ -129,6 +129,7 @@ extern int   resizeBorderWidth;
 extern int   Eflag;
 extern int   Rflag;
 extern int   debug;
+extern int   MflagVJcmd;
 extern char  systemdir[];
 extern char  userdir[];
 extern char  textFrameFds[];
@@ -1168,6 +1169,12 @@ int vnmr(int argc, char *argv[])
                strcpy(tmpStr,initCommand);
             }
             strcat(tmpStr,"\n");
+            if (MflagVJcmd)
+            {
+              fprintf(stderr,"initCommand %s",tmpStr);
+              fflush(stderr);
+              MflagVJcmd = 0;
+            }
             working = 1;
             loadAndExec(tmpStr);
 	}
