@@ -1,5 +1,6 @@
 
 readfile(path, 'par1', 'par2', <,cmpstr <,tree> >):num
+readfile(path, 'par1', '', <,cmpstr <,tree> >):num
 readfile(path, 'par1', 'par2', 'JCAMP' <,tree> >):num  reads a JCAMP file
 
 readfile reads the contents of a file and puts the contents into two
@@ -18,6 +19,8 @@ Arguments:
  path is the path name of the file to read.
  par1 is the name of the parameter to hold the first word of the line.
  par2 is the name of the parameter to hold the remainder of each line.
+ If par2 is supplied as '', the entire line will be put into par1.
+
  cmpstr is the optional comparison string for matching the first word.
  tree is an optional parameter to select the tree for par1 and par2.
     The possibilities are current, global, and local.  Current is the
@@ -37,7 +40,10 @@ Lines which start with a # are not added to the parameters.  Lines
 which start with a # can be used as comment lines.
 If a line only contains a single word, that word is put into the
 first parameter.  The corresponding array element of the second
-parameter will be set to an empty string.
+parameter will be set to an empty string, provided par2 is not a null string.
+
+If par2 is a null string, then white space will not be removed from the line.
+The entire line will be put into par1.
 
 The readfile will return the number of lines added to the parameters.
 
@@ -46,8 +52,8 @@ Examples using a prototype file containing the following.
            # A readfile test case
 
            # Proton values
-           H1pw   10
-           H1pwr  55
+           H1pw  10
+           H1pwr 55
 
            # Carbon values
            C13pw  14
@@ -61,6 +67,14 @@ readfile(systemdir+'/probes/testcase','attr','vals')
 This sets the attr and vals parameters to arrays of six strings.
 attr='H1pw','H1pwr','C13pw','C13pwr','H1macro','End'
 vals='10','55','14','50','ft f full aph vsadj',''
+
+readfile(systemdir+'/probes/testcase','attr','')
+This sets the attr parameter to an array of six strings.
+attr='H1pw  10','H1pwr 55','C13pw  14','C13pwr 50','H1macro  ft f full aph vsadj','End'
+
+readfile(systemdir+'/probes/testcase','attr','','H1')
+This sets the attr parameter to an array of three strings.
+attr='H1pw  10','H1pwr 55','H1macro  ft f full aph vsadj'
 
 readfile(systemdir+'/probes/testcase','$attr','$vals','H1','local')
 

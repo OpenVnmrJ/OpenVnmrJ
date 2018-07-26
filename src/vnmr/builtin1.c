@@ -3549,6 +3549,7 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
     int  length, i, numRows=0;
     char *path, *cmpstr=NULL;
     int jcampFlag = 0;
+    int hasPar2 = 1;
 
     /* Put args into variables */ 
     /* Must be at least 3 args */
@@ -3573,6 +3574,9 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
     {
        tree = argv[5];
     }
+    if ( ! strcmp(argv[3],"") )
+       hasPar2 = 0;
+    v2 = NULL;
     if (strcmp(tree,"local") == 0)
     {
        if ((root=selectVarTree(argv[2])) == NULL)
@@ -3580,7 +3584,7 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
           Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[2]);
           ABORT;
        }
-       if ((root=selectVarTree(argv[3])) == NULL)
+       if ( hasPar2 && ( (root=selectVarTree(argv[3])) == NULL) )
        {
           Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[3]);
           ABORT;
@@ -3594,7 +3598,7 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
     {   Werrprintf("%s: variable \"%s\" doesn't exist",argv[0],argv[2]);
         ABORT;
     }
-    if ((v2 = rfindVar(argv[3],root)) == NULL)
+    if ( hasPar2 && ((v2 = rfindVar(argv[3],root)) == NULL) )
     {   Werrprintf("%s: variable \"%s\" doesn't exist",argv[0],argv[3]);
         ABORT;
     }
@@ -3627,10 +3631,13 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
       assignReal(0.0,v1,0);
     else
       assignString("",v1,0);
-    if (v2->T.basicType == T_REAL)
-      assignReal(0.0,v2,0);
-    else
-      assignString("",v2,0);
+    if (hasPar2)
+    {
+       if (v2->T.basicType == T_REAL)
+         assignReal(0.0,v2,0);
+       else
+         assignString("",v2,0);
+    }
 
     /* Read each line */
     if (jcampFlag)
@@ -3661,47 +3668,54 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
         /* Nothing useful in this line, skip on */
         if(i == length)
             continue;
+        if ( hasPar2 )
+        {
 
-        /* Get the part of the string fillowing any leading white space */
-        strcpy(line2, &line1[i]);
+           /* Get the part of the string fillowing any leading white space */
+           strcpy(line2, &line1[i]);
 
-        /* Get first word */
-        length = strlen(line2);
-        for(i=0; i < length; i++) {
-            /* Go through chars until white space or end is found */
-            c = line2[i];
-            if(c == ' ' || c == '\t')
+           /* Get first word */
+           length = strlen(line2);
+           for(i=0; i < length; i++) {
+               /* Go through chars until white space or end is found */
+               c = line2[i];
+               if(c == ' ' || c == '\t')
                 break;
-        }
-        /* i should be length of the first word */
-        strncpy(first, line2, i);
-        /* terminate it */
-        first[i] = '\0';
+           }
+           /* i should be length of the first word */
+           strncpy(first, line2, i);
+           /* terminate it */
+           first[i] = '\0';
 
-        /* Get remaining string if any */
-        for(; i < length; i++) {
-            c = line2[i];
-            /* Go through chars until non-white space or end is found */
-            if(c != ' ' && c != '\t')
-                break;
+           /* Get remaining string if any */
+           for(; i < length; i++) {
+               c = line2[i];
+               /* Go through chars until non-white space or end is found */
+               if(c != ' ' && c != '\t')
+                   break;
+           }
+           /* Is there anything left? */
+           if(i == length) {
+               /* Nothing for second par, terminate it */
+               remain[0] = '\0';
+           }
+           else {
+               /* There is something left, keep it. */
+               strcpy(remain, &line2[i]);
+               length = strlen(remain);
+               /* remove trailing whitespace */
+               while (--length > 0)
+               {
+                  if ( (remain[length] == ' ') || (remain[length] == '\t') )
+                     remain[length] = '\0';
+                  else
+                     length = 0;
+               }
+           }
         }
-        /* Is there anything left? */
-        if(i == length) {
-            /* Nothing for second par, terminate it */
-            remain[0] = '\0';
-        }
-        else {
-            /* There is something left, keep it. */
-            strcpy(remain, &line2[i]);
-            length = strlen(remain);
-            /* remove trailing whitespace */
-            while (--length > 0)
-            {
-               if ( (remain[length] == ' ') || (remain[length] == '\t') )
-                  remain[length] = '\0';
-               else
-                  length = 0;
-            }
+        else // no Par2
+        {
+           strcpy(first, line1); // Copy entire line, incuding white space
         }
 
         /* Now see if cmpstr is set and if so, weed out any lines that
@@ -3723,11 +3737,14 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
         else {
           assignString(first,v1,numRows);
         }
-        if (v2->T.basicType == T_REAL) {
-          assignReal(strtod(remain, (char **)NULL), v2, numRows);
-        }
-        else {
-          assignString(remain, v2, numRows);
+        if (hasPar2)
+        {
+           if (v2->T.basicType == T_REAL) {
+             assignReal(strtod(remain, (char **)NULL), v2, numRows);
+           }
+           else {
+             assignString(remain, v2, numRows);
+           }
         }
     }
     fclose(inputFile);
