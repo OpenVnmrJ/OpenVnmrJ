@@ -1,22 +1,33 @@
 #!/bin/bash
 #
-# Copyright (C) 2016  Michael Tesch
+# Copyright (C) 2018  Michael Tesch
 #
-# You may distribute under the terms of either the GNU General Public
-# License or the Apache License, as specified in the LICENSE file.
+# This file is a part of the OpenVnmrJ project.  You may distribute it
+# under the terms of either the GNU General Public License or the
+# Apache 2.0 License, as specified in the LICENSE file.
 #
-# For more information, see the LICENSE file.
+# For more information, see the OpenVnmrJ LICENSE file.
 #
 
 #
 # Build script that takes all parameters/control on the command line
-# or inherits from the environment, based on buildovj+makeovj
+# or inherits from the environment.  Originally based on buildovj+makeovj.
 #
+
+CMDLINE="$0 $*"
+SCRIPT=$(basename "$0")
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ERRCOUNT=0
+onerror() {
+    echo "$(tput setaf 1)$SCRIPT: Error on line ${BASH_LINENO[0]}, exiting.$(tput sgr0)"
+    exit 1
+}
+trap onerror ERR
 
 # helper
 numcpus() {
     local ncpu=1
-    if [ "$(uname -s)" = "Darwin" ]; then
+    if [ "x$(uname -s)" = "xDarwin" ]; then
         ncpu=$(sysctl -n hw.ncpu)
     else
         ncpu=$(nproc)
@@ -40,14 +51,7 @@ numcpus() {
 : ${OVJ_PACK_DDR=yes}
 : ${OVJ_PACK_MINOVA=yes}
 : ${OVJ_SCONSFLAGS="-j $(( $(numcpus) + 1 ))"}
-: ${OVJ_VERBOSE=2}
-
-# remember how we were called
-CMDLINE="$0 $*"
-SCRIPT=$(basename "$0")
-SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-xUNAMEs=x$(uname -s)
-LOGFILE=
+: ${VERBOSE=3}
 
 usage() {
     if [ -t 3 ]; then echo "$SCRIPT failed, see log '$LOGFILE'" >&3 ; fi
@@ -75,6 +79,7 @@ where [options...] are:
   --inova yes|no            - enable Mercury/Inova DVD build [${OVJ_PACK_MINOVA}]
   -v|--verbose              - be more verbose (can add multiple times)
   -q|--quiet                - be more quiet   (can add multiple times)
+  -h|--help                 - print this message and exit
 
 EOF
     exit 1
@@ -103,8 +108,8 @@ while [ $# -gt 0 ]; do
         --ddr)                  OVJ_PACK_DDR="$2"; shift      ;;
         --inova)                OVJ_PACK_MINOVA="$2"; shift   ;;
         -h|--help)              usage                         ;;
-        -v|--verbose)           OVJ_VERBOSE=$(( OVJ_VERBOSE + 1 )) ;;
-        -q|--quiet)             OVJ_VERBOSE=$(( OVJ_VERBOSE - 1 )) ;;
+        -v|--verbose)           VERBOSE=$(( VERBOSE + 1 )) ;;
+        -q|--quiet)             VERBOSE=$(( VERBOSE - 1 )) ;;
         *)
             # unknown option
             echo "unrecognized arg: $key"
@@ -119,114 +124,9 @@ done
 # helper functions
 #
 
-# colors & names of the log levels
-# check if stdout is a terminal...
-if test -t 1; then
-    # see if it supports colors...
-    ncolors=$(tput colors)
-    if test -n "$ncolors" && test "$ncolors" -ge 8; then
-        bold="$(tput bold)"
-        underline="$(tput smul)"
-        standout="$(tput smso)"
-        normal="$(tput sgr0)"
-        black="$(tput setaf 0)"
-        red="$(tput setaf 1)"
-        green="$(tput setaf 2)"
-        yellow="$(tput setaf 3)"
-        blue="$(tput setaf 4)"
-        magenta="$(tput setaf 5)"
-        cyan="$(tput setaf 6)"
-        white="$(tput setaf 7)"
-    fi
-fi
-LEVELNAMES=( error warn info debug )
-LEVELCOLOR=( "$red" "$yellow" "$green" "$cyan" )
-#set -x
-log_msg () {
-    local level=$1
-    shift
-    #local datestring=$(date +"%Y-%m-%d %H:%M:%S")
-    local message="$*"
-    echo "${LEVELNAMES[level]}:$message"
-    if [ ${OVJ_VERBOSE} -ge "$level" ] && [ -t 3 ]; then
-        echo "${LEVELCOLOR[level]}${LEVELNAMES[level]}$normal:$message" >&3
-    fi
-}
-log_error () {
-    log_msg 0 "$*"
-}
-onerror() {
-    log_error "$SCRIPT: Error on line ${BASH_LINENO[0]}, exiting."
-    exit 1
-}
-trap onerror ERR
-log_warn () {
-    log_msg 1 "$@"
-}
-log_info () {
-    log_msg 2 "$@"
-}
-log_debug () {
-    log_msg 3 "$@"
-}
-log_cmd () {
-    # log it
-    log_info "\$ $*"
-    # execute it
-    eval "$@"
-}
-cmdspin () {
-    log_info "Cmd started $(date)"
-    log_info "\$ $*"
-    # spinner
-    local sp='/-\|'
-    if [ -t 3 ]; then printf ' ' >&3 ; fi
-    while : ; do
-        sleep 1;
-        sp=${sp#?}${sp%???}
-        if [ -t 3 ]; then printf '\b%.1s' "$sp" >&3 ; fi
-    done &
-    SPINNER_PID=$!
-    # Kill the spinner if we die prematurely
-    trap "kill $SPINNER_PID" EXIT
-    # command here
-    eval "$@"
-    CMDRET=$?
-    # Kill the loop and unset the EXIT trap
-    kill -PIPE $SPINNER_PID
-    trap " " EXIT
-    if [ -t 3 ]; then echo "" >&3 ; fi
-    log_info "Cmd finished $(date), returned: $CMDRET"
-    return $CMDRET
-}
-# call this before calling any log commands
-setup_logfile () {
-    LOGFILE="$1"       # typically $(basename "$0")
-    local LOGDIR="$2"  # directory for log files, will try to mkdir -p if non-existant
-    local date
-    date="$(date +%F_%T)"
-    if [ ! -d "$LOGDIR" ]; then
-        echo "creating log directory '$LOGDIR'"
-        mkdir -p "$LOGDIR" || return $?
-    fi
-    if [ ! -d "$LOGDIR" ]; then
-        echo "${red}Unable to create log directory '$LOGDIR':${normal}"
-        echo "${red}  log messages will be printed to the terminal.${normal}"
-        return
-    fi
-    LOGFILE="${LOGDIR}/build.${date}.txt"
-    exec 3>&1 4>&2
-    trap 'exec 1>&3 2>&4' 0 1 2 3
-    if [ ${OVJ_VERBOSE} -gt 2 ]; then
-        # at VERBOSE >= DEBUG level, also send cmd output to terminal
-        exec 1> >(tee -a "${LOGFILE}") 2>&1
-    else
-        exec 1> "$LOGFILE" 2>&1
-    fi
-    # how this script was called
-    log_debug "$CMDLINE"
-    log_info "Logfile: $LOGFILE"
-}
+# import logging functions
+# shellcheck source=loglib.sh
+. "$SCRIPTDIR/loglib.sh"
 
 #######################################################################
 #
@@ -408,10 +308,10 @@ export OVJ_TOOLS
 #
 # setup log file
 #
-setup_logfile "$SCRIPT" "${OVJ_BUILDDIR}/logs"
+log_setup "$(basename "$SCRIPT" .sh).txt" "${OVJ_BUILDDIR}/logs"
 
 # disallow Mercury/Inova build
-if [ "$xUNAMEs" = "xDarwin" ]; then
+if [ "x$(uname -s)" = "xDarwin" ]; then
     log_warn todo
 fi
 
@@ -444,7 +344,7 @@ fi
 if [ "${OVJ_DO_PACKAGE}" = yes ]; then
     if [ "${OVJ_PACK_DDR}" = yes ]; then
         log_info "Packaging DDR/DDR2"
-        if [ "$xUNAMEs" = "xDarwin" ]; then
+        if [ "x$(uname -s)" = "xDarwin" ]; then
             do_package ovjmacout.sh dvdimageOVJ
         else
             do_package ovjddrout.sh dvdimageOVJ
@@ -464,4 +364,5 @@ if [[ "${OVJ_DO_CHECKOUT}" == no && "${OVJ_DO_BUILD}" == no && "${OVJ_DO_PACKAGE
     usage
 fi
 
-log_info "$SCRIPT done."
+log_info "$SCRIPT done, ${ERRCOUNT} errors.  Logfile: $LOGFILE"
+exit ${ERRCOUNT}

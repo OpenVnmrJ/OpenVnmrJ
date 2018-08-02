@@ -13,12 +13,14 @@ jobs: # a collection of steps
           name: Install System Dependencies
           command: |
             lsb_release -a
-            sudo apt-get install -y gcc g++ gfortran gcc-multilib scons
-            sudo apt-get install -y libc6-dev-i386 lib32stdc++-6-dev libglu1-mesa-dev
-            sudo apt-get install -y liblapack-dev liblapacke-dev libfftw3-dev
+            sudo apt-get install -y gcc g++ gfortran gcc-multilib scons \
+                libc6-dev-i386 lib32stdc++-6-dev libglu1-mesa-dev \
+                liblapack-dev liblapacke-dev libfftw3-dev
             sudo dpkg --add-architecture i386
             sudo apt-get -qq update
             sudo apt-get install -y libmotif-dev:i386 libxt-dev:i386 libx11-dev:i386
+            echo "dash dash/sh boolean false" | sudo debconf-set-selections
+            DEBIAN_FRONTEND=noninteractive sudo dpkg-reconfigure dash
             java -version
             gcc --version
             g++ --version
@@ -40,5 +42,44 @@ jobs: # a collection of steps
             cd ${OVJ_ROOT}
             cp -a ${OVJ_TOOLS}/bin ${OVJ_BUILDDIR}
             OVJ_SCONSFLAGS='-j2' ${OVJ_ROOT}/scripts/build_release.sh build package
-            ${OVJ_TOOLS}/bin/whatsin $(ls -t ${OVJ_BUILDDIR}/logs/build* | head -1) | tail -60
+            ${OVJ_TOOLS}/bin/whatsin $(ls -t ${OVJ_BUILDDIR}/logs/build* | head -1) | tail -80
             ls -l ${OVJ_BUILDDIR}/dvdimage*
+      - run:
+          name: Build Failed
+          when: on_fail
+          command: |
+            export OVJ_BUILDDIR=$HOME
+            sudo tail -80 ${OVJ_BUILDDIR}/logs/build*
+      - run:
+          name: Install OpenVnmrJ
+          command: |
+            export OVJ_BUILDDIR=$HOME
+            export OVJ_ROOT=${OVJ_BUILDDIR}/OpenVnmrJ
+            export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
+            chmod a+xr ${OVJ_BUILDDIR}
+            chmod a+xr ${OVJ_BUILDDIR}/dvdimageOVJ*
+            pwd
+            cd ${OVJ_TOOLS}
+            sudo ${OVJ_ROOT}/scripts/install_test.sh -f install
+      - run:
+          name: Install Failed
+          when: on_fail
+          command: |
+            export OVJ_BUILDDIR=$HOME
+            sudo tail -80 ${OVJ_BUILDDIR}/logs/install_test.log
+      - run:
+          name: Test OpenVnmrJ
+          command: |
+            export OVJ_BUILDDIR=$HOME
+            export OVJ_ROOT=${OVJ_BUILDDIR}/OpenVnmrJ
+            export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
+            pwd
+            cd ${OVJ_TOOLS}
+            sudo rm -f ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/20*
+            sudo ${OVJ_ROOT}/scripts/install_test.sh -f test
+            sudo cat ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/20*
+      - run:
+          name: Tests Failed
+          when: on_fail
+          command: |
+            sudo cat ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/20*
