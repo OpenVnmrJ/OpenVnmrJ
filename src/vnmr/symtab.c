@@ -144,7 +144,8 @@ void balance(symbol **pp)
 |
 +-----------------------------------------------------------------------------*/
 
-symbol *findName(register symbol *p, const char *n)
+
+symbol *findName(symbol *p, const char *n)
 {  register int d;
 
    while (p)
@@ -254,7 +255,7 @@ int deleteName(symbol **pp, symbol *q, const char *n)
 |
 +-----------------------------------------------------------------------------*/
 
-symbol *addName(register symbol **pp, const char *n)
+symbol *addName(symbol **pp, const char *n)
 {  register symbol *p;
    register symbol *q;
 
