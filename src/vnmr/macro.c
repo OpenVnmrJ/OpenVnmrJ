@@ -63,8 +63,8 @@
 #endif 
 
 extern node   *loadMacro(char *n, int search, int *res);
-extern symbol *BaddName(symbol **pp, char *n);
-extern symbol *findName(register symbol *p, register char *n);
+extern symbol *BaddName(symbol **pp, const char *n);
+extern symbol *findName(symbol *p, const char *n);
 extern FILE   *popen_call(char *cmdstr, char *mode);
 extern int More(FILE *stream, int screenLength);
 extern void showTree(int n, char *m, node *p);

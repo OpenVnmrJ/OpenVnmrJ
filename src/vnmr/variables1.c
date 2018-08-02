@@ -51,9 +51,9 @@
 #define letter(c) ((('a'<=(c))&&((c)<='z'))||(('A'<=(c))&&((c)<='Z'))||((c)=='_')||((c)=='$')||((c)=='#')||((c)=='/'))
 #define digit(c) (('0'<=(c))&&((c)<='9'))
 
-extern symbol  *addName();
-extern symbol  *BaddName();
-extern symbol  *findName();
+extern symbol *addName(symbol **pp, const char *n);
+extern symbol *BaddName(symbol **pp, const char *n);
+extern symbol *findName(symbol *p, const char *n);
 extern int assignReal(double d, varInfo *v, int i);
 extern int assignString(const char *s, varInfo *v, int i);
 extern int  writelineToVnmrJ(const char *cmd, const char *message );
