@@ -3848,7 +3848,7 @@ MPSEQ getptrfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
    int nph = 23;
    int nof = 1;
    int na = 1; 
-   int ng = 1; 
+   int ng = 23; 
    MPinitializer(&pt,npw,nph,nof,na,ng,nphBase,nphSuper);
 
 // Set the Step Sizes
