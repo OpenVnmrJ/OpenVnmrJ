@@ -775,6 +775,8 @@ void init_rf (RF_PULSE_T *rf, char rfName[MAX_STR], double pw, double flip,
      case ERR_RF_HEADER_ENTRIES:
        sgl_abort_message("ERROR rf shape '%s': incorrect header information",rfName);
        break;
+     default:
+       break;
    }
    if ((rf->header.rfFraction < 0) || (rf->header.rfFraction > 1))
      sgl_abort_message("ERROR rf shape '%s': RF Fraction must be between 0 and 1",rfName);
@@ -830,6 +832,8 @@ void shape_rf (RF_PULSE_T *rf, char rfBase[MAX_STR], char rfName[MAX_STR], doubl
      case ERR_RF_HEADER_ENTRIES:
        sgl_abort_message("ERROR rf shape '%s': incorrect header information",rfName);
        break;
+     default:
+       break;
    }
    if ((rf->header.rfFraction < 0) || (rf->header.rfFraction > 1))
      sgl_abort_message("ERROR rf shape '%s': RF Fraction must be between 0 and 1",rfName);
@@ -856,6 +860,8 @@ void calc_rf (RF_PULSE_T *rf, char VJparam_tpwr[], char VJparam_tpwrf[])
      case ERR_RFPOWER_COARSE:
        sgl_abort_message("ERROR rf pulse '%s': Coarse power too large (pw = %.2fus, flip = %.2f",
          rf->pulseName, rf->rfDuration*1e6,rf->flip);
+     default:
+       break;
    }
 
    if ((rf->flip >= 0) && (!sglpower) && (ix == 1)) {

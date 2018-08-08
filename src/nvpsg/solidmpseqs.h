@@ -1345,16 +1345,13 @@ MPSEQ getpmlg(char *seqName, int iph ,double p, double phint, int iRec, int calc
 
    double obsstep = 360.0/8192;
    double delta = 360.0/(sqrt(3)*nsteps);
-   double val = 0.0;
    for (i = 0; i < pm.nphBase/2; i++) {
       pm.phBase[i] = sign*(i*delta + delta/2.0);
       pm.phBase[i] = roundphase(pm.phBase[i],obsstep);
-      val = pm.phBase[i];
    }
    for (i = pm.nphBase/2; i < pm.nphBase; i++) {
       pm.phBase[i] = 180.0 + sign*((2*nsteps - i)*delta - delta/2.0);
       pm.phBase[i] = roundphase(pm.phBase[i],obsstep);
-      val = pm.phBase[i];
    }
 
 // Set the Supercycle Phase List
@@ -2579,7 +2576,12 @@ MPSEQ getgrapt(char *seqName, double p, double phint, int iRec, int calc)
    double pw = getval(var);
    r.array = disarry(var, r.array);
 
-   double dstep = r.n90*DTCK;
+   double dstep;
+
+   if (PWRF_DELAY > 0.0)
+      dstep =  INOVAN90 * DTCK;
+   else
+      dstep =  VNMRSN90 * DTCK;
    double steps = pw/(2.0*dstep);
    int nsteps = 2*((int) (steps + 0.5));
    r.array = disarry(var, r.array);
@@ -3848,7 +3850,7 @@ MPSEQ getptrfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
    int nph = 23;
    int nof = 1;
    int na = 1; 
-   int ng = 1; 
+   int ng = 23; 
    MPinitializer(&pt,npw,nph,nof,na,ng,nphBase,nphSuper);
 
 // Set the Step Sizes
@@ -4792,16 +4794,13 @@ MPSEQ getpmlgxmx(char *seqName, int iph ,double p, double phint, int iRec, int c
 
    double obsstep = 360.0/8192;
    double delta = 360.0/(sqrt(3)*nsteps);
-   double val = 0.0;
    for (i = 0; i < pm.nphBase/2; i++) {
       pm.phBase[i] = sign*(i*delta + delta/2.0);
       pm.phBase[i] = roundphase(pm.phBase[i],obsstep);
-      val = pm.phBase[i];
    }
    for (i = pm.nphBase/2; i < pm.nphBase; i++) {
       pm.phBase[i] = 180.0 + sign*((2*nsteps - i)*delta - delta/2.0);
       pm.phBase[i] = roundphase(pm.phBase[i],obsstep);
-      val = pm.phBase[i];
    }
 
 // Set the Supercycle Phase List

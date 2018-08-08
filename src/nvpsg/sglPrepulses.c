@@ -212,7 +212,7 @@ if (mt[0] == 'y')
 ***********************************************************************/
 void create_satbands()
 {
-	int     nthk,npos,npsi,nphi,ntheta,i,_i;
+	int     nthk,npos,npsi,nphi,ntheta,i;
 	double  minthk;
 	
 	if( sat[0] == 'y' )
@@ -632,7 +632,8 @@ void create_arterial_spin_label()
   int caslsinemod=FALSE;
   int stardoubletag=FALSE;
   double power,powerlimit,aslb1max,fpwrscale;
-  double minpss,maxpss,centrepss;
+  double minpss,maxpss;
+//  double centrepss;
   double *pssval,*controlpos;
   int npssvals,sliceindex=0;
   double tmpval;
@@ -654,9 +655,9 @@ void create_arterial_spin_label()
   int vnps      = virblock;     /* Number of PS pulses */
   int vnips     = vnirpulses;   /* Number of IPS pulses */
   int vnq2      = vir;          /* Number of Q2TIPS pulses */
-  int vspoil    = virslice_ctr; /* Gradient spoil multiplier */
-  int vloop_ctr = vnir;         /* Loop counter */
-  int vpwrf     = vnir_ctr;     /* Fine power */
+//  int vspoil    = virslice_ctr; /* Gradient spoil multiplier */
+//  int vloop_ctr = vnir;         /* Loop counter */
+//  int vpwrf     = vnir_ctr;     /* Fine power */
 
   if (asl[0] == 'y') {
 
@@ -1308,6 +1309,7 @@ double calc_aslTime(double asladd,double trepmin,int *treptype)
     */
     /* Only perform auto calculation for first array element */
     if (autoirtime[0]=='y' && ix==1) {
+      int ret __attribute__((unused));
       /* Figure the number of T1s and get their values */
       P_getVarInfo(CURRENT,"mirt1",&dvarinfo);
       getarray("mirt1",mirt1);
@@ -1320,7 +1322,7 @@ double calc_aslTime(double asladd,double trepmin,int *treptype)
       /* Check that the aslmirtime binary is present */
       sprintf(timefile,"/tmp/aslmirtimestatus_%s",getenv("USER"));
       sprintf(timecmd,"which aslmirtime > %s",timefile);
-      system(timecmd);
+      ret = system(timecmd);
       if (stat(timefile,&buf) == -1)
         abort_message("calc_aslTime MIR error: Unable to access file /tmp/aslmirtimestatus\n");
       if (buf.st_size == 0)
@@ -1330,7 +1332,7 @@ double calc_aslTime(double asladd,double trepmin,int *treptype)
       sprintf(timecmd,"aslmirtime -n %d -d %f -t %d",nmir,mirTime,(int)dvarinfo.size);
       for (i=0;i<(int)dvarinfo.size;i++) sprintf(timecmd,"%s %f",timecmd,mirt1[i]);
       /* Execute the system call */
-      system(timecmd);
+      ret = system(timecmd);
       sprintf(timefile,"/tmp/aslmirtime_%s.txt",getenv("USER"));
       /* Open timefile for reading */
       if ((fp=fopen(timefile,"r")) == NULL)
@@ -1463,7 +1465,7 @@ void arterial_spin_label()
   int vpwrf     = vnir_ctr;     /* Fine power */
   /* Use more meaningful names for v41,v42 */
   int vnmir     = v42;          /* Number of MIR pulses (before Q2TIPS if q2tips='y') */
-  int vnmirq2   = v41;          /* Number of MIR pulses after Q2TIPS (if q2tips='y') */
+//  int vnmirq2   = v41;          /* Number of MIR pulses after Q2TIPS (if q2tips='y') */
 
   if (asl[0] == 'y') {
 

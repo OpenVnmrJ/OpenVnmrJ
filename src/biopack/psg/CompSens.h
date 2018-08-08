@@ -31,9 +31,10 @@ char  *fname;
 int    xni, xni2, xni3;
 {
   FILE  *src;
-  char   cmd[MAXSTR];
+  char   cmd[2*MAXSTR];
   double d[4];
-  int    s[4], i, j, k, m;
+  int    i, j, k, m;
+  char *ret __attribute__((unused));
 
   k = 1; j = 0; m = -1; 
   if(xni > 1) k *= xni;      
@@ -46,7 +47,7 @@ int    xni, xni2, xni3;
     psg_abort(1);
   }
 
-  fgets(cmd, 512, src);
+  ret = fgets(cmd, 512, src);
   xdim = sscanf(cmd, "%lf %lf %lf", &d[0], &d[1], &d[2]);  
   if(xdim < 1) 
   {
@@ -89,7 +90,6 @@ int    xni, xni2, xni3;
 void set_RS(opt)  /* set CS schedule */
 char *opt;        // reserved for weighted sampling modes
 {
-  FILE     *src;
   char      stype[MAXSTR], cmd[2*MAXSTR], fname[MAXSTR], path[MAXSTR];
   int       i, j, i1, i2, i3, jx, ni, ni2, ni3, skey;
   double    dkey;
@@ -109,7 +109,9 @@ char *opt;        // reserved for weighted sampling modes
   ni = (int) (0.5 + getval("ni"));        /* assuming ni is always present */
   if(find("ni2") > 0) ni2 = (int) (0.5 + getval("ni2"));
   if(find("ni3") > 0) ni3 = (int) (0.5 + getval("ni3"));
-  if(ni<1) ni=1; if(ni2<1) ni2=1; if(ni3<1) ni3=1;
+  if(ni<1) ni=1;
+  if(ni2<1) ni2=1;
+  if(ni3<1) ni3=1;
 
   if(ni>1)
   {
@@ -138,6 +140,7 @@ char *opt;        // reserved for weighted sampling modes
     sprintf(fname,"%s/sampling.sch", curexp);
     if((stype[0] =='a') || (stype[0] == 'y'))
     {
+      int ret __attribute__((unused));
       skey=169; dkey=0.0;
       if(find("skey") > 0)
       {
@@ -152,7 +155,7 @@ char *opt;        // reserved for weighted sampling modes
               path, fname, ni, nimax, ni2, ni2max, ni3, ni3max, skey);
       else
         abort_message("Failed to find mkCSsc sampling schedule program");
-      system(cmd);
+      ret = system(cmd);
     }
     if(!(kk=get_RS(fname, i1, i2, i3))) 
     {

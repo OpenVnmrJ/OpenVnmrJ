@@ -78,7 +78,7 @@ void get_wsparameters() {
 void create_ovsbands() {
   double posoff;        /* positional offset relative to voxel position */
   double csdvox,csdovs; /* chemical shift displacement errors */
-  int sglpowerSave;
+//  int sglpowerSave;
 
   if (ovs[0] == 'y') {
   

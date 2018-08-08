@@ -3285,12 +3285,6 @@ void _inept(GP in, int ph1, int ph2, int ph3, int ph4)
       psg_abort(1);
    }
 
-   double lsim = in.pw1/2.0;
-   if (in.pw2 > in.pw1) lsim = in.pw2/2.0;
-
-   double lsim1 = in.pw3/2.0;
-   if (in.pw4 > in.pw3) lsim1 = in.pw4/2.0;
-
    double t1a = in.t1;
    double t1b = in.t2;
 
@@ -3334,12 +3328,6 @@ void _ineptref(GP in, int ph1, int ph2, int ph3, int ph4, int ph5, int ph6)
       printf("_ineptref() Error: Source and Destination on Same Channel. Abort!\n");
       psg_abort(1);
    }
-
-   double lsim = in.pw1/2.0;
-   if (in.pw2 > in.pw1) lsim = in.pw2/2.0;
-
-   double lsim1 = in.pw3/2.0;
-   if (in.pw4 > in.pw3) lsim1 = in.pw4/2.0;
 
    double t1a = in.t1;
    double t1b = in.t2;

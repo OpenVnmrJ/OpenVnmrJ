@@ -37,8 +37,6 @@ STATE const_state(double t, SHAPE_PARS p)
 STATE sinc_state(double t, SHAPE_PARS p)
 {
    STATE s;
-   double bw;
-   bw = p.dp[0];             //bandwidth
    double tzc = p.dp[1];     //zero crossing time
    double arg;
    arg = PI*(t - 0.5*p.t)/tzc;
@@ -138,8 +136,7 @@ STATE sfm_state(double t, SHAPE_PARS p)
 STATE tanramp_state(double t, SHAPE_PARS p)
 {
    double norm,mean;
-   double at,ampl;
-   ampl = 0.0;
+   double at;
    enum polarity {NORMAL, UP_UP, DOWN_DOWN, DOWN_UP, UP_DOWN};
    enum polarity POL = NORMAL;
    STATE s;

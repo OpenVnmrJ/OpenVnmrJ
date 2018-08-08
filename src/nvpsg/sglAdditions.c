@@ -793,7 +793,7 @@ double writeOutputGradientDBStr(SGL_GRADIENT_T *aOutputGradient,
 {
    char *gradParams;
    char _tempname[MAX_STR];
-   int	_error;
+   int	_error __attribute__((unused));
 	int _startIdx, _endIdx;
 	
 	double *_vec;

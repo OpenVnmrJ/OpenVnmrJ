@@ -291,7 +291,8 @@ void calc_epi(EPI_GRADIENT_T          *epi_grad,
               int write_flag) {
 
   /* Variables for generating gradient shapes */
-  double dwint,blipint,skip,dw;
+//  double dwint;
+  double blipint,skip,dw;
   int    np_ramp, np_flat, npro;
   double *dwell, *dac;
   double pos, neg;
@@ -409,7 +410,7 @@ void calc_epi(EPI_GRADIENT_T          *epi_grad,
   calcReadout(ro_grad);
 
   dw    = granularity(1/sw,1/epi_grad->ddrsr);
-  dwint = dw*ro_grad->amp;
+//  dwint = dw*ro_grad->amp;
 
   skip  = getval("skip");              /* User specified min delay between acquisitions */
   skip  = MAX(skip,pe_grad->duration); /* Is PE blip longer? Then use that */

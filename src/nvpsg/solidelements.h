@@ -274,7 +274,7 @@ char varName[MAXSTR];
 
 char* getname0(char *varType, char *varSuffix, char *chXtra)
 {
-   int i,chCount, descrCount, typeCount, capCount;
+   int i, descrCount, typeCount, capCount;
    extern char varName[];
    char chDescr[MAXSTR];
    char chSeqType[MAXSTR];
@@ -288,7 +288,7 @@ char* getname0(char *varType, char *varSuffix, char *chXtra)
 // Will fail if the caps section contains digits
 //====================================================================
     
-   chCount = 0; descrCount = 0;typeCount = 0; capCount = 0;
+   descrCount = 0;typeCount = 0; capCount = 0;
    for (i = 0; i< strlen(varSuffix); i++){
       if (islower(varSuffix[i]) || isdigit(varSuffix[i])) {
          if (capCount == 0) chSeqType[typeCount++] = varSuffix[i];
@@ -319,7 +319,7 @@ char* getname0(char *varType, char *varSuffix, char *chXtra)
 
 char* getname1(char *varType, char *varSuffix, int chnl)
 {
-   int i,chCount, descrCount, typeCount, capCount;
+   int i, descrCount, typeCount, capCount;
    extern char varName[];
    char chDescr[MAXSTR];
    char chSeqType[MAXSTR];
@@ -333,7 +333,7 @@ char* getname1(char *varType, char *varSuffix, int chnl)
 // Will fail if the caps section contains digits
 //================================================================
 
-   chCount = 0; descrCount = 0;typeCount = 0; capCount = 0;
+   descrCount = 0;typeCount = 0; capCount = 0;
    for (i = 0; i< strlen(varSuffix); i++) {
       if (islower(varSuffix[i]) || isdigit(varSuffix[i])) {
          if (capCount == 0) chSeqType[typeCount++] = varSuffix[i];

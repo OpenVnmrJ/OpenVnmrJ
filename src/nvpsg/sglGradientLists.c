@@ -643,6 +643,8 @@ double getMomentOfNode( struct SGL_GRAD_NODE_T *aGradNode )
 			case READOUT_GRADIENT_TYPE:
 				moment = aGradNode->grad->_as_READOUT_GRADIENT.m0;
 				break;
+                        default:
+				break;
 		}
 	} else {
 		moment = 0;
@@ -1662,7 +1664,8 @@ void add_gradient( SGL_GRADIENT_T *grad, char *label, SGL_LOGICAL_AXIS_T logical
 					SGL_GRAD_PLACEMENT_ACTION_T action, char *refLabel,
 					double actionTime, SGL_CHANGE_POLARITY_T polarity )
 {
-	double _eventStart, _totalTime;
+	double _eventStart __attribute__((unused));
+        double _totalTime;
 	
 	_eventStart = addToGradList( workingList, grad, label, logicalAxis,
 						action, refLabel, actionTime, polarity, &_totalTime );
@@ -1670,7 +1673,8 @@ void add_gradient( SGL_GRADIENT_T *grad, char *label, SGL_LOGICAL_AXIS_T logical
 
 void add_marker( char *label, SGL_GRAD_PLACEMENT_ACTION_T action, char *refLabel, double actionTime )
 {
-	double _eventStart, _totalTime;
+	double _eventStart __attribute__((unused));
+        double _totalTime;
 	
 	_eventStart = addToGradList( workingList, (void *)&marker, label, MARKER,
 						action, refLabel, actionTime, PRESERVE, &_totalTime );

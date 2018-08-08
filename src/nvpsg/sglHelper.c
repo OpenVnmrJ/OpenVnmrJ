@@ -586,6 +586,8 @@ void calc_diffTime(DIFFUSION_T *diffusion,double *temin)
         diffusion->d1 = GRADIENT_RES;
       }
       break;
+    default:
+      break;
   }
 
   /* calculate the duration of all diffusion components */
@@ -1731,9 +1733,9 @@ void sgl_abort_message(char *format, ...)
   va_end(vargs);
 
   if (!sglabort)
-    abort_message(msg);
+    abort_message("%s",msg);
   else
-    warn_message(msg);
+    warn_message("%s",msg);
 
   sglerror = 2;  /* We've already printed some error messages, 
                     no need to print an error in error_check */

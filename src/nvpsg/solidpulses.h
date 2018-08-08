@@ -484,16 +484,8 @@ SHAPE getdumbogenshp(char *seqName, char *coeffName, double p, double phint, int
       s.pars.trap = INOVATRAP;
    }
 
-//set the flag for the supercycle
-
-   int supercyc;
    var = getname0("sc",coeffName,"");
-   supercyc=getval(var);
    s.pars.array = disarry(var, s.pars.array);
-
-   //reset supercycle to normal if shape will be used for windowed acquisition
-   if (!strcmp(s.pars.ch,"obs"))
-	supercyc=0;
 
 //get Fourier coefficients
    char *coef[12]={"ca1","ca2","ca3","ca4","ca5","ca6","cb1","cb2","cb3","cb4","cb5","cb6"};

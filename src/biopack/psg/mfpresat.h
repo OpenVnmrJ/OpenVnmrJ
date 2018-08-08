@@ -34,6 +34,7 @@ char    *fnm;
   char     str[MAXSTR];
   double   tm=0.0;
   extern   char curexp[];
+  char *ret __attribute__((unused));
 
   
   (void) sprintf(str, "%s/%s" , curexp, fnm);
@@ -44,7 +45,8 @@ char    *fnm;
     psg_abort(1);
   }
 
-  while ((getc(inpf)) == '#') fgets(str, MAXSTR, inpf);  /* ignore com-s */
+  while ((getc(inpf)) == '#')
+     ret = fgets(str, MAXSTR, inpf);  /* ignore com-s */
   k = ftell(inpf); fseek(inpf, k-1, 0);
 
   j = 0; nn = 0; 
@@ -68,6 +70,7 @@ shape  pbox_mfcw()       /* make mfcw shape */
   int       i, nl;
   char      str[MAXSTR], cmd[MAXSTR], repflg[MAXSTR];
   extern char userdir[];
+  int ret __attribute__((unused));
 
   getstr("repflg", repflg);
 
@@ -94,7 +97,7 @@ shape  pbox_mfcw()       /* make mfcw shape */
   fclose(inpf);
 
   sprintf(cmd, "Pbox mfpresat.DEC -%.0f\n", reps);
-  system(cmd);                                  /* execute Pbox */
+  ret = system(cmd);                                  /* execute Pbox */
   if(reps > 0) printf("  cmd : %s", cmd);
   
   return getDsh("mfpresat");
@@ -109,6 +112,7 @@ double dcyc;
   int       i, nl;
   char      str[MAXSTR], cmd[MAXSTR], repflg[MAXSTR];
   extern char userdir[];
+  int ret __attribute__((unused));
 
   getstr("repflg", repflg);
 
@@ -135,7 +139,7 @@ double dcyc;
   fclose(inpf);
 
   sprintf(cmd, "Pbox mfhdec.DEC -s %.2f -dcyc %.3f, -%.0f\n", 1.0e6*stepsize, dcyc, reps);
-  system(cmd);                                  /* execute Pbox */
+  ret = system(cmd);                                  /* execute Pbox */
   if(reps > 0) printf("  cmd : %s", cmd);
   
   return getDsh("mfhdec");
