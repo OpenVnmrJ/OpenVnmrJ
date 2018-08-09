@@ -212,12 +212,13 @@ double bw, ofs, rf_pwr, rf_pw90;
   
     if (sh.pwr > rf_pwr) 
     {
+      int ret __attribute__((unused));
       printf("pbox_Rsh: Warning! Insufficient power for %s\n ", sh.name);
       printf("%.0f dB needed, %.0f dB available\n ", sh.pwr, rf_pwr);
 
       sprintf(str, " -attn %.0f%c\n", rf_pwr, 'd');
 
-      system((char *)strcat(px_cmd,str));                      
+      ret = system((char *)strcat(px_cmd,str));                      
 
       sh = getRsh(shn);
       if (sh.pwrf > 4095.0) 
@@ -268,13 +269,14 @@ double bw, ofs, rf_pwr, rf_pw90;
   
     if (sh.pwr > rf_pwr) 
     {
+      int ret __attribute__((unused));
       printf("\n\n !!!!!!!!!!!!!!!!!!!!!!!! \n\n ");
       printf("pbox_Dsh: Warning! Insufficient power for %s\n ", sh.name);
       printf("%.0f dB needed, %.0f dB available and will be used !\n\n ", sh.pwr, rf_pwr);
 
       sprintf(str, " -attn %.0f%c\n", rf_pwr, 'd');
 
-      system((char *)strcat(px_cmd,str));                      
+      ret = system((char *)strcat(px_cmd,str));                      
 
       sh = getDsh(shn);
       if (sh.pwrf > 4095.0) 

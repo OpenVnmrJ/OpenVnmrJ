@@ -131,9 +131,10 @@ PBOXPULSE update_PBOXPULSE(PBOXPULSE shp, int iRec)
       var = getname0("",shp.seqName,"");
       sprintf(shp.pattern,"%s%d_%d",var,shp.nRec,lix);
       if (shp.hasArray == 1) {
+         int ret __attribute__((unused));
 	 sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n",
                 shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,shp.fla);
-         system(cmd);
+         ret = system(cmd);
          pboxshp = getRsh(shp.pattern); 
          shp.B1max = pboxshp.B1max; 
       }
@@ -156,7 +157,7 @@ PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
    char *var1, *var2;
    char bar1[256];
    char bar2[256];
-   char cmd[MAXSTR];
+   char cmd[2*MAXSTR];
 
 // The two Shapes must be on the same channel
 
@@ -236,10 +237,11 @@ PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
          strcpy(bar2,var2);  
          sprintf(shp.pattern,"%s%d_%s%d_%d",bar1,shp1.nRec,bar2,shp2.nRec,lix);
          if (shp.hasArray == 1) {
+            int ret __attribute__((unused));
             sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2" ,
                shp.pattern,shp1.wv,shp1.pw,shp1.of,shp1.st,shp1.ph,shp1.fla, 
                            shp2.wv,shp2.pw,shp2.of,shp2.st,shp2.ph,shp2.fla);
-            system(cmd);
+            ret = system(cmd);
             pboxshp = getRsh(shp.pattern); 
             shp.B1max = pboxshp.B1max; 
          }
@@ -349,9 +351,10 @@ PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
       var = getname0("",shp.seqName,"");
       sprintf(shp.pattern,"%s%d_%d",var,shp.nRec,lix);
       if (shp.hasArray == 1) {
+         int ret __attribute__((unused));
 	 sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n",
                 shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,shp.fla);
-         system(cmd);
+         ret = system(cmd);
          pboxshp = getRsh(shp.pattern); 
          shp.B1max = pboxshp.B1max; 
       }
@@ -453,9 +456,10 @@ PBOXPULSE getrefpboxpulse(char *seqName, int iRec, int calc)
       var = getname0("",shp.seqName,"");
       sprintf(shp.pattern,"%s%d_%d",var,shp.nRec,lix);
       if (shp.hasArray == 1) {
+         int ret __attribute__((unused));
          sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f\" -stepsize 0.2 -p %2.0f -l %f -attn e\n",
                 shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,ref_db,ref_pw);
-         system(cmd);
+         ret = system(cmd);
       }
    }
 

@@ -3662,6 +3662,7 @@ void readGradientHeader(GRADIENT_HEADER_T *header, FILE *fpin)
    char inString[MAX_STR];
    char seekString[GRAD_HEADER_ENTRIES][MAX_STR];
    long counter;
+   int ret __attribute__((unused));
 
    /* initialize variables */
    counter = 1;       /* loop counter */
@@ -3674,13 +3675,13 @@ void readGradientHeader(GRADIENT_HEADER_T *header, FILE *fpin)
    counter = 0; /* initialize counter */
    while (!feof(fpin) && (counter < (int)GRAD_HEADER_ENTRIES))
    {
-      fscanf(fpin, "%s", inString); /* read string from file */
+      ret = fscanf(fpin, "%s", inString); /* read string from file */
 
       /* assign value if string was found */
       /* check if string has been found */
       if (strstr(inString, seekString[counter]))
       {
-         fscanf(fpin, "%s", inString); /* read value following string */
+         ret = fscanf(fpin, "%s", inString); /* read value following string */
 
          /* assign values to structure */
          switch ((GRADIENT_HEADER_ENTRIES_T)counter)
@@ -3749,6 +3750,7 @@ void readRfPulse (RF_PULSE_T *rfPulse)
    long safetyCheck;
    long searchSteps;
    FILE *fpin;
+   int ret __attribute__((unused));
 
    /* initialize variables */
    counter     = 1;     /* loop counter */
@@ -3790,12 +3792,12 @@ void readRfPulse (RF_PULSE_T *rfPulse)
    counter = 0; /* initialize counter */
    do
    {
-      fscanf(fpin, "%s", inString); /* read string from file */
+      ret = fscanf(fpin, "%s", inString); /* read string from file */
       /* assign value if string was found */
       /* check if string has been found */
       if (strstr(inString, seekString[counter]))
       {
-         fscanf(fpin, "%s", inString); /* read value following string */
+         ret = fscanf(fpin, "%s", inString); /* read value following string */
          /* assign values to structure -> order is important ! */
          switch ((RF_PULSE_HEADER_ENTRIES_T)counter)
          {
@@ -3974,7 +3976,7 @@ void calcSlice (SLICE_SELECT_GRADIENT_T *slice, RF_PULSE_T *rfPulse)
       return;
    }
 
-   if (slice->rampShape == GAUSS)
+   if (slice->rampShape == PRIMITIVE_GAUSS)
    {
       slice->error = ERR_RAMP_SHAPE;
       displayError(slice->error, __FILE__, __FUNCTION__, __LINE__);
@@ -4502,7 +4504,7 @@ void calcRefocus (REFOCUS_GRADIENT_T *refocus)
       displayError(refocus->error, __FILE__, __FUNCTION__, __LINE__);
       return;
    }
-   if (refocus->rampShape == GAUSS)
+   if (refocus->rampShape == PRIMITIVE_GAUSS)
    {
       refocus->error = ERR_RAMP_SHAPE;
       displayError(refocus->error, __FILE__, __FUNCTION__, __LINE__);
@@ -4703,7 +4705,7 @@ void calcReadout (READOUT_GRADIENT_T *ro)
       displayError(ro->error, __FILE__, __FUNCTION__, __LINE__);
       return;
    }
-   if (ro->rampShape == GAUSS || ro->rampShape == SINE) 
+   if (ro->rampShape == PRIMITIVE_GAUSS || ro->rampShape == PRIMITIVE_SINE) 
    {
       ro->error = ERR_RAMP_SHAPE;
       displayError(ro->error, __FILE__, __FUNCTION__, __LINE__);
@@ -5195,7 +5197,7 @@ void calcDephase (REFOCUS_GRADIENT_T *dephase)
       return;
    }
 
-   if (dephase->rampShape == GAUSS)
+   if (dephase->rampShape == PRIMITIVE_GAUSS)
    {
       dephase->error = ERR_RAMP_SHAPE;
       displayError(dephase->error, __FILE__, __FUNCTION__, __LINE__);
@@ -5351,7 +5353,7 @@ void calcPhase (PHASE_ENCODE_GRADIENT_T *phase)
       displayError(phase->error, __FILE__, __FUNCTION__, __LINE__);
       return;
    }
-   if (phase->rampShape == GAUSS)
+   if (phase->rampShape == PRIMITIVE_GAUSS)
    {
       phase->error = ERR_RAMP_SHAPE;
       displayError(phase->error, __FILE__, __FUNCTION__, __LINE__);
@@ -6153,7 +6155,7 @@ void calcReadoutFlowcomp(FLOWCOMP_T *fc, READOUT_GRADIENT_T *readout)
 			int    noIterator;      /* Number of iterations */
 			int    maxIterations;   /* Max number of iterations */
    double deltaT;          /* time shift for 2nd lobe  */
-   double slew;            /* gradient slew */
+//   double slew;            /* gradient slew */
    MERGE_GRADIENT_T mg1;
    MERGE_GRADIENT_T mg2;
 //   char grad_params[MAX_STR];
@@ -6184,7 +6186,7 @@ void calcReadoutFlowcomp(FLOWCOMP_T *fc, READOUT_GRADIENT_T *readout)
    area            = fabs(readout->m0ref);
    areaSquare      = area * area;
    rampAreaSquared = rampArea * rampArea;
-   slew            = risetime / GRAD_MAX;
+//   slew            = risetime / GRAD_MAX;
    areaLobe1       = 0.0;
    areaLobe2       = 0.0;
 			momentLobe1     = 0.0;
@@ -6601,9 +6603,10 @@ int mergeGradient (char *waveform1, char *waveform2,
    char   start[MAX_STR];
    char   inString1[MAX_STR], inString2[MAX_STR];
    long   dacValue;
-   long   counter;
+//   long   counter;
    long   points1, points2; /* points from header, calc points*/
    double scale;
+   int ret __attribute__((unused));
 			
    GRADIENT_HEADER_T header1;
    GRADIENT_HEADER_T header2;
@@ -6613,7 +6616,7 @@ int mergeGradient (char *waveform1, char *waveform2,
    FILE   *fpout;
 
    /* initialize variables */
-   counter = 1; /* conter variable */
+//   counter = 1; /* conter variable */
    points1 = 0; /* points for merged waveform from headers*/
    points2 = 0; /* points for merged waveform ticks*/
    error   = ERR_NO_ERROR; /* error flag */
@@ -6711,12 +6714,12 @@ int mergeGradient (char *waveform1, char *waveform2,
    /* scaling factor to normalize gradient scale */
    while (!strstr(inString1, start))
    {
-      fscanf(fpin1, "%s", inString1);
+      ret = fscanf(fpin1, "%s", inString1);
    }
    while (!feof(fpin1))
    {
       /* read waveform values */
-      fscanf(fpin1, "%s %s", inString1, inString2);
+      ret = fscanf(fpin1, "%s %s", inString1, inString2);
 
       if (!feof(fpin1))
       {
@@ -6748,11 +6751,11 @@ int mergeGradient (char *waveform1, char *waveform2,
 
    while (!strstr(inString1, start))
    {
-      fscanf(fpin1, "%s", inString1);
+      ret = fscanf(fpin1, "%s", inString1);
    }
    while (!feof(fpin2))
    {
-      fscanf(fpin2, "%s %s", inString1, inString2);
+      ret = fscanf(fpin2, "%s %s", inString1, inString2);
       if ( !feof(fpin2) )
       {
          /* normalize waveform values */
@@ -7535,7 +7538,7 @@ void durationFromMomentRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int crusherNum)
 {
 
    CALC_FLAG_T *calcFlag;
-   double *slewRate;
+//   double *slewRate;
    double *crAmplitude;
    double *crDuration;
 
@@ -7547,24 +7550,24 @@ void durationFromMomentRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int crusherNum)
    double *rampToCrDuration;
    double *rampToSsDuration;
    
-   double polarity;
-   double tempSlew;
-			double tempMoment;
-			double tempRamp1;
-			double tempRamp2;
+//   double polarity;
+//   double tempSlew;
+//			double tempMoment;
+//			double tempRamp1;
+//			double tempRamp2;
 			
    crError= 0;
-   polarity = 1.0;
-			tempSlew = 0.0;
-			tempMoment = 0.0;
-			tempRamp1 = 0.0;
-			tempRamp2 = 0.0;
+//   polarity = 1.0;
+//			tempSlew = 0.0;
+//			tempMoment = 0.0;
+//			tempRamp1 = 0.0;
+//			tempRamp2 = 0.0;
 			
    /* copy pointers */
 			if (crusherNum == 1)
    {
       calcFlag         = &bfly->cr1CalcFlag;
-      slewRate         = &bfly->cr1.slewRate;
+ //     slewRate         = &bfly->cr1.slewRate;
       crAmplitude      = &bfly->cr1amp;
       crDuration       = &bfly->cr1.duration;
       crError          = &bfly->cr1.error;
@@ -7578,7 +7581,7 @@ void durationFromMomentRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int crusherNum)
    else if (crusherNum == 2)
    {
       calcFlag         = &bfly->cr2CalcFlag;
-      slewRate         = &bfly->cr2.slewRate;
+//      slewRate         = &bfly->cr2.slewRate;
       crAmplitude      = &bfly->cr2amp;
       crDuration       = &bfly->cr2.duration;
       crError          = &bfly->cr2.error;
@@ -7596,10 +7599,10 @@ void durationFromMomentRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int crusherNum)
       return;
    }   
 
-   if (FP_LT(*crMoment0,0))
-   {
-      polarity = -1.0;
-   }		
+//   if (FP_LT(*crMoment0,0))
+//   {
+//      polarity = -1.0;
+//   }		
 			
 			/* ss amplitude must be supplied or we don't know what to ramp down to */
    if(bfly->ssamp == 0)
@@ -7675,7 +7678,7 @@ void durationFromMomentRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int crusherNum)
 ***********************************************************************/
 void momentFromDurationAmplitudeRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int crusherNum)
 {
-   double *slewRate;
+//   double *slewRate;
    double *crAmplitude;
    double *crDuration;
    ERROR_NUM_T *crError;
@@ -7691,7 +7694,7 @@ void momentFromDurationAmplitudeRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int cr
    /* copy pointers */
    if (crusherNum == 1)
    {
-      slewRate        = &bfly->cr1.slewRate;
+ //     slewRate        = &bfly->cr1.slewRate;
       crAmplitude     = &bfly->cr1amp;
       crDuration      = &bfly->cr1.duration;
       crError         = &bfly->cr1.error;
@@ -7704,7 +7707,7 @@ void momentFromDurationAmplitudeRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int cr
    }
    else if (crusherNum == 2)
    {
-      slewRate        = &bfly->cr2.slewRate;
+//      slewRate        = &bfly->cr2.slewRate;
       crAmplitude     = &bfly->cr2amp;
       crDuration      = &bfly->cr2.duration;
       crError         = &bfly->cr2.error;
@@ -7783,13 +7786,13 @@ void momentFromDurationAmplitudeRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int cr
 ***********************************************************************/
 void amplitudeFromMomentDurationRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int crusherNum)
 {
-   double *slewRate;
+//   double *slewRate;
    double *crAmplitude;
    double *crDuration;
    ERROR_NUM_T *crError;
    double *crTotalDuration;
    double *crMoment0;
-   double *crResolution;
+//   double *crResolution;
 
    double *rampToCrDuration;
    double *rampToSsDuration;
@@ -7799,12 +7802,12 @@ void amplitudeFromMomentDurationRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int cr
    /* copy pointers */
    if (crusherNum == 1)
    {
-      slewRate        = &bfly->cr1.slewRate;
+//      slewRate        = &bfly->cr1.slewRate;
       crAmplitude     = &bfly->cr1amp;
       crDuration      = &bfly->cr1.duration;
       crError         = &bfly->cr1.error;
       crMoment0       = &bfly->cr1Moment0;
-      crResolution    = &bfly->cr1.resolution;
+//      crResolution    = &bfly->cr1.resolution;
       crTotalDuration = &bfly->cr1TotalDuration;
 
       rampToCrDuration = &bfly->ramp1.duration;
@@ -7812,12 +7815,12 @@ void amplitudeFromMomentDurationRampButterfly(BUTTERFLY_GRADIENT_T *bfly, int cr
    }
    else if (crusherNum == 2)
    {
-      slewRate        = &bfly->cr2.slewRate;
+//      slewRate        = &bfly->cr2.slewRate;
       crAmplitude     = &bfly->cr2amp;
       crDuration      = &bfly->cr2.duration;
       crError         = &bfly->cr2.error;
       crMoment0       = &bfly->cr2Moment0;
-      crResolution    = &bfly->cr2.resolution;
+//      crResolution    = &bfly->cr2.resolution;
       crTotalDuration = &bfly->cr2TotalDuration;
 
       rampToCrDuration = &bfly->ramp4.duration;
@@ -9899,7 +9902,7 @@ void calcPrimitive (PRIMITIVE_GRADIENT_T *prim)
       displayError(prim->error, __FILE__, __FUNCTION__, __LINE__);
       return;
    }
-   if ((prim->shape.function == SINE || prim->shape.function == GAUSS) &&
+   if ((prim->shape.function == PRIMITIVE_SINE || prim->shape.function == PRIMITIVE_GAUSS) &&
        FP_GT(prim->shape.startX, prim->shape.endX))
    {
       /* endX should be less than startX */
@@ -10540,6 +10543,7 @@ void calcPower (RF_PULSE_T *rf_pulse, char rfcoil[MAX_STR])
    double powerCoarse =0;                         /* RF power coarse */
    double attnStep = 0;                           /* attenuation step size */
    double flipangle;                              /* product of flip*flipmult */
+   int ret __attribute__((unused));
    
    /* assign attenuation step size */
    if (CATTN_MAX < 127)
@@ -10615,7 +10619,7 @@ void calcPower (RF_PULSE_T *rf_pulse, char rfcoil[MAX_STR])
   /* find coil entry */ 
    do
    {
-      fscanf(fpin, "%s", coil);  
+      ret = fscanf(fpin, "%s", coil);
    }    
    while ( (strcmp(rfcoil,coil) ) &&  (!feof(fpin)) );
    if (feof(fpin))
@@ -10626,7 +10630,7 @@ void calcPower (RF_PULSE_T *rf_pulse, char rfcoil[MAX_STR])
       return;
    }
    /* read calibration entries */
-   fscanf(fpin,"%f %f %f ",&calPulseWidth,&calFlip,&calPower);
+   ret = fscanf(fpin,"%f %f %f ",&calPulseWidth,&calFlip,&calPower);
  
    /* close RF calibration file */  
    fclose(fpin);

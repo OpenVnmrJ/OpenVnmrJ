@@ -105,7 +105,7 @@ shape getRshapeinfo(char *shname)
   shape    rshape;
   FILE     *inpf;
   int      j;
-  char     ch, str[MAXSTR];
+  char     ch, str[3*MAXSTR];
   extern char userdir[], systemdir[];
 
   strcpy(rshape.name, shname);
@@ -212,6 +212,7 @@ c13pulsepw(excband, nullband, c13shape, c13flip); steps=STEPS; spw=SPW;
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {
+         int ret __attribute__((unused));
          fprintf(fp, "\n Pbox Input File ");
          fprintf(fp, "\n Carrier at: %s   Exc max at: %s      Null at: %s", 
                     			   CURR_C13_OFFSET, excband, nullband);
@@ -223,7 +224,7 @@ c13pulsepw(excband, nullband, c13shape, c13flip); steps=STEPS; spw=SPW;
 						     (int)(pwClvl), pwC*1.0e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");
-         system(fs);
+         ret = system(fs);
 	 /*printf("\nFreq Shift = %5.0f  Pulse Width = %0.7f  File Name:%s", 
 							freqshift, spw, SNAME);*/
        }
@@ -378,6 +379,7 @@ void c13adiab_files(char *excband, double bandwidth, char *c13shape, double puls
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {
+         int ret __attribute__((unused));
          fprintf(fp, "\n Pbox Input File ");
          fprintf(fp, "\n Carrier at: %s   Exc max at: %s   Bandwidth(ppm): %s", 
                     			   CURR_C13_OFFSET, excband, fs);
@@ -389,7 +391,7 @@ void c13adiab_files(char *excband, double bandwidth, char *c13shape, double puls
 						     (int)(pwClvl), pwC*1.0e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");
-         system(fs);
+         ret = system(fs);
 	 /*printf("\nFreq Shift = %5.0f  Band Width = %5.0f  Pulse Width = %0.7f
   	 			  		File Name: %s",
  					freqshift, bandwidth*dfrq, spw, SNAME);*/
@@ -524,6 +526,7 @@ void fshapefiles(char *anyshape, double pwbw, double flip, double shift)
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {
+         int ret __attribute__((unused));
          fprintf(fp, "\n Pbox Input File ");
          fprintf(fp, "\n { %s %14.8f %12.1f 1.0 0.0 %6.1f } ", fshape, pwbw, 
 								  shift, flip);
@@ -532,7 +535,7 @@ void fshapefiles(char *anyshape, double pwbw, double flip, double shift)
 					(int)(REF_PWR), REF_PW90*1e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");
-         system(fs);
+         ret = system(fs);
        /*printf("\nFreq Shift = %5.0f  Pulse Width = %0.7f  File Name:%s", 
 							   shift, pwbw, SNAME);*/
        }
@@ -699,7 +702,7 @@ shape getDshapeinfo(char *shname)
   shape    dshape;
   FILE     *inpf;
   int      j;
-  char     ch, str[MAXSTR];
+  char     ch, str[3*MAXSTR];
   extern char userdir[], systemdir[];
 
   strcpy(dshape.name, shname);
@@ -760,6 +763,7 @@ void c13decfiles(char *decband, char *c13shape, double decbandwidth)
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {                                                                        
+         int ret __attribute__((unused));
          fprintf(fp, "\n Pbox Input File ");                                    
          fprintf(fp, "\n Carrier at: %s   Dec max at: %s  BandWidth: %8.1f",
 				             CURR_C13_OFFSET, decband, dwidth); 
@@ -769,7 +773,7 @@ void c13decfiles(char *decband, char *c13shape, double decbandwidth)
 						     (int)(pwClvl), pwC*1.0e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");  
-         system(fs);                                                            
+         ret = system(fs);                                                            
        /*printf("\nFreq Shift = %5.0f  Band Width = %10.0f  File Name:%s", 
 					      freqshift, dwidth, SNAME);*/
        }
@@ -882,13 +886,14 @@ void h1decfiles(char *h1shape, double decbandwidth, double shift)
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {                                                                        
+         int ret __attribute__((unused));
          fprintf(fp, "\n { %s %10.1f %10.1f } ", hshape, dwidth, freqshift);
          fprintf(fp, "\n name = %s   sucyc = d   type = d   attn = e ", SNAME);
          fprintf(fp, "\n RF Calibration Data: ref_pwr = %4d  ref_pw90 = %5.1f",
 						        (int)(tpwr), pw*1.0e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");  
-         system(fs);                                                            
+         ret = system(fs);                                                            
        /*printf("\nFreq Shift = %5.0f  Band Width = %10.0f  File Name:%s", 
 					      freqshift, dwidth, SNAME);*/
        }
@@ -1052,11 +1057,12 @@ void installdecshape(char *decshape)
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {                                                                        
+         int ret __attribute__((unused));
          fprintf(fp, "\n { %s } ", decshape);
          fprintf(fp, "\n name = %s   sucyc = d   type = d  attn = e ", SNAME);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");
-	 system(fs);                        
+	 ret = system(fs);                        
        }
      else          { printf("\nUnable to write Pbox.inp file !");  psg_abort(1); }
    }
@@ -1709,6 +1715,7 @@ void hshapefiles(char *anyshape, double bw, double shift)
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {
+         int ret __attribute__((unused));
          fprintf(fp, "\n Pbox Input File ");
          fprintf(fp, "\n { %s %14.8f %12.1f } ", fshape, dwidth, freqshift);
          fprintf(fp, "\n name = %s    sucyc = n", SNAME);
@@ -1716,7 +1723,7 @@ void hshapefiles(char *anyshape, double bw, double shift)
 					(int)(REF_PWR), REF_PW90*1e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");
-         system(fs);
+         ret = system(fs);
 
        }
      else          { printf("\nUnable to write Pbox.inp file !");  psg_abort(1); }
@@ -1806,6 +1813,7 @@ void cshapefiles(char *anyshape, double bw, double shift)
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {
+         int ret __attribute__((unused));
          fprintf(fp, "\n Pbox Input File ");
          fprintf(fp, "\n { %s %14.8f %12.1f } ", fshape, dwidth, 
 								  freqshift);
@@ -1814,7 +1822,7 @@ void cshapefiles(char *anyshape, double bw, double shift)
 					(int)(REF_PWR_C), REF_PW90_C*1e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");
-         system(fs);
+         ret = system(fs);
         } 
      else          { printf("\nUnable to write Pbox.inp file !");  psg_abort(1); }
   }
@@ -1915,6 +1923,7 @@ void cshapefiles2(char *anyshape1, char *anyshape2, double bw1, double bw2,
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {
+         int ret __attribute__((unused));
          fprintf(fp, "\n Pbox Input File ");
          fprintf(fp, "\n { %s %14.8f %12.1f } ", fshape1, dwidth1, 
 								  freqshift1);
@@ -1925,7 +1934,7 @@ void cshapefiles2(char *anyshape1, char *anyshape2, double bw1, double bw2,
 					(int)(REF_PWR_C), REF_PW90_C*1e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");
-         system(fs);
+         ret = system(fs);
        }
      else          { printf("\nUnable to write Pbox.inp file !");  psg_abort(1); }
   }
@@ -2090,6 +2099,7 @@ void nshapefiles(char *anyshape, double bw, double shift)
      (void) sprintf(fname, "%s/shapelib/Pbox.inp", userdir);
      if ( (fp=fopen(fname, "w")) != NULL )
        {
+         int ret __attribute__((unused));
          fprintf(fp, "\n Pbox Input File ");
          fprintf(fp, "\n { %s %14.8f %12.1f } ", fshape, dwidth, 
 								  freqshift);
@@ -2098,7 +2108,7 @@ void nshapefiles(char *anyshape, double bw, double shift)
 					(int)(REF_PWR_N), REF_PW90_N*1e6);
          fclose(fp);
          sprintf(fs,"cd $vnmruser/shapelib; Pbox > /tmp/${LOGNAME}_bionmrfile");
-         system(fs);
+         ret = system(fs);
         } 
      else          { printf("\nUnable to write Pbox.inp file !");  psg_abort(1); }
   }
@@ -2494,7 +2504,7 @@ double	timeTN = getval("timeTN"),	   /* constant time for 15N evolution */
         timeC = getval("timeC"),
         timeNCA = getval("timeNCA"),
         lambda = getval("lambda"),
-  	pwS9,					  /* length of last C13 pulse */
+  	pwS9 __attribute((unused)),					  /* length of last C13 pulse */
         pwN = getval("pwN"),          /* N15 90 degree pulse length at pwNlvl */
 	dpwr2 = getval("dpwr2"),		  /* power for N15 decoupling */
 

@@ -1369,9 +1369,8 @@ RAMP make_ramp(RAMP r)
    extern void dumpRAMP(RAMP r);
    FILE *fp;
    extern char userdir[];
-   char shapepath[MAXSTR],str[MAXSTR];
+   char shapepath[3*MAXSTR],str[MAXSTR+16];
    int ntick,nrpuls,naccumpuls;
-   int nph;
    int nmin = r.n90;
    double norm,mean;
    norm = 0.0; mean = 0.0;
@@ -1419,11 +1418,9 @@ RAMP make_ramp(RAMP r)
    }
    if (fabs(r.of) > 1.0) {
       dph = 360.0*r.of*DTCK;
-      nph = 1;
    }
    else {
       dph = 0.0;
-      nph = 0;
    }
    r.t = nmin*DTCK*(int)(r.t/(nmin*DTCK) + 0.5);
    r.n = (int)(r.t/DTCK + 0.5);

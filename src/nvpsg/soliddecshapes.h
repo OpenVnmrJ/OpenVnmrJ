@@ -529,7 +529,7 @@ PARIS getparis(char *name)
 
 void make_tppm(TPPM dec)
 {
-   char shapepath[MAXSTR],str[MAXSTR];
+   char shapepath[MAXSTR+16],str[3*MAXSTR];
    FILE *fp;
    int i;
    extern char userdir[];
@@ -627,7 +627,7 @@ void _tppm(TPPM dec)
 
 void make_spinal(SPINAL dec)
 {
-   char shapepath[MAXSTR],str[MAXSTR];
+   char shapepath[MAXSTR+16],str[3*MAXSTR];
    FILE *fp;
    extern char userdir[];
    int n,i;
@@ -726,7 +726,7 @@ void _spinal(SPINAL dec)
 
 void make_spinal2(SPINAL2 dec)
 {
-   char shapepath[MAXSTR],str[MAXSTR];
+   char shapepath[MAXSTR+16],str[3*MAXSTR];
    FILE *fp;
    extern char userdir[];
    int n,i;
@@ -825,7 +825,7 @@ void _spinal2(SPINAL2 dec)
 
 void make_waltz(WALTZ dec)
 {
-   char shapepath[MAXSTR],str[MAXSTR];
+   char shapepath[MAXSTR+16],str[3*MAXSTR];
    FILE *fp;
    extern char userdir[];
    int i;
@@ -924,7 +924,7 @@ void _waltz(WALTZ dec)
 
 void make_paris(PARIS p)
 {
-   char shapepath[MAXSTR],str[MAXSTR];
+   char shapepath[MAXSTR+16],str[3*MAXSTR];
    FILE *fp;
    extern char userdir[];
    int i;
@@ -1191,7 +1191,7 @@ void dseqoff_emergency(char* message)
      decprgoff();
      dec2prgoff();
      dec3prgoff();
-     abort_message(message);
+     abort_message("%s",message);
 }
 
 void _dseqon(DSEQ dseq)

@@ -62,7 +62,7 @@ MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
 {
    MPDEC d;
    char *var;
-   sprintf(d.seqName,name);
+   strcpy(d.seqName,name);
    var = getname0("seq",d.seqName,"");
    Getstr(var,d.seq,sizeof(d.seq));
 
@@ -74,7 +74,7 @@ MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
 // mpsName - seqName for mpseq
 
    var = getname0(d.seq,d.seqName,"");
-   sprintf(d.mpsName,d.seq);
+   strcpy(d.mpsName,d.seq);
    var = getname0("",d.seqName,"");
    strncat(d.mpsName,var,1);
 
@@ -110,7 +110,7 @@ MPDEC setmpdec(char *name, int iph, double p, double phint, int iRec, int calc)
 {
    MPDEC d;
    char *var;
-   sprintf(d.seqName,name);
+   strcpy(d.seqName,name);
    var = getname0("seq",d.seqName,"");
    Getstr(var,d.seq,sizeof(d.seq));
 
@@ -837,7 +837,7 @@ MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int
       printf("Error in getpmlgsuper(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(pm.seqName,seqName);
+   strcpy(pm.seqName,seqName);
    pm.calc = calc;
    pm.array = parsearry(pm.array);
 
@@ -912,18 +912,15 @@ MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int
 
    double obsstep = 360.0/8192;
    double delta = 360.0/(sqrt(3)*nsteps);
-   double val = 0.0;
    for (i = 0; i < pm.nphBase/j; i++) {
       k = ccw + mPMLG*i;
       pm.phBase[k] = sign*(i*delta + delta/2.0);
       pm.phBase[k] = roundphase(pm.phBase[k],obsstep);
-      val = pm.phBase[k];
    }
    for (i = pm.nphBase/j; i < 2*pm.nphBase/j; i++) {
       k = ccw + mPMLG*i;
       pm.phBase[k] = 180.0 + sign*((2*nsteps - i)*delta - delta/2.0);
       pm.phBase[k] = roundphase(pm.phBase[k],obsstep);
-      val = pm.phBase[k];
    }
    if ( j%4 == 0 ) {
       for (i = 0; i < pm.nphBase/2; i++) pm.phBase[nphBase - 1 - i] = pm.phBase[i];

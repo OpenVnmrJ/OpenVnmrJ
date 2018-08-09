@@ -77,9 +77,9 @@
 /* floating point comparison macros */
 #define EPSILON 1e-9      /* largest allowable deviation due to floating */
                			/* point storage */
-#define FP_LT(A,B) (((A) < (B)) && (fabs((A) - (B)) > EPSILON)) /* A less than B */
-#define FP_GT(A,B) (((A) > (B)) && (fabs((A) - (B)) > EPSILON)) /* A greater than B */
-#define FP_EQ(A,B) (fabs((A) - (B)) <= EPSILON)             /* A equal to B */
+#define FP_LT(A,B) (((A) < (B)) && (fabs((double)(A) - (double)(B)) > EPSILON)) /* A less than B */
+#define FP_GT(A,B) (((A) > (B)) && (fabs((double)(A) - (double)(B)) > EPSILON)) /* A greater than B */
+#define FP_EQ(A,B) (fabs((double)(A) - (double)(B)) <= EPSILON)             /* A equal to B */
 
 /* A not equal to B */
 #define FP_NEQ(A,B) (!FP_EQ(A,B))
@@ -92,9 +92,9 @@
 
 /* custom floating point comparison macros */
 /* these allow you to set EPSILON on a case by case basis */
-#define FPC_LT(A,B,EPSILON_C) (((A) < (B)) && (fabs((A) - (B)) > (EPSILON_C))) /* A less than B */
-#define FPC_GT(A,B,EPSILON_C) (((A) > (B)) && (fabs((A) - (B)) > (EPSILON_C))) /* A greater than B */
-#define FPC_EQ(A,B,EPSILON_C) ((fabs((A) - (B))) <= (EPSILON_C))             /* A equal to B */
+#define FPC_LT(A,B,EPSILON_C) (((A) < (B)) && (fabs((double)(A) - (double)(B)) > (EPSILON_C))) /* A less than B */
+#define FPC_GT(A,B,EPSILON_C) (((A) > (B)) && (fabs((double)(A) - (double)(B)) > (EPSILON_C))) /* A greater than B */
+#define FPC_EQ(A,B,EPSILON_C) ((fabs((double)(A) - (double)(B))) <= (EPSILON_C))             /* A equal to B */
 
 /* A not equal to B */
 #define FPC_NEQ(A,B,EPSILON_C) (!FPC_EQ(A,B,EPSILON_C))
