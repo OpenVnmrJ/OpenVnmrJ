@@ -35,6 +35,7 @@ AspDataInfo::~AspDataInfo() {
 
 void AspDataInfo::initDataInfo() {
 	rank=0;
+        hasData = false;
  	haxis.name="?";
 	haxis.label="?";
 	haxis.dunits="?";
@@ -70,6 +71,9 @@ void AspDataInfo::updateDataInfo() {
 
 	char str[20];
         Wgetgraphicsdisplay(str, 20);
+
+        if (str[0] == '\0')
+           return;
 
         int procdim = (int) AspUtil::getReal("procdim",1);
         if(procdim > 0) rank = procdim;
