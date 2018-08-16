@@ -7976,7 +7976,8 @@ public class ExpPanel extends JPanel
                    sPan.setBusy(bz);
 	    }
         }
-        vcanvas.setBusy(vbgBusy);
+        if (vcanvas != null)
+           vcanvas.setBusy(vbgBusy);
 /*
         if (bz)
             setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
