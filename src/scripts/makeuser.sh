@@ -146,7 +146,7 @@ get_group()
       
 ####################################################################
 #  Script function to extract home directory 
-#  use the ~username feature of the C-shell
+#  if nonexistant echo empty string.
 ####################################################################
 
 get_homedir() {
@@ -155,8 +155,10 @@ get_homedir() {
         home_dir=""
 	home_dir=`/vnmr/bin/getuserinfo $1 | awk 'BEGIN { FS = ";" } {print $2}'`
         /bin/winpath2unix $home_dir
-    else
+    elif [ -d "$(eval echo "~$1")" ]; then
         echo "$(eval echo "~$1")"
+    else
+        echo ""
     fi
 }
 
@@ -237,6 +239,10 @@ run_updaterev () {
    fi
 
 }
+
+###########################################################################
+#  Script function to install a file and make a backup if it exists already
+###########################################################################
 
 cp_backup() {
     srcfile="$1"
@@ -686,21 +692,18 @@ else  #current user is root
     then
        nnl_echo  "Do you wish to update files for '$name_add' (y or n) [n]: "
        read yesno
-       if  [ x$yesno != "xy" ]
+       if [ "x$yesno" != "xy" ]
        then
            exit
        fi
     fi
     if [ $# -ge 4 ]  #Called from Java
     then
-	if [ x$user_update = "xy" -a x$ostype != "xInterix" ]
+	if [ x$user_update = "xy" ] && [ x$ostype != "xInterix" ]
 	then
             cp_backup "$vnmrsystem/user_templates/.login" "$cur_homedir/.login"
             if [ x$ostype = "xLinux" ]
             then
-                if [ ! -f "$cur_homedir/.vnmrenvsh" ]; then
-                   echo "[ -f ~/.vnmrenvsh ] && . ~/.vnmrenvsh" >> "$cur_homedir/.bashrc"
-                fi
                 cp_backup "$vnmrsystem/user_templates/.vnmrenv" "$cur_homedir/.vnmrenv"
                 cp_backup "$vnmrsystem/user_templates/.vnmrenvsh" "$cur_homedir/.vnmrenvsh"
                 cp_backup "$vnmrsystem/user_templates/.vxresource" "$cur_homedir/.vxresource"
@@ -736,17 +739,17 @@ then
   
   nnl_echo  "Automatically configure user '$name_add' account (y or n) [y]: "
   read yesno
-  if test x$yesno = "xn" -o x$yesno = "xno"
+  if test "x$yesno" = "xn" -o "x$yesno" = "xno"
   then
      nnl_echo  "Automatically configure UNIX environment (.files) (y or n) [y]: "
      read yesno
-     if test x$yesno = "xn" -o x$yesno = "xno"
+     if test "x$yesno" = "xn" -o "x$yesno" = "xno"
      then
         intera_unix="y"
      fi
      nnl_echo  "Automatically configure VNMR directories (y or n) [y]: "
      read yesno
-     if test x$yesno = "xn" -o x$yesno = "xno"
+     if test "x$yesno" = "xn" -o "x$yesno" = "xno"
      then
         intera_vnmr="y"
      fi
@@ -778,7 +781,7 @@ do
    then
       nnl_echo  "OK to update $local_file (y or n) [y]: "
       read yesno
-       if test x$yesno = "xn" -o x$yesno = "xno"
+       if test "x$yesno" = "xn" -o "x$yesno" = "xno"
        then
            continue
        fi
@@ -825,7 +828,7 @@ do
     then
         nnl_echo  "OK to update $file (y or n) [y]: "
         read yesno
-        if test x$yesno = "xn" -o x$yesno = "xno"
+        if test "x$yesno" = "xn" -o "x$yesno" = "xno"
         then
             continue
         fi
@@ -903,7 +906,7 @@ do
     	   then
         	nnl_echo  "OK to update $file (y or n) [y]: "
         	read yesno
-        	if test x$yesno = "xn" -o x$yesno = "xno"
+                if test "x$yesno" = "xn" -o "x$yesno" = "xno"
         	then
         	    continue
         	fi
@@ -946,7 +949,7 @@ do
     	        then
         	    nnl_echo  "OK to create $file (y or n) [y]: "
         	    read yesno
-        	    if test x$yesno = "xn" -o x$yesno = "xno"
+                    if test "x$yesno" = "xn" -o "x$yesno" = "xno"
         	    then
         	        continue
         	    fi
@@ -1074,7 +1077,7 @@ do
         then
             nnl_echo  "Create $subdir in your VNMR user directory (y or n) [y]: "
             read yesno
-            if test x$yesno = "xn" -o x$yesno = "xno"
+            if test "x$yesno" = "xn" -o "x$yesno" = "xno"
             then
                 continue
             fi
