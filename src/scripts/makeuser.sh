@@ -123,7 +123,7 @@ get_vnmrsystem() {
     if test ! -d "$vnmrsystem"
     then
         echo "$vnmrsystem does not exist, cannot proceed:"
-        exit
+        exit 1
     fi
 }
 
@@ -146,7 +146,7 @@ get_group()
       
 ####################################################################
 #  Script function to extract home directory 
-#  use the ~username feature of the C-shell
+#  if nonexistant echo empty string.
 ####################################################################
 
 get_homedir() {
@@ -155,10 +155,10 @@ get_homedir() {
         home_dir=""
 	home_dir=`/vnmr/bin/getuserinfo $1 | awk 'BEGIN { FS = ";" } {print $2}'`
         /bin/winpath2unix $home_dir
+    elif [ -d "$(eval echo "~$1")" ]; then
+        echo "$(eval echo "~$1")"
     else
-       csh -f 2>/dev/null << ++
-echo ~$1
-++
+        echo ""
     fi
 }
 
@@ -172,13 +172,13 @@ make_homedir() {
         chmod 775 "$cur_homedir"
 	if [ x$ostype != "xInterix" ] 
 	then
-	    chown -R $name_add "$cur_homedir"
-	    chgrp -R $nmr_group "$cur_homedir"
+	    chown -R "$name_add" "$cur_homedir"
+	    chgrp -R "$nmr_group" "$cur_homedir"
 	fi
-        echo 0
+        return 0
     else
-        echo "Cannot create $cur_homedir"
-        echo 1
+        echo "Cannot create homedir '$cur_homedir'"
+        return 1
     fi
 }
 
@@ -194,7 +194,7 @@ verify_user_name() {
         return 1
     fi
 
-    echo $1 | awk '
+    echo "$1" | awk '
     /^[0-9A-Za-z_][0-9A-Za-z_-]*$/ {
 	exit 0
     }
@@ -240,10 +240,27 @@ run_updaterev () {
 
 }
 
+###########################################################################
+#  Script function to install a file and make a backup if it exists already
+###########################################################################
+
+cp_backup() {
+    srcfile="$1"
+    dstfile="$2"
+    base="$(basename "${dstfile}")"
+    if [ -s "$dstfile" ]; then
+	mv "$dstfile" "${dstfile}.bkup.$date"
+	echo "  ${base} backed up in ${base}.bkup.$date";
+    fi
+    /bin/cp "$srcfile" "$dstfile"
+    chown "$name_add":"$nmr_group" "$dstfile"
+    echo "  $base updated from templates."
+}
+
 ##########################
 #  start of main script
 ##########################
-if (test x$vnmrsystem = "x")
+if [ "x$vnmrsystem" = "x" ]
 then
    vnmrsystem="/vnmr"
    . /vnmr/user_templates/.vnmrenvsh
@@ -285,7 +302,7 @@ then
   elif [ x$lflvr != "xdebian" ]
   then
       # the carrage return is for the remote display question 
-      su - $user_name -c "/vnmr/bin/Vnmrbg -mback -n1 'setappmode'" <<+
+      su - "$user_name" -c "/vnmr/bin/Vnmrbg -mback -n1 'setappmode'" <<+
 
 +
   else
@@ -304,12 +321,12 @@ then
       # 
       # this hack works, until sudo 1.7 is standard  GMB  5/06/2009   
       #
-      sudo su - $user_name -s /bin/bash -c "/vnmr/bin/Vnmrbg -mback -n1 setappmode"
+      sudo su - "$user_name" -s /bin/bash -c "/vnmr/bin/Vnmrbg -mback -n1 setappmode"
   fi
   exit 0
 fi
 
-if [ $# -ge 4 -a x$user_update = "xy" ]  #Called from Java
+if [ $# -ge 4 ] && [ "x$user_update" = "xy" ]  #Called from Java
 then
    intera_unix="n"
    intera_vnmr="n"
@@ -322,7 +339,7 @@ then
 	then 
 	    as_root="y"
 	fi
-elif [ x$curr_user = "xroot" ]
+elif [ "x$curr_user" = "xroot" ]
 then
     as_root="y"
 fi
@@ -335,7 +352,7 @@ then
         exit 1
     else
         name_add=$curr_user
-        if [ $# -ge 4 -a x$user_update = "xy" ]
+        if [ $# -ge 4 ] && [ "x$user_update" = "xy" ]
         then
           cur_homedir="$2"
           if [ $# -eq 4 ]
@@ -356,7 +373,7 @@ then
 
     if [ $# -ne 0 ]
     then
-        if [ x$1 != x$name_add ]
+        if [ x$1 != "x$name_add" ]
         then
            echo "Only $1 or root can change or add $1's account"
            exit 1
@@ -373,11 +390,12 @@ else  #current user is root
     then
        if test $# -eq 2
        then
-          su - $1 -c "/vnmr/bin/makeuser $1 $2"
+          su - "$1" -c "/vnmr/bin/makeuser \"$1\" \"$2\""
+          exit
        else
           echo "Cannot run makeuser as root"
+          exit 1
        fi
-       exit 0
     fi
     as_root="y"
 
@@ -385,17 +403,17 @@ else  #current user is root
 
     get_group $3
     my_file="/tmp/my.file."$date
-    touch $my_file
-    chgrp $nmr_group $my_file 2>/dev/null
+    touch "$my_file"
+    chgrp "$nmr_group" "$my_file" 2>/dev/null
     if [ $? -ne 0 ]
     then
-        rm -f $my_file
-        echo "the $nmr_group group must be present to configure accounts for VNMR use"
+        rm -f "$my_file"
+        echo "the '$nmr_group' group must be present to configure accounts for VNMR use"
         exit 1
     else
         nmrgnum=`ls -ln $my_file | awk '{ printf $4}'`
     fi
-    rm -f $my_file
+    rm -f "$my_file"
 
     #  with the presence of the `nmr' group verified and /vnmr present,
     #  get the name of the user if not entered on the command line
@@ -404,7 +422,7 @@ else  #current user is root
     then
         nnl_echo  "Please enter user name [vnmr1]: "
         read name_add
-        if test x$name_add = "x"
+        if test "x$name_add" = "x"
         then
             name_add="vnmr1"
         fi
@@ -421,12 +439,11 @@ else  #current user is root
     # status to take the first branch.  It also insists on something
     # between the then and the else
 
-    if verify_user_name $name_add
+    if ! verify_user_name "$name_add"
     then
-        cur_homedir=`get_homedir $name_add`
-    else
         exit 1
     fi
+    cur_homedir=$(get_homedir "$name_add")
  
     #  lookup username in the password file
     #  if not present, /tmp/newuser will have password file
@@ -440,7 +457,7 @@ else  #current user is root
 	if [ x$ostype = "xInterix" ]
 	then
 	    cd "$vnmrsystem"
-	    interix_homedir=`net user | grep $name_add`
+	    interix_homedir=$(net user | grep "$name_add")
 	    echo "$interix_homedir" > /tmp/newuser
 	    if test -s /tmp/newuser
 	    then
@@ -453,7 +470,7 @@ else  #current user is root
 	    awk '
 	    BEGIN {N=1000
 		AlreadyExists=0
-		NewUser="'$name_add'"
+		NewUser="'"$name_add"'"
 		FS=":"
 	    }
 	    {
@@ -468,26 +485,26 @@ else  #current user is root
     else
         if [ ! -d "$cur_homedir" ]
         then
-            if [ x`make_homedir` = "x1" ]
+            if ! make_homedir
             then
                 exit 1
             fi
         else
             # The home directory already exists.  Be sure it is owned by $name_add
-            username=`stat -c %U  $cur_homedir`
-            if [ x$username !=  x$name_add ]
+            username=$(stat -c %U "$cur_homedir")
+            if [ "x$username" != "x$name_add" ]
             then  
-                chown -R $name_add $cur_homedir
+                chown -R "$name_add" "$cur_homedir"
             fi
         fi
 
-        if touch "$cur_homedir"/makeuser.$date 2>/dev/null
+        if touch "${cur_homedir}/makeuser.${date}" 2>/dev/null
         then
-            rm -f "$cur_homedir"/makeuser.$date
+            rm -f "${cur_homedir}/makeuser.${date}"
         else
 	   if [ ! $# -ge 4 ] 
 	   then 
-		echo "Cannot create files in the home directory of $name_add ($cur_homedir)"
+		echo "Cannot create files in the home directory of '$name_add' ($cur_homedir)"
 		echo "Is this directory exported from a remote system using NFS?"
 		exit 1
 	    else # called from java, network user
@@ -507,7 +524,7 @@ else  #current user is root
 	then
 	    dir_name="$user_dir"
 	else
-           nnl_echo  "Please enter home directory for $name_add [$default_dir]: "
+           nnl_echo  "Please enter home directory for '$name_add' [$default_dir]: "
            read dir_name
            if test x"$dir_name" = "x"
            then
@@ -518,36 +535,44 @@ else  #current user is root
 	read num </tmp/newuser
 	rm /tmp/newuser
 	if [ x$ostype = "xLinux" ]
-   then
-       if [ x$lflvr != "xdebian" ]
-       then
-          /usr/sbin/useradd -d$dir_name/$name_add -s/bin/csh -u$num -g$nmrgnum $name_add
-          /usr/bin/passwd -f -u $name_add
-	       chmod 755 $dir_name/$name_add
-       else
-          # --home-create == -m, --home == -d, --shell == -s, --gid == -g
-          # must give the account a temp password 'abcd1234' to get the account active 
-          # since passwd does not have the -f to force activation as does RHEL
-          # passwd abcd1234 = $1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1
-          # add user to appropriate groups, the special group admin and/or adm  allows user
-          # to use 'root' sudo 
-          # if vnmr1 then give it root access via sudo by adding the admin group to vnmr1
-          # other users should not have root access
-          if [ $name_add = "xvnmr1" ] ; then
-             sudo /usr/sbin/useradd --create-home --home-dir $dir_name/$name_add --shell /bin/bash --uid $num --gid $nmr_group --groups admin,cdrom,floppy,audio,video,plugdev,fuse,lpadmin,adm --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $name_add
-          else
-             sudo /usr/sbin/useradd --create-home --home-dir $dir_name/$name_add --shell /bin/bash --uid $num --gid $nmr_group --groups cdrom,floppy,audio,video,plugdev,fuse,lpadmin --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $name_add
-          fi
-          sudo chmod 755 "$nmr_home/$nmr_adm"
-          # we give a temp default password,  use the --expire option to force to user to change password on login
-          sudo /usr/bin/passwd --expire $name_add 2>/dev/null
-          sudo /vnmr/bin/setupbashenv $dir_name/$name_add
-       fi
+        then
+            if [ x$lflvr != "xdebian" ]
+            then
+                /usr/sbin/useradd -d"$dir_name/$name_add" -s/bin/csh -u$num -g$nmrgnum "$name_add"
+                /usr/bin/passwd -f -u "$name_add"
+	        chmod 755 "$dir_name/$name_add"
+            else
+                # --home-create == -m, --home == -d, --shell == -s, --gid == -g
+                # must give the account a temp password 'abcd1234' to get the account active 
+                # since passwd does not have the -f to force activation as does RHEL
+                # passwd abcd1234 = $1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1
+                # add user to appropriate groups, the special group admin and/or adm  allows user
+                # to use 'root' sudo 
+                # if vnmr1 then give it root access via sudo by adding the admin group to vnmr1
+                # other users should not have root access
+                if [ "x$name_add" = "xvnmr1" ] ; then
+                    sudo /usr/sbin/useradd --create-home --home-dir "$dir_name/$name_add" \
+                         --shell /bin/bash --uid $num --gid "$nmr_group" \
+                         --groups admin,cdrom,floppy,audio,video,plugdev,fuse,lpadmin,adm \
+                         --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' "$name_add"
+                else
+                    sudo /usr/sbin/useradd --create-home --home-dir "$dir_name/$name_add" \
+                         --shell /bin/bash --uid $num --gid "$nmr_group" \
+                         --groups cdrom,floppy,audio,video,plugdev,fuse,lpadmin \
+                         --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' "$name_add"
+                fi
+                sudo chmod 755 "$dir_name/$name_add"
+                # we give a temp default password, use the --expire
+                # option to force to user to change password on login
+                sudo /usr/bin/passwd --expire "$name_add" 2>/dev/null
+                sudo /vnmr/bin/setupbashenv "$dir_name/$name_add"
+            fi
 	elif [ x$ostype = "xInterix" ]
 	then
-	    /vnmr/bin/useradd -d "$dir_name"/$name_add -g $nmr_group $name_add
+	    /vnmr/bin/useradd -d "${dir_name}/${name_add}" -g "$nmr_group" "$name_add"
 	    #chown -R $name_add:$nmr_group "$dir_name"/$name_add 
         else
+            # $ostype not Linux, not Interix
             /bin/cp /etc/passwd /etc/passwd.bk
             
             stuff="$name_add::$num:$nmrgnum:$name_add:$dir_name/$name_add:/bin/csh"
@@ -556,7 +581,7 @@ else  #current user is root
 '"$stuff"'' /etc/passwd >/tmp/newpasswd)
             mv /tmp/newpasswd /etc/passwd
             chmod 644 /etc/passwd
-	    chown -R $name_add $dir_name/$name_add
+	    chown -R "$name_add" "$dir_name/$name_add"
         fi
 
 	# from Java only for now
@@ -583,22 +608,22 @@ else  #current user is root
 	{
 	    if ($1=="'$nmr_group'")
 	    print $0
-	}' </etc/group | grep $name_add >/dev/null
+	}' </etc/group | grep "$name_add" >/dev/null
 
 	#  Anchor the search string to the start of the line in /etc/group
 	if [ $? -ne 0 ]
 	then
-	    sed -e '/^'$nmr_group'/ s/$/,'$name_add'/' < /etc/group > /tmp/newusergroup
+	    sed -e '/^'"$nmr_group"'/ s/$/,'"$name_add"'/' < /etc/group > /tmp/newusergroup
 	    mv /tmp/newusergroup /etc/group
 	    if [ x$new_account = "xn" ]
 	    then
-		echo "$name_add added to the $nmr_group group"
+		echo "'$name_add' added to the '$nmr_group' group"
 	    fi
 	fi
     fi
 
     #  Username now in password, group file
-    cur_homedir=`get_homedir $name_add`
+    cur_homedir=$(get_homedir "$name_add")
     if [ x"$cur_homedir" = "x" -a x$ostype = "xInterix" ]
     then
 	cur_homedir="$user_dir/$name_add"
@@ -616,7 +641,7 @@ else  #current user is root
     #  Make home directory if not present
     if [ ! -d "$cur_homedir" ]
     then
-        if [ x`make_homedir` = "x1" ]
+        if ! make_homedir
         then
             exit 1
         fi
@@ -638,7 +663,7 @@ else  #current user is root
         else
 	    if [ ! $# -ge 4 ]
 	    then
-		echo "Cannot create files in the home directory of $name_add ($cur_homedir)"
+		echo "Cannot create files in the home directory of '$name_add' ($cur_homedir)"
 		echo "Is this directory exported from a remote system using NFS?"
 		exit 1
 	    else # called from java, network user
@@ -647,10 +672,10 @@ else  #current user is root
         fi
 
         # The home directory already exists.  Be sure it is owned by $name_add
-        username=`stat -c %U  $cur_homedir`
-        if [ x$username !=  x$name_add ]
+        username=$(stat -c %U "$cur_homedir")
+        if [ "x$username" !=  "x$name_add" ]
         then  
-            chown -R $name_add $cur_homedir
+            chown -R "$name_add" "$cur_homedir"
         fi
     fi
 
@@ -658,56 +683,35 @@ else  #current user is root
 
     if [ x$new_account = "xy" ]
     then
-        echo "$name_add is now an authorized user in the $nmr_group group"
+        echo "'$name_add' is now an authorized user in the '$nmr_group' group"
     else
-        echo "$name_add is already a defined user"
+        echo "'$name_add' is already a defined user"
     fi
 
     if [ $# -lt 4 ] #if called from Java, do not ask this
     then
-       nnl_echo  "Do you wish to update files for $name_add (y or n) [n]: "
+       nnl_echo  "Do you wish to update files for '$name_add' (y or n) [n]: "
        read yesno
-       if  [ x$yesno != "xy" ]
+       if [ "x$yesno" != "xy" ]
        then
            exit
        fi
     fi
     if [ $# -ge 4 ]  #Called from Java
     then
-	if [ x$user_update = "xy" -a x$ostype != "xInterix" ]
+	if [ x$user_update = "xy" ] && [ x$ostype != "xInterix" ]
 	then
-	    if test -s "$cur_homedir"/.login
-	    then
-		mv "$cur_homedir"/.login "$cur_homedir"/.login.bkup.$date
-		echo "  .login backed up in .login.bkup.$date";
-	    fi
-	    /bin/cp "$vnmrsystem"/user_templates/.login "$cur_homedir"/.login
-            chown $name_add:$nmr_group "$cur_homedir"/.login
-	    echo "  .login updated from templates."
-
+            cp_backup "$vnmrsystem/user_templates/.login" "$cur_homedir/.login"
             if [ x$ostype = "xLinux" ]
             then
-                if [ -s $cur_homedir/.vnmrenv ]
-                then
-		    mv $cur_homedir/.vnmrenv $cur_homedir/.vnmrenv.bkup.$date
-		    echo "  .vnmrenv backed up in .vnmrenv.bkup.$date";
-	        fi
-
-	        /bin/cp $vnmrsystem/user_templates/.vnmrenv $cur_homedir/.vnmrenv
-                chown $name_add:$nmr_group $cur_homedir/.vnmrenv
-	        echo "  .vnmrenv updated from templates."
-                if [ -s $cur_homedir/.vxresource ]
-                then
-		    mv $cur_homedir/.vxresource $cur_homedir/.vxresource.bkup
-	        fi
-	        /bin/cp $vnmrsystem/user_templates/.vxresource $cur_homedir/.vxresource
-                chown $name_add:$nmr_group $cur_homedir/.vxresource
-	        echo "  .vxresource updated from templates."
+                cp_backup "$vnmrsystem/user_templates/.vnmrenv" "$cur_homedir/.vnmrenv"
+                cp_backup "$vnmrsystem/user_templates/.vnmrenvsh" "$cur_homedir/.vnmrenvsh"
+                cp_backup "$vnmrsystem/user_templates/.vxresource" "$cur_homedir/.vxresource"
             fi
 	fi
 	if [ x$ostype != "xInterix" ] 
 	then 
-	    su - $name_add -c "/vnmr/bin/makeuser $1 '$cur_homedir' $nmr_group $user_update '$vnmrsystem'" << +++
+	    su - "$name_add" -c "/vnmr/bin/makeuser $1 '$cur_homedir' '$nmr_group' $user_update '$vnmrsystem'" << +++
 
 +++
 	    exit
@@ -726,26 +730,26 @@ sys_user=`ls -l "$vnmrsystem"/vnmrrev | awk '{ printf $3}'`
 intera_unix="n"
 intera_vnmr="n"
 
-if [ x$ostype="xDarwin" -a $# -eq 2 -a $2="y"  ]
+if [ "x$ostype" = "xDarwin" ] && [ $# -eq 2 ] && [ "$2" = "y" ]
 then
   intera_vnmr="n"
 else
 if [ $# -lt 4 ]
 then
   
-  nnl_echo  "Automatically configure user $name_add account (y or n) [y]: "
+  nnl_echo  "Automatically configure user '$name_add' account (y or n) [y]: "
   read yesno
-  if test x$yesno = "xn" -o x$yesno = "xno"
+  if test "x$yesno" = "xn" -o "x$yesno" = "xno"
   then
      nnl_echo  "Automatically configure UNIX environment (.files) (y or n) [y]: "
      read yesno
-     if test x$yesno = "xn" -o x$yesno = "xno"
+     if test "x$yesno" = "xn" -o "x$yesno" = "xno"
      then
         intera_unix="y"
      fi
      nnl_echo  "Automatically configure VNMR directories (y or n) [y]: "
      read yesno
-     if test x$yesno = "xn" -o x$yesno = "xno"
+     if test "x$yesno" = "xn" -o "x$yesno" = "xno"
      then
         intera_vnmr="y"
      fi
@@ -777,7 +781,7 @@ do
    then
       nnl_echo  "OK to update $local_file (y or n) [y]: "
       read yesno
-       if test x$yesno = "xn" -o x$yesno = "xno"
+       if test "x$yesno" = "xn" -o "x$yesno" = "xno"
        then
            continue
        fi
@@ -790,20 +794,20 @@ do
    /bin/cp -R "$vnmrsystem"/user_templates/$file $local_file
    if test $as_root = "y"
    then
-        chown -R $name_add $local_file
-        chgrp -R $nmr_group $local_file
+        chown -R "$name_add" "$local_file"
+        chgrp -R "$nmr_group" "$local_file"
    else
-        chgrp -R $nmr_group $local_file
+        chgrp -R "$nmr_group" "$local_file"
    fi
    echo "  $file updated from templates."
 done
 
 
-if [ x$ostype="xDarwin" -a $# -eq 2 -a $2="y"  ]
+if [ "x$ostype" = "xDarwin" ] && [ $# -eq 2 ] && [ "$2" = "y"  ]
 then
    dotfiles=
 else
-   dotfiles=`(cd "$vnmrsystem"/user_templates; ls .??*)`
+   dotfiles=`(cd "$vnmrsystem"/user_templates && ls .??*)`
 fi
 for file in $dotfiles
 do
@@ -811,7 +815,7 @@ do
     then
 	if [ x$user_update = "xy" ]
 	then
-	    if [ x$ostype != "xInterix" -a x$file = "x.login"  ]
+	    if [ x$ostype != "xInterix" ] && [ x$file = "x.login"  ]
  	    then	
 		continue
 	    fi
@@ -824,7 +828,7 @@ do
     then
         nnl_echo  "OK to update $file (y or n) [y]: "
         read yesno
-        if test x$yesno = "xn" -o x$yesno = "xno"
+        if test "x$yesno" = "xn" -o "x$yesno" = "xno"
         then
             continue
         fi
@@ -850,10 +854,10 @@ do
     fi
     if test $as_root = "y"
     then
-        chown $name_add $file
-        chgrp $nmr_group $file
+        chown "$name_add" "$file"
+        chgrp "$nmr_group" "$file"
     else
-        chgrp $nmr_group $file
+        chgrp "$nmr_group" "$file"
     fi
     echo "  $file updated from templates."
 done
@@ -878,10 +882,10 @@ then
     chmod 755 vnmrsys
     if test $as_root = "y"
     then
-        chown $name_add vnmrsys
-        chgrp $nmr_group vnmrsys
+        chown "$name_add" vnmrsys
+        chgrp "$nmr_group" vnmrsys
     else
-        chgrp $nmr_group vnmrsys
+        chgrp "$nmr_group" vnmrsys
     fi
 
     if [ x$ostype = "xInterix" ]
@@ -902,7 +906,7 @@ do
     	   then
         	nnl_echo  "OK to update $file (y or n) [y]: "
         	read yesno
-        	if test x$yesno = "xn" -o x$yesno = "xno"
+                if test "x$yesno" = "xn" -o "x$yesno" = "xno"
         	then
         	    continue
         	fi
@@ -916,10 +920,10 @@ do
 	   (cd "$vnmrsystem"/user_templates; tar cf - $file | (cd "$cur_homedir"/vnmrsys; tar xfBp -))
     	   if test $as_root = "y"
     	   then
-        	chown -R $name_add "$cur_homedir"/vnmrsys/$file
-        	chgrp -R $nmr_group "$cur_homedir"/vnmrsys/$file
+               chown -R "$name_add" "$cur_homedir"/vnmrsys/$file
+               chgrp -R "$nmr_group" "$cur_homedir"/vnmrsys/$file
     	   else
-        	chgrp -R $nmr_group "$cur_homedir"/vnmrsys/$file
+               chgrp -R "$nmr_group" "$cur_homedir"/vnmrsys/$file
     	   fi
 	   if [ $file = "ib_initdir" ]
 	   then
@@ -927,10 +931,10 @@ do
 	        ln -s ib_initdir "$cur_homedir"/vnmrsys/aip_initdir
     	        if test $as_root = "y"
     	        then
-        	     chown -h $name_add "$cur_homedir"/vnmrsys/aip_initdir
-        	     chgrp -h $nmr_group "$cur_homedir"/vnmrsys/aip_initdir
+        	    chown -h "$name_add" "$cur_homedir"/vnmrsys/aip_initdir
+        	    chgrp -h "$nmr_group" "$cur_homedir"/vnmrsys/aip_initdir
     	        else
-        	     chgrp -h $nmr_group "$cur_homedir"/vnmrsys/aip_initdir
+        	    chgrp -h "$nmr_group" "$cur_homedir"/vnmrsys/aip_initdir
     	        fi
 	   fi
            echo "  $file updated from templates."
@@ -945,7 +949,7 @@ do
     	        then
         	    nnl_echo  "OK to create $file (y or n) [y]: "
         	    read yesno
-        	    if test x$yesno = "xn" -o x$yesno = "xno"
+                    if test "x$yesno" = "xn" -o "x$yesno" = "xno"
         	    then
         	        continue
         	    fi
@@ -957,10 +961,10 @@ do
 		echo "  pulsecal file created."
     	        if test $as_root = "y"
     	        then
-        	     chown -h $name_add "$cur_homedir"/vnmrsys/pulsecal
-        	     chgrp -h $nmr_group "$cur_homedir"/vnmrsys/pulsecal
+        	     chown -h "$name_add" "$cur_homedir"/vnmrsys/pulsecal
+        	     chgrp -h "$nmr_group" "$cur_homedir"/vnmrsys/pulsecal
     	        else
-        	     chgrp -h $nmr_group "$cur_homedir"/vnmrsys/pulsecal
+        	     chgrp -h "$nmr_group" "$cur_homedir"/vnmrsys/pulsecal
     	        fi
 	   fi
 	fi
@@ -973,10 +977,10 @@ then
        mkdir "$cur_homedir"/vnmrsys/prescan
        if test $as_root = "y"
        then
-          chown -h $name_add "$cur_homedir"/vnmrsys/prescan
-          chgrp -h $nmr_group "$cur_homedir"/vnmrsys/prescan
+          chown -h "$name_add" "$cur_homedir"/vnmrsys/prescan
+          chgrp -h "$nmr_group" "$cur_homedir"/vnmrsys/prescan
        else
-          chgrp -h $nmr_group "$cur_homedir"/vnmrsys/prescan
+          chgrp -h "$nmr_group" "$cur_homedir"/vnmrsys/prescan
        fi
     fi
 fi
@@ -1073,7 +1077,7 @@ do
         then
             nnl_echo  "Create $subdir in your VNMR user directory (y or n) [y]: "
             read yesno
-            if test x$yesno = "xn" -o x$yesno = "xno"
+            if test "x$yesno" = "xn" -o "x$yesno" = "xno"
             then
                 continue
             fi
@@ -1086,10 +1090,10 @@ do
  	 fi
         if test $as_root = "y"
         then
-            chown $name_add $subdir
-            chgrp $nmr_group $subdir
+            chown "$name_add" $subdir
+            chgrp "$nmr_group" $subdir
         else
-            chgrp $nmr_group $subdir
+            chgrp "$nmr_group" $subdir
         fi
         if test $subdir = "imaging"
         then
@@ -1101,10 +1105,10 @@ do
 	    fi
             if test $as_root = "y"
             then
-                chown $name_add $subdir/eddylib
-                chgrp $nmr_group $subdir/eddylib
+                chown "$name_add" $subdir/eddylib
+                chgrp "$nmr_group" $subdir/eddylib
             else
-                chgrp $nmr_group $subdir/eddylib
+                chgrp "$nmr_group" $subdir/eddylib
             fi
         fi
         echo "  VNMR $subdir directory created."
@@ -1181,10 +1185,10 @@ then
     chmod 775 exp1/datdir
     if test $as_root = "y"
     then
-        chown -R $name_add exp1
-        chgrp -R $nmr_group exp1
+        chown -R "$name_add" exp1
+        chgrp -R "$nmr_group" exp1
     else
-        chgrp -R $nmr_group exp1 2> /dev/null
+        chgrp -R "$nmr_group" exp1 2> /dev/null
     fi
     echo "  VNMR experiment 1 created."
 fi
@@ -1195,10 +1199,10 @@ then
     chmod 775 data
     if test $as_root = "y"
     then
-        chown $name_add data
-        chgrp $nmr_group data
+        chown "$name_add" data
+        chgrp "$nmr_group" data
     else
-        chgrp $nmr_group data
+        chgrp "$nmr_group" data
     fi
 fi
 
@@ -1216,11 +1220,11 @@ then
     then
 	if [ x$ostype != "xInterix" ]
 	then
-	    chown $name_add global
+	    chown "$name_add" global
 	fi
-        chgrp $nmr_group global
+        chgrp "$nmr_group" global
     else
-        chgrp $nmr_group global
+        chgrp "$nmr_group" global
         run_updaterev
     fi
     echo "  global updated from templates;"
@@ -1231,8 +1235,8 @@ then
     echo "  global backed up in global.bkup.$date"
     /bin/cp "$vnmrsystem"/user_templates/global .
     chmod 644 global
-    chown $name_add global
-    chgrp $nmr_group global
+    chown "$name_add" global
+    chgrp "$nmr_group" global
 else
     /bin/cp global global.bkup.$date
     echo "  global backed up in global.bkup.$date"
@@ -1242,7 +1246,7 @@ else
     then
 	 /bin/cp "$vnmrsystem"/user_templates/global .
 	 chmod 644 global
-	 chgrp $nmr_group global
+	 chgrp "$nmr_group" global
          echo "  global updated from templates."
     else
          echo "  global updated with current values."
@@ -1264,10 +1268,10 @@ then
       chmod 644 shapelib/.Pbox_defaults
       if test $as_root = "y"
       then
-        chown $name_add shapelib/.Pbox_defaults
-        chgrp $nmr_group shapelib/.Pbox_defaults
+        chown "$name_add" shapelib/.Pbox_defaults
+        chgrp "$nmr_group" shapelib/.Pbox_defaults
       else
-        chgrp $nmr_group shapelib/.Pbox_defaults
+        chgrp "$nmr_group" shapelib/.Pbox_defaults
       fi
       echo "  .Pbox_defaults updated from shapelib;"
     fi
@@ -1282,22 +1286,22 @@ then
       mkdir Desktop
       if test $as_root = "y"
       then
-         chown $name_add Desktop
-         chgrp $nmr_group Desktop
+         chown "$name_add" Desktop
+         chgrp "$nmr_group" Desktop
       fi
    fi
    cd Desktop
    cp "$vnmrsystem"/user_templates/vnmrj.desktop vnmrj.desktop
    if test $as_root = "y"
    then
-      chown "$name_add":$nmr_group vnmrj.desktop
+      chown "$name_add":"$nmr_group" vnmrj.desktop
    fi
-   if [ x$name_add = x$sys_user ]
+   if [ "x$name_add" = x$sys_user ]
    then
       cp "$vnmrsystem"/user_templates/vnmrjadmin.desktop vnmrjadmin.desktop
       if test $as_root = "y"
       then
-         chown "$name_add":$nmr_group vnmrjadmin.desktop
+         chown "$name_add":"$nmr_group" vnmrjadmin.desktop
       fi
    fi
    if [ -f "$vnmrsystem"/templates/vnmrj/properties/labelResources_ja.properties ]
@@ -1305,7 +1309,7 @@ then
       cp "$vnmrsystem"/user_templates/vnmrjja.desktop vnmrjja.desktop
       if test $as_root = "y"
       then
-         chown "$name_add":$nmr_group vnmrjja.desktop
+         chown "$name_add":"$nmr_group" vnmrjja.desktop
       fi
    fi
    if [ -f "$vnmrsystem"/templates/vnmrj/properties/labelResources_zh_CN.properties ]
@@ -1313,7 +1317,7 @@ then
       cp "$vnmrsystem"/user_templates/vnmrjzh.desktop vnmrjzh.desktop
       if test $as_root = "y"
       then
-         chown "$name_add":$nmr_group vnmrjzh.desktop 
+         chown "$name_add":"$nmr_group" vnmrjzh.desktop 
       fi
    fi
 fi
@@ -1349,5 +1353,5 @@ then
 fi
 
 echo ""
-echo "Updating for $name_add complete"
+echo "Updating for '$name_add' complete"
 echo ""
