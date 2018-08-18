@@ -561,7 +561,7 @@ else  #current user is root
                          --groups cdrom,floppy,audio,video,plugdev,fuse,lpadmin \
                          --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' "$name_add"
                 fi
-                chmod 755 "$dir_name/$name_add"
+                sudo chmod 755 "$dir_name/$name_add"
                 # we give a temp default password, use the --expire
                 # option to force to user to change password on login
                 sudo /usr/bin/passwd --expire "$name_add" 2>/dev/null
