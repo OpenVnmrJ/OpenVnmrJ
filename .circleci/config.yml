@@ -36,12 +36,11 @@ jobs: # a collection of steps
             export OVJ_BUILDDIR=$HOME
             export OVJ_ROOT=${OVJ_BUILDDIR}/OpenVnmrJ
             export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
-            ls
             gcc --version
-            g++ --version
             cd ${OVJ_ROOT}
             cp -a ${OVJ_TOOLS}/bin ${OVJ_BUILDDIR}
             OVJ_SCONSFLAGS='-j2' ${OVJ_ROOT}/scripts/build_release.sh build package
+            echo "--- whatsin output ---"
             ${OVJ_TOOLS}/bin/whatsin $(ls -t ${OVJ_BUILDDIR}/logs/build* | head -1) | tail -80
             ls -l ${OVJ_BUILDDIR}/dvdimage*
       - run:
@@ -49,7 +48,7 @@ jobs: # a collection of steps
           when: on_fail
           command: |
             export OVJ_BUILDDIR=$HOME
-            sudo tail -80 ${OVJ_BUILDDIR}/logs/build*
+            sudo tail -180 ${OVJ_BUILDDIR}/logs/build*
       - run:
           name: Install OpenVnmrJ
           command: |
@@ -58,26 +57,23 @@ jobs: # a collection of steps
             export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
             chmod a+xr ${OVJ_BUILDDIR}
             chmod a+xr ${OVJ_BUILDDIR}/dvdimageOVJ*
-            pwd
-            cd ${OVJ_TOOLS}
             sudo ${OVJ_ROOT}/scripts/install_test.sh -f install
       - run:
           name: Install Failed
           when: on_fail
           command: |
             export OVJ_BUILDDIR=$HOME
-            sudo tail -80 ${OVJ_BUILDDIR}/logs/install_test.log
+            sudo tail -180 ${OVJ_BUILDDIR}/logs/install_test.log
       - run:
           name: Test OpenVnmrJ
           command: |
             export OVJ_BUILDDIR=$HOME
             export OVJ_ROOT=${OVJ_BUILDDIR}/OpenVnmrJ
             export OVJ_TOOLS=${OVJ_BUILDDIR}/ovjTools
-            pwd
-            cd ${OVJ_TOOLS}
-            sudo rm -f ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/20*
             sudo ${OVJ_ROOT}/scripts/install_test.sh -f test
-            sudo cat ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/20*
+            sudo rm -f ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/2015-10-27
+            echo "--- diff test output against GOLD ---"
+            sudo diff ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/20* ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/gold-circleci || true
       - run:
           name: Tests Failed
           when: on_fail
@@ -85,4 +81,4 @@ jobs: # a collection of steps
             sudo cat ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports/20*
       - store_artifacts:
           name: Store VJQA Results
-          path: ~vnmr1/vnmrsys/ovj_qa/ovjtest/reports
+          path: /home/vnmr1/vnmrsys/ovj_qa/ovjtest/reports
