@@ -9,6 +9,11 @@ add<(multiplier <,'trace',index>)>  - add the current FID to the "index" element
                                       in the add/subtract experiment
 sub<(multiplier <,'trace',index>)>  - subtract the current FID from the "index"
                                       element in the add/subtract
+add<(multiplier <,'newtrace',index>)>  - replace the "index" element in the
+                                      add/subtract experiment with the current FID
+sub<(multiplier <,'newtrace',index>)>  - replace the "index" element in the
+                                      add/subtract experiment with the negative 
+                                      of the current FID
 addsubexp - global integer identifying the add/subtract experiment
             The default is 5
 *******************************************************************************
@@ -19,15 +24,20 @@ the delexp command to delete the add-subtract experiment. It takes the same
 return values as the delexp command. These can be used to suppress messages.
 See the manual for delexp to a description of the return values.
 
+Note that the addsubexp parameter can be the same as the currently joined
+experiment. In this case, the clradd command cannot be used since that
+would cause the current experiment to be deleted. Using add or sub with
+addsubexp set to the current experiment will work as described below.
+
 "jaddsub" joins the add-subtract experiment, as defined by the global
 addsubexp parameter. jaddsub will create this parameter if it does not exist,
-and set it to a default value of 5. jaddsub with an argument, as in jaddsub('silent')
-will not clear the graphics, text window, or menu system. It does not matter
-what the argument is.
+and set it to a default value of 5. jaddsub with an argument, as in
+jaddsub('silent') will not clear the graphics, text window, or menu system.
+It does not matter what the argument is.
 
 The last displayed or selected FID is added to ("add") or subtracted
 from ("sub") the current contents of the add/subtract experiment.
-Am optional argument allows the FID to be first multiplied by a 'multiplier'.
+An optional argument allows the FID to be first multiplied by a 'multiplier'.
 The FID data are divided by the number of time averages of the data, reflected
 in the parameter ct.  To get unscaled data, use a multiplier of ct.
 The parameters lsfid and phfid may be used to shift or phase rotate the
@@ -53,6 +63,7 @@ where <num> is replaced by the number of FIDs in that experiment.
 For example, if twelve FIDs were put into the add/subtract experiment,
 one would enter
  setvalue('arraydim',12,'processed')
+
 Individual FIDs in a multi-fid add/subtract experiment may subsequently be added
 to and subtracted from.  The add and sub command without a 'trace' argument
 will add or subtract from the first FID in the add/subtract experiment.
@@ -60,8 +71,13 @@ Adding the 'trace' argument followed by a required index number will select
 another FID to be the target of the add/subtract.  For example, select(4)
 add('trace',6) will take the fourth FID from the current experiment and add
 it to the sixth FID in the add/subtract experiment.  When using the 'trace'
-argument, that FID must already exist in the add/subtract experiment by
-using an appropriate number of add('new') or sub('new') commands.
+argument, the index must be between 1 and one greater than the current
+number of FIDs in the add/subtract experiment. If the 'trace' index is
+one greater than the current number of FIDs in the add/subtract experiment,
+it is equivalent to using the 'add' argument.
+
+The 'newtrace' argument is same same as the 'trace' argument except that
+the data in the current trace is replaced with the new data.
 
 
 Examples
@@ -70,3 +86,4 @@ Examples
            sub(0.75)
            add('new')
            add('trace',2)
+           add('newtrace',2)

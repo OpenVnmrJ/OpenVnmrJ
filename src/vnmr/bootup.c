@@ -929,7 +929,10 @@ find_automount()
 		return( retaddr );
 	}
 	else
+        {
+	  free( ps_output_line );
 	  return( NULL );
+        }
 }
 
 #define  DEFAULT_AUTOMOUNT	"/tmp_mnt"
