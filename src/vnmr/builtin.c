@@ -2298,8 +2298,44 @@ static int countitems(char *dirname)
 |	in the selected directory
 |
 +-----------------------------------------------------------------------*/
+static int getitem(char *dirname, int index, char filename[])	
+{
+    DIR            *dirp;
+    struct dirent  *dp;
+    int             temp;
+
+    if ( (dirp = opendir(dirname)) )
+    {
+      dp = NULL;
+      temp = 0;
+      while ((temp < index) && ((dp = readdir(dirp)) != NULL))
+        if (*dp->d_name != '.')  /* no . files */
+          temp++;
+      if ((index == temp) && (dp != NULL))
+        strcpy(filename,dp->d_name);
+      else
+      {
+        closedir(dirp);
+        Werrprintf("cannot get item %d from %s",index,dirname);
+	ABORT;
+      }	
+      closedir(dirp);
+      RETURN;
+    }
+    else
+    {	Werrprintf("trouble opening %s",dirname);
+	ABORT;
+    }	
+}
+
+/*------------------------------------------------------------------------
+|
+|	This module returns the name of the n th file
+|	in the selected directory, sorted
+|
++-----------------------------------------------------------------------*/
 static int nodotfiles(const struct dirent * dp) { return dp->d_name[0] != '.'; }
-static int getitem(char *dirname, int index, char filename[])
+static int getitem_sorted(char *dirname, int index, char filename[], const char * sorttype)
 {
   int             temp;
   struct dirent **namelist;
@@ -2307,6 +2343,12 @@ static int getitem(char *dirname, int index, char filename[])
 
   /* make index 0-based */
   index--;
+
+  if (strcmp(sorttype, "alphasort"))
+  {
+    Werrprintf("unknown sort type '%s'", sorttype);
+    ABORT;
+  }
 
   if (-1 != (n = scandir(dirname, &namelist, nodotfiles, alphasort)))
   {
@@ -2324,13 +2366,13 @@ static int getitem(char *dirname, int index, char filename[])
       RETURN;
     else
     {
-      Werrprintf("cannot get item %d from %s",index+1,dirname);
+      Werrprintf("cannot get item %d from %s", index+1, dirname);
       ABORT;
     }
   }
   else
   {
-    Werrprintf("trouble opening %s",dirname);
+    Werrprintf("trouble opening %s", dirname);
     ABORT;
   }
 }
@@ -2353,7 +2395,7 @@ int getfile(int argc, char *argv[], int retc, char *retv[])
   char extension[MAXPATHL];
   int  temp,len,i;
 
-  if (argc == 3)       /* a specific file name is wanted */
+  if (argc == 3 || argc == 4)       /* a specific file name is wanted */
   {
     filename[0] = '\0';
     if ((isReal(argv[2])) && (isDirectory(argv[1])))
@@ -2364,12 +2406,17 @@ int getfile(int argc, char *argv[], int retc, char *retv[])
         Werrprintf("file index %d does not exist",index);
         ABORT;
       }
-      else if (getitem(argv[1],index,filename))
+      else if (argc == 3)
+      {
+        if (getitem(argv[1],index,filename))
+          ABORT;
+      }
+      else if (getitem_sorted(argv[1],index,filename,argv[3]))
         ABORT;
     }
     else
     {
-      Werrprintf("Usage -- getfile(directory <,index>)");
+      Werrprintf("Usage -- getfile(directory <,index[,'alphasort']>)");
       ABORT;
     }
     extension[0] = '\0';
