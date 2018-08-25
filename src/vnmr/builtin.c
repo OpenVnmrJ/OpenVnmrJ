@@ -2330,6 +2330,55 @@ static int getitem(char *dirname, int index, char filename[])
 
 /*------------------------------------------------------------------------
 |
+|	This module returns the name of the n th file
+|	in the selected directory, sorted
+|
++-----------------------------------------------------------------------*/
+static int nodotfiles(const struct dirent * dp) { return dp->d_name[0] != '.'; }
+static int getitem_sorted(char *dirname, int index, char filename[], const char * sorttype)
+{
+  int             temp;
+  struct dirent **namelist;
+  int             n;
+
+  /* make index 0-based */
+  index--;
+
+  if (strcmp(sorttype, "alphasort"))
+  {
+    Werrprintf("unknown sort type '%s'", sorttype);
+    ABORT;
+  }
+
+  if (-1 != (n = scandir(dirname, &namelist, nodotfiles, alphasort)))
+  {
+    if (index >= 0 && index < n)
+      strcpy(filename, namelist[index]->d_name);
+
+    /* cleanup for scandir */
+    for (temp = 0; temp < n; temp++) {
+      free(namelist[temp]);
+    }
+    free(namelist);
+
+    /* return */
+    if (index >= 0 && index < n)
+      RETURN;
+    else
+    {
+      Werrprintf("cannot get item %d from %s", index+1, dirname);
+      ABORT;
+    }
+  }
+  else
+  {
+    Werrprintf("trouble opening %s", dirname);
+    ABORT;
+  }
+}
+
+/*------------------------------------------------------------------------
+|
 |       getfile
 |
 |       This routine returns either the number of files in the specified
@@ -2346,7 +2395,7 @@ int getfile(int argc, char *argv[], int retc, char *retv[])
   char extension[MAXPATHL];
   int  temp,len,i;
 
-  if (argc == 3)       /* a specific file name is wanted */
+  if (argc == 3 || argc == 4)       /* a specific file name is wanted */
   {
     filename[0] = '\0';
     if ((isReal(argv[2])) && (isDirectory(argv[1])))
@@ -2357,12 +2406,17 @@ int getfile(int argc, char *argv[], int retc, char *retv[])
         Werrprintf("file index %d does not exist",index);
         ABORT;
       }
-      else if (getitem(argv[1],index,filename))
+      else if (argc == 3)
+      {
+        if (getitem(argv[1],index,filename))
+          ABORT;
+      }
+      else if (getitem_sorted(argv[1],index,filename,argv[3]))
         ABORT;
     }
     else
     {
-      Werrprintf("Usage -- getfile(directory <,index>)");
+      Werrprintf("Usage -- getfile(directory <,index[,'alphasort']>)");
       ABORT;
     }
     extension[0] = '\0';
