@@ -59,12 +59,14 @@ extern int      cexpCmd(int argc, char *argv[], int retc, char *retv[]);
 extern int      delexp(int argc, char *argv[], int retc, char *retv[]);
 extern float *get_one_fid(int curfid, int *np, dpointers *c_block, int dcflag);
 extern double get_dsp_lp();
+extern int      expdir_to_expnum(char *expdir);
 
 static int	addsub_complex,
 		newbuf,
 		save_complex,
 		shift,
 		range,
+                replaceFid,
 		trace;			/* trace number in addsub exp */
 static int	interactive_addi = FALSE;
 static float    *addi_cur_imag;
@@ -146,7 +148,7 @@ static int add_new_file(dpointers *header, int index, int stat, int mode)
 +--------------------------------------*/
 static int new_datafile(char *exppath)
 {
-  char	path[MAXPATHL];
+  char	path[MAXPATH];
 
   D_close(D_DATAFILE);
   strcpy(path, exppath);
@@ -175,7 +177,7 @@ static int get_addsub_data(int newexp, dpointers *new_file, char *exppath,
                            int status1, int status2, int mode1, int mode2,
                            int fid, int range)
 {
-  char	path[MAXPATHL];
+  char	path[MAXPATH];
   int	r,
 	file_id;
 
@@ -304,7 +306,9 @@ static int get_addsub_data(int newexp, dpointers *new_file, char *exppath,
         return(ERROR);
      }
 
-     if (newbuf)
+     if (trace == datahead.nblocks)
+        newbuf = 1;
+     if ( newbuf )
      {
         trace = datahead.nblocks;
         datahead.nblocks += 1;
@@ -809,7 +813,7 @@ static int addfid(int argc, char *argv[], int retc, char *retv[],
 
   if (do_sub)
      multiplier *= -1.0;
-  if (newbuf)
+  if (newbuf || replaceFid)
   {
      while (np--)
         *newptr++ = *fidptr++ * multiplier;
@@ -855,7 +859,7 @@ static int save_addsub_pars()
 int addsub_pars(char exppath[],int read_tree)
 /*****************************/
 {
-  char path[MAXPATHL];
+  char path[MAXPATH];
   char aig[5],dmg[5];
   int  r;
 
@@ -895,7 +899,7 @@ int addsub_pars(char exppath[],int read_tree)
 
 static int correct_fn_sw(char *exppath )
 {
-	char	path[ MAXPATHL ];
+	char	path[ MAXPATH ];
 	int	fnparam, fnval, r;
 	double	qval, ref, swval;
 
@@ -938,7 +942,7 @@ static int addspec(int argc, char *argv[], int retc, char *retv[],
                    char *exppath, int newexp)
 {
   char          *dsplymessage,
-                path[MAXPATHL];
+                path[MAXPATH];
   int           r,
                 dummy,
                 addsub_mode,
@@ -1332,8 +1336,10 @@ static int checkinput(int argc, char *argv[], int newexp)
       }
     else if ((!newexp) && (strcmp(*argv,"new") == 0))
       newbuf = 1;
-    else if (strcmp(*argv,"trace") == 0)
+    else if ( (strcmp(*argv,"trace") == 0) || (strcmp(*argv,"newtrace") == 0) )
     {
+       if (strcmp(*argv,"newtrace") == 0)
+          replaceFid = 1;
        argc--;
        if (argc && isReal(*++argv))
        {
@@ -1373,7 +1379,7 @@ static int addi(int argc, char *argv[],int retc, char *retv[],
 /***************************/
 { int  r;
   float *newptr,*add_spec;
-  char path[MAXPATHL];
+  char path[MAXPATH];
   double scale;
   int save_d2flag;
   int save_specperblock;
@@ -1610,13 +1616,14 @@ static int chpar(int getflag, int specadd)
 +--------------------------------------*/
 int addsub(int argc, char *argv[], int retc, char *retv[])
 {
-  char	exppath[MAXPATHL];
+  char	exppath[MAXPATH];
   int	newexp,
 	fidadd,
 	specadd,
 	clradd;
   double tmp;
   int   addsubExp;
+  int   inCurexp;
 
 
   Wturnoff_buttons();
@@ -1628,6 +1635,8 @@ int addsub(int argc, char *argv[], int retc, char *retv[])
     if ( P_getreal(GLOBAL,"addsubexp",&tmp,1)) 
        tmp = 5.0;
   addsubExp = (int) (tmp+0.1);
+  inCurexp = (addsubExp == expdir_to_expnum(curexpdir));
+
        
   sprintf(exppath, "%s/exp%d", userdir, addsubExp);
   newbuf = newexp = (access(exppath, 6));
@@ -1639,6 +1648,7 @@ int addsub(int argc, char *argv[], int retc, char *retv[])
      Wscrprintf("addsub exp %s\n", (newexp) ? "does not exist" : "exists");
 
   fidadd = specadd = FALSE;	/* initialization */
+  replaceFid = 0;
   clradd = ( strcmp(argv[0], "clradd") == 0 );
 
   if (!clradd)
@@ -1668,7 +1678,7 @@ int addsub(int argc, char *argv[], int retc, char *retv[])
 
   if (clradd)
   {
-     if (!newexp)
+     if (!newexp && !inCurexp)
      {
         char *argv2[3];
         char expnum[32];
@@ -1686,9 +1696,19 @@ int addsub(int argc, char *argv[], int retc, char *retv[])
         {
 	   char msg[MAXPATH];
 
-           sprintf(msg,"cannot delete experiment %d, does not exist", addsubExp);
+           if (inCurexp)
+              strcpy(msg,"cannot use clradd on currently active experiment");
+           else
+              sprintf(msg,"cannot delete experiment %d, does not exist", addsubExp);
            retv[ 1 ] = newString( msg );
         }
+     }
+     else
+     {
+           if (inCurexp)
+              Werrprintf("cannot use clradd on currently active experiment");
+           else
+              Werrprintf("cannot delete experiment %d, does not exist", addsubExp);
      }
   }
   else if (fidadd)
