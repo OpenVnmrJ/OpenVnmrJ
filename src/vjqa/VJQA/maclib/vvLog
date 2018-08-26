@@ -22,7 +22,10 @@ if ( not $e) then
   return('')
 endif
 chkname($vals[$e],'none'):$logfile
+$curlog=userdir+'/persistence/qalog.txt'
 if ($#=0 and $##=1) then
+  write('reset',$curlog)
+  write('file',$curlog,'%s',$logfile)
   return($logfile)
 endif
 if ($# = 0) then return('') endif
@@ -61,6 +64,14 @@ if ($## = 1) then
   return($str)
 endif
 
+// This prevents starting a second log if the tests run past midnight
+exists($curlog,'file'):$e
+if ($e) then
+  lookup('mfile',$curlog,'read'):$oldlog,$ret
+  if ($ret = 1) then
+    $logfile=$oldlog
+  endif
+endif
 write('file',$logfile,'%s',$text)
 if (auto='y') then
   write('line3','%s',$text)
