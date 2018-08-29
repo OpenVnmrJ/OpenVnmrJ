@@ -108,7 +108,7 @@ get_vnmrsystem() {
         # could test SUDO_USER, SUDO_GID, or SUDO_COMMAND
         # if SUDO_USER has a value then don't ask for vnmrsystem just default 
         # to /vnmr     GMB 5/4/2009
-        if [ "x" == "x$SUDO_USER" ]; then
+        if [ "x" = "x$SUDO_USER" ]; then
            nnl_echo  "Please enter location of VNMR system directory [/vnmr]: "
            read vnmrsystem
            if test x"$vnmrsystem" = "x"
@@ -132,10 +132,10 @@ get_vnmrsystem() {
 ####################################################################
 get_group()
 {
-   if [ x$1 != "x" ]
+   if [ "x$1" != "x" ]
    then 
       nmr_group=$1
-   elif [ x$ostype = "xDarwin"  -o  x$ostype = "xInterix" ]
+   elif [ x$ostype = "xDarwin" ] || [ x$ostype = "xInterix" ]
    then
       nmr_group=`id -gn`
    else
@@ -143,7 +143,7 @@ get_group()
       nmr_group=`ls -ld . | awk '{ print $4 }'`
    fi
 }
-      
+
 ####################################################################
 #  Script function to extract home directory 
 #  if nonexistant echo empty string.
@@ -152,9 +152,8 @@ get_group()
 get_homedir() {
     if [ "x$ostype" = "xInterix" ]
     then
-        home_dir=""
-	home_dir=`/vnmr/bin/getuserinfo $1 | awk 'BEGIN { FS = ";" } {print $2}'`
-        /bin/winpath2unix $home_dir
+        home_dir=$(/vnmr/bin/getuserinfo "$1" | awk 'BEGIN { FS = ";" } {print $2}')
+        /bin/winpath2unix "$home_dir"
     elif [ -d "$(eval echo "~$1")" ]; then
         echo "$(eval echo "~$1")"
     else
@@ -274,7 +273,7 @@ user_group=$3
 user_update=$4  #"y" or "n", or "appmode"
 date=`date +%y%m%d.%H:%M`
 
-if [ $# -ge 4 -a x$ostype = "xDarwin" ]  #Called from Java
+if [ $# -ge 4 ] && [ x$ostype = "xDarwin" ]  #Called from Java
 then
 #  exit if called from java and system is a Mac
    exit 0
@@ -335,7 +334,7 @@ fi
 if [ x$ostype = "xInterix" ] 
 then
 	rootuser=`/vnmr/bin/isAdmin "$curr_user" | awk '{print $1}'`
-	if [ x$rootuser != "x" ]
+	if [ "x$rootuser" != "x" ]
 	then 
 	    as_root="y"
 	fi
@@ -362,18 +361,18 @@ then
 	  then
 	    vnmrsystem="$5"
 	  fi
-          get_group $3
+          get_group "$3"
         else
           cur_homedir="$HOME"
           get_vnmrsystem
-          get_group $3
+          get_group "$3"
         fi
         as_root="n"
     fi
 
     if [ $# -ne 0 ]
     then
-        if [ x$1 != "x$name_add" ]
+        if [ "x$1" != "x$name_add" ]
         then
            echo "Only $1 or root can change or add $1's account"
            exit 1
@@ -401,8 +400,8 @@ else  #current user is root
 
     get_vnmrsystem
 
-    get_group $3
-    my_file="/tmp/my.file."$date
+    get_group "$3"
+    my_file=/tmp/my.file.$date
     touch "$my_file"
     chgrp "$nmr_group" "$my_file" 2>/dev/null
     if [ $? -ne 0 ]
@@ -585,7 +584,7 @@ else  #current user is root
         fi
 
 	# from Java only for now
-	if [ $# -ge 4 -a x$new_account = "xy" ]
+	if [ $# -ge 4 ] && [ x$new_account = "xy" ]
 	then
 		recfile="$vnmrsystem/adm/users/uexist"
 
@@ -606,7 +605,7 @@ else  #current user is root
 	awk '
 	BEGIN { FS=":" }
 	{
-	    if ($1=="'$nmr_group'")
+	    if ($1=="'"$nmr_group"'")
 	    print $0
 	}' </etc/group | grep "$name_add" >/dev/null
 
@@ -624,7 +623,7 @@ else  #current user is root
 
     #  Username now in password, group file
     cur_homedir=$(get_homedir "$name_add")
-    if [ x"$cur_homedir" = "x" -a x$ostype = "xInterix" ]
+    if [ x"$cur_homedir" = "x" ] && [ x$ostype = "xInterix" ]
     then
 	cur_homedir="$user_dir/$name_add"
     fi
@@ -711,7 +710,7 @@ else  #current user is root
 	fi
 	if [ x$ostype != "xInterix" ] 
 	then 
-	    su - "$name_add" -c "/vnmr/bin/makeuser $1 '$cur_homedir' '$nmr_group' $user_update '$vnmrsystem'" << +++
+	    su - "$name_add" -c "/vnmr/bin/makeuser '$1' '$cur_homedir' '$nmr_group' $user_update '$vnmrsystem'" << +++
 
 +++
 	    exit
@@ -788,10 +787,10 @@ do
    fi
    if test -d  $local_file
    then
-       mv $local_file  $local_file.bkup.$date
+       mv "$local_file"  "$local_file.bkup.$date"
        echo "  $local_file backed up in $file.bkup.$date";
    fi
-   /bin/cp -R "$vnmrsystem"/user_templates/$file $local_file
+   /bin/cp -R "$vnmrsystem/user_templates/$file" "$local_file"
    if test $as_root = "y"
    then
         chown -R "$name_add" "$local_file"
@@ -815,7 +814,7 @@ do
     then
 	if [ x$user_update = "xy" ]
 	then
-	    if [ x$ostype != "xInterix" ] && [ x$file = "x.login"  ]
+	    if [ x$ostype != "xInterix" ] && [ "x$file" = "x.login" ]
  	    then	
 		continue
 	    fi
@@ -833,24 +832,24 @@ do
             continue
         fi
     fi
-    if test -f $file
+    if test -f "$file"
     then
-        if [ $intera_unix = "n" -a  x$file = "x.cshrc" ]
+        if [ $intera_unix = "n" ] && [ "x$file" = "x.cshrc" ]
         then
           continue
         fi
-        mv $file $file.bkup.$date
+        mv "$file" "$file.bkup.$date"
         echo "  $file backed up in $file.bkup.$date";
     fi
-    /bin/cp "$vnmrsystem"/user_templates/$file .
-    chmod 644 $file
-    if test $file = ".openwin-init"
+    /bin/cp "$vnmrsystem/user_templates/$file" .
+    chmod 644 "$file"
+    if test "$file" = ".openwin-init"
     then
        chmod +x .openwin-init
     fi
-    if [ $file = ".xinitrc" -o $file = ".mwmrc" ]
+    if [ "$file" = ".xinitrc" ] || [ "$file" = ".mwmrc" ]
     then
-       chmod +x $file
+       chmod +x "$file"
     fi
     if test $as_root = "y"
     then
@@ -898,11 +897,11 @@ fi
 imgfiles="ib_initdir csi_initdir"
 for file in $imgfiles
 do
-    if [ $file = "ib_initdir" -o $file = "csi_initdir" ]
+    if [ "$file" = "ib_initdir" ] || [ "$file" = "csi_initdir" ]
     then
-	if test -d "$vnmrsystem"/user_templates/$file
+	if test -d "$vnmrsystem/user_templates/$file"
 	then
-    	   if test -d "$cur_homedir"/vnmrsys/$file -a $intera_unix = "y"
+	   if [ -d "$cur_homedir/vnmrsys/$file" ] && [ $intera_unix = "y" ]
     	   then
         	nnl_echo  "OK to update $file (y or n) [y]: "
         	read yesno
@@ -911,21 +910,21 @@ do
         	    continue
         	fi
 	   fi
-    	   if test -d "$cur_homedir"/vnmrsys/$file
+	   if test -d "$cur_homedir/vnmrsys/$file"
 	   then
-           	mv "$cur_homedir"/vnmrsys/$file "$cur_homedir"/vnmrsys/$file.bkup.$date
-           	echo "  $file backed up in $file.bkup.$date";
+		mv "$cur_homedir/vnmrsys/$file" "$cur_homedir/vnmrsys/$file.bkup.$date"
+		echo "  $file backed up in $file.bkup.$date";
 	   fi
 	   # Copy with tar to preserve symbolic links:
-	   (cd "$vnmrsystem"/user_templates; tar cf - $file | (cd "$cur_homedir"/vnmrsys; tar xfBp -))
+	   (cd "$vnmrsystem"/user_templates && tar cf - "$file" | (cd "$cur_homedir"/vnmrsys && tar xfBp -))
     	   if test $as_root = "y"
     	   then
-               chown -R "$name_add" "$cur_homedir"/vnmrsys/$file
-               chgrp -R "$nmr_group" "$cur_homedir"/vnmrsys/$file
+               chown -R "$name_add" "$cur_homedir/vnmrsys/$file"
+               chgrp -R "$nmr_group" "$cur_homedir/vnmrsys/$file"
     	   else
-               chgrp -R "$nmr_group" "$cur_homedir"/vnmrsys/$file
+               chgrp -R "$nmr_group" "$cur_homedir/vnmrsys/$file"
     	   fi
-	   if [ $file = "ib_initdir" ]
+	   if [ "$file" = "ib_initdir" ]
 	   then
 	        rm -f "$cur_homedir"/vnmrsys/aip_initdir
 	        ln -s ib_initdir "$cur_homedir"/vnmrsys/aip_initdir
@@ -939,11 +938,11 @@ do
 	   fi
            echo "  $file updated from templates."
 	fi
-    elif [ $file = "pulsecal" ]
+    elif [ "$file" = "pulsecal" ]
     then
 	if test -d "$vnmrsystem"/imaging
 	then
-	   if test ! -f "$cur_homedir"/vnmrsys/$file
+	   if test ! -f "$cur_homedir/vnmrsys/$file"
 	   then
     	        if test $intera_unix = "y"
     	        then
@@ -955,9 +954,9 @@ do
         	    fi
 	        fi
 		pcaldate=`date +%m%d%y`
-		echo "     PULSE CALIBRATION VALUES\n" > $cur_homedir/vnmrsys/$file
-		echo "     rfcoil      length        flip       power      date\n" >> $cur_homedir/vnmrsys/$file
-		echo "     main             1         180          30     $pcaldate" >> $cur_homedir/vnmrsys/$file
+		echo "     PULSE CALIBRATION VALUES\n" > "$cur_homedir/vnmrsys/$file"
+		echo "     rfcoil      length        flip       power      date\n" >> "$cur_homedir/vnmrsys/$file"
+		echo "     main             1         180          30     $pcaldate" >> "$cur_homedir/vnmrsys/$file"
 		echo "  pulsecal file created."
     	        if test $as_root = "y"
     	        then
@@ -991,9 +990,9 @@ fi
 bkupnoreplace="Acqi $cur_homedir/vnmrsys/templates/vnmrj/choicefiles/planParams"
 for file in $bkupnoreplace
 do
-    if test -d $file -o -f $file
+    if [ -d "$file" ] || [ -f "$file" ]
     then
-	mv $file $file.bkup.$date
+	mv "$file" "$file.bkup.$date"
 	echo "  $file backed up as $file.bkup.$date";
     fi
 done
@@ -1002,16 +1001,16 @@ done
 # files can be in either the home directory or in the subdirectory app-defaults
 # These files also are not replaced
 
-if [ x$ostype != "xLinux" -a x$ostype != "xDarwin" -a x$ostype != "xInterix" ]
+if [ x$ostype != "xLinux" ] && [ x$ostype != "xDarwin" ] && [ x$ostype != "xInterix" ]
 then
     appdefaults=`(cd "$vnmrsystem"/app-defaults; ls *)`
     if test x"$app-defaults" != "x"
     then
 	for file in $appdefaults
 	do
-	    if test -f $file
+	    if test -f "$file"
 	    then
-		mv $file $file.bkup.$date
+		mv "$file" "$file.bkup.$date"
 		echo "  $file backed up in $file.bkup.$date";
 	    fi
 	done
@@ -1020,9 +1019,9 @@ then
 	    cd app-defaults
 	    for file in $appdefaults
 	    do
-		if test -f $file
+		if test -f "$file"
 		then
-		    mv $file $file.bkup.$date
+		    mv "$file" "$file.bkup.$date"
 		    echo "  app-defaults/$file backed up in app-defaults/$file.bkup.$date";
 		fi
 	    done
@@ -1147,7 +1146,7 @@ fi
 export vnmrsystem
 if test -d persistence
 then
-    if [ x$ostype = "xInterix" -a x$as_root = "xy" ]
+    if [ x$ostype = "xInterix" ] && [ x$as_root = "xy" ]
     then
 	chmod 755 persistence
 	chown "$curr_user" persistence
