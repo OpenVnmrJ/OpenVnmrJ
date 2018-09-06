@@ -11,23 +11,9 @@
 # 
 #
 
-
-set ostype = `uname -s`
-if ( "x$ostype" == "xLinux" ) then
-   set TCLSH = /usr/bin/tclsh
-   set cmd = "$vnmrsystem/tcl/bin/atrecord.tcl"
-else
-   if ( "x$ostype" == "xInterix" ) then
-      cd $vnmrsystem/tcl/bin
-      set TCLSH = "./tclsh84.exe"
-      setenv TCL_LIBRARY   "../tcllibrary"
-      set cmd = "./atrecord.tcl"
-   else
-      setenv TCLDIR        "$vnmrsystem/tcl"
-      setenv TCL_LIBRARY   "$TCLDIR/tcllibrary"
-      set TCLSH = "$vnmrsystem/tcl/bin/tclsh"
-      set cmd = "$vnmrsystem/tcl/bin/atrecord.tcl"
-   endif
-endif
+setenv TCLDIR        "$vnmrsystem/tcl"
+setenv TCL_LIBRARY   "$TCLDIR/tcllibrary"
+set TCLSH = "$vnmrsystem/bin/tclsh"
+set cmd = "$vnmrsystem/tcl/bin/atrecord.tcl"
 
 "$TCLSH" "$cmd" "$1" "$2" "$3" "$4" $argv[5-] < /dev/null > /dev/null

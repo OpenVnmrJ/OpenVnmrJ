@@ -72,16 +72,8 @@ set PREV_SET_FILE        $AT_DIR/atdb/at_prev_setting
 set REPORT_FILE          $AT_DIR/atrecord_report
 set NMR_INIT_FILE        $env(vnmruser)/maclib/ATinit
 
-if { ($osType == "Linux") } {
-   set bitmapdir $env(vnmrsystem)/tcl/tklibrary/vnmr
-   option readfile $env(vnmrsystem)/app-defaults/Enter
-} elseif { ($osType == "Interix") } {
-   set bitmapdir $env(SFUDIR)usr/X11R6/include/X11/bitmaps
-   option readfile ../../app-defaults/Enter
-} else {
-   set bitmapdir /usr/openwin/share/include/X11/bitmaps
-   option readfile $env(vnmrsystem)/app-defaults/Enter
-}
+set bitmapdir $env(vnmrsystem)/tcl/tklibrary/vnmr
+catch { option readfile $env(vnmrsystem)/app-defaults/Enter }
 
 option add *Graph.x.title             "Number of Trials"
 #option add *Graph.x.MajorTicks        "1 2 3 4 5 6 7 8 9"
