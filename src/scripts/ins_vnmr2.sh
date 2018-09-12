@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -33,7 +33,7 @@ logdone() {
      echo " " >> $logfile
      echo "========================================================" >> $logfile
      echo " " >> $logfile
-     cmplttime=`date`
+     cmplttime=$(date)
      echo "Installation script complete $cmplttime " >> $logfile
      echo " " >> $logfile
      echo "========================================================" >> $logfile
@@ -48,32 +48,6 @@ logdone() {
 logmsg() {
       echo $1 >> $logfile
       # echo $1 >> $logfile 2>&1
-}
-
-
-nnl_echo() {
-    if test x$sysV = "x"
-    then
-        echo "error in echo-no-new-line: sysV not defined"
-        exit 1
-    fi
-
-    if test $sysV = "y"
-    then
-        if test $# -lt 1
-        then
-            echo
-        else
-            echo "$*\c"
-        fi
-    else
-        if test $# -lt 1
-        then
-            echo
-        else
-            echo -n $*
-        fi
-    fi
 }
 
 #-----------------------------------------------
@@ -98,7 +72,7 @@ update_user_group() {
        fi
    elif [ x$os_version != "xwin" ]
    then
-       nmr_group_no=`grep "^${nmr_group}:" /etc/group | awk 'BEGIN { FS = ":" } { print $3}'`
+       nmr_group_no=$(grep "^${nmr_group}:" /etc/group | awk 'BEGIN { FS = ":" } { print $3}')
    fi
 
    #Only copy the passwd file if there is no nmr_adm account
@@ -168,22 +142,6 @@ update_user_group() {
            add_to_passwd
        fi
 
-       #special stuff for Solaris
-
-       if [ x$ostype = "xSOLARIS" ]
-       then
-           if touch /etc/shadow
-           then
-               if grep -s $nmr_adm /etc/shadow >/dev/null
-               then
-                   :
-               else
-                   echo "$nmr_adm:::0:::::" >>/etc/shadow
-               fi
-           else
-               echo "Cannot add $name to the shadow file"
-           fi
-       fi
    elif [ x$os_version = "xwin" ]
    then
       nmrhomedir=`"$src_code_dir"/win/bin/getuserinfo "$nmr_adm" | awk 'BEGIN {FS=";"} {print $2}'`
@@ -356,111 +314,6 @@ update_if_dosy()
   fi
 }
 
-#-----------------------------------------------
-load_pw_option()
-{
-   i=0
-   n_pass=`expr $# / 2`
-   load_type=${cons_type}.opt
-
-   #console=`basename $console $opt_dir`opt
-   tmp_size=0
-   while [ $i -lt $n_pass ]
-   do
-       cat "$src_code_dir"/$os_version/$load_type | (while read line
-      do
-         b=`echo $line | awk 'BEGIN { FS = " " } { print $1 }'`
-         if [ x$b = x$1 ]
-         then
-            size=`echo $line | awk 'BEGIN { FS = " " } { print $2 }'`
-            c=`echo $line | awk 'BEGIN { FS = " " } { print $3 }'`
-            #echo  $c $tmp_size
-            #tmp_size=$size
-            if [ "x$nmr_adm" != "x" ] # actually nmr_adm always set
-            then
-               echo "  Extracting:  \"$1\"  $c"
-               (cd "$dest_dir"; \
-                cp "$source_dir"/"$c" .; \
-                "$src_code_dir"/decode.$os_version $2 `basename "$c"` tmp.tar;\
-                rm `basename "$c"` )
-               i=`ls -l "$dest_dir"/tmp.tar | awk 'BEGIN { FS=" " } {print $5}'`
-               # if the wrong password was used the file size will be zero
-               if [ $i -gt 2 ]
-               then
-                  # decode was OK so now untar the file
-                  if [ x$os_version != "xwin" ]
-                  then
-                     if [ x$lflvr != "xdebian" ]
-                     then
-                        (cd "$dest_dir";su $nmr_adm -fc "tar $taroption tmp.tar" )
-                     else
-                        (cd "$dest_dir";sudo -u $nmr_adm tar $taroption tmp.tar )
-                     fi
-                  else
-                     (cd "$dest_dir";tar $taroption tmp.tar )
-                  fi
-                  update_if_dosy $1
-                  printf "`basename $c`\n" >> "$dest_dir"/adm/log/options
-                  ${chown_cmd} $nmr_adm "$dest_dir"/adm/log/options
-                  ${chgrp_cmd} $nmr_group "$dest_dir"/adm/log/options
-                  echo "  DONE:  $size KB."
-               else
-                  echo "    PASSWORD for $1 incorrect. "
-                  echo "      If you have the correct password"
-                  echo "      you can load the option separately"
-                  echo "      when this install is complete."
-                  echo "      Run load.nmr again, and only select $1"
-                  echo "  SKIPPED: $size"
-                  grep $1  "$dest_dir"/pw_fault
-                  if [ $? -ne 0 ]
-                  then
-                      touch  "$dest_dir"/pw_fault
-                      echo "  $1" >> "$dest_dir"/pw_fault
-                  fi
-               fi
-               rm -f "$dest_dir"/tmp.tar
-            else
-               (cd "$dest_dir"; \
-                cp "$source_dir"/"$c" .; \
-                "$src_code_dir"/decode.$os_version $2  `basename "$c"` tmp.tar; \
-                rm `basename "$c"` )
-               i=`ls -l "$dest_dir"/tmp.tar | awk 'BEGIN { FS=" " } {print $5}'`
-               if [ $i -gt 2 ]
-               then
-                  (cd "$dest_dir";tar $taroption tmp.tar )
-                  printf "`basename $c`\n" >> "$dest_dir"/adm/log/options
-                  ${chown_cmd} $nmr_adm "$dest_dir"/adm/log/options
-                  ${chgrp_cmd} $nmr_group "$dest_dir"/adm/log/options
-                  echo "  DONE:  $size KB."
-               else
-                  echo "    Password for $1 incorrect "
-                  echo "      If you have the correct password"
-                  echo "      you can load the option separately"
-                  echo "      when this install is complete."
-                  echo "      Run load.nmr again, and only select $1"
-                  echo "  SKIPPED: $size"
-                  grep $1  "$dest_dir"/pw_fault
-                  if [ $? -ne 0 ]
-                  then
-                      touch  "$dest_dir"/pw_fault
-                      echo "  $1" >> "$dest_dir"/pw_fault
-                  fi
-               fi
-               rm -f "$dest_dir"/tmp.tar
-            fi
-         fi   
-      done
-      #echo " " $tmp_size
-      )
-
-      i=`expr $i + 1`
-      shift; shift
-   done
-   echo " "
-
-}
-
-
 #
 #  save the complete asm directory, for recovery of added and updated VAST files
 #  tar out the present asm directory excluding the backup directories.
@@ -539,7 +392,6 @@ restorevast()
 # create a unique list of files present in one but not the other
 # these we will copy over to the new release asm
 #  --- uniqlist maybe unique to the new or the old
-   # uniqlist=`/usr/bin/uniq -u /tmp/combolist`
    /usr/bin/uniq -u /tmp/vastcombolist > /tmp/vastuniqlist
 
 # ---  extractlist are the unique ones in the previous release
@@ -689,9 +541,9 @@ vnmr_link=$1     #yes
 shift
 man_link=$1      #no
 shift
-gen_list=`echo $1 | sed 's/+/ /g'`  #agr8 or 9 is a list, items separated by a "*"
+gen_list=$(echo $1 | sed 's/+/ /g')  #agr8 or 9 is a list, items separated by a "*"
 shift
-opt_list=`echo $1 | sed 's/+/ /g'`
+opt_list=$(echo $1 | sed 's/+/ /g')
 
 logmsg "OS Version: $os_version"
 logmsg "console type: $cons_type"
@@ -715,20 +567,15 @@ lflvr=" "
 
 nmr_group_no=30
 case x$os_version in
-    xsol) 
-        ostype="SOLARIS"
-        file_ext="sol"
-   ;;
-
     xwin)
 
         file_ext=$os_version
         ostype="Interix" 
    NAWK="awk"
    rootuser="Administrator"
-   src_code_dir=`/bin/ntpath2posix "${src_code_dir}"`
-   dest_dir=`/bin/ntpath2posix "$dest_dir"`
-   nmr_home=`/bin/ntpath2posix "$nmr_home"`
+   src_code_dir=$(/bin/ntpath2posix "${src_code_dir}")
+   dest_dir=$(/bin/ntpath2posix "$dest_dir")
+   nmr_home=$(/bin/ntpath2posix "$nmr_home")
    taroption="xf"
    sbindir="$dest_dir"/.sbin
    ;;
@@ -743,18 +590,18 @@ case x$os_version in
             lflvr="suse"
         elif [  -r /etc/debian_version ]
         then
-            distro=`lsb_release -is`    # Ubuntu
-            distrover=`lsb_release -rs` # 8.04, 9.04, etc.
-            distmajor=`echo $distrover | cut -f1 -d.`
+            distro=$(lsb_release -is)    # Ubuntu
+            distrover=$(lsb_release -rs) # 8.04, 9.04, etc.
+            distmajor=$(echo $distrover | cut -f1 -d.)
             lflvr="debian"
                  # Ubuntu has awk
                  NAWK="awk"
         else
             lflvr="rhat"
-            distrover=`cat /etc/redhat-release | sed -r 's/[^0-9]+//' | sed -r 's/[^0-9.]+$//'`    # yield 5.1, 5.3 , 6.1, etc..
-            # VersionNoDot=`cat /etc/redhat-release | sed -e 's#[^0-9]##g' -e 's#7[0-2]#73#'`    # yields 51, 53, 61, etc.
-            # MajorVersionNum=`cat /etc/redhat-release | sed -e 's#[^0-9]##g' | cut -c1`            # yields  5, 5,  6,  etc.
-            distmajor=`echo $distrover | cut -f1 -d.`
+            distrover=$(cat /etc/redhat-release | sed -r 's/[^0-9]+//' | sed -r 's/[^0-9.]+$//')    # yield 5.1, 5.3 , 6.1, etc..
+            # VersionNoDot=$(cat /etc/redhat-release | sed -e 's#[^0-9]##g' -e 's#7[0-2]#73#')    # yields 51, 53, 61, etc.
+            # MajorVersionNum=$(cat /etc/redhat-release | sed -e 's#[^0-9]##g' | cut -c1)            # yields  5, 5,  6,  etc.
+            distmajor=$(echo $distrover | cut -f1 -d.)
 
         fi
 
@@ -765,9 +612,9 @@ case x$os_version in
 
         #group 30 in RedHat system taken by gopher
         # also 30 is group 'dip' (Dialup IP) on RHEL and Ubuntu
-        while [ x`grep ":${nmr_group_no}:" /etc/group` != "x" ]
+        while [ x$(grep ":${nmr_group_no}:" /etc/group) != "x" ]
         do
-           nmr_group_no=`expr $nmr_group_no + 1`
+           nmr_group_no=$((nmr_group_no+1))
         done
         ;;
 esac
@@ -776,11 +623,11 @@ real_console=$cons_type
 
 if [ x$os_version = "xwin" ]
 then
-   domainname=`/bin/pdomain`
+   domainname=$(/bin/pdomain)
 else
    # nis may not be installed
    if [ -x /bin/domainname ]; then
-      domainname=`/bin/domainname`
+      domainname=$(/bin/domainname)
    else
       domainname=""
    fi
@@ -789,19 +636,13 @@ fi
 echo "NMR Owner = $nmr_adm"
 echo "NMR Group = $nmr_group"
 echo "NMR Destination directory= $dest_dir"
-echo "NMR host='`/bin/hostname`' domain='$domainname'"
+echo "NMR host='$(/bin/hostname)' domain='$domainname'"
 
-source_dir=`dirname "$src_code_dir"`
+source_dir=$(dirname "$src_code_dir")
 acq_pid=-1
  
-if [ x$ostype = "xSOLARIS" ]
-then
-    chown_cmd="/bin/chown -h "
-    chgrp_cmd="/bin/chgrp -h "
-else
-    chown_cmd="chown "
-    chgrp_cmd="chgrp "
-fi
+chown_cmd="chown "
+chgrp_cmd="chgrp "
 
 if [ $acq_pid -ne -1 ]
 then
@@ -819,7 +660,7 @@ nmrwebd_pidfile=${nmrwebd_root}/run/${nmrwebd_exe}.pid
 
 if [ -e $nmrwebd_pidfile ]; then
    echo "Stopping NMR Web Service $nmrwebd_exe"
-   pid=`cat $nmrwebd_pidfile`
+   pid=$(cat $nmrwebd_pidfile)
    kill -TERM $pid >/dev/null
    rm -f $nmrwebd_pidfile
 fi
@@ -831,26 +672,8 @@ if [ $? -eq 0 ]
 then
    #echo "Checking for $nmr_adm   in password file(s)"
    #echo "Checking for $nmr_group in group file"
-   if [ x$ostype = "xIRIX" -o x$ostype = "xIRIX64" ]
-   then
-      $src_code_dir/i_vnmr.4j $nmr_adm $nmr_group /usr/people
-   else
-      if [ x$ostype = "xSOLARIS" ]
-      then
-          echo "Updating User group and password files"
-          update_user_group
-          if [ x$nmr_adm != "xvnmr1" ]
-          then
-             tmp_admin=$nmr_adm
-             nmr_adm="vnmr1"
-             update_user_group
-             nmr_adm=$tmp_admin
-          fi
-      else
-          nmr_home="/home"
-          update_user_group
-      fi
-   fi
+   nmr_home="/home"
+   update_user_group
 fi
 
 if [ ! -d "$dest_dir" ]
@@ -1191,7 +1014,6 @@ then
    echo "Skipping NMR's GENERIC files"
 else
    echo "Installing NMR's GENERIC files"
-   temp_size=0
    tar_size=0
    did_vnmr="n"
 
@@ -1205,13 +1027,12 @@ else
       cat "$src_code_dir"/$os_version/$load_type | \
       ( while read line
         do
-           tar_cat=`echo $line | awk 'BEGIN { FS = " " } { print $1 }'`
+           tar_cat=$(echo $line | awk 'BEGIN { FS = " " } { print $1 }')
   
            if [ x$tar_cat = x$Item ]
            then
-            tar_size=`echo $line | awk 'BEGIN { FS = " " } { print $2 }'`
-         tar_name=`echo $line | awk 'BEGIN { FS = " " } { print $3 }'`
-              temp_size=$tar_size
+            tar_size=$(echo $line | awk 'BEGIN { FS = " " } { print $2 }')
+            tar_name=$(echo $line | awk 'BEGIN { FS = " " } { print $3 }')
          
          if [ x$tar_name = "x" ]
          then
@@ -1221,7 +1042,7 @@ else
          if (test $tar_name = "code/tarfiles/jre.tar")
               then
                     cd "$source_dir"
-                    echo "  Extracting  \"$Item\"  $source_dir/$tar_name"
+                    echo "  Extracting  \"$Item\"  $(basename $tar_name .tar)"
           if [ x$os_version != "xwin" ]
           then
              if [ x$lflvr != "xdebian" ]
@@ -1239,7 +1060,7 @@ else
           fi
           echo "  DONE:  $tar_size KB."
        else
-          echo "  Extracting  \"$Item\"  $source_dir/$tar_name"
+          echo "  Extracting  \"$Item\"  $(basename $tar_name .tar)"
           if [ x$os_version != "xwin" ]
           then
              if [ x$lflvr != "xdebian" ]
@@ -1283,38 +1104,7 @@ else
 fi
 
 ##############################################
-######### load the passworded options
 echo "-------------------------" 
-
-# if [ x$did_vnmr = "xy" ]
-# then
-#    mkdir "$dest_dir"/adm/options
-#    cp "$src_code_dir"/rht/${cons_type}.options "$dest_dir"/adm/options/options
-#    cat "$src_code_dir"/rht/${cons_type}.options | (while read line
-#      do
-#         filename=`echo $line | awk 'BEGIN { FS = " " } { print $1 }'`
-#         cp "$src_code_dir"/tarfiles/$filename "$dest_dir"/adm/options/.
-#      done
-#    )
-#    if [ -f "$src_code_dir"/tarfiles/servicetools.pwd ]
-#    then
-#       cp "$src_code_dir"/tarfiles/servicetools.pwd "$dest_dir"/adm/options/.
-#    fi
-#    ${chown_cmd} -R $nmr_adm "$dest_dir"/adm/options
-#    ${chgrp_cmd} -R $nmr_group "$dest_dir"/adm/options
-# fi
-# 
-# opt_testlist=`echo $opt_list | tr -d " "` 
-# 
-# if [ x$opt_testlist = "x" ]
-# then
-#    echo "Skipping PASSWORDED OPTION files"
-# else
-#    echo "Installing PASSWORDED OPTION files"
-# 
-#    load_pw_option $opt_list
-#    #echo "Passworded Options Completed."
-# fi
 
 echo "ALL REQUESTED SOFTWARE EXTRACTED"
 
@@ -1327,9 +1117,9 @@ then
 
    if [ -x /usr/bin/jre ]
    then
-      version=`/usr/bin/jre -version 2>&1 | grep Version`
-      minor=`echo $version | awk 'BEGIN { FS = "." } { print $2 }'`
-      sub=`echo $version | awk 'BEGIN { FS = "." } { print $3 }'`
+      version=$(/usr/bin/jre -version 2>&1 | grep Version)
+      minor=$(echo $version | awk 'BEGIN { FS = "." } { print $2 }')
+      sub=$(echo $version | awk 'BEGIN { FS = "." } { print $3 }')
       if [ x$minor = "x" ]
       then
          minor=1
@@ -1442,7 +1232,7 @@ then
    old_link=""
    if [ x$vnmr_link = "xyes" ]
    then
-      old_link=`readlink /vnmr`
+      old_link=$(readlink /vnmr)
       cd /
       rm -f /vnmr
       ln -s "$dest_dir" /vnmr
@@ -1459,8 +1249,8 @@ then
       ${chgrp_cmd} $nmr_group "$dest_dir"/devicenames "$dest_dir"/devicetable "$dest_dir"/conpar.prev
       echo "Restoring shim and probe-calibration files"
       mv /tmp/shims/* "$dest_dir"/shims
-      # if probelist is zero length string the for loop doesn't execute.
-      probelist=`ls /tmp/probes/`
+      # if probelist is zero length string the for loop does not execute.
+      probelist=$(ls /tmp/probes/)
       for probename in $probelist
       do
          if [ -d /tmp/probes/$probename ]; then
@@ -2104,51 +1894,6 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
        r_levl="rc5.d"
        r_levl0="rc0.d"
      fi
-     if [ x$lflvr = "xdebian" ]
-     then
-       # cd /vnmr/lib 
-       cd "$dest_dir"/lib
-       # for autotest and spincad
-       rm -f libBLT.so
-       ln -s libBLT24.so.8.4 libBLT.so
-       # for autotest and spincad
-       # Ubuntu (10.04) has a slightly different path than RHEL
-       rm -f /usr/share/tcltk/tk8.4/vnmr
-       ln -s /vnmr/tcl/tklibrary/vnmr /usr/share/tcltk/tk8.4/vnmr
-     else   # xrht
-       # perform the following only if it's NOT RHEL 6.X
-       # appears some version of RHEL 5.X don't have lsb_release
-       # if [ "$(lsb_release -rs  | grep '6' > /dev/null;echo $?)" != "0" ]; then
-       # this would fail for version 5.6
-       # if [ "$(echo $distrover | grep '6' > /dev/null;echo $?)" != "0" ]; then
-       if [ $distmajor -lt 6 ]
-       then
-         if [ -f /usr/lib/libtcl8.4.so ]
-         then
-           cd "$dest_dir"/lib
-           rm -f libtcl8.3.so libtk8.3.so
-           ln -s /usr/lib/libtcl8.4.so libtcl8.3.so
-           ln -s /usr/lib/libtk8.4.so libtk8.3.so
-           if  [ -f libBLT24.so ]
-           then
-             mv libBLT24.so libBLT24.so.8.3
-           fi
-           rm -f libBLT.so
-           ln -s libBLT24.so.8.4 libBLT.so
-           rm -f /usr/share/tk8.4/vnmr
-         fi
-         # rm -f /vnmr/bin/wkhtmltopdf
-         # mv /vnmr/bin/wkhtmltopdf-i386 /vnmr/bin/wkhtmltopdf
-       else  # RHEL 6.X there will be no /usr/lib/libtcl8.4.so, that's installed further down
-         cd "$dest_dir"/lib
-         # for autotest and spincad
-         rm -f libBLT.so
-         ln -s libBLT24.so.8.4 libBLT.so
-         # for autotest and spincad
-         rm -f /usr/share/tk8.4/vnmr
-         # rm -f /vnmr/bin/wkhtmltopdf-i386
-       fi
-     fi
    fi
 
    if [ x$os_version != "xwin" ] 
@@ -2293,27 +2038,6 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
                 rpm -U $src_code_dir/linux/sharutils-4.7-6.1.el6.x86_64.rpm >> $logfile 2>&1
             fi 
            fi 
-            # Need to install a tcl 8.4 version of the library to support vnmrWish and autotest 
-           if [ -f $src_code_dir/linux/tcl-8.4.13-4.el5.i386.rpm ]
-           then
-            if [ "$(rpm -q tcl-8.4.13-4.el5.i386.rpm | grep 'not installed' > /dev/null;echo $?)" == "0" ]; then
-                logmsg "Install tcl 8.4"
-                rpm -i --force $src_code_dir/linux/tcl-8.4.13-4.el5.i386.rpm >> $logfile 2>&1
-            fi 
-           fi
-            # Need to install a tk 8.4 version of the library to support vnmrWish and autotest 
-           if [ -f $src_code_dir/linux/tk-8.4.13-5.el5_1.1.i386.rpm ]
-           then
-            if [ "$(rpm -q tk-8.4.13-5.el5_1.1.i386.rpm  | grep 'not installed' > /dev/null;echo $?)" == "0" ]; then
-                logmsg "Install tk 8.4"
-                rpm -i --force $src_code_dir/linux/tk-8.4.13-5.el5_1.1.i386.rpm >> $logfile  2>&1
-            fi 
-           fi 
-         fi
-         if [ ! -d /usr/share/tk8.4/vnmr ]
-         then
-            logmsg "symlink /vnmr/tcl/tklibrary/vnmr /usr/share/tk8.4/vnmr "
-            ln -s /vnmr/tcl/tklibrary/vnmr /usr/share/tk8.4/vnmr
          fi
 
          if [ -f $src_code_dir/linux/tftp-server-0.32-4.i386.rpm ]
@@ -2647,6 +2371,7 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
      ln -s _sw_ddr _sw
      mv mtune mtune_orig
      ln -s mtune_ddr mtune
+     chown ${nmr_adm}:${nmr_group} mtune _sw
    fi
 
 fi

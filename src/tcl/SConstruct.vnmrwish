@@ -2,9 +2,18 @@
 
 import os
 import shutil
+import sys
+
+# can be called from any other SConstruct file
+cwd = os.getcwd()
 
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
     print "OVJ_TOOLS env not found."
     print "For bash and variants, use export OVJ_TOOLS=<path>"
     print "For csh and variants,  use setenv OVJ_TOOLS <path>"
@@ -12,10 +21,6 @@ if not ovjtools:
 
 # define target file names
 vnmrwishTarget = 'vnmrwish'
-
-# we need to specify an absolute path so this SConstruct file
-# can be called from any other SConstruct file
-cwd = os.getcwd()
 
 # library dependancies
 ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
@@ -58,23 +63,43 @@ env.AddPostAction(vnmrwish,
 #
 #                 Action('ln -sf vnmrwish vnmrWish', chdir=installPath ))
 #
+libInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'lib')
+if not os.path.exists(libInstallPath):
+   os.makedirs(libInstallPath)
+
+env.AddPostAction(vnmrwish,
+                  Action(Copy(libInstallPath, os.path.join(ovjtools, 'tcl','srcBlt','libBLT24.so.8.4'))))
+env.AddPostAction(vnmrwish,
+                  Action('ln -sf libBLT24.so.8.4 libBLT.so', chdir=libInstallPath ))
+env.AddPostAction(vnmrwish,
+                  Action(Copy(libInstallPath, os.path.join(ovjtools, 'tcl','srcTcl','libtcl8.4.so'))))
+env.AddPostAction(vnmrwish,
+                  Action(Copy(libInstallPath, os.path.join(ovjtools, 'tcl','srcTk','libtk8.4.so'))))
 
 tklibPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'tcl', 'tklibrary','vnmr')
 # make sure the path(s) exist
 if not os.path.exists(tklibPath):
    os.makedirs(tklibPath)
 tklibList =  [ 'Right',
-               'Left' ]
+               'Left',
+               'deck.tk',
+               'menu2.tk',
+             ]
 for i in tklibList:
    srcfile = os.path.join(cwd,i)
    dstfile =  os.path.join(tklibPath,i)
    shutil.copyfile(srcfile,dstfile)
 
-#the build wound attempt to make symlink even if target 'vnmrwish' wasn't created and thus copied
-#to the install directory, causing the link to fail..
-#tclSymLinkBld = Builder(action = 'cd ' + installPath + ' && ' + \
-#				'ln -f $SOURCE.file $TARGET.file')
-#env.Append(BUILDERS = {'SymLink' : tclSymLinkBld} )
+tcltkPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'tcl')
+Execute('unzip -d '+tcltkPath+ ' -oq '+ os.path.join(ovjtools, 'tcl','tcltk.zip'))
 
-#tclDerived = []
-#tclDerived.append(env.SymLink(target = 'vnmrWish', source = 'vnmrwish' ))
+binPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(binPath):
+   os.makedirs(binPath)
+
+srcfile=os.path.join(ovjtools, 'tcl','tclsh')
+dstfile=os.path.join(binPath, 'tclsh')
+shutil.copyfile(srcfile,dstfile)
+os.system('chmod 755 ' + dstfile)
