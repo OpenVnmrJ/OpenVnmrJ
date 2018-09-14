@@ -96,14 +96,14 @@ public:
     int getFirstPoint(double &x, double &y);
     bool getCenterPoint(double &x, double &y);
 
-    int select(int x, int y);
+    virtual int select(int x, int y);
     int selectHandle(int x, int y);
     int selectLabel(int x, int y);
 
     virtual string toString();
 
     virtual void modify(spAspCell_t cell, int x, int y, int prevX, int prevY);
-    void display(spAspCell_t cell, spAspDataInfo_t dataInfo);
+    virtual void display(spAspCell_t cell, spAspDataInfo_t dataInfo);
     virtual void getLabel(spAspDataInfo_t dataInfo, string &lbl, int &cwd, int &cht);
 
     int selected;
