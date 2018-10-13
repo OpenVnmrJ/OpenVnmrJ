@@ -66,7 +66,9 @@ extern int makeautoname(char *cmdname, char *a_name, char *sif_name, char *dirna
                  char *suffix, char *notsuffix);
 extern void currentDate(char* cstr, int len );
 extern int brkPath(char* path, char* root, char* name);
+#ifdef AUTOMOUNT
 extern int fix_automount_dir(char *input, char *output );
+#endif
 extern int disp_current_seq();
 extern void appendTopPanelParam();
 extern void set_vnmrj_rt_params(int do_call );
@@ -2192,6 +2194,12 @@ static void save_datdir(char* orig, char* dest)
     }
 
     if(part11_std_files == NULL) return; 
+    // If no "data" is requested, no need to save datdir
+    if ( !part11_std_files->data &&
+         !part11_std_files->phasefile &&
+         !part11_std_files->fdf &&
+         !part11_std_files->snapshot)
+       return;
 
     // set dataid to reflect datdirxxx
     strptr = dest + (strlen(dest)-9);
@@ -2215,9 +2223,12 @@ static void save_datdir(char* orig, char* dest)
     sprintf(file, "%s%s", orig, "spec.jpeg");
     if(fileExist(file)) unlink(file);
 
-    if(!strStartsWith(winCmd, "df") && strStartsWith(winCmd, "d")) {
-        sprintf(cdumpCmd, "%s%s%s", "vnmrjcmd('GRAPHICS', 'cdump', '", orig, "spec', 'jpeg')\n");
-        execString(cdumpCmd);
+    if(part11_std_files->snapshot)
+    {
+       if(!strStartsWith(winCmd, "df") && strStartsWith(winCmd, "d")) {
+           sprintf(cdumpCmd, "%s%s%s", "vnmrjcmd('GRAPHICS', 'cdump', '", orig, "spec', 'jpeg')\n");
+           execString(cdumpCmd);
+       }
     }
     save_recordInfo();
 
@@ -4698,7 +4709,9 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
 
     if (fiderr)
     {
+#ifdef AUTOMOUNT
         fix_automount_dir( path, path );
+#endif
         if (symlink(path,newpath))
         { Werrprintf("rt_FDA:cannot link the fid file %s %s", path,newpath);
             P_treereset(TEMPORARY);

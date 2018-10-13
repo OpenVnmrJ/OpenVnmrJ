@@ -141,6 +141,11 @@ public class BillAll extends JPanel implements Printable {
         y2 = r.y + r.height + fontH;
 
         g.setColor(Color.black);
+        if ( billingPeriod == null)
+        {
+           g.drawString("Please select Invoice dates", x0, y);
+           return;
+        }
         g.drawString(billingPeriod, x0, y);
         y += fontH;
         x1 = x0 + nameWidth + 30;
