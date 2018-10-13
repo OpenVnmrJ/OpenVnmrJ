@@ -42,14 +42,9 @@ set user = `id | sed -e 's/[^(]*[(]\([^)]*\)[)].*/\1/'`
       setenv VNMR_ADM_DIR  "$vnmrsystem/adm"
       set path = ($path "$vnmrsystem/tcl/bin")
 
-      set ostype = `uname -s`
-      if ( "x$ostype" == "xLinux" ) then
-          set WISH = /usr/bin/wish
-      else
-          setenv TCL_LIBRARY   "$TCLDIR/tcllibrary"
-          setenv TK_LIBRARY    "$TCLDIR/tklibrary"
-          set WISH = "$vnmrsystem/tcl/bin/vnmrWish"
-      endif
+      setenv TCL_LIBRARY   "$TCLDIR/tcllibrary"
+      setenv TK_LIBRARY    "$TCLDIR/tklibrary"
+      set WISH = "$vnmrsystem/tcl/bin/vnmrWish"
 
       "$WISH" "$TCLDIR/bin/add_printer" &
 

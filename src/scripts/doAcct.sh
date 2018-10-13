@@ -8,6 +8,26 @@
 # For more information, see the LICENSE file.
 #
 # set -x
+
+SCRIPT=$(basename "$0")
+
+usage() {
+    cat <<EOF
+
+usage:
+    $SCRIPT        get accounting records with default startdate and endDate
+    $SCRIPT cut    get accounting records with default startdate and endDate and remove
+                   records prior to and including endDate
+
+    The default endDate is the current date.
+    The default startDate is one month prior to the current date.
+    The option  -from yyyy/mm/dd    specifies an alternate startDate
+    The option  -to   yyyy/mm/dd    specifies an alternate endDate
+
+EOF
+    exit 1
+}
+
 if [ x"$vnmrsystem" = "x" ]
 then
    vnmrsystem=/vnmr
@@ -34,10 +54,33 @@ else
    sMon=$((eMon-1))
    sYear=$eYear
 fi
+doCut=0
 startDate=$(date -d "$sYear"/"$sMon"/"$day" +"%b %d %Y")
 endDate=$(date +"%b %d %Y")
 
-if [[ $# -gt 0 ]] ;
+# process flag args
+while [ $# -gt 0 ]; do
+    key="$1"
+    case $key in
+        -cut | cut)        doCut=1; ;;
+        -f | -from)        startDate=$(date -d "$2" +"%b %d %Y"); shift ;;
+        -t | -to)          endDate=$(date -d "$2" +"%b %d %Y"); shift ;;
+        -h | -help)        usage ;;
+        *)
+            # unknown option
+            echo "unrecognized argument: $key"
+            usage
+            ;;
+    esac
+    shift
+done
+
+if [[ "x${startDate}" = "x" ]] || [[ "x${endDate}" = "x" ]] ;
+then
+   usage
+fi
+
+if [[ ${doCut} -eq 1 ]] ;
 then
    $vnmrsystem/jre/bin/java -jar $vnmrsystem/java/account.jar -saveDir "${saveDir}" -cut
    $vnmrsystem/jre/bin/java -jar $vnmrsystem/java/account.jar -saveDir "${saveDir}" \

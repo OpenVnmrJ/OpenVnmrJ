@@ -40,7 +40,21 @@ exists('/etc/redhat-release','file'):$e
 if $e then
   write('file',$t,'\nOS:')
   shell('cat /etc/redhat-release >> ' +$t+'; cat'):$e
+else
+  exists('/etc/os-release','file'):$e
+  if $e then
+    write('file',$t,'\nOS:')
+    shell('. /etc/os-release; echo $PRETTY_NAME'):$s
+    write('file',$t,$s)
+  else
+    getbinpath('sw_vers'):$e
+    if $e then
+      write('file',$t,'\nOS:')
+      shell('sw_vers >> ' +$t+'; cat'):$e
+    endif
+  endif
 endif
+
 exists('CP_Version','CP_Readme'):$e,$path
 if ($e) then
   write('file',$t,'')
