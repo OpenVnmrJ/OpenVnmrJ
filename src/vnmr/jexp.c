@@ -90,7 +90,9 @@ extern int isInteractive(char *sName);
 extern int isACmd(char *sName);
 extern int isFileAscii(char *s);
 extern int is_exp_active( int this_expnum );
+#ifdef AUTOMOUNT
 extern int fix_automount_dir(char *input, char *output );
+#endif
 extern void p11_restartCmdHis();
 extern void p11_init_acqfil(char* func, char* orig, char* dest);
 extern int p11_copyFiles(char *orig, char *dest);
@@ -2714,10 +2716,12 @@ if (gettxtflag)
   specIndex = 1;
   if (link(path,newpath))
     {
+#ifdef AUTOMOUNT
       char oldPath[MAXPATH];
 
       strcpy(oldPath,path);
       fix_automount_dir( oldPath, path );
+#endif
       if (symlink(path,newpath))
         { Werrprintf("cannot link the fid file");
           P_treereset(TEMPORARY);

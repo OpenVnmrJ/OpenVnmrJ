@@ -598,7 +598,18 @@ public class RightsList
         }
 
         // If profile does not end in .xml, add it
-        if(!profile.endsWith(".xml"))
+        if(profile == null || profile.length() == 0)
+        {
+            profile = "AllLiquids.xml";
+            if (firstCall) {
+               Messages.postLog("Using default profile ("
+                  + profile  + ") for " + operator
+                  + ".  To assign\n    a different profile, use the Configure->"
+                  + "Operators->Edit operators... panel\n    in the vnmrj adm tool.");
+               firstCall = false;
+            }
+        }
+        else if(!profile.endsWith(".xml"))
             profile = profile + ".xml";
 
         // The area to get these profiles is /vnmr/adm/users/userProfiles

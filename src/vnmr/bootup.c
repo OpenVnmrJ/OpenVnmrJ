@@ -127,7 +127,9 @@ int BigEndian = 1;
 char OperatorName[MAXSTR];
 
 /* Function prototypes */
+#ifdef AUTOMOUNT
 static void set_automount_dir();
+#endif
 static int getbufscale();
 void setGlobalPars();
 int flush( int argc, char *argv[], int retc, char *retv[] );
@@ -652,7 +654,9 @@ void bootup(char *modeptr, int enumber)
     if (Bnmr)
        init_colors();  /* set default colors for graphics and plotters */
 
+#ifdef AUTOMOUNT
     set_automount_dir();
+#endif
 
     /*  Set up plotting parameters */
     /*  If there is trouble setting plottin parameters (ie plotting device
@@ -823,6 +827,7 @@ void setGlobalPars()
     }
 }
 
+#ifdef AUTOMOUNT
 static char *
 next_non_blank(char *tptr )
 {
@@ -1030,6 +1035,7 @@ int fix_automount_dir(char *input, char *output )
 
 	return( 0 );
 }
+#endif
 
 /*---------------------------------------
 |					|

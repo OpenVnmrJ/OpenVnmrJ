@@ -371,7 +371,7 @@ public class WFontColors extends ModelessDialog implements ActionListener
                         if(type !=null)
                         {
                             //newvars=true;
-                            Messages.postDebug("Adding Style Variable: "+symbol+" "+strValue);
+                            // Messages.postDebug("Adding Style Variable: "+symbol+" "+strValue);
                             var=new DVar(symbol,type,strValue);
                             var.obj=obj;
                             m_haVars.put(symbol,var);

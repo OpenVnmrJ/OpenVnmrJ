@@ -361,7 +361,7 @@ unsigned long fidn;
     }
 
     ok2bumpflag = 0;
-    if (P_getstring(CURRENT, "ok2bump", ok2bumpstr, 1, sizeof( ok2bumpstr - 1 )) >= 0 )
+    if (P_getstring(GLOBAL, "ok2bump", ok2bumpstr, 1, sizeof( ok2bumpstr - 1 )) >= 0 )
     {
 	if (ok2bumpstr[ 0 ] == 'Y' || ok2bumpstr[ 0 ] == 'y')
 	  ok2bumpflag = 1;
