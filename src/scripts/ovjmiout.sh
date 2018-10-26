@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 #
 # Copyright (C) 2015  University of Oregon
@@ -31,30 +31,8 @@ ShowPermResults=-100
 Code="code"
 Tarfiles="tarfiles"
  
-#
-# determine if pbzip2 is installed and is newer than v1.0.2
-# pbzip2 allows parallel bzip2 compression using all the processor cores
-#
-usePBZIP2() {
-   usepbzip='n'
-   if [ -x /usr/sbin/pbzip2 -o -x /usr/bin/pbzip2 ] ; then
-      # pbzip2 v1.0.3 and above work with pipes, v1.0.2 does not 
-      revminor=`pbzip2 -V 2>&1 | awk 'BEGIN { FS = "." } /v1/ { print $3 }' | awk 'BEGIN { FS = " " } { print $1 }'`
-      revmajor=`pbzip2 -V 2>&1 | awk 'BEGIN { FS = "." } /v1/ { print $2 }'`
-     if [ $revmajor -ge 0 -a $revminor -gt 2 ] ; then
-        usepbzip='y'
-     fi
-   else
-     usepbzip='n'
-   fi
-   # echo "usepbzip: $usepbzip"
-}
-
 taroption="xfBp"
 cpoption="-rp"
-
-ostype=`uname -s`
-ostype="Linux"
 
 #
 # files needed for loading from cd
@@ -173,18 +151,11 @@ tarring()
 }
 
 #
-# tar bzip2 options tarfilename dir2tar or files2tar
-#  tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles${dir}.tar" "*"
+#  tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles${dir}.tar" "*"
 #
-tarbzip2() {
-   if [ "x$usepbzip" = "xy" ] ; then
-       # echo "tar $1 -cf $2 --use-compress-program pbzip2  $3"
-       # tar $1 -cf $2 --use-compress-program pbzip2  $3    this varient does not owrk on RHEL 6.X so used the second form below  GMB.
-       tar $1 -c $3 | pbzip2 -c >  $2
-   else
-       # echo "tar $1 -cjf $2 $3"
-       tar $1 -cjf $2 $3
-   fi
+tarIt() {
+   # echo "tar $1 -cjf $2 $3"
+   tar $1 -cjf $2 $3
 }
 
 #---------------------------------------------------------------------------
@@ -195,8 +166,8 @@ tarbzip2() {
 # getSize $dest_dir/jre.Linux
 getSize()
 {
-    size_name=`du -sk $1`
-    Size=`echo $size_name | awk 'BEGIN { FS = " " } { print $1 }'`
+    size_name=$(du -sk $1)
+    Size=$(echo $size_name | awk 'BEGIN { FS = " " } { print $1 }')
 }
 
 getSubject()
@@ -320,34 +291,11 @@ makeTOC()
      for i in $flist
      do
         echo "${cat} $Size $Code/$dir/$tfile" >> $dest_dir_code/$i
-        systemname=`basename $i`
-        nnl_echo "  $systemname" | tee -a $log_file
+        systemname=$(basename $i)
+        echo -n "  $systemname" | tee -a $log_file
      done
      rm -rf $dest_dir_code/tmp/*
    )
-}
-
-nnl_echo() {
-    
-    case x$ostype in
-
-	"x")
-            echo "error in echo-no-new-line: ostype not defined"
-            exit 1
-            ;;
-
-        "xSOLARIS")
-            echo "$*\c"
-            ;;
-
-        "xLinux")
-            echo -n "$*"
-            ;;
-
-        *)
-            echo -n "$*"
-            ;;
-    esac
 }
 
 log_this(){
@@ -361,17 +309,13 @@ log_this(){
 
    echo "" | tee -a $log_file
    echo "" | tee -a $log_file
-   nnl_echo "$1" | tee -a $log_file
-}
-
-findcore() {
-   find . -name core -exec rm {} \;
+   echo -n "$1" | tee -a $log_file
 }
 
 create_support_dirs () {
 
    cd $1
-   nnl_echo "$Code " | tee -a $log_file
+   echo -n "$Code " | tee -a $log_file
    if [ ! -d $Code ]
    then
       mkdir -p $Code
@@ -380,7 +324,7 @@ create_support_dirs () {
    dirs=$SubDirs
    for file in $dirs
    do
-      nnl_echo "$file " | tee -a $log_file
+      echo -n "$file " | tee -a $log_file
       if [ ! -d $file ]
       then
          mkdir -p $file
@@ -392,17 +336,17 @@ create_support_dirs () {
    cd $dest_dir_code
    for file in $RmOptFiles
    do
-      nnl_echo "$file " | tee -a $log_file
+      echo -n "$file " | tee -a $log_file
       rm -rf $file
       touch $file
    done
    rm -rf $dest_dir_code/tmp/*
 }                                                                                                 
 drop_vnmrs_ () {
-   vnmrs_list=`ls vnmrs_*`
+   vnmrs_list=$(ls vnmrs_*)
    for file in $vnmrs_list 
    do
-      newfln=`echo $file | cut -c7-`
+      newfln=$(echo $file | cut -c7-)
       rm -f $newfln
       mv $file $newfln
    done
@@ -420,8 +364,6 @@ LoadVnmrJ="y"
 
 Vnmr="VNMR"
 
-# determine if pbipz2 is installed
-usePBZIP2
 interact="no"
 console="vnmrs"
 
@@ -482,17 +424,17 @@ create_support_dirs $dest_dir
 echo "" | tee -a $log_file
 echo `date` | tee -a $log_file
 echo "" | tee -a $log_file
-echo "M a k i n g   V n m r J   C D R O M   I m a g e" | tee -a $log_file
+echo "M a k i n g   O p e n V n m r J   M I   D V D   I m a g e" | tee -a $log_file
 
 echo $VnmrRevId  | tee -a $log_file
-echo `date '+%B %d, %Y'` | tee -a $log_file
+echo $(date '+%B %d, %Y') | tee -a $log_file
 
 
 #============== COMMON FILES =============================================
 echo "" | tee -a $log_file
 log_this  "PART I -- COMMON TAR FILES -- $dest_dir_code/$Tarfiles"
 # Let's copy and tar the Common files and log it.
-vnmrList=`ls $vnmrdir`
+vnmrList=$(ls $vnmrdir)
 
 for dir in  $vnmrList 
 do
@@ -505,7 +447,7 @@ do
       cd $dest_dir_code/tmp
       setperms ./ 755 644 755
       # tar --exclude=.gitignore -cjf $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
+      tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
       getSize $dest_dir_code/tmp
       makeTOC ${dir}.tar $Vnmr  rht/inova.rht	\
                                 rht/mercplus.rht
@@ -521,7 +463,7 @@ done
       cd $dest_dir_code/tmp
       setperms ./ 755 644 755
       # tar --exclude=.gitignore -cjf $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
+      tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
       getSize $dest_dir_code/tmp
       makeTOC ${dir}.tar $Vnmr  rht/inova.rht	\
                                 rht/mercplus.rht
@@ -540,7 +482,7 @@ log_this  "PART IA -- CONSOLE TAR FILES -- $dest_dir_code/$Tarfiles"
       setperms ./ 755 644 755
       getSize $dest_dir_code/tmp
       # tar --exclude=.gitignore -cjf $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
+      tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
       makeTOC ${dir}.tar $Vnmr  rht/inova.rht
       dir="mercury"
       tarring "$dir"
@@ -550,14 +492,14 @@ log_this  "PART IA -- CONSOLE TAR FILES -- $dest_dir_code/$Tarfiles"
       setperms ./ 755 644 755
       getSize $dest_dir_code/tmp
       # tar --exclude=.gitignore -cjf $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
+      tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
       makeTOC ${dir}.tar $Vnmr  rht/mercplus.rht
 fi
 
 #============== STANDARD OPTIONS FILES ===============================
 echo "" | tee -a $log_file
 log_this  "PART II -- STANDARD OPTIONS TAR FILES -- $dest_dir_code/$Tarfiles"
-standardList=`ls $standardsdir`
+standardList=$(ls $standardsdir)
 for dir in $standardList
 do
   case x$dir in
@@ -572,7 +514,7 @@ do
       getSubject ${dir}
       getSize $dest_dir_code/tmp
       # tar --exclude=.gitignore --exclude=SConstruct* -cjf $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore --exclude=SConstruct" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
+      tarIt "--exclude=.gitignore --exclude=SConstruct" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
       makeTOC ${dir}.tar "$Subject"  rht/inova.rht
    ;;
 
@@ -587,7 +529,7 @@ do
       getSubject ${dir}
       getSize $dest_dir_code/tmp
       # tar --exclude=.gitignore --exclude=SConstruct* -cjf $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore --exclude=SConstruct" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
+      tarIt "--exclude=.gitignore --exclude=SConstruct" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
       makeTOC ${dir}.tar "$Subject"  rht/inova.rht	\
                                      rht/mercplus.rht
    ;;
@@ -596,7 +538,7 @@ done
 
 echo "" | tee -a $log_file
 log_this  "PART III -- CONSOLE SPECIFIC STANDARD OPTIONS TAR FILES -- $dest_dir_code/$Tarfiles"
-optList=`ls $optmdir`
+optList=$(ls $optmdir)
 for dir in $optList
 do
       #log_this " Tarring $dir           for : "
@@ -607,11 +549,11 @@ do
       setperms ./ 755 644 755
       getSubject ${dir}
       #tar --exclude=.gitignore -cjf  $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}_merc.tar" "*"
+      tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}_merc.tar" "*"
       makeTOC "${dir}_merc.tar" "$Subject"  rht/mercplus.rht
 done
 
-optList=`ls $optidir`
+optList=$(ls $optidir)
 for dir in $optList
 do
       #log_this " Tarring $dir           for : "
@@ -622,11 +564,11 @@ do
       setperms ./ 755 644 755
       getSubject ${dir}
       #tar --exclude=.gitignore -cjf  $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}_inova.tar" "*"
+      tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}_inova.tar" "*"
       makeTOC "${dir}_inova.tar" "$Subject"  rht/inova.rht
 done
 
-optionsList=`ls $optionsdir`
+optionsList=$(ls $optionsdir)
 for dir in $optionsList
 do
 
@@ -645,6 +587,7 @@ case x$dir in
        cp $gitdir/src/scripts/vjpostinstallaction.sh $dest_dir_code/vjpostinstallaction
        chmod 755 $dest_dir_code/vjpostinstallaction
        cp $gitdir/src/common/user_templates/.??* $dest_dir_code/.
+       cp $gitdir/src/common/user_templates/profile $dest_dir_code/.
        cd $dest_dir
        rm -rf load.nmr
 #      setup nolonger used.
@@ -668,7 +611,7 @@ case x$dir in
       cd $dest_dir_code/tmp
       setperms ./ 755 644 755
       #tar --exclude=.gitignore -cjf  $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
+      tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
       makeTOC ${dir}.tar $Vnmr  rht/inova.rht   \
                                 rht/mercplus.rht
    ;;
@@ -687,7 +630,7 @@ log_this "PART IV -- INSTALLATION FILES -- $dest_dir"
        tarring "$dir"
        cd $OVJ_TOOLS/java
        tar --exclude=.gitignore -cf $dest_dir_code/$Tarfiles/jre.tar jre
-       # tarbzip2 "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/jre.tar" "jre"
+       # tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/jre.tar" "jre"
        cd $dest_dir_code
        tar xpf $Tarfiles/jre.tar
        rm -rf jre.linux
@@ -697,11 +640,6 @@ log_this "PART IV -- INSTALLATION FILES -- $dest_dir"
                              rht/mercplus.rht
        rm $Tarfiles/jre.tar     # exception
 
-   if [ -d $OVJ_TOOLS/linux ]
-   then
-      cp $OVJ_TOOLS/linux/* $dest_dir_code/linux
-      chmod 644 $dest_dir_code/linux/*
-   fi
 #
 #  VJ cdrom only
 #
@@ -719,7 +657,7 @@ log_this "PART IV -- INSTALLATION FILES -- $dest_dir"
      chmod 777 $dest_dir_code/rht
      chmod 666 install
 
-   VnmrRevId=`grep RevID ${gitdir}/src/vnmr/revdate.c | cut -s -d\" -f2`
+   VnmrRevId=$(grep RevID ${gitdir}/src/vnmr/revdate.c | cut -s -d\" -f2)
    RevFileName="OpenVnmrJ"`echo $VnmrRevId | awk '{print $3}'`
    cd $dest_dir_code/../
    echo " Writing Revision File '$RevFileName':"  | tee -a $log_file

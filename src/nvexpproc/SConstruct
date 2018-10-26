@@ -9,8 +9,17 @@ import sys
 sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import buildMethods
 
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
     print "OVJ_TOOLS env not found."
     print "For bash and variants, use export OVJ_TOOLS=<path>"
     print "For csh and variants,  use setenv OVJ_TOOLS <path>"
@@ -18,13 +27,6 @@ if not ovjtools:
 
 #import variables  and environment from SConstruct
 Import("*")
-
-# we need to specify an absolute path so this SConstruct file
-# can be called from any other SConstruct file
-cwd = os.getcwd()
-
-javaPath = os.path.join(ovjtools, 'java', 'bin')
-
 
 ## NDDS include/lib paths
 # get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
@@ -276,3 +278,24 @@ nvexpProcCEnv.AddPostAction(expproc,
                               Action(Copy(os.path.join(vnmrInstallPath,'Expproc'),
                                           os.path.join(cwd, expProcTarget))))
 
+ovjconsole=os.getenv('ovjConsole')
+if not ovjconsole:
+    ovjconsole = "yes"
+if (ovjconsole!="yes"):
+    print "DDR console software not requested."
+    sys.exit(0)
+
+# Copy console software
+fromPath = os.path.join(ovjtools, 'console', 'ddr')
+if os.path.exists(fromPath):
+   fromPath = os.path.join(ovjtools, 'console')
+   acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console')
+   if not os.path.exists(acqPath) :
+      os.makedirs(acqPath)
+   Execute('cd '+fromPath+'; tar -cf - ddr propulse vnmrs | (cd '+acqPath+'; tar -xf -)')
+   Execute('cd '+acqPath+'; chmod 644 */acq/d*/*')
+   Execute('cd '+acqPath+'; chmod 755 */acq/d*/nvSc*')
+   Execute('cd '+acqPath+'; chmod 644 */acq/d*/nvSc*.md5')
+   Execute('cd '+acqPath+'; chmod 755 ddr/acqbin/*')
+else:
+   print "cannot access <OVJ_TOOLS>/console/ddr. Update ovjTools to get compiled console software."

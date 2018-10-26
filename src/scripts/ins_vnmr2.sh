@@ -100,6 +100,10 @@ update_user_group() {
              cp $src_code_dir/.vnmrenv $nmr_home/$nmr_adm
              logmsg "cp $src_code_dir/.vxresource $nmr_home/$nmr_adm"
              cp $src_code_dir/.vxresource $nmr_home/$nmr_adm
+             mkdir "$nmr_home/$nmr_adm/vnmrsys"
+             chmod 755 "$nmr_home/$nmr_adm/vnmrsys"
+             ${chown_cmd} $nmr_adm -R "$nmr_home/$nmr_adm"
+             ${chgrp_cmd} $nmr_group -R "$nmr_home/$nmr_adm"
           else
              # --home-create == -m, --home == -d, --shell == -s, --gid == -g
              # must give the account a temp password 'abcd1234' to get the account active 
@@ -164,6 +168,8 @@ update_user_group() {
              logmsg "User already present, be sure user is configured."
              logmsg "chmod 755 $nmr_home/$nmr_adm"
              chmod 755 "$nmr_home/$nmr_adm"
+             logmsg "/usr/sbin/usermod -g$nmr_group $nmr_adm"
+             /usr/sbin/usermod -g$nmr_group $nmr_adm
              if [ ! -f $nmr_home/$nmr_adm/.login ] ; then
                logmsg "cp $src_code_dir/.login $nmr_home/$nmr_adm"
                cp $src_code_dir/.login $nmr_home/$nmr_adm
@@ -180,6 +186,31 @@ update_user_group() {
                logmsg "cp $src_code_dir/.vxresource $nmr_home/$nmr_adm"
                cp $src_code_dir/.vxresource $nmr_home/$nmr_adm
              fi
+             userShell=`getent passwd $nmr_adm | cut -d: -f7`
+             if [ "x$userShell" = "x/bin/bash" ]; then
+                if [ -f $nmr_home/$nmr_adm/.bash_profile ] ; then
+                   envFound=`grep vnmrenvbash $nmr_home/$nmr_adm/.bash_profile`
+                   if [ -z "$envFound" ] ; then
+                      cat "$src_code_dir/profile" >> $nmr_home/$nmr_adm/.bash_profile
+                   fi
+                elif [ -f $nmr_home/$nmr_adm/.profile ] ; then
+                   envFound=`grep vnmrenvbash $nmr_home/$nmr_adm/.profile`
+                   if [ -z "$envFound" ] ; then
+                      cat "$src_code_dir/profile" >> $nmr_home/$nmr_adm/.profile
+                   fi
+                fi
+                if [ ! -f $nmr_home/$nmr_adm/.vnmrenvbash ] ; then
+                  logmsg "cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm"
+                  cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm
+                fi
+             fi
+             if [ ! -d $nmr_home/$nmr_adm/vnmrsys ] ; then
+               logmsg "mkdir $nmr_home/$nmr_adm/vnmrsys"
+               mkdir "$nmr_home/$nmr_adm/vnmrsys"
+               chmod 755 "$nmr_home/$nmr_adm/vnmrsys"
+             fi
+             ${chown_cmd} $nmr_adm -R "$nmr_home/$nmr_adm"
+             ${chgrp_cmd} $nmr_group -R "$nmr_home/$nmr_adm"
           else
              # sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell /bin/bash --gid $nmr_group --groups admin,cdrom,floppy,audio,video,plugdev,fuse,lpadmin,adm --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $nmr_adm
              # make sure the user belongs the the nmr group
@@ -1149,11 +1180,9 @@ then
    
    if ( test x$load_type = "xmr400.opt" -o x$load_type = "xmr400dd2.opt" -o x$load_type = "xpropulse.opt" )
    then
-       here=`pwd`
-#       cd $dest_dir/acq/download
-#       cp nvScript.ls nvScript
-#       cp nvScript.ls.md5 nvScript.md5
-#       cd $here
+       dir=$dest_dir/acq/download
+       cp -f $dir/nvScript.ls $dir/nvScript
+       cp -f $dir/nvScript.ls.md5 $dir/nvScript.md5
        if [ -f $dest_dir/conpar.400mr ]
        then
           mv $dest_dir/conpar.400mr $dest_dir/conpar

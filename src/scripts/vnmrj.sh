@@ -41,6 +41,8 @@ showmem="no"
 theme="ocean"
 cmd=""
 cmd_on="n"
+dargs=""
+splash=""
 
 for arg in $*; do
     arg02=$(echo $arg | cut -c1-2)
@@ -50,12 +52,16 @@ for arg in $*; do
     elif [ "x$cmd_on" = "xy" ]; then
         cmd=$arg
         cmd_on="n"
+    elif [ "x$splash" = "xy" ]; then
+        splash=-splash:$arg
     elif test ${arg02} = "-D"; then
         dargs="$dargs $arg";
     elif test $arg = "-debug"; then
         debug_on="yy"
     elif test $arg = "-exec"; then
         cmd_on="y"
+    elif test $arg = "-splash"; then
+        splash="y"
     else
         itype=$arg
     fi;
@@ -63,6 +69,9 @@ done
 if [ "x$debug_on" = "xyy" ]; then
     debug_on="y"
     debugargs="traceXML"
+fi
+if [ "x$splash" = "xy" ]; then
+    splash=""
 fi
 # echo dargs=\"$dargs\"
 # echo debugargs=\"$debugargs\"
@@ -186,7 +195,7 @@ if [ x$debug_on = "xy" ]
 then
 
      $vjshell "$javabin" "$vjmem" \
-        -classpath $vjclasspath $dargs \
+        -classpath $vjclasspath $dargs $splash \
         -Ddbhost=$dbhost -Ddbport=$dbport -Dsysdir=$sysdir -Duserdir=$userdir \
         -Duser=$USER -Dfont="Dialog plain 14" -Dlookandfeel=$laf -Dtheme=$theme -DqueueArea=yes \
         -Dcmd="$cmd" \
@@ -201,7 +210,7 @@ then
 else
 
         $vjshell  "$javabin" "$vjmem" \
-          -classpath $vjclasspath $dargs \
+          -classpath $vjclasspath $dargs $splash \
           -Ddbhost=$dbhost -Ddbport=$dbport -Dsysdir=$sysdir -Duserdir=$userdir \
           -Duser=$USER -Dfont="Dialog plain 14" -Dlookandfeel=$laf -Dtheme=$theme -DqueueArea=yes \
           -DcanvasFont="Dialog plain 12" \
