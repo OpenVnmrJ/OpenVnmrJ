@@ -1,62 +1,27 @@
-# Frits Vosman
 #
-# do not change this file, instead copy it up one directory level to 
-# the git-repo directory, it is .gitignored there, so the defaults remain
+# Copyright (C) 2016  Michael Tesch
 #
-# if you want to keep the default, leave it here as is (no need to copy)
+# This file is a part of the OpenVnmrJ project.  You may distribute it
+# under the terms of either the GNU General Public License or the
+# Apache 2.0 License, as specified in the LICENSE file.
 #
-# 'include' file for SConstruct files
-#  Creates a boEnv (build-options Environment)
-#  if needed, inlcude with:
-#      # get options settings
-#      boFile=os.path.join(cwd,os.pardir,...,'buildoptions.py')
-#      if not os.path.exists(boFile):
-#         boFile=os.path.join(cwd,os.pardir,...,'scripts','buildoptions.py')
-#      execfile(boFile)
-#  adjust number of os.pardir for ....  as needed.
-#  Then use to test:
-#      if boEnv['dasho'] == 'y':
-#  etc
-#  Add more values as needed 
+# For more information, see the OpenVnmrJ LICENSE file.
 #
 
-opts = Options()
-boEnv = Environment(options = opts,
-                apt_0='n',
-                AS768='n',
-                BACKPROJ='y',
-                BIR='n',
-                CHEMPACK='n',
-                cryomon_O='n',
-                CSI='n',
-                dasho='n',
-                DOSY='n',
-                DIFFUS='n',
-                FDM='n',
-                FIDDLE='n',
-                GMAP='n',
-                Gxyz='n',
-                IMAGE='n',
-                INOVA='n',
-                jaccount_O='n',
-                JCP='n',
-                JMOL='n',
-                LC='n',
-                managedb_O='n',
-                MR400FH='n',
-                NDDS_VERSION='4.2e',
-                NDDS_LIB_VERSION='i86Linux2.6gcc3.4.3',
-                P11='n',
-                PATENT='n',
-                PFG='n',
-                PROTUNE='n',
-                protune_0='n',
-                probeid_0='n',
-                SENSE='n',
-                SOLIDS='Y',
-                stars='n',
-                VAST='n',
-                vnmrj_O='n',
-		)
+# execfile() on this file to import 'bo' into a SConstruct environment
 
+from __future__ import print_function
+import os
+import sys
+import inspect
 
+# directory of this file
+optdir = os.path.abspath(os.path.dirname(inspect.getfile(inspect.currentframe())))
+
+if optdir not in sys.path:
+    # if this file was execfile()'d from above, need to add our path before 'import bo'
+    #print('xxxx:', os.getcwd())
+    sys.path.insert(0, optdir)
+
+import bo
+from bo import env as boEnv

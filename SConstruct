@@ -1,28 +1,11 @@
 #
-
-import os
-import sys
-import string
-import subprocess
-
-ovjtools=os.getenv('OVJ_TOOLS')
-if not ovjtools:
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
-    sys.exit(1)
-
-if not os.path.exists(ovjtools):
-    print "OVJ_TOOLS path "+ovjtools+" not found."
-    sys.exit(1)
-
-# os.environ['OPENVNMRJ']="true"
-# os.environ['OPENVNMRJ_GSL']="false"
-# os.environ['OPENVNMRJ_GSL']="true"
-
-platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
-print "Platform: ", platform
-
+# Copyright (C) 2015  University of Oregon
+#
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+#
+# For more information, see the LICENSE file.
+#
 
 #
 # top level build file
@@ -44,6 +27,31 @@ print "Platform: ", platform
 # be running and SMP kernel to take advantage of multi-
 # core CPUs.
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+import os
+import sys
+import string
+import subprocess
+
+execfile(os.path.join('scripts', 'buildoptions.py'))
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+if not os.path.exists(ovjtools):
+    print "OVJ_TOOLS path "+ovjtools+" not found."
+    sys.exit(1)
+
+# os.environ['OPENVNMRJ']="true"
+# os.environ['OPENVNMRJ_GSL']="false"
+# os.environ['OPENVNMRJ_GSL']="true"
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+print "Platform: ", platform
 
 SetOption('warn', ['no-duplicate-environment'] + GetOption('warn'))
 
@@ -235,7 +243,7 @@ else:
 
 vnmrPath    = os.path.join(cwd, os.pardir,'vnmr')
 
-if ( 'darwin' not in platform):
+if 'darwin' not in platform:
    for i in acqBuildList:
       SConscript(os.path.join('src',i, 'SConstruct'))
 
