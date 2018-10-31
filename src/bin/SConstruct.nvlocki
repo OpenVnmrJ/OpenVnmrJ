@@ -2,31 +2,23 @@
 
 import os
 import sys
-sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
-import buildMethods
 
-ovjtools=os.getenv('OVJ_TOOLS')
-if not ovjtools:
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
-    sys.exit(1)
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# import build options 'bo'
+## NDDS include/lib paths
+# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
+execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
+ovjtools = bo.OVJ_TOOLS
+import buildMethods
 
 #import variables  and environment from SConstruct
 Import("*")
 
 # targets
 nvLockiTarget = 'nvlocki'
-
-# we need to specify an absolute path so this SConstruct file
-# can be called from any other SConstruct file
-cwd = os.getcwd()
-
-javaPath = os.path.join(ovjtools, 'java', 'bin')
-
-## NDDS include/lib paths
-# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
-execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
 
 print 'nvlocki NDDS_VERSION ' + boEnv['NDDS_VERSION']
 
@@ -123,10 +115,10 @@ nvLockiCEnv = Environment(CCFLAGS    = '-O2 -m32 -g ',
 ## if 'nvlocki4x' in COMMAND_LINE_TARGETS:
 nvLockiCEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
 
-nvLockiCppEnv = nvLockiCEnv.Copy(CC         = 'g++',
-                                 CCFLAGS    = '-O -g -Wno-deprecated -m32',
-                                 CPPDEFINES = ['LINUX'],
-                                 LINKFLAGS  = '-O -m32 -g -Wl,-rpath,/vnmr/lib ')
+nvLockiCppEnv = nvLockiCEnv.Clone(CC         = 'g++',
+                                  CCFLAGS    = '-O -g -Wno-deprecated -m32',
+                                  CPPDEFINES = ['LINUX'],
+                                  LINKFLAGS  = '-O -m32 -g -Wl,-rpath,/vnmr/lib ')
 
 # define Builders
 # nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
@@ -162,7 +154,7 @@ nvlocki = nvLockiCppEnv.Program(target  = nvLockiTarget,
 
 
 # define with absolute path where built files will be copied
-ddrPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console','ddr', 'bin')
+ddrPath = os.path.join(bo.prefix, 'console','ddr', 'bin')
 
 # make sure the path(s) exist
 if not os.path.exists(ddrPath):

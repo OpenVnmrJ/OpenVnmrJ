@@ -6,31 +6,23 @@
 #
 import os
 import sys
-sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
-import buildMethods
 
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
 cwd = os.getcwd()
 
-ovjtools=os.getenv('OVJ_TOOLS')
-if not ovjtools:
-# If not defined, try the default location
-    print "OVJ_TOOLS env not found. Trying default location."
-    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
-
-if not os.path.exists(ovjtools):
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
-    sys.exit(1)
+# import build options 'bo'
+## NDDS include/lib paths
+# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
+execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
+ovjtools = bo.OVJ_TOOLS
+import buildMethods
 
 #import variables  and environment from SConstruct
 Import("*")
 
-## NDDS include/lib paths
-# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
-execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
+javaPath = os.path.join(ovjtools, 'java', 'bin')
+
 
 # define target file names
 # expProcTarget = 'Expproc'

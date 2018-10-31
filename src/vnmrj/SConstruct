@@ -15,7 +15,7 @@ execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
 
 ovjtools = bo.OVJ_TOOLS
 platform = sys.platform
-print sys.platform
+print 'vnmrj/SConstruct sys.platform:', sys.platform
 
 #
 # define function to convert SUA paths to Windows
@@ -42,7 +42,7 @@ fbpath= cwd
 #
 # if interix then replace /dev/fs/C/ with C:/
 #
-if ( 'interix' in platform ):
+if 'interix' in platform:
    # print cwd
    # print cwd[0:8]
    #tcwd = cwd[9:]
@@ -95,7 +95,7 @@ propFileList = string.split("""
 ThirdPartyJarPath = os.path.join(ovjtools, 'JavaPackages')
 ThirdPartyList = ['jmol.jar']
 
-env = Environment()
+#env = Environment()
 #platform = env['PLATFORM']
 
 #dict = env.Dictionary()
@@ -144,10 +144,7 @@ else:
 
 # make sure the path(s) exist
 classesPath = os.path.join(cwd, 'classes')
-if not os.path.exists(classesPath):
-   os.makedirs(classesPath)
-
-
+Execute(Mkdir(classesPath))
 
 # method to copy files to remote directory
 def copyFilesHere(path, fileList):
@@ -227,7 +224,7 @@ print jEnv['ENV']
 
 
 # just a double check of which javac is being used for the build
-if ( 'interix' not in platform):
+if 'interix' not in platform:
   jEnv.Execute('which javac')
 
 # actual VJMol.jar build
@@ -239,7 +236,7 @@ findAction = 'find ' + os.path.join(cwd,'classes') + ' \( -name "*.java" -o -nam
 # print findAction
 vjmolEnv.AddPostAction(javaBuildVJMol,
                        Action(findAction))
-if ( 'interix' not in platform):
+if 'interix' not in platform:
   vjmolBuildObject = vjmolEnv.Jar(JAR      = jarBin,
                                   source   = vjmolPath,
                                   target   = vjmolTarget,
@@ -253,12 +250,15 @@ javaBuildObject = jEnv.Java(JAVACFLAGS = '-J-mx256m',
 
 todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
 manifestFile = os.path.join(cwd, 'Manifest')
-f = open(manifestFile, 'w')
-f.write('Manifest-Version: 1.0 ')
-f.write(todaysDate)
-f.write('\n')
-f.write('Main-Class: vnmr.ui.VNMRFrame\n')
-f.close()
+if not GetOption('no_exec'):
+    f = open(manifestFile, 'w')
+    f.write('Manifest-Version: 1.0 ')
+    f.write(todaysDate)
+    f.write('\n')
+    f.write('Main-Class: vnmr.ui.VNMRFrame\n')
+    f.close()
+else:
+    print 'would create ',manifestFile
 
 #jEnv.AddPostAction(javaBuildObject,
 #                   Action(os.path.join(cwd,'removeJava.sh')))
@@ -267,8 +267,8 @@ f.close()
 jEnv.AddPostAction(javaBuildObject,
                    Action(findAction))
 
-if ( 'interix' in platform):
-  cdCmd = 'cd ' + cwd + ' ; '
+if 'interix' in platform:
+  cdCmd = 'cd ' + cwd + ' && '
   jarCmd = cdCmd + jarBin + ' -cfm vnmrj.jar ' + Sua2WinPath(manifestFile) + ' -C ' + Sua2WinPath(classesPath) + ' .'
   jarBuildObject = jEnv.Command(target = vnmrjTarget,
                                 source = [ classesPath, manifestFile],
@@ -289,8 +289,8 @@ else:
 installPath = os.path.join(bo.prefix, 'vnmr', 'java')
 binPath = os.path.join(bo.prefix, 'vnmr', 'bin')
 # make sure the path(s) exist
-if not os.path.exists(installPath):
-   os.makedirs(installPath)
+Execute(Mkdir(installPath))
+Execute(Mkdir(binPath))
 
 moviePath = os.path.join(ovjtools, 'JMF-2.1.1e', 'src','simplemovie.jar')
 Execute(Copy(os.path.join(installPath,'simplemovie.jar'), moviePath))
@@ -314,7 +314,7 @@ else:
                       Action(Copy(installPath, os.path.join(cwd, vnmrjTarget))))
 
 # finally copy vjmol.jar
-if ( 'interix' not in platform):
+if 'interix' not in platform:
   vjmolEnv.AddPostAction(vjmolBuildObject,
                          Action(Copy(installPath, os.path.join(cwd, vjmolTarget))))
 else:

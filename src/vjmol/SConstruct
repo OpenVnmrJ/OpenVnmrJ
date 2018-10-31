@@ -7,18 +7,14 @@ import sys
 import shutil
 import datetime
 
-ovjtools=os.getenv('OVJ_TOOLS')
-if not ovjtools:
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
-    sys.exit(1)
+# current working directory
+cwd = os.getcwd()
+
+execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
+ovjtools = bo.OVJ_TOOLS
 
 # MAC -> darwin, Linux -> linux2
 platform = sys.platform
-
-# current working directory
-cwd = os.getcwd()
 
 # target
 vjmolTarget = 'vjmol.jar'
@@ -85,7 +81,7 @@ copyFilesHere(ThirdPartyJarPath,ThirdPartyList)
 
 # actions to perform at interpretation time
 for i in jarFileList:
-   Execute('cd classes; ' + jarBin + ' -xf ' + i)
+   Execute('cd classes && ' + jarBin + ' -xf ' + i)
 
 #for i in jarHelpFileList:
 #   Execute('cd classes; ' + jarBin + ' -xf ' + i)
@@ -107,12 +103,13 @@ jEnv.Java(JAVACFLAGS = '-J-mx128m',
 
 todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
 manifestFile = os.path.join(cwd, 'Manifest')
-f = open(manifestFile, 'w')
-f.write('Manifest-Version: 1.0 ')
-f.write(todaysDate)
-f.write('\n')
-f.write('Main-Class: VJMol\n')
-f.close()
+if not GetOption('no_exec'):
+    f = open(manifestFile, 'w')
+    f.write('Manifest-Version: 1.0 ')
+    f.write(todaysDate)
+    f.write('\n')
+    f.write('Main-Class: VJMol\n')
+    f.close()
 
 jarBuildObject = jEnv.Jar(JAR      = jarBin,
                           target   = vjmolTarget,

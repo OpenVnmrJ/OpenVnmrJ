@@ -4,26 +4,19 @@ import os
 import shutil
 import datetime
 import sys
-sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
-import buildMethods
-
-ovjtools=os.getenv('OVJ_TOOLS')
-if not ovjtools:
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
-    sys.exit(1)
-
-# target
-aptTarget = 'apt.jar'
-aptDashOTarget = 'apt.jar.dasho'
-aptProGuardTarget = 'apt.jar.pro'
 
 # current working directory
 cwd = os.getcwd()
 
 # get options environment
 execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
+import buildMethods
+ovjtools = bo.OVJ_TOOLS
+
+# target
+aptTarget = 'apt.jar'
+aptDashOTarget = 'apt.jar.dasho'
+aptProGuardTarget = 'apt.jar.pro'
 
 # paths
 javaPath = os.path.join(ovjtools, 'java', 'bin')
@@ -147,15 +140,16 @@ javaBuildObj = jEnv.Java(JAVACFLAGS = '-J-mx128m',
 todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
 shortDate = datetime.datetime.now().strftime("%Y-%m-%d %T")
 manifestFile = os.path.join(cwd,'Manifest')
-f = open(manifestFile,'w')
-f.write('Manifest-Version: 1.0 ')
-f.write(todaysDate)
-f.write('\n')
-f.write('Main-Class: vnmr.apt.ProbeTune\n')
-f.write('Implementation-Version: ')
-f.write(shortDate)
-f.write('\n')
-f.close()
+if not GetOption('no_exec'):
+    f = open(manifestFile,'w')
+    f.write('Manifest-Version: 1.0 ')
+    f.write(todaysDate)
+    f.write('\n')
+    f.write('Main-Class: vnmr.apt.ProbeTune\n')
+    f.write('Implementation-Version: ')
+    f.write(shortDate)
+    f.write('\n')
+    f.close()
 
 jarBuildObject = jEnv.Jar(JAR      = jarBin,
                           target   = aptTarget,
@@ -164,14 +158,12 @@ jarBuildObject = jEnv.Jar(JAR      = jarBin,
                           JARCHDIR = classesPath)
 
 # define with absolute path where built files will be copied
-installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,'console', 'inova', 'java')
-minstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,'console', 'mercury', 'java')
+installPath = os.path.join(bo.prefix,'console', 'inova', 'java')
+minstallPath = os.path.join(bo.prefix,'console', 'mercury', 'java')
 
 # make sure the path(s) exist
-if not os.path.exists(installPath):
-   os.makedirs(installPath)
-if not os.path.exists(minstallPath):
-   os.makedirs(minstallPath)
+Execute(Mkdir(installPath))
+Execute(Mkdir(minstallPath))
 
 jEnv.AddPostAction(jarBuildObject,
                    Action(Copy(installPath, os.path.join(cwd, aptTarget))))

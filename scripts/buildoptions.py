@@ -1,5 +1,4 @@
 #
-#
 # Copyright (C) 2015  University of Oregon
 #
 # This file is a part of the OpenVnmrJ project.  You may distribute it
@@ -18,7 +17,7 @@
 #
 #  execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
 #
-# this make bo and boEnv available.  It will also let you run scons
+# this makes bo and boEnv available.  It will also let you run scons
 # directly from the directory in question (in this example
 # ../src/vnmrj/) and still inherit the build configuration from the
 # command-line and/or the top-level 'config.py'.  See bo.py for more

@@ -4,12 +4,12 @@ import os
 import sys
 import datetime
 
-ovjtools=os.getenv('OVJ_TOOLS')
-if not ovjtools:
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
-    sys.exit(1)
+# current working directory
+cwd = os.getcwd()
+
+# import build options 'bo'
+execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
+ovjtools = bo.OVJ_TOOLS
 
 # obtain system platform
 platform = sys.platform
@@ -27,9 +27,6 @@ def Sua2WinPath(suaPath):
 
 # target
 VnmrAdminTarget = 'VnmrAdmin.jar'
-
-# current working directory
-cwd = os.getcwd()
 
 # paths
 classPath = cwd
@@ -93,12 +90,13 @@ jEnv.Java(JAVACFLAGS = '-J-mx128m',
 
 todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
 manifestFile = os.path.join(cwd, 'Manifest')
-f = open(manifestFile, 'w')
-f.write('Manifest-Version: 1.0 ')
-f.write(todaysDate)
-f.write('\n')
-f.write('Main-Class: LoadNmr\n')
-f.close()
+if not GetOption('no_exec'):
+    f = open(manifestFile, 'w')
+    f.write('Manifest-Version: 1.0 ')
+    f.write(todaysDate)
+    f.write('\n')
+    f.write('Main-Class: LoadNmr\n')
+    f.close()
 
 if ( 'interix' in platform):
   # cdCmd = 'cd ' + os.path.join(classesPath,os.pardir) +' ; '
@@ -120,7 +118,7 @@ else:
                           JARCHDIR = classesPath)
 
 # define with absolute path where built files will be copied
-installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'options', 'code')
+installPath = os.path.join(bo.prefix, 'options', 'code')
 
 # make sure the path(s) exist
 if not os.path.exists(installPath):

@@ -34,9 +34,6 @@ if 'optinc_once' not in globals():
     cmdline = Variables(os.path.join(bodir, os.path.pardir, 'custom.py'))
 
     # command line variables
-    cmdline.Add(EnumVariable('COLOR', 'Set background color', 'red',
-                             allowed_values=('red', 'green', 'blue'),
-                             map={'navy':'blue'}))
     cmdline.AddVariables(
         BoolVariable('RELEASE', 'Set to build for release', False),
         BoolVariable('apt_0', '', False),
@@ -51,6 +48,7 @@ if 'optinc_once' not in globals():
         BoolVariable('DIFFUS', '', False),
         BoolVariable('FDM', '', False),
         BoolVariable('FIDDLE', '', False),
+        BoolVariable('gsl', 'enable gsl-dependent features', True),
         BoolVariable('GMAP', '', False),
         BoolVariable('Gxyz', '', False),
         BoolVariable('IMAGE', '', False),
@@ -74,6 +72,7 @@ if 'optinc_once' not in globals():
         BoolVariable('stars', '', False),
         BoolVariable('VAST', '', False),
         BoolVariable('vnmrj_O', '', False),
+        BoolVariable('progress', 'display progress info while building', False),
         PathVariable('prefix', 'install prefix (OVJ_BUILDDIR)',
                      os.path.abspath(os.path.join(bodir, os.pardir, os.pardir)),
                      PathVariable.PathIsDir),
@@ -89,26 +88,39 @@ if 'optinc_once' not in globals():
     env = Environment(variables = cmdline)
     Help(cmdline.GenerateHelpText(env))
 
-    # bo.prefix
+    #
+    # bo.prefix - installation prefix, where to build the dvd image
+    #
     global prefix
-    prefix=env['prefix']
+    prefix = env['prefix']
 
     #
     # get and check the OVJ_TOOLS directory
     #
     global OVJ_TOOLS
-    OVJ_TOOLS = env['OVJ_TOOLS']
-    if not OVJ_TOOLS:
+    if 'OVJ_TOOLS' not in env:
         # If not defined, try the default location
-        print "OVJ_TOOLS env not found. Trying default location."
-        OVJ_TOOLS = os.path.abspath(os.path.join(bodir, os.pardir, os.pardir, 'ojvTools'))
+        print "OVJ_TOOLS env not found. Trying default location..."
+        env['OVJ_TOOLS'] = os.path.abspath(os.path.join(bodir, os.pardir, os.pardir, 'ovjTools'))
 
+    OVJ_TOOLS = env['OVJ_TOOLS']
     if not os.path.exists(OVJ_TOOLS):
-        print "OVJ_TOOLS env not found."
+        print "OVJ_TOOLS env not found:",OVJ_TOOLS
         print "For bash and variants, use export OVJ_TOOLS=<path>"
         print "For csh and variants,  use setenv OVJ_TOOLS <path>"
         print "or when running scons: scons OVJ_TOOLS=<path>"
         sys.exit(1)
 
+    #
+    # Setup scons progress indication
+    #
+    if env['progress']:
+        #Progress(['-\r', '\\\r', '|\r', '/\r'], interval=1) # spinny cursor
+        Progress('Evaluating $TARGET\n')
+
+    #
+    # TODO: javaPath, javaBin, jarBin, ...
+    #
+    
     # I'm not sure if this is needed
     optinc_once = True
