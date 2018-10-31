@@ -13,6 +13,16 @@ from SCons.Variables import *
 from SCons.Environment import *
 from SCons.Script import *
 
+#
+# This module reads the top-level config file and command line options
+# passed to 'scons'.  It exports the build environment in three objects:
+#
+#  OVJ_TOOLS  - path to ovjTools/ directory
+#  prefix     - path to install OpenVnmrJ under
+#  env        - SCons environment with the build options
+#               parsed from config.py and the command-line
+#
+
 # bo module
 if 'optinc_once' not in globals():
     print("******************** ONCE ***********************")
@@ -64,7 +74,12 @@ if 'optinc_once' not in globals():
         BoolVariable('stars', '', False),
         BoolVariable('VAST', '', False),
         BoolVariable('vnmrj_O', '', False),
-        PathVariable('prefix', 'install prefix', os.path.abspath(os.path.join(bodir, os.pardir)), False),
+        PathVariable('prefix', 'install prefix (OVJ_BUILDDIR)',
+                     os.path.abspath(os.path.join(bodir, os.pardir, os.pardir)),
+                     PathVariable.PathIsDir),
+        PathVariable('OVJ_TOOLS', 'path to ovjTools (OVJ_TOOLS)',
+                     os.getenv('OVJ_TOOLS'),
+                     PathVariable.PathIsDir),
     )
 
     #
@@ -73,7 +88,27 @@ if 'optinc_once' not in globals():
     global env
     env = Environment(variables = cmdline)
     Help(cmdline.GenerateHelpText(env))
-    optinc_once = True
 
-    global PREFIX
-    PREFIX=env['prefix']
+    # bo.prefix
+    global prefix
+    prefix=env['prefix']
+
+    #
+    # get and check the OVJ_TOOLS directory
+    #
+    global OVJ_TOOLS
+    OVJ_TOOLS = env['OVJ_TOOLS']
+    if not OVJ_TOOLS:
+        # If not defined, try the default location
+        print "OVJ_TOOLS env not found. Trying default location."
+        OVJ_TOOLS = os.path.abspath(os.path.join(bodir, os.pardir, os.pardir, 'ojvTools'))
+
+    if not os.path.exists(OVJ_TOOLS):
+        print "OVJ_TOOLS env not found."
+        print "For bash and variants, use export OVJ_TOOLS=<path>"
+        print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+        print "or when running scons: scons OVJ_TOOLS=<path>"
+        sys.exit(1)
+
+    # I'm not sure if this is needed
+    optinc_once = True

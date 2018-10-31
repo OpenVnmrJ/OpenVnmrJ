@@ -9,18 +9,11 @@ import platform
 
 # current working directory
 cwd = os.getcwd()
-ovjtools=os.getenv('OVJ_TOOLS')
-if not ovjtools:
-# If not defined, try the default location
-    print "OVJ_TOOLS env not found. Trying default location."
-    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
 
-if not os.path.exists(ovjtools):
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
-    sys.exit(1)
+# get options environment
+execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
 
+ovjtools = bo.OVJ_TOOLS
 platform = sys.platform
 print sys.platform
 
@@ -45,10 +38,6 @@ vjmolTarget = 'vjmol.jar'
 
 # file base path , usually cwd except for interix
 fbpath= cwd
-
-
-# get options environment
-execfile(os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py'))
 
 #
 # if interix then replace /dev/fs/C/ with C:/
@@ -179,7 +168,7 @@ for i in jarHelpFileList:
 Execute('rm -rf ' + os.path.join(classesPath, 'META-INF'))
 
 # copy properties files to classes/properties directory
-Execute('rm -rf ' + os.path.join(classesPath, 'vnmr') + ' && ' + \
+Execute('rm -rf ' + os.path.join(classesPath, 'vnmr') + ' && ' +
         'cp -r ' + os.path.join(cwd, 'src', 'vnmr') + ' ' + classesPath)
 
 # define vjmol environment
@@ -297,8 +286,8 @@ else:
                             JARCHDIR = classesPath)
 
 # define with absolute path where built files will be copied
-installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
-binPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+installPath = os.path.join(bo.prefix, 'vnmr', 'java')
+binPath = os.path.join(bo.prefix, 'vnmr', 'bin')
 # make sure the path(s) exist
 if not os.path.exists(installPath):
    os.makedirs(installPath)
