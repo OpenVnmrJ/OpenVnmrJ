@@ -43,46 +43,6 @@ then
 fi
 echo "Updating OpenVnmrJ from $prev"
 
-if [ -f $prev/psg/psgmain.cpp ]
-then
-  if [ -d $prev/acq/download -a ! -d $ovj/acq/download ]
-  then
-    echo "Collecting console files"
-    cd $prev/acq
-    newdir=$ovj/acq
-    zip -ryq $newdir/b.zip download download3x
-    cd $newdir
-    unzip -qn b.zip
-    rm b.zip
-    cd $prev/acqbin
-    newdir=$ovj/acqbin
-    zip -ryq $newdir/b.zip testconf* consoledownload* flashia*
-    cd $newdir
-    unzip -qn b.zip
-    rm b.zip
-  fi
-else
-  if [ -d $prev/acq/vxBoot -a ! -d $ovj/acq/vxBoot ]
-  then
-    echo "Collecting console files"
-    cd $prev/acq
-    newdir=$ovj/acq
-    zip -ryq $newdir/b.zip tms320dsp.ram vxB*
-    cd $newdir
-    unzip -qn b.zip
-    rm b.zip
-  fi
-fi
-if [ -d $prev/lib ]
-then
-  echo "Collecting libraries"
-  cd $prev/lib
-  newdir=$ovj/lib
-  zip -ryq $newdir/b.zip *
-  cd $newdir
-  unzip -qn b.zip
-  rm b.zip
-fi
 if [ -d $prev/bin ]
 then
   echo "Collecting misc programs"

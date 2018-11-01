@@ -14,8 +14,6 @@ import myShutilsym
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
 cwd = os.getcwd() 
-
-
 # dirList = [ 'vxBoot.small',
 #             'vxBoot.big',
 #             'vxBootPPC.small',
@@ -64,10 +62,32 @@ if not os.path.exists(consolePath):
    os.makedirs(consolePath)
 Execute(Copy(os.path.join(consolePath,'ExperimentSelector.xml'),os.path.join(cwd,'biopack','ExperimentSelector.xml')))
 
-# Make a copy for Mercury
-#consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
-#                        'console', 'mercury','acq')
-#if not os.path.exists(consolePath):
-#   os.makedirs(consolePath)
-#Execute(Copy(os.path.join(consolePath,'tms320dsp.ram'),os.path.join(cwd,'tms320dsp.ram')))
+ovjconsole=os.getenv('ovjConsole')
+if not ovjconsole:
+    ovjconsole = "yes"
+if (ovjconsole!="yes"):
+    print "Inova console software not requested."
+    sys.exit(0)
 
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if os.path.exists(ovjtools):
+   fromPath = os.path.join(ovjtools, 'console', 'inova')
+   if os.path.exists(fromPath):
+      acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','acq')
+      if not os.path.exists(acqPath) :
+         os.makedirs(acqPath)
+      Execute('cd '+fromPath+'; tar -cf - * | (cd '+acqPath+'; tar -xf -)')
+      Execute('cd '+acqPath+'; ln -s vxBoot.small vxBoot')
+      Execute('cd '+acqPath+'; ln -s vxBootPPC.small vxBootPPC')
+# Make a copy for Mercury
+      acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','mercury','acq')
+      if not os.path.exists(acqPath) :
+         os.makedirs(acqPath)
+      Execute(Copy(os.path.join(acqPath,'tms320dsp.ram'),os.path.join(fromPath,'tms320dsp.ram')))
+   else:
+      print "cannot access <OVJ_TOOLS>/console/inova. Update ovjTools to get compiled console software."

@@ -1,7 +1,21 @@
 import os
+import sys
 
 #get current working directory
 cwd = os.getcwd()
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
 
 # get the envirionment
 env = Environment()
@@ -10,6 +24,7 @@ env = Environment()
 fileList = ['bootr',
 		      'checkspace',
 		      'chksystempkgs',
+		      'installpkgs',
 		      'setupbashenv',
 		      'dbsetup',
 		      'kill_insvnmr',
@@ -19,7 +34,9 @@ fileList = ['bootr',
 #		      'setup',     put remounting within vnmrsetup directly
 
 # used by xmessage in vnmrsetup.sh aka load.nmr
-textList = [ 'rpmInstruction.txt' ]
+textList = [ 'rpmInstruction.txt',
+             'finalInstructions.txt',
+           ]
 
 optionsCodePath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','code')
 if not os.path.exists(optionsCodePath) :
@@ -35,4 +52,38 @@ for i in textList:
    Execute(Copy(dest,i))
    Execute(Chmod(dest,0644))
 
+# RPMS not available from standard yum repos.
+# sharutils is available for CentOS 7 but not CentOS 6.
+rpmList = [
+            'gftp-2.0.19-4.el6.rf.x86_64.rpm',
+            'numlockx-1.2-6.el7.nux.x86_64.rpm',
+            'sharutils-4.7-6.1.el6.x86_64.rpm',
+          ]
+
+rpmPath = os.path.join(optionsCodePath,'linux')
+if not os.path.exists(rpmPath) :
+    os.makedirs(rpmPath)
+
+srcPath = os.path.join(ovjtools,'linux')
+
+for i in rpmList:
+   dest = os.path.join(rpmPath,i)
+   src = os.path.join(srcPath,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
+
+# rarpd is only needed for acquisition systems.
+# It will be installed, if needed, by setacq
+acqList = [ 'rarpd-ss981107-22.2.2.x86_64.rpm',
+          ]
+
+acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'vnmr','adm','acq')
+if not os.path.exists(acqPath) :
+    os.makedirs(acqPath)
+
+for i in acqList:
+   dest = os.path.join(acqPath,i)
+   src = os.path.join(srcPath,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0644))
 

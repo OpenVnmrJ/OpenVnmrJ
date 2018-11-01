@@ -13,7 +13,6 @@ import myShutil # for better copytree()
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
 cwd = os.getcwd() 
-
 #dirList = [ 'vxBoot.small',
 #            'vxBoot.big']
 
@@ -64,3 +63,27 @@ consolePath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
 if not os.path.exists(consolePath):
    os.makedirs(consolePath)
 os.system('cp  global '+os.path.join(consolePath,'global'))
+
+ovjconsole=os.getenv('ovjConsole')
+if not ovjconsole:
+    ovjconsole = "yes"
+if (ovjconsole!="yes"):
+    print "Mercury console software not requested."
+    sys.exit(0)
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if os.path.exists(ovjtools):
+   fromPath = os.path.join(ovjtools, 'console', 'mercury')
+   if os.path.exists(fromPath):
+      acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','mercury','acq')
+      if not os.path.exists(acqPath) :
+         os.makedirs(acqPath)
+      Execute('cd '+fromPath+'; tar -cf - * | (cd '+acqPath+'; tar -xf -)')
+      Execute('cd '+acqPath+'; ln -s vxBoot.small vxBoot')
+   else:
+      print "cannot access <OVJ_TOOLS>/console/mercury. Update ovjTools to get compiled console software."
