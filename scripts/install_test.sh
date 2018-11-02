@@ -133,6 +133,7 @@ while [ $# -gt 0 ]; do
         -O)                     OVJ_INS_OPTS=()             ;;
         -c)                     OVJ_CONSOLE="$2"; shift      ;;
         -p)                     OVJ_PASSWD="$2"; shift      ;;
+        --nolink)               OVJ_SETVNMRLINK=no          ;;
         -f|--force)             FORCE=yes                   ;;
         -s)                     OVJ_SUPERCLEAN=yes          ;;
         -d)                     OVJ_SYSTEM=Datastation      ;;
