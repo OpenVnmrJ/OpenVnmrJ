@@ -39,6 +39,7 @@ numcpus() {
 : ${OVJ_DO_CHECKOUT=no}
 : ${OVJ_DO_BUILD=no}
 : ${OVJ_DO_PACKAGE=no}
+: ${OVJ_CODESIGN="3rd Party Mac Developer Application:"}
 : ${OVJ_BUILDDIR=${ovjBuildDir}}
 : ${OVJ_DEVELOPER=OpenVnmrJ}
 : ${OVJ_GITBRANCH=master}
@@ -77,6 +78,7 @@ where [options...] are:
   --ddr yes|no              - enable Direct-Drive (VnmrS/DD2/ProPulse) DVD build
                               [${OVJ_PACK_DDR}]
   --inova yes|no            - enable Mercury/Inova DVD build [${OVJ_PACK_MINOVA}]
+  --codesign id|none        - set code signing identity [${OVJ_CODESIGN}]
   -v|--verbose              - be more verbose (can add multiple times)
   -q|--quiet                - be more quiet   (can add multiple times)
   -h|--help                 - print this message and exit
@@ -107,6 +109,7 @@ while [ $# -gt 0 ]; do
         -s)                     OVJ_SCONSFLAGS="$2"; shift    ;;
         --ddr)                  OVJ_PACK_DDR="$2"; shift      ;;
         --inova)                OVJ_PACK_MINOVA="$2"; shift   ;;
+        --codesign)             OVJ_CODESIGN="$2"; shift      ;;
         -h|--help)              usage                         ;;
         -v|--verbose)           VERBOSE=$(( VERBOSE + 1 )) ;;
         -q|--quiet)             VERBOSE=$(( VERBOSE - 1 )) ;;
@@ -248,12 +251,11 @@ do_package () {
     # copy and run the packing script
     log_cmd mkdir -p "${OVJ_BUILDDIR}/bin/"
     log_cmd cd "${OVJ_BUILDDIR}/bin/"
-    log_cmd cp "${PACK_SCRIPT_SRC}" ./
     #log_cmd make ${PACK_SCRIPT} # what does this do?
 
     # export vars used by the ovj???out.sh ($PACK_SCRIPT) scripts
     export workspacedir dvdBuildName1 dvdBuildName2 ovjAppName OVJ_TOOLS
-    cmdspin "./${PACK_SCRIPT}" || return $?
+    cmdspin "${PACK_SCRIPT_SRC}/${PACK_SCRIPT}" || return $?
 
     # make a second copy? make an iso? todo...
     #dvdCopyName1=OVJ_$shortDate

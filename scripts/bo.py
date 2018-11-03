@@ -33,6 +33,14 @@ if 'optinc_once' not in globals():
     # load the customization file
     cmdline = Variables(os.path.join(bodir, os.path.pardir, 'custom.py'))
 
+    # check if libgsl is available (should maybe check for header files instead)
+    if (os.path.exists(os.path.join('/usr','lib','libgsl.so')) or
+        os.path.exists(os.path.join('/usr','lib64','libgsl.so')) or
+        os.path.exists(os.path.join('/usr','lib','libgsl.a')) ):
+        gsl_default = True
+    else:
+        gsl_default = False
+
     # command line variables
     cmdline.AddVariables(
         BoolVariable('RELEASE', 'Set to build for release', False),
@@ -48,7 +56,7 @@ if 'optinc_once' not in globals():
         BoolVariable('DIFFUS', '', False),
         BoolVariable('FDM', '', False),
         BoolVariable('FIDDLE', '', False),
-        BoolVariable('gsl', 'enable gsl-dependent features', True),
+        BoolVariable('gsl', 'enable gsl-dependent features', gsl_default),
         BoolVariable('GMAP', '', False),
         BoolVariable('Gxyz', '', False),
         BoolVariable('IMAGE', '', False),
