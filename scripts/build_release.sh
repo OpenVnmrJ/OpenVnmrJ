@@ -251,11 +251,10 @@ do_package () {
     # copy and run the packing script
     log_cmd mkdir -p "${OVJ_BUILDDIR}/bin/"
     log_cmd cd "${OVJ_BUILDDIR}/bin/"
-    #log_cmd make ${PACK_SCRIPT} # what does this do?
 
     # export vars used by the ovj???out.sh ($PACK_SCRIPT) scripts
     export workspacedir dvdBuildName1 dvdBuildName2 ovjAppName OVJ_TOOLS
-    cmdspin "${PACK_SCRIPT_SRC}/${PACK_SCRIPT}" || return $?
+    cmdspin "${PACK_SCRIPT_SRC}" || return $?
 
     # make a second copy? make an iso? todo...
     #dvdCopyName1=OVJ_$shortDate
