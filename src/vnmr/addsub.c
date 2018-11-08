@@ -68,6 +68,7 @@ static int	addsub_complex,
 		range,
                 replaceFid,
 		trace;			/* trace number in addsub exp */
+static int      old_blocks, fidhead_status;
 static int	interactive_addi = FALSE;
 static float    *addi_cur_imag;
 static double	multiplier;
@@ -123,7 +124,7 @@ static int add_new_file(dpointers *header, int index, int stat, int mode)
      return(ERROR);
   }
 
-  header->head->index   = index;
+  header->head->index   = index+1;
   header->head->scale   = 0;
   header->head->ctcount = 0;
 
@@ -183,11 +184,7 @@ static int get_addsub_data(int newexp, dpointers *new_file, char *exppath,
 
   D_trash(D_USERFILE); 
   strcpy(path, exppath);
-#ifdef UNIX
   strcat(path, "/datdir/phasefile");
-#else 
-  vms_fname_cat(path, "[.datdir]phasefile");
-#endif 
 
   if (newexp)
   {
@@ -287,17 +284,15 @@ static int get_addsub_data(int newexp, dpointers *new_file, char *exppath,
 
      file_id = (newbuf || fid) ? D_USERFILE : D_DATAFILE;
      strcpy(path, exppath);
-#ifdef UNIX
      strcat(path, (fid) ? "/acqfil/fid" : "/datdir/data");
-#else 
-     vms_fname_cat(path, (fid) ? "[.acqfil]fid" : "[.datdir]data");
-#endif 
 
      if ( (r = D_open(file_id, path, &datahead)) )
      {
         Werrprintf("cannot open addsub exp data file: error = %d", r);
         return(ERROR);
      }
+     old_blocks = datahead.nblocks;
+     fidhead_status = datahead.status;
      if ( ! range && (datahead.np != fn) )
      {
         Werrprintf("fn mismatch between current(%d) and addsub(%d) data",
@@ -312,6 +307,7 @@ static int get_addsub_data(int newexp, dpointers *new_file, char *exppath,
      {
         trace = datahead.nblocks;
         datahead.nblocks += 1;
+
         D_updatehead(file_id, &datahead);
         add_new_file(new_file, trace, (datahead.status & 0x3f), mode1);
 
@@ -753,6 +749,194 @@ int save_data(char *exppath, float *spec1, double mult1, float *spec2,
   return(COMPLETE);
 }
 
+static void updateBlocks(int blocks, int status, int trace)
+{
+     int i;
+     int ival;
+     dpointers fid_block;
+     for (i=0; i< blocks; i++)
+     {
+        if (i != trace)
+        {
+           ival = D_getbuf( D_USERFILE, 1, i, &fid_block );
+           fid_block.head->status = status;
+           ival = D_markupdated( D_USERFILE, i );
+           ival = D_release( D_USERFILE, i );
+        }
+     }
+}
+
+static int keepFids(char *exppath, int lastFid, char *msg)
+{
+   char	path[MAXPATH];
+   int	r;
+   off_t length = 0;
+   int updateFhead = 0;
+
+   D_trash(D_USERFILE); 
+   strcpy(path, exppath);
+   strcat(path,"/acqfil/fid");
+
+   if (make_copy_fidfile("clradd", exppath, msg))
+      return(-1);
+   if ( (r=D_open(D_USERFILE,path,&datahead)) )
+   {
+       sprintf(msg,"cannot open addsub fid file: %s",D_geterror(r));
+       return(-1);
+   }
+   if (lastFid > datahead.nblocks)
+      lastFid = datahead.nblocks;
+   if (datahead.ebytes == 4)
+   {
+      int i;
+      int ival;
+      dpointers fid_block;
+      int np;
+      
+      if ( (datahead.status & (S_DATA|S_FLOAT|S_COMPLEX)) == (S_DATA|S_FLOAT|S_COMPLEX) )
+      {
+         for (i=0; i< lastFid; i++)
+         {
+            ival = D_getbuf( D_USERFILE, 1, i, &fid_block );
+            if ( fid_block.head->scale || (fid_block.head->ctcount > 1) )
+            {
+               int shift;
+               float rmult = 1.0;
+               float *ptr;
+
+               shift = 1 << abs(fid_block.head->scale);
+               if (fid_block.head->scale < 0)
+                  rmult = 1.0/(float)(shift);
+               else
+                  rmult = (float) shift;
+               rmult /= (float)(fid_block.head->ctcount);
+               fid_block.head->ctcount = 1;
+               fid_block.head->scale = 0;
+               np = datahead.np;
+               ptr = (float *)fid_block.data;
+               while (np--)
+                  *ptr++ *= rmult;
+            
+               ival = D_markupdated( D_USERFILE, i );
+            }
+            ival = D_release( D_USERFILE, i );
+         }
+      }
+      else
+      {
+         datahead.status = (S_DATA|S_FLOAT|S_COMPLEX);
+         updateFhead = 1;
+         for (i=0; i< lastFid; i++)
+         {
+            int shift;
+            float rmult = 1.0;
+            float *ptr;
+            int *iptr;
+
+            ival = D_getbuf( D_USERFILE, 1, i, &fid_block );
+            shift = 1 << abs(fid_block.head->scale);
+            if (fid_block.head->scale < 0)
+               rmult = 1.0/(float)(shift);
+            else
+               rmult = (float) shift;
+            rmult /= (float)(fid_block.head->ctcount);
+            fid_block.head->ctcount = 1;
+            fid_block.head->scale = 0;
+            np = datahead.np;
+            ptr = (float *)fid_block.data;
+            iptr = (int *)fid_block.data;
+            while (np--)
+               *ptr++ = (float) (*iptr++) * rmult;
+            ival = D_markupdated( D_USERFILE, i );
+            ival = D_release( D_USERFILE, i );
+         }
+      }
+   }
+   else
+   {
+      char tmppath[MAXPATH];
+      dfilehead new_datahead;
+      dpointers new_block;
+      dpointers fid_block;
+      int r;
+      int i;
+      int np;
+
+      strcpy(tmppath,path);
+      strcat(tmppath,"tmp");
+      new_datahead.nblocks = lastFid;
+      new_datahead.ntraces = datahead.ntraces;
+      new_datahead.np      = datahead.np;
+      new_datahead.vers_id = datahead.vers_id;
+      new_datahead.nbheaders = 1;
+      new_datahead.ebytes  = 4;
+      new_datahead.tbytes  = new_datahead.ebytes * new_datahead.np;
+      new_datahead.bbytes  = new_datahead.tbytes * new_datahead.ntraces +
+                           sizeof(dblockhead);
+      new_datahead.status  = S_DATA|S_FLOAT|S_COMPLEX;
+      D_trash(D_PHASFILE);
+
+      if ( (r=D_newhead(D_PHASFILE,tmppath,&new_datahead)) )
+      { D_error(r); return(1);
+      }
+      for (i=0; i< lastFid; i++)
+      {
+         int shift;
+         float rmult = 1.0;
+         float *ptr;
+         short *iptr;
+
+         r = D_getbuf( D_USERFILE, 1, i, &fid_block );
+         shift = 1 << abs(fid_block.head->scale);
+         if (fid_block.head->scale < 0)
+            rmult = 1.0/(float)(shift);
+         else
+            rmult = (float) shift;
+         rmult /= (float)(fid_block.head->ctcount);
+         np = datahead.np;
+         iptr = (short *)fid_block.data;
+         if ( (r=D_allocbuf(D_PHASFILE,i,&new_block)) )
+         { D_error(r); return(1);
+         }
+         new_block.head->index  = i+1;
+         new_block.head->scale  = 0;
+         new_block.head->status = new_datahead.status;
+         new_block.head->mode   = 0;
+         new_block.head->rpval  = 0;
+         new_block.head->lpval  = 0;
+         new_block.head->lvl    = 0;
+         new_block.head->tlt    = 0;
+         new_block.head->ctcount= 1;
+         ptr = (float *)new_block.data;
+         while (np--)
+            *ptr++ = (float) (*iptr++) * rmult;
+         r = D_markupdated( D_PHASFILE, i );
+         r = D_release( D_PHASFILE, i );
+         r = D_release( D_USERFILE, i );
+      }
+      D_trash(D_USERFILE);
+      D_close(D_PHASFILE);
+      unlink(path);
+      rename(tmppath,path);
+      lastFid = datahead.nblocks;
+      length = 0;
+   }
+   if ( (lastFid < datahead.nblocks) || updateFhead )
+   {
+      datahead.nblocks = lastFid;
+      r = D_updatehead(D_USERFILE, &datahead);
+      length = datahead.nblocks * datahead.bbytes + sizeof(dfilehead);
+      if ( D_fidversion() == 0)
+      {
+         updateBlocks(datahead.nblocks, datahead.status, lastFid);
+      }
+   }
+   D_close(D_USERFILE);
+   if (length > 0)
+      truncate(path,length);
+   return(0);
+
+}
 
 /*---------------------------------------
 |					|
@@ -760,7 +944,7 @@ int save_data(char *exppath, float *spec1, double mult1, float *spec2,
 |					|
 +--------------------------------------*/
 static int addfid(int argc, char *argv[], int retc, char *retv[],
-                  char *exppath, int newexp)
+                  char *exppath, int newexp, int inCurexp)
 {
   int		r,
 		np,
@@ -801,6 +985,10 @@ static int addfid(int argc, char *argv[], int retc, char *retv[],
   {
      return(ERROR);
   }
+  if (inCurexp && ( D_fidversion() == 0) )
+  {
+     updateBlocks(old_blocks, fidhead_status, trace);
+  }
   newptr = (float *)new_fid.data;
   if (newbuf)
   {
@@ -815,13 +1003,115 @@ static int addfid(int argc, char *argv[], int retc, char *retv[],
      multiplier *= -1.0;
   if (newbuf || replaceFid)
   {
-     while (np--)
-        *newptr++ = *fidptr++ * multiplier;
+     new_fid.head->ctcount = 1;
+     new_fid.head->scale = 0;
+     if ( (new_fid.head->status & (S_DATA|S_FLOAT|S_COMPLEX) ) ==
+           (S_DATA|S_FLOAT|S_COMPLEX) )
+     {
+        while (np--)
+           *newptr++ = *fidptr++ * multiplier;
+     }
+     else
+     {
+        if (datahead.ebytes == 2)
+        {
+           short *inp16;
+           inp16 = (short *) new_fid.data;
+           while (np--)
+              *inp16++ = (short) (*fidptr++ * multiplier);
+        }
+        else
+        {
+           int *inp32;
+           inp32 = (int *) new_fid.data;
+           while (np--)
+              *inp32++ = (int) (*fidptr++ * multiplier);
+        }
+     }
   }
   else
   {
-     while (np--)
-        *newptr++ += *fidptr++ * multiplier;
+     int shift;
+     float rmult = 1.0;
+     if ( new_fid.head->scale || (new_fid.head->ctcount > 1) )
+     {
+        shift = 1 << abs(new_fid.head->scale);
+        if (new_fid.head->scale < 0)
+           rmult = 1.0/(float)(shift);
+        else
+           rmult = (float) shift;
+        rmult /= (float)(new_fid.head->ctcount);
+        new_fid.head->ctcount = 1;
+        new_fid.head->scale = 0;
+        shift = 1;
+     }
+     else
+     {
+        shift = 0;
+     }
+     if ( (new_fid.head->status & (S_DATA|S_FLOAT|S_COMPLEX) ) ==
+           (S_DATA|S_FLOAT|S_COMPLEX) )
+     {
+        if ( shift )
+        {
+           float *ptr;
+           int tmpNp;
+
+           ptr = newptr;
+           tmpNp = np;
+           while (tmpNp--)
+              *ptr++ *= rmult;
+        }
+        while (np--)
+           *newptr++ += *fidptr++ * multiplier;
+     }
+     else
+     {
+        if (datahead.ebytes == 2)
+        {
+           short *inp16;
+           inp16 = (short *) new_fid.data;
+           if ( shift )
+           {
+              short *ptr;
+              int tmpNp;
+              float tmp;
+
+              ptr = inp16;
+              tmpNp = np;
+              while (tmpNp--)
+              {
+                 tmp = (float) *ptr;
+                 tmp *= rmult;
+                 *ptr++ = (short) tmp;
+              }
+           }
+           while (np--)
+              *inp16++ += (short) (*fidptr++ * multiplier);
+        }
+        else
+        {
+           int *inp32;
+           inp32 = (int *) new_fid.data;
+           if ( shift )
+           {
+              int *ptr;
+              int tmpNp;
+              float tmp;
+
+              ptr = inp32;
+              tmpNp = np;
+              while (tmpNp--)
+              {
+                 tmp = (float) *ptr;
+                 tmp *= rmult;
+                 *ptr++ = (int) tmp;
+              }
+           }
+           while (np--)
+              *inp32++ += (int) (*fidptr++ * multiplier);
+        }
+     }
   }
 
   if ( (r = D_markupdated(D_USERFILE, trace)) )
@@ -834,6 +1124,7 @@ static int addfid(int argc, char *argv[], int retc, char *retv[],
   }
 
   D_close(D_USERFILE);
+  D_trash(D_PHASFILE);
   return(COMPLETE);
 }
 
@@ -1678,7 +1969,50 @@ int addsub(int argc, char *argv[], int retc, char *retv[])
 
   if (clradd)
   {
-     if (!newexp && !inCurexp)
+     if (argc > 1)
+     {
+        int res;
+	char msg[MAXPATH];
+
+        trace = 0;
+        if ( (argc == 3) && !strcmp(argv[1],"keep") )
+        {
+           if (isReal(argv[2]))
+              trace = (int) stringReal(argv[2]);
+        }
+        res = -1;
+        strcpy(msg,"");
+        if ( ! newexp && (trace > 0) )
+           res = keepFids(exppath,trace,msg);
+        if (res == 0)
+        {
+           if (retc)
+           {
+              retv[ 0 ] = intString( 1 );
+              if (retc > 1)
+              {
+                 sprintf(msg,"clradd kept %d fids",trace);
+                 retv[ 1 ] = newString( msg );
+              }
+           }
+        }
+        else
+        {
+           if (trace <= 0)
+              strcpy(msg,"clradd keep option requires an index greater than 0\n");
+           else
+              sprintf(msg,"cannot delete experiment %d, does not exist", addsubExp);
+           if (retc)
+           {
+              retv[ 0 ] = intString( 0 );
+              if (retc > 1)
+              {
+                 retv[ 1 ] = newString( msg );
+              }
+           }
+        }
+     }
+     else if (!newexp && !inCurexp)
      {
         char *argv2[3];
         char expnum[32];
@@ -1713,7 +2047,11 @@ int addsub(int argc, char *argv[], int retc, char *retv[])
   }
   else if (fidadd)
   { /* add the current fid into the addsub buffer */
-     addfid(argc, argv, retc, retv, exppath, newexp);
+     if ( ! newexp )
+     {
+        make_copy_fidfile(argv[0], exppath, NULL);
+     }
+     addfid(argc, argv, retc, retv, exppath, newexp, inCurexp);
   }
   else if (specadd)
   { /* add the current spectrum into the addsub buffer */

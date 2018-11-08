@@ -1,7 +1,12 @@
 
 *******************************************************************************
 clradd<:$stat,$message>	-	clear the add/subtract experiment
+clradd<('keep',numFid)><:$stat,$message> - clear the add/subtract experiment
+                                           but keeping the specified number
+                                           of FIDs
+
 jaddsub -       join the add/subtract experiment
+
 add<(multiplier <,'new'>)>  - add the current FID to the add/subtract experiment
 sub<(multiplier <,'new'>)>  - subtract the current FID from the add/subtract
                               experiment
@@ -23,6 +28,22 @@ number is defined by the global addsubexp parameter. The clradd program uses
 the delexp command to delete the add-subtract experiment. It takes the same
 return values as the delexp command. These can be used to suppress messages.
 See the manual for delexp to a description of the return values.
+
+clradd('keep',numFids) will remove FIDs from the addsub experiment, keeping
+the number specified. For example, if the addsub experiment was an arrayed
+data set with 10 FIDs, clradd('keep',1) would delete FIDs 2-10. If, for example,
+you wanted to keep FIDs 4 and 6 from the original 10, the following would
+be required
+  select(4)
+  add('newtrace',1)   // this replaces FID 1 with FID 4
+  select(6)
+  add('newtrace',2)   // this replaces FID 2 with FID 6
+  clradd('keep',2)    // this keeps the first 2 FIDs, deleting 3-10
+clradd('keep',numFIDs):$stat,$msg will set $stat=1 if it succeeds, 0 if it fails.
+The $msg will contain the message.  The 'keep' option has the side-effect
+of scaling the FID data and converting it to floating point. This removes the
+need to do the scaling and conversion every time an add/sub operation is done.
+The command clradd('keep',arraydim) will convert the entire FID data set.
 
 Note that the addsubexp parameter can be the same as the currently joined
 experiment. In this case, the clradd command cannot be used since that
@@ -74,10 +95,14 @@ it to the sixth FID in the add/subtract experiment.  When using the 'trace'
 argument, the index must be between 1 and one greater than the current
 number of FIDs in the add/subtract experiment. If the 'trace' index is
 one greater than the current number of FIDs in the add/subtract experiment,
-it is equivalent to using the 'add' argument.
+it is equivalent to using the 'new' argument.
 
 The 'newtrace' argument is same same as the 'trace' argument except that
 the data in the current trace is replaced with the new data.
+
+If the target FID is a link to another file, which happens if the data are
+returned to an experiment with the rt command, the links will be removed so
+that the previously linked FID file is not modified.
 
 
 Examples

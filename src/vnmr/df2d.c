@@ -481,8 +481,8 @@ int getfid(int curfid, float *outp, ftparInfo *ftpar, dfilehead *fidhead, int *l
          {
             if (inblock.head->status != 0)
             {
-               Wscrprintf("status of FID %d incorrect, status = %d\n",
-                     curfid + 1, inblock.head->status);
+               Wscrprintf("status of FID %d incorrect, status = %d (0x%x)\n",
+                     curfid + 1, inblock.head->status, inblock.head->status);
             }
  
             zerofill(outp, ftpar->fn0);

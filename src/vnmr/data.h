@@ -790,6 +790,7 @@ extern int D_foldt(int fileindex, float *datapntr, int seekmode,
 
 /**************************/
 extern void D_error(int errnum);
+extern char *D_geterror(int errnum);
 /**************************/
 /*-----------------------------------------------
 |  Display an error message for a data handler	|
@@ -820,6 +821,7 @@ extern void setfilepaths(int datano);
 /*************************************/
 /*************************************/
 extern int D_getLastVendorId();
+extern int D_fidversion();
 /*************************************/
 #endif
 
