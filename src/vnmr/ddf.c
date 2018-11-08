@@ -342,6 +342,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   else /* get maximum data point */
   {
      float tmpval, max=0.0;
+     int shift;
      for (i=0; i < dhd.np * dhd.ntraces; i++)
      {
         if (dhd.ebytes==2)
@@ -353,10 +354,24 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
 
         if (tmpval > max) max = tmpval;
      }
-     if (retc > 0)
-        retv[0] = realString( max );
+     shift = 1 << abs(block.head->scale);
+     if (block.head->scale < 0)
+        tmpval = 1.0/(float)(shift);
      else
+        tmpval = (float) shift;
+     tmpval /= (float)(block.head->ctcount);
+     if (retc > 0)
+     {
+        retv[0] = realString( max );
+        if (retc > 1)
+           retv[1] = realString( max*tmpval );
+     }
+     else
+     {
         Wscrprintf("%s FILE maximum absolute value = %g\n",dataname,max);
+        if ( block.head->scale || (block.head->ctcount > 1) )
+           Wscrprintf("%s FILE maximum scaled absolute value = %g\n",dataname,max*tmpval);
+     }
   }
 
   if ( (e = D_release(f, blocknumber)) )
@@ -1336,79 +1351,6 @@ int quadtt(int argc, char *argv[], int retc, char *retv[])
 }
 
 
-/*  The makefid command uses this program  */
-
-int
-make_copy_fidfile()
-{
-        int     diskFull, ival;
-        char    fidpath[ MAXPATH ], tmppath[ MAXPATH ];
-
-        ival = D_getfilepath( D_USERFILE, &fidpath[ 0 ], curexpdir );
-        if (ival != 0) {
-                Werrprintf( "makefid:  cannot get path to FID file" );
-                return( -1 );
-        }
-
-        /*Wscrprintf( "FID file is %s\n", &fidpath[ 0 ] );*/
-        if (isSymLink( &fidpath[ 0 ] ) == 0) {
-                ival = follow_link(
-                   &fidpath[ 0 ], &fidpath[ 0 ], sizeof( fidpath ) - 1
-                );
-                if (ival != 0)
-                  return( -1 );
-                /*Wscrprintf( "FID file is actually %s\n", &fidpath[ 0 ] );*/
-        }
-
-/*  No action required if the FID is neither a symbolic (soft) nor a hard link  */
-
-        else if (isHardLink( &fidpath[ 0 ] ) != 0) {
-                RETURN;
-        }
-
-        ival = access( &fidpath[ 0 ], R_OK );
-        if (ival != 0) {
-                Werrprintf(
-          "makefid: FID file %s does not exist or is not readable", &fidpath[ 0 ]
-                );
-                return( -1 );
-        }
-
-/*  This is the key test ...  */
-
-        ival = isDiskFullFile( curexpdir, &fidpath[ 0 ], &diskFull );
-        if (diskFull) {
-                Werrprintf(
-                  "makefid: insufficent disk space to make a copy of the FID file"
-                );
-                return( -1 );
-        }
-
-        strcpy( &tmppath[ 0 ], &fidpath[ 0 ] );
-        strcat( &tmppath[ 0 ], "tmp" );
-
-/*  The equivalent Magical commands:
-
-    cp(curexp+'/acqfil/fid',curexp+'/acqfil/fidtmp')
-    rm(curexp+'/acqfil/fid')
-    mv(curexp+'/acqfil/fidtmp',curexp+'/acqfil/fid') */
-
-        ival = copy_file_verify( &fidpath[ 0 ], &tmppath[ 0 ] );
-        if (ival != 0) {
-                Werrprintf(
-                  "makefid: error making a copy of the FID file"
-                );
-                return( -1 );
-        }
-
-/*  These two operations should work ...  */
-
-        unlink( &fidpath[ 0 ] );
-        move_file( &tmppath[ 0 ], &fidpath[ 0 ] );
-
-        RETURN;
-}
-
 /* calc fid */
 
 static void calc_FID(void *data, double freq, double amp, double decay, double phase, double dwell, int npnts)
@@ -1631,7 +1573,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
 
 /*  This program displays an error message if it encounters a problem  */
 
-        if (make_copy_fidfile() != 0)
+        if (make_copy_fidfile(cmd_name, curexpdir, NULL) != 0)
           ABORT;
 
 /*  Start with 0-length file header, in case new file header required.  */

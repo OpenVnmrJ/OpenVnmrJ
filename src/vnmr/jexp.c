@@ -1116,10 +1116,9 @@ int svprocpar(int fidflag, char *filepath)
 
 // this command will downsize fid by a factor (0 < factor < 1.0) 
 // curexp/acqfil/fid and curexp/acqfil/procpar will be overwriten
-// if fid is linked, the linki, make_copy_fidfile will be called to
+// if fid is linked, make_copy_fidfile will be called to
 // replace the link with a copy, so the original fid won;t be overwriten.
 // If the first argument is > 1, it is treated as the new np value.
-extern int make_copy_fidfile();
 extern int D_downsizefid(int newnp, char *datapath);
 extern int D_zerofillfid(int newnp, char *datapath);
 extern int D_leftshiftfid(int lsfid, char *datapath, int *newnp);
@@ -1159,7 +1158,7 @@ int downsizefid(int argc, char *argv[], int retc, char *retv[])
     if (curexpFid)
     {
     // this will copy the fid if acqfil/fid is linked
-       make_copy_fidfile();
+       make_copy_fidfile(argv[0], curexpdir, NULL);
  
        if ( (res = D_getfilepath(D_USERFILE, filepath, curexpdir)) )
        {
@@ -1254,7 +1253,7 @@ int zerofillfid(int argc, char *argv[], int retc, char *retv[])
     if (curexpFid)
     {
        // this will copy the fid if acqfil/fid is linked
-       make_copy_fidfile();
+       make_copy_fidfile(argv[0], curexpdir, NULL);
  
       if ( (res = D_getfilepath(D_USERFILE, filepath, curexpdir)) )
       {
@@ -1354,7 +1353,7 @@ int leftshiftfid(int argc, char *argv[], int retc, char *retv[])
    if (curexpFid)
    {
        // this will copy the fid if acqfil/fid is linked
-       make_copy_fidfile();
+       make_copy_fidfile(argv[0], curexpdir, NULL);
  
       if ( (res = D_getfilepath(D_USERFILE, filepath, curexpdir)) )
       {
@@ -1445,7 +1444,7 @@ int scalefid(int argc, char *argv[], int retc, char *retv[])
    if (curexpFid)
    {
        // this will copy the fid if acqfil/fid is linked
-       make_copy_fidfile();
+       make_copy_fidfile(argv[0], curexpdir, NULL);
  
       if ( (res = D_getfilepath(D_USERFILE, filepath, curexpdir)) )
       {

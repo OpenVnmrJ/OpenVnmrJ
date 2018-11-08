@@ -41,7 +41,7 @@ extern int     verify_fname(char *fnptr);
 extern int     isHardLink(char *lptr);
 extern int     isSymLink(char *lptr);
 extern int     copy_file_verify(char *file_a, char *file_b );
-extern int     move_file(char *file_a, char *file_b );
+extern int     make_copy_fidfile(char *prog, char *dir, char *msg);
 extern char *strwrd(char *s, char *buf, size_t len, char *delim);
 
 #endif

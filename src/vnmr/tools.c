@@ -45,17 +45,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
-#ifdef IRIX
-#include <values.h>
-#endif 
-#ifdef AIX
-#include <fp.h>
-#elif (SOLARIS) || (IRIX) 
-#include <nan.h>
-#endif 
 #include <errno.h>
 
 #ifdef UNIX
@@ -70,6 +63,8 @@
 #define MAXPATH 256
 #endif 
 
+#include "vfilesys.h"
+#include "wjunk.h"
 /*------------------------------------------------------------------------------
 |
 |	newString/1
@@ -295,7 +290,6 @@ int isReal(char *s)
 
 int isSymLink(char *lptr)
 {
-#ifdef UNIX
    int             ival;
    struct stat     unix_fab;
 
@@ -306,9 +300,6 @@ int isSymLink(char *lptr)
       return (0);
    else
       return (131071);
-#else 
-   return( 131071 );			/* On VMS no file is a symbolic link */
-#endif 
 }
 
 /****************************************************/
@@ -317,7 +308,6 @@ int isSymLink(char *lptr)
 
 int isHardLink(char *lptr)
 {
-#ifdef UNIX
    int             ival;
    struct stat     unix_fab;
 
@@ -328,25 +318,64 @@ int isHardLink(char *lptr)
       return (0);
    else
       return (131071);
-#else 
-   return( 131071 );			/* On VMS no file is a hard link */
-#endif 
 }
 
-/****************************************************************/
-/*  This subroutine is equivalent to the UNIX command:
-	mv file_a file_b
-    We assume the programmer knows about the situation where
-    file_b is a directory.					*/
-/****************************************************************/
-
-int move_file(char *file_a, char *file_b )
+int make_copy_fidfile(char *prog, char *dir, char *msg)
 {
-	char	mv_cmd[MAXPATH*2 + 16];
+   int     diskFull, ival;
+   char    fidpath[ MAXPATH ], tmp[ MAXPATH ];
+   struct stat     unix_fab;
+   strcpy(fidpath,dir);
+   strcat(fidpath,"/acqfil/fid");
+   if ( lstat(fidpath, &unix_fab) )
+   {
+      sprintf(tmp,"%s: FID file %s does not exist or is not readable",
+                  prog, fidpath);
+      if (msg == NULL)
+         Werrprintf(msg);
+      else
+         strcpy(msg,tmp);
+      return(-1);
+   }
+   if ( (unix_fab.st_nlink > 1) || S_ISLNK(unix_fab.st_mode) )
+   {
+      ival = access( fidpath, R_OK );
+      if (ival != 0) {
+         sprintf(tmp,"%s: FID file %s does not exist or is not readable",
+            prog, fidpath);
+         if (msg == NULL)
+            Werrprintf(msg);
+         else
+            strcpy(msg,tmp);
+         return( -1 );
+      }
+      ival = isDiskFullFile( dir, fidpath, &diskFull );
+      if (diskFull) {
+         sprintf(tmp,"%s: insufficent disk space to make a copy of the FID file",
+            prog);
+         if (msg == NULL)
+            Werrprintf(msg);
+         else
+            strcpy(msg,tmp);
+         return( -1 );
+      }
 
-        sprintf(mv_cmd,"mv \"%s\" \"%s\"", file_a, file_b );
-	system( mv_cmd );
-        return(0);
+      strcpy(tmp, fidpath);
+      strcat(tmp, "tmp" );
+
+      ival = copy_file_verify(fidpath, tmp);
+      if (ival != 0) {
+         sprintf(tmp,"%s: error making a copy of the FID file",prog);
+         if (msg == NULL)
+            Werrprintf(msg);
+         else
+            strcpy(msg,tmp);
+         return( -1 );
+      }
+      unlink(fidpath);
+      rename(tmp,fidpath);
+   }
+   RETURN;
 }
 
 /************************************************************************/

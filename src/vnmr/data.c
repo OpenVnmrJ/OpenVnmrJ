@@ -2375,6 +2375,35 @@ void D_error(int errnum)
       Wscrprintf("  Last function called = D_%s\n", lastfunc);
 }
 
+char *D_geterror(int errnum)
+{
+   static char msg[64];
+   switch (errnum)
+   {
+      case D_IS_OPEN:  strcpy(msg,"Data file is already open"); break;
+      case D_NOTOPEN:  strcpy(msg,"Data file is not open currently"); break;
+      case D_READERR:  strcpy(msg,"File read error"); break;
+      case D_WRITERR:  strcpy(msg,"File write error"); break;
+      case D_INCONSI:  strcpy(msg,"Inconsistent data file header"); break;
+      case D_NOALLOC:  strcpy(msg,"Buffer not allocated, out of memory"); break;
+      case D_NOBLOCK:  strcpy(msg,"Too many blocked blocks in memory"); break;
+      case D_NOTFOUND: strcpy(msg,"Requested block not in memory"); break;
+      case D_SEEKERR:  strcpy(msg,"File seek error"); break;
+      case D_BLINDEX:  strcpy(msg,"Illegal block index"); break;
+      case D_FLINDEX:  strcpy(msg,"Illegal file index"); break;
+      case D_BUFERR:   strcpy(msg,"Internal buffer too small"); break;
+      case D_TRERR:    strcpy(msg,"Cannot transpose block"); break;
+      case D_READONLY: strcpy(msg,"No write permission"); break;
+      case D_INVNBHDR: strcpy(msg,"Invalid number of block headers"); break;
+      case D_INVOP:    strcpy(msg,"Invalid file operation"); break;
+      case D_TRUNCERR: strcpy(msg,"File truncation error"); break;
+      case D_OPENERR:  strcpy(msg,"Cannot open data file"); break;
+      case ERROR:      break;
+      default:         strcpy(msg,"D_error: unknown error number"); break;
+   }
+   return(msg);
+}
+
 
 /*---------------------------------------
 |					|
