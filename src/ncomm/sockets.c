@@ -171,7 +171,7 @@ setupSocket( Socket *pSocket )
 	pid = getpid();
 
    /* ioctlsocket() supports only the SIOCATMARK */
-#ifndef __INTERIX
+#ifndef __CYGWIN__
 	ival = ioctl( pSocket->sd, FIOSETOWN, &pid );
 	if (ival < 0) {
 		errLogSysRet(ErrLogOp,debugInfo,"set ownership" );
@@ -598,7 +598,7 @@ connectSocket( Socket *pSocket, char *hostName, int portAddr )
          * of gethostbyname()
          * was hp = gethostbyname( hostName );
          */
-#if  defined(__INTERIX) || defined(MACOS)
+#if  defined(__CYGWIN__) || defined(MACOS)
         hp = gethostbyname(hostName);
 	if (hp == NULL) {
 	    return( -1 );
@@ -836,7 +836,7 @@ int
 setSocketAsync( Socket *pSocket )
 {
 	int ival;
-#if ( !defined(LINUX) || defined(CYGWIN) )
+#if ( !defined(LINUX) || defined(__CYGWIN__) )
         int one;
 #endif
 
@@ -849,7 +849,7 @@ setSocketAsync( Socket *pSocket )
 		return( -1 );
 	}
 
-#if defined(LINUX) && !defined(CYGWIN) || defined(__INTERIX)
+#if defined(LINUX) && !defined(__CYGWIN__) || defined(__INTERIX)
         fcntl(pSocket->sd, F_SETOWN, (int) getpid());
         ival = fcntl(pSocket->sd, F_GETFL);
         ival |= O_ASYNC;

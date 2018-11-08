@@ -545,7 +545,8 @@ int verify_fnameChar(char tchar)
 
 int verify_fname(char *fnptr )
 {
-	char lchar, tchar;
+	char lchar;
+        unsigned int tchar;
 	int  iter, jter, len;
 
 	len = strlen( fnptr );
@@ -553,7 +554,7 @@ int verify_fname(char *fnptr )
 
 	for (iter = 0; iter < len; iter++) {
 		tchar = *(fnptr+iter);
-		if (tchar < 32 || tchar > 126)
+		if (tchar < 32 )
 		  return( -1 );
 		jter = 0;
 		while ((lchar = illegal_fchars[ jter++ ]) != '\0')

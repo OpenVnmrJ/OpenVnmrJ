@@ -75,12 +75,12 @@ extern int  D_fidversion();
 static int count_lines(char *fn_addr );
 static void make_std_bhead(dblockhead *bh_ref, short b_status, short b_index );
 static void make_empty_fhead(dfilehead *fh_ref );
-static int makefid_args(int argc, char *argv[], int *element_addr, int *format_addr );
+static int makefid_args(int argc, char *argv[], int *element_addr, int *format_addr,
+                    int *addFlag, int *phaseInvert, int *revFlag, int *indexOffset );
 static int report_data_format_inconsistent(char *cmd_name, int old_format );
 static int makefid_getfhead(char *cmd_name, dfilehead *fh_ref, int *update_fh_ref, int force );
 static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
                               int max_lines, int cur_format, int revFlag );
-static int fix_phasefile(char *cmd_name, int element_number, int np_makefid );
 static int writefid_args(int argc, char *argv[], int *element_addr );
 static int writefid_getfhead(char *cmd_name, dfilehead *fh_ref );
 static int write_numbers_ascii(char *cmd_name, char *fn_addr, void *mem_buffer,
@@ -365,7 +365,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
         retv[0] = realString( max );
         if (retc > 1)
            retv[1] = realString( max*tmpval );
-     }
+     }     
      else
      {
         Wscrprintf("%s FILE maximum absolute value = %g\n",dataname,max);
@@ -1350,8 +1350,7 @@ int quadtt(int argc, char *argv[], int retc, char *retv[])
       RETURN;
 }
 
-
-/* calc fid */
+/* calc fid with summing into buffer */
 
 static void calc_FID(void *data, double freq, double amp, double decay, double phase, double dwell, int npnts)
 {
@@ -1360,6 +1359,7 @@ static void calc_FID(void *data, double freq, double amp, double decay, double p
    register double time;
    register float *ptr;
    register double ph;
+   register double eval;
 
    ptr = (float *)data;
 
@@ -1368,26 +1368,161 @@ static void calc_FID(void *data, double freq, double amp, double decay, double p
    {
       time = i * dwell;
       arg = time*freq*2.0*M_PI + ph;
-      *ptr++ += (float) (amp * cos(arg)*exp(-time/decay));
-      *ptr++ += (float) (-amp * sin(arg)*exp(-time/decay));
+      eval = amp * exp(-time/decay);
+      *ptr++ += (float) (eval * cos(arg));
+      *ptr++ += (float) (-eval * sin(arg));
    }
+}
+
+/* calc fid with setting buffer */
+
+static void calc_FID2(void *data, double freq, double amp, double decay, double phase, double dwell, int npnts)
+{
+   register int i;
+   register double arg;
+   register double time;
+   register float *ptr;
+   register double ph;
+   register double eval;
+
+   ptr = (float *)data;
+
+   ph = (phase/360.0) * 2.0 * M_PI;
+   for (i=0; i < npnts/2; i++)
+   {
+      time = i * dwell;
+      arg = time*freq*2.0*M_PI + ph;
+      eval = amp * exp(-time/decay);
+      *ptr++ = (float) (eval * cos(arg));   // calc_FID uses += here
+      *ptr++ = (float) (-eval * sin(arg));  // calc_FID uses += here
+   }
+}
+
+static int zeroElems(int element_number, int old_nblocks, dfilehead *fid_fhead)
+{
+   int tmp_elem;
+   int ival;
+   dpointers fid_block;
+
+   for (tmp_elem = old_nblocks; tmp_elem < element_number; tmp_elem++)
+   {
+      if ( (ival = D_allocbuf( D_USERFILE, tmp_elem, &fid_block )) )
+         return(ival);
+      memset( fid_block.data, 0, fid_fhead->tbytes );
+      make_std_bhead( fid_block.head, fid_fhead->status, (short) tmp_elem+1 );
+      ival = D_markupdated( D_USERFILE, tmp_elem );
+      ival = D_release( D_USERFILE, tmp_elem );
+   }
+   return(0);
+}
+
+static void cvrtReal(int npVal, int single_prec, void *mem_buffer)
+{
+   if (single_prec)
+   {
+      register short *optr = (short *) mem_buffer;
+      register float *iptr = (float *) mem_buffer;
+      while (npVal--)
+         *optr++ = (short) *iptr++;
+   }
+   else
+   {
+      register int *optr = (int *) mem_buffer;
+      register float *iptr = (float *) mem_buffer;
+      while (npVal--)
+         *optr++ = (int) *iptr++;
+   }
+}
+
+#define  UNDEFINED      1
+#define  SINGLE_PREC    2
+#define  DOUBLE_PREC    3
+#define  REAL_NUMBERS   4
+#define  CALC_FILE      5
+#define  CALC_STR       6
+#define  CALC_INDEX     7
+
+static void updateFidHead(dfilehead *fid_fhead, int blks, int pnts, int prec)
+{
+// fprintf(stderr,"updateFidHead blks= %d\n",blks);
+   fid_fhead->nblocks = blks;
+   fid_fhead->ntraces = 1;
+   fid_fhead->np      = pnts;
+   if (prec == SINGLE_PREC)
+      fid_fhead->ebytes  = sizeof( short );
+   else                                    /* sizeof double precision */
+      fid_fhead->ebytes  = sizeof( float );  /* same as sizeof float */
+   fid_fhead->tbytes  = pnts * fid_fhead->ebytes;
+   fid_fhead->bbytes  = fid_fhead->tbytes + sizeof( struct datablockhead );
+   fid_fhead->status  = (S_DATA | S_COMPLEX | S_DDR);
+   fid_fhead->vers_id &= ~P_VENDOR_ID;
+   fid_fhead->vers_id |= S_MAKEFID;
+
+   if (prec == REAL_NUMBERS)
+      fid_fhead->status |= S_FLOAT;
+   else if (prec == DOUBLE_PREC)
+      fid_fhead->status |= S_32;
+}
+
+static int mergeData(void *mem_buffer, dblockhead *this_bh, int element_number, int addFlag,
+              int npVal, int new_fid_format, int bytes)
+{
+   dpointers fid_block;
+   int ival;
+
+// fprintf(stderr,"merge addFlag= %d element_number= %d\n",addFlag, element_number);
+   if (addFlag)
+      ival = D_getbuf( D_USERFILE, 1, element_number, &fid_block );
+   else
+      ival = D_allocbuf( D_USERFILE, element_number, &fid_block );
+   if (ival) {
+// fprintf(stderr,"merge Error addFlag= %d ival= %d element_number= %d\n",addFlag, ival, element_number);
+      return(ival);
+   }
+
+   if (addFlag)
+   {
+      if (new_fid_format == SINGLE_PREC)
+      {
+         register short *optr = (short *) fid_block.data;
+         register short *iptr = (short *) mem_buffer;
+         while (npVal--)
+            *optr++ += *iptr++;
+      }
+      else if (new_fid_format == DOUBLE_PREC)
+      {
+         register int *optr = (int *) fid_block.data;
+         register int *iptr = (int *) mem_buffer;
+         while (npVal--)
+            *optr++ += *iptr++;
+      }
+      else
+      {
+         register float *optr = (float *) fid_block.data;
+         register float *iptr = (float *) mem_buffer;
+         while (npVal--)
+            *optr++ += *iptr++;
+      }
+   }
+   else
+   {
+      memcpy( fid_block.data, mem_buffer, bytes );
+   }
+   memcpy( fid_block.head, this_bh, sizeof( dblockhead ) );
+   ival = D_markupdated( D_USERFILE, element_number );
+   ival = D_release( D_USERFILE, element_number );
+   return(0);
 }
 
 static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
                               int npnts, double dwell, int fromFile, int phInvert )
 {
         char     cur_line[ 122 ];
-        int      ival, index, len, this_line;
+        int      index, len, this_line;
         double   freq, amp, decay, phase;
         FILE    *tfile;
-        float   *ptr;
 
-/*  Transfer buffer address to selected type so address arithmetic works right.  */
-
-        ptr = (float *)mem_buffer;
-        for (ival=0; ival<npnts; ival++)
-           *ptr++ = 0.0;
-
+        memset( mem_buffer, 0, npnts*sizeof(float) );
         if (fromFile == 2)  /* values are passed as an argument */
         {
            if (sscanf( fn_addr, "%lg %lg %lg %lg", &freq, &amp, &decay, &phase ) != 4)
@@ -1445,23 +1580,166 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
                 if (cur_line[ index ] == '#')
                   continue;
 
-/*  Now try to read 4 numbers from the string.  You have to tell `scanf'
-    whether the floating point numbers have 32 bits or 64 bits.  If you
-    read 32 bits into a 64 bit cell, only the low-order 32 bits are set.
-    The high-order bits (and the exponent) are NOT modified, due to the
-    ordering of data on the 68020 and the SPARC systems.  On the VAX,
-    the situation is reversed (and somewhat better).                    */
-
-                if (sscanf( &cur_line[ index ], "%lg %lg %lg %lg", &freq, &amp, &decay, &phase ) != 4)
+                if (fromFile == 3) // File has five values per line. Read and ignore the index
                 {
+                   int dummyIndex;
+                   if (sscanf( &cur_line[ index ], "%d %lg %lg %lg %lg",
+                         &dummyIndex, &freq, &amp, &decay, &phase ) != 5)
+                   {
                         Werrprintf( "%s:  problem reading %s at line %d",
                             cmd_name, fn_addr, this_line);
                         fclose( tfile );
                         return( -1 );
+                   }
+                }
+                else  // File has 4 values per line
+                {
+                   if (sscanf( &cur_line[ index ], "%lg %lg %lg %lg",
+                         &freq, &amp, &decay, &phase ) != 4)
+                   {
+                        Werrprintf( "%s:  problem reading %s at line %d",
+                            cmd_name, fn_addr, this_line);
+                        fclose( tfile );
+                        return( -1 );
+                   }
                 }
                 if (phInvert)
                    phase += 180.0;
                 calc_FID(mem_buffer, freq, amp, decay, phase, dwell, npnts);
+        }
+
+        fclose( tfile );
+        return( npnts );
+}
+
+static int calc_indexed_fid(char *cmd_name, char *fn_addr, void *mem_buffer,
+                              int npnts, double dwell, int fid_format, int phInvert,
+                              int indexOffset, int *replaced, dfilehead *fid_fhead )
+{
+        char     cur_line[ 122 ];
+        int      index, len, this_line;
+        double   freq, amp, decay, phase;
+        FILE    *tfile;
+        int      fidIndex;
+        dblockhead this_bh;
+        int old_nblocks;
+        int doAdd;
+        int numReplace = fid_fhead->nblocks;
+
+//        fprintf(stderr,"addFlag = %d\n", (replaced == NULL) ? 1 : 0);
+        
+        tfile = fopen( fn_addr, "r" );
+        if (tfile == NULL) {
+                Werrprintf( "%s:  problem opening %s", cmd_name, fn_addr );
+                return( -1 );
+        }
+        this_line = 0;
+        while (fgets( &cur_line[ 0 ], sizeof( cur_line ) - 1, tfile ) != NULL) {
+                len = strlen( &cur_line[ 0 ] );
+                this_line++;
+
+/*
+ *  First check is not likely to succeed; its main purpose
+ *  is to eleminate lines not containing any input.
+ *
+ *  Second test serves to remove the new-line charater; if this
+ *  renders the line blank, skip to the next line.
+ *
+ *  Third test eliminates lines that have only space characters.
+ *
+ *  Fourth test eliminates those lines with the first non-space
+ *  character the pound sign (#)
+ */
+                if (len < 1)
+                  continue;
+                if (cur_line[ len - 1 ] == '\n') {
+                        if (len == 1)
+                          continue;
+                        cur_line[ len - 1 ] = '\0';
+                        len--;
+                }
+                index = 0;
+                while (index < len) {
+                        if (!isspace( cur_line[ index ] ))
+                          break;
+                        else
+                          index++;
+                }
+
+                if (index >= len)
+                  continue;
+
+                if (cur_line[ index ] == '#')
+                  continue;
+
+                if (sscanf( &cur_line[ index ], "%d %lg %lg %lg %lg",
+                         &fidIndex, &freq, &amp, &decay, &phase ) != 5)
+                {
+                   Werrprintf( "%s:  problem reading %s at line %d",
+                            cmd_name, fn_addr, this_line);
+                   fclose( tfile );
+                   return( -1 );
+                }
+                if (phInvert)
+                   phase += 180.0;
+                fidIndex += indexOffset;
+                if ( fidIndex < 1 )
+                {
+                   if (indexOffset == 0) 
+                      Werrprintf("%s: Index less than 1 read from makefid file '%s' at line %d",
+                            cmd_name, fn_addr, this_line);
+                   else
+                      Werrprintf("%s: Index+indexOffset(%d) less than 1 read from makefid file '%s' at line %d",
+                            cmd_name, indexOffset, fn_addr, this_line);
+                   fclose( tfile );
+                   return( -1 );
+                }
+                fidIndex--;
+// fprintf(stderr,"calc for index %d\n",fidIndex);
+                calc_FID2(mem_buffer, freq, amp, decay, phase, dwell, npnts);
+                if (fid_format != REAL_NUMBERS)
+                   cvrtReal(npnts, (fid_format == SINGLE_PREC), mem_buffer);
+                old_nblocks = fid_fhead->nblocks;
+                doAdd = (replaced == NULL) ? 1 : 0;
+                if ((replaced != NULL) && (fidIndex < numReplace))
+                {
+                   if ( *(replaced+fidIndex) == 1)
+                      doAdd = 1;
+                   else
+                      *(replaced+fidIndex) = 1;
+                   
+                }
+//fprintf(stderr,"fidIndex: %d doAdd= %d\n",fidIndex, doAdd);
+                if (fid_fhead->nblocks < fidIndex+1) {
+                   int ival;
+                   fid_fhead->nblocks = fidIndex+1;
+                   ival = D_updatehead( D_USERFILE, fid_fhead );
+                   doAdd = 0;
+                   make_std_bhead( &this_bh, fid_fhead->status, (short) fidIndex+1 );
+                }
+                else
+                {
+                   int ival;
+                   ival = D_getblhead( D_USERFILE, fidIndex, &this_bh );
+                   if (ival != 0)
+                      make_std_bhead(&this_bh, fid_fhead->status, (short) fidIndex+1);
+                }
+                if (fidIndex > old_nblocks)
+                   if (zeroElems(fidIndex, old_nblocks, fid_fhead))
+                   {
+                      Werrprintf("%s:  error zeroing elements", cmd_name);
+                      fclose( tfile );
+                      return(-1);
+                   }
+// fprintf(stderr,"merge npnts= %d tbytes= %d ntraces= %d doAdd= %d addFlag= %d\n",
+//                 npnts, fid_fhead->tbytes,fid_fhead->ntraces, doAdd, addFlag);
+                if (mergeData(mem_buffer, &this_bh, fidIndex, doAdd, npnts,
+                     fid_format, fid_fhead->tbytes*fid_fhead->ntraces))
+                {
+                   Werrprintf("%s:  error allocating space for block %d", cmd_name, fidIndex+1);
+                   fclose( tfile );
+                   return(-1);
+                }
         }
 
         fclose( tfile );
@@ -1474,267 +1752,261 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
 |                                                       |
 -------------------------------------------------------*/
 
-#define  UNDEFINED      1
-#define  SINGLE_PREC    2
-#define  DOUBLE_PREC    3
-#define  REAL_NUMBERS   4
-#define  CALC_FILE      5
-#define  CALC_STR       6
-
 #define  FILE_NAME_ARG                  1       /* for `makefid' and `writefid' */
 #define  COUNT_REQUIRED_ARGS            2       /* for `makefid' and `writefid' */
-#define  MAX_NUMBER_MAKEFID_ARGS        4
 
 #define  exceeds_16bits( ival )  (((ival) > 32767) || ((ival) < -32768))
 
 int makefid(int argc, char *argv[], int retc, char *retv[])
 {
-        char            *cmd_name, *fn_addr;
-        void            *mem_buffer;
-        int              bytes_to_allocate, cur_fid_format, element_number, ival,
-                         new_fid_format, nlines, np_makefid, old_nblocks,
-                         stop_fixing_phf, tmp_elem, update_fhead;
-        dfilehead        fid_fhead;
-        dpointers        fid_block;
-        dblockhead       this_bh;
-        int              calcFID = 0;
-        int              forceUpdate = 0;
-        int              addFlag = 0;
-        int              phaseInvert = 0;
-        int              revFlag = 0;  /* Flag for spectral reverse */
+   char            *cmd_name, *fn_addr;
+   void            *mem_buffer;
+   int              bytes_to_allocate, cur_fid_format, element_number, ival,
+                    new_fid_format, nlines, np_makefid, old_nblocks,
+                    update_fhead;
+   dfilehead        fid_fhead;
+   dblockhead       this_bh;
+   int              calcFID = 0;
+   int              forceUpdate = 0;
+   int              addFlag = 0;
+   int              phaseInvert = 0;
+   int              revFlag = 0;  /* Flag for spectral reverse */
+   int              indexOffset = 0;
 
-        cmd_name = argv[ 0 ];
-        if (argc < COUNT_REQUIRED_ARGS || argc > MAX_NUMBER_MAKEFID_ARGS+2) {
-                Werrprintf(
-            "Usage:  %s( 'file_name' [, element number, format ] )", cmd_name
-                );
-                ABORT;
-        }
+   cmd_name = argv[ 0 ];
+   if (argc < COUNT_REQUIRED_ARGS) {
+      Werrprintf( "Usage:  %s( 'file_name' [, element number, format ] )",
+                   cmd_name);
+      ABORT;
+   }
 
-        element_number = 1;             /* default values */
-        new_fid_format = UNDEFINED;
-        if (makefid_args( argc, argv, &element_number, &new_fid_format ) != 0)
-          ABORT;                        /* `makefid_args' reports error */
-        if (new_fid_format == CALC_FILE)
-        {
-           new_fid_format = REAL_NUMBERS;
-           calcFID = 1;
-        }
-        if (new_fid_format == CALC_STR)
-        {
-           new_fid_format = REAL_NUMBERS;
-           calcFID = 2;
-        }
-        if ( ! strcmp(argv[argc-1],"rev") || ! strcmp(argv[argc-2],"rev") )
-           revFlag = 1;
-        if ( ! strcmp(argv[argc-1],"add") || ! strcmp(argv[argc-2],"add") )
-           addFlag = 1;
-        if ( ! strcmp(argv[argc-1],"sub"))
-        {
-           addFlag = 1;
-           phaseInvert = 1;
-        }
-        if (element_number == 0)
-        {
-           forceUpdate = 1;
-           addFlag = 0;
-           P_setreal(CURRENT,"arraydim",1.0,1);
-           P_setreal(PROCESSED,"arraydim",1.0,1);
-        }
-        else
-           element_number--;               /* VNMR numbers elements starting at 0 */
+   element_number = -1;             /* default values */
+   new_fid_format = UNDEFINED;
+   if (makefid_args( argc, argv, &element_number, &new_fid_format,
+                    &addFlag, &phaseInvert, &revFlag, &indexOffset ) != 0)
+      ABORT;                        /* `makefid_args' reports error */
+//fprintf(stderr,"element_number:%d new_fid_format:%d addFlag:%d phaseInvert:%d revFlag:%d indexOffset:%d\n",
+//                element_number, new_fid_format, addFlag, phaseInvert, revFlag, indexOffset);
+   if (new_fid_format == CALC_FILE)
+   {
+      new_fid_format = REAL_NUMBERS;
+      calcFID = 1;
+   }
+   if (new_fid_format == CALC_STR)
+   {
+      new_fid_format = REAL_NUMBERS;
+      calcFID = 2;
+   }
+   if (new_fid_format == CALC_INDEX)
+   {
+      new_fid_format = REAL_NUMBERS;
+      calcFID = 3;
+   }
+   if (element_number == 0)
+   {
+      forceUpdate = 1;
+      addFlag = 0;
+      P_setreal(CURRENT,"arraydim",1.0,1);
+      P_setreal(PROCESSED,"arraydim",1.0,1);
+   }
+   else if (element_number > 0 )
+      element_number--;               /* VNMR numbers elements starting at 0 */
 
-        if (calcFID == 2)
-        {
-           fn_addr = argv[ 2 ];        /* Pointer to line values */
-        }
-        else
-        {
-           fn_addr = argv[ FILE_NAME_ARG ];        /* address of (input) file name */
-           nlines = strlen( fn_addr );             /* borrow `nlines' */
-           if (nlines >= MAXPATH) {
-                Werrprintf(
-            "%s:  too many characters in file name", cmd_name
-                );
-                ABORT;
-           }
-           else if (nlines < 1) {
-                Werrprintf(
-            "%s:  problem with file name argument", cmd_name
-                );
-                ABORT;
-           }                       /* finished with borrowing `nlines' */
+   if (calcFID == 2)
+   {
+      fn_addr = argv[ 2 ];        /* Pointer to line values */
+   }
+   else
+   {
+      fn_addr = argv[ FILE_NAME_ARG ];        /* address of (input) file name */
+      nlines = strlen( fn_addr );             /* borrow `nlines' */
+      if (nlines >= MAXPATH) {
+         Werrprintf("%s:  too many characters in file name", cmd_name);
+         ABORT;
+      }
+      else if (nlines < 1) {
+         Werrprintf("%s:  problem with file name argument", cmd_name);
+         ABORT;
+      }                       /* finished with borrowing `nlines' */
 
-           if (access( fn_addr, F_OK )) {
-                Werrprintf( "%s:  file %s not present", cmd_name, fn_addr );
-                ABORT;
-           }
-        }
+      if (access( fn_addr, F_OK )) {
+         Werrprintf( "%s:  file %s not present", cmd_name, fn_addr );
+         ABORT;
+      }
+   }
 
 /*  This program displays an error message if it encounters a problem  */
 
-        if (make_copy_fidfile(cmd_name, curexpdir, NULL) != 0)
-          ABORT;
+   if (make_copy_fidfile(cmd_name, curexpdir, NULL) != 0)
+      ABORT;
 
 /*  Start with 0-length file header, in case new file header required.  */
 
-        make_empty_fhead( &fid_fhead );
+   make_empty_fhead( &fid_fhead );
 
 /*  `makefid_getfhead' displayes error message if it encounters a problem.  */
 
-        if (makefid_getfhead( cmd_name, &fid_fhead, &update_fhead, forceUpdate ) != 0)
-          ABORT;
+   if (makefid_getfhead( cmd_name, &fid_fhead, &update_fhead, forceUpdate ) != 0)
+      ABORT;
 
-        if ( !update_fhead ) {
-                if ((fid_fhead.status & (S_32 | S_FLOAT)) == 0)
-                  cur_fid_format = SINGLE_PREC;
-                else if (fid_fhead.status & S_FLOAT)
-                  cur_fid_format = REAL_NUMBERS;
-                else
-                  cur_fid_format = DOUBLE_PREC;
+// fprintf(stderr,"update_fhead= %d\n",update_fhead);
+   if ( !update_fhead ) {
+      if ((fid_fhead.status & (S_32 | S_FLOAT)) == 0)
+         cur_fid_format = SINGLE_PREC;
+      else if (fid_fhead.status & S_FLOAT)
+         cur_fid_format = REAL_NUMBERS;
+      else
+         cur_fid_format = DOUBLE_PREC;
 
 /*  Verify data format only if called out in the command arguments.  */
 
-                if (calcFID)
-                {
-                  new_fid_format = cur_fid_format;
-                }
-                else if (new_fid_format != UNDEFINED)
-                {
-                  if (new_fid_format != cur_fid_format) {
-                        report_data_format_inconsistent(
-                                argv[ 0 ], cur_fid_format);
-                        ABORT;
-                  }
-                  else ;                /* do nothing if the two values match */
-                }
-                else                    /* new fid format not defined */
-                  new_fid_format = cur_fid_format;
-        }
-        else                                    /* no data present */
-        {
-          addFlag = 0;
-          if (new_fid_format == UNDEFINED)      /* default to dp=y */
-            new_fid_format = DOUBLE_PREC;
-        }
-
       if (calcFID)
       {
-         double npnts;
-         double swval;
-         P_getreal(CURRENT,"np",&npnts,1);
-         P_setreal(PROCESSED,"np",npnts,1);
-         P_getreal(CURRENT,"sw",&swval,1);
-         P_setreal(PROCESSED,"sw",swval,1);
-         mem_buffer = allocateWithId( npnts*sizeof(float), "makefid" );
-         np_makefid = calc_fid_from_values(cmd_name, fn_addr, mem_buffer,
+         new_fid_format = cur_fid_format;
+      }
+      else if (new_fid_format != UNDEFINED)
+      {
+         if (new_fid_format != cur_fid_format) {
+            report_data_format_inconsistent(
+                                argv[ 0 ], cur_fid_format);
+            ABORT;
+         }
+         else ;                /* do nothing if the two values match */
+      }
+      else                    /* new fid format not defined */
+         new_fid_format = cur_fid_format;
+   }
+   else                                    /* no data present */
+   {
+      addFlag = 0;
+      if (new_fid_format == UNDEFINED)      /* default to dp=y */
+         new_fid_format = DOUBLE_PREC;
+   }
+
+   if ( (calcFID == 3) && (element_number == -1) )
+   {
+      double npnts;
+      double swval;
+      int *replaceList = NULL;
+      P_getreal(CURRENT,"np",&npnts,1);
+      P_setreal(PROCESSED,"np",npnts,1);
+      P_getreal(CURRENT,"sw",&swval,1);
+      P_setreal(PROCESSED,"sw",swval,1);
+      if ( update_fhead )
+      {
+         updateFidHead(&fid_fhead, 1, npnts, new_fid_format);
+         D_updatehead( D_USERFILE, &fid_fhead );
+      }
+      mem_buffer = allocateWithId( npnts*sizeof(float), "makefid" );
+      if ( ! addFlag)
+      {
+         int i;
+         replaceList = allocateWithId(fid_fhead.nblocks*sizeof(int), "makefid" );
+         for (i=0; i<fid_fhead.nblocks; i++)
+            *(replaceList+i) = 0;
+      }
+      np_makefid = calc_indexed_fid(cmd_name, fn_addr, mem_buffer,
+                               (int) npnts, 1.0/swval, new_fid_format, phaseInvert,
+                               indexOffset, replaceList, &fid_fhead );
+      if (replaceList)
+         release(replaceList);
+      calcFID = 4;
+      P_setreal(CURRENT,"arraydim",(double) fid_fhead.nblocks,1);
+      P_setreal(PROCESSED,"arraydim",(double) fid_fhead.nblocks,1);
+   }
+   else if (calcFID)
+   {
+      double npnts;
+      double swval;
+      P_getreal(CURRENT,"np",&npnts,1);
+      P_setreal(PROCESSED,"np",npnts,1);
+      P_getreal(CURRENT,"sw",&swval,1);
+      P_setreal(PROCESSED,"sw",swval,1);
+      mem_buffer = allocateWithId( npnts*sizeof(float), "makefid" );
+      np_makefid = calc_fid_from_values(cmd_name, fn_addr, mem_buffer,
                                (int) npnts, 1.0/swval, calcFID, phaseInvert );
-         if ( !update_fhead && ( element_number == 0) )
+      if (new_fid_format != REAL_NUMBERS)
+         cvrtReal(np_makefid, (new_fid_format == SINGLE_PREC), mem_buffer);
+
+      if ( !update_fhead && ( element_number == 0) )
+      {
+         if (fid_fhead.np != np_makefid)
          {
-            if (fid_fhead.np != np_makefid)
-            {
-               update_fhead = 1;
-               addFlag = 0;
-            }
+            update_fhead = 1;
+            addFlag = 0;
          }
       }
-      else
-      {
+   }
+   else
+   {
 /*  Count number of lines in the input file; then allocate buffer space.  */
 
-        nlines = count_lines( fn_addr );
-        if (nlines < 0) {
-                Werrprintf( "%s:  problem accessing %s", cmd_name, fn_addr );
-                ABORT;
-        }
-        else if (nlines == 0) {
-                Werrprintf( "%s:  There are 0 lines in %s ", cmd_name, fn_addr );
-                ABORT;
-        }
-
-        if (new_fid_format == SINGLE_PREC)
-          bytes_to_allocate = nlines*4;
-        else
-          bytes_to_allocate = nlines*8;
-        mem_buffer = allocateWithId( bytes_to_allocate, "makefid" );
-
-/*  Do not forget to deallocate the Memory just allocated.  */
-
-        np_makefid = load_ascii_numbers(
-                cmd_name,
-                fn_addr,
-                mem_buffer,
-                nlines,
-                new_fid_format, revFlag);
+      nlines = count_lines( fn_addr );
+      if (nlines < 0) {
+         Werrprintf( "%s:  problem accessing %s", cmd_name, fn_addr );
+         ABORT;
       }
-        if (np_makefid < 0) {           /* load_ascii_numbers */
-                release( mem_buffer );  /* displays the error */
-                ABORT;
-        }
+      else if (nlines == 0) {
+         Werrprintf( "%s:  There are 0 lines in %s ", cmd_name, fn_addr );
+         ABORT;
+      }
 
-        if ( update_fhead ) {
-                fid_fhead.nblocks = 1;
-                fid_fhead.ntraces = 1;
-                fid_fhead.np      = np_makefid;
-                if (new_fid_format == SINGLE_PREC)
-                  fid_fhead.ebytes  = sizeof( short );
-                else                                    /* sizeof double precision */
-                  fid_fhead.ebytes  = sizeof( float );  /* same as sizeof float */
-                fid_fhead.tbytes  = np_makefid * fid_fhead.ebytes;
-                fid_fhead.bbytes  = fid_fhead.tbytes + sizeof( struct datablockhead );
-                fid_fhead.status  = (S_DATA | S_COMPLEX | S_DDR);
-                fid_fhead.vers_id &= ~P_VENDOR_ID;
-                fid_fhead.vers_id |= S_MAKEFID;
+      if (new_fid_format == SINGLE_PREC)
+         bytes_to_allocate = nlines*4;
+      else
+         bytes_to_allocate = nlines*8;
 
-                if (new_fid_format == REAL_NUMBERS)
-                  fid_fhead.status |= S_FLOAT;
-                else if (new_fid_format == DOUBLE_PREC)
-                  fid_fhead.status |= S_32;
-        }
-        else {
-                if (np_makefid != fid_fhead.np*fid_fhead.ntraces) {
-                        Werrprintf(
-            "%s:  number of points in input file not equal to number in FID",
-             cmd_name
-                        );
-                        Wscrprintf(
-            "number of points in input file: %d\n", np_makefid
-                        );
-                        Wscrprintf(
-            "number of points in FID: %d\n", fid_fhead.np
-                        );
-                        release( mem_buffer );
-                        ABORT;
-                }
-        }
+      mem_buffer = allocateWithId( bytes_to_allocate, "makefid" );
+      np_makefid = load_ascii_numbers( cmd_name, fn_addr, mem_buffer,
+                nlines, new_fid_format, revFlag);
+   }
+   if (np_makefid < 0) {           /* load_ascii_numbers */
+      release( mem_buffer );  /* displays the error */
+      ABORT;
+   }
+
+   if (calcFID != 4)
+   {
+      if ( update_fhead ) {
+         updateFidHead(&fid_fhead, 1, np_makefid, new_fid_format);
+      }
+      else {
+         if (np_makefid != fid_fhead.np*fid_fhead.ntraces) {
+            Werrprintf("%s:  number of points in input file not equal to number in FID",
+                cmd_name);
+            Wscrprintf("number of points in input file: %d\n", np_makefid);
+            Wscrprintf("number of points in FID: %d\n", fid_fhead.np);
+            release( mem_buffer );
+            ABORT;
+         }
+      }
 
 /*  Only update the file header if required.  */
 
-        old_nblocks = fid_fhead.nblocks;
-        if (fid_fhead.nblocks < element_number+1) {
-                update_fhead = 1;
-                fid_fhead.nblocks = element_number+1;
-        }
-        if (update_fhead)
-        {
-          ival = D_updatehead( D_USERFILE, &fid_fhead );
-          addFlag = 0;
-        }
+      old_nblocks = fid_fhead.nblocks;
+      if (fid_fhead.nblocks < element_number+1) {
+         update_fhead = 1;
+         fid_fhead.nblocks = element_number+1;
+      }
+      if (update_fhead)
+      {
+         ival = D_updatehead( D_USERFILE, &fid_fhead );
+         addFlag = 0;
+      }
 
-       if (update_fhead && ( D_fidversion() == 0) )
-       {
-          int i;
-          int ival;
-          for (i=0; i< old_nblocks; i++)
-          {
-                ival = D_getbuf( D_USERFILE, 1, i, &fid_block );
-                fid_block.head->status = fid_fhead.status;
-                ival = D_markupdated( D_USERFILE, i );
-                ival = D_release( D_USERFILE, i );
-          }
-       }
-
-        stop_fixing_phf = 0;
+      if (update_fhead && ( D_fidversion() == 0) )
+      {
+         int i;
+         int ival;
+         dpointers fid_block;
+         for (i=0; i< old_nblocks; i++)
+         {
+            ival = D_getbuf( D_USERFILE, 1, i, &fid_block );
+            fid_block.head->status = fid_fhead.status;
+            ival = D_markupdated( D_USERFILE, i );
+            ival = D_release( D_USERFILE, i );
+         }
+      }
 
 /*  Now fill in intervening blocks with zeros.
     First intervening element is old value for nblocks.
@@ -1742,138 +2014,63 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
     written out later.  Of course, there may be no such
     intervening elements.                               */
 
-        if (element_number > old_nblocks)
-          for (tmp_elem = old_nblocks; tmp_elem < element_number; tmp_elem++) {
-                ival = D_allocbuf( D_USERFILE, tmp_elem, &fid_block );
-                if (ival) {
-                        Werrprintf(
-            "%s:  error allocating space for block %d", cmd_name, tmp_elem
-                        );
-                        release( mem_buffer );
-                        ABORT;
-                }
-                /*bzero( fid_block.data, fid_fhead.tbytes );*/
-                memset( fid_block.data, 0, fid_fhead.tbytes );
-                make_std_bhead( fid_block.head, fid_fhead.status, (short) tmp_elem+1 );
-                ival = D_markupdated( D_USERFILE, tmp_elem );
-                ival = D_release( D_USERFILE, tmp_elem );
-
-/*  It's necessary to "fix" the phase file if VNMR has stored FID data there.  */
-
-                if ( !stop_fixing_phf )
-                  stop_fixing_phf = fix_phasefile(
-                        cmd_name, element_number, np_makefid
-                  );
-          }
-
+      if (element_number > old_nblocks)
+      {
+         if (zeroElems(element_number, old_nblocks, &fid_fhead))
+         {
+            Werrprintf("%s:  error zeroing elements", cmd_name);
+            release( mem_buffer );
+            ABORT;
+         }
+      }
 /*  Try to get the original block header, if possible.  */
 
-        if (element_number < old_nblocks)
-        {
-           if (calcFID && update_fhead)
-           {
-                  make_std_bhead(
-                        &this_bh, fid_fhead.status, (short) element_number+1);
-           }
-           else
-           {
-                ival = D_getblhead( D_USERFILE, element_number, &this_bh );
-                if (ival != 0)
-                  make_std_bhead(
-                        &this_bh, fid_fhead.status, (short) element_number+1);
-            }
-        }
-        else
-          make_std_bhead( &this_bh, fid_fhead.status, (short) element_number+1 );
+      if (element_number < old_nblocks)
+      {
+         if (calcFID && update_fhead)
+         {
+            make_std_bhead(&this_bh, fid_fhead.status, (short) element_number+1);
+         }
+         else
+         {
+            ival = D_getblhead( D_USERFILE, element_number, &this_bh );
+            if (ival != 0)
+               make_std_bhead(&this_bh, fid_fhead.status, (short) element_number+1);
+         }
+      }
+      else
+         make_std_bhead( &this_bh, fid_fhead.status, (short) element_number+1 );
 
 /*  Now write the computed element out.  */
 
-        if (addFlag)
-           ival = D_getbuf( D_USERFILE, 1, element_number, &fid_block );
-        else
-           ival = D_allocbuf( D_USERFILE, element_number, &fid_block );
-        if (ival) {
-                Werrprintf(
-            "%s:  error allocating space for block %d", cmd_name, element_number
-                );
-                release( mem_buffer );
-                ABORT;
-        }
-
-        if ( calcFID && (new_fid_format != REAL_NUMBERS) )
-        {
-           register int np = np_makefid;
-
-           if (new_fid_format == SINGLE_PREC)
-           {
-               register short *optr = (short *) mem_buffer;
-               register float *iptr = (float *) mem_buffer;
-               while (np--)
-                  *optr++ = (short) *iptr++;
-           }
-           else if (new_fid_format == DOUBLE_PREC)
-           {
-               register int *optr = (int *) mem_buffer;
-               register float *iptr = (float *) mem_buffer;
-               while (np--)
-                  *optr++ = (int) *iptr++;
-           }
-        }
-/*  Note:  The order of the 1st 2 arguments reverses between bcopy and memcpy  */
-
-        /*bcopy( mem_buffer, fid_block.data, fid_fhead.tbytes );*/
-        if (addFlag)
-        {
-            register int np = np_makefid;
-            if (new_fid_format == SINGLE_PREC)
-            {
-               register short *optr = (short *) fid_block.data;
-               register short *iptr = (short *) mem_buffer;
-               while (np--)
-                  *optr++ += *iptr++;
-            }
-            else if (new_fid_format == DOUBLE_PREC)
-            {
-               register int *optr = (int *) fid_block.data;
-               register int *iptr = (int *) mem_buffer;
-               while (np--)
-                  *optr++ += *iptr++;
-            }
-            else
-            {
-               register float *optr = (float *) fid_block.data;
-               register float *iptr = (float *) mem_buffer;
-               while (np--)
-                  *optr++ += *iptr++;
-            }
-        }
-        else
-        {
-           memcpy( fid_block.data, mem_buffer, fid_fhead.tbytes*fid_fhead.ntraces );
-        }
-        /*bcopy( &this_bh, fid_block.head, sizeof( dblockhead ) );*/
-        memcpy( fid_block.head, &this_bh, sizeof( dblockhead ) );
-        ival = D_markupdated( D_USERFILE, element_number );
-        ival = D_release( D_USERFILE, element_number );
-        D_close( D_USERFILE );
-
-        stop_fixing_phf = fix_phasefile( cmd_name, element_number, np_makefid);
-        release( mem_buffer );
+      if (mergeData(mem_buffer, &this_bh, element_number, addFlag, np_makefid,
+                    new_fid_format, fid_fhead.tbytes*fid_fhead.ntraces))
+      {
+         Werrprintf("%s:  error allocating space for block %d", cmd_name, element_number);
+         release( mem_buffer );
+         ABORT;
+      }
+   }
+   
+   release( mem_buffer );
+   D_close( D_USERFILE );
+   D_trash(D_PHASFILE);
+   D_trash(D_DATAFILE);
         
-        if (element_number)
-        {
-            double tmp;
-            P_getreal(CURRENT,"arraydim",&tmp,1);
-            if (element_number+1 > (int) (tmp+0.1) )
-            {
-               P_setreal(CURRENT,"arraydim",(double) (element_number+1),1);
-               P_setreal(PROCESSED,"arraydim",(double) (element_number+1),1);
-            }
-        }
+   if (element_number > 0)
+   {
+      double tmp;
+      P_getreal(CURRENT,"arraydim",&tmp,1);
+      if (element_number+1 > (int) (tmp+0.1) )
+      {
+         P_setreal(CURRENT,"arraydim",(double) (element_number+1),1);
+         P_setreal(PROCESSED,"arraydim",(double) (element_number+1),1);
+      }
+   }
 
-        if (retc > 0)
-          retv[ 0 ] = realString( (double) np_makefid );
-        RETURN;
+   if (retc > 0)
+      retv[ 0 ] = realString( (double) np_makefid );
+   RETURN;
 }
 
 #define FIRST_PARSED_ARG        COUNT_REQUIRED_ARGS
@@ -1888,59 +2085,87 @@ static struct format_table_entry {
         { "32-bit",     DOUBLE_PREC },
         { "float",      REAL_NUMBERS },
         { "calc",       CALC_FILE },
+        { "calcIndex",  CALC_INDEX },
         { "calcstr",    CALC_STR }
 };
 
-static int makefid_args(int argc, char *argv[], int *element_addr, int *format_addr )
+static int makefid_args(int argc, char *argv[], int *element_addr, int *format_addr,
+                    int *addFlag, int *phaseInvert, int *revFlag, int *indexOffset )
 {
         int     iter, ival, jter;
-        int     found_format, size_of_table;
+        int     size_of_table;
+        int     firstArg;
 
 /*  Assume the file name is the first argument;
     this routine works with the 2nd and 3rd arguments.  */
 
-        *element_addr = 1;                      /* default value */
+        *element_addr = -1;                      /* default value */
         *format_addr = UNDEFINED;               /* default to what's in the file */
+// fprintf(stderr,"argc= %d\n",argc);
+// for (iter=0; iter < argc; iter++)
+//    fprintf(stderr,"arg:%d %s\n",iter, argv[iter]);
 
-        if (argc == COUNT_REQUIRED_ARGS)
-          return( 0 );
-        else if (argc > MAX_NUMBER_MAKEFID_ARGS)
-          argc = MAX_NUMBER_MAKEFID_ARGS;
+        firstArg = 2;
         if ( ! strcmp(argv[1],"calcstr") )
         {
            *format_addr = CALC_STR;
+           if (argc < 3)
+           {
+              Werrprintf( "%s: calcstr option requires frequency argument", argv[ 0 ]);
+              return( -1 );
+           }
+           firstArg = 3;
         }
 
         size_of_table = sizeof( format_table ) / sizeof( struct format_table_entry );
-        for (iter = FIRST_PARSED_ARG; iter < argc; iter++) {
-                found_format = 0;
-                for (jter = 0; jter < size_of_table; jter++)
-                  if (strcmp(argv[ iter ], format_table[ jter ].user_value) == 0) {
-                        *format_addr = format_table[ jter ].internal_value;
-                        found_format = 1;
-                        break;
-                  }
-                if (found_format)
-                  continue;             /* to the next argument in the vector */
-
-            /*  Come here if we didn't find the argument in the format table */
-
-                if (isReal( argv[ iter ] )) {
-                        ival = atoi( argv[ iter ] );
-                        if (ival < 0) {
-                                Werrprintf(
-            "%s:  invalid element number %d", argv[ 0 ], ival
-                                );
-                                return( -1 );
-                        }
-                        *element_addr = ival;
-                }
-                else if ( *format_addr != CALC_STR ) {
-                        Werrprintf(
-            "Invalid argument '%s' to %s", argv[ iter ], argv[ 0 ]
-                        );
-                        return( -1 );
-                }
+        for (iter = firstArg; iter < argc; iter++)
+        {
+// fprintf(stderr,"check %s\n",argv[iter]);
+           if (*format_addr == UNDEFINED)
+           {
+              for (jter = 0; jter < size_of_table; jter++)
+                 if (strcasecmp(argv[ iter ], format_table[ jter ].user_value) == 0) {
+                    *format_addr = format_table[ jter ].internal_value;
+                    jter = size_of_table;
+                 }
+              if (*format_addr != UNDEFINED)
+                 continue;
+           }
+           if ( ! strcasecmp(argv[iter],"rev") )
+              *revFlag = 1;
+           else if ( ! strcasecmp(argv[iter],"add") )
+              *addFlag = 1;
+           else if ( ! strcasecmp(argv[iter],"sub"))
+           {
+              *addFlag = 1;
+              *phaseInvert = 1;
+           }
+           else if (strcasecmp(argv[ iter ], "indexOffset")  == 0)
+           {
+                   if ( (iter + 1 < argc) && isReal( argv[iter+1] ))
+                   {
+                      iter++;
+                      *indexOffset = (int) stringReal( argv[iter] );
+                   }
+                   else
+                   {
+                      Werrprintf("indexOffset option for makefid requires a numeric index\n");
+                      return(-1);
+                   }
+           }
+           else if (isReal( argv[ iter ] )) {
+                   ival = atoi( argv[ iter ] );
+                   if (ival < 0) {
+                      Werrprintf( "%s:  invalid element number %d", argv[ 0 ], ival);
+                      return( -1 );
+                   }
+                   *element_addr = ival;
+           }
+           else
+           {
+                   Werrprintf( "Invalid argument '%s' to %s", argv[ iter ], argv[ 0 ]);
+                   return( -1 );
+           }
         }
         return( 0 );
 }
@@ -2017,7 +2242,9 @@ static int makefid_getfhead(char *cmd_name, dfilehead *fh_ref, int *update_fh_re
            ival = access( &fidpath[ 0 ], F_OK );
         }
         if (ival != 0) {
+// fprintf(stderr,"call newhead\n");
                 ival = D_newhead( D_USERFILE, &fidpath[ 0 ], fh_ref );
+// fprintf(stderr,"newhead nblocks= %d ival= %d\n", fh_ref->nblocks,ival);
                 if (ival != 0) {
                         Werrprintf(
             "%s:  cannot create current experiment's FID file", cmd_name
@@ -2235,84 +2462,6 @@ static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
 
         fclose( tfile );
         return( np_loaded );
-}
-
-static int fix_phasefile(char *cmd_name, int element_number, int np_makefid )
-{
-        char            phasefilepath[ MAXPATH];
-        int             ival;
-        dfilehead       phasehead;
-        dpointers       data_addr;
-
-        ival = D_gethead( D_PHASFILE, &phasehead );
-        if (ival == D_NOTOPEN) {
-                ival = D_getfilepath( D_PHASFILE, &phasefilepath[ 0 ],
-                           curexpdir );
-                if (ival != 0) {
-                        Werrprintf( "%s:  internal error #2", cmd_name );
-                        return( -1 );
-                }
-
-                ival = access( &phasefilepath[ 0 ], F_OK );
-                if (ival != 0)
-                  return( 0 );          /* No need to fix a non-existent file */
-
-                ival = D_open( D_PHASFILE, &phasefilepath[ 0 ], &phasehead );
-                if (ival != 0) {
-                        Werrprintf(
-            "%s:  problem opening current experiment's phase file", cmd_name
-                        );
-                        return( -1 );
-                }
-        }
-        else if (ival != 0) {
-                Werrprintf(
-            "%s:  problem accessing current experiment's phase file", cmd_name
-                );
-                return( -1 );
-        }
-
-/*  Header for phase file is in `phasehead'.
- *  Now check for
- *    1.  Current FID block not in phase file
- *    2.  np in phase file head different from np in makefid
- *    3.  ntraces in phase file head not 1
- *    4.  status in phase file head implies FID data present.
- *
- *  Routine returns -2 because these conditions are not errors,
- *  although the calling routine should stop attempting to fix
- *  the phase file.
- */
-        if (element_number+1 > phasehead.nblocks)
-          return( -2 );
-        if (np_makefid != phasehead.np)
-          return( -2 );
-        if (1 != phasehead.ntraces)
-          return( -2 );
-        if (phasehead.status != (S_DATA|S_FLOAT|S_COMPLEX))
-          return( -2 );
-
-/*  We now assume phase file contains FID data.  We cause VNMR to ignore
-    the data in phase file by setting this particular block status to zero.
-
-    The block (or buffer) may not exist.  If one displays the 2nd FID (or
-    the 2nd spectra), the file header for the phase file will count 2
-    blocks, but the first will be missing.  So if D_getbuf fails, return
-    0, as this is not an error and the calling routine should continue.    */
-
-        ival = D_getbuf( D_PHASFILE, phasehead.nblocks, element_number, &data_addr );
-        if (ival != 0) {
-                return( 0 );
-        }
-
-        data_addr.head->status = 0;
-        ival = D_markupdated( D_PHASFILE, element_number );
-        ival = D_release( D_PHASFILE, element_number );
-
-/*  Previous 2 VNMR Data Buffer Functions should
-    only fail if there is a programming error...        */
-
-        return( 0 );
 }
 
 #define MAX_NUMBER_WRITEFID_ARGS        3

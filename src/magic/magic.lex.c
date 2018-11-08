@@ -524,7 +524,9 @@ break;
 case 49:
 
 # line 239 "magic.lex.l"
-                             { int c,notDone,slashed;
+                             {
+                                  int notDone,slashed;
+                                  unsigned int c;
 
 				  slashed = 0;
 				  notDone = 1;
@@ -600,7 +602,9 @@ break;
 case 50:
 
 # line 311 "magic.lex.l"
-                             { int c,notDone,slashed;
+                             {
+                                  int notDone,slashed;
+                                  unsigned int c;
 
 				  slashed = 0;
 				  notDone = 1;
