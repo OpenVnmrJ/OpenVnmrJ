@@ -4711,6 +4711,16 @@ public class ExpPanel extends JPanel
                     cmd = tok.nextToken().trim();
                 else
                     cmd = "fpAction";
+                if (tok.hasMoreTokens())
+                {
+                    String dirName = tok.nextToken().trim();
+                    sshare.putProperty("fpDir", dirName );
+                    if (fpPanel != null) {
+                       File dir = new File(dirName);
+                       if (dir.exists())
+                          fpPanel.setCurrentDirectory(dir);
+                    }
+                }
                 openFpBrowser(cmd);
                 return;
             }
