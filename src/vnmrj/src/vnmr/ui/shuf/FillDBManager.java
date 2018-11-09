@@ -7409,6 +7409,11 @@ public class FillDBManager {
         FileWriter fw;
         PrintWriter os;
 
+        /* If directory does not exist, just return */
+        UNFile dir = new UNFile(FileUtil.sysdir() + "/pgsql");
+        if(!dir.canWrite()) {
+           return;
+        }
         filepath = FileUtil.savePath(FileUtil.sysdir()
                                          + "/pgsql/persistence/AgeLimit");
 
@@ -7461,46 +7466,36 @@ public class FillDBManager {
         // filepath = FileUtil.savePath(FileUtil.sysdir()
         //                                  + "/pgsql/persistence/LocatorOff");
 
+        /* If directory does not exist, just return */
+        UNFile dir = new UNFile(FileUtil.sysdir() + "/pgsql");
+        if(!dir.canWrite()) {
+           return;
+        }
         filepath = getLocatorOffFile();
-        Process prcs = null;
-	try {
-            fw = new FileWriter(filepath);
-            os = new PrintWriter(fw);
-            if(setting)
-                os.println("locatorOff true");
-            else
-                os.println("locatorOff false");
-            os.close();
-            // Change the mode to all write access
-            String[] cmd = {UtilB.SHTOOLCMD, UtilB.SHTOOLOPTION,
-                            "chmod 666 " + filepath};
-            Runtime rt = Runtime.getRuntime();
-            prcs = rt.exec(cmd);
-	}
-	catch (Exception e) {
-            Messages.postError("Problem writing " + filepath);
-            Messages.writeStackTrace(e);
-	}
-        finally {
-            // It is my understanding that these streams are left
-            // open sometimes depending on the garbage collector.
-            // So, close them.
-            try {
-                if(prcs != null) {
-                    OutputStream ost = prcs.getOutputStream();
-                    if(ost != null)
-                        ost.close();
-                    InputStream is = prcs.getInputStream();
-                    if(is != null)
-                        is.close();
-                    is = prcs.getErrorStream();
-                    if(is != null)
-                        is.close();
-                }
-            }
-            catch (Exception ex) {
-                Messages.writeStackTrace(ex);
-            }
+        UNFile file = new UNFile(filepath);
+        if (setting)
+        {
+           if ( ! file.exists() )
+           {
+              try {
+                 file.createNewFile();
+                 file.setWritable(true,false);
+                 file.setReadable(true,false);
+              }
+	      catch (Exception e) {
+                  Messages.postError("Problem creating " + filepath);
+	      }
+           }
+        }
+        else
+        {
+           if (  file.exists() )
+              try {
+                 file.delete();
+              }
+	      catch (Exception e) {
+                  Messages.postError("Problem deleting " + filepath);
+	      }
         }
     }
 
@@ -7525,9 +7520,12 @@ public class FillDBManager {
             }
         }
 
-        String filepath = FileUtil.openPath(FileUtil.sysdir()
-                         + "/pgsql/persistence/LocatorOff");
-
+        UNFile dir = new UNFile(FileUtil.sysdir() + "/pgsql");
+        if(!dir.canWrite()) {
+           locatoroff = true;
+           return locatoroff;
+        }
+        String filepath = getLocatorOffFile();
         // Temporarily try the users file in case they had set this in
         // a previous version.
         
@@ -7539,37 +7537,18 @@ public class FillDBManager {
                 return locatoroff;
             }
         }
-	try {
-            in = new BufferedReader(new FileReader(filepath));
-            line = in.readLine();
-            if(!line.startsWith("locatorOff")) {
-                in.close();
-                File file = new File(filepath);
-                // Remove the corrupted file.
-                file.delete();
-                value = "false";
-            }
-            else {
-                tok = new StringTokenizer(line, " \t\n");
-                value = tok.nextToken();
-                if (tok.hasMoreTokens()) {
-                    value = tok.nextToken();
-                }
-                else
-                    value = "false";
-                in.close();
-            }
-	}
-	catch (Exception e) {
-	    // No error output here.
-            value = "false";
-	}
-
-        if(value.startsWith("t"))
-            locatoroff = true;
-        else
-            locatoroff = false;
-
+        UNFile file = new UNFile(filepath);
+        if (file == null)
+        {
+           locatoroff = false;
+           return locatoroff;
+        }
+        if (file.exists())
+        {
+           locatoroff = true;
+           return locatoroff;
+        }
+        locatoroff = false;
         return locatoroff;
     }
 
@@ -7581,6 +7560,10 @@ public class FillDBManager {
         StringTokenizer tok;
         int newValue;
 
+        UNFile dir = new UNFile(FileUtil.sysdir() + "/pgsql");
+        if(!dir.canWrite()) {
+           return "-2";
+        }
 
         filepath = FileUtil.openPath(FileUtil.sysdir()
                                          + "/pgsql/persistence/AgeLimit");
