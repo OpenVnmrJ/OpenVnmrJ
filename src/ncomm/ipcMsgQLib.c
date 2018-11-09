@@ -19,7 +19,7 @@
 #endif
 
 #include <sys/msg.h>
-#if (defined(__INTERIX) || defined(CYGWIN) || defined(MACOS))
+#if (defined(__INTERIX) || defined(__CYGWIN__) || defined(MACOS))
 struct msgbuf
 {
   long int mtype;
