@@ -63,8 +63,10 @@
 #define MAXPATH 256
 #endif 
 
+#ifdef VNMRJ
 #include "vfilesys.h"
 #include "wjunk.h"
+#endif
 /*------------------------------------------------------------------------------
 |
 |	newString/1
@@ -320,6 +322,7 @@ int isHardLink(char *lptr)
       return (131071);
 }
 
+#ifdef VNMRJ
 int make_copy_fidfile(char *prog, char *dir, char *msg)
 {
    int     diskFull, ival;
@@ -377,6 +380,7 @@ int make_copy_fidfile(char *prog, char *dir, char *msg)
    }
    RETURN;
 }
+#endif
 
 /************************************************************************/
 /*  A customer reported a bug in the SVF command which caused only the
