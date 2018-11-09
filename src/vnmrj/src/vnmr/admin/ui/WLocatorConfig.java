@@ -61,10 +61,14 @@ public class WLocatorConfig extends ModalEntryDialog
         // File has value of -1 to mean forever
         if(value.equals("-1"))
             value = "Forever";
+        if(value.equals("-2"))
+            value = "Locator not installed";
 
         // One way or the other, we now have newValue set.  Set it into
         // the entry field.
         inputText.setText(value); 
+        if(value.equals("Locator not installed"))
+           inputText.setEnabled(false); 
 
         // Get the current locator off value
         boolean locatoroff = FillDBManager.readLocatorOff(false);
@@ -73,7 +77,10 @@ public class WLocatorConfig extends ModalEntryDialog
         // Add a Check box for LocatorOff
         if(ckBox == null) {
             ckBox = new JCheckBox(vnmr.util.Util.getLabel("_admin_Locator_Off"), locatoroff);
-            ckBox.addMouseListener(new MouseAdapter() {
+            if(value.equals("Locator not installed"))
+               ckBox.setEnabled(false);
+            else
+                ckBox.addMouseListener(new MouseAdapter() {
                 public void mousePressed(MouseEvent e) {
                     if(!okButton.isEnabled())
                         okButton.setEnabled(true);
