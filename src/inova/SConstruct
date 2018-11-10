@@ -67,27 +67,26 @@ if not ovjconsole:
     ovjconsole = "yes"
 if (ovjconsole!="yes"):
     print "Inova console software not requested."
-    sys.exit(0)
-
-ovjtools=os.getenv('OVJ_TOOLS')
-if not ovjtools:
+else:
+    ovjtools=os.getenv('OVJ_TOOLS')
+    if not ovjtools:
 # If not defined, try the default location
-    print "OVJ_TOOLS env not found. Trying default location."
-    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+        print "OVJ_TOOLS env not found. Trying default location."
+        ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
 
-if os.path.exists(ovjtools):
-   fromPath = os.path.join(ovjtools, 'console', 'inova')
-   if os.path.exists(fromPath):
-      acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','acq')
-      if not os.path.exists(acqPath) :
-         os.makedirs(acqPath)
-      Execute('cd '+fromPath+'; tar -cf - * | (cd '+acqPath+'; tar -xf -)')
-      Execute('cd '+acqPath+'; ln -s vxBoot.small vxBoot')
-      Execute('cd '+acqPath+'; ln -s vxBootPPC.small vxBootPPC')
+    if os.path.exists(ovjtools):
+       fromPath = os.path.join(ovjtools, 'console', 'inova')
+       if os.path.exists(fromPath):
+          acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','acq')
+          if not os.path.exists(acqPath) :
+             os.makedirs(acqPath)
+          Execute('cd '+fromPath+'; tar -cf - * | (cd '+acqPath+'; tar -xf -)')
+          Execute('cd '+acqPath+'; ln -s vxBoot.small vxBoot')
+          Execute('cd '+acqPath+'; ln -s vxBootPPC.small vxBootPPC')
 # Make a copy for Mercury
-      acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','mercury','acq')
-      if not os.path.exists(acqPath) :
-         os.makedirs(acqPath)
-      Execute(Copy(os.path.join(acqPath,'tms320dsp.ram'),os.path.join(fromPath,'tms320dsp.ram')))
-   else:
-      print "cannot access <OVJ_TOOLS>/console/inova. Update ovjTools to get compiled console software."
+          acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','mercury','acq')
+          if not os.path.exists(acqPath) :
+             os.makedirs(acqPath)
+          Execute(Copy(os.path.join(acqPath,'tms320dsp.ram'),os.path.join(fromPath,'tms320dsp.ram')))
+       else:
+          print "cannot access <OVJ_TOOLS>/console/inova. Update ovjTools to get compiled console software."
