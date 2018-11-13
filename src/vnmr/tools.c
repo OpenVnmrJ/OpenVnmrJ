@@ -332,6 +332,9 @@ int make_copy_fidfile(char *prog, char *dir, char *msg)
    strcat(fidpath,"/acqfil/fid");
    if ( lstat(fidpath, &unix_fab) )
    {
+      /* If there is no fid file, just return */
+      if (access( fidpath, F_OK ))
+         return(0);
       sprintf(tmp,"%s: FID file %s does not exist or is not readable",
                   prog, fidpath);
       if (msg == NULL)
