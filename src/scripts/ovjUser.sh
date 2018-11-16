@@ -13,10 +13,21 @@
 #      be invoked by the OVJ system admin account, which is typically vnmr1.
 #      The new user name is passed as an argument, as in
 #      /vnmr/bin/ovjUser <newUserName>
+#      A second optional argument specifies the type of user. The is generally
+#      either Spectroscopy (the default) or Imaging.
 #
 # set -x
 
+if [ $# -eq 0 ] ; then
+   echo "Usage: $0 user <type>"
+   exit 1
+fi
 name=$1
+lname=$name
+itype=Spectroscopy
+if [ $# -gt 1 ] ; then
+   itype=$2
+fi
 if [ x$vnmrsystem = "x" ]
 then
    vnmrsystem=/vnmr
@@ -29,12 +40,12 @@ if [ ! -d $dir ]; then
 fi
 file=$dir/$name
 if [ ! -f $file ]; then
-  cat <<- EOF | sed -e s/USER/$name/ > $file
+  cat <<- EOF | sed -e s/USER/$name/ | sed -e s/ITYPE/$itype/ > $file
 	update	Yes
 	home	/home/USER
-	name	
+	name	USER
 	access	all
-	itype	Spectroscopy
+	itype	ITYPE
 	owned	/home/USER
 	EOF
 fi
@@ -89,6 +100,22 @@ file=$vnmrsystem/adm/users/operators/operatorlist
 grep -w $name $file >& /dev/null
 if [ $? -ne 0 ]
 then
-   echo "$name  $name;null;30;null;AllLiquids"  >> $file
+   echo "$name  $name;null;30;$lname;AllLiquids"  >> $file
 fi
 chmod 644 $file
+
+file=$vnmrsystem/p11/part11Config
+if [ -f $file ]; then
+   p11dir=$(grep part11Dir: /vnmr/p11/part11Config | awk 'BEGIN {FS=":"} {print $2}')
+   if [ x$p11dir = "x" ]
+   then
+      # If no path given in config file, default to /vnmr/vnmrp11
+      p11dir="$vnmrsystem/vnmrp11"
+   fi
+   dir=$vnmrsystem/adm/users/profiles/p11
+   if [ -d $dir ]; then
+      echo "part11Dir:$p11dir/$name"  > $dir/$name
+      chmod 644 $dir/$name
+   fi
+fi
+
