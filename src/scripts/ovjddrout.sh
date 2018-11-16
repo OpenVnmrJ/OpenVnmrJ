@@ -454,22 +454,6 @@ do
                                 rht/propulse.rht
 done
 
-# add postgress
-#log_this "   Tarring $dir		for : "
-      dir="pgsql"
-      tarring "$dir"
-      cd $OVJ_TOOLS
-      tar --exclude=.gitignore -cf - ${dir} | (cd $dest_dir_code/tmp; tar $taroption -)
-
-      cd $dest_dir_code/tmp
-      setperms ./ 755 644 755
-      # tar --exclude=.gitignore -cjf $dest_dir_code/$Tarfiles/${dir}.tar *
-      tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"
-      getSize $dest_dir_code/tmp
-      makeTOC ${dir}.tar $Vnmr  rht/vnmrs.rht	\
-				rht/mr400.rht   \
-                                rht/propulse.rht
-
 #============== CONSOLE SPECIFIC FILES ===============================
 if [ x$consoledir != "x" ]
 then
