@@ -49,8 +49,6 @@ rm -f "${vnmrdir}/bin/convert"
 tar jxf ImageMagick.tar.bz2 -C $vnmrdir
 # rm -rf "${vnmrdir}/jre"
 # cp $JAVA_HOME/jre $vnmrdir/
-rm -rf $vnmrdir/pgsql
-cp -a "${OVJ_TOOLS}/pgsql.osx" "${vnmrdir}"/pgsql
 
 vjdir="${packagedir}/${ovjAppName}/Contents/Resources/OpenVnmrJ"
 
