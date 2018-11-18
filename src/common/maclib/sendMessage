@@ -1,0 +1,39 @@
+"macro sendMessage"
+if ($# <> 1) then
+  write('line3','%s requires a single argument',$0)
+  return
+endif
+
+$run=userdir+'/ovjnet'
+exists($run,'file'):$e
+if ($e) then
+  rtv($run,'ovjIP','ovjPort'):$ovjIP,$ovjPort
+  write('net',$ovjIP,$ovjPort,'%s\n',$1):$ok
+  if ($ok) then
+    return
+  endif
+  rm($run):$e
+endif
+if ($1 = 'exitComm') then
+  return
+endif
+$start=userdir+'/persistence/ovjStarting'
+write('reset',$start)
+write('line3','Starting OpenVnmrJ server')
+shell('vnmrj -exec initComm hide'):$e
+$i = 0
+$e=1
+while ($i < 20) and ($e) do
+  $i=$i+1
+  shell('sleep 1'):$e
+  exists($start,'file'):$e
+endwhile
+if ($e) and ($i >= 20) then
+  write('line3','Problem starting OpenVnmrJ')
+  return
+endif
+exists($run,'file'):$e
+if ($e) then
+  rtv($run,'ovjIP','ovjPort'):$ovjIP,$ovjPort
+  write('net',$ovjIP,$ovjPort,'%s\n',$1)
+endif
