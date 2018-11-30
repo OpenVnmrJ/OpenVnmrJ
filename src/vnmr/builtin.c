@@ -24,6 +24,7 @@
 |               groupcopy    - copy a group of variables between trees.     
 |               create       - create a variable
 |               prune        - prune the current tree
+|               paramcopy    - copy a parameter to another parameter
 |               destroy      - destroy a variable
 |               destroygroup - destroy all variables of a group
 |               display      - display variables      
@@ -1547,6 +1548,54 @@ int groupcopy(int argc, char *argv[], int retc, char *retv[])
     {   Werrprintf("Usage -- groupcopy(fromtree,totree,group)!");
         ABORT;
     }
+}
+
+/*------------------------------------------------------------------------------
+|
+|       paramcopy
+|
+|       This routine is used to copy a variable to another variable.
+|       The variables can be in the same or different trees.
+|       Usage -- paramcopy(fromVar,toVar, fromTree, toTree)
+|                trees can be  current,global,processed,usertree
+|       Default tree is current.
+|
++-----------------------------------------------------------------------------*/
+
+int paramcopy(int argc, char *argv[], int retc, char *retv[])
+{
+   int fromTree = CURRENT;
+   int toTree = CURRENT;
+
+   if (argc >= 3)
+   {
+      if (argc >= 4)
+      {
+         if ( (fromTree = getTreeIndex(argv[3])) == -1 )
+         {
+            Werrprintf("paramcopy: \"%s\" is not valid tree!",argv[3]);
+            ABORT;
+         }
+         if (argc == 5)
+         {
+            if ( (toTree = getTreeIndex(argv[4])) == -1 )
+            {
+               Werrprintf("paramcopy: \"%s\" is not valid tree!",argv[4]);
+               ABORT;
+            }
+         }
+      }
+      if (P_copyvar(fromTree,toTree,argv[1],argv[2]) < 0)
+      {
+         Werrprintf("paramcopy: parameter \"%s\" does not exist", argv[1]);
+         ABORT;
+      }
+   }
+   else
+   {   Werrprintf("Usage -- paramcopy(fromVar,toVar<,fromTree<,toTree>>)");
+       ABORT;
+   }
+   RETURN;
 }
 
 /*------------------------------------------------------------------------------

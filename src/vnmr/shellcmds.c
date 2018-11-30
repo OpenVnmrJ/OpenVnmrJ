@@ -606,6 +606,28 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
     int  i,len;
     int res;
 
+    if ( (argc == 4) && ! strcmp(argv[3],"symlink") )
+    {
+       res = 0;
+       if (!access(argv[1],F_OK))
+       {  
+          res = 1;
+          if (symlink(argv[1],argv[2]))
+          {
+            res = 0;
+          }
+       }
+       if (retc)
+       {
+	  retv[ 0] = realString((double) res);
+       }
+       else if ( ! res)
+       {
+          Werrprintf("cannot link file %s\n", argv[1]);
+          ABORT;
+       }
+       RETURN;
+    }
 #ifdef UNIX
     strcpy(cmdstr,"/bin/cp ");
 #else 

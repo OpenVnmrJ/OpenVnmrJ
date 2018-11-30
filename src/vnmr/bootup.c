@@ -1257,6 +1257,18 @@ int flushpars( int argc, char *argv[], int retc, char *retv[] )
   RETURN;
 }
 
+int flush2( int argc, char *argv[], int retc, char *retv[] )
+{
+     extern int start_from_ft;
+     /* Just dump the internal data buffers */
+     D_trash(D_DATAFILE);
+     D_trash(D_PHASFILE);
+     D_trash(D_USERFILE);
+     start_from_ft = 1;
+     closexposebuf();
+     RETURN;
+}
+
 /*  flush is now an official VNMR command.  Use it when you want to access
     the data in the current experiment from a separate program.
 
