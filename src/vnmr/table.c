@@ -215,6 +215,7 @@ extern int fitspec();
 extern int flashc();			/* flashc reformatting */
 extern int flip();
 extern int flush();
+extern int flush2(int argc, char *argv[], int retc, char *retv[]);
 extern int flushpars(int argc, char *argv[], int retc, char *retv[]);
 extern int foldcc();
 extern int foldj();
@@ -351,6 +352,7 @@ extern int output_sdf();			/* ImageBrowser */
 extern int p11_action();
 extern int p11_switchOpt();
 extern int page();
+extern int paramcopy(int argc, char *argv[], int retc, char *retv[]);
 extern int pcmap();
 extern int do_pcss();
 extern int peak2d();
@@ -752,7 +754,8 @@ static cmd_t vnmr_table[] = {
 	{"flashc"     , flashc,		NO_REEXEC, 0},
 	{"flip"       , flip,		NO_REEXEC, 0},
 	{"flush"      , flush,		NO_REEXEC, 0},
-	{"flushpars"  , flushpars,		NO_REEXEC, 0},
+	{"flush2"     , flush2,		NO_REEXEC, 0},
+	{"flushpars"  , flushpars,	NO_REEXEC, 0},
 	{"fr"         , s_cmd,		NO_REEXEC, 0},
 	{"focus"      , takeFocus,	NO_REEXEC, 0},
 	{"foldcc"     , foldcc,		NO_REEXEC, 4},
@@ -922,6 +925,7 @@ static cmd_t vnmr_table[] = {
         {"p11_action" , p11_action,     NO_REEXEC, 0},
 	{"pacosy"     , acosy,		NO_REEXEC, 0},
 	{"padept"     , adept,		NO_REEXEC, 0},
+	{"paramcopy"  , paramcopy,	NO_REEXEC, 0},
 	{"plotpage"   , page,		NO_REEXEC, 0},
 	{"plotxy"     , drawxy,		NO_REEXEC, 0},
 	{"pap"        , dg,		NO_REEXEC, 0},
@@ -1094,7 +1098,6 @@ static cmd_t vnmr_table[] = {
 	{"svsdfd"     , output_sdf,	NO_REEXEC, 0},
 	{"svphf"      , svphf,		NO_REEXEC, 0},
 	{"swrite"     , swrite,		NO_REEXEC, 0},
-	{"sync"       , flush,		NO_REEXEC, 0},
 	{"systemtime" , unixtime,	NO_REEXEC, 0},
 	{"tan"        , ln,	 	NO_REEXEC, 10},
         {"tbox"       , tnmr_draw,	NO_REEXEC, 10},
