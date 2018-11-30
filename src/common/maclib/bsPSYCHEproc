@@ -1,0 +1,52 @@
+// Chempacker macro
+
+if ($# < 1) then $1='init' endif
+// support stitch argument for older data which may have
+//   execprocess set to $0('stitch')
+if ($1='stitch') then $1='fidproc' endif
+
+
+IF ($1='init') THEN
+
+// For the time being set MinSW to off
+    MinSW='off'
+    // This sets sw1 via _tauPS
+    tauPS=tauPS
+    selbwPS=selbwPS
+    ni=at*sw1
+    sspul='y'
+    on('gain')
+    create('execprocess','string','current',''):$dum
+    setgroup('execprocess','display')
+    execprocess=$0+'(\'fidproc\')'
+    wstart=''
+
+ELSEIF ($1='fidproc') THEN
+
+    saveAsScout
+
+    ftarg
+    fidinfo=curexp+'/ftinfo'
+    exists('droppts','parameter'):$parex
+    $drop=0
+    if $parex then $drop=droppts endif
+    $npoints=trunc((sw/sw1)+0.5)
+    fidsa=$npoints
+    fidsas=$drop
+    fidautoshift=-$drop,$npoints
+    fidadd=arraydim
+    fn=2*$npoints*arraydim
+    fidproc('ftargs')
+    rt(curexp+'/fidproc')
+    ni=1 setvalue('ni',1,'processed')
+    setvalue('arraydim',1)
+    setvalue('arraydim',1,'processed')
+    gaussian('acq',0.9*at) fn=2*np
+    exists('wstart','parameter'):$parex
+    if ($parex) then wstart=$0 endif
+    exists('execprocess','parameter'):$parex
+    if ($parex) then execprocess='' endif
+    file='exp' setvalue('file',file,'processed')
+    process
+
+ENDIF

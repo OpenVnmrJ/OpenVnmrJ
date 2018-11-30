@@ -1,0 +1,81 @@
+// Chempacker macro
+//  This is dss with color option for individual traces
+//  Follows similar to dssi but not interactive.  So valid fo >128 traces
+// Look in the header of the dssi macro for arguments and their relevance
+
+// If argument is supplied, interpret it, set appropriate
+//   parameter and call dssi again
+
+    bgmode_is:$BG
+// While in BG mode don't bother with mspec
+    if $BG then ds(1) return endif
+
+// The following is the generic dssi call after the parameters
+//   are set appropriately
+    clear(2)
+    $colors=''
+    destroy('dssicolors','global'):$dum
+    exists('dssicolors','parameter'):$parex
+    if $parex then $colors=dssicolors endif
+    $colorsize=size('$colors')
+    if ($colors[1]='') then $colorsize=0 endif
+
+    if $colorsize then
+      exists('colorMap','maclib'):$macex
+      if $macex then
+          $i=1
+          repeat
+              colorMap($colors[$i]):$cndx,$colors[$i]
+              $i=$i+1
+          until $i > $colorsize
+      endif
+    endif
+
+    $trace=0
+    destroy('dssitrace','global'):$dum
+    exists('dssitrace','parameter'):$parex
+    if $parex then 
+	$trace=dssitrace 
+    else
+	getvalue('arraydim','processed'):$dim
+	$i=1
+	while $i<=$dim do
+	    $trace[$i]=$i
+	    $i=$i+1
+	endwhile
+    endif
+    $tracedim=size('$trace')
+    if ($trace[1]=0) then $tracedim=0 endif
+    if not $tracedim then return endif
+
+    if $# > 0 then $groups=$1 else $groups=$tracedim endif
+    $grp=$tracedim/$groups
+	    $i=1 $j=1 $first=1 $vp=vp $sc=dss_sc
+	    repeat
+		if $j>$grp then vp=vp+vo $j=1 endif
+		if $trace[$i] then
+		    $ci=$trace[$i]
+		    if not $first then
+			if $colorsize >= $trace[$i] then
+			    dssn('dodc',$trace[$i],$colors[$ci])
+			else
+			    dssn('dodc',$trace[$i])
+			endif
+		    else
+			if $colorsize >= $trace[$i] then
+			    dss('dodc',$trace[$i],$colors[$ci])
+			else
+			    dss('dodc',$trace[$i])
+			endif
+			dscale
+			$first=0
+		    endif
+		    $j=$j+1
+//		    vp=vp+vo
+//		    dss_sc=dss_sc+ho
+		endif
+		$i=$i+1
+	    until $i > $tracedim
+	    vp=$vp
+	    dss_sc=$sc
+	    return

@@ -17,10 +17,12 @@ else
 	// arraydim in the addsubexp is either same or none as
 	// in curexp
     dss:$dim
-    write('line3','%s/exp%d/procpar',userdir,$1):$add2pp
-    exists($add2pp,'file'):$ppex
+    write('line3','%s/exp%d/datdir/data',userdir,$1):$add2data
+    exists($add2data,'file'):$ppex
     $dim2=0
-    if $ppex then $dim2=$dim endif
+    if $ppex then
+	readheader($add2data):$np2,$dim2
+    endif
     $addcmd='spadd'
 endif
 
@@ -28,6 +30,7 @@ endif
     addsubexp=$1
     f full dc ds
     if not $dim2 then
+	clradd:$dum
     	$x=1
     	repeat
             select($x)

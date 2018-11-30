@@ -1,4 +1,4 @@
-"macro psGshim"
+// Chempacker macro
 "prescan macro for gradient shimming"
 
 if ($# = 0) then
@@ -24,6 +24,9 @@ if ($action = 'init') then
   if (auto='y') then
     if (alock='n') and ($NUC='lk') then alock='y' endif
   endif
+  $alock=alock
+  format(solvent,'lower'):$solv
+
   if ($mapname<>$curmap) then
     gmapz($mapname,'loadmap'):$e
     if ($e) then return('quit') endif
@@ -149,6 +152,33 @@ if ($action = 'init') then
     endif
     autoname = '_GMAP_FILE_%SAMPLE#:%'
   endif
+  exists('shapedfindtof','parameter'):$e7
+  exists('shaped','parameter'):$e6
+  if $e7 and $e6 then
+      if shaped='y' and shapedfindtof='y' then
+	  if $alock='u' then
+		getparam('z0','lk'):$z0
+		getsolvinfo($solv):$ppm,$w,$g,$c,$gm,$sh,$ok
+		getparam('hzdac','lk'):$hzdac
+		if $ok then
+		    $diffhz=(4.67-$ppm)*lockfreq
+		    $diffz0=$diffhz/$hzdac
+		    $z0=$z0+$diffz0
+		endif
+	        z0=$z0
+		sethw('z0',z0)
+	  endif
+	  write('line3','finding tof for on-resonance shape..')
+	  $tok=0
+	  {$0}('shapedGO4findtof'):$tok
+	  if $tok then
+		psCmd('set','stage','shapedfindtof')
+		psCmd('set','auArgs','wait shimming shim')
+		return('doau')
+	  endif
+      endif
+  endif
+	
   exists('gmap_findtof','parameter'):$e5
   if $e5>0.5 then
       if gmap_findtof='y' then
@@ -160,6 +190,83 @@ if ($action = 'init') then
   endif
   psCmd('set','auArgs','wait shimming shim')
   return('doau')
+
+elseif ($action = 'shapedGO4findtof') then
+    psCmd('psPath'):$path
+    svp($path+'/shapedGshim','force')
+    seqfil='s2pul'
+    array='' setvalue('arraydim',1,'current')
+    pw(5) ss=1 gain=0 nt=1 d1=1
+    return(1)
+elseif ($action = 'shapedfindtof') then
+    lb=10 wft('nods') f dc aph0 vsadj(110) th=100
+    nll:$r1
+    $done=0
+    while $r1<=5 and $done<0.5 do
+        th=0.9*th
+        nll:$r1
+        if th<10 then $done=1 endif
+    endwhile
+
+    if not $r1 then 
+      write('error','Did not find a peak to do shaped gradient shimming')
+      if auto='y' then
+        gmapset('autoreturn')
+      else
+        gmapset('return')
+      endif
+      return('quit')
+    endif
+
+    if $r1>1 then
+        sort(llamp,'r'):$inx
+    else
+        $inx=1
+    endif
+    $ix=$inx[1]
+    $ok=0
+    if $r1<2 then
+        $ok=1
+    else
+        if $ix=1 then
+           if llfrq[1]-llfrq[2]>200 then $ok=1 endif
+        elseif $ix=$r1 then
+           if llfrq[$ix-1]-llfrq[$ix]>200 then $ok=1 endif
+        else
+           if llfrq[$ix]-llfrq[$ix+1]>200 and llfrq[$ix-1]-llfrq[$ix]>200 then
+                $ok=1
+           endif
+        endif
+    endif
+       $x=$r1
+        while $x>=1 and $ok<0.5 do
+           $ix=$x
+           if $ix=1 then
+                if llfrq[1]-llfrq[2]>200 then $ok=1 endif
+            elseif $ix=$r1 then
+                if llfrq[$ix-1]-llfrq[$ix]>200 then $ok=1 endif
+            else
+                if llfrq[$ix]-llfrq[$ix+1]>200 and llfrq[$ix-1]-llfrq[$ix]>200 then
+                    $ok=1
+                endif
+            endif
+            $x=$x+1
+        endwhile
+
+    if $ok then
+    	$tof=tof-sw/2+llfrq[$ix]
+    endif
+
+    psCmd('psPath'):$path
+    rtp($path+'/shapedGshim')
+    tof=$tof
+    psCmd('set','stage','shim')
+    if auto='y' then
+    	gmapset('autorm',file,'noflush')
+    endif
+    write('line3','tof set to %1.1f, starting gradient shimming...',tof)
+    psCmd('set','auArgs','wait shimming shim')
+    return('doau')
 
 elseif ($action = 'shim') then
 

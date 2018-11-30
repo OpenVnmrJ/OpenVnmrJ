@@ -690,16 +690,16 @@ ELSEIF ($1='makespecarray') or ($1='makeonlyspecarray') THEN
     if $ds<>'' then exec($ds) endif
     clradd:$dum
     addsubexp=$addsuborig
-    $LIST='clusterlog','spectrumlog','fidlog'
-    xmhaha_subSQ($d,$LIST)
+    if $# < 4 then $4='' endif
+    if $4<>'noxml' then
+    	$LIST='clusterlog','spectrumlog','fidlog'
+    	xmhaha_subSQ($d,$LIST)
+    endif
 
-//    is_craft:$craftver
-//    if $craftver<1.5 then
-    	$str='' $ret=0
-    	strstr($b,'_specarray'):$ret,$str
-    	$sumfid=$d+'/scoutfids/'+$str+'_fidsum'
-    	{$0}('makespecsum',$d+'/'+$b,$sumfid)
-//    endif
+//    	$str='' $ret=0
+//    	strstr($b,'_specarray'):$ret,$str
+//    	$sumfid=$d+'/scoutfids/'+$str+'_fidsum'
+//    	{$0}('makespecsum',$d+'/'+$b,$sumfid)
     return($d+'/'+$b)
 "*************************************************************************"
 ELSEIF ($1='makespecsum') THEN
@@ -731,6 +731,7 @@ ELSEIF ($1='makespecsum') THEN
     delexp($nexp2):$rdum
     lsfrq=0 off('lsfrq')
     CPwtmenu('acq','set','none')
+    proc='ft' off('lsfid') off('phfid')
     setvalue('arraydim',1)
     setvalue('arraydim',1,'processed')
     if $# < 3 then
@@ -751,9 +752,9 @@ ELSEIF ($1='makespecsum') THEN
     return(1,$3)
 
 "*************************************************************************"
-ELSEIF ($1='makearray') or ($1='makesum') THEN
+ELSEIF ($1='makearray') or ($1='makesum') or ($1='makefidarray') THEN
 
-    $retval1=0 $retval2=''
+    $retval1=0 $retval2='' $retval3=''
     if ($# < 2) then $2=lastclusterdir[1] endif
     $cfids=$2+'/dirinfo/clusterfids'
     $tmpfile=userdir+'/persistence/'+$0+'_'+$1
@@ -762,7 +763,7 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
     $s1='' $s2='' $total=0 $s3=''
     readfile($tmpfile,'$s1','$s2','','local'):$total
     rm('-f',$tmpfile):$dum
-    if ($total<2) then return($retval1,$retval2) endif
+    if ($total<2) then return($retval1,$retval2,$retval3) endif
 
     $list=$s1
     $list2='' $es3=''
@@ -870,7 +871,7 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
                     {$0}('makeonlyspecarray',$cfids):$retval2
 		endif
 		if $origex then rename($cfids+'_orig',$cfids):$dum endif
-		if $retval2='' then return(0,$retval2) endif
+		if $retval2='' then return(0,$retval2,'') endif
     		if ($# < 3) then $3='' endif
     		if $3<>'noxml' then
     		    studyCluster('setqueue',$2+'/dirinfo/xmldir')
@@ -880,7 +881,7 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
 	    endif
 	endif
 	if $retval2<>'' then $retval1=1 endif
-	return($retval1,$retval2)
+	return($retval1,$retval2,'')
     endif
 
     jexp:$cexp
@@ -889,7 +890,7 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
     $addsuborig=addsubexp
     nextexp:addsubexp
 
-  if ($1='makearray') then
+  if ($1='makearray') or $1='makefidarray' then
     clradd:$dum
     $i=1
     repeat
@@ -949,16 +950,22 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
 	setvalue('archivedir',archivedir,'processed')
 	setvalue('sample',sample,'processed')
     endif
-    Svfname($2+'/'+svftmplt,'.fid','.fid'):$file
-    exists($file,'directory'):$fidex
-    if ($fidex) then
+    $file=''
+    if $1='makefidarray' then
+	$file=$3
 	svf($file,'force')
     else
-	file='exp'
-	savefid(svftmplt):$ok
-	$file=file
+    	Svfname($2+'/'+svftmplt,'.fid','.fid'):$file
+    	exists($file,'directory'):$fidex
+    	if ($fidex) then
+	    svf($file,'force')
+    	else
+	    file='exp'
+	    savefid(svftmplt):$ok
+	    $file=file
+    	endif
     endif
-    $retval1=1 $retval2=$file
+    $retval1=1 $retval2=$file $retval3=$file
     $arrayname=''
     substr($file,'basename'):$arrayname,$ext
 //    write('line3','Arrayed fid %s created',$arrayname)
@@ -1006,7 +1013,6 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
     writeparam(curexp+'/CFIDlist','CFIDlist CFIDlistOrig')
     fread(curexp+'/CFIDlist','processed')
     rm('-f',curexp+'/CFIDlist'):$dum
-
     Svfname(archivedir+'/'+sample+'/'+svftmplt,'.fid','.fid'):$file
     exists($file,'directory'):$fidex
     if ($fidex) then
@@ -1016,7 +1022,7 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
         savefid(svftmplt):$dum
         $file=file
     endif
-    $retval1=1 $retval2=$file
+    $retval1=1 $retval2=$file $retval3=$file
     $arrayname=''
     substr($file,'basename'):$arrayname,$ext
 //    write('line3','Sum fid %s created',$arrayname)
@@ -1024,7 +1030,7 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
     tmpsqreturn($0)
     clradd:$dum
     addsubexp=$addsuborig
-
+    
     if ($1='makearray') then
 	if $# > 3 then 
 	    {$0}('makespecarray',$file,$4):$retval2
@@ -1035,11 +1041,13 @@ ELSEIF ($1='makearray') or ($1='makesum') THEN
     if $origex then
 	rename($cfids+'_orig',$cfids):$dum
     endif
-    if ($# < 3) then $3='' endif
-    if $3<>'noxml' then
-        studyCluster('setqueue',$2+'/dirinfo/xmldir')
+    if $1<>'makefidarray' then
+    	if ($# < 3) then $3='' endif
+    	if $3<>'noxml' then
+            studyCluster('setqueue',$2+'/dirinfo/xmldir')
+    	endif
     endif
-    return($retval1,$retval2)
+    return($retval1,$retval2,$retval3)
 
 "*************************************************************************"
 ELSEIF ($1='updatelib') THEN
@@ -1210,6 +1218,11 @@ ELSEIF ($1='array2cluster') THEN
 
     $dim=arraydim
     $subfiddir=$d+'/dirinfo/subfids/'+$b
+    if $# > 1 then 
+	$subfiddir=$2 
+	$fc='' substr($subfiddir,1,1):$fc
+	if $fc<>'/' then $subfiddir=$d+'/'+$subfiddir endif
+    endif
     exists($subfiddir,'directory'):$direx
     if not $direx then mkdir('-p',$subfiddir):$dum endif
 
@@ -1229,17 +1242,23 @@ ELSEIF ($1='array2cluster') THEN
            format({$param},'isreal'):$real
            if ($real) then
                 {$param}=$rval[$z]
-                setvalue($param,{$param},'processed')
+                setvalue($param,{$param},0,'processed')
            else
                 {$param}=$val[$z]
-                setvalue($param,{$param},'processed')
+                setvalue($param,{$param},0,'processed')
            endif
            $z=$z+1
         endwhile
         setvalue('arraydim',1)
         setvalue('arraydim',1,'processed')
-        Svfname($subfiddir+'/trace','.fid'):$fidname
-        svf($fidname)
+	if $x<10 then
+	    write('line3','%s/trace00%d.fid',$subfiddir,$x):$fidname
+	elseif $x<100 then
+	    write('line3','%s/trace0%d.fid',$subfiddir,$x):$fidname
+	else
+	    write('line3','%s/trace%d.fid',$subfiddir,$x):$fidname
+	endif
+        svf($fidname,'force')
         $fids[$x]=$fidname
         tmpsqreturn($0+$1)
         $x=$x+1
@@ -1626,10 +1645,18 @@ ELSEIF ($1='save') or ($1='save2') THEN
 
     show_n_pause('close')
     if (resumeQ='') then
-	adirtmplt=userdir+'/clusterlib'
+	if archivedir='' then
+	    adirtmplt=userdir+'/clusterlib'
+	else
+	    adirtmplt=archivedir
+	endif
 	exists(adirtmplt,'directory'):$direx
 	if ($direx=0) then mkdir(adirtmplt):$dum endif
-	sdirtmplt='$samplename$_%DATE%_'
+	if sample='' then
+	    sdirtmplt='$samplename$_%DATE%_'
+	else
+	    sdirtmplt=sample+'%R0%'
+	endif
 	svftmplt='$pslabel$_'
     endif
     checktemplates:$return

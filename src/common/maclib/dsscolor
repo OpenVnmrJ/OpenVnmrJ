@@ -1,0 +1,250 @@
+// Chempacker macro
+
+// dssi:$dim
+// this does nothing but return number of traces.
+
+//  One keyword argument string argument (voup or vodown or vo0 or all or select).  
+//	The voup or vodown argument
+//	increase/decrease vo by 10% or 1 whichever is more 
+//	and reexecutes this macro without argument
+
+//	The vo0 will set vo=0 and call this macro again
+
+//	The all argument is same as dssi(1)
+
+//	The select argument will take all the subsequence trace numbers (arguments)
+//	and display only those traces (example:  dssi('select',1,3,5,6) will display
+//	trace numbers 1, 3, 5 and 6 only
+
+//	The unselect argument will work inverse of select argument
+//	(example: dssi('unselect',1,3,5) will display all traces but 1, 3 and 5)
+
+//  Without any of the keyworded first arguments the following applies
+//  Three optional real arguments (arg1 - start trace; arg2 - end trace and arg3 - stepsize)
+
+// The real and string arguments are mutually exclusive
+
+// Use of dssi with a return value is a special case
+    if($##>0) then
+	dss:$dim
+	if($dim>1) then return($dim)
+	else return(arraydim) endif
+    endif
+
+// If argument is supplied, interpret it, set appropriate
+//   parameter and call dssi again
+    if ($# > 0) then
+	if typeof('$1') then
+	    $vo=vo*0.1
+	    if $vo<0.2 then $vo=0.2 endif
+	    if ($1='voup') then
+	    	vo=vo+$vo
+	    	dssi
+	    elseif ($1='vodown') then
+	        $vo=vo-$vo
+	    	if $vo<0 then $vo=0 endif
+	    	vo=$vo
+	    	dssi
+	    elseif ($1='vo0') then
+		vo=0
+		dssi
+	    elseif ($1='all') then
+		dssi(1)
+	    elseif ($1='select') then
+		if $# < 2 then dssi(1)
+		else
+		    create('dssitrace','real','current',0):$dum
+		    setgroup('dssitrace','display')
+		    dssitrace=0
+		    $i=2 $j=1
+		    while $i <= $# do
+			dssitrace[$j]=${$i}
+			$j=size('dssitrace')
+			$j=$j+1
+			$i=$i+1
+		    endwhile
+		    dssi
+		endif
+	    elseif ($1='unselect') then
+		if $# < 2 then dssi(1)
+		else
+                    create('dssitrace','real','current',0):$dum
+                    setgroup('dssitrace','display')
+		    getvalue('arraydim','processed'):$dim
+		    $i=1 $trace=0
+		    repeat
+			$trace[$i]=$i
+			$i=$i+1
+		    until $i > $dim
+		    $i=2
+		    while $i <= $# do
+			$ix=${$i}
+			if $ix <= $dim and $ix > 0 then
+			    $trace[$ix]=0
+			endif
+			$i=$i+1
+		    endwhile
+		    $i=1 $j=1
+		    dssitrace=0
+		    repeat
+			if $trace[$i]>0 then
+			    dssitrace[$j]=$trace[$i]
+			    $j=$j+1
+			endif
+			$i=$i+1
+		    until $i > $dim
+		    dssi
+		endif
+	    endif
+	else
+	    getvalue('arraydim','processed'):$dim
+	    $start=$1 $end=$dim $step=1
+	    if ($# > 1) then $end=$2 endif
+	    if ($# > 2) then $step=$3 endif
+	    create('dssitrace','integer','current',0):$dum
+	    setgroup('dssitrace','display')
+	    dssitrace=0
+	    $x=$start $j=1
+	    repeat
+		dssitrace[$j]=$x
+		$j=$j+1
+		$x=$x+$step
+	    until $x > $end
+	    dssi
+	endif
+	return
+    endif
+
+    bgmode_is:$BG
+// While in BG mode don't bother with mspec
+    if $BG then ds(1) return endif
+
+// The following is the generic dssi call after the parameters
+//   are set appropriately
+    mspec('clear')
+    $colors=''
+    destroy('dssicolors','global'):$dum
+    exists('dssicolors','parameter'):$parex
+    if $parex then $colors=dssicolors endif
+    $colorsize=size('$colors')
+    if ($colors[1]='') then $colorsize=0 endif
+
+    if $colorsize then
+      exists('colorMap','maclib'):$macex
+      if $macex then
+          $i=1
+          repeat
+              colorMap($colors[$i]):$cndx,$colors[$i]
+              $i=$i+1
+          until $i > $colorsize
+      endif
+    endif
+
+    $trace=0
+    destroy('dssitrace','global'):$dum
+    exists('dssitrace','parameter'):$parex
+    if $parex then $trace=dssitrace endif
+    $tracedim=size('$trace')
+    if ($trace[1]=0) then $tracedim=0 endif
+
+// evaluate the total number of real traces and
+//  if it exceeds 128, mspec will panic.  
+//  if it exceeds 128, call dssn instead for each
+//  trace
+/*
+    if $tracedim>128 then
+	$i=1 $realdim=0
+	repeat
+	    if ($trace[$i]>0.5) then
+	    	$realdim=$realdim+1
+	    endif
+	    $i=$i+1
+	until $i > $tracedim
+	if $realdim > 128 then
+*/
+// Dont bother with color here
+	    $i=1 $first=1 $vp=vp $sc=dss_sc
+	    repeat
+		if $trace[$i] then
+		    $tix=$trace[$i]
+		    if not $first then
+			if $colorsize >= $i then
+			    dssn('dodc',$trace[$i],$colors[$tix])
+			else
+			    dssn('dodc',$trace[$i])
+			endif
+		    else
+			if $colorsize >= $i then
+			    dss('dodc',$trace[$i],$colors[$tix])
+			else
+			    dss('dodc',$trace[$i])
+			endif
+	//		dscale
+			$first=0
+		    endif
+		    vp=vp+vo
+		    dss_sc=dss_sc+ho
+		endif
+		$i=$i+1
+	    until $i > $tracedim
+	    vp=$vp
+	    dss_sc=$sc
+	    return
+/*
+	endif
+    endif
+*/
+// Now move on with mspec
+// define default colors
+    $arg2=''
+    if ($colorsize) then
+        $x=1
+        repeat
+            if $arg2='' then
+                    write('line3','\'%s\'',$colors[$x]):$arg2
+            else
+                    write('line3','%s,\'%s\'',$arg2,$colors[$x]):$arg2
+            endif
+            $x=$x+1
+        until $x>$colorsize
+    endif
+
+// define traces
+// associate traces with its colors
+    $arg=''
+    if ($tracedim) then
+	$arg2=''
+	$x=1
+	repeat
+	    if ($trace[$x]) then
+	      if $arg='' then
+		write('line3','%d',$trace[$x]):$arg
+              else
+                write('line3','%s,%d',$arg,$trace[$x]):$arg
+	      endif
+	      if $colorsize >= $trace[$x] then
+		$inx=$trace[$x]
+		if $arg2='' then
+		    write('line3','\'%s\'',$colors[$inx]):$arg2
+		else
+		    write('line3','%s,\'%s\'',$arg2,$colors[$inx]):$arg2
+		endif
+	      endif
+	    endif
+	    $x=$x+1
+	until $x>$tracedim
+    endif
+
+// execute mspec
+    $cmd='mspec('
+    if ($arg='') then
+	$cmd=$cmd+'\'all\''
+    endif
+    if ($arg2='') then
+	$cmd=$cmd+$arg
+    else
+	$cmd=$cmd+$arg+','+$arg2
+    endif
+    $cmd=$cmd+')'
+    exec($cmd)
+    intmod='off' ds

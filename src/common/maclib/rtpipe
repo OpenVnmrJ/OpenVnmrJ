@@ -1,0 +1,28 @@
+// Chempacker macro
+
+$dum='' $devnull=''
+is_cpfid:$cp
+if not $cp then return(0) endif
+substr(file,'dirname'):$d,$b,$e
+$pdir=$d+'/NMRpipe'
+$pfile=$pdir+'/'+$b+'.pipe'
+exists($pfile,'directory'):$direx
+if not $direx then return(0) endif
+
+exists(curexp+'/pipe','directory'):$direx
+if $direx then rm('-rf',curexp+'/pipe'):$dum endif
+mkdir(curexp+'/pipe'):$dum
+pwd:$curdir
+cd($pfile):$dum
+shell('(tar cf - * | (cd '+curexp+'/pipe; tar xfBp -))'):$devnull
+cd($curdir):$dum
+is_NUS2d:$nus
+if $nus then
+    wft(1)
+    pread(curexp+'/pipe/spec_ist.ft2')
+    setvalue('procdim',2)
+    setvalue('procdim',2,'processed')
+    nm2d
+    dconi
+endif
+return(1)
