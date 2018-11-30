@@ -1,0 +1,140 @@
+// macro : makeXdecshape
+// Creates WURST or CHIRP DECOUPLING Shape to Decouple C13, N15 and F19
+// IMPORTANT: It is assumed that the probe has been properly calibrated
+// IMPORTANT: Written for DD2, VNMRS and 400MR (running VJ42A) only
+// Usage: In VNMR Command Input Window, type				
+// makeXdecshape(arg1,arg2,arg3,arg4)				
+// arg1=pattern (CHIRP or WURST)				
+// arg2=bandwidth in ppm					
+// arg3=nucleus to be decoupled (C13 or N15 or F19)
+// arg4=largest 1-bond JXH in Hz				
+// Example: makeXdecshape('CHIRP',200,C13,146)
+// 2017_09_03 | Hari, N.
+// 2017_09_08 | Krish, K.
+
+// Initialize the local variables
+
+$xnuc='' $xdecbwppm=0 $largej1xh=0 $xshape=''
+
+// Check the choice of decoupler nucleus and proceed
+
+if $#<3 then
+    input('Nucleus to be decoupled [C13, N15 or F19] :') :$xnuc
+else
+    $xnuc=$3
+endif
+
+if ($xnuc='C13' or $xnuc='N15' or $xnuc='F19') then
+ if $# < 2 then
+    input('Enter decoupling bandwidth value [ppm] :') :$xdecbwppm
+ else
+    $xdecbwppm=$2
+ endif
+
+// Initialize and define the parameters
+// Define 'dmf' so that VJ's restriction on the stepsize is taken care
+
+ setlimit('dmf',100000,1,1)
+ $decbwppm=''
+ format($xdecbwppm,0,0):$decbwppm
+ $decbandhz=''
+ format($xdecbwppm*dfrq,6,0):$decbandhz
+
+// Check whether the decoupling bandwidth is in acceptable limit 
+
+ if ($xnuc='C13' and $xdecbwppm>200 or $xnuc='N15' and $xdecbwppm>80 or $xnuc='F19' and $xdecbwppm>70) then
+   write('error','DEC bandwidth is large; Reduce below '+$decbwppm+' ppm and run the macro')
+   return
+ endif
+
+ if $# < 4 then
+    input('Enter largest 1-bond Jxh value [Hz] :') :$largej1xh
+ else
+    $largej1xh=$4
+ endif
+
+ if $# < 1 then
+    input('Enter SHAPE of interest [WURST or CHIRP] :') :$xshape
+ else
+    $xshape=$1
+ endif
+
+// Set DEC nucleus
+
+ if ($xnuc='C13') then dn='C13' endif
+ if ($xnuc='N15') then dn='N15' endif
+ if ($xnuc='F19') then dn='F19' endif
+
+// Check whether the probe file is complete with calibration
+
+ $dn=dn
+ $ref_pw90=0
+ $ref_pwr=0
+ $amp_cf=0
+ getparam('pwx',dn):$ref_pw90
+ getparam('pwxlvl',dn):$ref_pwr
+ getparam('pwxlvl_cf',dn):$amp_cf
+ $ref_pw90 = $ref_pw90*$amp_cf
+ if ($ref_pw90=0 or $ref_pwr=0) then
+  banner('Calibrate the probe & run the macro')
+  return
+ endif
+
+// Define the name of the shapefile
+
+ $shapefile=''
+ $shapefile=''+$xshape+'_'+$dn+'_'+$decbwppm+'ppm_'+probe+'.DEC'
+
+// Calculate the adiabatic waveform
+
+ $adpw=''
+ format(1/(5*$largej1xh),0,6):$adpw	
+ if ($xshape='WURST') then
+  $wave='WURST40 '+$decbandhz+'/'+$adpw
+ else
+  $wave='CHIRP '+$decbandhz+'/'+$adpw
+ endif
+ opx($shapefile)
+ setwave($wave)
+ cpx($ref_pw90,$ref_pwr)
+ pbox_pwr($shapefile):$dpwr
+ pbox_dmf($shapefile):$dmf
+
+// Update the probe file
+
+ $dpwr=$dpwr+1
+ $dseq=''+$xshape+'_'+$dn+'_'+$decbwppm+'ppm_'+probe+''
+ $dres=9
+ $dmm='p'
+ $strdpwr=''
+ $strdmf=''
+ $sdres=''
+ format($dpwr,0,0):$strdpwr
+ format($dmf,0,0):$strdmf
+ format($dres,0,0):$sdres
+ setparams('dmf',$strdmf,dn)
+ setparams('dpwr',$strdpwr,dn)
+ setparams('dseq',$dseq,dn)
+ setparams('dres',$sdres,dn)
+ setparams('dmm',$dmm,dn)
+
+// Announce the outcome
+
+ if $## < 1 then
+  write('line3',''+$xshape+' to Decouple '+$dn+' over '+$decbwppm+' ppm is created')
+  write('alpha',''+$xshape+' to Decouple '+$dn+' over '+$decbwppm+' ppm is created')
+  banner(''+$xshape+' Shape to Decouple '+$dn+' over '+$decbwppm+' ppm is created')
+  write('line3','Shapefile is at '+userdir+'/shapelib/'+$shapefile+'')
+  write('alpha','Shapefile is at '+userdir+'/shapelib/'+$shapefile+'')
+  write('graphics',10,wc2max-45,'Reference Power: %9d',$ref_pwr)
+  write('graphics',10,wc2max-55,'Reference Pulsewidth: %4.2f',$ref_pw90)
+ endif
+
+else
+
+// Abort if the decoupler nucleus is not C13 or N15 or F19
+
+ write('error','Choose C13 or N15 or F19 only & run the macro') 
+ return
+
+endif

@@ -1,0 +1,197 @@
+// Chempacker macro
+
+"*********************************************************************"
+if ($# < 1) then $arg='init' else $arg=$1 endif
+if (auto='y') then
+        $tmpfile=autodir+'/'+$0+'_tmp'
+else
+        $tmpfile=curexp+'/'+$0+'_tmp'
+endif
+
+"*********************************************************************"
+IF ($1='wstart') THEN
+
+    if doscout=0 then
+	tof=tofh2o
+	wstart=''
+        return
+    endif
+
+    $wexp=wexp
+    {$0}('init')
+    scoutinfo='Scout1D'
+    if $wexp='chempackQ' then
+        $explist=explist
+        $md=archivedir+'/'+sample+'/dirinfo/macdir'
+        cpexplist('read',$md):explist
+        write('file',$md+'/alias','SetUp: setupCmd(\'%s\',\'setup\')',$0)
+        explist=pslabel+'scout','SetUp',explist
+        cpexplist('write',$md)
+        explist=$explist
+        wds='' wstart=''
+        scoutinfo='Scout1D'
+        wexp='chempackQ'
+   else
+        banner('Acquiring '+pslabel+' '+scoutinfo)
+   endif
+"*********************************************************************"
+ELSEIF ($1='init') THEN
+        "Reset parameters to do scout experiment"
+
+    writeparam($tmpfile,'sspul ss nt pw d1 MinSW pltopt gain werr')
+    writeparam($tmpfile,'execprocess execplot execprescan execsetup execprep','current','add')
+    CPwtmenu('acq','save')
+    execpars('delete')
+    satmode='n'
+    WGmode='n'
+    sspul='n'
+    MinSW='off'
+    is_param('spintype'):$isst
+    if ($isst>0) then
+      	if (spintype<>'tach') then spin=0 endif
+    else
+      	spin=0
+    endif
+    d1=1 nt=1
+    ss=0 pltopt='n'
+    pw(5) gain=0
+    wexp=$0+'(\'setup\')'
+    explist=pslabel+'scout'
+    off('doscout')
+    wstart='' wds=''
+    wdone='' werr='return'
+
+"*********************************************************************"
+ELSEIF ($1='setup') THEN
+
+    $GO='go'
+    if ($# > 1) then $GO=$2 endif
+    if ($GO='go') then saveAsScout endif
+    CPwtmenu('acq','set','none')
+    setref wft ph f full aph0 av vsadj
+
+    peak:$int,cr
+    $tof=tof
+    ph movetof
+    format(solvent,'lower'):$solv
+    if $solv<>'d2o' and $solv<>'d2o_10' then
+    	abs(tof-$tof):$delta
+    	sw=sw+2*$delta
+    	setref setobsSW
+    endif
+
+    {$0}('reset')
+    if (alock<>'u') then alock='n' endif
+    wshim='n'
+
+    if (flag3919='n') and (flagW5='n') then
+	if (WG180calflg='y') or (WGpwrcalflg='y') then
+            writeparam($tmpfile,'nt pw d1 MinSW pltopt gain werr')
+            writeparam($tmpfile,'execprocess execplot execprescan execsetup execprep','current','add')
+            CPwtmenu('acq','save')
+            execpars('delete')
+            nt=4 pltopt='n'
+	    if WG180calflg='y' then
+            	{$0}('array180')
+	    else
+		{$0}('arraypwr')
+	    endif
+        endif
+    endif
+    if ($GO = 'go') then
+	banner('Acquiring '+pslabel+' '+scoutinfo)
+        cpgo
+    endif
+"*********************************************************************"
+ELSEIF ($1='reset') THEN
+    shell('touch '+$tmpfile):$dum
+    fread($tmpfile)
+    rm($tmpfile):$dum
+    CPwtmenu('acq','read')
+    CPwtmenu('acq','purge')
+    wexp='wft'
+    wdone=''
+    WGmode='y'
+    seqfil=seqfil
+    explist=pslabel
+"*********************************************************************"
+ELSEIF ($1='array180') THEN
+	wgspwrf=wgspwrf[1]
+	wgspwr=wgspwr[1]
+	$wg180=wgpw180
+	array('wgpw180',21,$wg180+0.25,-0.025)
+	wexp=$0+'(\'copt180\')'
+	werr='return'
+	scoutinfo='hard180_optimization'
+	explist=pslabel+'scout'
+"*********************************************************************"
+ELSEIF ($1='arraypwr') THEN
+	wgspwrf=wgspwrf[1]
+        $espwr=wgspwr
+	array('wgspwr',5,$espwr-2,1)
+        wexp=$0+'(\'coptpwr\')'
+	werr='return'
+        scoutinfo='coursepwr_optimization'
+	explist=pslabel+'scout'
+"*********************************************************************"
+ELSEIF ($1='arraypwrf') THEN
+	wgspwr=wgspwr[1]
+        $espwr=wgspwrf
+        array('wgspwrf',11,$espwr-100,20)
+        wexp=$0+'(\'coptpwrf\')'
+	werr='return'
+        scoutinfo='finepwr_optimization'
+        explist=pslabel+'scout'
+"*********************************************************************"
+ELSEIF ($1='coptpwr') or ($1='coptpwrf') or ($1='copt180') THEN
+    $GO='go'
+    if ($# > 1) then $GO=$2 endif
+    if ($GO='go') then saveAsScout endif
+    expfilt('acq')
+    setref wft ph f full aph0 av vsadj ai
+    vp=0 $counter=1
+    $cr=wp/2+sp
+    wp=100 sp=$cr-50
+    select(1)  vsadj(100) $best=101
+    repeat
+    	select($counter)
+    	peak:$ht
+    	if $ht<$best then $best=$ht $bestone=$counter endif
+    	$counter=$counter+1
+    until $counter>arraydim
+    ds($bestone) f full ph aph vsadj
+
+    if ($1='coptpwr') then
+        wgspwr=wgspwr[$bestone]
+	{$0}('arraypwrf')
+    elseif ($1='coptpwrf') then
+	wgstpwrf=wgspwrf[$bestone]
+	{$0}('reset')
+    else
+	wgpw180=wgpw180[$bestone]
+	if (WGpwrcalflg='y') then
+	    {$0}('arraypwr')
+	else
+	    {$0}('reset')
+	endif
+    endif
+    if ($GO = 'go') then
+        banner('Acquiring '+pslabel+' '+scoutinfo)
+        cpgo
+    endif
+
+"*********************************************************************"
+ELSEIF ($1='makeshapes') THEN
+
+    if ($# < 2) then $2='' endif
+    if ($2='') or ($2='flipshape') then
+    	make_es_flipshape:$dum
+    endif
+    if ($2='') or ($2='echoshape') then
+    	make_wgshape:$dum
+    endif
+//    if ($2='') or ($2='wselshape') then
+//    	make_wselshape:$dum
+//    endif
+"*********************************************************************"
+ENDIF

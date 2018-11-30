@@ -1,0 +1,124 @@
+// Chempacker macro
+
+// multiple arguments
+//  First argument is either add or remove or empty string
+//     if empty string - display only traces defined by subsequent arguements
+//	if add - add the traces defined by subsequent arguments
+//	if remove - remove the traces defined by subsequent arguments
+//	if stack - don't rearrange the existing dssitrace
+//  Arg 2 thru N each argument can be:
+//	- real (the supplied index will be included)
+//  	- string (example 'N thru M' - N, M and all indices in between will be included)
+
+
+if $1<>'' and $1<>'add' and $1<>'remove' and $1<>'stack' then
+    write('error','invalid first argument for %s',$0)
+    return
+endif
+
+    $trace=0
+    $i=2 $j=0
+    while $i<=$# do
+	write('line3','$%d',$i):$arg
+	if not typeof($arg) then
+	    $j=$j+1 $trace[$j]={$arg}
+	else
+	    $ok=0
+	    //  Must have 3 words
+	    substr({$arg},'wc'):$words
+	    if $words=3 then $ok=1 endif
+	    if $ok then
+		string2array({$arg}):$arg2
+		if $arg2[2]<>'thru' then $ok=0 endif
+	    endif
+	    if $ok then
+		format($arg2[1],'isreal'):$real
+		if $real then
+		    format($arg2[3],'isreal'):$real
+		endif
+		if not $real then $ok=0 endif
+	    endif
+	    if $ok then
+		$x=0 $y=0
+		format($arg2[1],'lower'):$x
+		format($arg2[3],'lower'):$y
+		if $x>$y then $from=$y $to=$x else $from=$x $to=$y endif
+		$z=$from
+		while $z<=$to do
+		    $j=$j+1 $trace[$j]=$z
+		    $z=$z+1
+		endwhile
+	    endif
+	endif
+	$i=$i+1
+    endwhile
+
+    if not $j then return endif
+    if $j>1 then
+	if $1<>'stack' then
+		sort($trace):$inx,$trace
+	endif
+    endif
+    $tot=size('$trace')
+
+    exists('dssitrace','parameter'):$pex
+    if $pex then if dssitrace[1]=0 then $pex=0 endif endif
+    if not $pex then
+	readheader(curexp+'/datdir/data'):$np,$tdim
+	$i=1
+	while $i<=$tdim do
+	    $oldtrace[$i]=$i
+	    $i=$i+1
+	endwhile
+    else
+	$oldtrace=dssitrace
+    endif
+    if $1='' then
+	$newtrace=$trace
+    elseif $1='add' then
+	$newtrace=$oldtrace,$trace
+	sort($newtrace):$inx,$newtrace
+    elseif $1='stack' then
+	$newtrace=$oldtrace,$trace
+    elseif $1='remove' then
+	$dssitrace='' 
+	array2string($oldtrace,0):$dssitrace
+	string2array($dssitrace):$dssitrace
+	$strace=''
+	array2string($trace,0):$strace
+	string2array($strace):$strace
+
+	$size=size('$strace')
+	$x=1
+	while $x<=$size do
+	    teststr('$dssitrace',$strace[$x],'local'):$k
+	    if $k then $dssitrace[$k]='' endif
+	    $x=$x+1
+	endwhile
+	array2array($dssitrace):$strace
+	$size=size('$strace')
+	if $strace[1]='' then $size=0 endif
+	if not $size then clear(2) return endif
+	$x=1
+	while $x<=$size do
+	    format($strace[$x],'lower'):$newtrace[$x]
+	    $x=$x+1
+	endwhile
+    endif
+    $nsize=size('$newtrace')
+    if $nsize>1 then
+      if $1<>'stack' then
+	sort($newtrace,'u'):$inx,$newtrace
+	if $newtrace[1]=0 then 
+	    $newtrace[1]=$newtrace[2]
+	    sort($newtrace,'u'):$inx,$newtrace
+	endif
+      endif
+    endif
+
+    create('dssitrace','real','current',0)
+    setgroup('dssitrace','display')
+    setprotect('dssitrace','on',256,'current')
+    dssitrace=$newtrace
+    dssi
+

@@ -1,0 +1,24 @@
+"es_mkesshape - macro to update the water refocussing shape       "
+"                      for dpfgse water suppression sequences         "
+"   the macro takes the current shapename (esshape) and             "
+"   pulsewidth (wgspw) and receates the shape and updates the        "
+"   corresponding power level (wgspwr)                               "
+"   for the shape type a rectangular shape is set by the macro        "
+
+if (wgspw<500)or(wgspw>5000) then
+  write('error','Please make sure 500 < wgspw < 5000 usec!')
+endif
+getparam('tpwr_cf',tn):tpwr_cf
+$wgspw='' $wgspwr='' $wgspwban=''
+ format(wgspw*1e-6,6,6):$wgspw 
+ format(wgspw,1,1):$wgspwban
+$wave='square '+$wgspw+' 0 0.5 0 90'
+opx(wgsshape)
+setwave($wave)
+cpx(pw*tpwr_cf, tpwr):$dum
+ pbox_pw(wgsshape+'.RF'):$wgspw1 wgspw=$wgspw1
+ pbox_pwr(wgsshape+'.RF'):$wgspwr1 wgspwr=$wgspwr1
+ format(wgspwr,0,0):$wgspwr
+if ($## < 1) then
+    write('line3','wgsshape = %s, wgspw = %s us, wgspwr = %s dB (can optimize wgspwrf)',wgsshape,$wgspwban,$wgspwr)
+endif
