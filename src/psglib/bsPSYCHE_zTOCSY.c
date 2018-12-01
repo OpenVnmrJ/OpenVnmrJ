@@ -84,14 +84,14 @@ pulsesequence()
 
 //synchronize gradients to srate for probetype='nano'
 //   Preserve gradient "area"
-        gt1 = syncGradTime("gt1","gzlvl1",1.0);
-        gzlvl1 = syncGradLvl("gt1","gzlvl1",1.0);
-	gt2 = syncGradTime("gt2","gzlvl2",1.0);
-        gzlvl2 = syncGradLvl("gt2","gzlvl2",1.0);
-        gtA = syncGradTime("gtA","gzlvlA",1.0);
-        gzlvlA = syncGradLvl("gtA","gzlvlA",1.0);
-        gtB = syncGradTime("gtB","gzlvlB",1.0);
-        gzlvlB = syncGradLvl("gtB","gzlvlB",1.0);
+   gt1 = syncGradTime("gt1","gzlvl1",1.0);
+   gzlvl1 = syncGradLvl("gt1","gzlvl1",1.0);
+   gt2 = syncGradTime("gt2","gzlvl2",1.0);
+   gzlvl2 = syncGradLvl("gt2","gzlvl2",1.0);
+   gtA = syncGradTime("gtA","gzlvlA",1.0);
+   gzlvlA = syncGradLvl("gtA","gzlvlA",1.0);
+   gtB = syncGradTime("gtB","gzlvlB",1.0);
+   gzlvlB = syncGradLvl("gtB","gzlvlB",1.0);
 
    assign(ct,v17);
    initval(2.0*(double)(((int)(d2*getval("sw1")+0.5)%2)),v14);

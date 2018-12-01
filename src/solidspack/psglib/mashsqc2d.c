@@ -87,7 +87,7 @@ pulsesequence() {
       rev1 = 1;
    }
    else {
-      del1 = (pw1Hhxhsqc - pw1Xhxhsqc)/2,0;
+      del1 = (pw1Hhxhsqc - pw1Xhxhsqc)/2.0;
       rev1 = 2;
    }
    del1 = (double) ((int) (del1/0.0125e-6 + 0.5));
@@ -112,7 +112,7 @@ pulsesequence() {
       rev2 = 0;
    }
    else {
-      del2 = (pw2Hhxhsqc - pw2Xhxhsqc)/2,0;
+      del2 = (pw2Hhxhsqc - pw2Xhxhsqc)/2.0;
       rev2 = 1;
    }
    del2 = (double) ((int) (del2/0.0125e-6 + 0.5));
@@ -143,7 +143,7 @@ pulsesequence() {
       rev3 = 0;
    }
    else {
-      del3 = (pw1Hhxhsqc - pw1Xhxhsqc)/2,0;
+      del3 = (pw1Hhxhsqc - pw1Xhxhsqc)/2.0;
       rev3 = 1;
    }
 
