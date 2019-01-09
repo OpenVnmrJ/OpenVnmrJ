@@ -1,0 +1,41 @@
+// Chempacker macro
+
+// This is a branch point of vnmrunits macro
+// At this time sw1/sw2/sw3 are handled
+
+$param=$2
+$getset=$1
+
+if ($getset<>'set') and ($getset<>'get') then
+    return(0)
+endif
+$k=0 $s1='' $ext=''
+strstr($param,'sw'):$k,$s1,$ext
+format($ext,'isreal'):$real
+if $k<>1 or not $real then return(0) endif
+
+$refsource='refsource'+$ext
+$reffrq='reffrq'+$ext
+$k1=0 $k2=0
+exists($refsource,'parameter'):$k1
+exists($reffrq,'parameter'):$k2
+if not $k1 or not $k2 then return(0) endif
+
+getdgroup($param,'current'):$dgroup
+if $dgroup=1 then $ref=1 else $ref={$reffrq} endif
+
+if $getset='get' then
+    $num=size($param)
+    if $num>1 then
+	return(1,'array')
+    endif
+    $pval={$param}[1]
+    $pval=$pval/$ref
+    return(1,$pval)
+endif
+
+if $getset='set' then
+    $pval=$3*$ref
+    {$param}=$pval
+    return(1,0)
+endif

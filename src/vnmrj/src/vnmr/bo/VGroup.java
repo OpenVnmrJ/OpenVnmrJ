@@ -1954,7 +1954,7 @@ to be done in setEditMode()
                             // Try up to 3 levels of group above this.
                             if(helpstr==null){
                                   Container group = getParent();
-                                  helpstr = CSH_Util.getHelpFromGroupParent((VGroup)group, title, LABEL, HELPLINK);    
+                                  helpstr = CSH_Util.getHelpFromGroupParent(group, title, LABEL, HELPLINK);    
                             }
 
                             // Get the ID and display the help content

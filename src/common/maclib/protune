@@ -686,17 +686,18 @@ elseif ($action = 'reset') then
       endif
       protune('quit','failure')
       shell('protune -quitgui'):$x  /*Quit protune gui before start next one*/
-      return
+      return('done')
   endif
 
   // normal protune operation, reset freq or quit
   if (tuneTiming[11]) then
+      $ret=''
       if (tuneTiming[11] = 1) then
-        protune('quit')
+        protune('quit'):$ret
       else
-        protune('quit','failed')
-        return('abort')  // return abort to psTune
+        protune('quit','failed'):$ret
       endif
+      return($ret)  // return abort to psTune
   else
       protune('start')
   endif
@@ -1244,14 +1245,15 @@ elseif ($action = 'quit') then
   shell('chmod 666 '+systemdir+'/tmp/ptune* 2>/dev/null'):$x
 
   psCmd('active'):$psActive
+  $ret=''
   if ($psActive) then
     if ($# < 2) then $2='' endif
     if ($2='failure') or ($2='failed') then
-      psTune('abort')
+      psTune('abort'):$ret
     else
-      psTune('done')
+      psTune('done'):$ret
     endif
-    return
+    return($ret)
   endif
 
   if auto='y' then

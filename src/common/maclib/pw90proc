@@ -139,8 +139,12 @@ ELSEIF ($1='est90') THEN
 	fread($tmpfile+'2')
 	shell('rm -f '+$tmpfile+'2'):$dum
   endif
-    vsadj(100) thadj th=th*2 dc
+	// Set thadj to a maximum of 10 peaks via thadj
+  dc vsadj(100) thadj(10)
+//    vsadj(100) thadj th=th*2 dc
   if ($wpspex=0) then
+	// wpsp are not defined. So find at least
+	//  5 peaks starting from middle 10% of the sepctrum
     $done=0
     $wp=wp/10 $sp=sp+wp/2-$wp/2 
     $i=1
@@ -152,7 +156,26 @@ ELSEIF ($1='est90') THEN
 	$i=$i+1
     endwhile
   else
+	// Let us make sure we use a maximum of 5 tallest peaks
+	// just to avoid too many noise peaks
     nll:$peaks
+    if $peaks>5 then
+	// If we have more than 5 peaks, increase th and try again
+	$done=0
+	while $done<1 do
+	    th=th+10
+	    nll:$peaks
+	    if $peaks=0 then
+		// No peaks, go back to the previous step
+		th=th-10 
+		nll:$peaks 
+		$done=1
+	    elseif $peaks<=5 then
+		// Found 5 or less peaks
+		$done=1
+	    endif
+	endwhile
+    endif
   endif
     if ($peaks>0) then
 	select(1) dc select(2) dc fp
@@ -162,6 +185,7 @@ ELSEIF ($1='est90') THEN
 	pw90=$pw90
 	write('line3','%s pw90 set to %0.2f',pslabel,pw90)
 	Studyprobecal(tn,'pw90',pw90)
+	dousermacro($0)
       else
 	$pw90=trunc(10*$pw90 + 0.5)/10
 	array('pw',9,4*$pw90-3.2,0.8)
@@ -206,6 +230,7 @@ ELSEIF ($1='est360') THEN
 	pw90=$pw90
 	write('line3','%s pw90 set to %0.2f',pslabel,pw90)
         Studyprobecal(tn,'pw90',pw90)
+	dousermacro($0)
     endif
     pw90proc('done')
     if ($GO='go') then cpgo endif
