@@ -834,7 +834,7 @@ public class VCheck extends JCheckBox
                             // Try up to 3 levels of group above this.
                             if(helpstr==null){
                                 Container group = getParent();
-                                helpstr = CSH_Util.getHelpFromGroupParent((VGroup)group, label, LABEL, HELPLINK);           
+                                helpstr = CSH_Util.getHelpFromGroupParent(group, label, LABEL, HELPLINK);           
                             }
 
                             // Get the ID and display the help content

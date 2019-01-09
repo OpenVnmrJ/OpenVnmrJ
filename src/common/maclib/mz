@@ -32,14 +32,29 @@ endif
 
 " remember integration parameters "
 on('lifrq') on('liamp')
-$lifrq=lifrq $liamp=liamp
+$lifrq=lifrq $liamp=liamp $reffrq=reffrq $tn=tn $rfl=rfl
 
 " read in parameters from target experiment "
 fread(userdir+'/exp'+$t+'/curpar','current','reset')
 
-" transfer integration poarameters "
-lifrq=$lifrq off('lifrq')
-liamp=$liamp off('liamp')
+" transfer integration parameters "
+if $tn<>tn then
+  write('error','Cannot move resets between different nuclei!')
+  if $curexp<>$t then fread(curexp+'/curpar','current','reset') endif
+else
+  lifrq=0
+  liamp=0
+  $drfl=$rfl*(reffrq/$reffrq)-rfl
+  $size=size('$lifrq')
+  $i=1
+  repeat
+    setvalue('lifrq',$lifrq[$i]*(reffrq/$reffrq)-$drfl,$i)
+    setvalue('liamp',$liamp[$i],$i)
+    $i=$i+1
+  until $i>$size
+  off('lifrq')
+  off('liamp')
+endif
 
 " if necessary, save target data and restore current experiment params "
 if $curexp<>$t then

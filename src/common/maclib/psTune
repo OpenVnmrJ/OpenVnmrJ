@@ -1,5 +1,4 @@
 "macro psTune"
-"macro psTune"
 if ($# = 0) then
   write('error','Do not call %s directly. Use prescan.',$0)
   abort
@@ -74,25 +73,25 @@ elseif ($action = 'done') or ($action = 'quit') or ($action= 'abort') then
 "*********************************************************************"
         checkprotune('write','lasttunepar')
     endif
-    $abortpterror='no'
-    getadminfo('abortpterror'):$abortpterror
     if ($action = 'abort') then
+        $abortpterror='no'
+        getadminfo('abortpterror'):$abortpterror
         if ($abortpterror='yes') then
-                write('error','Protune reported a Failure')
+                write('error','Protune reported a failure')
                 if (auto='y') then
                    wexp='AutoSKIP'
                    psCmd('record','wexp=\'AutoSKIP\'')
                 endif
+                return('abort') // Return abort to psMain
         else
-                write('line3','Protune reported a Failure')
+                write('line3','Protune reported a failure, continue nontheless')
 		if (auto='y') then
                    $loc='' $locdir='' $when=''
                    getlocid:$loc,$locdir,$when
                    $errlog=autodir+'/enterQ.macdir/'+$locdir+'/errorlog_'+$when
-                   write('file',$errlog,'Protune reported a Failure')
+                   write('file',$errlog,'Protune reported a failure, but queue runs anyway')
 		endif
         endif
-        return('abort') // Return abort to psMain
     endif
 
   return('done')
