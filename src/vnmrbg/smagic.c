@@ -151,7 +151,7 @@ extern int   acqflag;
 extern int        doThisCmdHistory;
 int          JgetPid;
 extern int autoDelExp;
-extern int nextexp_d(int *expi, char *expn );
+extern int nextexp_d(int *expi, char *expn);
 extern int cexpCmd(int argc, char *argv[], int retc, char *retv[]);
 
 extern varInfo *findVar(char *name);
@@ -237,7 +237,7 @@ extern void set_bootup_gfcn_ptrs();
 extern void setUpWin(int windowRetain, int noUi);
 extern void jgraphics_init();
 extern void nmr_exit(char *modeptr);
-extern void bootup(char *modeptr, int enumber);
+extern void bootup(int enumber);
 extern void setWissun(int val);
 extern int merge_command_table(void *aipCmd);
 extern void *aipGetCommandTable();
@@ -290,6 +290,7 @@ int 	     working     = 0;
 int	     jShowInput  = 0;
 int	     jShowArray  = 0;
 int	     jParent  = 0;
+int	     doingAutoJexp  = 0;
 
 static int  expnum;
 static int  graphics_window = 0;
@@ -1129,16 +1130,17 @@ int vnmr(int argc, char *argv[])
 	setupdirs( "background" );
         if (expnum < 0)
         {
-           int expi;
+           int expi=5;
            char expn[32];
            if (nextexp_d( &expi, expn))
            {
               char *argv2[3];
               char *retv2[2];
-                    
+
               if (expnum == -2)
                  autoDelExp=1;
               expnum = expi;
+              doingAutoJexp = 1;
               sprintf(expn,"%d",expi);
               argv2[0] = "cexp";
               argv2[1] = expn;
@@ -1146,7 +1148,6 @@ int vnmr(int argc, char *argv[])
               strcpy( curexpdir, userdir );
               strcat( curexpdir, "/exp0" );
               cexpCmd(2, argv2, 1, retv2);
-   
            }
            else
            {
@@ -1154,7 +1155,7 @@ int vnmr(int argc, char *argv[])
            }
         }
         jgraphics_init();
-	bootup(vnMode,expnum);
+	bootup(expnum);
 	if (initCommand)
 	{
             char tmpStr[2048];
@@ -1204,7 +1205,7 @@ int vnmr(int argc, char *argv[])
 	jvnmr_init();
         if (!noUI)
 	    init_win_info();
-	bootup(vnMode,expnum);
+	bootup(expnum);
 /*	setWissun(1); */
 	JgetPid = getpid();
         smagicLoop();
@@ -1216,7 +1217,7 @@ int vnmr(int argc, char *argv[])
     {	setupdirs( "terminal" );
 	graphics_window = 0;
 	Wsetupterm(); /* setup windows */
-	bootup(vnMode,expnum);
+	bootup(expnum);
 	terminal_main_loop();
     }
     return(0);

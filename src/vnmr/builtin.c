@@ -94,6 +94,7 @@ extern int   find_param_file(char *init, char *final);
 extern int   goodType(char *type);
 extern int   goodGroup(char *group);
 extern void  copyGVars(symbol **fp, symbol **tp, int group);
+extern void  P_balance(symbol **tp);
 extern void  jsetcopyGVars(int flag);
 extern void  resetMagicVar(varInfo *v, char *name);
 extern void  nmr_exit(char *modeptr);
@@ -1515,6 +1516,7 @@ int groupcopy(int argc, char *argv[], int retc, char *retv[])
 			  jsetcopyGVars( 0 );
 #endif 
 			copyGVars(fromroot,toroot,group);
+                        P_balance(toroot);
 #ifdef VNMRJ
 			if (strcmp(to_tree,"current")==0)
 			  jsetcopyGVars( -1 );
@@ -1544,8 +1546,26 @@ int groupcopy(int argc, char *argv[], int retc, char *retv[])
             ABORT;
         }
     }
+    else if (argc == 3)
+    {
+       int fromTree = getTreeIndex(argv[1]);
+       int toTree = getTreeIndex(argv[2]);
+       if (fromTree < 0)
+       {
+          Werrprintf("groupcopy: \"%s\" is not valid tree!",argv[1]);
+          ABORT;
+       }
+       if (toTree < 0)
+       {
+          Werrprintf("groupcopy: \"%s\" is not valid tree!",argv[2]);
+          ABORT;
+       }
+       P_pruneTree(toTree,fromTree);
+       P_copy(fromTree,toTree);
+       RETURN;
+    }
     else
-    {   Werrprintf("Usage -- groupcopy(fromtree,totree,group)!");
+    {   Werrprintf("Usage -- groupcopy(fromtree,totree<,group>)!");
         ABORT;
     }
 }

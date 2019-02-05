@@ -18,6 +18,7 @@
 #define TOOLS_H
 
 #include <stdio.h>
+#include <sys/stat.h>
 
 #define NO_FIRST_FILE	-4
 #define NO_SECOND_FILE	-2
@@ -40,6 +41,7 @@ extern int     verify_fname(char *fnptr);
 
 extern int     isHardLink(char *lptr);
 extern int     isSymLink(char *lptr);
+extern int     copyFile(const char *fromFile, const char *toFile, mode_t mode);
 extern int     copy_file_verify(char *file_a, char *file_b );
 extern int     make_copy_fidfile(char *prog, char *dir, char *msg);
 extern char *strwrd(char *s, char *buf, size_t len, char *delim);

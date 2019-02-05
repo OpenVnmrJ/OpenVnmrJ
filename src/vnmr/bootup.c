@@ -117,6 +117,7 @@ int showFlushDisp = 1;
 extern int acqStartUseRtp;
 
 extern int part11System;
+extern int doingAutoJexp;
 
 typedef union {
     unsigned int  my_int;
@@ -133,6 +134,8 @@ static void set_automount_dir();
 static int getbufscale();
 void setGlobalPars();
 int flush( int argc, char *argv[], int retc, char *retv[] );
+int flush2( int argc, char *argv[], int retc, char *retv[] );
+int flushpars( int argc, char *argv[], int retc, char *retv[] );
 
 int bigendian( int argc, char *argv[], int retc, char *retv[] )
 {
@@ -329,7 +332,7 @@ static void saveViewPortAddr()
 /* enumber integer experiment number */
 /* modeptr mode of Vnmr: foreground, background, acquisition or automation */
 /*****************************/
-void bootup(char *modeptr, int enumber)
+void bootup(int enumber)
 /*****************************/
 {
     char	 autodir[MAXPATH];
@@ -344,7 +347,6 @@ void bootup(char *modeptr, int enumber)
     int lval;
     endian_tester et;
 
-    (void) modeptr;
     et.my_int = 0x0a0b0c0d;
     BigEndian = (et.my_bytes[0] == 0x0a) ? 1:0;
     psg_pid = 0;		/* set pids to zero */
@@ -587,16 +589,33 @@ void bootup(char *modeptr, int enumber)
         }
 	else       /* if (mode_of_vnmr != AUTOMATION) */
         {
-           /* load parameters in curexp/curpar file */
-           D_getparfilepath(CURRENT, parampath, curexpdir);
+           if (doingAutoJexp)
+           {
+              strcpy(parampath,systemdir);
+              strcat(parampath,"/fidlib/fid1d.fid/procpar");
+           }
+           else
+           {
+              /* load parameters in curexp/curpar file */
+              D_getparfilepath(CURRENT, parampath, curexpdir);
+           }
            if (P_read(CURRENT,parampath))
 	       Werrprintf("problem loading current parameters from \"%s\"",
                            parampath);
+           if (doingAutoJexp)
+           {
+              doingAutoJexp = 0;
+              P_copy(CURRENT,PROCESSED);
+              flushpars(0,NULL,0,NULL);
+           }
+           else
+           {
            /* load parameters in curexp/procpar file */
-           D_getparfilepath(PROCESSED, parampath, curexpdir);
-           if (P_read(PROCESSED,parampath))
-	       Werrprintf("problem loading processed parameters from \"%s\"",
+              D_getparfilepath(PROCESSED, parampath, curexpdir);
+              if (P_read(PROCESSED,parampath))
+	          Werrprintf("problem loading processed parameters from \"%s\"",
                            parampath);
+           }
 #ifdef VNMRJ
 	   sprintf(mstr,"exp%s %s",estring,curexpdir);
 	   writelineToVnmrJ("expn",mstr);
@@ -682,20 +701,19 @@ void bootup(char *modeptr, int enumber)
        strcpy(PrinterName,"none");
     }
 
-#ifdef SUN
 /*
  *  Set up signal handler to exit VNMR
  *  The function nmr_quit will be called when Vnmr exits
  */
     set_nmr_quit_signal();
-#endif 
     check_datastation();
 
-#ifdef VNMRJ
-    writelineToVnmrJ("bootup","");
-    /* create a frame for graphics display */
-    frame_update("init", "");
-#endif 
+    if (!Bnmr) /* No UI in background */
+    {
+       writelineToVnmrJ("bootup","");
+       /* create a frame for graphics display */
+       frame_update("init", "");
+    }
 
 /*  The extra space in the first Wscrprintf is essential for
     the scrollable text subwindow to work correctly.			*/
@@ -703,7 +721,7 @@ void bootup(char *modeptr, int enumber)
 /* ---  print revision ID and Date, Compiled within revdate.c --- */
     P_setstring( SYSTEMGLOBAL, "rev", &RevID[ 0 ], 1);
     P_setstring( SYSTEMGLOBAL, "revdate", &RevDate[ 0 ], 1);
-    if (!Bnmr) /* only execute the bootup macro if we are in forground */
+    if (!Bnmr)
     {
 	Wscrprintf("\n              %s\n",RevID);
         Wscrprintf("              %s\n",RevDate);
@@ -1126,7 +1144,10 @@ void nmr_exit(char *modeptr)
       stop_acqi( 1 );
       autoqMsgOff();
 #endif 
-      flush(99,NULL,0,NULL);
+      if ( (mode_of_vnmr == BACKGROUND) && autoDelExp)
+         flush2(0,NULL,0,NULL);
+      else
+         flush(99,NULL,0,NULL);
       if (mode_of_vnmr == FOREGROUND)
          WrestoreTerminal();
 

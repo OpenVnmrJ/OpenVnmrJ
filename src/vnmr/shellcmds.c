@@ -39,6 +39,7 @@
 #include <sys/utsname.h>
 #define __USE_XOPEN 1
 #include <time.h>
+#include <libgen.h>
 
 #include "pvars.h"
 #include "wjunk.h"
@@ -606,6 +607,99 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
     int  i,len;
     int res;
 
+    if ( (argc == 3) || ( (argc == 4) && ! strcmp(argv[1],"-p") ) )  // simple copy
+    {
+       mode_t mode;
+       char *fromFile;
+       char toFile[MAXPATH];
+       struct stat buf;
+       ino_t inode;
+       nlink_t nlink;
+
+       if (argc == 3)
+       {
+          fromFile = argv[1];
+       }
+       else
+       {
+          fromFile = argv[2];
+       }
+       if (stat(fromFile, &buf))
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          Werrprintf ( "%s: error for %s: %s", argv[0], fromFile, strerror(errno) );
+          ABORT;
+       }
+       if (S_ISDIR(buf.st_mode))
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          Werrprintf ( "%s: cannot copy directory %s", argv[0], fromFile );
+          ABORT;
+       }
+       if (argc == 3)
+       {
+          strcpy(toFile,argv[2]);
+          mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
+       }
+       else
+       {
+          strcpy(toFile,argv[3]);
+          mode = buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO);
+       }
+       inode = buf.st_ino;
+       nlink = buf.st_nlink;
+       buf.st_ino = 0;
+       if ( (stat(toFile, &buf) == 0) && (S_ISDIR(buf.st_mode)) )
+       {
+          char tmpFile[MAXPATH];
+          char *bname;
+
+          strcpy(tmpFile,fromFile);
+          bname = basename(tmpFile);
+          strcat(toFile,"/");
+          strcat(toFile,bname);
+          if (stat(toFile, &buf))
+             buf.st_ino = 0;
+       }
+       if ((inode == buf.st_ino) && (nlink == buf.st_nlink) )
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          Werrprintf ( "%s: %s and %s are the same file", argv[0], fromFile, toFile );
+          RETURN;
+       }
+       if ( (res = copyFile(fromFile, toFile, mode)) )
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          if (res == NO_FIRST_FILE)
+             Werrprintf("%s: cannot copy file %s\n", argv[0],  fromFile);
+          else if (res == NO_SECOND_FILE)
+             Werrprintf("%s: could not open %s for writing", argv[0],  toFile );
+          else
+             Werrprintf("%s: error writing to file: %s", argv[0], strerror(errno) );
+          ABORT;
+       }
+       if (retc)
+       {
+	  retv[ 0] = realString((double) 1);
+       }
+       RETURN;
+    }
     if ( (argc == 4) && ! strcmp(argv[3],"symlink") )
     {
        res = 0;
@@ -623,20 +717,34 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        }
        else if ( ! res)
        {
+          Werrprintf("cannot symlink file %s\n", argv[1]);
+          ABORT;
+       }
+       RETURN;
+    }
+    if ( (argc == 4) && ! strcmp(argv[3],"link") )
+    {
+       res = 0;
+       if (!access(argv[1],F_OK))
+       {  
+          res = 1;
+          if (link(argv[1],argv[2]))
+          {
+            res = 0;
+          }
+       }
+       if (retc)
+       {
+	  retv[ 0] = realString((double) res);
+       }
+       else if ( ! res)
+       {
           Werrprintf("cannot link file %s\n", argv[1]);
           ABORT;
        }
        RETURN;
     }
-#ifdef UNIX
     strcpy(cmdstr,"/bin/cp ");
-#else 
-    if (argc != 3) {
-      Werrprintf( "%s:  use exactly 2 arguments", argv[ 0 ] );
-      ABORT;
-    }
-    strcpy(cmdstr,"copy ");
-#endif 
     for (i=1; i<argc; i++)
     {
 	if (verify_fname( argv[ i ] ) != 0)
@@ -891,15 +999,10 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
 
-#ifdef UNIX
-    strcpy(cmdstr,"/bin/mv");
-#else 
     if (argc != 3) {
       Werrprintf( "%s:  use exactly 2 arguments", argv[ 0 ] );
       ABORT;
     }
-    strcpy(cmdstr,"rename ");
-#endif 
     for (i=1; i<argc; i++)
     {
 	if (verify_fname( argv[ i ] ) != 0)
@@ -910,12 +1013,19 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
 #endif 
 	    ABORT;
 	}
+    }
+    if ( rename(argv[1], argv[2]) )
+    {
+       strcpy(cmdstr,"/bin/mv");
+       for (i=1; i<argc; i++)
+       {
 	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
 	len = MAXSHSTRING - strlen(cmdstr) -1;
 	strncat(cmdstr,check_spaces(argv[i],chkbuf,len),len);
+       }
+       TPRINT1("mv: command string \"%s\"\n",cmdstr);
+       system_call(cmdstr);
     }
-    TPRINT1("mv: command string \"%s\"\n",cmdstr);
-    system_call(cmdstr);
     RETURN;
 }
 
@@ -1049,26 +1159,25 @@ int mk_dir(int argc, char *argv[], int retc, char *retv[])
 
 int Rm(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
-#ifdef VMS
-    char *ival;
-#endif
     int  i,len;
 
-#ifdef UNIX
+    if ( (argc == 2) || ( (argc == 3) && ! strcmp(argv[1],"-f") ) )
+    {
+       int argnum = (argc == 2) ? 1 : 2;
+       
+       if ( ! access(argv[argnum],F_OK))
+       {
+          unlink(argv[argnum]);
+          if ( access(argv[argnum],F_OK))
+             RETURN;
+       }
+    }
     strcpy(cmdstr,"/bin/rm");
-#else 
-    strcpy(cmdstr,"delete ");
-#endif 
     for (i=1; i<argc; i++)
     {
         strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
 	len = MAXSHSTRING - strlen(cmdstr) -1;
 	strncat(cmdstr,check_spaces(argv[i],chkbuf,len),len);
-#ifdef VMS
-	ival = strchr( argv[ i ], ';' );
-	if (ival == NULL)
-	  strncat(cmdstr,";",MAXSHSTRING - strlen(cmdstr) -1 );
-#endif 
     }
     TPRINT1("rm: command string \"%s\"\n",cmdstr);
     system_call(cmdstr);
@@ -1077,7 +1186,8 @@ int Rm(int argc, char *argv[], int retc, char *retv[])
       {
           if ( access(argv[i],F_OK) == 0)
 	  {
-             Werrprintf("cannot delete %s",argv[i]);
+             if (!retc)
+                Werrprintf("cannot delete %s",argv[i]);
 #ifdef VNMRJ
 	     writelineToVnmrJ("nodelete",argv[i]);
 #endif 
@@ -1103,7 +1213,6 @@ int RmTree(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i;
 
-#ifdef UNIX
     strcpy(cmdstr,"/bin/rm -r ");
     for (i=1; i<argc; i++)
     {	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
@@ -1121,9 +1230,6 @@ int RmTree(int argc, char *argv[], int retc, char *retv[])
 #endif 
 	  }
     RETURN;
-#else 
-    Werrprintf( "%s:  command not supported, sorry!", argv[ 0 ] );
-#endif 
 }
 
 /*------------------------------------------------------------------------------
@@ -1138,7 +1244,6 @@ int rm_dir(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
 
-#ifdef UNIX
     strcpy(cmdstr,"/bin/rmdir");
     for (i=1; i<argc; i++)
     {
@@ -1148,10 +1253,6 @@ int rm_dir(int argc, char *argv[], int retc, char *retv[])
     }
     TPRINT1("rmdir: command string \"%s\"\n",cmdstr);
     system_call(cmdstr);
-#else 
-    for (i=1; i<argc; i++)
-      rmdir( argv[i] );
-#endif 
     for (i=1; i<argc; i++)
       if (argv[i][0] != '-')
       {
@@ -1280,70 +1381,66 @@ int del_file2(int argc, char *argv[], int retc, char *retv[])
 
 int del_file(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[MAXPATH+20];   
-#ifdef VNMRJ
     char jstr[ 3*MAXPATH ], jstrn[ MAXPATH ];
-#endif 
     int  i,j;
+    int isDir;
 
     for (i=1; i<argc; i++)
        for (j=0; j<strlen(argv[i]); j++)
           if (argv[i][j] == '*')
           {
              Werrprintf("No wildcards are permitted in the delete command");
-#ifdef VNMRJ
 	     writelineToVnmrJ("noRmFile","nowildcards");
-#endif 
              ABORT;
           }
     for (i=1; i<argc; i++)
-       if ( access(argv[i],F_OK) == 0)
+    {
+       isDir = (strstr(argv[i],".fid") || strstr(argv[i],".par") );
+       if ( !isDir &&  access(argv[i],F_OK) == 0)
        {
           if ( access(argv[i],W_OK|R_OK) == 0)
           {
-#ifdef UNIX
-             sprintf(cmdstr,"/bin/rm %s",check_spaces(argv[i],chkbuf,MAXPATH));
-#else 
-	     if (strchr(argv[i],';') != NULL)
-	      sprintf(cmdstr,"delete %s",argv[i]);
-	     else
-	      sprintf(cmdstr,"delete %s;*",argv[i]);
-#endif 
-             TPRINT1("delete: command string \"%s\"\n",cmdstr);
-             system_call(cmdstr);
+             unlink(argv[i]);
           }
-#ifdef VNMRJ
-          if (argv[i][0] != '/')
+          if (!Bnmr)
           {
-              if (getcwd(jstr,256) == NULL)
-                  strcpy(jstr,"");
-              strcat(jstr,"/");
-              strcat(jstr,argv[i]);
-              strncpy(jstrn,jstr,MAXPATH);
-              i = strlen(jstrn);
-              if (jstrn[i] != '\0')
-                  jstrn[i] = '\0';
-              sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+             if (argv[i][0] != '/')
+             {
+                 if (getcwd(jstr,256) == NULL)
+                     strcpy(jstr,"");
+                 strcat(jstr,"/");
+                 strcat(jstr,argv[i]);
+                 strncpy(jstrn,jstr,MAXPATH);
+                 i = strlen(jstrn);
+                 if (jstrn[i] != '\0')
+                     jstrn[i] = '\0';
+                 sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+             }
+             else
+                 sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,argv[i]);
+             if ( access(argv[i],F_OK) == 0)
+	     {
+                Werrprintf("cannot delete %s",argv[i]);
+	        writelineToVnmrJ("noRmFile",jstr);
+	     }
+	     else
+	        writelineToVnmrJ("RmFile",jstr);
           }
           else
-              sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,argv[i]);
-#endif 
-          if ( access(argv[i],F_OK) == 0)
-	  {
-             Werrprintf("cannot delete %s",argv[i]);
-#ifdef VNMRJ
-	     writelineToVnmrJ("noRmFile",jstr);
-#endif 
-	  }
-#ifdef VNMRJ
-	  else
-	     writelineToVnmrJ("RmFile",jstr);
-#endif 
+          {
+             if ( !retc &&  access(argv[i],F_OK) == 0)
+	     {
+                Werrprintf("cannot delete %s",argv[i]);
+	     }
+          }
        }
-#ifdef UNIX
        else
        {  char tmp[MAXPATH];
 
-          sprintf(tmp,"%s.fid",argv[i]);
+          if (isDir)
+             strcpy(tmp,argv[i]);
+          else
+             sprintf(tmp,"%s.fid",argv[i]);
           if ( access(tmp,F_OK) == 0)
           {
              if ( access(tmp,W_OK|R_OK) == 0)
@@ -1351,33 +1448,38 @@ int del_file(int argc, char *argv[], int retc, char *retv[])
                 sprintf(cmdstr,"/bin/rm -r %s",check_spaces(tmp,chkbuf,MAXPATH));
                 TPRINT1("delete: command string \"%s\"\n",cmdstr);
                 system_call(cmdstr);
-#ifdef VNMRJ
-                if (tmp[0] != '/')
+                if (!Bnmr)
                 {
-                    if (getcwd(jstr,256) == NULL)
-                        strcpy(jstr,"");
-                    strcat(jstr,"/");
-                    strcat(jstr,tmp);
-                    strncpy(jstrn,jstr,MAXPATH);
-                    i = strlen(jstrn);
-                    if (jstrn[i] != '\0')
-                        jstrn[i] = '\0';
-                    sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+                   if (tmp[0] != '/')
+                   {
+                       if (getcwd(jstr,256) == NULL)
+                           strcpy(jstr,"");
+                       strcat(jstr,"/");
+                       strcat(jstr,tmp);
+                       strncpy(jstrn,jstr,MAXPATH);
+                       i = strlen(jstrn);
+                       if (jstrn[i] != '\0')
+                           jstrn[i] = '\0';
+                       sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+                   }
+                   else
+                       sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,tmp);
+                   if ( access(tmp,F_OK) == 0)
+		   {
+                      if (!retc)
+                         Werrprintf("cannot delete %s",argv[i]);
+		      writelineToVnmrJ("noRmFile",jstr);
+		   }
+		   else
+		      writelineToVnmrJ("RmFile",jstr);
                 }
                 else
-                    sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,tmp);
-#endif 
-                if ( access(tmp,F_OK) == 0)
-		{
-                   Werrprintf("cannot delete %s",argv[i]);
-#ifdef VNMRJ
-		   writelineToVnmrJ("noRmFile",jstr);
-#endif 
-		}
-#ifdef VNMRJ
-		else
-		   writelineToVnmrJ("RmFile",jstr);
-#endif 
+                {
+                   if ( !retc &&  access(argv[i],F_OK) == 0)
+	           {
+                      Werrprintf("cannot delete %s",argv[i]);
+	           }
+                }
              }
           }
           else
@@ -1390,13 +1492,52 @@ int del_file(int argc, char *argv[], int retc, char *retv[])
                    sprintf(cmdstr,"/bin/rm -r %s",check_spaces(tmp,chkbuf,MAXPATH));
                    TPRINT1("delete: command string \"%s\"\n",cmdstr);
                    system_call(cmdstr);
-#ifdef VNMRJ
-                   if (tmp[0] != '/')
+                   if (!Bnmr)
+                   {
+                      if (tmp[0] != '/')
+                      {
+                         if (getcwd(jstr,256) == NULL)
+                             strcpy(jstr,"");
+                         strcat(jstr,"/");
+                         strcat(jstr,tmp);
+                         strncpy(jstrn,jstr,MAXPATH);
+                         i = strlen(jstrn);
+                         if (jstrn[i] != '\0')
+                             jstrn[i] = '\0';
+                         sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+                      }
+                      else
+                         sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,tmp);
+                      if ( access(tmp,F_OK) == 0)
+		      {
+                         if (!retc)
+                            Werrprintf("cannot delete %s",argv[i]);
+		         writelineToVnmrJ("noRmFile",jstr);
+		      }
+		      else
+		         writelineToVnmrJ("RmFile",jstr);
+                   }
+                   else
+                   {
+                      if ( !retc &&  access(argv[i],F_OK) == 0)
+	              {
+                         Werrprintf("cannot delete %s",argv[i]);
+	              }
+                   }
+                }
+             }
+             else
+	     {
+                if (!retc)
+                   Werrprintf("file %s not found",argv[i]);
+                if (!Bnmr)
+                {
+                   if (argv[i][0] != '/')
                    {
                       if (getcwd(jstr,256) == NULL)
                           strcpy(jstr,"");
                       strcat(jstr,"/");
-                      strcat(jstr,tmp);
+                      strcat(jstr,argv[i]);
                       strncpy(jstrn,jstr,MAXPATH);
                       i = strlen(jstrn);
                       if (jstrn[i] != '\0')
@@ -1404,72 +1545,13 @@ int del_file(int argc, char *argv[], int retc, char *retv[])
                       sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
                    }
                    else
-                      sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,tmp);
-#endif 
-                   if ( access(tmp,F_OK) == 0)
-		   {
-                      Werrprintf("cannot delete %s",argv[i]);
-#ifdef VNMRJ
-		      writelineToVnmrJ("noRmFile",jstr);
-#endif 
-		   }
-#ifdef VNMRJ
-		   else
-		      writelineToVnmrJ("RmFile",jstr);
-#endif 
+                      sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,argv[i]);
+		   writelineToVnmrJ("noRmFile",jstr);
                 }
-             }
-             else
-	     {
-                Werrprintf("file %s not found",argv[i]);
-#ifdef VNMRJ
-                if (argv[i][0] != '/')
-                {
-                   if (getcwd(jstr,256) == NULL)
-                       strcpy(jstr,"");
-                   strcat(jstr,"/");
-                   strcat(jstr,argv[i]);
-                   strncpy(jstrn,jstr,MAXPATH);
-                   i = strlen(jstrn);
-                   if (jstrn[i] != '\0')
-                       jstrn[i] = '\0';
-                   sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
-                }
-                else
-                   sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,argv[i]);
-		writelineToVnmrJ("noRmFile",jstr);
-#endif 
 	     }
           }
        }
-#else 
-       else
-       {
-          char tmp[MAXPATH];
-
-          sprintf( tmp, "%s_fid.dir", argv[ i ] );
-          if (access( tmp, F_OK ) == 0)
-          {
-             sprintf( cmdstr, "rm_recur %s", tmp );
-             system_call( cmdstr );
-             if (access( tmp, F_OK ) == 0)
-               Werrprintf( "cannot delete %s", argv[ i ] );
-          }
-          else
-          {
-             sprintf( tmp, "%s_par.dir", argv[ i ] );
-             if (access( tmp, F_OK ) == 0)
-             {
-                sprintf( cmdstr, "rm_recur %s", tmp );
-                system_call( cmdstr );
-                if (access( tmp, F_OK ) == 0)
-                  Werrprintf( "cannot delete %s", argv[ i ] );
-             }
-             else
-               Werrprintf( "file %s not found", argv[ i ] );
-          }
-       }
-#endif 
+    }
     RETURN;
 }
 
