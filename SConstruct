@@ -159,6 +159,7 @@ acqBuildList = string.split("""
                          infoproc
                          inova
                          kpsglib
+                         lcpeaks
                          mercury
                          nautoproc
                          nvexpproc

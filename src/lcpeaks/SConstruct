@@ -1,0 +1,68 @@
+import os
+import sys
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+
+# define target file names
+lcpeaksTarget = 'vjLCAnalysis'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+lcpeaksPath     = cwd
+lcpeaksFileList = ['EventsReader.cpp',
+                   'LineFitter.cpp',
+                   'SignalReader.cpp',
+                   'Wavelets.cpp',
+                   'debug.cpp',
+                   'integrator_EventsFactory.cpp',
+                   'integrator_abstract_manager.cpp',
+                   'integrator_calcul.cpp',
+                   'integrator_classes.cpp',
+                   'integrator_groups.cpp',
+                   'integrator_ioFunctions.cpp',
+                   'integrator_ioStructures.cpp',
+                   'integrator_lineTools.cpp',
+                   'integrator_manager_Cstruct.cpp',
+                   'integrator_peakProperties.cpp',
+                   'integrator_util_events.cpp',
+                   'integrator_util_misc.cpp',
+                   'integrator_util_peaks.cpp',
+                   'median.cpp',
+                   'vjLCAnalysis.cpp']
+
+lcpeaksEnv = Environment(CCFLAGS    = '-m32 -O -Wno-deprecated',
+                         CPPDEFINES = ['DV', 'LINUX'],
+                         CC         = 'g++',
+                         LINKFLAGS  = '-m32 ',
+                         CPPPATH    = [cwd])
+
+if ('interix' in platform):    # Interix
+   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
+   interixgpp= os.path.join(os.sep,'opt','gcc.3.3','bin','g++')
+   lcpeaksEnv.Replace( CC=interixgcc )
+   lcpeaksEnv.Replace( CXX=interixgpp )
+   lcpeaksEnv.Replace(  LINKFLAGS='-O -m32' )
+   lcpeaksEnv.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','LINUX']  )
+   lcpeaksEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib') ]  )
+   #print "CC is:", lcpeaksEnv['CC']
+   #print "C++ is:", lcpeaksEnv['CXX']
+
+# actual builds
+lcpeaks = lcpeaksEnv.Program(target  = lcpeaksTarget,
+                             source  = [lcpeaksFileList],
+                             LIBPATH = [cwd])
+
+# define with absolute path where built files will be copied
+lcPath   = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                    'options','standard','LC','bin')
+
+# make sure the path(s) exist
+Execute(Mkdir(lcPath))
+
+lcpeaksEnv.AddPostAction(lcpeaks,
+                  Action(Copy(lcPath, os.path.join(cwd, lcpeaksTarget))))
+
