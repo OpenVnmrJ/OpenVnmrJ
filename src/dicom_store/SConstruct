@@ -1,4 +1,19 @@
 import os
+import sys
+# top level build for the bin build category
+# # current working directory
+cwd = os.getcwd()
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
 
 # define target file names
 dicomStoreTargetList = ['byte_swap',
@@ -46,3 +61,16 @@ for i in range(len(dicomStoreTargetList)):
    dicom_storeEnv.AddPostAction(dicom_store_builds[i],
                                 Action(Copy(optionsDicomBinPath, os.path.join(cwd, dicomStoreTargetList[i]))))
 
+srcDir = os.path.join(ovjtools,'dicom3tools','dcmtk-3.5.4')
+
+fileList = [
+            'echoscu',
+            'storescp',
+            'storescu',
+           ]
+
+for i in fileList:
+   src = os.path.join(srcDir,i)
+   dest = os.path.join(optionsDicomBinPath,i)
+   Execute(Copy(dest,src))
+   Execute(Chmod(dest,0755))
