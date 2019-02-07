@@ -1,0 +1,204 @@
+# 
+# Copyright (c) 1991-2003 Varian Assoc.,Inc. All Rights Reserved. 
+# This software contains proprietary and confidential
+# information of Varian Assoc., Inc. and its contributors.
+# Use, disclosure and reproduction is prohibited without
+# prior consent.
+#
+# makelcpeaks  make file
+#
+#
+
+MAKEFILE= makelcpeaks.lnx
+
+ifndef sccsdir
+sccsdir = /vsccs/sccs
+endif
+
+SCCSDIR=$(sccsdir)
+
+#-The SCCS Sources -----------------------------------------------
+PROG_SCCS_SRC=$(SCCSDIR)/lcpeaks/SCCS/s.
+
+CFLAGS= -O -m32 -DVJ -DLINUX -Wno-deprecated
+CPPFLAGS= 
+LDFLAGS= 
+
+TARGET_ARCH=
+CCC= g++
+COMPILE.cc= $(CCC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+LINK.c= $(CCC) $(CFLAGS) $(LDFLAGS) $(TARGET_ARCH)
+
+
+#---  SCCS Extraction Commands for Sources Needed In True Source Dir.  -------
+PROG_SGET = sccs -p$(SCCSDIR)/lcpeaks/SCCS get
+
+
+#------------------------------------------------------------------------
+#-- common source files 
+#------------------------------------------------------------------------
+PROG_SRC=	\
+    EventsReader.c  \
+    LineFitter.c \
+    SignalReader.c \
+    Wavelets.c \
+    debug.c \
+    integrator_EventsFactory.c \
+    integrator_abstract_manager.c \
+    integrator_calcul.c \
+    integrator_classes.c \
+    integrator_groups.c \
+    integrator_ioFunctions.c \
+    integrator_ioStructures.c \
+    integrator_lineTools.c \
+    integrator_manager_Cstruct.c \
+    integrator_peakProperties.c \
+    integrator_util_events.c \
+    integrator_util_misc.c \
+    integrator_util_peaks.c \
+    median.c \
+    vjLCAnalysis.c
+
+PROG_HDR= \
+    EventsReader.h \
+    GeneralLibrary.h \
+    LeakWatcher.h \
+    LineFitter.h \
+    SignalReader.h \
+    Wavelets.h \
+    common.h \
+    debug.h \
+    integrator_CTypes.h \
+    integrator_EventsFactory.h \
+    integrator_abstract_manager.h \
+    integrator_base_manager.h \
+    integrator_calcul.h \
+    integrator_classes.h \
+    integrator_events_code.h \
+    integrator_groups.h \
+    integrator_ioFunctions.h \
+    integrator_ioStructures.h \
+    integrator_lineTools.h \
+    integrator_manager_Cstruct.h \
+    integrator_peakProperties.h \
+    integrator_types.h \
+    integrator_util_events.h \
+    integrator_util_misc.h \
+    integrator_util_peaks.h \
+    median.h \
+    owninglist.h
+
+OTHER_SRC= owninglist.c
+
+PROG_OBJ= $(PROG_SRC:.c=.o)
+
+#---- All Sources and headers required for compilation -----
+ALLSRC= $(PROG_SRC) $(PROG_HDR) $(OTHER_SRC)
+
+
+#--- PAID Targets ------------------------------------------
+std LINUX : %:$(MAKEFILE) Source 
+	$(MAKE) -e -f $(MAKEFILE)  \
+	  vjLCAnalysis 
+	@echo "NMR_ID vjLCAnalysis complete ----------------------------------"
+
+
+# ---- Be sure True Source that we link to are upto date.
+Source :
+	( $(PROG_SGET) $(MAKEFILE) )
+	( $(MAKE) -e -f $(MAKEFILE) \
+             src )
+
+
+#---- Recursive Targets ------------------------------------------------
+src : %:$(MAKEFILE) $(ALLSRC)
+	@echo Sources up to date...
+
+vjLCAnalysis : $(ALLSRC) $(PROG_OBJ)
+	@echo Making $@...
+	( umask 2;  $(LINK.c) -o $@ $(PROG_OBJ) )
+
+
+#--- Object Targets ------------------------------------------------------
+$(PROG_OBJ) : $(@:.o=.c) 
+	(umask 2; $(COMPILE.cc) $(@:.o=.c))
+
+
+#------ makefile extraction via SCCS allways. -------
+$(MAKEFILE) : 
+	$(PROG_SGET) $@
+
+#------------  Source Extraction via SCCS or Links ---------------
+$(PROG_SRC) : %:$(PROG_SCCS_SRC)%
+	$(PROG_SGET) $@
+
+$(PROG_HDR) : %:$(PROG_SCCS_SRC)%
+	$(PROG_SGET) $@
+$(OTHER_SRC) : %:$(PROG_SCCS_SRC)%
+	$(PROG_SGET) $@
+
+
+EventsReader.o: owninglist.c common.h EventsReader.h LeakWatcher.h 
+LineFitter.o: common.h LineFitter.h LeakWatcher.h
+SignalReader.o: common.h SignalReader.h
+Wavelets.o: common.h Wavelets.h debug.h GeneralLibrary.h LeakWatcher.h
+debug.o: common.h LeakWatcher.h debug.h
+integrator_EventsFactory.o: common.h LeakWatcher.h integrator_EventsFactory.h \
+			    integrator_classes.h
+integrator_abstract_manager.o: common.h LeakWatcher.h  \
+			       integrator_abstract_manager.h
+integrator_calcul.o: common.h LeakWatcher.h integrator_types.h \
+		     integrator_calcul.h integrator_groups.h \
+		     integrator_classes.h integrator_peakProperties.h \
+		     GeneralLibrary.h LineFitter.h Wavelets.h median.h \
+		     owninglist.h debug.h
+integrator_classes.o: common.h LeakWatcher.h integrator_types.h \
+		      integrator_classes.h
+integrator_groups.o: common.h LeakWatcher.h integrator_groups.h GeneralLibrary.h
+integrator_ioFunctions.o: common.h integrator_ioFunctions.h \
+			  integrator_ioStructures.h
+integrator_ioStructures.o: common.h LeakWatcher.h integrator_ioStructures.h \
+			   integrator_EventsFactory.h
+integrator_lineTools.o: common.h LeakWatcher.h integrator_lineTools.h
+integrator_manager_Cstruct.o: common.h LeakWatcher.h GeneralLibrary.h \
+		integrator_manager_Cstruct.h integrator_abstract_manager.h \
+		integrator_classes.h integrator_calcul.h
+integrator_peakProperties.o: common.h LeakWatcher.h \
+		integrator_peakProperties.h integrator_lineTools.h \
+		GeneralLibrary.h debug.h
+integrator_util_events.o: common.h LeakWatcher.h integrator_util_events.h \
+			  integrator_types.h owninglist.h
+integrator_util_misc.o: common.h LeakWatcher.h integrator_util_misc.h
+integrator_util_peaks.o: common.h LeakWatcher.h integrator_util_peaks.h \
+			 integrator_classes.h GeneralLibrary.h
+median.o: common.h LeakWatcher.h median.h
+vjLCAnalysis.o: SignalReader.h integrator_types.h integrator_ioFunctions.h \
+		integrator_manager_Cstruct.h
+owninglist.c:
+owninglist.h: owninglist.c
+EventsReader.h: integrator_classes.h
+LineFitter.h: integrator_types.h
+Wavelets.h: integrator_types.h
+integrator_EventsFactory.h: integrator_ioStructures.h integrator_classes.h
+integrator_abstract_manager.h: integrator_types.h integrator_classes.h \
+			      integrator_calcul.h
+integrator_base_manager.h: integrator_types.h
+integrator_calcul.h: integrator_types.h integrator_classes.h \
+		    integrator_util_peaks.h integrator_util_events.h \
+		    integrator_util_misc.h
+integrator_classes.h: integrator_types.h LineFitter.h owninglist.h \
+		     integrator_ioStructures.h integrator_events_code.h
+integrator_groups.h: integrator_util_events.h integrator_util_peaks.h \
+		    integrator_classes.h integrator_calcul.h
+integrator_ioFunctions.h: integrator_ioStructures.h
+integrator_ioStructures.h: integrator_types.h
+integrator_lineTools.h: integrator_types.h
+integrator_manager_Cstruct.h: integrator_types.h integrator_ioStructures.h \
+		integrator_abstract_manager.h integrator_EventsFactory.h
+integrator_peakProperties.h: integrator_classes.h integrator_util_peaks.h \
+			    integrator_types.h
+integrator_types.h: integrator_CTypes.h
+integrator_util_events.h: integrator_types.h integrator_classes.h \
+			 integrator_util_peaks.h
+integrator_util_misc.h: integrator_types.h
+integrator_util_peaks.h: integrator_types.h owninglist.h

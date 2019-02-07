@@ -1,0 +1,100 @@
+Galaxie Compile Notes (Chris and Glenn)
+
+
+-  I don't have "stream.h".  In EventsReader.h:
+
+    46c46
+    < #include <istream>
+    ---
+    > #include <istream.h>
+
+-  In debug.cpp:
+
+    37d36
+    > using namespace std;
+
+   I can't access "ostream", "cout", or "endl" without the first change.
+   The second is a clear compiler difference.  
+
+-  In integrator_classes.h the case of the include file does not match
+   the actual file name.  I guess it doesn't matter to Windows.
+   
+    100c100
+    < #include "OwningList.h"
+    ---
+    > #include "owninglist.h"
+
+-  owninglist.cpp: For some reason I haven't figured out, the "distance()" 
+   call in owninglist.cpp doesn't work for me.  I just substituted the 
+   following, which I think should be equivalent (for a "vector"):
+   
+    <     return distance(_list.begin(), it);
+    ---
+    >     return it - _list.begin();
+
+   Without the change I get the error:
+   
+   "owninglist.cpp", line 84: Error: Could not find a match for 
+   std::distance<std::ForwardIterator, std::Distance>(TCandidateBaseLine**, 
+   TCandidateBaseLine**).
+   "integrator_calcul.cpp", line 3504:     Where: While instantiating 
+   "OwningList<TCandidateBaseLine>::indexof(TCandidateBaseLine&)".
+   "integrator_calcul.cpp", line 3504:     Where: Instantiated from 
+   non-template code.
+
+
+-  makefile
+    29,30c29
+    < #COMPILE = g++ -Wall -DDEBUG -g -c
+    < 
+    ---
+    > COMPILE = g++ -Wall -DDEBUG -g -c
+
+    32,34c31
+    < #LINK = g++ -g
+    < COMPILE = CC -g -c -DVJ
+    < LINK = CC -g
+    ---
+    > LINK = g++ -g
+
+    104c101
+    < #-include .dependencies
+    ---
+    > -include .dependencies
+
+    119c116
+    <       ${TEXCMD} $<   (add newline at end of file)
+    ---
+    >       ${TEXCMD} $<
+
+    As first target under "main targets" add the following:
+
+	vjLCAnalysis : vjLCAnalysis.o debug.o ${READERSOBJ} ${INTGOBJ}
+		@echo
+		@echo linking...
+		@echo
+		${LINK} -o vjLCAnalysis ${LEAKTRACER} vjLCAnalysis.o debug.o  \
+		${READERSOBJ} ${INTGOBJ}
+		@echo
+		@echo done
+		@echo
+
+-  integrator_ioFunctions.h
+    49c49
+    < #include <iostream.h>
+    ---
+    > #include <ostream.h>
+
+-  debug.h
+    43c43
+    < #include <iostream.h>
+    ---
+    > #include <ostream.h>
+
+-  integrator_lineTools.cpp
+    18c18
+    < #include "math.h"
+    ---
+    > #include "cmath"
+
+-  Copy "vjLCAnalysis.cpp" into the directory with the other stuff
