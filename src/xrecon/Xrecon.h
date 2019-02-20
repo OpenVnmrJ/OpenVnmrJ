@@ -81,11 +81,12 @@
 /* We will wait for C99 standard to become a bit more standard */
 //#include <complex.h>
 
-
+#ifdef DOTIFF
 /*---------------------------------*/
 /*---- Include tiff I/O header ----*/
 /*---------------------------------*/
 #include <tiffio.h>
+#endif
 
 
 /*------------------------------------------*/
