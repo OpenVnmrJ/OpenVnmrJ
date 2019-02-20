@@ -122,3 +122,7 @@ int band_pass_float(int, float, float [], float, float);
 int si_low_pass_float(int, float, float [], float, float);
 int cos_low_pass_float(int, float, float [], float, float);
 int hamming_float(int, float, float [], float, float);
+int access_file (char *name, struct datafilehead *fh, struct datablockhead *bh, int bigendian);
+int create_file (char *name, struct datafilehead *fh, struct datablockhead *bh);
+int create_phf_file (char *name, struct datafilehead *fh, struct datablockhead *bh);
+int create_ib_file (char *name, struct datafilehead *fh, struct datablockhead *bh);

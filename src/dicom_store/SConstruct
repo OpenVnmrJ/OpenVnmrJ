@@ -61,16 +61,18 @@ for i in range(len(dicomStoreTargetList)):
    dicom_storeEnv.AddPostAction(dicom_store_builds[i],
                                 Action(Copy(optionsDicomBinPath, os.path.join(cwd, dicomStoreTargetList[i]))))
 
-srcDir = os.path.join(ovjtools,'dicom3tools','dcmtk-3.5.4')
-
 fileList = [
             'echoscu',
             'storescp',
             'storescu',
            ]
 
-for i in fileList:
-   src = os.path.join(srcDir,i)
-   dest = os.path.join(optionsDicomBinPath,i)
-   Execute(Copy(dest,src))
-   Execute(Chmod(dest,0755))
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
+if (platform!="darwin"):
+   srcDir = os.path.join(ovjtools,'dicom3tools','dcmtk-3.5.4')
+   for i in fileList:
+      src = os.path.join(srcDir,i)
+      dest = os.path.join(optionsDicomBinPath,i)
+      Execute(Copy(dest,src))
+      Execute(Chmod(dest,0755))

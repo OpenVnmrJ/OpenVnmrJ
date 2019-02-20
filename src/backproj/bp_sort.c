@@ -35,6 +35,9 @@
 #define		TRUE		1
 #define     FALSE 0
 
+int access_file (char *name, struct datafilehead *fh, struct datablockhead *bh, int bigendian);
+int create_file (char *name, struct datafilehead *fh, struct datablockhead *bh);
+
 main (argc,argv)
 int	argc;
 char	*argv[];

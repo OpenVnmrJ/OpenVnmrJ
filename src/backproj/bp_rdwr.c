@@ -53,11 +53,7 @@
 /* Magic number ofor the new format output file */
 /* #define FFT3D_MAGIC 0xb29b7d8f */
 
-access_file (name, fh, bh, bigendian)
-char		*name;
-struct		datafilehead	*fh;
-struct		datablockhead	*bh;
-int bigendian;
+int access_file (char *name, struct datafilehead *fh, struct datablockhead *bh, int bigendian)
 {
 int		filesize;
 FILE		*fp;
@@ -204,10 +200,7 @@ else {
     } 
 }
 
-create_file (name, fh, bh)
-char		*name;
-struct		datafilehead	*fh;
-struct		datablockhead	*bh;
+int create_file (char *name, struct datafilehead *fh, struct datablockhead *bh)
 {
 int		act_block;
 FILE		*fp;
@@ -292,10 +285,7 @@ else {
 }
 
 
-create_phf_file (name, fh, bh)
-char		*name;
-struct		datafilehead	*fh;
-struct		datablockhead	*bh;
+int create_phf_file (char *name, struct datafilehead *fh, struct datablockhead *bh)
 {
 int		act_block;
 FILE		*fp;
@@ -474,10 +464,7 @@ else {
     } 
 }
 
-create_ib_file (name, fh, bh)
-char		*name;
-struct		datafilehead	*fh;
-struct		datablockhead	*bh;
+int create_ib_file (char *name, struct datafilehead *fh, struct datablockhead *bh)
 {
 int		act_block;
 FILE		*fp;
