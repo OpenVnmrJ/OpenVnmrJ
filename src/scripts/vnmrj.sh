@@ -1,5 +1,4 @@
 #! /bin/bash
-: '@(#)vnmrj.sh 22.1 03/24/08 1991-2006 '
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -89,7 +88,7 @@ then
     fi
     laf="metal"
 else
-    id=`id | sed -e 's/[^(]*[(]\([^)]*\)[)].*/\1/'`
+    id=$(id | sed -e 's/[^(]*[(]\([^)]*\)[)].*/\1/')
     # echo "USER: $USER"
     # echo "id: $id"
     if [ "$USER" != "$id" ]
@@ -100,13 +99,13 @@ else
     fi
     if [[ -d $vnmrsystem/p11 ]] || [[ -f $vnmruser/persistence/singleSession ]]
     then
-       session=`ls $vnmruser/lock_*.primary >& /dev/null`
+       session=$(ls $vnmruser/lock_*.primary >& /dev/null)
        if [ $? -eq 0 ]
        then
-          cvnmr=`ps -ef | grep "/java/vnmrj.jar" | grep -v grep | awk '{print $1}'`
+          cvnmr=$(ps -ef | grep "/java/vnmrj.jar" | grep -v grep | awk '{print $1}')
           if [ x$cvnmr = x$id ]
           then
-             sel=`/usr/bin/zenity --info --text="An OpenVnmrJ session is already active"`
+             sel=$(java -jar $vnmrsystem/java/dialog.jar "An OpenVnmrJ session is already active")
              exit
           fi
        fi
@@ -167,16 +166,20 @@ else
     vjmem=-mx"$VJMEM"m
 fi
 
-ostype=`uname -s`
 sysdir=$vnmrsystem
 userdir=$vnmruser
-shtoolcmd="/bin/sh"
+shtoolcmd="/bin/bash"
 shtooloption="-c"
 javabin="$vnmrsystem/jre/bin/java"
-
-if [ x$ostype = "xDarwin" ]
+if [ ! -f $javabin ]
 then
    javabin="java"
+fi
+modsArg=""
+vers=$($javabin -fullversion 2>&1 | awk 'BEGIN {FS="\""} {print $2}' | awk 'BEGIN {FS="."} {print $1}')
+if [[ $vers > 8 ]]
+then
+  modsArg="--add-modules ALL-SYSTEM"
 fi
 
 # Set the "MultiClickTime"
@@ -195,7 +198,7 @@ if [ x$debug_on = "xy" ]
 then
 
      $vjshell "$javabin" "$vjmem" \
-        -classpath $vjclasspath $dargs $splash \
+        -classpath $vjclasspath $dargs $modsArg $splash \
         -Ddbhost=$dbhost -Ddbport=$dbport -Dsysdir=$sysdir -Duserdir=$userdir \
         -Duser=$USER -Dfont="Dialog plain 14" -Dlookandfeel=$laf -Dtheme=$theme -DqueueArea=yes \
         -Dcmd="$cmd" \
@@ -210,7 +213,7 @@ then
 else
 
         $vjshell  "$javabin" "$vjmem" \
-          -classpath $vjclasspath $dargs $splash \
+          -classpath $vjclasspath $dargs $modsArg $splash \
           -Ddbhost=$dbhost -Ddbport=$dbport -Dsysdir=$sysdir -Duserdir=$userdir \
           -Duser=$USER -Dfont="Dialog plain 14" -Dlookandfeel=$laf -Dtheme=$theme -DqueueArea=yes \
           -DcanvasFont="Dialog plain 12" \
@@ -221,6 +224,6 @@ else
           -Dsquish=$squish -Ddbnet_server=$dbnet_server -Ddebug="savedatasetup" \
           -Djava.library.path="/vnmr/lib" \
           -Djogamp.gluegen.UseTempJarCache="false" \
-           vnmr.ui.VNMRFrame >> /dev/null &
+           vnmr.ui.VNMRFrame >& /dev/null &
 fi
 

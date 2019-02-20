@@ -185,6 +185,7 @@ gslBuildList = string.split("""
 #
 javaBuildList = string.split("""
                              admin
+                             dialog
                              jplot
                              managedb
                              vjmol

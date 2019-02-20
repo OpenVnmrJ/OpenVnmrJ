@@ -1,0 +1,63 @@
+#!
+
+import os
+import datetime
+import shutil
+
+# current working directory
+cwd = os.getcwd()
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print "OVJ_TOOLS env not found. Trying default location."
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
+    print "OVJ_TOOLS env not found."
+    print "For bash and variants, use export OVJ_TOOLS=<path>"
+    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    sys.exit(1)
+
+# target
+dialogTarget = 'dialog.jar'
+
+# paths
+javaPath = os.path.join(ovjtools, 'java', 'bin')
+
+# make sure the path(s) exist
+classesPath = os.path.join(cwd, 'classes')
+if not os.path.exists(classesPath):
+   os.makedirs(classesPath)
+
+# define build environment
+jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
+                          'PATH' : javaPath + ':' + os.environ['PATH']})
+
+# actual builds
+srcPath = os.path.join(cwd, 'src')
+jEnv.Java(JAVACFLAGS = '-J-mx128m',
+          target     = classesPath,
+          source     = srcPath)
+
+todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+manifestFile = os.path.join(cwd, 'Manifest')
+f = open(manifestFile, 'w')
+f.write('Manifest-Version: 1.0 ')
+f.write(todaysDate)
+f.write('\n')
+f.write('Main-Class: dialog\n')
+f.close()
+
+jarBuildObject = jEnv.Jar(JAR      = os.path.join(javaPath, 'jar'),
+                          target   = dialogTarget,
+                          source   = [classesPath,
+                                      manifestFile],
+                          JARCHDIR = classesPath)
+
+# define with absolute path where built files will be copied
+vnmrJavaPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
+Execute(Mkdir(vnmrJavaPath))
+
+jEnv.AddPostAction(jarBuildObject,
+                   Action(Copy(vnmrJavaPath, os.path.join(cwd, dialogTarget))))
