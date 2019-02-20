@@ -1,6 +1,7 @@
 #!
 
 import os
+import sys
 import datetime
 import shutil
 
@@ -22,17 +23,23 @@ if not os.path.exists(ovjtools):
 # target
 dialogTarget = 'dialog.jar'
 
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
 # paths
-javaPath = os.path.join(ovjtools, 'java', 'bin')
+if (platform=="darwin"):
+   javaBinDir = os.path.join('/', 'usr', 'bin')
+   jarBin = os.path.join(javaBinDir, 'jar')
+   jEnv = Environment(ENV = {'PATH' : javaBinDir + ':' + os.environ['PATH']})
+else:
+   javaBinDir = os.path.join(ovjtools, 'java', 'bin')
+   jarBin = os.path.join(javaBinDir, 'jar')
+   jEnv = Environment(ENV = {'JAVA_HOME' : javaBinDir,
+                          'PATH' : javaBinDir + ':' + os.environ['PATH']})
 
 # make sure the path(s) exist
 classesPath = os.path.join(cwd, 'classes')
 if not os.path.exists(classesPath):
    os.makedirs(classesPath)
-
-# define build environment
-jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
-                          'PATH' : javaPath + ':' + os.environ['PATH']})
 
 # actual builds
 srcPath = os.path.join(cwd, 'src')
@@ -49,7 +56,8 @@ f.write('\n')
 f.write('Main-Class: dialog\n')
 f.close()
 
-jarBuildObject = jEnv.Jar(JAR      = os.path.join(javaPath, 'jar'),
+jarBuildObject = jEnv.Jar(JAR      = jarBin,
+
                           target   = dialogTarget,
                           source   = [classesPath,
                                       manifestFile],

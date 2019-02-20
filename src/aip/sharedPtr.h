@@ -74,7 +74,9 @@
 
 //#include <boost/config.hpp>   // for broken compiler workarounds
 #include <cstddef>            // for std::size_t
+#ifdef BOOST_AUTO_PTR
 #include <memory>             // for std::auto_ptr
+#endif
 #include <algorithm>          // for std::swap
 #include <functional>         // for std::less
 
@@ -112,7 +114,7 @@ template<typename T> class shared_ptr {
       shared_ptr(const shared_ptr<Y>& r) : px(r.px) {  // never throws 
          ++*(pn = r.pn); 
       }
-#ifndef BOOST_NO_AUTO_PTR
+#ifdef BOOST_AUTO_PTR
    template<typename Y>
       explicit shared_ptr(std::auto_ptr<Y>& r) { 
          pn = new long(1); // may throw
@@ -126,7 +128,7 @@ template<typename T> class shared_ptr {
          return *this;
       }
 
-#ifndef BOOST_NO_AUTO_PTR
+#ifdef BOOST_AUTO_PTR
    template<typename Y>
       shared_ptr& operator=(std::auto_ptr<Y>& r) {
          // code choice driven by guarantee of "no effect if new throws"
@@ -141,7 +143,7 @@ template<typename T> class shared_ptr {
       }
 #endif
 #else
-#ifndef BOOST_NO_AUTO_PTR
+#ifdef BOOST_AUTO_PTR
       explicit shared_ptr(std::auto_ptr<T>& r) { 
          pn = new long(1); // may throw
          px = r.release(); // fix: moved here to stop leak if new throws
