@@ -48,8 +48,8 @@
 // TO BE CHANGED INTO INLINE TEMPLATE FUNCTIONS
 //----------------------------------------------
 
-#define max(a,b) ((a)>(b)?(a):(b))
-#define min(a,b) ((a)<(b)?(a):(b))
+// #define max(a,b) ((a)>(b)?(a):(b))
+// #define min(a,b) ((a)<(b)?(a):(b))
 #define round(x) ( (int)( ((x) < 0) ? ((x) - 0.5) : ((x) + 0.5) ) )
 
 template<class T> int sign(T x) {if (x>0) return 1 ;  else if (x<0) return -1 ; else return 0 ;}
