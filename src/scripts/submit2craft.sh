@@ -1,5 +1,6 @@
 #!/bin/sh 
 
+source /vnmr/user_templates/.vnmrenvsh
 if [ $# -lt 1 ]; then
     cmd='submit2craft'
 elif [ $# -lt 2 ]; then
