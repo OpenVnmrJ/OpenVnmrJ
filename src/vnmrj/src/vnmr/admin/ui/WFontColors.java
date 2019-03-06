@@ -231,7 +231,6 @@ public class WFontColors extends ModelessDialog implements ActionListener
 
         if (strPath == null)
         {
-            Messages.postDebug("File not found: " + WGlobal.OPT_PER_FILE);
             return;
         }
 
