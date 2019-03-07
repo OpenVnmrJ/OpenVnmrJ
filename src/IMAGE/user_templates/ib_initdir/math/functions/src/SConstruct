@@ -25,8 +25,6 @@ mathFuncTargetList = [ 'addms',
 
 fitTarget = 'fit'
 
-ufuncSrcFile = [ 'ufuncs.c', 'parmlist.c' ]
-
 # create c source list
 srcFileList = []
 for i in mathFuncTargetList:
@@ -49,9 +47,11 @@ cEnv = Environment(CCFLAGS    = '-O -DLINUX -m32 -fPIC',
                    CPPPATH    = [cwd,
                                  ])
 LibList = [ 'ddl', 'port3', 'f2c', 'm' ]
+ufuncsObj = cEnv.Object("ufuncs.c")
+parmlistObj = cEnv.Object("parmlist.c")
 
 fit = cEnv.Program(target  = fitTarget,
-                        source  = [ fitFileList, ufuncSrcFile ], 
+                        source  = [ fitFileList]+ufuncsObj+parmlistObj, 
                         LIBPATH = [cwd,
                                    ddlPath,
                                    ibPath ],
@@ -59,13 +59,13 @@ fit = cEnv.Program(target  = fitTarget,
                                    )
 
 #
-# create the build targets, for each of the tearget in the list, 
+# create the build targets, for each of the targets in the list, 
 # this start the compilation of the programs
 #
 buildList = []
 for i in range(len(mathFuncTargetList)):
     buildList.append(cEnv.Program(target = mathFuncTargetList[i],
-                        source  = [ srcFileList[i], ufuncSrcFile ], 
+                        source  = [ srcFileList[i]]+ufuncsObj+parmlistObj, 
                         LIBPATH = [cwd,
                                    ddlPath,
                                    ibPath ],

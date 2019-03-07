@@ -164,19 +164,14 @@ public class WDialogHandler implements PropertyChangeListener
         }
         else if (strPropName.indexOf("printer") >= 0)
         {
-           
-          //   String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, WGlobal.SUDO +
-          //                    " /usr/varian/sbin/adddevices"};
-          //  WUtil.runScriptInThread(cmd);
-
           VjPlotterConfig pltConfig = new VjPlotterConfig(true);
           pltConfig.setVisible(true);
           return;
         }
         else if (strPropName.indexOf("accounting") >= 0)
         {
-            String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, WGlobal.SUDO +
-                             " " + WGlobal.SBIN + "vnmr_accounting"};
+            String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, 
+                             FileUtil.sysdir() + "/bin/vnmr_accounting"};
             WUtil.runScriptInThread(cmd);
         }
         else if (strPropName.indexOf("validate") >= 0)

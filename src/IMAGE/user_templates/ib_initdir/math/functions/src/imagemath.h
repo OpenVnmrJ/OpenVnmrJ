@@ -74,6 +74,8 @@ void gser(float *gamser, float a, float x, float *gln);
 float gammq(float a, float x);
 extern float chisqComp(float chisq, int n);
 extern float chisqCompInv(float p, int n);
+extern int ib_errmsg(char *message);
+extern int ib_msgline(char *message);
 
 #undef EXTERN
 

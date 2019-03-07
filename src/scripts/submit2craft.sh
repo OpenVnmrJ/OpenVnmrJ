@@ -1,6 +1,7 @@
 #!/bin/bash 
 
 # set -x
+
 if [ x$vnmrsystem = "x" ]
 then
    vnmrsystem=/vnmr
