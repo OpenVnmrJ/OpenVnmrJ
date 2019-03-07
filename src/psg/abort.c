@@ -139,7 +139,7 @@ void psg_abort(int error)
     text_error("P.S.G. Aborted.");
     if (newacq)
     {
-      if (!acqiflag && !dps_flag)
+      if (!acqiflag && !dps_flag && !checkflag)
         release_console();
     }
     close_error(1);     /* 1 arg means failure/abort */
@@ -234,7 +234,7 @@ void abort_message(const char *format, ...)
      while (emessage[strlen(emessage)-1] == '\n')
         emessage[strlen(emessage)-1] = '\0';
      vnmremsg(emessage);
-     if (!acqiflag && !dps_flag)
+     if (!acqiflag && !dps_flag && !checkflag)
        release_console();
    }
    close_error(1);    /* 1 arg means fail/abort */
