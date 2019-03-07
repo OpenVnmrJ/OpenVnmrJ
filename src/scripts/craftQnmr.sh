@@ -1,7 +1,5 @@
 #!/bin/bash 
 
-# set -x
-
 if [ x$vnmrsystem = "x" ]
 then
    vnmrsystem=/vnmr
@@ -10,7 +8,7 @@ if [ x$vnmruser = "x" ]
 then
    source $vnmrsystem/user_templates/.vnmrenvsh
 fi
-cmd='submit2craft'
+cmd='craftQnmr'
 if [ $# -ge 1 ]; then
   args=''
   while [[ $# > 0 ]] ; do
