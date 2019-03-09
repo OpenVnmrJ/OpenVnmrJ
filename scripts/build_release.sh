@@ -25,15 +25,7 @@ onerror() {
 trap onerror ERR
 
 # helper
-numcpus() {
-    local ncpu=1
-    if [ "x$(uname -s)" = "xDarwin" ]; then
-        ncpu=$(sysctl -n hw.ncpu)
-    else
-        ncpu=$(nproc)
-    fi
-    echo $ncpu
-}
+CORES="$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu || echo "$NUMBER_OF_PROCESSORS")"
 
 # defaults
 : ${OVJ_DO_CHECKOUT=no}
@@ -50,7 +42,7 @@ numcpus() {
 : ${OVJ_SRCRESET=no}
 : ${OVJ_PACK_DDR=yes}
 : ${OVJ_PACK_MINOVA=yes}
-: ${OVJ_SCONSFLAGS="-j $(( $(numcpus) + 1 ))"}
+: ${OVJ_SCONSFLAGS="-j $(( CORES + 1 ))"}
 : ${VERBOSE=3}
 
 usage() {
