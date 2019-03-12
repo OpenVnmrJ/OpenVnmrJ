@@ -23,7 +23,7 @@ static int table5[4] = {0,1,2,3};           // phRec
 #define pwXprep v3
 #define adXprep v4
 
-pulsesequence() {
+void pulsesequence() {
 
 // Set the Maximum Dynamic Table and v-var Numbers
 

@@ -44,7 +44,7 @@ static int
  
 
 
-pulsesequence()
+void pulsesequence()
 {
   int        ni2=getval("ni2");
 

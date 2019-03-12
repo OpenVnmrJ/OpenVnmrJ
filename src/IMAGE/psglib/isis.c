@@ -18,7 +18,7 @@
 ******************************************************************/
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
   /***** Internal variable declarations *****/
   int    shapelist1,shapelist2,shapelist3; /* pulse shapes (lists) */

@@ -64,7 +64,7 @@ parameters:
 #include <standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 {
 double	del    = getval("del"),
         gstab  = getval("gstab"),

@@ -26,7 +26,7 @@ p2=p1, p2pat=p1pat.
 static int ph1[4] = {0,2,1,3},              /* 90 deg pulse phase */
 	   phr[4] = {0,2,1,3};              /* receiver phase */
 
-pulsesequence() {
+void pulsesequence() {
   /* Internal variable declarations *********************/
   double  freq90[MAXNSLICE],freq180[MAXNSLICE];
   int     shape90,shape180;

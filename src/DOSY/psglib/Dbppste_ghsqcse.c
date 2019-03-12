@@ -81,7 +81,7 @@ static int phi1[16] = {0,0,0,0,0,0,0,0,3,3,3,3,3,3,3,3},
            phi4[1]  = {2},
            rec[4]   = {0,2,2,0}; 
 
-pulsesequence()
+void pulsesequence()
 {
  char    f1180[MAXSTR],sspul[MAXSTR],edit[MAXSTR],satmode[MAXSTR],
          alt_grd[MAXSTR],lkgate_flg[MAXSTR],arraystring[MAXSTR];

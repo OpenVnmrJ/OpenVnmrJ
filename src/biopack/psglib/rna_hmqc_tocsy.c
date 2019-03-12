@@ -60,7 +60,7 @@
 extern int dps_flag;
 
 /* Chess - CHEmical Shift Selective Suppression */
-Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
+void Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
 double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
   codeint phase;
   char* pulseshape;
@@ -72,7 +72,7 @@ double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
 }
 
 /* Wet4 - Water Elimination */
-Wet4(phaseA,phaseB)
+void Wet4(phaseA,phaseB)
   codeint phaseA,phaseB;
 {
   double finepwr,gzlvlw,gtw,gswet,gswet2,wetpwr,wetpw,dz;
@@ -116,7 +116,7 @@ static int      phs1[4] = {0,0,0,0},
                 phs6[4] = {0,0,0,0};
 
 
-mleva()
+void mleva()
 {
    double wdwfctr,window,slpw;
    wdwfctr=getval("wdwfctr");
@@ -129,7 +129,7 @@ mleva()
    txphase(v3); delay(slpw); 
 }
 
-mlevb()
+void mlevb()
 {
    double wdwfctr,window,slpw;
    wdwfctr=getval("wdwfctr");
@@ -143,7 +143,7 @@ mlevb()
 }
 
 
-pulsesequence()
+void pulsesequence()
 {
 
    double  JCH,

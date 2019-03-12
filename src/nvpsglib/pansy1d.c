@@ -23,7 +23,7 @@ static shape H1dec;
 static int ph1[4] = {0, 2, 1, 3};
 static int ph2[4] = {0, 2, 1, 3};
 
-pulsesequence()
+void pulsesequence()
 {
   char rcvrsflag[MAXSTR],
        mrmode[MAXSTR];

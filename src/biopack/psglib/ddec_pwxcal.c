@@ -26,7 +26,7 @@
  */
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    double pwx1;
    double pwx2;

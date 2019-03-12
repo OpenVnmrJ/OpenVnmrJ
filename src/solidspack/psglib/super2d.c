@@ -44,7 +44,7 @@ static int table12[8] = {0,2,1,3,2,0,3,1};  // phRec
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 

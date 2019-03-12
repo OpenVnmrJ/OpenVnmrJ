@@ -11,7 +11,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
 double	grise,gstab,gt1,gzlvl1,phase,qlvl,ss,taud2,tau1;
 int	icosel;

@@ -13,7 +13,7 @@
 static int ph1[4] = {0, 2, 1, 3};
 static int ph2[4] = {0, 2, 1, 3};
 
-pulsesequence()
+void pulsesequence()
 {
 
   double pwx;

@@ -41,7 +41,7 @@ If mult = zero a normal one pulse experiment is done. */
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 
 {
 char	normal[MAXSTR],

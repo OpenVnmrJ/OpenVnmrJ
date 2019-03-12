@@ -37,7 +37,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    double	pp;
 

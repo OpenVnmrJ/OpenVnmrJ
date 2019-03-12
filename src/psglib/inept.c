@@ -58,7 +58,7 @@ If mult = zero a normal one pulse experiment is done. */
 
 static int phasecycle[4] = {0, 2, 1, 3};
 
-pulsesequence()
+void pulsesequence()
 
 {
    char         normal[MAXSTR],

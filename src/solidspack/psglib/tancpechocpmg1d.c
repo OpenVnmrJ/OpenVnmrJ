@@ -48,7 +48,7 @@ static int table6[8] = {2,0,1,3,0,2,3,1};//{1,3,3,1,1,3,3,1,1,3,3,1,1,3,3,1,
 #define phXcpmg t5
 #define phRec t6
 
-pulsesequence() {
+void pulsesequence() {
 
 // Set the Maximum Dynamic Table Number
 

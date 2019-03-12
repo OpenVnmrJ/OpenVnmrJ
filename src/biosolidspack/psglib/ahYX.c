@@ -97,7 +97,7 @@ static int table32[4] = {1,1,1,1};           // ph2Xcomp
 #define ph2Xcomp t32
 #define phRec t10
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Modules and Get Parameter Values
 

@@ -71,8 +71,7 @@
 #include <standard.h>
 #include <mfpresat.h>
 
-mleva(slpw,window)
-double slpw,window;
+void mleva(double slpw,double window)
 {
    txphase(v2); delay(slpw);
    xmtroff(); delay(window); xmtron();
@@ -81,8 +80,7 @@ double slpw,window;
    txphase(v2); delay(slpw);
 }
 
-mlevb(slpw,window)
-double slpw,window;
+void mlevb(double slpw,double window)
 {
    txphase(v4); delay(slpw);
    xmtroff(); delay(window); xmtron();
@@ -92,7 +90,7 @@ double slpw,window;
 }
 
 
-pulsesequence()
+void pulsesequence()
 {
    double         
                    trim,

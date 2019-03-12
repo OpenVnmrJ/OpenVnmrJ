@@ -162,7 +162,7 @@ double dec_c13_shpulse(shape pwxshape, codeint phase)
 }
 
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE AND LOAD VARIABLES */
 

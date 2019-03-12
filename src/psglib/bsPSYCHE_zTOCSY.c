@@ -23,7 +23,7 @@ static int	ph1[2] = {0,2},
 		ph8[1] = {0},
 		ph9[8] = {2,0,0,2,2,0,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
 
    double	   gt1 = getval("gt1"),

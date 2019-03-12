@@ -43,7 +43,7 @@
 #include "Pbox_bld.h"
 
 
-pulsesequence()
+void pulsesequence()
 {  
    double          decbw = getval("decbw"),        /* decoupling bandwidth */
                    ref_pwr = getval("ref_pwr"), 

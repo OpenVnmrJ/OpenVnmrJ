@@ -80,7 +80,7 @@ JohnR - includes CPMG option : Jan 2015
 
 extern int dps_flag;
 
-pulsesequence()
+void pulsesequence()
 {
    double	   slpwrR = getval("slpwrR"),
 		   slpwR = getval("slpwR"),

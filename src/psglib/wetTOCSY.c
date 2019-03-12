@@ -9,7 +9,7 @@
 
 #include <standard.h>
 
-mleva()
+void mleva()
 {
    double slpw;
    slpw = getval("slpw");
@@ -20,7 +20,7 @@ mleva()
    txphase(v2); delay(slpw);
 }
 
-mlevb()
+void mlevb()
 {
    double slpw;
    slpw = getval("slpw");
@@ -39,7 +39,7 @@ static int ph1[4] = {0,0,1,1},   		/* presat */
 	   ph7[8] = {1,1,2,2,3,3,0,0},
 	   ph8[4] = {3,3,0,0};
 	   
-pulsesequence()
+void pulsesequence()
 {
    double          slpwr,
                    slpw,

@@ -55,7 +55,7 @@ static int 	phs1[8] = {0,0,0,0,1,1,1,1},
 		phs5[8] = {0,0,0,0,1,1,1,1},
 		phs6[8] = {0,0,0,0,1,1,1,1};
 
-mleva()
+void mleva()
 {
    double wdwfctr,window,slpw;
    wdwfctr=getval("wdwfctr");
@@ -68,7 +68,7 @@ mleva()
    txphase(v3); delay(slpw); 
 }
 
-mlevb()
+void mlevb()
 {
    double wdwfctr,window,slpw;
    wdwfctr=getval("wdwfctr");
@@ -82,7 +82,7 @@ mlevb()
 }
 
 
-pulsesequence()
+void pulsesequence()
 {
 
    double  j1xh,

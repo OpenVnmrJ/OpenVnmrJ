@@ -36,7 +36,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    double          mix;
    char            sspul[MAXSTR];

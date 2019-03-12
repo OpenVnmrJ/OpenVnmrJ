@@ -66,7 +66,7 @@ Parameters:
  
 #include <standard.h> 
 
-dipsi(phse1,phse2) 
+void dipsi(phse1,phse2) 
 codeint phse1,phse2; 
 { 
         double slpw5; 
@@ -91,7 +91,7 @@ codeint phse1,phse2;
               ph8[ 8] =  {1,1,3,3,0,0,2,2},
               ph4[ 8] =  {0,2,2,0,1,3,3,1};
 
-pulsesequence() 
+void pulsesequence() 
 { 
    int     iphase; 
    char    flipback[MAXSTR], flipshape[MAXSTR], sspul[MAXSTR],trim_flg[MAXSTR], 

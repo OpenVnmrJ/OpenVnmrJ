@@ -78,7 +78,7 @@ static int ph1[4] = {0,0,1,1},   		/* presat */
          phs9[16] = {0,0,1,1,0,0,1,1,2,2,3,3,2,2,3,3}, /* 2nd ecdo in ES */
        rec_cor[4] = {0,2,2,0};
 	   
-pulsesequence()
+void pulsesequence()
 {
    double          slpwrT = getval("slpwrT"),
                    slpwT = getval("slpwT"),

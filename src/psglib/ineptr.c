@@ -25,7 +25,7 @@
 
 static int phasecycle[4] = {0, 2, 1, 3};
 
-pulsesequence()
+void pulsesequence()
 
 {
    int          mult = (0.5 + getval("mult"));

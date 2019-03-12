@@ -54,7 +54,7 @@ static int   phi2[1]  = {2},
 static double   d2_init=0.0, d3_init=0.0, d4_init=0.0, ofs, bw, ppm,nst,pws,pwme180,me180pwr,me180pwrf;
 static shape Pdec_154p,me180;
 
-pulsesequence()
+void pulsesequence()
 {
 
 

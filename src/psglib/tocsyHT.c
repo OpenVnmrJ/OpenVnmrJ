@@ -55,7 +55,7 @@
 
 static shape  hhmix, ref180;
 
-pulsesequence()
+void pulsesequence()
 {
   char    mixpat[MAXSTR], pshape[MAXSTR], httype[MAXSTR], sspul[MAXSTR];
   double  rg1	= 2.0e-6,

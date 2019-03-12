@@ -19,7 +19,7 @@ Spin echo imaging sequence
 /* Phase cycling of 180 degree pulse */
 static int ph180[2] = {1,3};
 
-pulsesequence()
+void pulsesequence()
 {
   /* Internal variable declarations *********************/
   double  freq90[MAXNSLICE],freq180[MAXNSLICE];

@@ -16,7 +16,7 @@ JohnR - includes CPMG option : Jan 2015
 static int phs1[4] = {0,2,1,3},
            phs2[8] = {0,0,1,1,2,2,3,3};
 
-pulsesequence()
+void pulsesequence()
 {
 
   char compshape[MAXSTR],

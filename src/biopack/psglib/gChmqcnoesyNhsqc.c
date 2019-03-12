@@ -57,7 +57,7 @@ static  int phi1[4] = {0,0,2,2},
         phi5[1] = {0},
         rec_1[8] = {0,2,2,0,2,0,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
 char    f1180[MAXSTR],
         f2180[MAXSTR],

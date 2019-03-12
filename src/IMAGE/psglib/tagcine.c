@@ -36,7 +36,7 @@ GENERIC_GRADIENT_T       t2crush_grad;                   /*End of T2prep crusher
 GENERIC_GRADIENT_T       tag_grad;                       /* define the tagging gradient */
 GENERIC_GRADIENT_T       tagcrush_grad ;                 /* define the tagging crusher  */                     
 
-pulsesequence(){
+void pulsesequence(){
   /* INTERNAL VARIABLE DECLARATIONS *********************/
   double  freqEx[MAXNSLICE], freqIR[MAXNSLICE], freqT2[MAXNSLICE];  
   int     shapeEx, shapeIR=0, shapeT2=0;

@@ -29,7 +29,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
         double gzlvl1,qlvl,grise,gstab,gt1,ss,phase;
 	int icosel,iphase;

@@ -37,7 +37,7 @@ static int ph2[4] = {0,1,2,3};
 static int ph3[16] = {0,1,2,3,3,0,1,2,2,3,0,1,1,2,3,0};
 
  
-pulsesequence()
+void pulsesequence()
 {
         int index1,index2,ni,ni2;
         double gt1,gt2,gt3,tau,d5,del,range,hspcorr,shimset,gzlvl1,gzlvl3,

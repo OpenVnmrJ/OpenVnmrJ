@@ -21,7 +21,7 @@ KrishK -	Last revision : Jan 1998
 static int ph1[4]  = {0,1,2,3},
 	   ph2[4]  = {0,2,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
    double          j1xh,
 		   pwxlvl,

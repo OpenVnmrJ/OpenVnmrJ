@@ -15,7 +15,7 @@
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
   /* Internal variable declarations *************************/ 
   double  freqEx[MAXNSLICE];

@@ -36,7 +36,7 @@ KrishK	-	Revised for CP3	: May 2005
 #include <standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 {
    double	   mixN = getval("mixN"),
 		   gzlvlC = getval("gzlvlC"),

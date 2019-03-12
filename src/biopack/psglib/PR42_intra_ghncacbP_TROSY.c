@@ -46,7 +46,7 @@ static int
        phi9[8]  = {0,0,0,0,2,2,2,2},
        rec[4]   = {0,2,2,0};
 
-pulsesequence()
+void pulsesequence()
 {
 
 char        sel_flg[MAXSTR],

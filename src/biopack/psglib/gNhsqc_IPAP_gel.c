@@ -64,7 +64,7 @@ static int phi10[2] = {3,1},
            phi30[4] = {1,3,3,1},
 	   rec[8] = {0,2,2,0,2,0,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
 
 int     t1_counter;

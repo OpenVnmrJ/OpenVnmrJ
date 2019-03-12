@@ -25,7 +25,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
   	double  hsglvl,
 		hsgt,

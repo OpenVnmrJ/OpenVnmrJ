@@ -78,7 +78,7 @@ static int  phi1[1]  = {0},          /* was 1 */
             rec[4]  = {2,0,0,2};     /* was 0220 */
 
 
-pulsesequence()
+void pulsesequence()
 
 {
 /* DECLARE VARIABLES */

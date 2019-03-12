@@ -18,7 +18,7 @@ Version 2/15/09 (+SGL libraries)
   /*voxel crusher gradient structs for butterfly grad without ss */
   SLICE_SELECT_GRADIENT_T  vox1_crush,vox2_crush, vox3_crush;
 
-pulsesequence()
+void pulsesequence()
 {
 
   /* Internal variable declarations *************************/

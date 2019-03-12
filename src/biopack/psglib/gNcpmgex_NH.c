@@ -112,7 +112,7 @@ static int phi2[2] =  {0,2},
 
 static double d2_init = 0.0;
 
-pulsesequence()
+void pulsesequence()
 
 {
 /* DECLARE VARIABLES */

@@ -57,7 +57,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
   char    pshape[MAXSTR], httype[MAXSTR];
   int     Hdim    = (int) (0.5 + getval("Hdim")); /* dimension for testing */

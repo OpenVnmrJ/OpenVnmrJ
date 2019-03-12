@@ -54,7 +54,7 @@ static int   phi1[32]  = {0,2,0,2, 1,3,1,3, 2,0,2,0, 3,1,3,1,
 
 static double   d2_init=0.0;
 
-pulsesequence()
+void pulsesequence()
 {
    char            f1180[MAXSTR];			/* Flag to start t1 @ halfdwell */
 

@@ -41,7 +41,7 @@ static int table8[16] = {0,2,2,0,0,2,2,0,
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values 
 

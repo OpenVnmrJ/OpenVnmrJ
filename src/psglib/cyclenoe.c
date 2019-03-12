@@ -39,7 +39,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
 /*DEFINE LOCAL VARIABLES */
   double mix,control,sattime,spacing;

@@ -13,7 +13,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
   double pwClvl,gzlvl1,gt1;
   gzlvl1=getval("gzlvl1"); gt1=getval("gt1");

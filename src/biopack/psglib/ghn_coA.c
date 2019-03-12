@@ -240,7 +240,7 @@ static double   H1ofs=4.7, C13ofs=174.0, N15ofs=120.0, H2ofs=0.0;
 
 static shape    H2Osinc, wz16, offC3, offC6, offC8;
 
-pulsesequence()
+void pulsesequence()
 {
 
 

@@ -69,7 +69,7 @@ static int
 	
              rec[]   = {0,2,0,2,0,2,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

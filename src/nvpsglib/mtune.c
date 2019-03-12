@@ -9,7 +9,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    double tunesw;
    double freq;

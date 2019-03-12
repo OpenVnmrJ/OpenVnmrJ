@@ -9,7 +9,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
 
    dpwr = getval("dpwr");

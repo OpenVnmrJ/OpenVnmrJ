@@ -40,7 +40,7 @@ loopback sequence
                                         /* point storage */
 #define FP_GT(A,B) (((A) > (B)) && (fabs((A) - (B)) > EPSILON)) /* A greater than B */
 
-pulsesequence()
+void pulsesequence()
 {
 	/* Internal variable declarations *********************/
 	char txphase[MAXSTR];

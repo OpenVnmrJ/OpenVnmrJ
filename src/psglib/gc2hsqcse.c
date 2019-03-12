@@ -35,7 +35,7 @@ JohnR - includes CPMG option : Jan 2015
 #include <standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 
 {
 

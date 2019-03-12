@@ -53,7 +53,7 @@ static int
 
 static double   d2_init=0.0,
 	        d3_init=0.0;
-pulsesequence()
+void pulsesequence()
 {
 char        f1180[MAXSTR],   		      /* Flag to start t1 @ halfdwell */
 	    f2180[MAXSTR],   		      /* Flag to start t1 @ halfdwell */

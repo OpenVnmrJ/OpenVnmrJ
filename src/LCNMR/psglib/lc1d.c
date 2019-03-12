@@ -182,7 +182,7 @@ finepwr=wetpwr-(int)wetpwr;  /* Adjust power to 152 deg. pulse */
 /*************************/
 static void sscomposite(codeint phase)
 {
-    char cmd[MAXSTR];
+    char cmd[MAXSTR*2];
    shape compshape;
 
     sprintf(compshape.name,"cmp_1");

@@ -414,7 +414,7 @@ static double   H1ofs=4.7, C13ofs=35.0, N15ofs=120.0, H2ofs=0.0;
 
 static shape offC2, offC9, offC10, stC12, stC30, stC50, stC80, stC200;
 
-pulsesequence()
+void pulsesequence()
 {
 
 

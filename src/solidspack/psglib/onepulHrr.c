@@ -22,7 +22,7 @@ static int tblRec[4]   = {2,0,3,1};           // receiver
 #define ph1Hrr  t3
 #define phRec   t4
 
-pulsesequence() {
+void pulsesequence() {
 
 // =========================================================
 // Define Variables and Objects and Get Parameter Values

@@ -58,8 +58,7 @@ static int
 extern int dps_flag;       
 static double d2_init=0.0, d3_init=0.0;
 
-shaka6(pwC90)
-double pwC90;
+void shaka6(double pwC90)
 {
           /* Shaka composite (10.9333*pwC90)   */
 
@@ -71,7 +70,7 @@ double pwC90;
         decrgpulse(pwC90*85.3/90.0, two, 0.0, 0.0);
 }
 
-pulsesequence()
+void pulsesequence()
 {
  char    
     f1180[MAXSTR],    

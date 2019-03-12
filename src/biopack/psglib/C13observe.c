@@ -19,7 +19,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
   char spinecho[MAXSTR];
   double gzlvl1,gt1,pwClvl,pwC;

@@ -22,7 +22,7 @@ static int table5[8] = {2,0,1,3,0,2,3,1};           // phRec
 #define phXecho t4
 #define phRec t5
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 

@@ -47,7 +47,7 @@ static int tblRec[16]       = {0,0,2,2,1,1,3,3,
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 // =========================================================
 // Define Variables and Objects and Get Parameter Values

@@ -82,7 +82,7 @@ static int ph1[4] = {0,0,1,1},   		/* presat */
            ph4[16] = {0,1,0,1,2,3,2,3,0,1,0,1,2,3,2,3}, /* 1st echo */
            ph9[16] = {0,0,1,1,0,0,1,1,2,2,3,3,2,2,3,3}; /* 2nd echo */
 	   
-pulsesequence()
+void pulsesequence()
 {
    double          slpwrT = getval("slpwrT"),
                    slpwT = getval("slpwT"),

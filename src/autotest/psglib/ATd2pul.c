@@ -45,7 +45,7 @@
 
 static int phasecycle[4] = {0, 2, 1, 3};
 
-pulsesequence()
+void pulsesequence()
 {
    settable(t1,4,phasecycle);
       obspower(0.0);

@@ -32,7 +32,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
         double rg1 = 2.0e-6,
 	       compH = getval("compH"),

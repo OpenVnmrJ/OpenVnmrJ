@@ -36,7 +36,7 @@
 
 static shape sh1, sh2, sh2dec;
 
-pulsesequence()
+void pulsesequence()
 {
    char   CT_flg[MAXSTR],	/* Constant time flag */
 	  f1180[MAXSTR],

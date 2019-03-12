@@ -72,7 +72,7 @@ static int phi1[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
            phi9[16] = {0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3},
            rec[16]  = {0,2,0,2,2,0,2,0,2,0,2,0,0,2,0,2};
 
-pulsesequence ()
+void pulsesequence ()
 {
 
 double  gstab = getval("gstab"),

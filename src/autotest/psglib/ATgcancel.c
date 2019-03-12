@@ -16,7 +16,7 @@
 
 #include <standard.h>
 static int phasecycle[4] = {0, 2, 1, 3};
-pulsesequence()
+void pulsesequence()
 {
    double gzlvl1,gt1;
    char shaped[MAXSTR];

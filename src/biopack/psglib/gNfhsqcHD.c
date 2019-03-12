@@ -81,7 +81,7 @@ static int phi1[4] = {1,1,3,3},
 
 shape   HHdseq, Cdseq;
 
-pulsesequence()
+void pulsesequence()
 {
   void      makeHHdec(), makeCdec(); 	                  /* utility functions */
   int       ihh=1,        /* used in HH decoupling to improve water suppression */

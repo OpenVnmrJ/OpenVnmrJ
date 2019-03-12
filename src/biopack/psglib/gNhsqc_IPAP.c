@@ -43,7 +43,7 @@ static int phi1[2] = {3,1},
            rec[4] = {0,2,2,0}, 		/* receiver phase for IP */
 	   recA[8] = {0,2,2,0,2,0,0,2}; /* receiver phase for AP */
 
-pulsesequence()
+void pulsesequence()
 {
 
 int     t1_counter;

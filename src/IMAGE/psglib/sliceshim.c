@@ -17,7 +17,7 @@ ARR  3/15/10
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
   /* Internal variable declarations *********************/
   double  freq1;

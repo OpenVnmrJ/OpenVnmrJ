@@ -30,7 +30,7 @@ static int ph2[4] = {0,1,2,3},
 	   ph7[2] = {0,2},
 	   ph4[1] = {0};
 
-pulsesequence()
+void pulsesequence()
 {
    double      	pplvl = getval("pplvl"),
 		pp = getval("pp"),

@@ -66,7 +66,7 @@
 
 */
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {
    double mix,SSpwr,pwSS,hsdly,pwa,pwd,gt1,gzlvl1,gzlvl2;
    char ptable[MAXSTR],SSshape[MAXSTR];

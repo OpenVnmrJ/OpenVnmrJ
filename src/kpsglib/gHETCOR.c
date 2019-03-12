@@ -28,7 +28,7 @@ static int ph2[4] = {0,1,2,3},
 	   ph8[4] = {1,1,3,3},
 	   ph7[2] = {0,2};
 
-pulsesequence()
+void pulsesequence()
 {
    double	j1xh,
          	dly3,

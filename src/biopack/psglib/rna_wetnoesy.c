@@ -74,7 +74,7 @@ static void Wet4(pulsepower,wetshape,duration,phaseA,phaseB)
 }
 
 /* Chess1 - CHEmical Shift Selective Suppression */
-Chess1(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw1,gtw1,gswet1)
+void Chess1(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw1,gtw1,gswet1)
   double pulsepower,duration,rx1,rx2,gzlvlw1,gtw1,gswet1;
   codeint phase;
   char* pulseshape;
@@ -87,7 +87,7 @@ Chess1(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw1,gtw1,gswet1)
 
 
 /* Wet4first - Water Elimination during relaxation delay */
-Wet4first(pulsepower,wetshape,duration,phaseA,phaseB)
+void Wet4first(pulsepower,wetshape,duration,phaseA,phaseB)
   double pulsepower,duration;
   codeint phaseA,phaseB;
   char* wetshape;
@@ -110,7 +110,7 @@ Wet4first(pulsepower,wetshape,duration,phaseA,phaseB)
 }
 
 
-pulsesequence()
+void pulsesequence()
 {
    double          arraydim,compH,wetpwr,wetpwr1,
                    corr1,corr,gstab,gzlvl1,gzlvl2,gt1,gt2,

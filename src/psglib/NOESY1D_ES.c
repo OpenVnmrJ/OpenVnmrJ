@@ -73,7 +73,7 @@ manually.
 #include <FlipBack.h>
 */
 
-pulsesequence()
+void pulsesequence()
 {
    double	   mixN = getval("mixN"),
 		   gzlvlC = getval("gzlvlC"),

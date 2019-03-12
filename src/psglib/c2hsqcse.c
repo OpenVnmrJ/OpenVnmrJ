@@ -41,7 +41,7 @@ static int      ph1[4] = {0,0,2,2},
                 ph8[2] = {3,2},
                 ph9[2] = {1,2};
 
-pulsesequence()
+void pulsesequence()
 
 {
 

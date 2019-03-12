@@ -35,7 +35,7 @@ static int
 
 
 
-pulsesequence()
+void pulsesequence()
 {
    char   
 	  f1180[MAXSTR],

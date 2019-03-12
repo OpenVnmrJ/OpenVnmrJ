@@ -2624,7 +2624,7 @@ double	timeTN = getval("timeTN"),	   /* constant time for 15N evolution */
 /*  xxxxxxxxxxxxxxxxxxxxxxxx   nh_evol_train   xxxxxxxxxxxxxxxxxxxxxxxxxx  */
 /*  for g...._nh pulse sequences  */
 
-nh_evol_train(excband, nullband)
+void nh_evol_train(excband, nullband)
 
 char		*excband, *nullband;
 {
@@ -2793,7 +2793,7 @@ else
 }
 
 
-ch_simshapedpulse(anyshapeC,bwC, shiftC,shapeH,pwH,pwN, phase1, phase2,phase3, rofa, rofb) 
+void ch_simshapedpulse(anyshapeC,bwC, shiftC,shapeH,pwH,pwN, phase1, phase2,phase3, rofa, rofb) 
 
 char 		*anyshapeC,*shapeH ;
 double 		bwC,shiftC,pwH,pwN,rofa, rofb;
@@ -2857,7 +2857,7 @@ cshapefiles(anyshapeC, bwC, shiftC);
 
  /******** generate double band 13C shape with 15N and H ****************/
 
-ch_simshapedpulse2(anyshape1,bw1,shift1,anyshape2,bw2, shift2,shapeH,pwH,pwN,phase1,phase2,phase3,rofa,rofb) 
+void ch_simshapedpulse2(anyshape1,bw1,shift1,anyshape2,bw2, shift2,shapeH,pwH,pwN,phase1,phase2,phase3,rofa,rofb) 
 
 char 		*anyshape1,*anyshape2,*shapeH ;
 double 		bw1, bw2, shift1, shift2,pwH,pwN,rofa,rofb;
@@ -2928,7 +2928,7 @@ cshapefiles2(anyshape1, anyshape2, bw1, bw2, shift1, shift2);
 /*		  shiftH and shiftC: frequency shift with respect to carrier (in ppm)     */
 /******************************************************************************************/
 
-hn_simshapedpulse(anyshapeH,bwH,shiftH,anyshapeN,bwN,shiftN,phase1,phase2,rofa,rofb) 
+void hn_simshapedpulse(anyshapeH,bwH,shiftH,anyshapeN,bwN,shiftN,phase1,phase2,rofa,rofb) 
 
 char 		*anyshapeN,*anyshapeH ;
 double 		bwN,shiftN,bwH,shiftH,rofa,rofb;

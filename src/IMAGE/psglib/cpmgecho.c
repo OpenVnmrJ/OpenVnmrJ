@@ -33,7 +33,7 @@
 /* Phase cycling of 180 degree pulse */
 static int ph180[2] = {1,3};
 
-pulsesequence()
+void pulsesequence()
 { 
   double  aqtm     = getval("aqtm");      /* "extra" sampling time for filters */
   double  acqdelay = getval("acqdelay");  /* minimum delay between echoes */

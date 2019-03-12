@@ -38,7 +38,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    char            sspul[MAXSTR];
 

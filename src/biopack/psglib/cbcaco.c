@@ -47,7 +47,7 @@ static int
 static double   d2_init=0.0, d3_init=0.0, C13ofs=174.0;
  
 
-pulsesequence()
+void pulsesequence()
 {
  
 int         t1_counter, t2_counter;	/* used for states tppi in t1 & t2*/

@@ -17,7 +17,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    /* equilibrium period */
    status(A);

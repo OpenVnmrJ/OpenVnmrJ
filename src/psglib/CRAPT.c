@@ -19,7 +19,7 @@ static int phs1[4] = {0,2,1,3},
            phs3[4] = {0,0,1,1},
            phs2[8] = {0,0,1,1,2,2,3,3};
 
-pulsesequence()
+void pulsesequence()
 {
   double   tpwr180r = getval("tpwr180r"),
            pw180r = getval("pw180r"),

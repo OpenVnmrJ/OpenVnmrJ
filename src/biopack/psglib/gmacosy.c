@@ -45,7 +45,7 @@ static int   phi1[4]  = {0,2,1,3},
              phi3[4]  = {1,1,2,2},
              phi4[4]  = {0,2,1,3};
 
-pulsesequence()
+void pulsesequence()
 {
         double nsw,gzlvl1,gzlvl2,gzlvl2a,
 	 gt1,gt2,qlvl,gstab,theta,phi,

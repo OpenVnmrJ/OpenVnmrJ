@@ -31,7 +31,7 @@ pre_fidsequence()
     delay(0.01);
 }
 
-pulsesequence()
+void pulsesequence()
 {
     int i;
     double df;

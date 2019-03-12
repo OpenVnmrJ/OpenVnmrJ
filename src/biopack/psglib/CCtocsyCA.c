@@ -55,7 +55,7 @@ static shape    CO_dec, mix_seq;
 
 
 
-pulsesequence()
+void pulsesequence()
 {
 
 

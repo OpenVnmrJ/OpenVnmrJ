@@ -23,7 +23,7 @@
   GENERIC_GRADIENT_T       endspoil_grad;  // crusher after FID is acquired
   SLICE_SELECT_GRADIENT_T  vox3_crush,vox3r_crush, vox3a_crush;
 
-  pulsesequence()
+void pulsesequence()
   {
   /***** Internal variable declarations *****/
   int    shapelist1,shapelist2,shapelist3; /* pulse shapes (lists) */

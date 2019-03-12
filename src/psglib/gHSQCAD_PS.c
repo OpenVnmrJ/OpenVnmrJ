@@ -91,7 +91,7 @@ static int      ph11[8]  = {1,1,1,1,3,3,3,3},  //v1
                 ph18[4]  = {1,1,2,2},  //v8 - simpulse 180 of bird
                 ph19[4]  = {2,2,3,3};  //v9 - 2nd 90 of bird 
 
-pulsesequence()
+void pulsesequence()
 {
 double  gzlvlE = getval("gzlvlE"),
         gtE = getval("gtE"),

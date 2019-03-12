@@ -20,7 +20,7 @@ relayed cosy, including regular cosy and delayed cosy
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    int          i,
 		relay;

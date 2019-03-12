@@ -24,7 +24,7 @@ fn2D      - Fourier number to up the 2D display in F2
 #include <standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 {
 
 static int 	ph1[4] = {0, 2, 0, 2},

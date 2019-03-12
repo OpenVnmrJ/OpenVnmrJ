@@ -60,7 +60,7 @@ static int table13[64] = {0,2,1,3,2,0,3,1,
 
 #define tXinczf t14
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
    

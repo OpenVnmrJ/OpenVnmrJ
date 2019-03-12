@@ -1050,7 +1050,7 @@ psgsetup(in_pipe, bugflag)
            point in stubs.o.   November 1997			*/
            
 
-pulsesequence()
+void pulsesequence()
 {
     Werrprintf( "pulse sequence called from SWTUNE version of psglib\n" );
 }

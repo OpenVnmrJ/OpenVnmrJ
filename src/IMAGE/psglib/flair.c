@@ -13,7 +13,7 @@
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence() {
+void pulsesequence() {
   /* Internal variable declarations *************************/
   int     shapelist90,shapelist180,shapelistIR;
   double  nseg;

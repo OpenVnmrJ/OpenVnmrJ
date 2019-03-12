@@ -29,7 +29,7 @@ static int table7[16] = {0,1,0,1,1,0,1,0};  //phYxy8
 #define phRec t6
 #define phYxy8 t7
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 
@@ -84,7 +84,7 @@ pulsesequence() {
 
    double ofXg = getval("ofXg");
    double ofYg = getval("ofYg");
-   char   cmd[MAXSTR];
+   char   cmd[MAXSTR*2];
    static shape  shXg, shYg;
 
    if (getval("arraydim") < 1.5 || (ix==1) || isarry("ofXg") || isarry("pwXg")) {

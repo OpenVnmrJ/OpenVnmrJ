@@ -81,7 +81,7 @@ If F1 axis is upside down change the sign of last four f1coefs.
 #include <standard.h>
 
 /* Subroutines here */
-LPJF(pass,jmin,jmax,het90,rofa,rofb,zgradlen,zgradlvl,zgradrec,tauadjust)
+void LPJF(pass,jmin,jmax,het90,rofa,rofb,zgradlen,zgradlvl,zgradrec,tauadjust)
 int pass;
 double jmin, jmax, tauadjust,
  het90, rofa, rofb,
@@ -193,7 +193,7 @@ double jmin, jmax, tauadjust,
   }
  } /* end of LPJF subroutine */
 
-MBOB_LPJF(pass,jmin,jmax,het90,rofa,rofb,zgradrec)
+void MBOB_LPJF(pass,jmin,jmax,het90,rofa,rofb,zgradrec)
 int pass;
 double jmin, jmax, het90, rofa, rofb, zgradrec; 
 {
@@ -430,7 +430,7 @@ double jmin, jmax, het90, rofa, rofb, zgradrec;
 
 /* The pulsesequence starts here */
 
-pulsesequence()
+void pulsesequence()
 {
 
  /* Variables */

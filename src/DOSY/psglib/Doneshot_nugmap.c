@@ -71,7 +71,7 @@ in the sequence. They cannot be set directly.
 
 #include<standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
 int     selectCTP = getval("selectCTP");
 double	kappa = getval("kappa"), 
