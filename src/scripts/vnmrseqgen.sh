@@ -1,5 +1,4 @@
-: '@(#)seqgen.sh 22.1 03/24/08 1991-2007 '
-# 
+#! /bin/bash 
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -11,7 +10,7 @@
 #
 #*********************************************************************
 #** seqgen:  shell script for performing pulse sequence generation  **
-#**          at the UNIX level.   (Bourne shell)                    **
+#**          at the UNIX level.                                     **
 #**                                                                 **
 #**          The pulse sequence file to be compiled is supplied as  **
 #**          the argument to the seqgen shell script, e.g.,         **
@@ -22,13 +21,6 @@
 #**   Modified:							    **
 #**    10/25/89   Greg B.    Added Code to include the DPS phase of **
 #**			     the pulse sequence compilation.	    **
-#**    10/23/90   Greg B.    Added Code to include the -Bstatic     **
-#**			     option to the link load to override    **
-#**			     the dynamic libraries.		    **
-#**                                                                 **
-#**   Modified for Solaris to make separate target psgsol and to    **
-#**   define environment variable SOLARIS for seqgenmake to use     **
-#**                                                                 **
 #**    01/25/96   Rolf K.    allows compilation of sequences in     **
 #**             $vnmrsystem/psglib; the sequence will be copied     **
 #**		into the local psglib and treated as a local file   **
@@ -37,11 +29,6 @@
 #**             simultaneous compilation by the same user.          **
 #**             allows compilation of multiple sequences, e.g.:     **
 #**                     cd ~/vnmrsys/psglib; seqgen *.c             **
-#**             static option is now the first argument, to be      **
-#**             preceded with a minus sign, e.g.:      		    **
-#**                  seqgen -static roesy       :will link the      **
-#**		roesy with the PSG library statically (yielding a   **
-#**		very large pulse sequence executable)		    **
 #*********************************************************************
 # Main MAIN main
 
@@ -57,29 +44,11 @@ if [ ! $USER = $LOGNAME ]; then
    exit
 fi
 
-ostype=`uname -s`
-
-# CHECK for load option e.g. dynamic default if shared libs present, or static
-
-if [ x$ostype = "xSunOS" ]; then
-  if [ "x$1" = "x-static" ]; then
-    target=psgsolstatic
-    shift
-  else
-    target=psgsol
-  fi
-else
-  if [ "x$1" = "x-static" ]; then
-    libop="-Bstatic"
-    shift
-  fi
-fi
-
 if (test ! -f "$vnmrsystem"/lib/libparam.a)
 then
    echo " "
    echo " "
-   echo "No Varian PSG library was found in system directory."
+   echo "No PSG library was found in system directory."
    echo "Specifically, $vnmrsystem/lib/libparam.a does not exist."
    echo "This is an irrecoverable error."
    echo " "
@@ -91,7 +60,7 @@ fi
 #  directory (/VNMR/PSG).
 
 cd "$vnmruser"
-osname=`vnmr_uname`
+osname=$(vnmr_uname)
 
 rpath="-Wl,-rpath $vnmrsystem/lib"
 psdir="$vnmrsystem"/lib
@@ -99,11 +68,11 @@ makefile="$vnmrsystem"/psg/seqgenmake
 if [ -d "$vnmruser"/psg ]; then
    # If USER does not have the appropriate PSG library, the PSG
    # directory is set to the SYSTEM PSG directory (/VNMR/PSG).
-   if [ x$osname="xLinux" -a -r "$vnmruser"/psg/libpsglib.so.6.0 ]; then
+   if [ x$osname="xLinux" ] && [ -r "$vnmruser"/psg/libpsglib.so.6.0 ]; then
       rpath="-Wl,-rpath $vnmruser/psg -Wl,-rpath $vnmrsystem/lib"
       psdir="$vnmruser"/psg
    fi
-   if [ x$osname="xDarwin" -a -r "$vnmruser"/psg/libpsglib.a ]; then
+   if [ x$osname="xDarwin" ] && [ -r "$vnmruser"/psg/libpsglib.a ]; then
       rpath="-Wl,-rpath $vnmruser/psg -Wl,-rpath $vnmrsystem/lib"
       psdir="$vnmruser"/psg
    fi
@@ -113,6 +82,25 @@ if [ -d "$vnmruser"/psg ]; then
    fi
 fi
 
+# Silence warnings from newer gcc compilers
+if [ x$osname="xLinux" ]; then
+   Wextra=""
+   gcc -Q --help=warning | grep Wunused-but-set-variable >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra="-Wno-unused-but-set-variable"
+   fi
+   gcc -Q --help=warning | grep Wunused-result >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra=${Wextra}" -Wno-unused-result"
+   fi
+   gcc -Q --help=warning | grep Wmisleading-indentation >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra=${Wextra}" -Wno-misleading-indentation"
+   fi
+fi
 
 #  Check for USER directory for compiled pulse sequences (SEQLIB). If
 #  it is not present, create it.
@@ -125,7 +113,7 @@ fi
 
 if [ ! -d "$vnmruser"/psglib ]; then
    mkdir "$vnmruser"/psglib
-   if [ ! -d "$vnmruser"/psglib -o ! -d "$vnmruser"/seqlib ]; then
+   if [ ! -d "$vnmruser"/psglib ] || [ ! -d "$vnmruser"/seqlib ]; then
       echo "Cannot create user's 'psglib' and/or 'seqlib' Directories."
       exit
    fi
@@ -164,11 +152,11 @@ LANG=C
 while [ $# != 0 ]; do
 
    # Remove the *.c file extension (if present) from the pulse sequence name
-   basetest=`basename filec .c`
+   basetest=$(basename filec .c)
    if [ x$basetest = "xfil" ]; then
-      file=`basename $1 \\\\.c`
+      file=$(basename $1 \\\\.c)
    else
-      file=`basename $1 .c`
+      file=$(basename $1 .c)
    fi
 
    cd "$vnmruser"/psglib
@@ -215,80 +203,44 @@ while [ $# != 0 ]; do
          echo "Adding DPS extensions to Pulse Sequence \""$file"\"."
          dpspost="dps"
          dps_dummy_obj=
-         if [ x$ostype = "xSunOS" ]; then
-            ( SOLARIS="y"; export SOLARIS;
-              PATH="$GNUDIR"/bin:/usr/ccs/bin:"$PATH";
-              export PATH;
-              dps_ps_gen -DDPS -I"$vnmruser"/psg -I"$vnmrsystem"/psg \
-              -I$GCC_EXEC_PREFIX/include $file.c )
+         if [ -f "$vnmrsystem"/psg/psgmain.cpp ]; then
+            dps_ps_gen -DDPS -DNVPSG $incl $file.c
          else
-            if [ -f "$vnmrsystem"/psg/psgmain.cpp ]; then
-               dps_ps_gen -DDPS -DNVPSG $incl $file.c
-            else
-               dps_ps_gen -DDPS $incl $file.c
-            fi
-            if [ ! -f "$psglib"/${file}${dpspost}.c ]; then
-               echo "Adding DPS extensions failed"
-               dpspost=""
-               dps_dummy_obj="$vnmrsystem"/lib/x_ps.o
-               rm -f "$psglib"/${file}.i
-            fi
+            dps_ps_gen -DDPS $incl $file.c
+         fi
+         if [ ! -f "$psglib"/${file}${dpspost}.c ]; then
+            echo "Adding DPS extensions failed"
+            dpspost=""
+            dps_dummy_obj="$vnmrsystem"/lib/x_ps.o
+            rm -f "$psglib"/${file}.i
          fi
       else
          dps_dummy_obj="$vnmrsystem"/lib/x_ps.o
       fi
 
-      if [ x$ostype = "xSunOS" ]; then
-         ( SOLARIS="y"; export SOLARIS;
-           PATH="$GNUDIR"/bin:/usr/ccs/bin:"$PATH";
-           export PATH;
-           make -e -s -f "$makefile" PS=${file} \
-           CPPFLAGS="-I$(GCC_EXEC_PREFIX)include -I$vnmruser/psg -I$vnmrsystem/psg" \
-           LIB="$psdir" CFLAGS="-O" LFLAGS="-s" \
-           LNFLAGS="-O -Wunused -Wformat -Wuninitialized -Wparentheses" \
-           SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
-           SEQLIB="$seqlib" sol_lint ) 2>> /dev/null
-      fi
-
       # Compile either the combined normal & dps or just
       #    the normal Pulse Sequence if dps_ps_gen was not found.
 
-      if [ x"$osname" = "xIRIX" ]; then
-         ( make -fes $makefile PS=${file}${dpspost} \
-           CPPFLAGS="-cckr -woff 110,1009,1116,1174,1552 \
-           -I$vnmruser/psg -I$vnmrsystem/psg -D_NO_PROTO" \
-           LIB="$psdir" CFLAGS="-O" LFLAGS="-woff 110 -rpath $vnmrsystem/lib -s $libop" \
-           SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
-           SEQLIB="$seqlib" ) 2>> /dev/null
-      elif [ x$osname = "xLinux" ]; then
+      if [ x$osname = "xLinux" ]; then
          ( make -e -s -f $makefile PS=${file}${dpspost} \
            CPPFLAGS="$incl" \
-           LIB="$psdir" CFLAGS="-O2 -m32" LFLAGS="$rpath" \
+           LIB="$psdir" CFLAGS="-O2 -m32 ${Wextra}" LFLAGS="$rpath" \
            SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
            SEQLIB="$seqlib" psgLinux) 2>> /dev/null
       elif [ x$osname = "xDarwin" ]; then
          ( make -e -s -f $makefile PS=${file}${dpspost} \
            CPPFLAGS="$incl" \
-           LIB="$psdir" CFLAGS="-O2 -m32 -DMACOS" LFLAGS="" \
-           CC="gcc" CCC="g++" \
+           LIB="$psdir" CFLAGS="-Os -arch x86_64 -DMACOS" LFLAGS="" \
+           CC="clang" CCC="clang++" \
            SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
            SEQLIB="$seqlib" psgMac) 2>> /dev/null
-      elif [ x$osname = "xInterix" ]; then
+      else
          ( make -e -s -f $makefile PS=${file}${dpspost} \
            CPPFLAGS="$incl" \
            LIB="$psdir" CFLAGS="-O2 -m32 -D_ALL_SOURCE" LFLAGS="$rpath" \
            CC="gcc" CCC="g++" \
            SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
            SEQLIB="$seqlib" psgInterix) 2>> /dev/null
-      else
-         ( SOLARIS="y"; export SOLARIS;
-	   PATH="$GNUDIR"/bin:/usr/ccs/bin:"$PATH";
-	   export PATH;
-           make -e -s -f $makefile PS=${file}${dpspost} \
-           CPPFLAGS="-I$(GCC_EXEC_PREFIX)include -I$vnmruser/psg -I$vnmrsystem/psg" \
-           LIB="$psdir" CFLAGS="-O" LFLAGS="-s" \
-           SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
-           SEQLIB="$seqlib" $target ) 2>> /dev/null
       fi
 
       # Check for extraneous psg and object file
@@ -298,14 +250,14 @@ while [ $# != 0 ]; do
 
       if [ -f "$psglib"/${file}${dpspost}.o ]; then
          rm "$psglib"/${file}${dpspost}.o
-         if [ "x$dpspost" != "x" -a -f ${file}${dpspost}.errors ]; then
+         if [ "x$dpspost" != "x" ] && [ -f ${file}${dpspost}.errors ]; then
             cat ${file}${dpspost}.errors >> ${file}.errors
             rm ${file}${dpspost}.errors
          fi
 
          # Rename pulse sequence back to standard name if required
          #					(eg. s2puldps -> s2pul)
-         if [ "x$dpspost" != "x" -a -f "$seqlib"/${file}${dpspost} ]; then
+         if [ "x$dpspost" != "x" ] && [ -f "$seqlib"/${file}${dpspost} ]; then
             mv -f "$seqlib"/${file}${dpspost} "$seqlib"/$file
          fi
       elif [ "x$dpspost" != "x" ]; then
@@ -318,42 +270,26 @@ while [ $# != 0 ]; do
          echo "Retrying without DPS extensions"
          dps_dummy_obj="$vnmrsystem"/lib/x_ps.o
 
-         if [ x$osname = "xIRIX" ]; then
-         ( make -fes $makefile PS=${file} \
-           CPPFLAGS="-I$vnmruser/psg -I$vnmrsystem/psg -D_NO_PROTO" \
-           LIB="$psdir" CFLAGS="-O -woff 110,1009,1116,1174,1552 " \
-           LFLAGS="-woff 110 -rpath $vnmrsystem/lib -s $libop" \
-           SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
-           SEQLIB="$seqlib" ) 2>> /dev/null
-         elif [ x$osname = "xLinux" ]; then
+         if [ x$osname = "xLinux" ]; then
             ( make -e -s -f $makefile PS=$file \
               CPPFLAGS="$incl" \
-              LIB="$psdir" CFLAGS="-O2 -m32" LFLAGS="$rpath" \
+              LIB="$psdir" CFLAGS="-O2 -m32 ${Wextra}" LFLAGS="$rpath" \
               SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
               SEQLIB="$seqlib" psgLinux) 2>> /dev/null
          elif [ x$osname = "xDarwin" ]; then
             ( make -e -s -f $makefile PS=$file \
               CPPFLAGS="$incl" \
-              LIB="$psdir" CFLAGS="-O2 -DMACOS" LFLAGS="" \
-              CC="gcc" CCC="g++" \
+              LIB="$psdir" CFLAGS="-Os -DMACOS -arch x86_64" LFLAGS="" \
+              CC="clang" CCC="clang++" \
               SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
               SEQLIB="$seqlib" psgMac) 2>> /dev/null
-         elif [ x$osname = "xInterix" ]; then
+         else
             ( make -e -s -f $makefile PS=$file \
               CPPFLAGS="$incl" \
               LIB="$psdir" CFLAGS="-O2 -m32 -D_ALL_SOURCE" LFLAGS="$rpath" \
               CC="gcc" CCC="g++" \
               SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
               SEQLIB="$seqlib" psgInterix) 2>> /dev/null
-         else
-            ( SOLARIS="y"; export SOLARIS
-              PATH="$GNUDIR"/bin:/usr/ccs/bin:"$PATH";
-	      export PATH
-              make -fes $makefile PS=$file \
-              CPPFLAGS="-I$(GCC_EXEC_PREFIX)include -I$vnmruser/psg -I$vnmrsystem/psg" \
-              LIB="$psdir"  CFLAGS="-O" LFLAGS="-s" \
-              SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
-              SEQLIB="$seqlib" $target ) 2>> /dev/null
          fi
          if [ -f "$psglib"/$file.o ]; then
             rm "$psglib"/$file.o
@@ -361,7 +297,7 @@ while [ $# != 0 ]; do
       fi
 
       # Delete dps .c file if present
-      if [ "x$dpspost" != "x" -a -f "$psglib"/${file}${dpspost}.c ]; then
+      if [ "x$dpspost" != "x" ] && [ -f "$psglib"/${file}${dpspost}.c ]; then
          rm "$psglib"/${file}${dpspost}.c
       fi
       rm -f "$psglib"/psg
