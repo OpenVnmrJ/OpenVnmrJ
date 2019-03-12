@@ -73,15 +73,15 @@ typedef struct _comInfo comInfo;
 
 struct _fileheader
 {
-   long		nblocks;
-   long		ntraces;
-   long		np;
-   long		ebytes;
-   long		tbytes;
-   long		bbytes;
+   int		nblocks;
+   int		ntraces;
+   int		np;
+   int		ebytes;
+   int		tbytes;
+   int		bbytes;
    short	vers_id;
    short	status;
-   long		nbheaders;
+   int		nbheaders;
 };
 
 typedef struct _fileheader fileheader;
@@ -92,7 +92,7 @@ struct _blockheader
    short	status;
    short	index;
    short	mode;
-   long		ctcount;
+   int		ctcount;
    float	lpval;
    float	rpval;
    float	lvl;
@@ -127,15 +127,15 @@ typedef struct _fdInfo fdInfo;
 /* mirrors datafilehead to allow little to big endian swapping */
 struct datafileheadSwapByte
 {
-   long    l1;       /* number of blocks in file			*/
-   long    l2;       /* number of traces per block			*/
-   long    l3;            /* number of elements per trace		*/
-   long    l4;        /* number of bytes per element		*/
-   long    l5;        /* number of bytes per trace			*/
-   long    l6;        /* number of bytes per block			*/
+   int    l1;       /* number of blocks in file			*/
+   int    l2;       /* number of traces per block			*/
+   int    l3;            /* number of elements per trace		*/
+   int    l4;        /* number of bytes per element		*/
+   int    l5;        /* number of bytes per trace			*/
+   int    l6;        /* number of bytes per block			*/
    short   s1;       /* software version and file_id status bits	*/
    short   s2;        /* status of whole file			*/
-   long	   l7;	  /* number of block headers			*/
+   int	   l7;	  /* number of block headers			*/
 };
 
 typedef union
@@ -193,11 +193,11 @@ struct datablockheadSwapByte
    short s2;
    short s3;
    short s4;
-   long  l1;
-   long  l2;
-   long  l3;
-   long  l4;
-   long  l5;
+   int  l1;
+   int  l2;
+   int  l3;
+   int  l4;
+   int  l5;
 };
 
 typedef union

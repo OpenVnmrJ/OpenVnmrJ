@@ -4,6 +4,8 @@ sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import buildMethods
 import myShutil
 
+platform = sys.platform
+
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
 cwd = os.getcwd()
@@ -30,6 +32,11 @@ bpSpecialList = ['bp_image']
 bpEnv = Environment(CCFLAGS   = '-m32 -O2 -DLINUX',
                     LINKFLAGS = '-m32',
                     CPPPATH   = [cwd])
+
+if ('darwin' in platform):
+    bpEnv.Replace(CC = 'clang')
+    bpEnv.Replace(CCFLAGS = '-Wall -Os -arch x86_64 -DLINUX')
+    bpEnv.Replace(LINKFLAGS = '')
 
 # actual builds
 bpcommonStaticTarget = 'libbpcommon.a'

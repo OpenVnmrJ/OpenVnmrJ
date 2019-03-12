@@ -15,9 +15,13 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S), Darwin)
   CCC=clang++
   CC=clang
+  CFLAGS= -Os -fPIC -arch x86_64 -Wall
+  LDFLAGS= -shared
 else
   CCC=g++
   CC=gcc
+  CFLAGS= -O -fPIC -m32 
+  LDFLAGS= -shared -m32
 endif
 #-----  The system and user PSG directories
 PSG_DIR= $(vnmrsystem)/psg/
@@ -27,15 +31,9 @@ USR_PSG_DIR= $(vnmruser)/psg/
 #-----  Normal operational compile flags
 CDEFINE = 
 NVFLAGS = -Dcodeint=int -Dcodelong=int
-ifeq ($(UNAME_S), Darwin)
-  CFLAGS= -Os -fPIC -m32 -Wall
-else
-  CFLAGS= -O -fPIC -m32 
-endif
 CPPFLAGS= -DSUN -DLINUX -DPSG_LC -DNVPSG -U_FORTIFY_SOURCE
 
 LDOPTIONS   = -O
-LDFLAGS= -shared -m32
 
 PSG_LN= ln -s $(PSG_DIR)$(@)
 SHAREDLIB_VER=6.0
@@ -282,11 +280,11 @@ libpsglib.so : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
 
 maclibpsglib : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
 	@(umask 2; libtool -static -o libpsglib.a $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
-	@(umask 2; $(CCC) -o libpsglib.dylib -install_name /vnmr/lib/libpsglib.dylib -m32 -undefined dynamic_lookup -dynamiclib $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
+	@(umask 2; $(CCC) -o libpsglib.dylib -install_name /vnmr/lib/libpsglib.dylib -undefined dynamic_lookup -dynamiclib $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
 
 macuserlibpsglib : $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ)
 	@(umask 2; libtool -static -o libpsglib.a $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
-	@(umask 2; $(CCC) -o libpsglib.dylib -install_name $(USR_PSG_DIR)/libpsglib.dylib -m32 -undefined dynamic_lookup -dynamiclib $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
+	@(umask 2; $(CCC) -o libpsglib.dylib -install_name $(USR_PSG_DIR)/libpsglib.dylib -undefined dynamic_lookup -dynamiclib $(PSG_OBJ) $(NVPSG_OBJ) $(NVPSG_CPP_OBJ))
 
 #------------------------------------------------------------------------
 #-----  Object dependencies

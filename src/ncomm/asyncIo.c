@@ -71,8 +71,9 @@ extern int find_maxfd( register fd_set *fdmaskp );
 
 static struct _asyncIoEntry	asyncIoEntryArray[ NOFILE ];
 static int			maxAsyncIoIndex = 0;
-static int			asyncIoSetup = 0;
 
+#ifndef NOASYNC
+static int			asyncIoSetup = 0;
 
 static void
 setupAsyncIo()
@@ -248,6 +249,7 @@ locateUnusedEntry()
 
 	return( index );
 }
+#endif
 
 static int
 locateEntryByFd( int fd )
@@ -264,6 +266,7 @@ locateEntryByFd( int fd )
 	return( index );
 }
 
+#ifndef NOASYNC
 int setFdAsync( int fd, void *clientData, void (*callback)() )
 {
 	int		index, iter, ival;
@@ -336,6 +339,7 @@ int setFdAsync( int fd, void *clientData, void (*callback)() )
 #endif
 	return( 0 );
 }
+#endif
 
 int setFdNonAsync( int fd )
 /* int fd -        fd to be used */
@@ -370,6 +374,7 @@ int setFdNonAsync( int fd )
 	return( 0 );
 }
 
+#ifndef NOASYNC
 int setFdDirectAsync( int fd, void *clientData, void (*callback)() )
 {
 	int		index, iter, ival;
@@ -442,3 +447,4 @@ int setFdDirectAsync( int fd, void *clientData, void (*callback)() )
 #endif
 	return( 0 );
 }
+#endif

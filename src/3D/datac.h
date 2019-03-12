@@ -24,11 +24,11 @@ struct dbh_swap
    short s2;
    short s3;
    short s4;
-   long  l1;
-   long  l2;
-   long  l3;
-   long  l4;
-   long  l5;
+   int  l1;
+   int  l2;
+   int  l3;
+   int  l4;
+   int  l5;
 };
           
 typedef union

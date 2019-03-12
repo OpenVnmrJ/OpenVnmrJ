@@ -96,9 +96,6 @@ Set DEBUG_ASYNC to get useful information about asynchronous channels.
 #include "errLogLib.h"
 #include "chanLibP.h"
 
-extern int setFdAsync( int fd, void *clientData, void (*callback)() );
-extern int setFdNonAsync( int fd );
-
 #define  ERROR_CHANNEL	 -1
 
 /*  Stolen from the Krikkit Connection Broker !!  */
@@ -731,6 +728,9 @@ int flushChannel( int channel)
 #ifndef NOASYNC
 #include "listObj.h"
 #include "eventHandler.h"
+
+extern int setFdAsync( int fd, void *clientData, void (*callback)() );
+extern int setFdNonAsync( int fd );
 
 typedef struct _asyncChanEntry {
 	int	  channel;

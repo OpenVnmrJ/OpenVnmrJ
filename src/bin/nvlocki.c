@@ -58,7 +58,7 @@ static int vstandby = 0;
 static int vnmrFd = -1;
 static int stoped = 0;
 static char *vnmrAddr = NULL;
-static unsigned long fidNum = 0;
+static unsigned int fidNum = 0;
 static FID_STAT_BLOCK *fidstataddr = NULL;
 
 /** from locknddscom.c ***/
@@ -107,8 +107,8 @@ void saveLockData(short* data, int size)
 	fprintf(stderr, "nvlocki:  fid data size is  %d \n", size);
      fidNum++;
      fidstataddr->elemId = fidNum;
-     fidstataddr->np = (long) size;
-     fidstataddr->dataSize = (long) size;
+     fidstataddr->np = size;
+     fidstataddr->dataSize = size;
      ptr = (short *) fidstataddr + sizeof( FID_STAT_BLOCK );
      k = sizeof(short) * size;
      memcpy(ptr, data, k);
@@ -200,7 +200,7 @@ void Lock_FIDCallback(void* listener_data, DDS_DataReader* reader)
    struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
    DDS_ReturnCode_t retcode;
    DDS_Boolean result;
-   long i,numIssues;
+   int i,numIssues;
    DDS_TopicDescription *topicDesc;
 
 
@@ -243,8 +243,8 @@ void Lock_FIDCallback(void* listener_data, DDS_DataReader* reader)
 
               dataLength = DDS_ShortSeq_get_length(&(recvIssue->lkfid));
               if (verbose)
-                  fprintf(stderr," lkfid len: %lu\n",dataLength);
-              DPRINT1(+3,"Console_StatCallback: lkfid len: %lu\n",dataLength);
+                  fprintf(stderr," lkfid len: %d\n",dataLength);
+              DPRINT1(+3,"Console_StatCallback: lkfid len: %d\n",dataLength);
 
               dispCount++;
               if (!ignoreLockFIDSub)
