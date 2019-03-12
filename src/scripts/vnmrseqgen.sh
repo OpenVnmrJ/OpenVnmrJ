@@ -230,7 +230,7 @@ while [ $# != 0 ]; do
       elif [ x$osname = "xDarwin" ]; then
          ( make -e -s -f $makefile PS=${file}${dpspost} \
            CPPFLAGS="$incl" \
-           LIB="$psdir" CFLAGS="-O2 -m32 -DMACOS" LFLAGS="" \
+           LIB="$psdir" CFLAGS="-Os -arch x86_64 -DMACOS" LFLAGS="" \
            CC="clang" CCC="clang++" \
            SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
            SEQLIB="$seqlib" psgMac) 2>> /dev/null
@@ -279,7 +279,7 @@ while [ $# != 0 ]; do
          elif [ x$osname = "xDarwin" ]; then
             ( make -e -s -f $makefile PS=$file \
               CPPFLAGS="$incl" \
-              LIB="$psdir" CFLAGS="-O2 -DMACOS" LFLAGS="" \
+              LIB="$psdir" CFLAGS="-Os -DMACOS -arch x86_64" LFLAGS="" \
               CC="clang" CCC="clang++" \
               SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
               SEQLIB="$seqlib" psgMac) 2>> /dev/null
