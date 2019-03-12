@@ -19,7 +19,7 @@ static int table3[4] = {2,0,2,0};           // phRec
 #define phXwdumbot t2
 #define phRec t3
 
-pulsesequence() {
+void pulsesequence() {
 
 // Set the Maximum Dynamic Table and v-var Numbers
 

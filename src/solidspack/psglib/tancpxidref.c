@@ -23,7 +23,7 @@ static int table5[4] = {0,2,1,3};           // phRec
 #define phXref t4
 #define phRec t5
 
-pulsesequence() {
+void pulsesequence() {
 
 // Set the Maximum Dynamic Table Number
 

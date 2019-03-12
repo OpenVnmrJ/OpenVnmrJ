@@ -82,7 +82,7 @@ static int phi1[16] = {0,2,0,2,2,0,2,0,1,3,1,3,3,1,3,1},
            phi7[16] = {1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2};
 
 
-pulsesequence()
+void pulsesequence()
 {
    double          phase = getval("phase"),
                    mix = getval("mix"),

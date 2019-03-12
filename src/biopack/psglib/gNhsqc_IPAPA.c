@@ -60,7 +60,7 @@ static double   H1ofs=4.7, C13ofs=0.0, N15ofs=120.0, H2ofs=0.0;
 
 static shape  stC200;
 
-pulsesequence()
+void pulsesequence()
 {
 
 int     t1_counter;

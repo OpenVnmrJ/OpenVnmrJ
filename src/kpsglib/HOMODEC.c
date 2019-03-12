@@ -12,7 +12,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    char homo[MAXSTR];
 

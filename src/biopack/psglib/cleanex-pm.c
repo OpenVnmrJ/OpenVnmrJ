@@ -69,7 +69,7 @@ modified for BioPack aug 2007, G.Gray Varian Palo Alto
 
 #include <standard.h>
 
-cleanex(phse1,phse2)
+void cleanex(phse1,phse2)
 codeint phse1,phse2;
 {
         double slpw1;
@@ -90,7 +90,7 @@ static int phi1[1]  = {0},
            phi6[1]  = {0},
             rec[4]  = {0,2,0,2};
 
-pulsesequence ()
+void pulsesequence ()
 {
 
 double  gstab = getval("gstab"),

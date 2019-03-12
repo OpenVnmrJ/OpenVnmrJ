@@ -53,7 +53,7 @@
 
 static shape       hhmix, ad180, Hdec;
 
-pulsesequence()
+void pulsesequence()
 {
    double          rg1 = 2.0e-6,
                    mix	= getval("mix"),	/* mixing time */

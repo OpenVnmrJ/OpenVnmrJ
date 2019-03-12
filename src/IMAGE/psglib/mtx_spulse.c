@@ -34,12 +34,7 @@ in the parts of fidelity that have to do with matlab calls.
 #include <standard.h>
 #include "sgl.c"
 
-/* floating point comparison macros */
-#define EPSILON 1e-9      /* largest allowable deviation due to floating */
-                                        /* point storage */
-#define FP_GT(A,B) (((A) > (B)) && (fabs((A) - (B)) > EPSILON)) /* A greater than B */
-
-pulsesequence()
+void pulsesequence()
 {
 	/* Internal variable declarations *********************/
 	char txphase[MAXSTR];
@@ -63,7 +58,7 @@ pulsesequence()
 	int my_on_off[64];
 	double mytmp;
 	int my_numrfch;
-	int my_retval;
+	int my_retval __attribute__((unused));
 
 
 	

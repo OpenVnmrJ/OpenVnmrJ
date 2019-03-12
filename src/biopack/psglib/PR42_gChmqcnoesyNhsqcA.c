@@ -56,7 +56,7 @@ static  int phi1[4] = {0,0,2,2},
 
 static shape stC200;
 
-pulsesequence()
+void pulsesequence()
 {
  char   codec[MAXSTR], codecseq[MAXSTR];
 

@@ -44,7 +44,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    char         Cdseq[MAXSTR], refoc[MAXSTR], sspul[MAXSTR];
    int          mult = (0.5 + getval("mult"));

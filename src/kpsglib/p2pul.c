@@ -19,7 +19,7 @@ static double tc1z,tc2z,tc3z,tc4z;
 static double amp1z,amp2z,amp3z,amp4z; 
 static char   gread,gslice,gphase,command[MAXSTR],gradshape[MAXSTR];
 
-pulsesequence()
+void pulsesequence()
 {
    int flag;
    /* get variables */

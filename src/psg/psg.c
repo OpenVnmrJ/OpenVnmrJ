@@ -1692,7 +1692,7 @@ psgsetup(in_pipe, bugflag)
     setupPsgFile();
 }
 
-pulsesequence()
+void pulsesequence()
 {
 }
 

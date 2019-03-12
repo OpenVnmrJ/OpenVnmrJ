@@ -49,7 +49,7 @@ static int phi1[4] = {1,1,3,3},
 
 static shape stC200;
 
-pulsesequence()
+void pulsesequence()
 {
 
 int     t1_counter;

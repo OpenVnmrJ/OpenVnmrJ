@@ -43,7 +43,7 @@ static int ph4[1] = {0};
 static int ph5[4] = {0,0,2,2};
 static int ph6[4] = {0,2,2,0};
 
-pulsesequence()
+void pulsesequence()
 {
   double jch,
          jnch,

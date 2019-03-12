@@ -126,7 +126,7 @@ double dec_c13_shpulse(shape pwxshape, codeint phase)
  return(pwxshape.pw + 2.0*POWER_DELAY +WFG_STOP_DELAY + WFG_START_DELAY);
 }
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

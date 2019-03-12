@@ -78,7 +78,7 @@ static int ph1[4] = {1,3,2,0},
          ph11[16] = {0,1,0,1,2,3,2,3,0,1,0,1,2,3,2,3}, /* 1st echo in ES */
          ph12[16] = {0,0,1,1,0,0,1,1,2,2,3,3,2,2,3,3}; /* 2nd echo in ES */
 
-pulsesequence()
+void pulsesequence()
 {
    double          slpwrR = getval("slpwrR"),
                    slpwR = getval("slpwR"),

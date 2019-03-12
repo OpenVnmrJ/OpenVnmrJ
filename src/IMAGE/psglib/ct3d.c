@@ -19,7 +19,7 @@
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 { 
   double  aqtm     = getval("aqtm");      /* "extra" sampling time for filters */
   double  acqdelay = getval("acqdelay");  /* minimum delay between echoes */

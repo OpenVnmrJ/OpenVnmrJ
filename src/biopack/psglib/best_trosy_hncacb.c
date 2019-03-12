@@ -34,7 +34,7 @@ static int
 
 
 
-pulsesequence()
+void pulsesequence()
 {
    char   
           shname1[MAXSTR],

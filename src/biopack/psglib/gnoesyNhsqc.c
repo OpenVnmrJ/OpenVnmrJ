@@ -134,7 +134,7 @@ static int   phi1[4]  = {0,0,2,2}, /* first 90 in t1 H1 (NOE)*/
 static double   d2_init=0.0, d3_init=0.0;
 
 
-pulsesequence()
+void pulsesequence()
 {
 
 

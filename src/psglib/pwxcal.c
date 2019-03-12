@@ -21,7 +21,7 @@
 
 int    numrfch;
 
-pulsesequence()
+void pulsesequence()
 {
    double tmpval;
    double pwx1;

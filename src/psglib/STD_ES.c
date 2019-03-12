@@ -84,7 +84,7 @@ static int	ph1[8] = {0,0,2,2,1,1,3,3},  /* observe pulse with subtraction */
                            0,0,0,0,3,3,3,3,2,2,2,2,1,1,1,1},  /* RCVR with ES & subtraction */
                ph81[16] = {0,2,3,1,2,0,1,3,0,2,3,1,2,0,1,3};  /* RCVR with ES, no subtraction */
 
-pulsesequence()
+void pulsesequence()
 {
    double	   prgpwr = getval("prgpwr"),
                    prgtime = getval("prgtime"),

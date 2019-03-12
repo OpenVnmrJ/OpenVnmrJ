@@ -37,7 +37,7 @@ static int	ph1[1] = {0},
 		ph10[1] = {0},
 		ph11[1] = {0};
 
-mleva()
+void mleva()
 {
    double wdwfctr,window,slpw;
    wdwfctr=getval("wdwfctr");
@@ -48,7 +48,7 @@ mleva()
    rgpulse(slpw,v6,0.0,0.0);
 }
 
-mlevb()
+void mlevb()
 {
    double wdwfctr,window,slpw;
    wdwfctr=getval("wdwfctr");
@@ -59,7 +59,7 @@ mlevb()
    rgpulse(slpw,v4,0.0,0.0);
 }
 
-dipsi(phse1,phse2)
+void dipsi(phse1,phse2)
 codeint phse1,phse2;
 {
         double slpw5;
@@ -77,7 +77,7 @@ codeint phse1,phse2;
 }
 
 
-pulsesequence()
+void pulsesequence()
 {
 	double		satpwr,
 			satdly,

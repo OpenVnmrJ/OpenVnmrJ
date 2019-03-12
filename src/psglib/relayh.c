@@ -18,7 +18,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    int          i,
 		relay;

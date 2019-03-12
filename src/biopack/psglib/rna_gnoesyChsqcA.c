@@ -105,7 +105,7 @@
 
 
 /* Chess - CHEmical Shift Selective Suppression */
-Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
+void Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
 double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
   codeint phase;
   char* pulseshape;
@@ -117,7 +117,7 @@ double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
 }
 
 /* Wet4 - Water Elimination */
-Wet4(phaseA,phaseB)
+void Wet4(phaseA,phaseB)
   codeint phaseA,phaseB;
 {
   double finepwr,gzlvlw,gtw,gswet,gswet2,wetpwr,wetpw,dz;
@@ -156,7 +156,7 @@ static double d2_init=0.0, d3_init=0.0;
 
 static shape  stC30, stC80;
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

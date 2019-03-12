@@ -17,7 +17,7 @@ static int table3[8] =  {1,0,3,2,3,2,1,0};                  //phRec
 #define phXecho t2
 #define phRec t3
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
    double aXecho = getval("aXecho");  // define the echoX group in the sequence

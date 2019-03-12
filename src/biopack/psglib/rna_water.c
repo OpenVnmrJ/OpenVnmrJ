@@ -249,7 +249,7 @@ static int phi1[4] = {0,2,1,3},
          phi13[16] = {0,2,0,2,2,0,2,0,1,3,1,3,3,1,3,1},
          phi14[16] = {0,2,2,0,2,0,0,2,3,1,1,3,1,3,3,1};
 
-pulsesequence()
+void pulsesequence()
 {
   char   fsqd[MAXSTR], presat[MAXSTR], scuba[MAXSTR], jumpret[MAXSTR],
          dpfgse[MAXSTR],shaped[MAXSTR], wet[MAXSTR],  watergate[MAXSTR],

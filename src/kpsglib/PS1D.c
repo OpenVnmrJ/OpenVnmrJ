@@ -21,7 +21,7 @@ static int	ph1[4] = {0,1,2,3},
 		ph3[8] = {0,0,1,1,2,2,3,3},
 		ph4[16] = {0,1,0,1,0,1,0,1,2,3,2,3,2,3,2,3};
 
-pulsesequence()
+void pulsesequence()
 {
 
    double	   gtE = getval("gtE"),

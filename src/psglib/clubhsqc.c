@@ -116,7 +116,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
      
 {
   double        cpw,cpwr,jch,gtime1,gtime2,gtime,gdel,gzlvl1,

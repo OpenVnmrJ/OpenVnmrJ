@@ -31,7 +31,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
   int     icosel, iphase;
   char    pshape[MAXSTR], xptype[MAXSTR], sspul[MAXSTR];

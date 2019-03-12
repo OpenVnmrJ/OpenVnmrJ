@@ -12,7 +12,7 @@ static int table2[4] = {0,0,0,0};  //phRec
 #define phTune t1
 #define phRec t2
 
-pulsesequence(){
+void pulsesequence(){
 
 //Define Variables and Get Parameter Values
 

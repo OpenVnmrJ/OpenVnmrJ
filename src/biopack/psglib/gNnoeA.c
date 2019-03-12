@@ -127,7 +127,7 @@ static double   d2_init=0.0;
 
 static shape stC200;
 
-pulsesequence()
+void pulsesequence()
 {
 
 

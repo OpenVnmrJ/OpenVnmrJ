@@ -58,7 +58,7 @@ static int      ph1[4] = {0,0,2,2},
                 rec[4] = {0,2,2,0};
 
 
-pulsesequence()
+void pulsesequence()
 {
 int     phase;
 double 	j1xh    = getval("j1xh"),

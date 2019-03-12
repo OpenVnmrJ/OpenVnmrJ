@@ -34,7 +34,7 @@ static int   phi3[2] = {1,3},
 	     rec_1[16] = {1,3,2,0,3,1,0,2,3,1,0,2,1,3,2,0},
 	     phi2[16] = {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1};
 	     
-pulsesequence()
+void pulsesequence()
 {
    double          mult = getval("mult"),
                    pp = getval("pp"),

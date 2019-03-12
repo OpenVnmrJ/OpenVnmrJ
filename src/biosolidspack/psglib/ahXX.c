@@ -94,7 +94,7 @@ static int table9[8] = {3,2,3,2,3,2,3,2};           // phXmixdqf;
 #define phXrcplref t8
 #define phXmixdqf t9
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 

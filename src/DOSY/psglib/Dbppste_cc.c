@@ -99,7 +99,7 @@ static int phi1[8]  = {0,0,1,1,2,2,3,3},
            phi10[1] = {0},
            rec[16]  = {0,2,0,2,2,0,2,0,2,0,2,0,0,2,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
 double	Dtau,Ddelta,dosytimecubed,dosyfrq,CORR,del2check,del2max,
         gzlvl1   = getval("gzlvl1"),

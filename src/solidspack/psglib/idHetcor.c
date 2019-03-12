@@ -61,7 +61,7 @@ static int tblX90[4]  = {0,2,0,2};           // X90 pulse
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 
 // =========================================================

@@ -75,7 +75,7 @@ p.s.   Apr. 2005
 #include<standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 {
 double	gzlvl1  = getval("gzlvl1"),
 	gt1     = getval("gt1"),

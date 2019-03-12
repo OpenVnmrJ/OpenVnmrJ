@@ -96,7 +96,7 @@ static double   H1ofs=4.7, C13ofs=0.0, N15ofs=120.0, H2ofs=0.0;
 
 shape   HHdseq, Cdseq, H2Osinc, stC200;
 
-pulsesequence()
+void pulsesequence()
 {
   void      makeHHdec(), makeCdec(); 	                  /* utility functions */
   int       ihh=1,        /* used in HH decoupling to improve water suppression */

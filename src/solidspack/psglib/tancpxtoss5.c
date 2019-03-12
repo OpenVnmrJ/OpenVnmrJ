@@ -40,7 +40,7 @@ static int table7[44] = {0,0,0,0,0,0,0,0,0,0,0,
 #define phXtoss t6
 #define phRec t7
 
-pulsesequence() {
+void pulsesequence() {
 
 // Set the Maximum Dynamic Table Number
 

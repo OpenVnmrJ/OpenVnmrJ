@@ -22,7 +22,7 @@ static int
            phs25[16] = {0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3},
            phs26[8] = {0,2,0,2,2,0,2,0};
 		
-pulsesequence()
+void pulsesequence()
 {
  double gstab,gzlvl1,gt1;
    gzlvl1=getval("gzlvl1");

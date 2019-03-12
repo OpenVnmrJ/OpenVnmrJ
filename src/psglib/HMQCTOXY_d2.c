@@ -16,7 +16,7 @@ static int phs1[8] = {0,0,0,0,2,2,2,2},
 	   phs5[4] = {0,0,2,2},
 	   phs2[8] = {0,2,2,0,2,0,0,2};
 
-mleva()
+void mleva()
 {
    double slpw;
    slpw = getval("slpw");
@@ -26,7 +26,7 @@ mleva()
    xmtroff(); delay(slpw); xmtron();
    txphase(zero); delay(slpw);
 }
-mlevb()
+void mlevb()
 {
    double slpw;
    slpw = getval("slpw");
@@ -37,7 +37,7 @@ mlevb()
    txphase(two); delay(slpw);
 }
 
-pulsesequence()
+void pulsesequence()
 {
    double          j1xh,
 		   pwx2lvl,

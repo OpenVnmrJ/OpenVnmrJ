@@ -41,7 +41,7 @@ static int
              phi9[8] = {0,0,0,0,2,2,2,2},
              rec[4] = {2,0,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES; parameters used in the last half of the */

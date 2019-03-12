@@ -8,7 +8,7 @@
 /*  profile - gradient calibrtion sequence */
 
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {
    double gzlvl1;
    double td;

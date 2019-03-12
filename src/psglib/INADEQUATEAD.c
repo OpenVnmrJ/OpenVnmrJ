@@ -46,7 +46,7 @@
 
 static shape shapead;
 
-pulsesequence()
+void pulsesequence()
 {
    double          jcc = getval("jcc"),
                    adpw = getval("adpw"),

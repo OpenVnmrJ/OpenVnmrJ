@@ -143,7 +143,7 @@
 #include <standard.h>
 #include "Pbox_bio.h"               /* Pbox Bio Pack Pulse Shaping Utilities */
 
-dipsi(phse1,phse2)
+void dipsi(phse1,phse2)
 codeint phse1,phse2;
 {
         double slpw5;
@@ -176,7 +176,7 @@ static double   H1ofs=4.7, C13ofs=35.0, N15ofs=120.0, H2ofs=0.0;
 
 static shape    stC200;
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

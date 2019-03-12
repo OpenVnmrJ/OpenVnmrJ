@@ -46,7 +46,7 @@ static int	ph1[4] = {1,1,3,3},
 		ph4[16] = {0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,2},
 		ph5[16] = {1,3,3,1,3,1,1,3,3,1,1,3,1,3,3,1};
 
-pulsesequence()
+void pulsesequence()
 
 {
    double   gzlvlE = getval("gzlvlE"),

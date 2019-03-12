@@ -23,7 +23,7 @@
 #include "sgl.c"
 
 
-pulsesequence()
+void pulsesequence()
 {
   /***** Internal variable declarations *****/
   double te_d1,te_d2,te_d3;             /* delays */

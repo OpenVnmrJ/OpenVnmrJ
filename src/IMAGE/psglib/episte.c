@@ -32,7 +32,7 @@
 #define GDELAY 4e-6
 
 
-pulsesequence() {
+void pulsesequence() {
   /* Acquisition variables */
   double dw;  /* nominal dwell time, = 1/sw */
   double aqtm = getval("aqtm");

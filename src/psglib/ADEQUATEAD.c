@@ -90,7 +90,7 @@ static int phi1[1]   = {0},
            phi11[1]  = {0},
            phi31[16] = {0,2,2,0,2,0,0,2,2,0,0,2,0,2,2,0};
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
  char     satmode[MAXSTR],f1180[MAXSTR],sspul[MAXSTR],comm[MAXSTR],

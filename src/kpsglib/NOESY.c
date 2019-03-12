@@ -41,7 +41,7 @@ static int	phs1[16] = {0,2,0,2,0,2,0,2,1,3,1,3,1,3,1,3},
 		phs4[32] = {0,2,1,3,2,0,3,1,1,3,2,0,3,1,0,2,
                             2,0,3,1,0,2,1,3,3,1,0,2,1,3,2,0};
 		
-pulsesequence()
+void pulsesequence()
 {
    double          mixN = getval("mixN"),
 		   mixNcorr,

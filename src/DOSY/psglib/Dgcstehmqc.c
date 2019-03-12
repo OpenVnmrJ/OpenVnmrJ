@@ -49,7 +49,7 @@ Parameters:
 #include <standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 {
 double 	jtau,dosytimecubed,Ddelta,taumb,delcor,delcor2,
         j1xh    = getval("j1xh"),

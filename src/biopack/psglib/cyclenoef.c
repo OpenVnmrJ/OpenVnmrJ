@@ -43,7 +43,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
 /*DEFINE LOCAL VARIABLES */
   double gzlvl1,gt1,mix,control,noefrq,satfrq,noepwr,satpwr,finepwr,noetime,spacing;

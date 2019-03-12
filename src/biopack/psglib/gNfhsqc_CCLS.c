@@ -44,7 +44,7 @@ static double d2_init = 0.0;
 
 static shape H2Osinc;
 
-pulsesequence()
+void pulsesequence()
 {
   int       t1_counter;
   char	    CCLS[MAXSTR],	      /* C13 refocussing pulse in middle of t1 */

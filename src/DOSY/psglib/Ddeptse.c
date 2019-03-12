@@ -77,7 +77,7 @@ static int      ph1[2]   = {0,2},
                 rec[32]  = {0,2,0,2,0,2,0,2,1,3,1,3,1,3,1,3,
                             2,0,2,0,2,0,2,0,3,1,3,1,3,1,3,1};
 
-pulsesequence()
+void pulsesequence()
 {
 	/* VARIABLE DECLARATION */
 double  del    = getval("del"),

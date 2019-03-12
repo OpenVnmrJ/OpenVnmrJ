@@ -108,7 +108,7 @@ static void Wet4first(pulsepower,wetshape,duration,phaseA,phaseB)
   rcvron();
 }
 
-pulsesequence()
+void pulsesequence()
 {
    double          arraydim,compH,wetpwr,wetpwr1,
                    corr1,corr,gstab,gzlvl1,gzlvl2,gt1,gt2,

@@ -35,7 +35,7 @@ static int table8[4] = {3,3,3,3};           // ph2Xtilt
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 // Set the Maximum Dynamic Table and v-var Numbers
 

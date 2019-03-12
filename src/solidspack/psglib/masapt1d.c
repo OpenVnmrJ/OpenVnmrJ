@@ -33,7 +33,7 @@ static int table8[4] = {0,2,2,0};           // phRec - reciever
 #define ph3Hhxaptf t7
 #define phRec t8
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 

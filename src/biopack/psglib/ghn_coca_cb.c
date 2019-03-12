@@ -137,7 +137,7 @@ static int   phi5[4]  =  {0,1,0,1}, /* 180 on CA-cb inept */
 		    
 static double   d2_init=0.0, d3_init=0.0;
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

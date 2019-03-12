@@ -33,7 +33,7 @@ static int ph2[8]   = {0, 0, 2, 2,  0, 0, 2, 2};
 static int ph3[8]   = {0, 0, 0, 0,  2, 2, 2, 2};
 static int phobs[8] = {0, 2, 2, 0,  2, 0, 0, 2};
 
-pulsesequence()
+void pulsesequence()
 {
    double pd, seqtime;
    double ted1,ted2,gf,tm,mintDELTA;

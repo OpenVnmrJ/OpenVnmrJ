@@ -61,7 +61,7 @@ static int   /*  T is for TROSY='y', phx etc also enable TROSY phase changes */
 static double   d2_init=0.0, relaxTmax;
 
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

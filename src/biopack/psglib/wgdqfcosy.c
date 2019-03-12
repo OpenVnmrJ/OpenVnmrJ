@@ -39,7 +39,7 @@ static int 	ph1[8] = {0, 2, 0, 2, 1, 3, 1, 3},
 		ph2[8] = {0, 0, 2, 2, 1, 1, 3, 3},
 		ph3[8] = {0, 2, 0, 2, 1, 3, 1, 3};
 
-pulsesequence()
+void pulsesequence()
 {
 	double	gzlvl1,
 		gt1,

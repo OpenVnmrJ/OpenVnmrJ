@@ -47,7 +47,7 @@ static int ph1[4] = {0,0,1,1},   		/* presat */
 	   ph7[8] = {1,1,2,2,3,3,0,0},
 	   ph8[4] = {3,3,0,0};
 	   
-pulsesequence()
+void pulsesequence()
 {
    double          slpwrT = getval("slpwrT"),
                    slpwT = getval("slpwT"),

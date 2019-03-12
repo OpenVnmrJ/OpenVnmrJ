@@ -65,7 +65,7 @@ static int phi1[16] = {0,0,0,0,2,2,2,2,1,1,1,1,3,3,3,3},
            phi7[16] = {2,3,2,3,2,3,2,3,3,0,3,0,3,0,3,0},
            rec[16]  = {0,0,2,2,2,2,0,0,1,1,3,3,3,3,1,1};
 		
-pulsesequence()
+void pulsesequence()
 {
    double          mixN = getval("mixN"),
 		   mixNcorr,fbcorr,d2corr,

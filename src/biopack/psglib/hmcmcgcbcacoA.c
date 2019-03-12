@@ -67,7 +67,7 @@ static int  phi1[2]  = {0,2},
 static double d2_init=0.0, d3_init=0.0;
 static shape    rb180, rb180_cg, rb180_co, ca90, ca180;
             
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

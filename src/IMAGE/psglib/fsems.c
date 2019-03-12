@@ -38,7 +38,7 @@ GRO |  ___________////\_____|_________________//////////\_________|     |
 
 SLICE_SELECT_GRADIENT_T  ss3_grad; /* Spin echo preparation slice select gradient */
 
-pulsesequence() {
+void pulsesequence() {
   /* Internal variable declarations *************************/
   int    shapelist90,shapelist180,shapelistte=0;
   double kzero,thk2fact,thk3fact;

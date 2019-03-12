@@ -148,7 +148,7 @@ static int table34[4] = {1,1,1,1};                    // ph2Ycomp
 #define ph1Ycomp t33
 #define ph2Ycomp t34
 
-pulsesequence() {
+void pulsesequence() {
   
 // Define Variables and Modules and Get Parameter Values
      

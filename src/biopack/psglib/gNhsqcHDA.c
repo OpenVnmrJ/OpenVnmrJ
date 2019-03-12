@@ -304,7 +304,7 @@ static double   H1ofs=4.7, C13ofs=0.0, N15ofs=120.0, H2ofs=0.0;
 
 shape   HHdseq, Cdseq, stC200, H2Osinc;
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

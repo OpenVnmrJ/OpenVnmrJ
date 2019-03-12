@@ -44,7 +44,7 @@ static int table6[64] = {1,3,3,1,1,3,3,1,1,3,3,1,1,3,3,1,
 #define phXcpmg t5
 #define phRec t6
 
-pulsesequence() {
+void pulsesequence() {
 
 //
 // Set the Maximum Dynamic Table Number

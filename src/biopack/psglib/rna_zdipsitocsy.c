@@ -47,7 +47,7 @@ static void Wet4(pulsepower,wetshape,duration,phaseA,phaseB)
 }
 
 
-dipsi(phse1,phse2)
+void dipsi(phse1,phse2)
 codeint phse1,phse2;
 {
         double slpw5;
@@ -71,7 +71,7 @@ static int ph1[16]  = {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1},
            ph3[8]  =  {0,0,2,2,1,1,3,3},                           
            ph4[8]  =  {0,2,2,0,1,3,3,1};
 
-pulsesequence()
+void pulsesequence()
 {
    double          p1lvl,
                    slpw5,

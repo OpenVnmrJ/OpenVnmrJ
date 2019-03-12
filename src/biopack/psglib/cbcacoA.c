@@ -61,7 +61,7 @@ static int
 static double   d2_init=0.0, d3_init=0.0, C13ofs=174.0;
 static shape CO_90, CO_180, CA_90, CA_180, CAB_90, CAB_180;
 
-pulsesequence()
+void pulsesequence()
 {
 
 

@@ -21,7 +21,7 @@ in order to allow arraying the coarse/fine power levels independently.
 /* phase cycling of RF and receiver */
 static int phr[4] = {0,2,1,3};              /* receiver phase */
 
-pulsesequence() {
+void pulsesequence() {
   /* Internal variable declarations *********************/
   double  freq90[MAXNSLICE],freq180[MAXNSLICE];
   int     shape90,shape180;

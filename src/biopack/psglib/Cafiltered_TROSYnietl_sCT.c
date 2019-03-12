@@ -53,7 +53,7 @@ static int
 static double   d2_init=0.0;
 
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

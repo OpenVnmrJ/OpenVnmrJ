@@ -134,7 +134,7 @@ static double   d2_init=0.0, d3_init=0.0;
 
 static shape    adC180, wuCdec_lr, H2Osinc;
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE AND LOAD VARIABLES */
 

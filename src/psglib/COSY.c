@@ -28,7 +28,7 @@ static int 	ph1[8] = {0, 0, 1, 1, 2, 2, 3, 3},
 		ph2[8] = {0, 1, 3, 0, 2, 3, 1, 2},
 		ph3[8] = {0, 2, 1, 3, 2, 0, 3, 1};
 
-pulsesequence()
+void pulsesequence()
 {
         int  prgcycle = (int)(getval("prgcycle")+0.5);
         double cmult = getval("cmult");

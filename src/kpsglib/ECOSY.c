@@ -23,7 +23,7 @@
 
 #include <standard.h>
 #include <chempack.h>
-pulsesequence()
+void pulsesequence()
 {   
    int	phase1 = (int)(getval("phase")+0.5);
 

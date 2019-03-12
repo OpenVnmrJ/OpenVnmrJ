@@ -28,7 +28,7 @@ static int table8[8] = {0,2,1,3,2,0,3,1};   // phRec
 #define phXyx t7
 #define phRec t8
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
      

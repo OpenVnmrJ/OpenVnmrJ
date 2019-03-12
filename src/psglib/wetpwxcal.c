@@ -14,7 +14,7 @@
  */
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    double jc13,jtau;
 

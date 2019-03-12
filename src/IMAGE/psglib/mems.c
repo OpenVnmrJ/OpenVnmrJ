@@ -55,7 +55,7 @@ static int phref2s[4] = {2,3,0,1};  // Even refocusing pulses
 static int phrec1s[4] = {2,0,2,0};  // Odd acquisitions
 static int phrec2s[4] = {0,0,0,0};  // Even acqusitions
 
-pulsesequence() {
+void pulsesequence() {
   /* Internal variable declarations *************************/
   int     shapelist90,shapelist180;
   int     table = 0;

@@ -40,7 +40,7 @@ static int  /*  T is for TROSY='y', phx etc also enable TROSY phase changes */
 
 static shape gly90;
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES; parameters used in the last half of the */

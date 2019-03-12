@@ -77,8 +77,7 @@ static double   H1ofs=4.7, C13ofs=56.0, N15ofs=120.0, H2ofs=0.0;
 
 static shape wz16, offC8;
 
-shaka6(pwC90)
-double pwC90;
+void shaka6(double pwC90)
 {
           /* Shaka composite (10.9333*pwC90)   */
 
@@ -90,7 +89,7 @@ double pwC90;
         decrgpulse(pwC90*85.3/90.0, two, 0.0, 0.0);
 }
 
-pulsesequence()
+void pulsesequence()
 {
  char    
     f1180[MAXSTR],    

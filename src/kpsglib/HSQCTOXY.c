@@ -40,7 +40,7 @@ static int	ph1[4] = {1,1,3,3},
 		ph5[16] = {1,3,3,1,3,1,1,3,3,1,1,3,1,3,3,1};
 		
 
-pulsesequence()
+void pulsesequence()
 
 {
    double   hsglvl = getval("hsglvl"),

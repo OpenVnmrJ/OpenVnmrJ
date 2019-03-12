@@ -16,7 +16,7 @@
 */
 
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {
  double
    	pwHs = getval("pwHs"),	        /* H1 90 degree pulse length at tpwrs */

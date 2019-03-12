@@ -67,7 +67,7 @@ nugcal_[1-5] - 5 membered parameter array summarising the results of a
 #include <standard.h> 
 #include <chempack.h>
  
-pulsesequence() 
+void pulsesequence() 
 { 
  double gstab = getval("gstab"),
         gt1 = getval("gt1"),

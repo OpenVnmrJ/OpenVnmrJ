@@ -104,7 +104,7 @@
 #include <standard.h>
 #include "Pbox_bio.h"
 
-dipsi(phse1,phse2)
+void dipsi(phse1,phse2)
 codeint phse1,phse2;
 {
         double slpw5, 
@@ -136,7 +136,7 @@ static double d2_init=0.0, d3_init=0.0;
 
 static shape  adC180, wuCdec, wuHmix;
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

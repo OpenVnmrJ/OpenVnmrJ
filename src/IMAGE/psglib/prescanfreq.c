@@ -18,7 +18,7 @@
  *********************************************************************/
 #include <standard.h>
 #include "prescan.h"
-pulsesequence()
+void pulsesequence()
 {
     /*******************************************************/
     /* Internal variable declarations                      */

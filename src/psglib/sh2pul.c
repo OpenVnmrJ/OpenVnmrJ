@@ -8,7 +8,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
     getstr("pwpat",pwpat);
     getstr("p1pat",p1pat);

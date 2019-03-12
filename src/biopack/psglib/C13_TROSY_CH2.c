@@ -47,7 +47,7 @@ static int   phi1[]  = {1,1,1,1},  /*phi1 in paper, steady-state C13 to final*/
              rec[]   = {0,2,2,0};
 
 static double   d2_init=0.0;
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE AND LOAD VARIABLES */
 

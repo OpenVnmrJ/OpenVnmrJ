@@ -13,7 +13,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
         double gzlvl1,qlvl,grise,gstab,gt1,taud2,tau1;
 	int icosel;

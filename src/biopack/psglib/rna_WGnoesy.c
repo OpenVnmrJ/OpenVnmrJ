@@ -28,7 +28,7 @@
                 made identical to proteinpack/wgnoesy.c 10/3/00  GG
 */
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {
    double          arraydim,
                    ss,

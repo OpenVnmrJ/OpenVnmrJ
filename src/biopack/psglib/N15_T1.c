@@ -34,7 +34,7 @@ static int
 	     phi10[1]  = {0},       /* Echo-anti-echo in reverse double inept */
 	
              rec[4]   = {0,2,2,0};
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

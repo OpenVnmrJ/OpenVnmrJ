@@ -58,7 +58,7 @@
 #include <standard.h>
 
 /* Chess - CHEmical Shift Selective Suppression */
-Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
+void Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
 double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
   codeint phase;
   char* pulseshape;
@@ -70,7 +70,7 @@ double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
 }
 
 /* Wet4 - Water Elimination */
-Wet4(phaseA,phaseB)
+void Wet4(phaseA,phaseB)
   codeint phaseA,phaseB;
 {
   double finepwr,gzlvlw,gtw,gswet,wetpwr,wetpw,dz;
@@ -96,8 +96,7 @@ Wet4(phaseA,phaseB)
   rcvron();
   delay(dz);
 }
-mleva(window)
-double window;
+void mleva(double window)
 {
    txphase(v2); delay(pw);
    xmtroff(); delay(window); xmtron();
@@ -106,8 +105,7 @@ double window;
    txphase(v2); delay(pw);
 }
 
-mlevb(window)
-double window;
+void mlevb(double window)
 {
    txphase(v4); delay(pw);
    xmtroff(); delay(window); xmtron();
@@ -117,7 +115,7 @@ double window;
 }
 
 
-pulsesequence()
+void pulsesequence()
 {
    double          ss,
                    arraydim,

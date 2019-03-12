@@ -127,7 +127,7 @@ static int   /*  T is for TROSY='y', phx etc also enable TROSY phase changes */
 
 
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES; parameters used in the last half of the */

@@ -56,7 +56,7 @@ static int   phi1[1] = {1},  /* 90 for 15N prior to t1 */
              phi6[4] = {0,0,2,2},  /* purge pulse on 13CO */
              phi7[2] = {0,2};  /* receiver */
              
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

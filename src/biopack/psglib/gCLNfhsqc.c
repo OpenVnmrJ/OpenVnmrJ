@@ -68,7 +68,7 @@ static int phi1[4] = {1,1,3,3},
            phT4[1] = {3},                     
            recT[4] = {1,3,2,0};                              /* minimum nt = 4 */
 
-pulsesequence()
+void pulsesequence()
 {
   int       phase, t1_counter;
 

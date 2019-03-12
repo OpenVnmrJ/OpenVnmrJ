@@ -19,7 +19,7 @@ static int table2[4] = {1, 1, 3, 3};
 static int table3[4] = {3, 0, 3, 0};
 static int table4[4] = {1, 2, 1, 2};
 
-pulsesequence()
+void pulsesequence()
 
 {
 

@@ -94,7 +94,7 @@ static void Wet4(pulsepower,wetshape,duration,phaseA,phaseB)
   rcvron();
 }
 
-Wet4B(pulsepower,wetshape,duration,phaseA,phaseB)
+void Wet4B(pulsepower,wetshape,duration,phaseA,phaseB)
   double pulsepower,duration;
   codeint phaseA,phaseB;
   char* wetshape;
@@ -123,7 +123,7 @@ static int ph1[4] = {1,3,2,0},
            ph5[4] = {3,3,0,0},
            ph6[8] = {1,1,2,2,3,3,0,0};
 
-pulsesequence()
+void pulsesequence()
 {
    double          slpwr, strength = getval("strength"),
                    slpw, compH = getval("compH"),

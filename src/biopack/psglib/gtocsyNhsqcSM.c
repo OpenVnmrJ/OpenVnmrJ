@@ -136,7 +136,7 @@
 #include <standard.h>
 #include "Pbox_bio.h"               /* Pbox Bio Pack Pulse Shaping Utilities */
 
-dipsi(phse1,phse2)
+void dipsi(phse1,phse2)
 codeint phse1,phse2;
 {
         double slpw5;
@@ -168,7 +168,7 @@ static double   d2_init=0.0, d3_init=0.0;
 
 static shape    adC180, wuCdec_lr, wuHmix, H2Osinc;
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

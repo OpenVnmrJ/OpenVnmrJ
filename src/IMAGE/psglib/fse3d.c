@@ -17,7 +17,7 @@
 
 SLICE_SELECT_GRADIENT_T  ss3_grad; /* 3rd slice select gradient */
 
-pulsesequence() {
+void pulsesequence() {
   /* Internal variable declarations *********************/
   int    shapelist90,shapelist180,shapelistte=0;
   double kzero,thk2fact,thk3fact;

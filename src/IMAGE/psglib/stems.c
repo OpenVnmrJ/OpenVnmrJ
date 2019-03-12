@@ -19,7 +19,7 @@ Stimulated echo sequence with optional diffusion weighting
 /* Phase cycling of last two 90 degree pulses */
 static int ph90[2] = {1,3};
 
-pulsesequence() 
+void pulsesequence() 
 {
   /* Internal variable declarations *****************/
   double freq90[MAXNSLICE];

@@ -20,7 +20,7 @@
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
    double pd, seqtime;
 

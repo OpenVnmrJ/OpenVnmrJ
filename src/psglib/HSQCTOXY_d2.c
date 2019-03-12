@@ -19,7 +19,7 @@ static int	ph1[4] = {1,1,3,3},
 		ph4[16] = {0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,2},
 		ph5[16] = {0,2,2,0,2,0,0,2,2,0,0,2,0,2,2,0};
 
-mleva()
+void mleva()
 {
    double slpw;
    slpw = getval("slpw");
@@ -29,7 +29,7 @@ mleva()
    xmtroff(); delay(slpw); xmtron();
    txphase(zero); delay(slpw);
 }
-mlevb()
+void mlevb()
 {
    double slpw;
    slpw = getval("slpw");
@@ -40,7 +40,7 @@ mlevb()
    txphase(two); delay(slpw);
 }
 
-pulsesequence()
+void pulsesequence()
 
 {
    double   pwx2lvl,

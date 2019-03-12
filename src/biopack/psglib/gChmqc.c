@@ -71,7 +71,7 @@ static int	phi1[8]	= {0,0,1,1,2,2,3,3},
 		phi4[1] = {0},
 		rec[8]	= {0,2,2,0,0,2,2,0};
 /* Chess - CHEmical Shift Selective Suppression */
-Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
+void Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
   double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
   codeint phase;
   char* pulseshape;
@@ -83,7 +83,7 @@ Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
 }
 
 /* Wet4 - Water Elimination */
-Wet4(double pulsepower, char* shape,double duration,codeint phaseA,codeint phaseB)
+void Wet4(double pulsepower, char* shape,double duration,codeint phaseA,codeint phaseB)
 /*  double pulsepower,duration;
   codeint phaseA,phaseB;
   char* shape;*/
@@ -105,7 +105,7 @@ Wet4(double pulsepower, char* shape,double duration,codeint phaseA,codeint phase
   rcvron();
 }
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE VARIABLES */	

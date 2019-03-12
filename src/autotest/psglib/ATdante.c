@@ -8,7 +8,7 @@
 /*       contact- G. Gray  (palo alto)  revision-  */
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
     double count,channel;
     channel = getval("channel");

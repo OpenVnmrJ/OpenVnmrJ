@@ -79,7 +79,7 @@ p. sandor, darmstadt jan. 2007.
  
 #include <standard.h> 
 
-dipsi(phse1,phse2) 
+void dipsi(phse1,phse2) 
 codeint phse1,phse2; 
 { 
         double slpw5; 
@@ -103,7 +103,7 @@ codeint phse1,phse2;
               ph7[16] =  {0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3},
               ph4[ 8] =  {0,2,2,0,1,3,3,1};
 
-pulsesequence() 
+void pulsesequence() 
 { 
    int     iphase; 
    char    flipback[MAXSTR], flipshape[MAXSTR], sspul[MAXSTR], 

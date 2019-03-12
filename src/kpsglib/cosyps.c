@@ -29,7 +29,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
 /* VARIABLE DECLARATION */
    double          corr,

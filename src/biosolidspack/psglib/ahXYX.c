@@ -120,7 +120,7 @@ static int table16[4] = {1,1,1,1};            // ph2Ycomp
 #define phXyx_soft t22
 #define phRec t20
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Modules and Get Parameter Values
 

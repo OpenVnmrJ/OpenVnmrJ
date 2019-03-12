@@ -35,7 +35,7 @@ static int	ph1[2] = {0,2},
                 ph5[1] = {0},
                 ph6[2] = {0,2};
 		
-pulsesequence()
+void pulsesequence()
 
 {
    double   pwxlvl, pwx, gtE,EDratio, gzlvlE, gstab,

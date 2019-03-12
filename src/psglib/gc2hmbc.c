@@ -48,7 +48,7 @@ static int ph4[16] = {0, 0, 0, 0, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 3};
 static int ph5[4] = {0, 0, 2, 2};
 static int ph6[16] = {0, 2, 2, 0, 0, 2, 2, 0, 2, 0, 0, 2, 2, 0, 0, 2};
 
-pulsesequence()
+void pulsesequence()
 {
 
   double j1min = getval("j1min"),

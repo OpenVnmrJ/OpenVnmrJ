@@ -25,7 +25,7 @@ static int table7[4] = {0,2,1,3};           // phRec
 #define ph2Xr2inv t6
 #define phRec t7
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 
@@ -70,7 +70,7 @@ pulsesequence() {
    }
 
    static shape shXr2inv;
-   char cmd[MAXSTR];
+   char cmd[MAXSTR*2];
    if (getval("arraydim") < 1.5 || (ix==1) || isarry("ofsXr2inv") ||
       isarry("pwsXr2inv")) {
       sprintf(shXr2inv.name, "%s_%d", "r2inv", ix);
