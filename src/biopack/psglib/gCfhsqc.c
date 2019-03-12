@@ -31,7 +31,7 @@ static int phi1[4] = {1,1,3,3},
            phT3[8] = {0,0,0,0,2,2,2,2},
            recT[8] = {0,2,3,1,0,2,1,3}; 
 
-pulsesequence()
+void pulsesequence()
 {
 
 int     t1_counter;

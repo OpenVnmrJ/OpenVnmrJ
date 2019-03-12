@@ -50,7 +50,7 @@ static int ph1[8] = {0,2,0,2,0,2,0,2},
 
 static char shapename[MAXSTR];
 
-pulsesequence()
+void pulsesequence()
 {
    double  gzlvl1 = getval("gzlvl1"),
               gt1 = getval("gt1"),

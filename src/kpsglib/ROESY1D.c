@@ -41,7 +41,7 @@ static int	ph1[8] = {0,2,0,2,1,3,1,3},
 		ph2[8] = {2,2,0,0,1,1,3,3},
 		ph4[8] = {0,2,0,2,1,3,1,3};
 
-pulsesequence()
+void pulsesequence()
 {
    double	   slpwrR = getval("slpwrR"),
 		   slpwR = getval("slpwR"),

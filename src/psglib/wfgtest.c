@@ -11,7 +11,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    char obspat[MAXSTR];
    int  option;

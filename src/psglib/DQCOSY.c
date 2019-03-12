@@ -28,7 +28,7 @@ static int 	ph1[8]  = {0,0,0,0,1,1,1,1},
 		ph4[8]  = {0,3,2,1,3,2,1,0},
 		ph6[1]  = {0};
 
-pulsesequence()
+void pulsesequence()
 {
 
   int   phase1 = (int)(getval("phase")+0.5),

@@ -144,6 +144,7 @@ int create_skiptab(double nvval,double nv2val,int *skiptabvals)
   }
   //printf("\ni %d    count %d\n",i,count);
   putarray("skipint",skipint,count);             // write skipint array back to procpar
+  return(0);
 }
 
 

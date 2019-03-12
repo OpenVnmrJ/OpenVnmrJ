@@ -22,7 +22,7 @@ KrishK	-	Last revision	:	June 1997
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
 double	j1xh,
 	d3,

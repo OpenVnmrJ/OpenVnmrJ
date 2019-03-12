@@ -59,7 +59,7 @@ static int phi1[2]  = {0,2},
                        3,1,1,3,3,1,1,3,1,3,3,1,1,3,3,1};
 
 
-pulsesequence()
+void pulsesequence()
 {
 double	del      = getval("del"),
         gstab    = getval("gstab"),

@@ -25,7 +25,7 @@ static int table4[8] = {0,0,1,1,2,2,3,3};           // ph3H90
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 //=======================================================
 // Define Variables and Objects and Get Parameter Values

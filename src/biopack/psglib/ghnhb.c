@@ -80,7 +80,7 @@ static int
            
 static double d2_init=0.0, d3_init=0.0;
             
-pulsesequence()
+void pulsesequence()
 {
  char       f1180[MAXSTR],   
             f2180[MAXSTR],  

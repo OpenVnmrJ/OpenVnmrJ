@@ -46,7 +46,7 @@ static int   phi1[1]  = {0},
 
 static double   d2_init=0.0;
 
-pulsesequence()
+void pulsesequence()
 {
 
 char  satflg[MAXSTR], stCshape[MAXSTR];    /* sech/tanh pulses from shapelib */       

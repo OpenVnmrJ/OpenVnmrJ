@@ -28,7 +28,7 @@
 
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
 	/* declaration of SGL kernel structures */
 	SGL_KERNEL_INFO_T read, phase, slice, ss_pre, ss_post;

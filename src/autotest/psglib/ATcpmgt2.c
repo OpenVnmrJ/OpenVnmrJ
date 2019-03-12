@@ -9,7 +9,7 @@
    with gradients in echo time */
 
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {   
     double loops,r,gzlvl1,gzlvl2,gt1;
     char shaped[MAXSTR],gradaxis[MAXSTR];

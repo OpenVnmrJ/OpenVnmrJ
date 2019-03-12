@@ -42,7 +42,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 
 {
       delay(d1);

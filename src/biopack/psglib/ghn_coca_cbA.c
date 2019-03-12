@@ -173,7 +173,7 @@ static double   H1ofs=4.7, C13ofs=46.0, N15ofs=120.0, H2ofs=0.0;
 #define CgCO2ps   ""
 static shape H2Osinc, wz16, offC1, offC2, offC5, offC7, CgCO1, CgCO2;
 
-pulsesequence()
+void pulsesequence()
 {
 
 

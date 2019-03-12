@@ -596,8 +596,10 @@ main(int argc, char *argv[])
       fprintf(stderr, "dps_ps_gen(2):  can not open file %s. \n", tmp_file1);
       exit(0);
    }
-   fprintf(fout, "\n#pragma GCC diagnostic ignored \"-Wunused-variable\"\n");
-   fprintf(fout, "#pragma GCC diagnostic ignored \"-Wreturn-type\"\n");
+   fprintf(fout, "\n#pragma GCC diagnostic ignored \"-Wall\"\n");
+   fprintf(fout, "#pragma GCC diagnostic ignored \"-Wextra\"\n");
+   fprintf(fout, "#pragma GCC diagnostic ignored \"-Wunused\"\n");
+   fprintf(fout, "#pragma GCC diagnostic ignored \"-Wuninitialized\"\n");
 #ifndef MACOS
    fprintf(fout, "#pragma GCC diagnostic ignored \"-Wunused-but-set-variable\"\n");
 #endif

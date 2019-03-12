@@ -75,7 +75,7 @@ static double   d2_init=0.0;
 
 static shape H2Osinc, offC3, offC6, offC8;
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE AND LOAD VARIABLES */
 

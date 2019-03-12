@@ -19,7 +19,7 @@ tr:     total repetition time
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
   double  seqtime,tr_delay,sign1,sign2;
 

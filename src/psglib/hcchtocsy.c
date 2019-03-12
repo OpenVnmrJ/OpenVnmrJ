@@ -35,7 +35,7 @@
 
 /* Create dipsi3 function */
 
-  dipsi3a()
+void dipsi3a()
 {
    decrgpulse(2.722*p1,one,0.0,0.0);      /*245 deg pulse */
    decrgpulse(4.389*p1,three,0.0,0.0);      /*395 deg pulse */
@@ -57,7 +57,7 @@
    decrgpulse(4.389*p1,three,0.0,0.0);      /*395 deg pulse */
 }
 
-  dipsi3b()
+void dipsi3b()
 {
    decrgpulse(2.722*p1,three,0.0,0.0);      /*245 deg pulse */
    decrgpulse(4.389*p1,one,0.0,0.0);      /*395 deg pulse */
@@ -78,7 +78,7 @@
    decrgpulse(2.833*p1,three,0.0,0.0);      /*255 deg pulse */
    decrgpulse(4.389*p1,one,0.0,0.0);      /*395 deg pulse */
 }
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

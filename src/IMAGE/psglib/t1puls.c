@@ -23,7 +23,7 @@
 /* Phase cycling of 180 degree pulse */
 static int ph180[2] = {1,3};
 
-pulsesequence()
+void pulsesequence()
 {
   double pd,seqtime,minti;
   double restol, resto_local;

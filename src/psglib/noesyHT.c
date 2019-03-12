@@ -38,7 +38,7 @@
 
 static shape       ad180sh, roesySL;
 
-pulsesequence()
+void pulsesequence()
 {
   char    pshape[MAXSTR], httype[MAXSTR], roesy[MAXSTR], ad180[MAXSTR], sspul[MAXSTR];
   double  rg1	= 2.0e-6, corr, 

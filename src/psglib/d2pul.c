@@ -18,7 +18,7 @@
 
 static int phasecycle[4] = {0, 2, 1, 3};
 
-pulsesequence()
+void pulsesequence()
 {
 /* equilibrium period */
    status(A);

@@ -8,7 +8,7 @@
 #include <standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 {
    /* equilibrium period */
    status(A);

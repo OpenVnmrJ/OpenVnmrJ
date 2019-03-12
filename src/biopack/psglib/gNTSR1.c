@@ -49,7 +49,7 @@ static int phi1[2] = {0,2},
            rec[8]  = {0,2,2,0,2,0,0,2};
                                 
 
-pulsesequence()
+void pulsesequence()
 {
   int       t1_counter;
   char	    C13refoc[MAXSTR],	      /* C13 refocussing pulse in middle of t1 */

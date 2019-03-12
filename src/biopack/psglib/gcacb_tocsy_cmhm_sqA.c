@@ -82,7 +82,7 @@ static int   phi1[2]  = {1,3},
 
 static double   d2_init=0.0;
 
-pulsesequence()
+void pulsesequence()
 {
 
 

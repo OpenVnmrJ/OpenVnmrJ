@@ -26,7 +26,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
 /* CHECK CONDITIONS */
    if (rof1 < 9.9e-6)

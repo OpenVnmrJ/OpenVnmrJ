@@ -37,7 +37,7 @@ GRO |  ___________////\_____|_________________//////////\_________|     |
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence() {
+void pulsesequence() {
   /* Internal variable declarations *************************/
   int     shapelist90,shapelist180;
   double  nseg;

@@ -51,7 +51,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    char	    Hdseq[MAXSTR], Cdseq[MAXSTR],
             C13refoc[MAXSTR];		/* C13 sech/tanh pulse in middle of t1 */

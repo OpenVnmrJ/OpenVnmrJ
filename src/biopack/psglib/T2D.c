@@ -90,7 +90,7 @@ fourth amplifier in "pulsed" mode so as to not disturb the lock */
 }
 */
             
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

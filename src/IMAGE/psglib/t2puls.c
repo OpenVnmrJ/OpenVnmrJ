@@ -24,7 +24,7 @@
 #include "sgl.c"
 static int ph180[2] = {1,3};
 
-pulsesequence()
+void pulsesequence()
 {
    double pd, seqtime;
    double minte,ted1,ted2;

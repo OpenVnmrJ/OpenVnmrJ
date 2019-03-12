@@ -68,6 +68,7 @@
 extern FILE *sliderfile;
 extern double sign_add();
 extern double whatiffreq();
+extern void pulsesequence();
 
 extern int bgflag;
 extern int ap_interface;	/* ap bus interface type 1=500style, 2=amt style */ 

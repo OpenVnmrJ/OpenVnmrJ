@@ -18,7 +18,7 @@ static int table4[4] = {2,0,3,1};           // phRec
 #define phXwpmlg t3
 #define phRec t4
 
-pulsesequence() {
+void pulsesequence() {
 
 // Set the Maximum Dynamic Table and v-var Numbers
 

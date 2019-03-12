@@ -88,7 +88,7 @@ int     bits32, llbyte, hlbyte, lhbyte, hhbyte;
    }
 }
 
-pulsesequence()
+void pulsesequence()
 {
 char	tn[MAXSTR];
 double	txif;

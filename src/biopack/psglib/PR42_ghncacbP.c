@@ -36,7 +36,7 @@ static int
              rec[4]  = {2,0,0,2};
 
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES; parameters used in the last half of the */

@@ -21,7 +21,7 @@
 
 #define CURRENT         1
 
-pulsesequence()
+void pulsesequence()
 {
 int	i, n ;
 char	fname[5];

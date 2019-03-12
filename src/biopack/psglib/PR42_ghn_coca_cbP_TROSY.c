@@ -43,7 +43,7 @@ static int   /*  T is for TROSY='y', phx etc also enable TROSY phase changes */
              phi7[1] = {1},
              recT[8] = {0,2,2,0,0,2,2,0};
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES; parameters used in the last half of the */

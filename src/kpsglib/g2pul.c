@@ -14,7 +14,7 @@
 */
 
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {
 double gzlvl1,gt1;
 

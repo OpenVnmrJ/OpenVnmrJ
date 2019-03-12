@@ -42,7 +42,7 @@ static int	ph1[16] = {0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,2},
 
 /* array gzlvl2 for diffusion decay*/
 
-pulsesequence()
+void pulsesequence()
 {
  
 char      N15edit[MAXSTR], C13edit[MAXSTR];	      /* C13 editing*/

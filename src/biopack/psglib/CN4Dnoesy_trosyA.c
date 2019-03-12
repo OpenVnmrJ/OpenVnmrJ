@@ -37,7 +37,7 @@ static int phi1[1] = {0},
            phi8[1] = {3},
            rec[2]  = {0,2};
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

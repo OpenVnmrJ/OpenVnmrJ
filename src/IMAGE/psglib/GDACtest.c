@@ -70,7 +70,7 @@
 #define TRUE (!FALSE)
 #endif
 
-pulsesequence(){
+void pulsesequence(){
 
 
     char axis[3];			/* The first 3 chars of "axes" */

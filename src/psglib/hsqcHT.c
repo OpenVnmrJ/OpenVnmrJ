@@ -53,7 +53,7 @@
 
 static shape       ad180sh, Hdec;
 
-pulsesequence()
+void pulsesequence()
 {
    double          tau, rg1 = 2.0e-6,
                    jXH = getval("jXH"),

@@ -21,7 +21,7 @@
 /* Refocus gradient structure */
 GENERIC_GRADIENT_T ref_grad;
 
-pulsesequence()
+void pulsesequence()
 {
   /* Internal variable declarations *************************/
   double  freqEx[MAXNSLICE];

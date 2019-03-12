@@ -23,7 +23,7 @@ static int
    phi12[4] = {1,3,3,1},
    phi13[4] = {2,0,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
    char   
           shname1[MAXSTR],

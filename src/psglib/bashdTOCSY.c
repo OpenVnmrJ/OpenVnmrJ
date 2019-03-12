@@ -47,7 +47,7 @@ static int ph1[4] = {0,0,1,1},   		/* presat */
 	   ph7[8] = {1,1,2,2,3,3,0,0},		/* flipback */
 	   ph8[4] = {3,3,0,0};			/* observe */
 	   
-pulsesequence()
+void pulsesequence()
 {
    double          selpwrA = getval("selpwrA"),
                    selpwA = getval("selpwA"),

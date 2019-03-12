@@ -28,7 +28,7 @@ static int table8[4] = {0,2,0,2};           // phRec
 #define ph2Xmix t7
 #define phRec t8
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 
@@ -62,7 +62,7 @@ pulsesequence() {
 // Calculate the Selective Gaussian Pulse with PBox
 
    double ofXgauss = getval("ofXgauss");
-   char   cmd[MAXSTR];
+   char   cmd[MAXSTR*2];
    static shape shXgauss;
 
    if (getval("arraydim") < 1.5||(ix==1)||isarry("ofXgauss")||isarry("pwXgauss")) {

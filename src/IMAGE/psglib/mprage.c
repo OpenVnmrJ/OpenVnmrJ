@@ -17,7 +17,7 @@ MPRAGE: 3D Gradient echo imaging sequence with segmented inversion recovery
 RF_PULSE_T ps_rf;
 GENERIC_GRADIENT_T pscrush_grad;
 
-pulsesequence()
+void pulsesequence()
 {
   /* Internal variable declarations *************************/
   double  freqEx,freqIR;

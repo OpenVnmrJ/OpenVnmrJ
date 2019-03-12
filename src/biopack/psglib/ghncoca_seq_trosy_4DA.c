@@ -81,7 +81,7 @@ static int  phi1[1]  = {0},
 
 static double d2_init=0.0, d3_init=0.0, d4_init=0.0;
             
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

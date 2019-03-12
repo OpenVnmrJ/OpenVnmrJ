@@ -9,7 +9,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    initval(nt,v1);
    sub(v1,ct,v2);

@@ -16,7 +16,7 @@ Multi-spin echo imaging sequence (slice selective CPMG).
 
 
 
-pulsesequence()
+void pulsesequence()
 {
   /* Variables for setting up phase-ramped pulses */
   double  freq90[MAXNSLICE],freq180[MAXNSLICE];

@@ -74,7 +74,7 @@ static int phi1[2] = {0,2}, /* N-90 before t1 */
            phi8[1] = {1}; /* water flip-back */
 
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

@@ -166,7 +166,7 @@ static double   d2_init=0.0, d3_init=0.0;
 
 
 
-pulsesequence()
+void pulsesequence()
 {
 
 

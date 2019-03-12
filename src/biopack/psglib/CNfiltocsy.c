@@ -31,7 +31,7 @@
 
 #include <standard.h>
 
-dipsi(phse1,phse2)
+void dipsi(phse1,phse2)
 codeint phse1,phse2;
 {
         double slpw5;
@@ -57,7 +57,7 @@ static int phi1[2] = {1,3},
            phi6[8]  = {2,2,3,3,0,0,1,1},
            rec[8] = {0,2,1,3,2,0,3,1};
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

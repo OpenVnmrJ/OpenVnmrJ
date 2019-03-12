@@ -77,7 +77,7 @@ static int phi1[16] = {0,0,0,0,2,2,2,2,1,1,1,1,3,3,3,3},
 
 #include <standard.h>
 
-pulsesequence ()
+void pulsesequence ()
 {
 double  gstab = getval("gstab"),
 	gt1 = getval("gt1"),

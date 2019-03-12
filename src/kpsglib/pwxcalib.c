@@ -18,7 +18,7 @@ KrishK -	Last revision : Jan 1998
 #include <standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 {
    double          j1xh,
 		   pwxlvl,

@@ -30,7 +30,7 @@
 
 static shape  HHmix, CHdec;
 
-pulsesequence()
+void pulsesequence()
 {
    char    c1d[MAXSTR];               /* option to record only 1D C13 spectrum */
    int     ncyc;

@@ -55,7 +55,7 @@
 #include <standard.h>
 #include "mfpresat.h"
 
-pulsesequence()
+void pulsesequence()
 {
    double  gzlvl1 = getval("gzlvl1"),
            gzlvl2 = getval("gzlvl2"),

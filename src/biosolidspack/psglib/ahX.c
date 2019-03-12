@@ -111,7 +111,7 @@ static int table14[4] = {1,3,2,0};   	    // phX90flip
 #define phXecho t13
 #define phX90flip t14
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 
@@ -368,7 +368,7 @@ pulsesequence() {
 
 // Blank DEC3 and Blank DEC2 for No DEC2 Decoupling
 
-   if (!strcmp(ddec2,"y") != 1) {
+   if ( (!strcmp(ddec2,"y")) != 1) {
       if (NUMch > 2) dec2blank(); 
    }
    if (NUMch > 3) dec3blank();

@@ -55,7 +55,7 @@ KrishK	-	Revised		: July 2004
 #include <chempack.h>
 extern int dps_flag;
 
-pulsesequence()
+void pulsesequence()
 {
    double	   slpwrT = getval("slpwrT"),
 		   slpwT = getval("slpwT"),

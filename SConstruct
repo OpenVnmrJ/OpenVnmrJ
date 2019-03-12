@@ -185,6 +185,7 @@ gslBuildList = string.split("""
 #
 javaBuildList = string.split("""
                              admin
+                             dialog
                              jplot
                              managedb
                              vjmol
@@ -226,13 +227,11 @@ if os.path.exists(javaLink) or 'linux' not in platform:
 else:
    print "java link in "+ovjtools+" not found. Skipping java compiles"
 
-if ( os.path.exists(os.path.join('/usr','lib','libgsl.so')) or
-     os.path.exists(os.path.join('/usr','lib64','libgsl.so')) or
-     os.path.exists(os.path.join('/usr','lib','libgsl.a')) ):
+if ( os.path.exists(os.path.join('/usr','include','gsl')) ):
    for i in gslBuildList:
       SConscript(os.path.join('src',i, 'SConstruct'))
 else:
-   print "gsl library not found. Skipping compiles requiring that library"
+   print "gsl includes not found. Skipping compiles requiring gsl"
 
 vnmrPath    = os.path.join(cwd, os.pardir,'vnmr')
 

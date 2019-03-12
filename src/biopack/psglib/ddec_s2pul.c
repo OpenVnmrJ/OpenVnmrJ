@@ -8,7 +8,7 @@
  */
 /* ddec_s2pul */
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {
   char lkflg[MAXSTR];
   getstr("lkflg",lkflg);

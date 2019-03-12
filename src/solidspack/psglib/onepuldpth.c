@@ -18,7 +18,7 @@ static int table4[16] = {0,0,3,3,2,2,1,1,0,0,3,3,2,2,1,1};  // receiver
 #define ph2X180 t3
 #define phRec t4
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 

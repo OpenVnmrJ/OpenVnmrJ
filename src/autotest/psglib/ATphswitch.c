@@ -8,7 +8,7 @@
 #include <standard.h>
 
 
-pulsesequence()
+void pulsesequence()
 {
    hsdelay(d1);
    rcvroff();

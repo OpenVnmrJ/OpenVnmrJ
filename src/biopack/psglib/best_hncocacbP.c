@@ -84,7 +84,7 @@ static int
    phi13[4] = {2,0,0,2};
 
 
-pulsesequence()
+void pulsesequence()
 {
    char   
           shname1[MAXSTR],

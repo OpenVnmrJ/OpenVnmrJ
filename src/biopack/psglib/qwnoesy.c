@@ -50,7 +50,7 @@
 #include <standard.h>
 
 /* Chess1 - CHEmical Shift Selective Suppression */
-Chess1(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw1,gtw1,gswet1)  double pulsepower,duration,rx1,rx2,gzlvlw1,gtw1,gswet1;
+void Chess1(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw1,gtw1,gswet1)  double pulsepower,duration,rx1,rx2,gzlvlw1,gtw1,gswet1;
   codeint phase;
   char* pulseshape;
 {
@@ -63,7 +63,7 @@ Chess1(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw1,gtw1,gswet1)  double
 
 
 /* Wet4first - Water Elimination */
-Wet4first(phaseA,phaseB)
+void Wet4first(phaseA,phaseB)
   codeint phaseA,phaseB;
 
 {
@@ -92,7 +92,7 @@ Wet4first(phaseA,phaseB)
 }
 
 /* Chess - CHEmical Shift Selective Suppression */
-Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)  double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
+void Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)  double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
   codeint phase;
   char* pulseshape;
 {
@@ -105,7 +105,7 @@ Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)  double pul
 
  
 /* Wet4 - Water Elimination during MIX*/
-Wet4(phaseA,phaseB)
+void Wet4(phaseA,phaseB)
   codeint phaseA,phaseB;
 
 {
@@ -133,7 +133,7 @@ Wet4(phaseA,phaseB)
   delay(dz);
 }
  
-pulsesequence()
+void pulsesequence()
 {
    double          arraydim,
                    gzlvl1,gzlvl2,gt1,

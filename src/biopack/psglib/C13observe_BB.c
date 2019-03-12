@@ -24,7 +24,7 @@ static int
                       
 	     phi1[]  = {0,2,0,2},
              rec[]   = {0,2,0,2};
-pulsesequence()
+void pulsesequence()
 {
     
 char        gpurge[MAXSTR],shape[MAXSTR],   		       

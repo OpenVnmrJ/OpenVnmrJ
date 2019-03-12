@@ -57,7 +57,7 @@ static int table9[4] = {1,1,1,1};              //phXdfsp
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 

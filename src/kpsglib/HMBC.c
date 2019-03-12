@@ -33,7 +33,7 @@ static int ph5[8] = {0,0,0,0,2,2,2,2};
 static int ph6[8] = {0,0,2,2,2,2,0,0};
 static int ph7[4] = {0,2,2,0};
 
-pulsesequence()
+void pulsesequence()
 {
   double j1min = getval("j1min"),
          j1max = getval("j1max"),

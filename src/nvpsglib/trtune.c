@@ -27,7 +27,7 @@ void getRealSetDefault(int tree, const char *name, double *buf, double def)
 #endif
 
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {
    double freq,fstart,fend;
    double attn,attnd,attnd2,attnd3,attnd4,tattn;/* 5 channels supported */

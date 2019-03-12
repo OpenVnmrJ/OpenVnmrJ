@@ -277,7 +277,7 @@ static double   d2_init=0.0,
 	        relaxTmax;
 
 
-pulsesequence()
+void pulsesequence()
 {
 
 

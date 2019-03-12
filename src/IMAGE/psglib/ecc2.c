@@ -12,7 +12,7 @@
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
   double sign,currentlimit,RMScurrentlimit,dutycycle;
   int calcpower;

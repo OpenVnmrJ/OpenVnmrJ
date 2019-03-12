@@ -16,7 +16,7 @@ ASL Test Sequence (centric out Gradient Echo)
 #include <standard.h>
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
   /* Internal variable declarations *********************/
   double  testte,testtr,testflip,testns,testthk,testpss[MAXNSLICE];

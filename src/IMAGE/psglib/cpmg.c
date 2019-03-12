@@ -24,7 +24,7 @@
 
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
    double pd, seqtime;
    double n,r,bigtau;

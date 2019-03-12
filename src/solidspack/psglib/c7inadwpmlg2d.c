@@ -40,7 +40,7 @@ static int table9[4] = {0,2,1,3};           // phRec
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 // Set the Maximum Dynamic Table and v-var Numbers
 

@@ -11,7 +11,7 @@
 
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {   
    double cycles,
           bigtau = getval("bigtau"),

@@ -59,7 +59,7 @@
 /* v3 => ph3[16] = {0,0,1,1, 2,2,3,3, 0,0,1,1, 2,2,3,3};
 /* v4 => ph4[16] = {0,2,1,3, 2,0,3,1, 2,0,3,1, 0,2,1,3}; */
 
-pulsesequence()
+void pulsesequence()
 {
 double	gzlvl1, gzlvl2, gzlvl3;
 double	gt1,    gt2,    gt3;

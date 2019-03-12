@@ -50,7 +50,7 @@ static int   phs2[4] = {0,1,2,3},
 	     phs7[2] = {0,2},
 	     phs4[1] = {0};
 
-pulsesequence()
+void pulsesequence()
 {
    char  	hmult[MAXSTR],
                 chonly[MAXSTR],

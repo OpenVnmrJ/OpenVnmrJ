@@ -17,7 +17,7 @@
   amptype='_a'. */
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
     char pwpat[MAXSTR],p1pat[MAXSTR];
     /* equilibrium period */

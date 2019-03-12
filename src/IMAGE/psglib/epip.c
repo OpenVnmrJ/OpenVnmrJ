@@ -45,7 +45,7 @@ struct timeval tp;
 double time1,time2,time3,time4,time5;
 int    rtn;
 
-pulsesequence()
+void pulsesequence()
 {
   /* Internal variable declarations */
   double  freq90[MAXNSLICE],freq180[MAXNSLICE];

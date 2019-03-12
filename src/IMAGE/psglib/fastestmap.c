@@ -37,7 +37,7 @@
 
 /**[2] PULSE SEQUENCE CODE**********************************************/
 
-pulsesequence()
+void pulsesequence()
 {
 
   /**[2.1] DECLARATIONS**************************************************/
@@ -51,7 +51,7 @@ pulsesequence()
   double gread, grr, gsl, gsr, grew, gspoil, u2g, gsp;
   double grise_halfsine, grise_rampup, grise_triangle;
   double kread, kslice, krew, krew_epi;
-  double vtheta, vpsi, vphi;
+//  double vtheta, vpsi, vphi;
 
   double gay0[6], gay1[6], gay2[6], gay3[6], gay4[6], gay5[6], gax6[6];
   double gax0[6], gax1[6], gax2[6], gax3[6], gax4[6], gax5[6], gay6[6];
@@ -71,9 +71,9 @@ pulsesequence()
 
 
   /**[2.2] PARAMETER READ IN FROM EXPERIMENT****************************/
-  vtheta=0.0;
-  vphi=0.0;
-  vpsi=0.0;
+//  vtheta=0.0;
+//  vphi=0.0;
+//  vpsi=0.0;
   gmax = getval("gmax");
   u2g=gmax/Grad_DAC; 
   tof = getval("resto");
@@ -117,11 +117,11 @@ pulsesequence()
 
   /**[2.3] CALCULATIONS***********************************************/
 
-        if ((strstr(pipat1,"fm_invpat_2") != '\0') && (strstr(pipat2,"fm_invpat2_2") != '\0') )
+        if ((strstr(pipat1,"fm_invpat_2") != NULL) && (strstr(pipat2,"fm_invpat2_2") != NULL) )
         {
           invpw2bw = 4.0;
         }
-        if ((strstr(pipat1,"fm_invpat_10") != '\0') && (strstr(pipat2,"fm_invpat2_10") != '\0'))
+        if ((strstr(pipat1,"fm_invpat_10") != NULL) && (strstr(pipat2,"fm_invpat2_10") != NULL))
         {
           invpw2bw = 10.0;
         }

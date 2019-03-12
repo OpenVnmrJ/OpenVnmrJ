@@ -83,7 +83,7 @@ gradient pulses
 #include <standard.h>
 #include <chempack.h>
 
-pulsesequence()
+void pulsesequence()
 {
 double	delcor,initdel,gzlvl4,gt4,Dtau,Ddelta,dosytimecubed,dosyfrq,
         kappa     = getval("kappa"), 

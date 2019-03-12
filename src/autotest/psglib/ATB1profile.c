@@ -7,7 +7,7 @@
 /*  B1profile - B1 profile along Z */
 
 #include <standard.h>
-pulsesequence()
+void pulsesequence()
 {
    double gzlvl1;
    extern int dps_flag;

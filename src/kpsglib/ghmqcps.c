@@ -26,7 +26,7 @@
 
 static double d2_init = 0.0;
 
-pulsesequence()
+void pulsesequence()
 {
 double	gzlvl1,   gzlvl2,   gzlvl3;
 double	gt1,      gt2,      gt3;    

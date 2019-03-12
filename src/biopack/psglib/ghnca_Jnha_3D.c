@@ -68,7 +68,7 @@ static int   phi1[1]  =  {0},   /* 90 15N prior to t2 */
              phi6[8]  =  {0,0,0,0,2,2,2,2},
              phi7[4]  =  {0,2,2,0}; /* receiver */ 
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

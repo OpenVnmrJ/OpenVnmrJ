@@ -137,7 +137,7 @@ static int
 
 
 static double   d2_init=0.0, relaxTmax;
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE AND LOAD VARIABLES */
 char

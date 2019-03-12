@@ -36,7 +36,7 @@ JohnR - includes CPMG option : Jan 2015
 static int	ph1[4] = {0,2,1,3},
 		ph5[4] = {2,0,3,1};
 
-pulsesequence()
+void pulsesequence()
 {
 
    double	   selfrq = getval("selfrq"),

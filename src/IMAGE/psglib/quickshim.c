@@ -18,7 +18,7 @@
 static int ph1[4] = {0,2,1,3},              /* 90 deg pulse phase */
 	   phr[4] = {0,2,1,3};              /* receiver phase */
 
-pulsesequence()
+void pulsesequence()
 {
 	double  predelay,seqtime,glimit,gshimlim;
 	double  gbasex,gbasey,gbasez,del;

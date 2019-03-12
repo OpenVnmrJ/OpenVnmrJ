@@ -7,7 +7,7 @@
 /* Xrfhomo: X channel nutation experiment */
 #include <standard.h>
 
-pulsesequence()
+void pulsesequence()
 {
    double pwx,pwxlvl,j;
    pwx=getval("pwx"); pwxlvl=getval("pwxlvl");  j=getval("j");

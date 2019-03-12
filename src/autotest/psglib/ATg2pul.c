@@ -23,9 +23,7 @@
 */
 #include <standard.h>
 
-halfsineshapegrad(grad,gval,gtim)
-char grad;
-double gval,gtim;
+void halfsineshapegrad(char grad, double gval, double gtim)
 {
    static double mgrad[20]= {0.0,0.1564,0.3090,0.4540,0.5878,0.7071,0.8090,
 			0.8910,0.9510,0.9877,1.0,0.9877,0.9510,0.8910,
@@ -44,7 +42,7 @@ double gval,gtim;
 }
 
 
-pulsesequence()
+void pulsesequence()
 {
    double gzlvl1,gt1;
    char   shaped[MAXSTR],gradaxis[MAXSTR];

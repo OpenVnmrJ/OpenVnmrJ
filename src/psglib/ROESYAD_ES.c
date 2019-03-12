@@ -63,7 +63,7 @@ static int phs1[32] = {0,0,0,0,2,2,2,2,0,0,0,0,2,2,2,2,1,1,1,1,3,3,3,3,1,1,1,1,3
            phs8[16] = {0,1,0,1,2,3,2,3,0,1,0,1,2,3,2,3},
            phs9[16] = {0,0,1,1,0,0,1,1,2,2,3,3,2,2,3,3};
 		
-pulsesequence()
+void pulsesequence()
 {
    double          mixR = getval("mixR"),
 		   gzlvlz = getval("gzlvlz"),

@@ -26,7 +26,7 @@
 
 #include "sgl.c"
 
-pulsesequence()
+void pulsesequence()
 {
 	/* declaration of internal variables */
 	double freqlist[MAXNSLICE];

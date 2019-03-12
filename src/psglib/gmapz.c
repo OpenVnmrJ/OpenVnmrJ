@@ -80,7 +80,7 @@ static int ph1[16] = {0,1,2,3,0,1,2,3,1,2,3,0,1,2,3,0},
            ph3[8]  = {0,3,0,3,1,0,1,0},
            ph4[16] = {0,1,2,3,2,3,0,1,1,2,3,0,3,0,1,2}; 
 
-pulsesequence()
+void pulsesequence()
 {
    double 	d3 = getval("d3"),
                 vtcomplvl = getval("vtcomplvl"),

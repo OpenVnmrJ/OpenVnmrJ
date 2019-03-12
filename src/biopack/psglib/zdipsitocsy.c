@@ -46,7 +46,7 @@
 #include <standard.h>
 #include <mfpresat.h>
 
-dipsi(phse1,phse2)
+void dipsi(phse1,phse2)
 codeint phse1,phse2;
 {
         double slpw5;
@@ -113,7 +113,7 @@ static void Wet4(pulsepower,wetshape,duration,phaseA,phaseB)
   rcvron();
 }
 
-pulsesequence()
+void pulsesequence()
 {
    double         
                    slpw5,slpwr,

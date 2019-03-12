@@ -72,7 +72,7 @@ Ref: Nilsson M, Gil AM, Delgadillo I, Morris GA. Anal Chem 2004;76:5418-5422
 #include<standard.h> 
 #include <chempack.h>
  
-pulsesequence() 
+void pulsesequence() 
 { 
 double	Ddelta,cdel1,cdel2,
         gzlvl1 = getval("gzlvl1"),

@@ -161,7 +161,7 @@ static int
 
 	   rec[8] =  {0,2,2,0,2,0,0,2};
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

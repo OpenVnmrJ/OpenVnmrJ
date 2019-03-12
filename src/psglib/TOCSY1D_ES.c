@@ -70,7 +70,7 @@ static int	ph1[4] = {0,2,3,1},
               phs9[16] = {0,0,1,1,0,0,1,1,2,2,3,3,2,2,3,3}, /* 2nd ecdo in ES */
 		ph8[4] = {0,0,3,3};
 
-pulsesequence()
+void pulsesequence()
 {
    double	   slpwrT = getval("slpwrT"),
 		   slpwT = getval("slpwT"),

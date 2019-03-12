@@ -74,7 +74,7 @@ extern	int	newacq;
 extern	int	PSfile;
 extern	int	setupflag;
 extern	int	bgflag;
-extern	int	pulsesequence();
+extern	void	pulsesequence();
 extern	int	ra_flag;
 extern	short	*Aacode;
 extern	short	*Codeptr;

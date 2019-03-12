@@ -32,7 +32,7 @@ static int 	ph1[8] = {0, 2, 0, 2, 1, 3, 1, 3},
 		ph3[8] = {0, 2, 0, 2, 1, 3, 1, 3},
 		ph6[1] = {0};
 
-pulsesequence()
+void pulsesequence()
 {
 	double	gzlvlE = getval("gzlvlE"),
 		gtE = getval("gtE"),

@@ -29,7 +29,7 @@ static int table8[4] = {0,2,2,0};           // phRec
 #define phHdec t7
 #define phRec t8
 
-pulsesequence() {
+void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
 
@@ -45,8 +45,12 @@ pulsesequence() {
 
    MPSEQ r18 = getr1825("r18H",0,0.0,0.0,0,1);
    MPSEQ r18ref = getr1825("r18H",r18.iSuper,r18.phAccum,r18.phInt,1,1); 
-   MPSEQ r18ref2 = getr1825("r18H",r18ref2.iSuper,r18ref2.phAccum,r18ref2.phInt,2,1);
-   MPSEQ r18ref3 = getr1825("r18H",r18ref3.iSuper,r18ref3.phAccum,r18ref3.phInt,3,1);
+// THe following two lines are the originals but they use uninitialized variables.
+// The corrections may not be correct.
+// MPSEQ r18ref2 = getr1825("r18H",r18ref2.iSuper,r18ref2.phAccum,r18ref2.phInt,2,1);
+// MPSEQ r18ref3 = getr1825("r18H",r18ref3.iSuper,r18ref3.phAccum,r18ref3.phInt,3,1);
+   MPSEQ r18ref2 = getr1825("r18H",r18.iSuper,r18.phAccum,r18.phInt,2,1);
+   MPSEQ r18ref3 = getr1825("r18H",r18.iSuper,r18.phAccum,r18.phInt,3,1);
    strncpy(r18.ch,"dec",3);
    strncpy(r18ref.ch,"dec",3);
    strncpy(r18ref2.ch,"dec",3);

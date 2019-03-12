@@ -72,7 +72,7 @@ static double   H1ofs=4.7, C13ofs=56.0, N15ofs=120.0, H2ofs=0.0;
 
 static shape wz16, offC1, offC2, offC9;  /* Cbd; */
 
-pulsesequence()
+void pulsesequence()
 {
  char    
     f1180[MAXSTR],    

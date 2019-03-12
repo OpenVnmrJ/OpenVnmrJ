@@ -111,7 +111,7 @@ static double d2_init=0.0, d3_init=0.0;
 
 static shape  adC180, wuCdec, wuHmix;
 
-pulsesequence()
+void pulsesequence()
 {
 /* DECLARE VARIABLES */
 

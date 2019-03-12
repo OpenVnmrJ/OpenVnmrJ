@@ -55,7 +55,7 @@ static int phi1[4] = {1,1,3,3},
            phT4[1] = {3},                     
            recT[4] = {1,3,2,0};                              /* minimum nt = 4 */
 
-pulsesequence()
+void pulsesequence()
 {
   int       t1_counter;
   char	    C13refoc[MAXSTR],	      /* C13 refocussing pulse in middle of t1 */

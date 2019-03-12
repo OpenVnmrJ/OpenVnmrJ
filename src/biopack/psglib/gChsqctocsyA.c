@@ -82,7 +82,7 @@
 #include "Pbox_bio.h"		/* Pbox Bio Pack Pulse Shaping Utilities */
 
 /* Chess - CHEmical Shift Selective Suppression */
-Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
+void Chess(pulsepower,pulseshape,duration,phase,rx1,rx2,gzlvlw,gtw,gswet)
 double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
   codeint phase;
   char* pulseshape;
@@ -94,7 +94,7 @@ double pulsepower,duration,rx1,rx2,gzlvlw,gtw,gswet;
 }
 
 /* Wet4 - Water Elimination */
-Wet4(phaseA,phaseB)
+void Wet4(phaseA,phaseB)
   codeint phaseA,phaseB;
 {
   double finepwr,gzlvlw,gtw,gswet,gswet2,wetpwr,wetpw,dz;
@@ -121,7 +121,7 @@ Wet4(phaseA,phaseB)
   rcvron();
   delay(dz);
 }
-dipsi(phse1, phse2)
+void dipsi(phse1, phse2)
 codeint phse1, phse2;
 {
   double slpw5;
@@ -156,7 +156,7 @@ static double H1ofs = 4.7, C13ofs = 46.0, N15ofs = 120.0, H2ofs = 0.0;
 
 static shape offC10, stC80;
 
-pulsesequence()
+void pulsesequence()
 {
   /* DECLARE VARIABLES */
 

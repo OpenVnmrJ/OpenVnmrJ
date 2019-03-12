@@ -72,7 +72,7 @@ static int	ph1[8] = {0,0,2,2,1,1,3,3},  /* observe pulse  */
                 ph8[32] = {0,2,2,0,3,1,1,3,2,0,0,2,1,3,3,1,
                            0,2,2,0,3,1,1,3,2,0,0,2,1,3,3,1};
                                           /* RCVR with dpfgse */
-pulsesequence()
+void pulsesequence()
 {
    double	   gzlvl0 = getval("gzlvl0"),
 		   gt0 = getval("gt0"),

@@ -8,7 +8,7 @@
 
 #include "standard.h"
 
-pulsesequence()
+void pulsesequence()
 {
    add(oph, two, v1);
 

@@ -1,28 +1,26 @@
 // Chempacker macro
 
 $dum='' $devnull=''
-is_cpfid:$cp
-if not $cp then return endif
 exists(curexp+'/pipe','directory'):$direx
 if not $direx then return endif
 
-substr(file,'dirname'):$d,$b,$e
-$pdir=$d+'/NMRpipe'
-exists($pdir,'directory'):$direx
-if not $direx then mkdir($pdir):$dum endif
-$pfile=$pdir+'/'+$b+'.pipe'
-exists($pfile,'directory'):$direx
-if $direx then
-    rm('-rf',$pfile):$dum
+if $# < 1 then $1=file endif
+$file=$1
+
+    substr($file,'dirname'):$d,$b,$e
+    $pdir=$d+'/NMRpipe'
+    exists($pdir,'directory'):$direx
+    if not $direx then mkdir($pdir):$dum endif
+    $pfile=$pdir+'/'+$b+'.pipe'
     exists($pfile,'directory'):$direx
-endif
-if $direx then
-    write('error','%s could not be deleted',$pfile)
-    return
-endif
-mkdir($pfile):$dum
-pwd:$curdir
-cd(curexp+'/pipe'):$dum
-shell('(tar cf - * | (cd '+$pfile+'; tar xfBp -))'):$devnull
-cd($curdir):$dum
-dousermacro($0)
+    if $direx then
+        rm('-rf',$pfile):$dum
+        exists($pfile,'directory'):$direx
+    endif
+    if $direx then
+    	write('error','%s could not be deleted',$pfile)
+     	return
+    endif
+    cp('-rf',curexp+'/pipe',$pfile):$dum
+
+    dousermacro($0)

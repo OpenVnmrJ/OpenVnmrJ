@@ -291,7 +291,7 @@ static double   d2_init=0.0, relaxTmax;
 
 shape   HHdseq, Cdseq;
 
-pulsesequence()
+void pulsesequence()
 {
 
 /* DECLARE AND LOAD VARIABLES */

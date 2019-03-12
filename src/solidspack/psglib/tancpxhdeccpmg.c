@@ -34,7 +34,7 @@ static int table6[4] = {1,1,2,2};           // phX90
 
 static double d2_init;
 
-pulsesequence() {
+void pulsesequence() {
 
 //=====================================================
 //Define Variables and Objects and Get Parameter Values
