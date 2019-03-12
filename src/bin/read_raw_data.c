@@ -53,15 +53,15 @@
 
 struct HEADER
 	  {
-          long	 nblocks;              /* number of blocks in file */
-	  long	 ntraces;              /* number of traces in file */
-	  long	 np;                   /* number of elements pre trace */
-	  long 	 ebytes;               /* number of bytes per element */
-	  long	 tbytes;               /* number of bytes per trace */
-	  long	 bbytes;               /* number of bytes per block */
+          int	 nblocks;              /* number of blocks in file */
+	  int	 ntraces;              /* number of traces in file */
+	  int	 np;                   /* number of elements pre trace */
+	  int 	 ebytes;               /* number of bytes per element */
+	  int	 tbytes;               /* number of bytes per trace */
+	  int	 bbytes;               /* number of bytes per block */
 	  short  vers_id;              /* software version, file_di status bits */
 	  short	 status;               /* status of whole file */
-          long	 nbheaders;            /* number of block headers per block */
+          int	 nbheaders;            /* number of block headers per block */
 	   } header;
 
 
@@ -71,7 +71,7 @@ struct DATABLOCKHEAD
 	   short   status;		/* status of data in block */
 	   short   index;               /* block index */
 	   short   mode;                /* mode of data in block */
-	   long    ctcount;             /* ct value for FID */
+	   int    ctcount;             /* ct value for FID */
 	   float   lpval;               /* f2 (2D-f1) left phase in phase file */
 	   float   rpval;               /* f2 (2D-f1) right phase in phase file */
 	   float   lvl;                 /* level of drift correction */
@@ -84,7 +84,7 @@ struct HYPERCOMPLEXHEADER
 	   short   status;              /* status wird for block header */
 	   short   s_spare2;            /* short word: spare */
 	   short   s_spare3;            /* short word: spare */
-	   long    l_spare1;            /* long word:  spare */
+	   int    l_spare1;            /* int word:  spare */
 	   float   lpval1;              /* 2D-f2 left phase */
 	   float   rpval1;              /* 2D f2 right phase */
 	   float   f_spare1;            /* float word: spare */
@@ -209,7 +209,7 @@ void show_complex_header(struct HYPERCOMPLEXHEADER hcompheader,short block_no)
      printf("Status:                :    %x[hex]\n",hcompheader.status);
      printf("Spare 2 (short):            %i\n",hcompheader.s_spare2);
      printf("Spare 3 (short):            %i\n",hcompheader.s_spare3);
-     printf("Spare 4 (long):             %ld\n",hcompheader.l_spare1);
+     printf("Spare 4 (int):              %d\n",hcompheader.l_spare1);
      printf("2D-f2:left phase:           %f\n",hcompheader.lpval1);
      printf("2D-f2 rigth phase:          %f\n",hcompheader.rpval1);
      printf("Spare 5 (float):            %f\n",hcompheader.f_spare1);
@@ -348,7 +348,7 @@ void write_complex_header (struct HYPERCOMPLEXHEADER hcompheader, short block_no
      fprintf(fpout,"Status:                :    %x[hex]\n",hcompheader.status);
      fprintf(fpout,"Spare 2 (short):            %i\n",hcompheader.s_spare2);
      fprintf(fpout,"Spare 3 (short):            %i\n",hcompheader.s_spare3);
-     fprintf(fpout,"Spare 4 (long):             %ld\n",hcompheader.l_spare1);
+     fprintf(fpout,"Spare 4 (int):              %d\n",hcompheader.l_spare1);
      fprintf(fpout,"2D-f2:left phase:           %f\n",hcompheader.lpval1);
      fprintf(fpout,"2D-f2 rigth phase:          %f\n",hcompheader.rpval1);
      fprintf(fpout,"Spare 5 (float):            %f\n",hcompheader.f_spare1);
@@ -400,7 +400,7 @@ printf("              <arg4> = target filename (default = rawdata) \n\n");
 /**********************************************************
  *   Write MAX:                                           *
  **********************************************************/
-void write_max (float max, long block_no, long block, int trace, FILE *fpout)
+void write_max (float max, int block_no, int block, int trace, FILE *fpout)
 {
       if ((block == 1) && (trace ==0))
           {
@@ -414,7 +414,7 @@ void write_max (float max, long block_no, long block, int trace, FILE *fpout)
 /**********************************************************
  *   int -  display data                                  *
  **********************************************************/
-void show_int_data (void *values, long size)
+void show_int_data (void *values, int size)
 {
     int   i, line_elements;
     int   *ptr;
@@ -435,7 +435,7 @@ void show_int_data (void *values, long size)
 /**********************************************************
  *   short -  display data                                  *
  **********************************************************/
-void show_short_data (void *values, long size)
+void show_short_data (void *values, int size)
 {
     int    i, line_elements;
     short  *ptr;
@@ -456,7 +456,7 @@ void show_short_data (void *values, long size)
 /**********************************************************
  *   short -  display data                                  *
  **********************************************************/
-void show_float_data (void *values, long size)
+void show_float_data (void *values, int size)
 {
     int    i, line_elements;
     float  *ptr;
@@ -478,7 +478,7 @@ void show_float_data (void *values, long size)
 /**********************************************************
  *   int -  display hypercompled header status            *
  **********************************************************/
-float find_absmax_int (void *values, long size)
+float find_absmax_int (void *values, int size)
 {
     int i;
     float max_val;
@@ -505,7 +505,7 @@ float find_absmax_int (void *values, long size)
 /**********************************************************
  *   short -   display hypercompled header status         *
  **********************************************************/
-float find_absmax_short (void *values, long size)
+float find_absmax_short (void *values, int size)
 {
     int i;
     float max_val;
@@ -532,7 +532,7 @@ float find_absmax_short (void *values, long size)
 /**********************************************************
  *   float -   display hypercompled header status         *
  **********************************************************/
-float find_absmax_float (void *values, long size)
+float find_absmax_float (void *values, int size)
 {
     int i;
     float max_val;
@@ -599,9 +599,9 @@ int main (int argc, char *argv[])
     void    *cmpres;             /* result of string comparision */
     float   max_value;           /* maximum data value */
     char    data_format;         /* data format 0=int_16, 1=int_32, 3=float*/
-    long    data_size;	         /* size of data returned */
-    long    read_status;         /* status of file read */
-    long    write_status;        /* status of file write */
+    int     data_size;	         /* size of data returned */
+    size_t  read_status;         /* status of file read */
+    size_t  write_status;        /* status of file write */
     char    arg_status;          /* status of arguments passed into program */
     char    *args[MAXOPT] ={"dh", "ds", "bh", "bs", "ch", "cs", "data", "max"};
     char    output;              /* flag containing output action [0] = display, [1] write to file */

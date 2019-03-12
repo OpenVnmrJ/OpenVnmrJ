@@ -66,15 +66,15 @@ struct datafilehead
 /*****************/
 /* Used at the beginning of each data file (fid's, spectra, 2D)  */
 {
-  long nblocks;        /* number of blocks in file     */
-  long ntraces;        /* number of traces per block   */
-  long np;             /* number of elements per trace */
-  long ebytes;         /* number of bytes per element  */
-  long tbytes;         /* number of bytes per trace    */
-  long bbytes;         /* number of bytes per block    */
+  int nblocks;        /* number of blocks in file     */
+  int ntraces;        /* number of traces per block   */
+  int np;             /* number of elements per trace */
+  int ebytes;         /* number of bytes per element  */
+  int tbytes;         /* number of bytes per trace    */
+  int bbytes;         /* number of bytes per block    */
   short transf;	       /* transposed storage flag      */
   short status;        /* status of whole file         */
-  long spare1;         /* reserved for future use      */
+  int spare1;         /* reserved for future use      */
 };
 
 /******************/
@@ -86,7 +86,7 @@ struct datablockhead
   short status;        /* status of data in block      */
   short index;         /* block index                  */
   short spare3;        /* reserved for future use      */
-  long  ctcount;       /* completed transients in fids */
+  int  ctcount;       /* completed transients in fids */
   float lpval;	       /* left phase in phasefile      */
   float rpval;	       /* right phase in phasefile     */
   float lvl;	       /* level drift correction       */
@@ -386,7 +386,7 @@ int i;
 /* Calculates phase and instantaneous frequency.		*/
 /****************************************************************/
 phase_calc(ntraces,npoints,prec,fbuff,fine_time)
-long ntraces,npoints,prec;
+int ntraces,npoints,prec;
 double *fbuff;
 double fine_time;
 {

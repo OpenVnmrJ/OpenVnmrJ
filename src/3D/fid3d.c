@@ -86,15 +86,15 @@ typedef struct _simInfo simInfo;
 
 struct _fileheader
 {
-   long         nblocks;
-   long         ntraces;
-   long         np;
-   long         ebytes;
-   long         tbytes;
-   long         bbytes;
+   int         nblocks;
+   int         ntraces;
+   int         np;
+   int         ebytes;
+   int         tbytes;
+   int         bbytes;
    short        vers_id;
    short        status;
-   long         nbheaders;
+   int         nbheaders;
 };
 
 typedef struct _fileheader fileheader;
@@ -105,7 +105,7 @@ struct _blockheader
    short        status;
    short        index;
    short        mode;
-   long         ctcount;
+   int         ctcount;
    float        lpval;
    float        rpval;
    float        lvl;

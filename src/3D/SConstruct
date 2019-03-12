@@ -66,6 +66,8 @@ env = Environment(CCFLAGS    = '-O3 -Wall -m32 ' + largeFileFlags,
 if (platform=="darwin"):
     env.Replace(CC = 'clang')
     env.Append(CPPDEFINES = 'MACOS')
+    env.Replace(CCFLAGS = '-Os -Wall -arch x86_64')
+    env.Replace(LINKFLAGS = '')
 
 if ('interix' in platform):    # Interix
    env.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','_REENTRANT','USE_HTONS','WINDRIDGE','NO_WIN_MMAP','BSDACQ','NESSIE','LINUX','VNMRJ','SUN','X11','NOMOTIF']  )
@@ -75,6 +77,12 @@ buildMethods.makeSymLinks(env, getplaneTarget, cwd, vnmrPath, vnmrHdrList)
 
 lpEnv = env.Clone(CCFLAGS = '-O3 -m32 -Wall ' + largeFileFlags)
 lpEnv.Append(CPPDEFINES = ['FT3D'])
+
+if (platform=="darwin"):
+    lpEnv.Replace(CC = 'clang')
+    lpEnv.Append(CPPDEFINES = 'MACOS')
+    lpEnv.Replace(CCFLAGS = '-Os -Wall -arch x86_64')
+    lpEnv.Replace(LINKFLAGS = '')
 
 buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, ncommPath, ncommFileList)
 buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, vnmrPath, vnmrFileList)

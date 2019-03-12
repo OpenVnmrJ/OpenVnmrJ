@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 #
 # Copyright (C) 2015  University of Oregon
@@ -110,6 +110,7 @@ chmod +x $postinstall
 
 cd "$vnmrdir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
 cd "$ddrconsoledir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
+rm -rf $vjdir/craft/Bayes3
 
 optionslist=`ls $standardsdir`
 for file in $optionslist
@@ -149,3 +150,13 @@ cp "${gitdir}/src/macos/user_tmplt" profiles/user/.
 #Following need a certificate issued by Apple to developer
 echo "Code signing requires a certificate issued by Apple. Check for any errors and fix for OS X El Capitan or macOS Sierra"
 codesign -s "3rd Party Mac Developer Application:" --entitlements "${gitdir}/src/macos/entitlement.plist" "${packagedir}/${ovjAppName}"
+
+
+if [[ -f /usr/local/bin/packagesbuild ]]
+then
+   echo "Making MacOS package of OpenVnmrJ"
+   /usr/local/bin/packagesbuild -v -F "${workspacedir}" "${gitdir}/src/macos/ovjpkg.pkgproj"
+else
+   echo "MacOS Packages.app not installed"
+   echo "Cannot build OpenVnmrJ pkg"
+fi

@@ -66,15 +66,15 @@ struct datafilehead
 /*****************/
 /* Used at the beginning of each data file (fid's, spectra, 2D)  */
 {
-   long    nblocks;       /* number of blocks in file			*/
-   long    ntraces;       /* number of traces per block			*/
-   long    np;            /* number of elements per trace		*/
-   long    ebytes;        /* number of bytes per element		*/
-   long    tbytes;        /* number of bytes per trace			*/
-   long    bbytes;        /* number of bytes per block			*/
+   int    nblocks;       /* number of blocks in file			*/
+   int    ntraces;       /* number of traces per block			*/
+   int    np;            /* number of elements per trace		*/
+   int    ebytes;        /* number of bytes per element		*/
+   int    tbytes;        /* number of bytes per trace			*/
+   int    bbytes;        /* number of bytes per block			*/
    short   vers_id;       /* software version and file_id status bits	*/
    short   status;        /* status of whole file			*/
-   long	   nbheaders;	  /* number of block headers			*/
+   int	   nbheaders;	  /* number of block headers			*/
 };
 
 /*******************/
@@ -86,7 +86,7 @@ struct datablockhead
    short 	  status;	/* status of data in block          */
    short 	  index;	/* block index                      */
    short	  mode;		/* mode of data in block	    */
-   long		  ctcount;	/* ct value for FID		    */
+   int		  ctcount;	/* ct value for FID		    */
    float 	  lpval;	/* F2 left phase in phasefile       */
    float 	  rpval;	/* F2 right phase in phasefile      */
    float 	  lvl;		/* F2 level drift correction        */
@@ -102,7 +102,7 @@ struct hypercmplxbhead
    short	status;		/* status word for block header	*/
    short	s_spare2;	/* short word:  spare		*/
    short	s_spare3;	/* short word:  spare		*/
-   long		l_spare1;	/* long word:  spare		*/
+   int		l_spare1;	/* int word:  spare		*/
    float 	lpval1;		/* additional left phase	*/
    float 	rpval1;		/* additional right phase 	*/
    float 	f_spare1;	/* float word:  spare		*/
