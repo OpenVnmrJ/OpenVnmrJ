@@ -113,8 +113,9 @@ typedef int socklen_t;
 #define JEVALLEN 8
 
 char         datadir[MAXPATH]; 		/* path to data in automation mode */
-char        *initCommand = NULL;        /* inital command */
-char         serverMac[MAXPATH];        /* inital command */
+char        *initCommand = NULL;        /* initial command */
+char        *initArg = NULL;
+char         serverMac[MAXPATH];
 char        *graphics;			/* Type of graphical display */
 char         psgaddr[MAXSTR];
 
@@ -297,7 +298,6 @@ static int  annotate = 0;
 static int  inPort = 0;  /* the input socket port of master */
 static int  inPrintMode = 0;  /* print screen  */
 static int  cmdLineOK = 1;  /* command line is enabled */
-static char default_graphics[ 2 ] = "\0";
 static char escChar = '\033';
 static char *vjWinInfo = NULL;
 static char evalStr[ MAXPATH ];
@@ -996,6 +996,16 @@ static void vnmr_argvec(int argc, char *argv[] )
 	}
 	else
 	{   initCommand = p;
+            if ( ((i+1) < argc) && strlen(serverMac) )
+            {
+               i++;
+               initArg = argv[i];
+               if ((i+1) < argc)
+               {
+                  fprintf(stderr,"Unknown argument '%s' passed to Vnmrbg\n",argv[i+1]);
+                  exit(1);
+               }
+            }
 	    if (Tflag)
 		fprintf(stderr,"Command line %s passed to vnmr\n",initCommand);
 	}
@@ -1066,7 +1076,6 @@ int vnmr(int argc, char *argv[])
     inPrintMode = 0;
     Wretain   = 1;   /* default retained */
     expnum    = 1;
-    graphics  = &default_graphics[ 0 ];
     fontName[0] = '\0';
     Xserver[0] = '\0';
     Xdisplay[0] = '\0';
@@ -1162,7 +1171,10 @@ int vnmr(int argc, char *argv[])
 		fprintf(stderr,"executing command line %s\n",initCommand);
             if (strlen(serverMac))
             {
-               sprintf(tmpStr,"%s(`%s`)",serverMac,initCommand);
+               if (initArg)
+                  sprintf(tmpStr,"%s(`%s`,`%s`)",serverMac,initCommand,initArg);
+               else
+                  sprintf(tmpStr,"%s(`%s`)",serverMac,initCommand);
             }
             else
             {
@@ -1182,7 +1194,7 @@ int vnmr(int argc, char *argv[])
 	exit(0);
     }
 
-    graphics = (char *)getenv( "graphics" );
+    graphics = "sun";
 
     jgraphics_init();
 
