@@ -1,6 +1,6 @@
 "macro sendMessage"
-if ($# <> 1) then
-  write('line3','%s requires a single argument',$0)
+if ($# < 1) then
+  write('line3','%s requires an argument',$0)
   return
 endif
 
@@ -20,12 +20,16 @@ endif
 $start=userdir+'/persistence/ovjStarting'
 write('reset',$start)
 write('line3','Starting OpenVnmrJ server')
-shell('vnmrj -exec initComm hide'):$e
+$arg=''
+if ($# > 1) then
+  $arg=$2
+endif
+shell('vnmrj '+$arg+' -exec initComm hide'):$e
 $i = 0
 $e=1
 while ($i < 20) and ($e) do
   $i=$i+1
-  shell('sleep 1'):$e
+  sleep(1)
   exists($start,'file'):$e
 endwhile
 if ($e) and ($i >= 20) then
