@@ -158,7 +158,6 @@ static void setOnCancel(char *txt);
     "sun".  Thus the two distinct variables and the two
     separate definitions of the global pointer "graphics".	*/
 
-static char     default_graphics[4] = "sun";
 #ifdef MOTIF
 static char     bgReaderBuffer[256];		/* bgReaderBuffer isn't used */
 #endif
@@ -1321,6 +1320,7 @@ void startForground(char *name, char *vnmrj_portid,
 	       char            addr[257];
                char            font_name[122];
                char            port_name[20];
+               char            progName[512];
 
 	       /* Pass the heigth and width of master screen */
                if (Bserver)
@@ -1338,24 +1338,29 @@ void startForground(char *name, char *vnmrj_portid,
 	       sprintf(port_name, "-xport_%d", htons(inputPort));
                strcpy(addr,"-h");
                GET_VNMR_ADDR(&addr[2]);
+#ifdef __CYGWIN__
+               sprintf(progName,"%s/bin/Vnmrbg.exe",systemdir);
+#else
+               strcpy(progName,name);
+#endif
 
 #ifdef DEBUG
 	       if (debug)
 	       {
 		  if (strlen(Xserver) > 0)
-                    execlp(name, "Vnmrch", "-t", "-mforeground", addr, mserver, port_name, mback, Xdisplay, Xserver, font_name,"-port",vnmrj_portid,"-view",vnmrj_viewid,"-host",vnmrj_hostname, jParentName, vjXInfo, NULL);
+                    execlp(progName, "Vnmrch", "-t", "-mforeground", addr, mserver, port_name, mback, Xdisplay, Xserver, font_name,"-port",vnmrj_portid,"-view",vnmrj_viewid,"-host",vnmrj_hostname, jParentName, vjXInfo, NULL);
 		  else
-                    execlp(name, "Vnmrch", "-t", "-mforeground", addr, mserver, port_name, mback, font_name,"-port",vnmrj_portid,"-view",vnmrj_viewid,"-host",vnmrj_hostname, jParentName, vjXInfo,NULL);
+                    execlp(progName, "Vnmrch", "-t", "-mforeground", addr, mserver, port_name, mback, font_name,"-port",vnmrj_portid,"-view",vnmrj_viewid,"-host",vnmrj_hostname, jParentName, vjXInfo,NULL);
 	       }
 	       else
 #endif 
 	       {
 		  if (strlen(Xserver) > 0)
-                     execlp(name, "Vnmrch", "-mforeground", addr, mserver,port_name, mback, Xdisplay, Xserver,font_name, "-port",vnmrj_portid,"-view",vnmrj_viewid,"-host",vnmrj_hostname, jParentName, vjXInfo, NULL);
+                     execlp(progName, "Vnmrch", "-mforeground", addr, mserver,port_name, mback, Xdisplay, Xserver,font_name, "-port",vnmrj_portid,"-view",vnmrj_viewid,"-host",vnmrj_hostname, jParentName, vjXInfo, NULL);
 		  else
-                     execlp(name, "Vnmrch", "-mforeground", addr, mserver, port_name, mback, font_name, "-port",vnmrj_portid,"-view",vnmrj_viewid,"-host",vnmrj_hostname, jParentName, vjXInfo, NULL);
+                     execlp(progName, "Vnmrch", "-mforeground", addr, mserver, port_name, mback, font_name, "-port",vnmrj_portid,"-view",vnmrj_viewid,"-host",vnmrj_hostname, jParentName, vjXInfo, NULL);
 	       }
-	       fprintf(stderr, "master: execl(%s,Vnmrch,0) failed!\n", name);
+	       fprintf(stderr, "master: execl(%s,Vnmrch,0) failed!\n", progName);
 	       exit(1);
 	    }
 	 }
@@ -1412,9 +1417,7 @@ void master(int argc, char *argv[])
 /*  Define graphics so window routines will not crash...  */
 
    textTypeIsTcl = NULL;
-   graphics = (char *)getenv("graphics");
-   if (graphics == NULL)
-      graphics = &default_graphics[0];
+   graphics = "sun";
    if ( !strcmp(graphics,"sun") )
    {
       maxbuttonchars = 128;
@@ -1561,7 +1564,7 @@ void master(int argc, char *argv[])
       VnmrJPortId = atoi(vnmrj_portid);
       VnmrJViewId = atoi(vnmrj_viewid);
       strcpy(VnmrJHostName,vnmrj_hostname); /* same as in main.c */
-      sprintf(Jvbgname, "/tmp/vbgtmp%d", VnmrJPortId);
+      sprintf(Jvbgname, "%s/tmp/vbgtmp%d", systemdir, VnmrJPortId);
 
    if (fgName)
    {
@@ -1574,7 +1577,9 @@ void master(int argc, char *argv[])
       setupdirs("master");
 
       /* create the Acqisition Process socket (return port number) */
+#ifndef NOACQ
       INIT_ACQ_COMM(systemdir);/* To send stuff to acq process */
+#endif
       createWindows2( 1, noUI );
       readyCatchers();
       if (smagicSendJvnmraddr(inputPort))

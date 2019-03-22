@@ -120,6 +120,7 @@ public class DisplayOptions extends ModelessDialog
     private static String m_interface_item="Default";
     private static int m_interface_type=SYSTEM;
     private static String m_interface_tab="Labels";
+    private static int screenRes=0;
     
     private static String m_graphics_item="Default";
     private static int m_graphics_type=SYSTEM;
@@ -1443,7 +1444,8 @@ public class DisplayOptions extends ModelessDialog
         path = FileUtil.savePath(getPersistenceFile(PLOT));
         writeStyles(path);
         
-        writeFonts();
+        path = FileUtil.savePath(getPersistenceFile(".Fontlist"));
+        writeFonts(path);
         m_tabsType=oldtabs;
 
     }
@@ -1677,7 +1679,8 @@ public class DisplayOptions extends ModelessDialog
             refLabel = new JLabel();
         try {
             os = new PrintWriter(new FileWriter(path));
-            int r = Toolkit.getDefaultToolkit().getScreenResolution();
+            if (screenRes == 0)
+               screenRes = Toolkit.getDefaultToolkit().getScreenResolution();
             if (defaultFont == null)
                  defaultFont = new GraphicsFont();
             else
@@ -1699,9 +1702,9 @@ public class DisplayOptions extends ModelessDialog
                      }
                  }
             }
-            if (r < 20)
-                r = 90;
-            os.println("ScreenDpi Screen "+r+" "+r+" "+r+" "+r);
+            if (screenRes < 20)
+                screenRes = 90;
+            os.println("ScreenDpi Screen "+screenRes+" "+screenRes+" "+screenRes+" "+screenRes);
         } catch(IOException er) {
             Messages.postError("DisplayOptions: can't write persistence file");
         }
