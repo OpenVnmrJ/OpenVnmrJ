@@ -1986,7 +1986,7 @@ public class ExpPanel extends JPanel
                     vnmrHostPort = a;
                     int  vnmrId = b;
                     outPort = new CanvasOutSocket(this, vnmrHostName, vnmrHostPort);
-                    String vpath = File.separator+"tmp"+File.separator+"vnmr"+vnmrId;
+                    String vpath = FileUtil.sysdir()+File.separator+"tmp"+File.separator+"vnmr"+vnmrId;
                     try {
                         PrintWriter os = new PrintWriter(new FileWriter(vpath));
                         if (os != null) {

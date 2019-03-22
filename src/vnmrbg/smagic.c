@@ -715,7 +715,7 @@ int smagicSendJvnmraddr(int portno) /* send Java vnmraddr */
     char smagicJaddr[MAXPATH];
     int val2;
     int i=1, getjfile=1;
-    char mstr[1024], kstr[64], kstr2[64], kstr3[64], kstr1[64];
+    char mstr[1024], kstr[MAXPATH+128], kstr2[64], kstr3[64], kstr1[64];
 /*  int newPort; */
 
     (void) portno;
@@ -729,7 +729,7 @@ int smagicSendJvnmraddr(int portno) /* send Java vnmraddr */
     sprintf(smagicJaddr,"%s %d %s",kstr1, newPort, kstr3);
 #endif
 **/
-    sprintf(kstr, "/tmp/vnmr%s", kstr3);
+    sprintf(kstr, "%s/tmp/vnmr%s", systemdir, kstr3);
     if (access( Jvbgname, F_OK ) == 0)
        unlink( Jvbgname );
     unlink( kstr );
@@ -3125,7 +3125,7 @@ static void jsendArrayInfo(int exnum )
 	  switch (i)
 	  {
 		case 0:
-	          strcpy(param,"ni");
+	          strcpy(param,"ni3");
 		  rank=ni_rank;
 		  break;
 		case 1:
@@ -3133,7 +3133,7 @@ static void jsendArrayInfo(int exnum )
 		  rank=ni2_rank;
 		  break;
 		case 2:
-	          strcpy(param,"ni3");
+	          strcpy(param,"ni");
 		  rank=ni3_rank;
 		  break;
 		default:

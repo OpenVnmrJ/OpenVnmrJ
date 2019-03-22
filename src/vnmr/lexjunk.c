@@ -759,7 +759,8 @@ int input()
 		  return('\004');
 	       }
 	       else
-	       {  *p = '\0';
+	       {  *p++ = '\n';
+	          *p = '\0';
 		  LPRINT0(2,"input:    ...<done>\n");
 		  break;
 	       }

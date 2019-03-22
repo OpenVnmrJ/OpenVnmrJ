@@ -54,9 +54,10 @@ public class VnmrProcess implements Runnable {
            // exec and get back a Process class
            String cmd = "Vnmrbg master  -port "+socketPort+" -view "+id;
            if (Util.iswindows())
-               cmd = WGlobal.SHTOOLCMD + " " + WGlobal.SHTOOLOPTION +
-                            " \"" + FileUtil.SYS_VNMR + "/bin/Vnmrbg master -port " +
-                            socketPort + " -view " + id + "\"";
+           {
+               cmd = FileUtil.sysdir() + "/bin/Vnmrbg.exe master -port " +
+                            socketPort + " -view " + id;
+           }
            if (info != null)
                cmd = cmd + " "+info;
            chkit = rt.exec(cmd);

@@ -492,7 +492,12 @@ int macroLd(int argc, char *argv[], int retc, char *retv[])
 	    TPRINT1("macroLd: removing macro \"%s\"\n",argv[i]);
 	    rmMacro(argv[i]);
 	    renameAllocation("newMacro","tmpSavenewMacro");
-            if (argv[i][0] == '/')
+#ifndef __CYGWIN__
+            if   (argv[i][0] == '/')
+#else
+            if ( (argv[i][0] == '/') ||
+                 ((argv[i][1] == ':') && (argv[i][2] == '/')) )
+#endif
             {
                char *s;
                

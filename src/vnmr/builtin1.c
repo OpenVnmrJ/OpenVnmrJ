@@ -450,6 +450,7 @@ int rtx(int argc, char *argv[], int retc, char *retv[] )
    {   Werrprintf("file path too long");
        ABORT;
    }
+#ifndef __CYGWIN__
    if (name[0]!='/')
    {
       pathptr = get_cwd();
@@ -458,6 +459,7 @@ int rtx(int argc, char *argv[], int retc, char *retv[] )
       strcat(filepath0,name);
    }
    else
+#endif
       strcpy(filepath0,name);
    if (find_param_file(filepath0, filepath))
    {
