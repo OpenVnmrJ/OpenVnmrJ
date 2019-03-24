@@ -38,12 +38,12 @@ elif [ "x$Arg" = "xfg" ]; then
     vnmrj -exec craftv5 -splash $vnmrsystem/iconlib/Splash_CRAFT.png
 else
     if [ "x$Arg" = "xsubmit" ]; then
-	Vnmrbg -mback -n- -s sendMessage "submit2craft('window') s2cparbg='bg'"
+	Vnmrbg -mback -n- -s sendMessage "submit2craft('window') s2cparbg='bg'" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
     elif [ "x$Arg" = "xexit" ]; then
         Vnmrbg -mback -n0 -s sendMessage "exitComm"
     elif [ "x$Arg" = "xadmin" ]; then
-        Vnmrbg -mback -n- -s sendMessage "craftQueueManage('window') cQMpar2='bg'"
+        Vnmrbg -mback -n- -s sendMessage "craftQueueManage('window') cQMpar2='bg'" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
     elif [ "x$Arg" = "xqest" ]; then
-        Vnmrbg -mback -n- -s sendMessage "craftQnmr('window')"
+        Vnmrbg -mback -n- -s sendMessage "craftQnmr('window')" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
     fi
 fi
