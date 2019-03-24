@@ -33,6 +33,7 @@ public class VNMRFrame extends JFrame implements AppInstaller {
     private static String m_persona;
     private static Dimension screenDim;
     private static JFrame m_splashFrame = null;
+    private static SplashScreen splash = null;
     protected static int m_nclick = 0;
 
     /** current user-interface application */
@@ -76,7 +77,7 @@ public class VNMRFrame extends JFrame implements AppInstaller {
 
         String persona = getPersona();
         if ( ! m_persona.equalsIgnoreCase("hideNoSplash")) {
-           SplashScreen splash = SplashScreen.getSplashScreen();
+           splash = SplashScreen.getSplashScreen();
            if (splash == null) {  // command line does not define splash
               ImageIcon background = Util.getImageIcon("Splash_VnmrJ.png");
               Font msgFont = new Font( "SansSerif", Font.PLAIN, 18);
@@ -273,6 +274,8 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             if (m_persona.equalsIgnoreCase("icon")) {
                   vnmrFrame.setState(Frame.ICONIFIED);
             }
+            if (splash != null)
+                splash.close();
             if (m_splashFrame != null)
                 m_splashFrame.dispose();
 
