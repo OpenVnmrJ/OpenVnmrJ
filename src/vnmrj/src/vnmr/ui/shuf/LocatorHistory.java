@@ -703,7 +703,8 @@ public class LocatorHistory {
         StatementHistory history = sshare.statementHistory();
 
         if(history == null) {
-            Messages.postError("Category " + objType +
+            if(DebugOutput.isSetFor("locatorHistory"))
+               Messages.postError("Category " + objType +
                            ", does not exist in locator_statements_xxx file");
             // Replace the previous type
             String type = getPrevActiveObjType();
