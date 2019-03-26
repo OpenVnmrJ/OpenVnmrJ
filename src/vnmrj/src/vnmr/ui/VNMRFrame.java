@@ -275,7 +275,13 @@ public class VNMRFrame extends JFrame implements AppInstaller {
                   vnmrFrame.setState(Frame.ICONIFIED);
             }
             if (splash != null)
-                splash.close();
+            {
+               try {
+                  splash.close();
+               }
+               catch (Exception e) {}
+               splash = null;
+            }
             if (m_splashFrame != null)
                 m_splashFrame.dispose();
 
