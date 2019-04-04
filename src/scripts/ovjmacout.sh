@@ -58,7 +58,7 @@ chmod 777 "${vjdir}/tmp" "$vjdir/acqqueue"
 
 # backup for later copying useful dirs in existing /vnmr
 preinstall=$resdir/preinstall
-printf "#!/bin/sh\n" > $preinstall
+printf "#!/bin/bash\n" > $preinstall
 printf "orig=\`readlink /vnmr\`\n" >> $preinstall
 printf "if [ -d \$orig/fidlib ]\n" >> $preinstall
 printf "then\n" >> $preinstall
@@ -77,7 +77,7 @@ chmod +x $preinstall
 
 # setup the OpenVnmrJ environment and re-install any directories backup up above
 postinstall=$resdir/postinstall
-printf "#!/bin/sh\n" > $postinstall
+printf "#!/bin/bash\n" > $postinstall
 printf "rm -rf /vnmr\n" >> $postinstall
 printf "ln -s /Applications/$ovjAppName/Contents/Resources/OpenVnmrJ /vnmr\n" >> $postinstall
 printf "username=\$(/usr/bin/stat -f%%Su /dev/console)\n" >> $postinstall
@@ -88,6 +88,7 @@ printf "cd /vnmr/adm/users/profiles/user;   sed s/USER/$%s/g < user_tmplt > $%s;
 printf "chown -h $%s /vnmr\n" username >> $postinstall
 printf "chown -R -L $%s /vnmr\n" username >> $postinstall
 printf "/vnmr/bin/makeuser $%s y\n" username >> $postinstall
+printf "su - $%s -c \"source /vnmr/user_templates/.vnmrenvsh; /vnmr/bin/Vnmrbg -mback -n1 -s config auto\"\n" username >> $postinstall
 printf "/vnmr/bin/dbsetup root /vnmr \n" >> $postinstall
 
 printf "if [ -f /tmp/fidlib.zip ]\n" >> $postinstall
