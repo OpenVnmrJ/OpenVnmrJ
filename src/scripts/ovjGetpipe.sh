@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (C) 2017  Dan Iverson
 #
@@ -45,11 +45,12 @@ options:
     -d|--download directory   Directory in which to download NMRPipe files
     -h|--help                 Display this help information
     -i|--install directory    Directory from which to install NMRPipe files
-    -l|--log file             File for log messages
-    -nv|--no-verbose)         Turn off verbose output
+    -l|--log file             File for log messages. If a relative path name is used
+                              the log file will be placed in /vnmr/nmrpipe
+    -nv|--no-verbose          Turn off verbose output
     -t|--test                 Perform nmmrPipe installation tests
-    -v|--verbose)             Use verbose output (default)
-    -vv|--debug)              Debug script
+    -v|--verbose              Use verbose output (default)
+    -vv|--debug               Debug script
 
 EOF
     exit 1
@@ -95,26 +96,26 @@ downloadMac() {
       curl -O https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ
    else
       $OVJ_VECHO "Downloading file 1 of 7"
-      echo "Downloading file 1 of 7 (install.com)" &>> ${OVJ_LOG}
-      curl -O https://www.ibbr.umd.edu/nmrpipe/install.com &>> ${OVJ_LOG}
+      echo "Downloading file 1 of 7 (install.com)" >> ${OVJ_LOG}
+      curl -O https://www.ibbr.umd.edu/nmrpipe/install.com 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 2 of 7"
-      echo "Downloading file 2 of 7 (binval.com)" &>> ${OVJ_LOG}
-      curl -O https://www.ibbr.umd.edu/nmrpipe/binval.com &>> ${OVJ_LOG}
+      echo "Downloading file 2 of 7 (binval.com)" >> ${OVJ_LOG}
+      curl -O https://www.ibbr.umd.edu/nmrpipe/binval.com 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 3 of 7"
-      echo "Downloading file 3 of 7 (NMRPipeX.tz)" &>> ${OVJ_LOG}
-      curl -O https://www.ibbr.umd.edu/nmrpipe/NMRPipeX.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 3 of 7 (NMRPipeX.tz)" >> ${OVJ_LOG}
+      curl -O https://www.ibbr.umd.edu/nmrpipe/NMRPipeX.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 4 of 7"
-      echo "Downloading file 4 of 7 (s.tz)" &>> ${OVJ_LOG}
-      curl -O https://www.ibbr.umd.edu/nmrpipe/s.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 4 of 7 (s.tz)" >> ${OVJ_LOG}
+      curl -O https://www.ibbr.umd.edu/nmrpipe/s.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 5 of 7"
-      echo "Downloading file 5 of 7 (dyn.tz)" &>> ${OVJ_LOG}
-      curl -O https://www.ibbr.umd.edu/nmrpipe/dyn.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 5 of 7 (dyn.tz)" >> ${OVJ_LOG}
+      curl -O https://www.ibbr.umd.edu/nmrpipe/dyn.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 6 of 7"
-      echo "Downloading file 6 of 7 (talos.tz)" &>> ${OVJ_LOG}
-      curl -O https://www.ibbr.umd.edu/nmrpipe/talos.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 6 of 7 (talos.tz)" >> ${OVJ_LOG}
+      curl -O https://www.ibbr.umd.edu/nmrpipe/talos.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 7 of 7"
-      echo "Downloading file 7 of 7 (plugin.smile.tz)" &>> ${OVJ_LOG}
-      curl -O https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 7 of 7 (plugin.smile.tz)" >> ${OVJ_LOG}
+      curl -O https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ 2>> ${OVJ_LOG}
    fi
 }
 
@@ -137,26 +138,26 @@ downloadLinux() {
       wget https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ
    else
       $OVJ_VECHO "Downloading file 1 of 7"
-      echo "Downloading file 1 of 7 (install.com)" &>> ${OVJ_LOG}
-      wget  -nv https://www.ibbr.umd.edu/nmrpipe/install.com &>> ${OVJ_LOG}
+      echo "Downloading file 1 of 7 (install.com)" >> ${OVJ_LOG}
+      wget  -nv https://www.ibbr.umd.edu/nmrpipe/install.com 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 2 of 7"
-      echo "Downloading file 2 of 7 (binval.com)" &>> ${OVJ_LOG}
-      wget  -nv https://www.ibbr.umd.edu/nmrpipe/binval.com &>> ${OVJ_LOG}
+      echo "Downloading file 2 of 7 (binval.com)" >> ${OVJ_LOG}
+      wget  -nv https://www.ibbr.umd.edu/nmrpipe/binval.com 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 3 of 7"
-      echo "Downloading file 3 of 7 (NMRPipeX.tz)" &>> ${OVJ_LOG}
-      wget  -nv https://www.ibbr.umd.edu/nmrpipe/NMRPipeX.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 3 of 7 (NMRPipeX.tz)" >> ${OVJ_LOG}
+      wget  -nv https://www.ibbr.umd.edu/nmrpipe/NMRPipeX.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 4 of 7"
-      echo "Downloading file 4 of 7 (s.tz)" &>> ${OVJ_LOG}
-      wget  -nv https://www.ibbr.umd.edu/nmrpipe/s.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 4 of 7 (s.tz)" >> ${OVJ_LOG}
+      wget  -nv https://www.ibbr.umd.edu/nmrpipe/s.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 5 of 7"
-      echo "Downloading file 5 of 7 (dyn.tz)" &>> ${OVJ_LOG}
-      wget  -nv https://www.ibbr.umd.edu/nmrpipe/dyn.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 5 of 7 (dyn.tz)" >> ${OVJ_LOG}
+      wget  -nv https://www.ibbr.umd.edu/nmrpipe/dyn.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 6 of 7"
-      echo "Downloading file 6 of 7 (talos.tz)" &>> ${OVJ_LOG}
-      wget  -nv https://www.ibbr.umd.edu/nmrpipe/talos.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 6 of 7 (talos.tz)" >> ${OVJ_LOG}
+      wget  -nv https://www.ibbr.umd.edu/nmrpipe/talos.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 7 of 7"
-      echo "Downloading file 7 of 7 (plugin.smile.tz)" &>> ${OVJ_LOG}
-      wget  -nv https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ &>> ${OVJ_LOG}
+      echo "Downloading file 7 of 7 (plugin.smile.tz)" >> ${OVJ_LOG}
+      wget  -nv https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ 2>> ${OVJ_LOG}
    fi
 }
 
@@ -173,6 +174,13 @@ downloadFiles() {
          
          if [ ${pingRecv} -eq 1 ]; then
             $OVJ_VECHO "Test for internet access to $URL passed"
+            if [ "x${OVJ_LOG}" != "x" ] ; then
+               if [ ${OVJ_LOG:0:1} = '/' ]; then
+                  $OVJ_VECHO "Log file is ${OVJ_LOG}"
+               else
+                  $OVJ_VECHO "Log file is /vnmr/nmrpipe/${OVJ_LOG}"
+               fi
+            fi
             if [ x$(uname -s) = "xDarwin" ]; then
                downloadMac
             elif [ x$(uname -s) = "xLinux" ]; then
@@ -252,13 +260,13 @@ if [ ${OVJ_PIPETEST} -eq 1 ]; then
    if [ "x${OVJ_LOG}" = "x" ] ; then
       ./install.com +dest /vnmr/nmrpipe
    else
-      ./install.com +dest /vnmr/nmrpipe &>> ${OVJ_LOG}
+      ./install.com +dest /vnmr/nmrpipe >> ${OVJ_LOG}
    fi
 else
    if [ "x${OVJ_LOG}" = "x" ] ; then
       ./install.com +dest /vnmr/nmrpipe +nopost
    else
-      ./install.com +dest /vnmr/nmrpipe +nopost &>> ${OVJ_LOG}
+      ./install.com +dest /vnmr/nmrpipe +nopost >> ${OVJ_LOG}
    fi
 fi
 cleanup
