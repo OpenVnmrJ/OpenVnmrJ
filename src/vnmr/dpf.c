@@ -560,7 +560,7 @@ int dpf(int argc, char *argv[], int retc, char *retv[])
       else if (strcmp(argv[i],"axisp") == 0)
       {
          axisp = TRUE;
-         P_getreal(PROCESSED,"sfrq",&axisp_freq,1);
+         P_getreal(CURRENT,"reffrq",&axisp_freq,1);
       }
       else if (strcmp(argv[i],"leader") == 0)
       {
