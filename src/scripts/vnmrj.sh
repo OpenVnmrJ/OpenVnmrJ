@@ -47,7 +47,7 @@ for arg in $*; do
     arg02=$(echo $arg | cut -c1-2)
     if [ "x$debug_on" = "xyy" ]; then
         debug_on="y"
-        debugargs=$arg
+        debugargs="-Ddebug=$arg"
     elif [ "x$cmd_on" = "xy" ]; then
         cmd=$arg
         cmd_on="n"
@@ -67,7 +67,7 @@ for arg in $*; do
 done
 if [ "x$debug_on" = "xyy" ]; then
     debug_on="y"
-    debugargs="traceXML"
+    debugargs="-Ddebug=traceXML"
 fi
 if [ "x$splash" = "xy" ]; then
     splash=""
@@ -207,7 +207,7 @@ then
         -Dbatchupdates=no -Dpersona=$itype -Dsavepanels=10 -DSQAllowNesting=false \
         -Djava.library.path="/vnmr/lib" \
         -Djogamp.gluegen.UseTempJarCache="false" \
-        -Dsquish=$squish -DshowMem=$showmem -Ddebug="savedatasetup,$debugargs" -Ddbnet_server=$dbnet_server \
+        -Dsquish=$squish -DshowMem=$showmem $debugargs -Ddbnet_server=$dbnet_server \
         vnmr.ui.VNMRFrame
 
 else
@@ -221,7 +221,7 @@ else
           -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" \
           -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dvjerrfile=custom \
           -Dbatchupdates=no -Dpersona=$itype -Dsavepanels=10 -DSQAllowNesting=false \
-          -Dsquish=$squish -Ddbnet_server=$dbnet_server -Ddebug="savedatasetup" \
+          -Dsquish=$squish -Ddbnet_server=$dbnet_server \
           -Djava.library.path="/vnmr/lib" \
           -Djogamp.gluegen.UseTempJarCache="false" \
            vnmr.ui.VNMRFrame >& /dev/null &

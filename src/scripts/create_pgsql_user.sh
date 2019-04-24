@@ -1,5 +1,4 @@
-#!/bin/sh
-# 
+#!/usr/bin/env bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -33,7 +32,7 @@ then
     $vnmrsystem/pgsql/bin/createuser -d -a -q $1
 else
     # New one, use no path and appropriate args
-    createuser -d -S -R $1
+    createuser -d -S -R $1 2> /dev/null
 fi
 
 echo "DONE"

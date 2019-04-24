@@ -13,8 +13,10 @@
 #      be invoked by the OVJ system admin account, which is typically vnmr1.
 #      The new user name is passed as an argument, as in
 #      /vnmr/bin/ovjUser <newUserName>
-#      A second optional argument specifies the type of user. The is generally
+#      A second optional argument specifies the type of user. This is generally
 #      either Spectroscopy (the default) or Imaging.
+#      A third optional argument specifies the profile of the user. This is generally
+#      AllLiquids, AllImaging, or AllSolids
 #
 # set -x
 
@@ -28,22 +30,39 @@ itype=Spectroscopy
 if [ $# -gt 1 ] ; then
    itype=$2
 fi
+if [ $# -gt 3 ] ; then
+   profile=$3
+else
+   if [ $itype = "Spectroscopy" ]; then
+      profile="AllLiquids"
+   else
+      profile="AllImaging"
+   fi
+fi
 if [ x$vnmrsystem = "x" ]
 then
    vnmrsystem=/vnmr
 fi
+vnmr_adm=$("$vnmrsystem"/bin/fileowner "$vnmrsystem"/vnmrrev)
 
 dir=$vnmrsystem/adm/users/profiles/system
 if [ ! -d $dir ]; then
    mkdir $dir
    chmod 755 $dir
 fi
+if [ $vnmr_adm = $name ]; then
+   label="System Administrator"
+else
+   label=$name
+fi
 file=$dir/$name
 if [ ! -f $file ]; then
-  cat <<- EOF | sed -e s/USER/$name/ | sed -e s/ITYPE/$itype/ > $file
+  cat <<- EOF | sed -e s/USER/$name/ | sed -e s/ITYPE/$itype/ | \
+                sed -e s/LABEL/"${label}"/ > $file
 	update	Yes
+	accname	USER
 	home	/home/USER
-	name	USER
+	name	LABEL
 	access	all
 	itype	ITYPE
 	owned	/home/USER
@@ -57,41 +76,44 @@ if [ ! -d $dir ]; then
    chmod 755 $dir
 fi
 file=$dir/$name
+userdir=/home/$name/vnmrsys
 if [ ! -f $file ]; then
-  cat <<- EOF | sed -e s/USER/$name/g > $file
-	appdir	Spectroscopy
-	accname	USER
-	sysdir	/vnmr
+  cat <<- EOF | sed -e s?USERDIR?${userdir}?g | sed -e s/ITYPE/$itype/ | \
+                sed -e s?SYSDIR?${vnmrsystem}? > $file
+	appdir	ITYPE
+	sysdir	SYSDIR
 	operators	
-	userdir	/home/USER/vnmrsys
-	datadir	/home/USER/vnmrsys/data /home/USER/vnmrsys/parlib /home/USER/vnmrsys/shims
+	userdir	USERDIR
+	datadir	USERDIR/data USERDIR/parlib USERDIR/shims
 	EOF
 fi
 chmod 644 $file
 
 file=$vnmrsystem/adm/users/userlist
 if [ ! -f $file ]; then
-   echo vnmr1 > $file
+   echo $vnmr_adm > $file
 fi
 grep -w $name $file >& /dev/null
 if [ $? -ne 0 ]
 then
    mv $file $file.bk
-   cat $file.bk | sed s/vnmr1/vnmr1\ $name/ > $file
+   echo $name >> $file.bk
+   cat $file.bk | /usr/bin/tr '\n' ' ' > $file
+   echo >> $file
    rm $file.bk
 fi
 chmod 644 $file
 
 file=$vnmrsystem/adm/users/group
 if [ ! -f $file ]; then
-   echo "vnmr:VNMR group:vnmr1" > $file
-   echo "agilent and me:Myself and system:me, agilent" >> $file
+   echo "vnmr:VNMR group:$vnmr_adm" > $file
+   echo "agilent and me: Myself and system:me, agilent" >> $file
 fi
 grep -w $name $file >& /dev/null
 if [ $? -ne 0 ]
 then
    mv $file $file.bk
-   cat $file.bk | sed s/vnmr1/vnmr1,$name/ > $file
+   cat $file.bk | sed -e "s/VNMR group:/VNMR group: $name, /g" > $file
    rm $file.bk
 fi
 chmod 644 $file
@@ -100,7 +122,7 @@ file=$vnmrsystem/adm/users/operators/operatorlist
 grep -w $name $file >& /dev/null
 if [ $? -ne 0 ]
 then
-   echo "$name  $name;null;30;$lname;AllLiquids"  >> $file
+   echo "$name  $name;null;30;$lname;$profile"  >> $file
 fi
 chmod 644 $file
 

@@ -19,19 +19,11 @@ if ( $id == "root" ) then
    exit
 endif
 
-set ostype=`uname -s`
-
 # USER is not correct sometimes, so fix it
 set USER = $id
 
 # HOME, vnmruser and other env variables are wrong when executed
 # from exec_asuser in Windows, so we need to fix them here.
-
-if ( x$ostype == "xInterix" ) then
-    cd ~$USER
-    set HOME = "`pwd`"
-    source .vnmrenv
-endif
 
 if ( ! "$?vnmrsystem" ) then
     set vnmrsystem = /vnmr
@@ -86,20 +78,11 @@ set shtooloption="-c"
 set sfudir=""
 set sfudir_interix=""
 set javacmd="$vnmrsystem/jre/bin/java"
+if ( ! -f $javacmd ) then
+   set javacmd="java"
+endif
 set vjclasspath="$vnmrsystem/java/managedb.jar"
 set sysdir="$vnmrsystem"
-if ( x$ostype == "xInterix" ) then
-   set vjclasspath=`/bin/unixpath2win "$vjclasspath"`
-   set sfudir="$SFUDIR"
-   set sfudir_interix="$SFUDIR_INTERIX"
-   set shtoolcmd="$SFUDIR\\common\\ksh.bat"
-   set shtooloption="-lc"
-   set javacmd="$vnmrsystem/jre/bin/java.exe" 
-   if ( ! -f "$javacmd" ) then
-    set javacmd="java.exe"
-   endif
-   set sysdir=`/bin/unixpath2win "$vnmrsystem"`
-endif
 
 $javacmd -mx256m -classpath $vjclasspath -Dsysdir="$sysdir" -Duserdir="$tmpdir" -Ddbhost=$dbhost -Ddbport=$dbport -Ddbnet_server=$dbnet_server  -Djava.compiler=sunwjit  -Dsfudirwindows="$sfudir" -Dsfudirinterix="$sfudir_interix" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Ddebug="$debugargs" -Duser.name=$id vnmr.ui.shuf.FillDBManager $argv[*]
 
