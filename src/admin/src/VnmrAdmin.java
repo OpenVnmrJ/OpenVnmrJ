@@ -50,7 +50,7 @@ public class VnmrAdmin extends JFrame {
     //                     "/export/home/chin/vadmin/group",
     //                     "/export/home/chin/vadmin/access"};
 
-    String         shToolCmd = "/bin/csh";
+    String shToolCmd  = "/bin/bash";
     String vnmrSystem = "/vnmr";
     String vnmrAdmin = "vnmr1";
     String dbUser="";

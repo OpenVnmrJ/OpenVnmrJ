@@ -150,6 +150,7 @@ public class LoadNmr extends JFrame {
         makeBtmPane();
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setBackground(Color.gray);
+        tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 
 	if (dotnvExists==1) {
             String origVersion = checkPreviousVnmrVersion();
@@ -473,8 +474,8 @@ public class LoadNmr extends JFrame {
        rtPane[index] = new JPanel();
        rtPane[index].setLayout(new tabPanLayout());
        rtPane[index].add(panel1);
-       rtPane[index].add(new JSeparator());
-       rtPane[index].add(panel2);
+//       rtPane[index].add(new JSeparator());
+//       rtPane[index].add(panel2);
 
        return rtPane[index];
     }

@@ -16,10 +16,18 @@ then
    vnmrsystem=/vnmr
 fi
 
+modsArg=""
+vers=$(java -fullversion 2>&1 | awk 'BEGIN {FS="\""} {print $2}' | awk 'BEGIN {FS="."} {print $1}')
+if [[ $vers > 8 ]]
+then
+  modsArg="--add-modules java.xml.bind"
+fi
+
+
 if [[ $# -eq 1 ]] ; then
-   ovjPasswd=$(java -jar ${vnmrsystem}/java/passwd.jar $1)
+   ovjPasswd=$(java $modsArg -jar ${vnmrsystem}/java/passwd.jar $1)
 else
-   ovjPasswd=$(java -jar ${vnmrsystem}/java/passwd.jar)
+   ovjPasswd=$(java $modsArg -jar ${vnmrsystem}/java/passwd.jar)
 fi
 
 echo ${ovjPasswd}

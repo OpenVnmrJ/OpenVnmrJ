@@ -1,5 +1,4 @@
-: /bin/sh
-# '@(#)makeuser.sh 1991-2009 '
+#/usr/bin/env bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -552,12 +551,12 @@ else  #current user is root
                 if [ "x$name_add" = "xvnmr1" ] ; then
                     sudo /usr/sbin/useradd --create-home --home-dir "$dir_name/$name_add" \
                          --shell /bin/bash --uid $num --gid "$nmr_group" \
-                         --groups admin,cdrom,floppy,audio,video,plugdev,fuse,lpadmin,adm \
+                         --groups admin,cdrom,floppy,audio,video,plugdev,lpadmin,adm \
                          --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' "$name_add"
                 else
                     sudo /usr/sbin/useradd --create-home --home-dir "$dir_name/$name_add" \
                          --shell /bin/bash --uid $num --gid "$nmr_group" \
-                         --groups cdrom,floppy,audio,video,plugdev,fuse,lpadmin \
+                         --groups cdrom,floppy,audio,video,plugdev,lpadmin \
                          --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' "$name_add"
                 fi
                 sudo chmod 755 "$dir_name/$name_add"
@@ -710,9 +709,7 @@ else  #current user is root
 	fi
 	if [ x$ostype != "xInterix" ] 
 	then 
-	    su - "$name_add" -c "/vnmr/bin/makeuser '$1' '$cur_homedir' '$nmr_group' $user_update '$vnmrsystem'" << +++
-
-+++
+	    su - "$name_add" -c "/vnmr/bin/makeuser '$1' '$cur_homedir' '$nmr_group' $user_update '$vnmrsystem'" 2> /dev/null
 	    exit
 	fi
     fi

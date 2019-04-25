@@ -78,7 +78,7 @@ public class ProgressMonitor extends JFrame {
         userExist = userexist;
 	
 	if (shToolCmd == null)
-	    shToolCmd = "/bin/csh";
+	    shToolCmd = "/bin/bash";
 	if (shToolOption == null)
 	    shToolOption = "-c";
 
