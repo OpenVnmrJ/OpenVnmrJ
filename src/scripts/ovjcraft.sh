@@ -31,6 +31,7 @@ if [ "x$Arg" = "xhelp" ]; then
         echo "    submit - displays submit2craft popup"
         echo "    admin  - displays craft queue manager"
         echo "    qest   - displays craftQnmr options"
+	echo "    pref   - displays craftPref options"
         echo "    exit   - exits craft application"
     fi
 
@@ -45,5 +46,7 @@ else
         Vnmrbg -mback -n- -s sendMessage "craftQueueManage('window') cQMpar2='bg'" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
     elif [ "x$Arg" = "xqest" ]; then
         Vnmrbg -mback -n- -s sendMessage "craftQnmr('window')" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
+    elif [ "x$Arg" = "xpref" ]; then
+        Vnmrbg -mback -n- -s sendMessage "craftPref('window') cpparbg='bg'" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
     fi
 fi
