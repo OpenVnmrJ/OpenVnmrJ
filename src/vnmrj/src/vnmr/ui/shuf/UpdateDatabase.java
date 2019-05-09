@@ -20,7 +20,7 @@ import java.awt.image.*;
 import java.awt.event.*;
 import java.lang.reflect.*;
 import java.awt.*;
-import sun.awt.SunToolkit;
+// import sun.awt.SunToolkit;
 import java.text.*;
 
 
@@ -264,6 +264,7 @@ public class UpdateDatabase extends Thread {
      *  other processes like vnmrbg running and needing time.
      </pre> **************************************************/
 
+/*
     public synchronized void waitForIdle() {
 
         // ** Perhaps move this to a higher level so it is not called so much
@@ -292,5 +293,6 @@ public class UpdateDatabase extends Thread {
                                                 "the event dispatcher thread");
         }
     }
+ */
 
 }

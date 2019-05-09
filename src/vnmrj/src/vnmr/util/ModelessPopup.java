@@ -26,11 +26,12 @@ public class ModelessPopup extends ModelessDialog
     protected AppIF appIf;
     protected SessionShare sshare;
 //
-    protected JPanel            panel=null;
+    protected static JPanel            panel=null;
     private JScrollPane       scrollPane=null;
 
     protected boolean m_bRebuild = false;
     protected boolean m_bNewXml = false;
+    protected static boolean visible = false;
     protected int m_nWidth;
     private String m_strXmlFile;
     protected String m_closeCmd="";
@@ -49,6 +50,12 @@ public class ModelessPopup extends ModelessDialog
                          String helpFile, String closeCmd) {
         super(title);
         buildUi(ss,vif,aif,xmlfile,width,height,bRebuild, helpFile,closeCmd);
+    }
+
+    public static JPanel getContainer() {
+       if ( (panel == null) || (visible == false ) )
+          return null;
+       return panel;
     }
 
     private void buildUi(SessionShare ss, ButtonIF vif, AppIF aif,
@@ -117,6 +124,7 @@ public class ModelessPopup extends ModelessDialog
     public void setVisible(boolean bVisible)
     {
         boolean bUpdate = false;
+        visible = bVisible;
 
         if (!isVisible() && bVisible)
             bUpdate = true;

@@ -3772,6 +3772,7 @@ public class ExpPanel extends JPanel
     private static VJOpenPopup openPanel=null;
     private static VJSavePopup savePanel=null;
     private static VJFileBrowser browserPanel=null;
+    private static JDialog fpDialog = null;
     private static JFileChooser fpPanel = null;
     
     // static method to reset browsers and profile panel to null.  This
@@ -3827,11 +3828,15 @@ public class ExpPanel extends JPanel
     private void openFpBrowser(String cmd) {
         File dir;
 
-        if (fpPanel == null) {
+        if (fpDialog == null) {
+             fpDialog = new JDialog();
              fpPanel = new JFileChooser();
+             fpDialog.add(fpPanel);
              fpPanel.setApproveButtonText("OK");
              fpPanel.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
              fpPanel.setMultiSelectionEnabled(true);
+             fpDialog.setAlwaysOnTop(true);
+             fpDialog.toFront();
              String f = (String)sshare.getProperty("fpDir");
              if (f == null) {
                  f = FileUtil.openPath("USER"+File.separator+"fingerprintlib");
@@ -3845,7 +3850,7 @@ public class ExpPanel extends JPanel
              }
              SwingUtilities.updateComponentTreeUI(fpPanel);
         }
-        int ret = fpPanel.showOpenDialog(null);
+        int ret = fpPanel.showOpenDialog(ModelessPopup.getContainer() );
         if (ret != JFileChooser.APPROVE_OPTION)
              return;
         File[] files = fpPanel.getSelectedFiles();
