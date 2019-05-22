@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-#
 # Copyright (C) 2015  University of Oregon
 # 
 # You may distribute under the terms of either the GNU General Public
@@ -11,6 +10,13 @@
 
 # Default Declarations
 #
+
+SCRIPT="$(basename "$0")"
+onerror() {
+    echo "$(tput setaf 1)$SCRIPT: Error on line ${BASH_LINENO[0]}, exiting.$(tput sgr0)"
+    exit 1
+}
+trap onerror ERR
 
 if [ x$workspacedir = "x" ]
 then
@@ -86,7 +92,7 @@ setperms()
          while [ $spaces -gt 0 ]
          do
            pp='.'$pp
-           spaces=`expr $spaces - 1`
+           spaces=$(( spaces - 1 ))
          done
       fi
    
@@ -100,10 +106,10 @@ setperms()
          chmod $dirperm $1/$setpermfile
          if [ $ShowPermResults -gt 0 ]
          then
-            indent=`expr $indent + 4`
+            indent=$(( indent + 4 ))
          fi
          setperms $1/$setpermfile $dirperm $fileperm $execperm $indent
-         indent=`expr $indent - 4`
+         indent=$(( indent - 4 ))
       elif [ -f $1/$setpermfile ]
       then
          if [ -x $1/$setpermfile ]
@@ -127,35 +133,14 @@ setperms()
 }
 
 # routine to force "Tarring xyz    for:" to same length
-tarring()
-{
-  #echo $1
-  len=`expr length "$1"`
-  #echo $len
-  echo " " | tee -a $log_file
-  echo -n " " | tee -a $log_file
-  echo -n " " | tee -a $log_file
-  echo -n " " | tee -a $log_file
-  str=`echo "Tarring $1"`
-  ns=`expr 22 - $len`
-  #echo spaces: $ns
-  echo -n $str | tee -a $log_file
-  while [ $ns -gt 0 ];  do
-    #str=`expr "$str"" "`
-    echo -n " " | tee -a $log_file
-    ns=`expr $ns - 1`
-  done
-  #echo \'$str\'
-  echo -n "for:" | tee -a $log_file
-
-}
+tarring () { printf " \n   Tarring %-21s for:" "$1" | tee -a $log_file ; }
 
 #
 #  tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles${dir}.tar" "*"
 #
 tarIt() {
    # echo "tar $1 -cjf $2 $3"
-   tar $1 -cjf $2 $3
+   tar "$1" -cjf "$2" $3
 }
 
 #---------------------------------------------------------------------------
@@ -378,9 +363,6 @@ console="vnmrs"
    echo ""
    useDasho="y"
    notifySW="n"
-
-distro=`lsb_release -is`    # RedHatEnterpriseWS; Ubuntu
-
 
 # create log directory if not present
 if [ ! -d $DefaultLogDir ]

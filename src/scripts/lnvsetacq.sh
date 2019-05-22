@@ -485,19 +485,7 @@ getEthernetInfoIfconf() {
 # rmQuotes removes the surrounding double quotes
 # e.g. "172.16.0.1" -> 172.16.0.1
 rmQuotes() {
-         noquotes="$1"
-         idx=`expr index "\"" "$1"`
-         if [ $idx = "1" ] ; then
-            # remove 1st quote
-            noquotes=`expr substr "$1" 2 100`
-   
-            # calc lenght of string
-            length=`expr length "$noquotes"`
-            length=`expr $length - 1`
-            # remove last character
-            noquotes=`expr substr "$noquotes" 1 $length`
-         fi
-         # echo "IPSTR: $1, noquotes: $noquotes"
+    noquotes=$(echo "$1" | tr -d '"')
 }
 
 getEthernetInfo() {
