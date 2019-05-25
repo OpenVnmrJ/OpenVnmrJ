@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # script to modify the .profile and .bashrc to source the
 # .vnmrenvbash file

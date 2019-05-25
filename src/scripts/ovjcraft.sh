@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Looks for sendMessage macro in systemdir or userdir
 if [ x$vnmrsystem = "x" ]
