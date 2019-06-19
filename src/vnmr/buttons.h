@@ -39,6 +39,7 @@ extern void Buttons_off();
 extern void Wturnoff_buttons();
 extern int getMouseButtons(int argc, char *argv[], int retc, char *retv[]);
 extern int getMask(int bid, int but, int click, int move, int modifier);
+extern int mouseMask();
 
 enum {                      // Mouse event modifiers
 	b1 = 0x100,

@@ -68,10 +68,19 @@ int setButtonState(int argc, char *argv[], int retc, char *retv[]) {
    RETURN;
 }
 
+static int mouseMaskVal;
+
+int mouseMask()
+{
+   return(mouseMaskVal);
+}
+
 void newMouseHandler(int x, int y, int but, int mask, int dummy,
 		int(*mouse_move)(), int(*mouse_but)(), int(*mouse_return)()) {
 	double d;
-	int mode, button3, button2;
+	int mode;
+        static int button2 = -1;
+        static int button3 = -1;
 	int release = 0;
 	int mouseProcessed = 0;
 	static char gmode[256]="";
@@ -80,16 +89,23 @@ void newMouseHandler(int x, int y, int but, int mask, int dummy,
 	if (strlen(gmode)>2 && (strncmp(gmode, "df", 2) == 0 || strncmp(gmode, "ds", 2) == 0))
 		stackplot=1;
 
-	if (P_getreal(GLOBAL, "useButton3", &d, 1) != 0)
+        if (button3 == -1)
+        {
+	   if (P_getreal(GLOBAL, "useButton3", &d, 1) != 0)
 		button3 = 1;
-	else
+	   else
 		button3 = (int) d;
+        }
 
-	if (P_getreal(GLOBAL, "useButton2", &d, 1) != 0)
+        if (button2 == -1)
+        {
+	   if (P_getreal(GLOBAL, "useButton2", &d, 1) != 0)
 		button2 = 1;
-	else
+	   else
 		button2 = (int) d;
+        }
 
+        mouseMaskVal = mask;
 	mode = getButtonMode();
 	/*
 	 note: it is important that the following three "if statements" are in order
@@ -226,6 +242,8 @@ void newMouseHandler(int x, int y, int but, int mask, int dummy,
 		case b1 + ctrl + drag:
 		case b2 + drag:
 		case b3 + drag:
+		case b3 + shift + drag:
+		case b3 + ctrl + drag:
 			if (mouse_move) {
 				(*mouse_move)(x, y, but);
 				update_overlay_image(0, 0);
@@ -240,7 +258,11 @@ void newMouseHandler(int x, int y, int but, int mask, int dummy,
 		case b2 + down:
 		case b2 + up:
 		case b3 + down:
+		case b3 + shift + down:
+		case b3 + ctrl + down:
 		case b3 + up:
+		case b3 + shift + up:
+		case b3 + ctrl + up:
 			//m_noCrosshair();
 			if (mouse_but) {
 				(*mouse_but)(but, release, x, y);
