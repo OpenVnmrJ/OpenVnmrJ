@@ -17,12 +17,11 @@ ds:
   will cause the spectrum to be updated.
 
   Two additional parameters control the behavior of the "ds" command.
-  The parameter "phasing" (in the "global" parameter set) controls the
-  percentage of the spectrum that is updated during interactive
-  phasing.  This parameter can be set in the range of 10 to 100.  A
-  value of 100 will cause the entire spectrum to be updated.  A value
-  of 20 will cause the area between the two horizontal cursors to be
-  updated.  The parameter "lvltlt" (in the "current" parameter set)
+  The parameter "phasef" (in the "global" parameter set) controls the
+  sensitivity of phasing when using the right mouse button. 
+  This parameter can be set in the range of 8 to 100. It is a divisor
+  for the change that occurs when using the left mouse button.
+  The parameter "lvltlt" (in the "current" parameter set)
   controls the sensitivity of the interactive lvl / tlt adjustment.
   The parameter can be set to any positive real number.  It is basically
   a multiplier for the sensitivity.  The default value is 1.0.  Larger
@@ -88,8 +87,7 @@ select:
   When VNMR is first booted up, "select" is in 1D mode.  "select"
   enters into 2D mode if any of the key words 'f1f3', 'f2f3', 'f1f2',
   or 'proj' are present in the argument list.  The "ds" and "jexp"
-  commands reset "select" back to the 1D mode.
-
+  commands reset "select" back to the 1D mode.  
 
   ds can take several options :
 
@@ -98,6 +96,8 @@ select:
 	expand	- toggle between expanded and full view of spectrum.
 	spwp	- interactively adjust start and width of spectrum display.
 	phase	- enter interactive phasing mode.
+	newphase- enter alternate interactive phasing mode.
+        vsAdj   - adjust the vertical scale (vs) while in phasing mode.
 	thresh	- interactively adjust threshold.
 	z	- interactively set integral resets.
 	dscale	- toggle scale below spectrum on and off.
@@ -106,6 +106,24 @@ select:
 	noclear	- start or restart the ds display without clearing the graphics screen.
 	exit   	- exit the ds display, leaving a non-interactive dss display
 	again   - restart the ds display
+
+  When the 'phase' argument is given, the initial use of the left mouse will adjust
+  the zero-order phase (rp). It also sets two cursors around a pivot point. When the left
+  mouse is clicked outside of the two cursors, the first-order phase (lp) is adjusted.
+  The rp phase is also adjusted so that the phase at the pivot point remains constant.
+  Whenever the mouse is clicked outside of the two cursors, a new pivot point is
+  selected.  To return to adjusting rp, the phase menu button must be clicked again.
+
+  The 'newphase' option selects an alternative phasing scheme. The left mouse always
+  adjusts rp and selects a pivot point. The shift-left mouse adjusts lp and uses the
+  current pivot point.  The ctrl-left mouse always selects a new pivot point and
+  adjusts lp. A single cursor will be displayed, indicting the position of the
+  pivot point.
+
+  When ds is in phase mode, either 'phase' or 'newphase', the vsAdj option will adjust
+  the vertical scale (vs) without exiting the phase mode. The new value for vs must
+  be passed as an argument following the 'vsAdj' option, as in
+     ds('vsAdj',vs*1.2)
 
   The ds command will return to a calling macro whether line displays (dpf) or integral
   displays (dpir) are active. ds('dpf'):$e will set $e equal to 1 or 0 depending upon

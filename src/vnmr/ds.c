@@ -183,6 +183,7 @@ static int     threshflag;
 static int     threshY;
 static int     resetflag;
 static int     phaseflag;
+static int     newphaseflag = FALSE;
 static int     spwpflag;
 static int     lvltltflag;
 static int     alt_menu;
@@ -726,7 +727,7 @@ static void newspec(int inset, int fp, int np, int dfp, int dnp)
      show_plotterbox();
      drawPlotBox();
      ResetLabels();
-     displayspec(dfpnt,dnpnt,0,&next,&spec1,&erase1,vmax,vmin,INT_COLOR);
+     displayspec(dfpnt,dnpnt,0,&next,&spec1,&erase1,vmax,vmin,SPEC_COLOR);
      update_xcursor(0,res);
      update_xcursor(1,res2);
      update_ycursor(1,threshY);
@@ -735,7 +736,7 @@ static void newspec(int inset, int fp, int np, int dfp, int dnp)
        calc_ybars(spectrum+fp,1,*cur_vs * *cur_scl,dfp,dnp,np,
           dfpnt2 + (int)(dispcalib * *cur_vp),next);
        erase1 = 0;
-       displayspec(dfp,dnp,0,&spec1,&spec1,&erase1,0,0,INT_COLOR);
+       displayspec(dfp,dnp,0,&spec1,&spec1,&erase1,0,0,SPEC_COLOR);
        displayspec(dfp,dnp,0,&next,&spec2,&erase2,vmax,vmin,SPEC_COLOR);
      }
      if (dscale_on())
@@ -879,6 +880,18 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
   double delt,fine;
   extern float vs_mult();
 
+  if (butnum == 5)
+  {
+    if (phase_dnp)
+    {
+      y = oldy_cursor[0];
+      newspec(TRUE,phase_fp,phase_np,phase_dfp,phase_dnp);
+      update_ycursor(0,y);
+    }
+    else
+      newspec(FALSE,phase_fp,phase_np,phase_dfp,phase_dnp);
+    return(COMPLETE);
+  }
   if (get_dis_setup() != 1)
     select_init(
         0,
@@ -933,7 +946,37 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
     {
       int newyval = 0;
 
-      if (phase_dnp == 0)  /* this is true on the first mouse button only */
+      if (newphaseflag)
+      {
+         int mask = mouseMask();
+         if ((mask & ctrl) || (mask & shift))
+         {
+            dsstatus("1st PH");
+            if (mask & ctrl)
+            {
+               phase_disp(x,&phase_fp,&phase_np,&phase_dfp,&phase_dnp);
+               phase_cr = sp + wp - (double) (x - dfpnt) * wp / (double) dnpnt;
+               update_xcursor(0,x);
+            }
+            else if (phase_dnp == 0)
+            {
+               phase_disp(x,&phase_fp,&phase_np,&phase_dfp,&phase_dnp);
+               phase_cr = sp + wp - (double) (x - dfpnt) * wp / (double) dnpnt;
+               update_xcursor(0,x);
+            }
+            do_lp = x;
+            newyval = 1;
+         }
+         else
+         {
+             dsstatus("0th PH");
+             update_xcursor(0,x);
+             do_lp = 0;
+             phase_cr = sp + wp - (double) (x - dfpnt) * wp / (double) dnpnt;
+             newyval = 1;
+         }
+      }
+      else if (phase_dnp == 0)  /* this is true on the first mouse button only */
       {
         dsstatus("0th PH");
         phase_cursors(x);
@@ -953,7 +996,8 @@ static int m_newphase(int butnum, int x, int y, int moveflag)
       }
       if (newyval)
       {
-        phase_disp(x,&phase_fp,&phase_np,&phase_dfp,&phase_dnp);
+        if (do_lp != x)
+           phase_disp(x,&phase_fp,&phase_np,&phase_dfp,&phase_dnp);
         set_cursors(0,1,&y,
                  oldy_cursor[0],oldy_cursor[1],&dum,dfpnt2,mnumypnts - dfpnt2);
         newspec(TRUE,phase_fp,phase_np,phase_dfp,phase_dnp);
@@ -1082,6 +1126,7 @@ static void b_phase()
 *********************************************/
 
    ds_mode = -1;
+/*
    if (P_getreal(GLOBAL, "phasing", &value, 1))
    {
       phaseflag = 20;
@@ -1098,6 +1143,8 @@ static void b_phase()
          phaseflag = 100;
       }
    }
+ */
+   phaseflag = 100;
    if (P_getreal(GLOBAL, "phasef", &value, 1))
    {
       phasefine = 8.0;
@@ -2849,6 +2896,17 @@ int ds(int argc, char *argv[], int retc, char *retv[])
       }
       return(COMPLETE);
   }
+  if ((argc == 3) && (strcmp(argv[1],"vsAdj") == 0) )
+  {
+     if (phaseflag)
+     {
+      *cur_vs = atof(argv[2]);
+      MAXMIN(*cur_vs,1.0e9,1.0e-6);
+      P_setreal(CURRENT,"vs",*cur_vs,0);
+      m_newphase(5,0,0,0);
+      return(COMPLETE);
+     }
+  }
 
 /*
 int i;
@@ -3010,11 +3068,12 @@ Winfoprintf("##ds %d %d %s",argc,i,argv[i]);
         ABORT;
       }
     }
-    else if (strcmp(argv[1],"phase") == 0)
+    else if (strstr(argv[1],"phase"))
     {
       if ((WgraphicsdisplayValid(argv[0]) || WgraphicsdisplayValid("addi"))
 		 && ( ! start_from_ft))
       {
+        newphaseflag = (strcmp(argv[1],"newphase") == 0);
    	setButtonMode(PHASE_MODE);
         b_phase();
         grf_batch(0);
@@ -3317,6 +3376,7 @@ Winfoprintf("##ds %d %d %s",argc,i,argv[i]);
        ))
          return(ERROR);
     ds_mode = (ds_mode == BOX_MODE) ? CURSOR_MODE : -1;
+    setButtonMode(SELECT_MODE); 
     redisplay_flag = 1;
 
   }
