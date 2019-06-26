@@ -57,6 +57,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
     private String statusParam = null;
     private String statusEnable = null;
     private String statusValue = null;
+    private String justifyValue = null;
     private boolean isEditing = false;
     private boolean inEditMode = false;
     private boolean isFocused = false;
@@ -365,6 +366,8 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         case ENABLE:
 	    if(bEnable) return "yes";
 	    else return "no";
+        case JUSTIFY:
+            return justifyValue;
         case HELPLINK:
             return m_helplink;
         default:
@@ -511,6 +514,10 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         case PANEL_NAME:
             objName = c;
             break;
+        case JUSTIFY:
+            justifyValue = c;
+            setTextPosition(c);
+            break;
         case HELPLINK:
             m_helplink = c;
             break;
@@ -613,6 +620,23 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         g.drawLine(psize.width -1, 0, psize.width-1, psize.height-1);
     }
 
+    /**
+     *  Sets the text position of the title specified by the string as "left", "right" or "center".
+      */
+    private void setTextPosition(String c)
+    {
+        int i;
+
+        for (i = 0; i < m_arrStrTtlJust.length; i++)
+        {
+            if (m_arrStrTtlJust[i].equals(c))
+            {
+                setHorizontalAlignment(m_hAlignments[i]);
+                break;
+            }
+        }
+    }
+
     private void toggleAction(ActionEvent ev, boolean set) {
         if (inModalMode || inEditMode || vnmrIf == null)
             return;
@@ -696,6 +720,10 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
     }
 
     private final static String[] m_arrStrYesNo = {"yes", "no"};
+    /** The string array for displaying the left, right, center justification in the menu.  */
+    private final static String[] m_arrStrTtlJust = {"Left","Center","Right"};
+    /** The integer array that corresponds to the constant value for the left, right, and center justification. */
+    private final static int[] m_hAlignments = {SwingConstants.LEFT, SwingConstants.CENTER, SwingConstants.RIGHT};
 
     private final static Object[][] attributes = {
         {LABEL,        Util.getLabel(LABEL)},
@@ -711,6 +739,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         {RADIOBUTTON,  Util.getLabel(RADIOBUTTON), "radio", m_arrStrYesNo},
         {SUBTYPE,      "Button Look:", "radio", m_arrStrYesNo},
         {ENABLE, Util.getLabel("vgENABLE"), "radio", m_arrStrYesNo},
+        {JUSTIFY,      "Label justification:", "menu", m_arrStrTtlJust},
         {TOOLTIP,      Util.getLabel(TOOLTIP)},
    };
     private final static Object[][] attributes_H = {
@@ -727,6 +756,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         {RADIOBUTTON,  Util.getLabel(RADIOBUTTON), "radio", m_arrStrYesNo},
         {SUBTYPE,      "Button Look:", "radio", m_arrStrYesNo},
         {ENABLE, Util.getLabel("vgENABLE"), "radio", m_arrStrYesNo},
+        {JUSTIFY,      "Label justification:", "menu", m_arrStrTtlJust},
         {TOOLTIP,      Util.getLabel(TOOLTIP)},
         {new Integer(HELPLINK), Util.getLabel("blHelp")}
    };
