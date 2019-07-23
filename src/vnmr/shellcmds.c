@@ -920,9 +920,10 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
 }
 
 /* convert string to octal */
-static int str_to_octal(char *ptr )
+mode_t str_to_octal(char *ptr )
 {
-  int i, fac=1, len, ret=0;
+  int i, len;
+  mode_t fac=1, ret=0;
   char *cptr;
   len = strlen( ptr );
   if ((len < 1) || (len > 4))
