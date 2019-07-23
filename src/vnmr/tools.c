@@ -430,15 +430,40 @@ int verify_copy(char *file_a, char *file_b )
 	return( 0 );
 }
 
+int copyFile(const char *fromFile, const char *toFile, mode_t mode)
+{
+   int f1, f2;
+   int n;
+   char buffer[32768];
+
+   if ( (f1=open(fromFile,O_RDONLY)) == -1 )
+   {
+      return(NO_FIRST_FILE);
+   }
+   if (mode == 0)
+      mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
+   if ( (f2=open(toFile,O_WRONLY|O_CREAT|O_TRUNC,mode)) == -1 )
+   {
+      close(f1);
+      return(NO_SECOND_FILE);
+   }
+   while ( (n=read(f1, buffer, sizeof(buffer))) > 0 )
+   {  if ( write(f2,buffer,n) != n )
+      {
+         close ( f1 );
+         close ( f2 );
+         return(SIZE_MISMATCH);
+      }
+   }
+   fchmod(f2,mode);
+   close(f1);
+   close(f2);
+   return(0);
+}
+
 int copy_file_verify(char *file_a, char *file_b )
 {
-	char	cp_cmd[MAXPATH*2 + 16];
-	int	 ival;
-
-        sprintf(cp_cmd,"cp \"%s\" \"%s\"", file_a, file_b );
-	system( cp_cmd );
-	ival = verify_copy( file_a, file_b );
-        return( ival );
+   return( copyFile(file_a, file_b, 0) );
 }
 
 /********************************************************************/
