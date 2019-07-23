@@ -124,6 +124,7 @@ extern int cexpCmd();
 extern int mkchsums();
 extern int chchsums();
 extern int chkname(int argc, char *argv[], int retc, char *retv[]);
+extern int Chmod(int argc, char *argv[], int retc, char *retv[]);
 extern int cmdHistory(int argc, char *argv[], int retc, char *retv[]);
 extern int cmdlineOK(int argc, char *argv[], int retc, char *retv[]);
 extern int clear();
@@ -426,7 +427,7 @@ extern int setvalue();
 extern int setvalue4name();
 extern int setwin();
 extern int setButtonState();
-extern int shellcmds();
+extern int shellcmds(int argc, char *argv[], int retc, char *retv[]);
 extern int shimamp(int argc, char *argv[], int retc, char *retv[]);
 extern int shimnames();
 extern int show_local_files();		/* magnetom */
@@ -626,6 +627,7 @@ static cmd_t vnmr_table[] = {
 	{"chchsums"   , chchsums,	NO_REEXEC, 0},
 	{"mkchsums"   , mkchsums,	NO_REEXEC, 0},
 	{"chkname"    , chkname,	NO_REEXEC, 10},
+	{"chmod"      , Chmod,		NO_REEXEC, 0},
 	{"clear"      , clear,		NO_REEXEC, 10},
 	{"clradd"     , addsub,		NO_REEXEC, 10},
 	{"cmdHistory" , cmdHistory,	NO_REEXEC, 0},
