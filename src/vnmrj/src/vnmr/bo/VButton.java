@@ -183,6 +183,7 @@ public class VButton extends JButton implements VObjIF, VObjDef, VEditIF,
 
     protected static final String[] m_arrStrYesNo = { Util.getLabel("mlYes"),
             Util.getLabel("mlNo") };
+    private final static String[] m_arrStrTtlJust = {"Left","Center","Right"};
     /** The array of the attributes that are displayed in the edit template. */
     private final static Object[][] attributes = {
             { new Integer(LABEL), Util.getLabel(LABEL) },
@@ -194,6 +195,7 @@ public class VButton extends JButton implements VObjIF, VObjDef, VEditIF,
             { new Integer(STATSHOW), Util.getLabel(STATSHOW) },
             { new Integer(VAR2), Util.getLabel(LABELVARIABLE) },
 	    { new Integer(SETVAL),   Util.getLabel(LABELVALUE) },
+            { new Integer(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
             { new Integer(TOOLTIP), Util.getLabel(TOOLTIP) },
             { new Integer(BGCOLOR), Util.getLabel(BGCOLOR), "color" }
     };
@@ -210,6 +212,7 @@ public class VButton extends JButton implements VObjIF, VObjDef, VEditIF,
         { new Integer(STATSHOW), Util.getLabel(STATSHOW) },
         { new Integer(VAR2), Util.getLabel(LABELVARIABLE) },
 	{ new Integer(SETVAL),   Util.getLabel(LABELVALUE) },
+        { new Integer(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
         { new Integer(TOOLTIP), Util.getLabel(TOOLTIP) },
         { new Integer(BGCOLOR), Util.getLabel(BGCOLOR), "color" },
         {new Integer(HELPLINK), Util.getLabel("blHelp")}
@@ -439,19 +442,12 @@ public class VButton extends JButton implements VObjIF, VObjDef, VEditIF,
             return borderStr;
         case STRETCH:
             return stretchStr;
-        case HALIGN:
+        case JUSTIFY:
             int a = getHorizontalAlignment();
             if (a == SwingConstants.LEFT)
                return "Left";
             if (a == SwingConstants.RIGHT)
                return "Right";
-            return "Center";
-        case VALIGN:
-            int h = getVerticalAlignment();
-            if (h == SwingConstants.TOP)
-               return "Top";
-            if (h == SwingConstants.BOTTOM)
-               return "Bottom";
             return "Center";
         case PANEL_NAME:
             return objName;
@@ -630,7 +626,7 @@ public class VButton extends JButton implements VObjIF, VObjDef, VEditIF,
                    setIcon(jicon);
             }
             break;
-        case HALIGN:
+        case JUSTIFY:
             if (c == null)
                 return;
             int h = SwingConstants.CENTER;
@@ -639,16 +635,6 @@ public class VButton extends JButton implements VObjIF, VObjDef, VEditIF,
             else if (c.equalsIgnoreCase("right"))
                 h = SwingConstants.RIGHT;
             setHorizontalAlignment(h);
-            break;
-        case VALIGN:
-            if (c == null)
-                return;
-            int v = SwingConstants.CENTER;
-            if (c.equalsIgnoreCase("top"))
-                v = SwingConstants.TOP;
-            else if (c.equalsIgnoreCase("bottom"))
-                h = SwingConstants.BOTTOM;
-            setVerticalAlignment(v);
             break;
         case PANEL_NAME:
             objName = c;

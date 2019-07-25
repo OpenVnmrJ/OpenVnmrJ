@@ -1381,8 +1381,32 @@ int format(int argc, char *argv[], int retc, char *retv[])
           }
           RETURN;
        }
+       else if (strcmp(argv[2],"expand") == 0)
+       {
+          int inIndex=0;
+          int outIndex=0;
+          int count=0;
+          int ch;
+
+          while ( (ch = argv[1][inIndex]) != '\0' )
+          {
+             if (ch == '\t')
+             {
+                count = 8;
+                count -= (outIndex+8) % 8;
+                for (; count > 0; count--)
+                   retstr[outIndex++] = ' ';
+                inIndex++;
+             }
+             else
+             {
+                retstr[outIndex++] = argv[1][inIndex++];
+             }
+          }
+          retstr[outIndex]='\0';
+       }
        else
-       {  Werrprintf("The second argument must be 'upper' or 'lower' for this mode of %s",argv[ 0 ]);
+       {  Werrprintf("The second argument must be 'upper', 'lower' or 'expand' for this mode of %s",argv[ 0 ]);
           clearRets(retc,retv);
           ABORT;
        }

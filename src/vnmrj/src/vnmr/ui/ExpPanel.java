@@ -3850,7 +3850,18 @@ public class ExpPanel extends JPanel
              }
              SwingUtilities.updateComponentTreeUI(fpPanel);
         }
-        int ret = fpPanel.showOpenDialog(ModelessPopup.getContainer() );
+        ModelessPopup parentPopup = null;
+        if (modelessPopups != null) {
+           Enumeration<String> e = modelessPopups.keys();
+           while (e.hasMoreElements() && (parentPopup == null)) {
+              ModelessPopup popup =
+                      (ModelessPopup)(modelessPopups.get(e.nextElement()));
+              if (popup != null && popup.isVisible()) {
+                 parentPopup = popup;
+              }
+           }
+        }
+        int ret = fpPanel.showOpenDialog(parentPopup);
         if (ret != JFileChooser.APPROVE_OPTION)
              return;
         File[] files = fpPanel.getSelectedFiles();
