@@ -89,7 +89,7 @@ int Chmod(int argc, char *argv[], int retc, char *retv[])
          if ( (argv[1][index] < '0') || (argv[1][index] > '7') ||
               (argv[1][index+1] < '0') || (argv[1][index+1] > '7') ||
               (argv[1][index+2] < '0') || (argv[1][index+2] > '7') ||
-              (argv[1][index+2] != '\0') )
+              (argv[1][index+3] != '\0') )
          {
             Werrprintf("%s: in numerical mode, three characters must be between 0 and 7 (%s)",
                        argv[0], &(argv[1][index]) );
