@@ -594,7 +594,7 @@ public class VnmrAdmin extends JFrame {
        String strg = null;
        try
        {
-          String[] cmd = {shToolCmd, "-c", sysDir + "/pgsql/bin/create_pgsql_user" + " " + name };
+          String[] cmd = {shToolCmd, "-c", sysDir + "/bin/create_pgsql_user" + " " + name };
           Runtime rt = Runtime.getRuntime();
           Process prcs = rt.exec(cmd);
           if (prcs == null)

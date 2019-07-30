@@ -214,13 +214,13 @@ public class ProgressMonitor extends JFrame {
                            if (bwindows)
                                 userExist = false; 
 
-                            if( ! userExist  && did_vnmr) {
-                                makeUserVnmrj( nmrUser );
-                            }
+                            // if( ! userExist  && did_vnmr) {
+                            //     makeUserVnmrj( nmrUser );
+                            // }
 
-                            if( setupDB && did_vnmr) {
-                                setupDatabase( codeDir, oldVnmrPath );
-                            }
+                            // if( setupDB && did_vnmr) {
+                            //     setupDatabase( codeDir, oldVnmrPath );
+                            // }
 
                             // disable the stuff below for now,
                             //  until we straighten out jsetacq
@@ -309,15 +309,15 @@ public class ProgressMonitor extends JFrame {
                     // At the end, if the installation did not get completed
                     // e.g. if only installing an option that requires a  password field,
                     // and the password is incorrect.
-                    if( ! userExist && did_vnmr)
-                    {
-                        makeUserVnmrj( nmrUser );
-                    }
+                    // if( ! userExist && did_vnmr)
+                    // {
+                    //     makeUserVnmrj( nmrUser );
+                    // }
 
-                    if( setupDB && did_vnmr)
-                    {
-                        setupDatabase( codeDir, oldVnmrPath);
-                    }
+                    // if( setupDB && did_vnmr)
+                    // {
+                    //     setupDatabase( codeDir, oldVnmrPath);
+                    // }
 
                     String VnmrInstalled;
                     if (did_vnmr)

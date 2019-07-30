@@ -30,7 +30,7 @@ import java.net.*;
  *      This class will create a table of known mount point information
  *      and will despense that information as needed.
  *
- *      First check for a file '/usr/varian/mount_name_table'.
+ *      First check for a file '/vnmr/pgsql/config/mount_name_table'.
  *      If found, only use this file.  An example of this file is as follows:
  *            # Table of remote system mount names and paths
  *            # One line per entry, Syntax:
@@ -82,11 +82,7 @@ public class MountPaths {
 
         // Fill the mountPaths list with all know mount points
         // Start by looking in a user supplied file
-        if(UtilB.OSNAME.startsWith("Windows"))
-            filepath = UtilB.SFUDIR_WINDOWS + File.separator + "usr" +
-                    File.separator + "varian" + File.separator + "mount_name_table";
-        else
-            filepath = "/usr/varian/mount_name_table";
+        filepath = "/vnmr/pgsql/config/mount_name_table";
         file = new UNFile(filepath);
         if(file.exists()) {
             // mount_name_table exists, use it to fill our list.
@@ -178,7 +174,7 @@ public class MountPaths {
                                                 + " used in mounting, then that\n"
                                                 + "    directory will not be accessible"
                                                 + " via the locator.  Try creating a\n"
-                                                + "    /usr/varian/mount_name_table file"
+                                                + "    /vnmr/pgsql/config/mount_name_table file"
                                                 + " with mount entries in the form of\n"
                                                 + "        \'host:direct_path mount_path\'"
                                                 + " with one line per mounted directory.");
@@ -256,7 +252,7 @@ public class MountPaths {
                                      + " used in mounting, then that\n"
                                      + "    directory will not be accessible"
                                      + " via the locator.  Try creating a\n"
-                                     + "    /usr/varian/mount_name_table file"
+                                     + "    /vnmr/pgsql/config/mount_name_table file"
                                      + " with mount entries in the form of\n"
                                      + "        \'host:direct_path mount_path\'"
                                      + " with one line per mounted directory.");
@@ -378,7 +374,7 @@ public class MountPaths {
 //                            + host + " and \n    path = " + fullpath + "  .\n"
 //                            + "    Be sure this directory is mounted. "
 //                            + "If still not found, you may need to create\n"
-//                            + "    a file \'/usr/varian/mount_name_table\' "
+//                            + "    a file \'/vnmr/pgsql/config/mount_name_table\' "
 //                            + "with mount entries in the form of\n"
 //                            + "        \'host:direct_path mount_path\'"
 //                            + " with one line per mounted directory.");

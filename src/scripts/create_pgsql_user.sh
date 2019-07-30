@@ -29,10 +29,10 @@ file="$vnmrsystem/pgsql/bin/createuser"
 if [ -f "$file" ]
 then
     # Old one, use appropriate path and args
-    $vnmrsystem/pgsql/bin/createuser -d -a -q $1
+    $vnmrsystem/pgsql/bin/createuser -d -h /tmp $1
 else
     # New one, use no path and appropriate args
-    createuser -d -S -R $1 2> /dev/null
+    createuser -d -h /tmp -S -R $1 2> /dev/null
 fi
 
 echo "DONE"

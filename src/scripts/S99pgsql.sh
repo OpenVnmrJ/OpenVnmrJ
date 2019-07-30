@@ -1,6 +1,4 @@
-#!/bin/sh
-# '@(#)S99pgsql.sh 22.1 03/24/08 1991-2004 '
-#
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -18,7 +16,7 @@ fi
 
 if [ x`uname -s` = "xLinux" ]
 then
-    /bin/mount -a
+#    /bin/mount -a
     #determine if we should use su (redhat) or sudo (debian)
     if [ -r /etc/debian_version ]
     then
@@ -98,10 +96,14 @@ if [ -f "$file" ]
 then
     pgpath="$vnmrsystem/pgsql/bin/"
 fi
-echo "Using postgres path: $pgpath"
 
 case "$1" in
 'start')
+        if [ ! -d "$vnmrsystem/pgsql" ] || [ -f "$vnmrsystem/pgsql/persistence/LocatorOff" ]
+        then
+           exit 0
+        fi
+        echo "Using postgres path: $pgpath"
         # Ubuntu needs to have a writable directory "/var/run/postgresql"
         # or it fails to start the server.
         if [ x$lflvr = "xdebian" ]
@@ -123,7 +125,7 @@ case "$1" in
                     rm -f "$vnmrsystem/pgsql/data/postmaster.pid"
                  fi
                  if [ x$lflvr = "xrhat" ]; then
-                     su "$vnmradm" -c $pgpath"pg_ctl start -l $vnmrsystem/pgsql/pgsql.log -D /vnmr/pgsql/data -o '-N 10 -B 45 -i -c sort_mem=100000'"
+                     su "$vnmradm" -c $pgpath"pg_ctl start -l $vnmrsystem/pgsql/pgsql.log -D /vnmr/pgsql/data -o '-k /tmp -N 20 -B 45 -i -c sort_mem=100000'"
                  fi
                  if [ x$lflvr = "xdarwin" ]; then
                      echo Executing: sudo -u "$vnmradm" -i $pgpath"pg_ctl start -l $vnmrsystem/pgsql/pgsql.log -D $vnmrsystem/pgsql/data"
@@ -135,11 +137,11 @@ case "$1" in
                      done
                  fi
                  if [ x$lflvr = "xdebian" ]; then
-                     sudo -u "$vnmradm" -i ${pgpath}pg_ctl start -l "$vnmrsystem"/pgsql/pgsql.log -o '-N 10 -B 45 -i -c sort_mem=100000'
+                     sudo -u "$vnmradm" -i ${pgpath}pg_ctl start -l "$vnmrsystem"/pgsql/pgsql.log -o '-k /tmp -N 20 -B 45 -i -c sort_mem=100000'
                  fi
              else
                  echo must have been login user
-                 $pgpath"pg_ctl" start -l "$vnmrsystem/pgsql/pgsql.log"  -o "-N 10 -B 45 -i -c sort_mem=100000"
+                 $pgpath"pg_ctl" start -l "$vnmrsystem/pgsql/pgsql.log"  -o "-k /tmp -N 20 -B 45 -i -c sort_mem=100000"
              fi
         fi
         ;;
