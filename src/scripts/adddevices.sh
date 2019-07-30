@@ -1,6 +1,4 @@
 #! /bin/csh
-# '@(#)adddevices.sh 22.1 03/24/08 1991-1996 '
-#
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -27,15 +25,6 @@ set user = `id | sed -e 's/[^(]*[(]\([^)]*\)[)].*/\1/'`
       if ( ! -d "$vnmrsystem" ) then
           echo "$vnmrsystem does not exist, cannot proceed:"
           exit
-      endif
-      if ( -r "$vnmrsystem/p11/p11Config" ) then
-          set aa = `/usr/bin/cksum "$vnmrsystem/tcl/bin/add_printer" | awk '{print $1}'`
-          set bb = `/bin/cat /usr/varian/sbin/add_printer.sum | awk '{print $1}'`
-
-          if ( "x$aa" != "x$bb" ) then
-             echo "The add printer tool had been altered since last installed"
-             exit
-          endif
       endif
 
       setenv TCLDIR        "$vnmrsystem/tcl"

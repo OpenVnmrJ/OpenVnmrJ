@@ -1,6 +1,4 @@
-#!/bin/sh
-# '@(#)dbsetup.sh 22.1 03/24/08 1991-2004 '
-# 
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -18,6 +16,9 @@
 
 # This needs to be replaced by a dynamic way to know which postgres we
 # are running.
+
+# set -x
+
 newpostgres="false"
 #set -x
 kill_procs()
@@ -51,23 +52,12 @@ remove_db()
         echo "remove_db: Removing any existing DB"
         # Try killing the postmaster with pg_ctl then go after any remaining
         # processes found.
-        ostype=`uname -s`
-        if [ x$ostype = "xInterix" ]
+        # If pg_ctl exists in $vnmrsystem/pgsql/bin/, use it, 
+        # else use system version.
+        file="$vnmrsystem/pgsql/bin/pg_ctl"
+            
+        if [ -f "$vnmrsystem/pgsql/data/postmaster.pid" ]
         then
-            # Use the Windows service manager to stop the postmaster in windows
-            # Don't try to stop it unless it is not already stopped, else we
-            # get an error.
-            serv_status=`sc.exe query PostgreSQL | grep STATE | awk '{ print $4 }'`
-                    if [ x$serv_status != "xSTOPPED" ]
-                    then
-                echo "Stopping the PostgreSQL Service"
-                sc.exe stop PostgreSQL
-                sleep 2
-            fi
-        else
-            # If pg_ctl exists in $vnmrsystem/pgsql/bin/, use it, 
-            # else use system version.
-            file="$vnmrsystem/pgsql/bin/pg_ctl"
             if [ -f "$file" ]
             then
                 $vnmrsystem/pgsql/bin/pg_ctl stop -m immediate -s -D "$vnmrsystem"/pgsql/data
@@ -83,21 +73,7 @@ remove_db()
         kill_procs "postgres"
 
 
-        if [ x$ostype = "xInterix" ]
-        then
-            owner=`"$vnmrsystem"/bin/fileowner "$vnmrsystem_interix"/pgsql/data`
-            # if Interix, we must be postgres to have permission to remove this
-            if [ x$owner = "xpostgres" ]
-            then
-                wscript.exe /B /Nologo "$VNMRSYSTEM_WIN"\\bin\\runasscript.vbs postgres postgres "$VNMRSYSTEM_WIN\\bin\\rundbdata.bat"
-                sleep 5
-                rmdir "$vnmrsystem"/pgsql/data
-            else
-                rm -rf "$vnmrsystem_interix"/pgsql/data
-            fi
-        else
            rm -rf $vnmrsystem/pgsql/data
-        fi
 
 #        rm -rf $vnmrsystem/pgsql/persistence
 
@@ -131,329 +107,9 @@ show_usage()
    echo ""
 }
 
-setdatadir()
-{   
-    oldIFS=$IFS
-    if [ x$osname = "xInterix" ]
-    then
-	IFS=';'
-    fi
-
-    if [ x$osname = "xInterix" ]
-    then
-	datadir=`grep datadir $1 | sed -e 's@\\\\@\\\\\\\\@g'`
-    else   
-	datadir=`grep datadir $1`
-    fi
-
-    if [ -n "$datadir" ]
-    then
-	hasdatadir="y"
-    
-	for dir in $datadirline
-	do
-	    dirfound="false"
-	    for dir2 in $datadir
-	    do
-	    if [ x"$dir2" = x"$dir" ]
-	    then
-		dirfound="true"
-	    fi
-	    done
-	    if [ x$dirfound = "xfalse" ]
-	    then
-		if [ x$osname = "xInterix" ]
-		then
-		    datadir="$datadir;$dir"
-		else
-		    datadir="$datadir $dir"
-		fi
-	    fi
-	done   
-
-	cat $1 | sed '/^datadir/c\
-'"$datadir"'' > ${1}.bak
-	mv ${1}.bak ${1}
-    fi
-
-    IFS=$oldIFS
-}
-
-gethomedirInterix()
-{
-    home_dir=""
-    if [ x$osname = "xInterix" ]
-    then
-	home_dir=`/vnmr/bin/getuserinfo $1 | awk 'BEGIN { FS = ";" } {print $2}'`
-	if [ x"$home_dir" = "x" ]
-	then
-	    home_dir=`posixpath2nt "$HOME"`
-	fi
-	home_dir=`/bin/posixpath2nt $home_dir | sed -e 's@\\\\@\\\\\\\\@g'`
-    fi
-}
-
-makeadminfiles()
-{
-    seperator=""
-# group
-    file="$vnmrsystem"/adm/users/group
-    if [ ! -f "$file" ]
-    then
-	echo "Creating $file"
-	echo "vnmr:VNMR group:$1" > "$file"
-        echo "agilent and me: Myself and system:me, agilent" >> "$file"
-    else
-	grep $1 "$file"
-        if [ $? -ne 0 ]
-        then
-	    ( cd "$vnmrsystem"/adm/users;
-              cat "$file" | sed "s/VNMR group:/VNMR group: $1, /g" > gp.out;
-              mv gp.out group
-	    )  
-        fi
-    fi
-
-    #  userlist 
-    file="$vnmrsystem"/adm/users/userlist
-    if [ ! -f "$file" ]
-    then
-	echo "Creating $file"
-	echo "$1" > "$file"
-    else
-        change_vnmr_adm="false"
-        grep $1 "$file"
-        if [ $? -ne 0 ]
-        then
-	    /bin/echo $1 >> "$file"
-            /bin/cat "$file" | /usr/bin/tr '\n' ' ' > ${file}.new
-            /bin/mv ${file}.new "$file"
-            change_vnmr_adm="true"
-        fi
-    fi
-
-    #make sure there is only one admin
-    cd "$vnmrsystem"/adm/users/profiles/system/
-    list=`grep  -l -s System *`
-    for item in $list
-    do
-	grep -v "System Administrator" $item > ${item}.new
-        echo "name     $item" >> ${item}.new
-        mv ${item}.new $item
-    done
-
-    osname=`uname -s`
-    vnmrdir="/vnmr"
-    vnmrsysdir="$vnmrdir"
-    user_dir="$4"
-    slash="/"
-    if [ x$osname = "xInterix" ]
-    then
-	# change the unix path to windows path, and replace \ with \\ to escape slash.
-	# To escape one slash in sed it's \\\\.
-	# Use unixpath2win for getting the actual path for softlinks
-	vnmrdirInterix=`/bin/ntpath2posix "$vnmrdir"`
-	user_dirInterix=`/bin/ntpath2posix "$user_dir"`
-	vnmrsysdir=`/bin/unixpath2win "$vnmrdir" | sed -e 's@\\\\@\\\\\\\\@g'`
-	vnmrdir=`/bin/posixpath2nt "$vnmrdir" | sed -e 's@\\\\@\\\\\\\\@g'`
-	user_dir=`/bin/posixpath2nt "$user_dir" | sed -e 's@\\\\@\\\\\\\\@g'`
-	slash="\\\\"
-	if [ x$2 != "xdb" ]
-	then
-	    vnmruser_dir="$user_dir"
-	    vnmruser_dirInterix="$user_dirInterix"
-	fi
-        
-	datadirline="${user_dir}${slash}data;${vnmrdir}${slash}fidlib;${vnmrdir}${slash}stdpar;${vnmrdir}${slash}tests;${vnmrdir}${slash}parlib;${vnmrdir}${slash}imaging${slash}tests;${vnmrdir}${slash}imaging${slash}data;${vnmrdir}${slash}shims;${user_dir}${slash}parlib;${user_dir}${slash}shims"
-    else
-	datadirline="${vnmrdir}/fidlib ${vnmrdir}/stdpar ${vnmrdir}/tests ${vnmrdir}/parlib ${vnmrdir}/imaging/tests ${vnmrdir}/imaging/data ${vnmrdir}/shims ${user_dir}/parlib ${user_dir}/shims"
-    fi
-
-# system
-    file="$vnmrsystem"/adm/users/profiles/system/$1
-
-    if [ ! -f "$file" ]
-    then
-	echo "Creating $file"
-        echo "accname  $1" > "$file"
-	if [ x$2 != "xdb" ]
-	then
-	    echo "name     System Administrator" >> "$file"
-	fi
-        echo "home     $3" >> "$file"
-	if [ x$osname = "xInterix" ]
-	then
-	    if [ x$2 != "xdb" ]
-	    then
-		echo "owned    ${3};${vnmrdir}" >> "$file"
-	    else
-		echo "owned    ${3}" >> "$file"
-	    fi
-	else
-	    echo "owned    ${3} ${vnmrsysdir}" >> "$file"
-	fi
-        echo "usrlvl   2" >> "$file"
-        echo "access   all" >> "$file"
-        if [ x$APP_MODE = "ximaging" ]
-        then
-	    echo "itype    Imaging" >> "$file"
-	elif [ x$APP_MODE = "xwalkup" ]
-        then
-	    echo "itype    Spectroscopy" >> "$file"
-        else
-	    echo "itype    Spectroscopy" >> "$file"
-        fi
-#	echo "cmdArea    Yes" >> "$file"
-    else
-        grep -v -w "name" "$file" > ${file}.new
-	if [ x$2 != "xdb" ]
-	then
-	    echo "name     System Administrator" >> ${file}.new
-	fi
-        mv ${file}.new "$file"
-	
-	setdatadir "$file"
-     
-    fi
-# user
-    file="$vnmrsystem"/adm/users/profiles/user/$1
-    echo "Creating $file"
-    echo "userdir   ${user_dir}" > "$file"
-    echo "sysdir    ${vnmrsysdir}" >> "$file"
-    if [ x$APP_MODE = "ximaging" ]
-    then
-        if [ x$osname = "xInterix" ]
-        then
-            echo "winappdir    ${user_dir};${vnmrsysdir}${slash}imaging;${vnmrsysdir}" >> "$file"
-            echo "appdir    ${user_dirInterix};${vnmrdirInterix}/imaging;${vnmrdirInterix}" >> "$file"
-        else
-            echo "appdir    ${user_dir} ${vnmrsysdir}/imaging ${vnmrsysdir}" >> "$file"
-        fi
-    elif [ x$APP_MODE = "xwalkup" ]
-    then
-        if [ x$osname = "xInterix" ]
-        then
-            echo "winappdir    ${user_dir};${vnmrsysdir}${slash}walkup;${vnmrsysdir}" >> "$file"
-            echo "appdir    ${user_dirInterix};${vnmrdirInterix}/walkup;${vnmrdirInterix}" >> "$file"
-        else
-            echo "appdir    ${user_dir} ${vnmrsysdir}/walkup ${vnmrsysdir}" >> "$file"
-        fi
-    else
-        if [ x$osname = "xInterix" ]
-        then
-            echo "winappdir    ${user_dir};${vnmrsysdir}" >> "$file"
-            echo "appdir    ${user_dirInterix};${vnmrdirInterix}" >> "$file"    
-        else
-            echo "appdir    ${user_dir} ${vnmrsysdir}" >> "$file"
-        fi
-    fi
-
-    echo "datadir   ${datadirline}" >> "$file" 
-     
-    if [ x$hasdatadir != "xy" ]
-    then
-	setdatadir "$file"
-    fi
-
-
-    # data
-    file="$vnmrsystem"/adm/users/profiles/data/$1
-    if [ ! -f "$file" ]
-    then
-	echo "Creating $file"
-	if [ x$osname = "xInterix" ]
-	then
-	    echo 'private;'"$user_dir"'/data' > "$file"
-	else
-	    echo 'private:'"$user_dir"'/data' > $file
-	fi
-    fi
-   
-# templates
-    file="$vnmrsystem"/adm/users/profiles/templates/$1
-    if [ ! -f "$file" ]
-    then
-	echo "Creating $file"
-       if [ x$APP_MODE = "ximaging" ]
-        then
-	    cat "$vnmrsystem"/imaging/templates/vnmrj/properties/filename_templates > "$file"
-	    echo 'RFCOIL:$RFCOIL$_' >> "$file"
-	elif [ x$APP_MODE = "xwalkup" ]
-	then
-	    cat "$vnmrsystem"/walkup/templates/vnmrj/properties/filename_templates > "$file"
-        else
-	    cat "$vnmrsystem"/templates/vnmrj/interface/dataTemplateDefault > "$file"
-        fi
-    fi
-
-}
-
-updateadminfiles()
-{
-    if [ x$osname = "xInterix" ]
-    then
-
-	# user
-	file="$vnmrsystem"/adm/users/profiles/user/$1
-
-	appmode=`/bin/cat "$vnmrsystem"/adm/users/profiles/system/"$1" | awk '/itype/ {print $2}'`
-	if [ x$appmode = "x" ]
-	then
-	    appmode=`/bin/cat "$file" | awk '/itype/ {print $2}'`
-	fi
-	
-	# if the file exists, then update sysdir and winappdir to current vnmrsysdir
-	if [ -f ""$file"" ]
-	then
-	    /bin/cat "$file" | sed '/^sysdir/c\
-sysdir    '${vnmrsysdir}'
-' > ${file}.new
-	    /bin/mv ${file}.new "$file"
-	    
-	    if [ x$appmode = "xImaging" ]
-	    then
-		/bin/cat "$file" | sed '/^winappdir/c\
-winappdir    '${user_dir}';'${vnmrsysdir}''${slash}'imaging;'${vnmrsysdir}'
-' > ${file}.new
-	    elif [ x$appmode = "xWalkup" ]
-	    then
-		/bin/cat "$file" | sed '/^winappdir/c\
-winappdir    '${user_dir}';'${vnmrsysdir}''${slash}'walkup;'${vnmrsysdir}'
-' > ${file}.new
-	    else
-		/bin/cat "$file" | sed '/^winappdir/c\
-winappdir    '${user_dir}';'${vnmrsysdir}'
-' > ${file}.new	
-	    fi
-            /bin/mv ${file}.new "$file"
-	fi
-    fi
-}
-
 godoit() 
 {
-   # If Windows, check to see if the "service" has been create yet.
-   # If so, stop and remove it before creating one.  The reason for always
-   # recreating it is that the path to /vnmr can change and the service
-   # needs to be created with the correct path.
    osname=`uname -s`
-   if [ x$osname = "xInterix" ]
-   then
-      # The sc.exe output contains several lines and starts with \r\n
-      postproc=`sc.exe Query PostgreSQL | head -2 | tr -d "\r\n"` 
-      if [ "x$postproc" = "xSERVICE_NAME: PostgreSQL" ]
-      then
-         echo "Windows Service for PostgreSQL found, stop and removing it."
-	 service stop PostgreSQL
-	 service remove PostgreSQL
-      fi
-      # Create a service.  There MUST be a user name = postgres
-      # with a passwd = postgres.  
-      #vnmrsyswin=`posixpath2nt "$vnmrsystem"`
-
-      "$vnmrsystem_interix"/pgsql/bin/pg_ctl.exe register -N PostgreSQL -U "postgres" -P "postgres" -D "$VNMRSYSTEM_WIN/pgsql/data" -o "-N 10 -B 45 -i -c sort_mem=100000" -l "$vnmrsystem_interix/pgsql/pgsql.log"
-      echo "Creating New Windows Service for PostgreSQL"
-   fi
    if [ $# -eq 2 ]
    then
       if [ x$2 = "xremove" ]
@@ -465,9 +121,8 @@ godoit()
           else
               owner=`"$vnmrsystem"/bin/fileowner $PGDATA`
           fi
-          # For Interix, the DB adm is not the same as the vnmr adm
           # The new postgres also uses postgres as a user
-          if [ x$osname = "xInterix" -o x$newpostgres = 'xtrue']
+          if [ x$newpostgres = 'xtrue']
           then
               dbadm="postgres"
           else
@@ -518,13 +173,7 @@ godoit()
           if test $dbhost = $localhost
           then
               owner=`"$vnmrsystem"/bin/fileowner $PGDATA`
-			  # For Interix, the DB adm is not the same as the vnmr adm
-			  if [ x$osname = "xInterix" ]
-			  then
-				  dbadm="postgres"
-			  else
 				  dbadm=$vnmr_adm
-			  fi
               if [ x$owner = x$dbadm ]
               then
                   echo "Previous Database being removed"
@@ -537,25 +186,6 @@ godoit()
       fi 
    fi
 
-
-     prfiles='system user data templates'
-     for file in $prfiles
-     do
-	  if test ! -d "$vnmrsystem/adm/users/profiles/$file"
-          then
-	    mkdir -p "$vnmrsystem/adm/users/profiles/$file"
-          fi
-     done
-
-
-     if [ x$osname = "xInterix" ]
-     then
-	db_adm="postgres"
-	echo "$vnmrdb_home_dir" "$vnmrdbuser_dir"
-	makeadminfiles "$db_adm" "db" "$vnmrdb_home_dir" "$vnmrdbuser_dir"
-     fi
-     makeadminfiles $vnmr_adm " " "$vnmradm_home_dir" "$vnmruser_dir"
-      
    if [ "x$APP_MODE" = "x" ]
    then
       file="$vnmradm_home_dir/vnmrsys/global"
@@ -586,41 +216,7 @@ godoit()
       # If a DB exists, see if its version is correct.
       owner=`"$vnmrsystem"/bin/fileowner $PGDATA`
 
-      # For Interix, the DB adm is not the same as the vnmr adm
-      if [ x$osname = "xInterix" ]
-      then
-          if [ x$owner = "xpostgres" ]
-          then
-              echo "Found a database in $PGDATA owned by postgres, checking it"
-              # Stop the service if running
-			  serv_status=`sc.exe query PostgreSQL | grep STATE | awk '{ print $4 }'`
-			  if [ x$serv_status != "xSTOPPED" ]
-			  then
-				  echo "Stopping the PostgreSQL Service"
-				  sc.exe stop PostgreSQL
-				  sleep 2
-			  fi
-              # Start the service, namely, start the postmaster daemon
-              # It is done this way because an administrator level person can
-              # start the service, but cannot actually start the postmaster 
-              # directly
-              sc.exe start PostgreSQL
-          else
-              echo "No database found, we will create one."
-              # Print the version of postgres we are using
-              # If pg_ctl exists in $vnmrsystem/pgsql/bin/, use it, 
-              # else use system version.
-              file="$vnmrsystem/pgsql/bin/pg_ctl"
-              if [ -f "$file" ]
-              then
-                  $vnmrsystem/pgsql/bin/pg_ctl --version
-              else
-                 $pgpath"pg_ctl" --version
-              fi
-              dbStatus="none"
-          fi
-      # Not Interix, must be unix or linux
-      elif [ x$newpostgres = 'xtrue' ]
+      if [ x$newpostgres = 'xtrue' ]
       then
           # New Postgres, don't kill the server
           #echo "Previous Database being removed"
@@ -642,7 +238,7 @@ godoit()
                   then
                       $vnmrsystem/pgsql/bin/pg_ctl start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log
                   else
-                      $vnmrsystem/pgsql/bin/pg_ctl start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log  -o "-N 10 -B 45 -i -c sort_mem=100000"
+                      $vnmrsystem/pgsql/bin/pg_ctl start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log  -o "-k /tmp -N 20 -B 45 -i -c sort_mem=100000"
                   fi
               else
                   # Stop it
@@ -652,7 +248,7 @@ godoit()
                   then
                       $pgpath"pg_ctl" start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log
                   else
-                      $pgpath"pg_ctl" start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log  -o "-N 10 -B 45 -i -c sort_mem=100000"
+                      $pgpath"pg_ctl" start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log  -o "-k /tmp -N 20 -B 45 -i -c sort_mem=100000"
                   fi
               fi
           else
@@ -660,13 +256,13 @@ godoit()
               # Print the version of postgres we are using
               # If pg_ctl exists in $vnmrsystem/pgsql/bin/, use it, 
               # else use system version.
-              file="$vnmrsystem/pgsql/bin/pg_ctl"
-              if [ -f "$file" ]
-              then
-                  $vnmrsystem/pgsql/bin/pg_ctl --version
-              else
-                  $pgpath"pg_ctl" --version
-              fi
+              # file="$vnmrsystem/pgsql/bin/pg_ctl"
+              # if [ -f "$file" ]
+              # then
+              #     $vnmrsystem/pgsql/bin/pg_ctl --version
+              # else
+              #     $pgpath"pg_ctl" --version
+              # fi
 
               dbStatus="none"
           fi
@@ -694,38 +290,15 @@ godoit()
           rm -f /tmp/.s.PGSQL*
 
           echo "Initializing Postgres Database"
-          if [ x$osname = "xInterix" ]
-          then
-              # For some reason, we need to be in the proper directory/partition
-              # to run this command
-              cd "$vnmrsystem"/pgsql
-              # When executing things with exec_asuser, they receive a couple
-              # of extra args.  initdb complains about this, but works
-              # properly after the complaint.  For lack of any better way to
-              # avoid the error message, I will just redirect the error output
-              # to /dev/null.  In case of debugging need, remove this redirect.
-
-	          #vnmrsyswin=`posixpath2nt "$vnmrsystem"`
-
-	      #(cd "$vnmrsystem"/pgsql/bin; \
-              #"$vnmrsystem_interix"/bin/vnmr_exec_asuser postgres postgres "$vnmrsystem_interix"/pgsql/bin/initdb.exe initdb.exe "$VNMRSYSTEM_WIN/pgsql/data" 2> /dev/null )
-	      mkdir "$vnmrsystem"/pgsql/data
-	      chmod 700 "$vnmrsystem"/pgsql/data
-	      chown postgres "$vnmrsystem"/pgsql/data
-	      (cd "$vnmrsystem"/pgsql/bin; \
-              wscript.exe /B /Nologo "$VNMRSYSTEM_WIN"\\bin\\runasscript.vbs postgres postgres "$VNMRSYSTEM_WIN\\pgsql\\bin\\initdb.exe $VNMRSYSTEM_WIN\\pgsql\\data")
-	      sleep 20
-          else
              # If initdb exists in $vnmrsystem/pgsql/bin/, use it, 
              # else use system version.
               file="$vnmrsystem/pgsql/bin/initdb"
               if [ -f "$file" ]
               then
-                  $vnmrsystem/pgsql/bin/initdb --pgdata="$vnmrsystem"/pgsql/data
+                  $vnmrsystem/pgsql/bin/initdb --pgdata="$vnmrsystem"/pgsql/data &> "$vnmrsystem"/pgsql/init.log
               else
-                  $pgpath"initdb" --pgdata="$vnmrsystem"/pgsql/data
+                  $pgpath"initdb" --pgdata="$vnmrsystem"/pgsql/data &> "$vnmrsystem"/pgsql/init.log
               fi
-          fi      
 
           if test ! -d "$vnmrsystem/pgsql/data"
           then
@@ -738,15 +311,6 @@ godoit()
           cat "$vnmrsystem/pgsql/data/pg_hba.conf.orig" | sed 's/127.0.0.1\/32/0.0.0.0\/0/' > "$vnmrsystem/pgsql/data/pg_hba.conf"
           rm -f "$vnmrsystem/pgsql/data/pg_hba.conf.orig"
 
-          if [ x$osname = "xInterix" ]
-          then
-                  # Start the service, namely, start the postmaster daemon
-                  # It is done this way because an administrator level person can
-                  # start the service, but cannot actually start the postmaster 
-                  # directly
-              sc.exe start PostgreSQL
-
-          else
                   # If pg_ctl exists in $vnmrsystem/pgsql/bin/, use it, 
                   # else use system version.
               file="$vnmrsystem/pgsql/bin/pg_ctl"
@@ -756,17 +320,16 @@ godoit()
                   then
                       $vnmrsystem/pgsql/bin/pg_ctl start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log
                   else
-                      $vnmrsystem/pgsql/bin/pg_ctl start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log  -o "-N 10 -B 45 -i -c sort_mem=100000"
+                      $vnmrsystem/pgsql/bin/pg_ctl start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log  -o "-k /tmp -N 20 -B 45 -i -c sort_mem=100000"
                   fi
               else
                   if [ x$lflvr = "xdarwin" ]
                   then
                       $pgpath"pg_ctl" start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log
                   else
-                      $pgpath"pg_ctl" start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log  -o "-N 10 -B 45 -i -c sort_mem=100000"
+                      $pgpath"pg_ctl" start -D "$vnmrsystem"/pgsql/data -l "$vnmrsystem"/pgsql/pgsql.log  -o "-k /tmp -N 20 -B 45 -i -c sort_mem=100000"
                   fi
               fi
-          fi
           sleep 2
           echo " "
 
@@ -788,15 +351,7 @@ godoit()
           fi
           
 
-          if [ x$osname = "xInterix" ]
-          then
-             # createuser $login_user and then run createdb, 
-	     # otherwise createdb fails
-	     wscript.exe /B /Nologo "$VNMRSYSTEM_WIN"\\bin\\runasscript.vbs postgres postgres "$VNMRSYSTEM_WIN/pgsql/bin/createuser.exe -d -a -q $login_user"
-	     $vnmrsystem/bin/managedb createdb
-          else
              $vnmrsystem/bin/managedb createdb
-          fi
 
           # The newpostgres will not be in /vnmr.  May want to figure out
           # a way to tell if the DB has been created for newpostgres
@@ -860,16 +415,13 @@ godoit()
       if [ x$APP_MODE = "ximaging" ]
       then
          file=$vnmrsystem/imaging/templates/vnmrj/choicefiles
-      elif [ x$APP_MODE = "xwalkup" ]
-      then
-         file="$vnmrsystem"/walkup/templates/vnmrj/choicefiles
       else
          file="$vnmrsystem"/templates/vnmrj/choicefiles
       fi
 
       if [ ! -f "$file" ]
       then
-         echo "Creating $file/pis"
+         # echo "Creating $file/pis"
          if test ! -d "$file"
          then
              mkdir -p "$file"
@@ -893,33 +445,11 @@ godoit()
        do
        echo "     Adding $user"
 
-       # For Interix, the DB adm is not the same as the vnmr adm
-       if [ x$osname = "xInterix" ]
-       then
-          dbadm="postgres"
-       else
           dbadm=$vnmr_adm
-       fi
-
-       if [ x$osname = "xInterix" ]
-       then
-	 echo "Updating user files for $user..."
-	 updateadminfiles $user "$vnmrdb_home_dir"
-       fi
 
        if [ x$user != x$dbadm ]
        then
-          if [ x$osname = "xInterix" ]
-          then
-             # $login_user has already been added to the database,
-	     # run createuser for other users
-	     if [ x"$login_user" != "x$user" ]
-	     then
-		"$vnmrsystem"/pgsql/bin/createuser.exe -d -a -q $user
-             fi
-          else
              "$vnmrsystem"/bin/create_pgsql_user $user
-          fi
        fi
        done
 
@@ -932,6 +462,15 @@ godoit()
     #   $vnmrsystem/bin/managedb filldb ${vnmruser_dir}/parlib $vnmr_adm vnmr_par
     #   $vnmrsystem/bin/managedb filldb ${vnmruser_dir}/shims $vnmr_adm shims
     #
+
+    if [[ -f "$vnmrsystem"/pgsql/persistence/LocatorOff ]]
+    then
+       echo ""
+       echo "Locator is turned off"
+       echo "To re-activate it, turn it on from vnmrj admin"
+       echo "and then re-run dbsetup"
+       echo ""
+    else
        echo "Loading data for all users (this may take a moment)..."
        "$vnmrsystem"/bin/managedb update
        echo " "
@@ -939,6 +478,7 @@ godoit()
        echo "Loading protocols..."
        "$vnmrsystem"/bin/managedb filldb "$vnmrsystem"/templates/vnmrj/protocols $vnmr_adm protocol
        "$vnmrsystem"/bin/managedb filldb "$vnmrsystem"/imaging/templates/vnmrj/protocols $vnmr_adm protocol
+    fi
 
 
 #       echo "Loading workspaces..."
@@ -966,8 +506,12 @@ if [ "x$vnmrsystem" = "x" ]
 then
    vnmrsystem="/vnmr"
 fi
+if [ ! -d "$vnmrsystem"/pgsql ]
+then
+   exit
+fi
 vnmr_adm=`"$vnmrsystem"/bin/fileowner /vnmr/vnmrrev`
-nmrnetdb="/usr/varian/config/NMR_NETWORK_DB"
+nmrnetdb="/vnmr/pgsql/config/NMR_NETWORK_DB"
 osname=`uname -s`
 rootuser="root"
 
@@ -989,7 +533,7 @@ then
     sudocmd="sudo -u $vnmr_adm "
 fi
 
-echo OS: $lflvr
+# echo OS: $lflvr
 
 if [ x$lflvr = "xdebian" ]
 then
@@ -997,7 +541,7 @@ then
     # if a newer version is installed.  Postgres is normally installed
     # in /usr/lib/postgresql/ in a directory name which is the version number.
     # Look in /usr/lib/postgresql/ and find the dir with the largest number.
-    echo finding pgpath for Ubuntu
+    # echo finding pgpath for Ubuntu
     # See if Postgres is installed
     if [ ! -d "/usr/lib/postgresql" ]
     then
@@ -1007,7 +551,7 @@ then
 
     dirlist=`ls -1 /usr/lib/postgresql`
 
-    echo "dirlist: $dirlist"
+#    echo "dirlist: $dirlist"
     version="0.0"
     for dir in $dirlist
     do
@@ -1018,11 +562,11 @@ then
 
     pgpath="/usr/lib/postgresql/"$version/bin/
     # needed to run postgresql as other user on Ubuntu14
-    chmod a+rw /var/run/postgresql
+#    chmod a+rw /var/run/postgresql
 fi
 if [ x$lflvr = "xdarwin" ]
 then
-echo finding pgpath for Mac
+    # echo finding pgpath for Mac
     # Mac sometimes needs a fullpath much like Ubuntu above
     # First, see if pg_ctl is found in the PATH
     pgpath=""
@@ -1036,7 +580,7 @@ echo finding pgpath for Mac
         then
             
             dirlist=`ls -1 /Library/PostgreSQL`
-            echo $dirlist
+#            echo $dirlist
             version="0.0"
             for dir in $dirlist
             do
@@ -1072,15 +616,15 @@ then
         # The system pg_ctl must not exist
         if test -d "$vnmrsystem/pgsql/bin_ver7"
         then
-            # vin_ver7 is still there, rename it to bin
+            # bin_ver7 is still there, rename it to bin
             mv "$vnmrsystem/pgsql/bin_ver7" "$vnmrsystem/pgsql/bin"
-            echo "Postgres 8.x version not found, switching to 7.x version"
+            echo "Postgres not installed, switching to OpenVnmrJ's version 7.x"
             echo "    mv $vnmrsystem/pgsql/bin_ver7 $vnmrsystem/pgsql/bin"
         fi
     fi
 fi
 
-echo "Using postgres path: $pgpath"
+# echo "Using postgres path: $pgpath"
 
 # Setup the Mac for using Postgres
 if [ x$lflvr = "xdarwin" ]
@@ -1110,13 +654,6 @@ then
         ln -s $pgpath bin
     fi
     echo "login_user:.${login_user}. vnmr_adm:.${vnmr_adm}.\n"
-fi
-
-if [ x$osname = "xInterix" ]
-then
-   echo "Interix, skipping dbsetup"
-   echo "End of Database Setup."
-   exit
 fi
 
 case $# in
@@ -1209,11 +746,6 @@ case $# in
           else
              vnmrsystem=$2   #This value passed by java program
              export vnmrsystem
-	     if [ x$osname = "xInterix" ]
-	     then
-		VNMRSYSTEM_WIN=`/bin/unixpath2win "$vnmrsystem"`
-		export VNMRSYSTEM_WIN
-	     fi
           fi
           ;;
 
@@ -1232,11 +764,6 @@ case $# in
           vnmr_adm=$1
           vnmrsystem=$2   #This value passed by java program
           export vnmrsystem
-	  if [ x$osname = "xInterix" ]
-	  then
-	    VNMRSYSTEM_WIN=`/bin/unixpath2win "$vnmrsystem"`
-	    export VNMRSYSTEM_WIN
-	  fi
           if [ x$3 = "xstandard" -o x$3 = "ximaging" -o x$3 = "xwalkup" ]
           then
              revm_save=$3
@@ -1261,11 +788,6 @@ case $# in
           vnmr_adm=$1
           vnmrsystem=$2   #This value passed by java program
           export vnmrsystem
-	  if [ x$osname = "xInterix" ]
-	  then
-	    VNMRSYSTEM_WIN=`/bin/unixpath2win "$vnmrsystem"`
-	    export VNMRSYSTEM_WIN
-	  fi
           if [ x$3 = "xstandard" -o x$3 = "ximaging" -o x$3 = "xwalkup" -o x$3 = "xpreserveDB" ]
           then
              revm_save=$3
@@ -1280,39 +802,6 @@ case $# in
           exit 1
           ;;
 esac
-
-if [ x$osname = "xInterix" ]
-then
-    rootuser="Administrator"
-    userexists=`/bin/id postgres`
-    if [ x"$userexists" = "x" ]
-    then
-	nmrgroup=`"$vnmrsystem"/bin/getgroup`
-	if [ ! -d /home ]
-	then
-	    mkdir /home
-	fi
-	# The postgres user does not exists, so we need to create one.
-    	"$vnmrsystem"/bin/useradd -d "/home/postgres" -g "$nmrgroup" -p "postgres" postgres
-        /usr/varian/sbin/makeuser postgres /home nmr y
-
-        #postgres user's password never expires
-        #net user postgres /expires:never
-
-	# We should only reach here during the first installation on a system
-	# where the postgres user did not exist yet.
-	# At this point, on Interix, we must get the user to add the postgres
-	# user to the "log on as a service" list, and then start dbsetup again.
-	# Tell them everything to do.
-	
-	/vnmr/bin/logonAsService.exe "$HOST" -u postgres -p SeServiceLogonRight
-	
-    fi
-    cscript.exe //nologo "$VNMRSYSTEM_WIN\bin\nopwdexp.vbs" /domain:$COMPUTERNAME /user:postgres
-    vnmrsystem_interix=`ntpath2posix "$VNMRSYSTEM_WIN"`
-
-
-fi
 
 if [ "x$login_user" = "x$rootuser" ]
 then
@@ -1333,28 +822,16 @@ then
     if [ x$osname = "xDarwin" ]
     then
        vnmradm_home_dir=$HOME
-    elif [ x$osname = "xInterix" ]
-    then
-	db_adm="postgres"
-	gethomedirInterix $vnmr_adm
-	vnmradm_home_dir="$home_dir"
-	gethomedirInterix $db_adm
-	vnmrdb_home_dir="$home_dir"
     else
        vnmradm_home_dir=`/usr/bin/getent passwd ${vnmr_adm} | awk 'BEGIN { FS = ":" } { print $6 }'`
     fi
 
-    if [ x$osname = "xInterix" ]
-    then
-    vnmruser="${vnmradm_home_dir}"\\\\vnmrsys
-    else
         vnmruser=${vnmradm_home_dir}/vnmrsys
-    fi
     export vnmruser
  
     if [ x$lflvr != "xdebian" ]
     then
-       su $vnmr_adm -c "$0 $vnmr_adm "$vnmrsystem" $revm_save $prevVnmrDir"
+       su - $vnmr_adm -c "$0 $vnmr_adm $vnmrsystem $revm_save $prevVnmrDir"
     else
        sudo -u $vnmr_adm $0 $vnmr_adm "$vnmrsystem" $revm_save $prevVnmrDir
     fi
@@ -1392,24 +869,11 @@ else
     if [ x$osname = "xDarwin" ]
     then
         vnmradm_home_dir=$HOME
-    elif [ x$osname = "xInterix" ]
-    then
-        db_adm="postgres"
-        gethomedirInterix $vnmr_adm
-        vnmradm_home_dir="$home_dir"
-        gethomedirInterix $db_adm
-        vnmrdb_home_dir="$home_dir"
     else
         vnmradm_home_dir=`/usr/bin/getent passwd ${vnmr_adm} | awk 'BEGIN { FS = ":" } { print $6 }'`
     fi
 
-    if [ x$osname = "xInterix" ]
-    then
-        vnmruser_dir="${vnmradm_home_dir}"\\\\vnmrsys
-        vnmrdbuser_dir="${vnmrdb_home_dir}"\\\\vnmrsys
-    else
         vnmruser_dir=${vnmradm_home_dir}/vnmrsys
-    fi 
    
     if [ "x$vnmruser" = "x" ]
     then
@@ -1428,49 +892,17 @@ else
     godoit $vnmr_adm $revm_save
 fi
 
-# set permissions
-if [ x$osname = "xInterix" -a $# = 2 ]
-then
-    owner=`"$vnmrsystem"/bin/fileowner "$vnmrsystem"/vnmrrev`
-    if [ x$owner != x$vnmr_adm ]
-    then
-	echo "Performing cleanup..."
-	files=`ls "$vnmrsystem"`
-	for file in $files
-	do
-	    if [ x$file != "xpgsql" -a x$file != "xbin" ]
-	    then
-		chown -R "$vnmr_adm" "$vnmrsystem/$file"
-		#chgrp -R "$nmr_group" $dest_dir"
-	    else
-		vnmrfiles=`ls "$vnmrsystem"/$file`
-		for vnmrfile in $vnmrfiles
-		do
-		    if [ x$vnmrfile != "xdata" -a x$vnmrfile != "xexeckillacqproc" -a x$vnmrfile != "xsudoins" ]
-		    then
-			chown -R "$vnmr_adm" "$vnmrsystem/$file/$vnmrfile"
-		    fi
-		done
-	    fi
-	done
-    fi
-    
-    chmod 755 "$vnmrsystem"
-    chmod 755 "$vnmrsystem/pgsql"
-    chown "$vnmr_adm" "$vnmrsystem/pgsql"
-    "$vnmrsystem"/bin/managedb update
-fi
-
 # Print the version of postgres we are using
 # If pg_ctl exists in $vnmrsystem/pgsql/bin/, use it, 
 # else use system version.
-file="$vnmrsystem/pgsql/bin/pg_ctl"
-if [ -f "$file" ]
-then
-    $vnmrsystem/pgsql/bin/pg_ctl --version
-else
-    $pgpath"pg_ctl" --version
-fi
+# file="$vnmrsystem/pgsql/bin/pg_ctl"
+# if [ -f "$file" ]
+# then
+#     $vnmrsystem/pgsql/bin/pg_ctl --version
+# else
+#     $pgpath"pg_ctl" --version
+# fi
 
+echo ""
 echo "End of Database Setup."
 

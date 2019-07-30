@@ -698,11 +698,17 @@ fi
 
 #and if we want to load vnmr we create entry in passwd/shadow
 
+update_adm="no"
 echo $gen_list | grep -s VNMR > /dev/null
 if [ $? -eq 0 ]
 then
    #echo "Checking for $nmr_adm   in password file(s)"
    #echo "Checking for $nmr_group in group file"
+   getent passwd $nmr_adm > /dev/null
+   if [ $? -ne 0 ]
+   then
+      update_adm="yes"
+   fi
    nmr_home="/home"
    update_user_group
 fi
@@ -1181,8 +1187,14 @@ then
    if ( test x$load_type = "xmr400.opt" -o x$load_type = "xmr400dd2.opt" -o x$load_type = "xpropulse.opt" )
    then
        dir=$dest_dir/acq/download
-       cp -f $dir/nvScript.ls $dir/nvScript
-       cp -f $dir/nvScript.ls.md5 $dir/nvScript.md5
+       if [ -f $dir/nvScript.ls ]
+       then
+          cp -f $dir/nvScript.ls $dir/nvScript
+       fi
+       if [ -f $dir/nvScript.ls.md5 ]
+       then
+          cp -f $dir/nvScript.ls.md5 $dir/nvScript.md5
+       fi
        if [ -f $dest_dir/conpar.400mr ]
        then
           mv $dest_dir/conpar.400mr $dest_dir/conpar
@@ -2134,7 +2146,8 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
              # so that the rsh server is active, we copy shell,exec,login files to correct this if missing
              # e.g. 12.04
              if [ $distmajor -ge 12 ] ; then
-                if [ ! -r /etc/xinetd.d/shell ]
+                if [ -d /etc/xinetd.d ] && [ ! -r /etc/xinetd.d/shell ] &&
+                   [ -a $src_code_dir/linux/xinetd.d.tgz ]
                 then
                    echo "Installing xinetd files for rsh server"
                    logmsg "Installing xinetd files for rsh server"
@@ -2588,6 +2601,22 @@ fi
 if [ x$old_link != "x" ]
 then
     su ${nmr_adm} -fc "/vnmr/bin/update_OpenVnmrJ /vnmr $old_link fromInstall"
+fi
+if [ x$did_vnmr = "xy" ]
+then
+   if [ $update_adm = "yes" ] || [ ! -d ${nmr_home}/${nmr_adm}/vnmrsys ]
+   then
+      vnmrsystem=$dest_dir
+      export vnmrsystem
+      "$dest_dir"/bin/makeuser ${nmr_adm} "" "" "y"
+   fi
+   if [ x$lflvr != "xdebian" ]
+   then
+      su $nmr_adm -c "$dest_dir/bin/ovjUser ${nmr_adm}"
+   else
+      sudo -u $nmr_adm $dest_dir/bin/ovjUser ${nmr_adm}
+   fi
+   "$dest_dir"/bin/dbsetup ${nmr_adm} "$dest_dir"
 fi
 
 #

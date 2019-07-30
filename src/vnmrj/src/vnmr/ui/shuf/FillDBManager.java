@@ -115,7 +115,7 @@ import vnmr.util.*;
       machine.
     - Vnmrj must be able to translate between the mounted path and the
       actual path on the destination computer.
-      - It will first look for a file '/usr/varian/mount_name_table'
+      - It will first look for a file '/vnmr/pgsql/config/mount_name_table'
         If found, it only uses this file.  An example of this file
         is as follows:
            # Table of remote system mount names and paths
@@ -2984,11 +2984,11 @@ public class FillDBManager {
                 UNFile file = new UNFile("/vnmr/pgsql/bin/createdb");
                 if(file.canExecute()) {
                     // Use our released one
-                    cmd = "/vnmr/pgsql/bin/createdb " + dbName;
+                    cmd = "/vnmr/pgsql/bin/createdb -h /tmp " + dbName;
                 }
                 else {
                     // Use the system one
-                    cmd =  "createdb " + dbName;
+                    cmd =  "createdb -h /tmp " + dbName;
                 }
             }
             String[] cmds = {UtilB.SHTOOLCMD, UtilB.SHTOOLOPTION, cmd};
@@ -3885,16 +3885,12 @@ public class FillDBManager {
     // in turn only be called if PGHOST = the local host.  In that case,
     // the only reason to have networkMode other than false, is if we
     // have been directed to do so by finding a file
-    //   /usr/varian/config/NMR_NETWORK_DB
+    //   /vnmr/pgsql/config/NMR_NETWORK_DB
     private String determineNetworkMode() {
         String usingNetServer;
         UNFile file;
 
-        if(UtilB.OSNAME.startsWith("Windows"))
-            file = new UNFile(UtilB.SFUDIR_WINDOWS +
-                              "/usr/varian/config/NMR_NETWORK_DB");
-        else
-            file = new UNFile("/usr/varian/config/NMR_NETWORK_DB");
+        file = new UNFile(FileUtil.sysdir() + "/pgsql/config/NMR_NETWORK_DB");
         if(file.exists())
             usingNetServer = "true";
         else
