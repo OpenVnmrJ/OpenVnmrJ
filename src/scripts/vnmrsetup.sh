@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 #
 #
 # Copyright (C) 2015  University of Oregon
@@ -340,66 +340,6 @@ set_system_stuff
 #  First make sure the firewall and SELinux are OFF.
 #
 
-#
-# for VnmrJ 3.0 we must check if require RHEL packages have been installed
-# prior to installing VnmrJ
-#
-# only test on RHEL 5.x
-if [ "x$distroType" = "xrhel" -a "x$rhelrlvl" = "x5" -o "x$distroType" = "xdebian" ]; then
-# any argument with load.nmr will skip this test
-  if [ ! -e /tmp/vskippkgchk ]; then
-    dirpath=`pwd`
-    # check for required RPM packages
-    sh $dirpath/code/chksystempkgs
-    if [ $? -ne 0 ]; then
-      # echo the Standby because it takes several seconds to copy and bring up the next xmessage
-      echo " Standby........ "
-      mkdir -p /tmp/agilent_preinstall
-      # dont let the copy complain about the TuboVNC directory that it can't copy, that's OK
-      cp $dirpath/code/linux/* /tmp/agilent_preinstall > /dev/null 2>&1
-      # change permission so that even if another user does the install
-      # we won't get permission errors
-      chmod 777 /tmp/agilent_preinstall
-      chmod go+w  /tmp/agilent_preinstall/*
-
-      if [ -x /usr/bin/xmessage ]; then
-        /usr/bin/xmessage -center -default OK -buttons OK:0 -file rpmInstruction.txt -timeout 300
-        # just so the user has another chance of copy/paste
-        echo " "
-        echo "cd /tmp/agilent_preinstall"
-        echo "./installpkgs"
-        echo " "
-        exit 0
-      else
-        echo " "
-        echo "================================================================== "
-        echo " "
-        echo "There are RHEL packages required by OpenVnmrJ that are not installed"
-        echo " "
-        echo "OpenVnmrJ Installation can not proceed until the required Linux packages are Installed. "
-        echo " "
-        echo " "
-        echo "Please following the instructions below to install the Linux packages: "
-        echo " "
-        echo "Eject the OpenVnmrJ Installation CD and go to the directory /tmp/agilent_preinstall"
-        echo "Insert your systems RHEL 5 Installation DVD and run the installpkgs script"
-        echo "e.g.: "
-        echo " "
-        echo "cd /tmp/agilent_preinstall"
-        echo "./installpkgs"
-        echo " "
-        echo " "
-        echo "After completion Eject RHEL DVD, insert the OpenVnmrJ CD and start the OpenVnmrJ install."
-        echo " "
-        echo "================================================================== "
-        echo " "
-        sleep 30
-        exit 1
-      fi
-    fi 
-  fi
-fi
-
 notroot=0
 userId=`/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }'`
 if [ $userId != "uid=0(root)" ]; then
@@ -454,6 +394,35 @@ fi
 #
 # User is now root.
 #
+#
+# we must check if require RHEL packages have been installed
+# prior to installing VnmrJ
+#
+if [ "x$distroType" = "xrhel" -o "x$distroType" = "xdebian" ]; then
+# any argument with load.nmr will skip this test
+  if [ ! -e /tmp/vskippkgchk ]; then
+    dirpath=`pwd`
+    # check for required RPM packages
+    $dirpath/code/chksystempkgs
+    if [ $? -ne 0 ]; then
+      ping -W 1 -c 1 www.openvnmrj.com > /dev/null 2>&1
+      if [ $? -ne 0 ]
+      then
+         cat $dirpath/code/rpmInstruction.txt
+         exit 2
+      fi
+      echo "This may take up to 40 minutes to update............."
+      mkdir -p /tmp/ovj_preinstall
+      chmod 777 /tmp/ovj_preinstall
+      $dirpath/code/installpkgs
+      if [ $? -ne 0 ]; then
+         cat $dirpath/code/rpmInstruction.txt
+         exit 2
+      fi
+    fi 
+  fi
+fi
+
 
 #
 # determine if running from mount CD/DVD media
