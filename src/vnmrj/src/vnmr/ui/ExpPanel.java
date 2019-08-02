@@ -969,7 +969,6 @@ public class ExpPanel extends JPanel
          updateTools(true);
          queryPanelInfo();
          if (active) {
-             Messages.postDebug("start UI  ");
              setParamPanels();
              VTabbedToolPanel vToolPanel = Util.getVTabbedToolPanel();
              if(vToolPanel != null) vToolPanel.updateValue();
@@ -1210,6 +1209,7 @@ public class ExpPanel extends JPanel
         if ( bSuspendPnew ) {
             return;
         }
+        Util.dorebuild = false;
 
         // Messages.postDebug("pnew", "ExpPanel.processPnew(): " + str);
         queryCount = 0;
@@ -1360,6 +1360,11 @@ public class ExpPanel extends JPanel
                    break;
                }
             }
+        }
+        if (Util.dorebuild)
+        {
+           Util.rebuildUI();
+           Util.dorebuild = false;
         }
         if (bVerbose)
             System.out.println("Exp "+winId+":  total pnew query count "+queryCount);

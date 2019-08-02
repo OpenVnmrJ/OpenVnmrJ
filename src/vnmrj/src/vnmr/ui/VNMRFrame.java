@@ -809,6 +809,9 @@ public class VNMRFrame extends JFrame implements AppInstaller {
     public static boolean usesDatabase() {
     	return useDatabase;
     }
+    public static void setNoDatabase() {
+    	useDatabase = false;
+    }
 
     private void initAppDirs(String path, ArrayList appDirectories, ArrayList appDirLabels) {
         // read persistence file

@@ -184,10 +184,13 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
         if (sshare == null) {
             sshare = new SessionShare(appInstaller, user);
         }
+        if (FillDBManager.locatorOff())
+            VNMRFrame.setNoDatabase();
         if (!bReBuild) {
             sshare.setAppInstaller(appInstaller);
             sshare.setUser(user);
-            sshare.FillLocatorHistoryList();
+            if (!FillDBManager.locatorOff())
+               sshare.FillLocatorHistoryList();
         }
         Util.setAppIF(this);
         Util.setUser(user);

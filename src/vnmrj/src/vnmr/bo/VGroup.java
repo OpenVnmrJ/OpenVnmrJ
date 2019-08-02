@@ -381,6 +381,18 @@ to be done in setEditMode()
         if (inEditMode)
            return;
 
+        if (reference != null && expanded != null && expanded.equals("rebuild") )
+        {
+            if (hasVariable(this, params) != null)
+            {
+               Util.dorebuild = true;
+               setvisible(false);
+               removeAll();
+               invalidate();
+               return;
+            }
+        }
+
         if (showVal != null && hasVariable(this, params) != null) {
             bNeedUpdate = true;
             vnmrIf.asyncQueryShow(this, showVal);
