@@ -51,6 +51,7 @@ public class Util implements VnmrKey {
     public static String OSNAME = System.getProperty("os.name");
     public static final String SFUDIR_WINDOWS = System.getProperty("sfudirwindows");
     public static final String SFUDIR_INTERIX = System.getProperty("sfudirinterix");
+    public static boolean dorebuild = false;
     /** cache for image icons */
     private static final Hashtable<String,ImageIcon> iconCache
             = new Hashtable<String,ImageIcon>();
@@ -1799,7 +1800,7 @@ public class Util implements VnmrKey {
 	    Messages.postDebug("### appDir "+i+" "+(String)appDirs.get(i));
 	
         if(user.setAppDirs(appDirs, labels) && rebuild) {
-            Messages.postDebug("### rebuildUI");
+                // Messages.postDebug("### rebuildUI");
                 rebuildUI();
         }
 
