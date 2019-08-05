@@ -208,6 +208,8 @@ if [ ! -x /usr/bin/dpkg ]; then
 
  item68List='
   motif
+  libX11
+  libXt
   mtools
   expect
   gpm
@@ -305,7 +307,7 @@ if [ ! -x /usr/bin/dpkg ]; then
  echo "tail -f $logfile"
  echo "Installing standard packages (1 of 3)"
  yum -y install $package68List &> $logfile
- yum -y upgrade glibc glibc-devel libstdc++ libstdc++-devel &>> $logfile
+ yum -y upgrade glibc glibc-devel libstdc++ libstdc++-devel libX11 libXt &>> $logfile
 
  echo "Installing required packages (2 of 3)"
  yumList=''
@@ -321,7 +323,7 @@ if [ ! -x /usr/bin/dpkg ]; then
  if [ "x$yumList" != "x" ]; then
    yum -y install $yumList &>> $logfile
  fi
- yum -y install glibc.i686 glibc-devel.i686 libstdc++.i686 libstdc++-devel.i686 &>> $logfile
+ yum -y install glibc.i686 glibc-devel.i686 libstdc++.i686 libstdc++-devel.i686 libX11.i686 libXt.i686 &>> $logfile
 
 # perl-homedir creates a perl5 directory in every acct. This fixes it so it does not do that.
  if [ $perlHomeInstalled -eq 0 ]
@@ -431,7 +433,7 @@ else
  fi
  # apt-get uninstalls these if an amd64 version is installed for something else >:(
  # so install them last...
- apt-get install -y libmotif-dev libx11-dev libxt-dev &>> $logfile
+ apt-get install -y libmotif-dev libx11-dev libxt-dev libx11-dev:i386 libxt-dev:i386 &>> $logfile
  unset DEBIAN_FRONTEND
  echo "dash dash/sh boolean false" | debconf-set-selections &>> $logfile
  dpkg-reconfigure -u dash &>> $logfile
