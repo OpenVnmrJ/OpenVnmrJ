@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # the next line restarts using tclsh \
 exec tclsh "$0" "$@"
 
@@ -21,7 +21,7 @@ exec tclsh "$0" "$@"
 # Configuration parameters                                  #
 #############################################################
 
-# Usualy the USB-485M will get the default /dev/ttyUSB0 port
+# Usually the USB-485M will get the default /dev/ttyUSB0 port
 set port /dev/ttyUSB0
 
 # When debugflg is true, extra messages are printed in the terminal window
@@ -193,10 +193,11 @@ proc getTemp {port} {
     set reply [ modbusasciicommand $readPV $port 1000]
     CheckTimeoutError $reply
     if {$debugflg} {puts -nonewline "  > Register 1000: $reply  "}
-    if { [expr 0x$reply >> 15]} {
-      set temp [expr [scan "FFFF$reply" %x ] / 10.0]
-    } else { 
-      set temp [expr [scan $reply %x] / 10.0 ]
+    scan $reply %x ttemp
+    if { $ttemp < 1000 } {
+      set temp [expr (($ttemp ) / 10.0)]
+    } else {
+      set temp [expr (($ttemp - 65536) / 10.0)]
     }
     return $temp
 }
@@ -206,10 +207,11 @@ proc getTempSetPoint {port} {
     set reply [ modbusasciicommand $readPV $port 1000]
     CheckTimeoutError $reply
     if {$debugflg} {puts "Register 1001: $reply"}
-    if { [expr 0x$reply >> 15]} {
-      set temp [expr [scan "FFFF$reply" %x ] / 10.0]
-    } else { 
-      set temp [expr [scan $reply %x] / 10.0 ]
+    scan $reply %x ttemp
+    if { $ttemp < 1000 } {
+      set temp [expr (($ttemp ) / 10.0)]
+    } else {
+      set temp [expr (($ttemp - 65536) / 10.0)]
     }
     return $temp
 }
@@ -219,7 +221,8 @@ proc setTempSetPoint { T port} {
     if {$T >= 0} {
         append setSV [format %04x [expr int($T * 10)]]
     } else {
-        append setSV [string range [ format %8x [expr int($T * 10) ]] 4 end]
+        set setSVn [format 0x%.8x [expr int($T * 10) & 0xFFFFFFFF]]
+        append setSV [string range $setSVn 6 end  ]
     }
     set setSV [string toupper $setSV]
     debugmsg "  > Writing to Register 1001: $setSV"
