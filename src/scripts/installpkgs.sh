@@ -301,15 +301,31 @@ if [ ! -x /usr/bin/dpkg ]; then
  for prog_pid in $npids
  do
    kill $prog_pid
+   sleep 2
  done
+# Try a second time
+ npids=$(ps -ef  | grep PackageKit | grep -v grep | awk '{ printf("%d ",$2) }')
+ for prog_pid in $npids
+ do
+   kill $prog_pid
+ done
+# If it will not die, exit
+ npids=$(ps -ef  | grep PackageKit | grep -v grep | awk '{ printf("%d ",$2) }')
+ if [ ! -z $npids ]
+ then
+    echo "CentOS PackageKit is preventing installation"
+    exit 1
+ fi
 
  echo "You can monitor the progress in a separate terminal window with the command"
  echo "tail -f $logfile"
  echo "Installing standard packages (1 of 3)"
- yum -y install $package68List &> $logfile
+ echo "Installing standard packages (1 of 3)" > $logfile
+ yum -y install $package68List &>> $logfile
  yum -y upgrade glibc glibc-devel libstdc++ libstdc++-devel libX11 libXt &>> $logfile
 
  echo "Installing required packages (2 of 3)"
+ echo "Installing required packages (2 of 3)" >> $logfile
  yumList=''
  for xpack in $packagelist
  do
@@ -333,6 +349,7 @@ if [ ! -x /usr/bin/dpkg ]; then
  fi
 
  echo "Installing additional packages (3 of 3)"
+ echo "Installing additional packages (3 of 3)" >> $logfile
  if [ $epelInstalled -eq 0 ]
  then
    yum -y install epel-release &>> $logfile
@@ -401,13 +418,28 @@ else
  echo "You can monitor the progress in a separate terminal window with the command"
  echo "tail -f $logfile"
  echo "Installing standard packages (1 of 2)"
+ echo "Installing standard packages (1 of 2)" > $logfile
 # The unattended-upgrade script often holds a yum lock.
 # This prevents this script from executing
  npids=$(ps -ef  | grep unattended-upgrade | grep -v grep | awk '{ printf("%d ",$2) }')
  for prog_pid in $npids
  do
    kill -s 2 $prog_pid
+   sleep 2
  done
+# Try a second time
+ npids=$(ps -ef  | grep unattended-upgrade | grep -v grep | awk '{ printf("%d ",$2) }')
+ for prog_pid in $npids
+ do
+   kill -s 2 $prog_pid
+ done
+# If it will not die, exit
+ npids=$(ps -ef  | grep unattended-upgrade | grep -v grep | awk '{ printf("%d ",$2) }')
+ if [ ! -z $npids ]
+ then
+    echo "Ubuntu unattended-update is preventing installation"
+    exit 1
+ fi
  dpkg --add-architecture i386
  apt-get -qq update
 # apt-get -qq -y dist-upgrade
@@ -416,8 +448,9 @@ else
  apt-get install -y csh make expect bc git scons g++ gfortran \
       openssh-server mutt sharutils sendmail-cf gnome-power-manager \
       kdiff3 ghostscript imagemagick postgresql \
-      gedit dos2unix zip cups gnuplot gnome-terminal enscript &> $logfile
+      gedit dos2unix zip cups gnuplot gnome-terminal enscript &>> $logfile
  echo "Installing version specific packages (2 of 2)"
+ echo "Installing version specific packages (2 of 2)" >> $logfile
  if [ $distmajor -gt 16 ] ; then
    # these are needed to build
     apt-get install -y gdm3 gnome-session openjdk-8-jre \
