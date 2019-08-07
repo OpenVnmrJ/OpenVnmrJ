@@ -2426,7 +2426,8 @@ int check_args(int argc, char *argv[], int retc, char *retv[])
             {
                 strcpy(psgfile, sfile);
                 if ( ! timeFlag)
-	           Werrprintf("dps error: file '%s(.psg)' does not exist", psgfile);
+                   if (retc == 0)
+	              Werrprintf("dps error: file '%s(.psg)' does not exist", psgfile);
                 return(0);
             }
             if (cFound == 0)
