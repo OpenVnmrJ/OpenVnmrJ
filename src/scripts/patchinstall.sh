@@ -1,6 +1,4 @@
-#!/bin/sh
-# '@(#)patchinstall.sh ' 
-#
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -76,12 +74,7 @@ get_vnmrsystem() {
 
     if [ "x$vnmrsystem" = "x" ]
     then
-        printf "Please enter location of VnmrJ system directory [/vnmr]: "
-        read vnmrsystem
-        if test "x$vnmrsystem" = "x"
-        then
-            vnmrsystem="/vnmr"
-        fi
+       vnmrsystem=/vnmr
     fi
  
     if test ! -d "$vnmrsystem"
