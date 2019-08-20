@@ -22,17 +22,21 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <fts.h>
 #include <sys/stat.h>
+#include <regex.h>
 
 #include "vnmrsys.h"
+#include "variables.h"
 #include "tools.h"
 #include "wjunk.h"
 
 extern mode_t str_to_octal(char *ptr );
+extern int assignString(const char *s, varInfo *v, int i);
 
 /*---------------------------------------------------------------------------
 |
@@ -175,6 +179,7 @@ int Chmod(int argc, char *argv[], int retc, char *retv[])
       RETURN;
    }
 
+   errno = 0;
    FTSENT *node;
    while ((node = fts_read(tree)))
    {
@@ -184,14 +189,6 @@ int Chmod(int argc, char *argv[], int retc, char *retv[])
          mode = (node->fts_statp)->st_mode & (~modeMask);
       chmod(node->fts_path, mode);
    }
-   if (errno)
-   {
-      if (retc > 0)
-         retv[0] = intString(0);
-      else
-         Werrprintf("%s: cannot read %s",argv[0],argv[2]);
-      RETURN;
-   }
 
    if (fts_close(tree))
    {
@@ -199,6 +196,14 @@ int Chmod(int argc, char *argv[], int retc, char *retv[])
          retv[0] = intString(0);
       else
          Werrprintf("%s: cannot close %s",argv[0],argv[2]);
+      RETURN;
+   }
+   if (errno)
+   {
+      if (retc > 0)
+         retv[0] = intString(0);
+      else
+         Werrprintf("%s: cannot read %s",argv[0],argv[2]);
       RETURN;
    }
    if (retc > 0)
@@ -222,7 +227,7 @@ int Rmdir(char *dirname, int rmParent)
    FTSENT *node;
    while ((node = fts_read(tree)))
    {
-      if (node->fts_info == FTS_F)
+      if ( (node->fts_info == FTS_F) || (node->fts_info == FTS_SL) || (node->fts_info == FTS_SLNONE) )
       {
 //         fprintf(stderr,"fts_path: %s\n",node->fts_path);
 //         fprintf(stderr,"fts_name %s\n",node->fts_name);
@@ -241,10 +246,10 @@ int Rmdir(char *dirname, int rmParent)
          }
       }
    }
-   if (errno)
-      return(-2);
    if (fts_close(tree))
       return(-3);
+   if (errno)
+      return(-2);
    return(0);
 }
 
@@ -261,26 +266,341 @@ int Cpdir(char *fromdir, char *todir)
    errno = 0;
    FTS *tree = fts_open(argv2, FTS_NOCHDIR|FTS_PHYSICAL, NULL);
    if (!tree)
+   {
+      Werrprintf("cp: trouble opening %s",fromdir);
       return(-1);
+   }
 
    FTSENT *node;
    while ((node = fts_read(tree)))
    {
-      if (node->fts_info == FTS_F)
+      if ( (node->fts_info == FTS_F) || (node->fts_info == FTS_SL) )
       {
-//         fprintf(stderr,"fts_path: %s\n",node->fts_path);
-//         fprintf(stderr,"fts_name %s\n",node->fts_name);
-//         fprintf(stderr,"rm %s\n",node->fts_path);
          strcpy(toPath,todir);
          strcat(toPath,"/");
          strcat(toPath,node->fts_name);
-//         fprintf(stderr,"Cpdir %s to %s\n",node->fts_path, toPath);
          copyFile(node->fts_path,toPath,0);
       }
    }
-   if (errno)
-      return(-2);
    if (fts_close(tree))
       return(-3);
+   if (errno)
+      return(-2);
    return(0);
 }
+
+/*------------------------------------------------------------------------
+|
+|	This module returns the name of the n th file
+|	in the selected directory
+|
++-----------------------------------------------------------------------*/
+int getitem(char *dirname, int index, char *filename, char *fileCmp, int recurse,
+                   int regExp, int saveInPar, varInfo *v1)
+{
+   regex_t regex;
+   regmatch_t matches;
+   int reti;
+   int cnt;
+   size_t len = 0;
+
+   char *argv2[2];
+   argv2[0] = dirname;
+   argv2[1] = NULL;
+
+   if (recurse)
+   {
+      len = strlen(dirname);
+      if ( dirname[len-1] != '/')
+         len++;
+   }
+   errno = 0;
+   FTS *tree = fts_open(argv2, FTS_NOCHDIR|FTS_PHYSICAL, NULL);
+   if (!tree)
+   {
+      Werrprintf("getfile: trouble opening %s",dirname);
+      return(-1);
+   }
+
+   FTSENT *node = NULL;
+   if (regExp)
+   {
+      reti = regcomp(&regex, fileCmp, REG_EXTENDED|REG_NOSUB);
+      if (reti)
+      {
+         char buf[MAXPATH];
+         regerror(reti, &regex , buf, sizeof(buf) );
+         fts_close(tree);
+         Werrprintf("regular expression '%s' has error '%s'",fileCmp,buf);
+         return(-1);
+      }
+   }
+   cnt = 0;
+   while ( (node = fts_read(tree)) )
+   {
+      int found;
+
+      found = 0;
+      if ( (*node->fts_name != '.') || (regExp == 2) )  /* no . files unless regular expressions are used */
+      {
+         if ( (node->fts_info == FTS_F) || (node->fts_info == FTS_SL) )
+         {
+         
+            if ( regExp )
+            {
+               if (regexec(&regex, node->fts_name, 0, &matches, 0) == 0)
+               {
+                  cnt++;
+                  found = 1;
+               }
+            }
+            else if ( ! strlen(fileCmp)  || (strstr(node->fts_name, fileCmp) != NULL) )
+            {
+               cnt++;
+               found = 1;
+            }
+         }
+         else if (node->fts_info == FTS_D)
+         {
+            if ( regExp )
+            {
+               if (regexec(&regex, node->fts_name, 0, NULL, 0) == 0)
+                  if ( strcmp(dirname,node->fts_path) )
+                  {
+                     cnt++;
+                     found = 1;
+                  }
+            }
+            else if ( ! strlen(fileCmp)  || (strstr(node->fts_name, fileCmp) != NULL) )
+            {
+               if ( strcmp(dirname,node->fts_path) )
+               {
+                  cnt++;
+                  found = 1;
+               }
+            }
+            if (( ! recurse ) && strcmp(dirname,node->fts_path) )
+               fts_set(tree, node, FTS_SKIP);
+         }
+      }
+      if (found && saveInPar)
+      {
+         if (cnt == 1)
+            assignString("",v1,0);
+         if (recurse)
+            assignString(&node->fts_path[len],v1,cnt);
+         else
+            assignString(node->fts_name,v1,cnt);
+      }
+      if (index && (index == cnt))
+      {
+         if (recurse)
+            strcpy(filename,&node->fts_path[len]);
+         else
+            strcpy(filename,node->fts_name);
+         break;
+      }
+   }
+   if (regExp)
+   {
+      regfree(&regex);
+   }
+   if (fts_close(tree))
+   {
+      Werrprintf("fts close error");
+      return(-1);
+   }
+   if (index && (index != cnt))
+   {
+        Werrprintf("cannot get item %d from %s",index,dirname);
+	return(-1);
+   }	
+   if (errno)
+   {
+      Werrprintf("errno error %d",errno);
+      return(-1);
+   }
+   return(cnt);
+}
+
+/*------------------------------------------------------------------------
+|
+|	This module returns the name of the n th file
+|	in the selected directory, sorted
+|
++-----------------------------------------------------------------------*/
+struct sort {
+   char path[MAXPATH];
+};
+static int doSort(const void *s1, const void *s2)
+{
+   struct sort *si1 = (struct sort *) s1;
+   struct sort *si2 = (struct sort *) s2;
+   return( strcmp( si1->path, si2->path) );
+}
+
+int getitem_sorted(char *dirname, int index, char *filename, char *fileCmp, int recurse,
+                   int regExp, int saveInPar, varInfo *v1)
+{
+   regex_t regex;
+   regmatch_t matches;
+   int reti;
+   int cnt;
+   size_t len = 0;
+
+   char *argv2[2];
+   argv2[0] = dirname;
+   argv2[1] = NULL;
+
+   if (recurse)
+   {
+      len = strlen(dirname);
+      if ( dirname[len-1] != '/')
+         len++;
+   }
+   errno = 0;
+   FTS *tree = fts_open(argv2, FTS_NOCHDIR|FTS_PHYSICAL, NULL);
+   if (!tree)
+   {
+      Werrprintf("getfile: trouble opening %s",dirname);
+      return(-1);
+   }
+
+   FTSENT *node = NULL;
+   if (regExp)
+   {
+      reti = regcomp(&regex, fileCmp, REG_EXTENDED|REG_NOSUB);
+      if (reti)
+      {
+         char buf[MAXPATH];
+         regerror(reti, &regex , buf, sizeof(buf) );
+         fts_close(tree);
+         Werrprintf("regular expression '%s' has error '%s'",fileCmp,buf);
+         return(-1);
+      }
+   }
+   cnt = 0;
+   while ( (node = fts_read(tree)))
+   {
+      if ( (*node->fts_name != '.') || (regExp == 2) )  /* no . files unless regular expressions are used */
+      {
+         if ( (node->fts_info == FTS_F) || (node->fts_info == FTS_SL) )
+         {
+         
+            if ( regExp )
+            {
+               if (regexec(&regex, node->fts_name, 0, &matches, 0) == 0)
+                  cnt++;
+            }
+            else if ( ! strlen(fileCmp)  || (strstr(node->fts_name, fileCmp) != NULL) )
+            {
+               cnt++;
+            }
+         }
+         else if (node->fts_info == FTS_D)
+         {
+            if ( regExp )
+            {
+               if (regexec(&regex, node->fts_name, 0, NULL, 0) == 0)
+                  if ( strcmp(dirname,node->fts_path) )
+                  {
+                     cnt++;
+                  }
+            }
+            else if ( ! strlen(fileCmp)  || (strstr(node->fts_name, fileCmp) != NULL) )
+            {
+               if ( strcmp(dirname,node->fts_path) )
+               {
+                  cnt++;
+               }
+            }
+            if (( ! recurse ) && strcmp(dirname,node->fts_path) )
+               fts_set(tree, node, FTS_SKIP);
+         }
+      }
+   }
+
+   struct sort sortPath[cnt+1];
+   fts_close(tree);
+   tree = fts_open(argv2, FTS_NOCHDIR|FTS_PHYSICAL, NULL);
+   cnt = 0;
+   while ( (node = fts_read(tree)))
+   {
+      int found;
+
+      found = 0;
+      if ( (*node->fts_name != '.') || (regExp == 2) )
+      {
+         if ( (node->fts_info == FTS_F) || (node->fts_info == FTS_SL) )
+         {
+            if ( regExp )
+            {
+               if (regexec(&regex, node->fts_name, 0, &matches, 0) == 0)
+               {
+                  cnt++;
+                  found = 1;
+               }
+            }
+            else if ( ! strlen(fileCmp)  || (strstr(node->fts_name, fileCmp) != NULL) )
+            {
+               cnt++;
+               found = 1;
+            }
+         }
+         else if (node->fts_info == FTS_D)
+         {
+            if ( regExp )
+            {
+               if  (regexec(&regex, node->fts_name, 0, NULL, 0) == 0)
+                  if ( strcmp(dirname,node->fts_path) )
+                  {
+                     cnt++;
+                     found = 1;
+                  }
+            }
+            else if ( ! strlen(fileCmp)  || (strstr(node->fts_name, fileCmp) != NULL) )
+            {
+               if ( strcmp(dirname,node->fts_path) )
+               {
+                  cnt++;
+                  found = 1;
+               }
+            }
+            if (( ! recurse ) && strcmp(dirname,node->fts_path) )
+               fts_set(tree, node, FTS_SKIP);
+         }
+      }
+      if (found)
+      {
+         if (recurse)
+            strcpy(sortPath[cnt-1].path, &node->fts_path[len]);
+         else
+            strcpy(sortPath[cnt-1].path, node->fts_name);
+      }
+   }
+   qsort( &sortPath[0], cnt, sizeof(struct sort), doSort);
+   if (regExp)
+   {
+      regfree(&regex);
+   }
+   if (index)
+      strcpy(filename, sortPath[index-1].path );
+   else if (saveInPar)
+   {
+      assignString("",v1,0);
+      for (index=1; index <= cnt; index++)
+         assignString(sortPath[index-1].path,v1,index);
+   }
+   if (fts_close(tree))
+   {
+      Werrprintf("fts close error");
+      return(-1);
+   }
+   if (errno)
+   {
+      Werrprintf("errno error %d",errno);
+      return(-1);
+   }
+   return(cnt);;
+}
+

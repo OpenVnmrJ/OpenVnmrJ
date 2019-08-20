@@ -37,7 +37,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef VNMRJ
 #include "graphics.h"
+#endif
 #include "group.h"
 #include "params.h"
 #include "symtab.h"
@@ -1375,6 +1377,7 @@ char *buildValue(pair *p)
     return(s);
 }
 
+#ifdef VNMRJ
 /*------------------------------------------------------------------------------
 |
 |	showValue/1
@@ -1411,6 +1414,7 @@ void showValue(pair *p)
 	}
     }
 }
+#endif
 
 /*------------------------------------------------------------------------------
 |
