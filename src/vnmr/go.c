@@ -154,6 +154,7 @@ extern int p11_saveFDAfiles_raw(char* func, char* orig, char* dest);
 extern int setfrq(int argc, char *argv[], int retc, char *retv[]);
 extern int verify_fnameChar(char tchar);
 extern int check_ShimPowerPars();
+extern int Rmdir(char *dirname, int rmParent);
 
 extern int psg_pid;
 
@@ -479,11 +480,15 @@ protectedRead(int fd)
 
 void clearExpDir(const char *curexpdir)
 {
-   char cmd[3*MAXPATH+16];
+   char path[MAXPATH];
    D_remove(D_PHASFILE);
    D_remove(D_DATAFILE);
-   sprintf(cmd,"rm -rf %s/recon %s/datadir3d %s/shapelib",curexpdir,curexpdir,curexpdir);
-   system(cmd);
+   sprintf(path,"%s/recon",curexpdir);
+   Rmdir(path,1);
+   sprintf(path,"%s/datadir3d",curexpdir);
+   Rmdir(path,1);
+   sprintf(path,"%s/shapelib",curexpdir);
+   Rmdir(path,1);
 }
 
 /*------------------------------------------------------------------------------
@@ -1065,13 +1070,19 @@ int acq(int argc, char *argv[], int retc, char *retv[])
 
     if (!acqi_fid && !ACQOK(HostName) )
     {
-        Werrprintf("Acquisition system is not active!");
-        goto abortAcq;
+       if (!argtest( argc, argv, "forcePSG" ) )
+       {
+          Werrprintf("Acquisition system is not active!");
+          goto abortAcq;
+       }
     }
 
     if (!acqi_fid && (check_status_console( callname, HostName ) != 0))
     {
-        goto abortAcq;
+       if (!argtest( argc, argv, "forcePSG" ) )
+       {
+          goto abortAcq;
+       }
     }
 
     if (P_getstring(CURRENT,"load",tmpStr,1,MAXPATH))
@@ -2944,16 +2955,13 @@ static int savepars(char *acqfile, int debugPutCmd)
 +------------------------------------------------------------------------*/
 static int copytext(char *dirname)
 {
-    char   commnd[2 * MAXPATH + 40];
+    char   filea[MAXPATH];
+    char   fileb[MAXPATH];
 
     GPRINT2(1,"copytext from '%s/text' to '%s/text'\n",curexpdir,dirname);
-#ifdef OLD
-    if (automode)
-      sprintf(commnd,"cat %s/text > %s/text",curexpdir,dirname);
-    else
-#endif
-      sprintf(commnd,"cp %s/text %s/text",curexpdir,dirname);
-    system(commnd);
+    sprintf(filea,"%s/text",curexpdir);
+    sprintf(fileb,"%s/text",dirname);
+    copyFile(filea,fileb,0);
     RETURN;
 }
 /*----------------------------------------------------------------
@@ -4366,6 +4374,8 @@ char	*ptr;
 char	*aptr;
 char	*sptr;
 char	buffer[MAXPATH*2 + 40];
+char	filea[MAXPATH];
+char	fileb[MAXPATH];
 char	search_str[MAXSTR];
 char	tmpStr[MAXSTR];
 char	tmp[MAXPATH];
@@ -4702,8 +4712,9 @@ char    recDir[MAXPATH];
       ABORT;
    }
 
-   sprintf(buffer,"cp %s/sampleinfo %s/sampleinfo",curexpdir,tmp);
-   system(buffer);
+   sprintf(filea,"%s/sampleinfo",curexpdir);
+   sprintf(fileb,"%s/sampleinfo",tmp);
+   copyFile(filea,fileb,0);
 
    RETURN;
 }

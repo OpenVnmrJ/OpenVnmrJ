@@ -382,7 +382,7 @@ EOF
    fi
  fi
 
- dir=`dirname "$(readlink -f $0))"`
+ dir=$(dirname $0)
  if [ "$(rpm -q gftp | grep 'not installed' > /dev/null;echo $?)" == "0" ]
  then
    if [ -f $dir/linux/gftp-2.0.19-4.el6.rf.x86_64.rpm ]
@@ -447,7 +447,7 @@ else
  export DEBIAN_FRONTEND=noninteractive
  apt-get install -y csh make expect bc git scons g++ gfortran \
       openssh-server mutt sharutils sendmail-cf gnome-power-manager \
-      kdiff3 ghostscript imagemagick postgresql \
+      kdiff3 ghostscript imagemagick \
       gedit dos2unix zip cups gnuplot gnome-terminal enscript &>> $logfile
  echo "Installing version specific packages (2 of 2)"
  echo "Installing version specific packages (2 of 2)" >> $logfile
@@ -457,11 +457,11 @@ else
       lib32stdc++-7-dev libc6-dev-i386 libglu1-mesa-dev libgsl-dev &>> $logfile
  elif [ $distmajor -gt 14 ] ; then
    # these are needed to build
-    apt-get install -y gdm3 gnome-session openjdk-8-jre \
+    apt-get install -y postgresql gdm3 gnome-session openjdk-8-jre \
       lib32stdc++-5-dev libc6-dev-i386 libglu1-mesa-dev libgsl-dev &>> $logfile
  else
     # these are needed to build
-    apt-get install -y openjdk-6-jre lib32stdc++-4.8-dev \
+    apt-get install -y postgresql openjdk-6-jre lib32stdc++-4.8-dev \
             libc6-dev-i386 libglu1-mesa-dev libgsl0-dev &>> $logfile
  fi
  # apt-get uninstalls these if an amd64 version is installed for something else >:(
