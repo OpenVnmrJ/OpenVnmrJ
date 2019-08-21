@@ -163,7 +163,6 @@ int AspFrameMgr::aspRoi(int argc, char *argv[], int retc, char *retv[]) {
 
    spAspFrame_t frame = mgr->getCurrentFrame();
    if(frame == nullAspFrame) {
-	Winfoprintf("Frame is not defined.");
 	RETURN;
    }
 
@@ -282,7 +281,6 @@ int AspFrameMgr::aspSession(int argc, char *argv[], int retc, char *retv[]) {
 
    spAspFrame_t frame = mgr->getCurrentFrame();
    if(frame == nullAspFrame) {
-	Winfoprintf("Frame is not defined.");
 	RETURN;
    }
 
