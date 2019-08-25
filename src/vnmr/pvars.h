@@ -41,6 +41,7 @@ int P_saveUnsharedGlobal(const char *filename);
 int P_rtx(int tree, const char *filename, int key1IsRt, int key2IsClear);
 int P_read(int tree, const char *filename);
 int P_testread(int tree);
+int P_ispar(const char *filename);
 int P_readnames(const char *filename, char **names);
 int P_getparinfo(int tree, const char *pname, double *pval, int *pstatus);
 int P_getmax(int tree, const char *pname, double *pval);

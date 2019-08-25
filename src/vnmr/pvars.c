@@ -587,7 +587,86 @@ void copyVar(const char *n, varInfo *v, symbol **root)
 	newv->ET.basicType = v->T.basicType;
     }
     else
+    {
 	newv = RcreateVar(n,root,v->T.basicType);     /*  create the variable */
+    }
+    newv->active = v->active;
+    newv->subtype= v->subtype;
+    newv->Dgroup = v->Dgroup;
+    newv->Ggroup = v->Ggroup;
+    newv->prot   = v->prot;
+    newv->minVal = v->minVal;
+    newv->maxVal = v->maxVal;
+    newv->step   = v->step;
+    if (v->T.basicType == T_STRING)  /* copy over string values */
+    {	i = 1; 
+     	r = v->R;
+	while (r && i < v->T.size+1)
+	{   assignString(r->v.s,newv,i);
+	    i += 1;
+	    r = r->next;
+	}
+	/*  copy over enumeral values */
+     	i = 1; 
+     	r = v->E;
+	while (r && i < v->ET.size+1)
+	{   assignEString(r->v.s,newv,i);
+	    i += 1;
+	    r = r->next;
+	}
+    }
+    else  /* copy over all reals */
+    {	i = 1; 
+     	r = v->R;
+	while (r && i < v->T.size+1)
+	{   assignReal(r->v.r,newv,i);
+	    i += 1;
+	    r = r->next;
+	}
+	/*  copy over enumeral values */
+     	i = 1; 
+     	r = v->E;
+	while (r && i < v->ET.size+1)
+	{   assignEReal(r->v.r,newv,i);
+	    i += 1;
+	    r = r->next;
+	}
+    }
+}
+
+/*------------------------------------------------------------------------------
+|
+|	copyVarNB/2
+|
+|	This function copies one variable from one tree to another.
+|	It first deletes the existing variable and copies over the new one.
+|       It is the same as copyVar except the tree is not "balanced"
+|       after adding each new variable. It uses RcreateUVar.
+|
++-----------------------------------------------------------------------------*/
+
+static void copyVarNB(char *n, varInfo *v, symbol **root)
+{   int      i; 
+    Rval    *r;
+    varInfo *newv;
+    
+    if ( (newv=rfindVar(n,root)) ) /* if variable exists, get rid of its values */
+    {	if (newv->T.basicType == T_STRING)  
+	{   disposeStringRvals(newv->R);
+	    disposeStringRvals(newv->E);
+	}
+	else
+	{   disposeRealRvals(newv->R);
+	    disposeRealRvals(newv->E);
+	}
+	newv->R = NULL;
+	newv->E = NULL;
+	newv->T.size = newv->ET.size = 0;
+	newv->T.basicType = v->T.basicType;
+	newv->ET.basicType = v->T.basicType;
+    }
+    else
+	newv = RcreateUVar(n,root,v->T.basicType);     /*  create the variable */
     newv->active = v->active;
     newv->subtype= v->subtype;
     newv->Dgroup = v->Dgroup;
@@ -640,7 +719,7 @@ void copyVar(const char *n, varInfo *v, symbol **root)
 |
 +-----------------------------------------------------------------------------*/
 
-void copyAllVars(symbol **fp, symbol **tp)
+static void copyAllVars(symbol **fp, symbol **tp)
 {  symbol  *p;
    varInfo *v;
  
@@ -649,7 +728,7 @@ void copyAllVars(symbol **fp, symbol **tp)
       {
 	 DPRINT1(3,"copyAllVars:  working on var \"%s\"\n",p->name);
 	 if ( (v=(varInfo *)(p->val)) )
-	    copyVar(p->name,v,tp);
+	    copyVarNB(p->name,v,tp);
       }
       if (p->left)
 	 copyAllVars(&(p->left),tp);
@@ -700,7 +779,7 @@ void copyGVars(symbol **fp, symbol **tp, int group)
 		   diffval = compareVar(p->name,v,tp);
 #endif 
 		DPRINT1(3,"copyGVars: copying \"%s\"\n",p->name);
-	     	copyVar(p->name,v,tp);
+	     	copyVarNB(p->name,v,tp);
 #ifdef VNMRJ
 		if ((vjcopyflag > -1) && (diffval == 1))
 		   appendvarlist(p->name);
@@ -710,6 +789,10 @@ void copyGVars(symbol **fp, symbol **tp, int group)
     }
 }
 
+void P_balance(symbol **tp)
+{
+   balance(tp);  /* rebalance tree */
+}
 /*------------------------------------------------------------------------------
 |
 |	P_pruneTree/2
@@ -874,6 +957,7 @@ int P_copy(int fromtree, int totree)
        (troot = getTreeRoot(getRoot(totree))))
     {	copyAllVars(froot,troot);
 /* don't appendvarlist("seqfil") for VNMRJ - doesn't work within parameter trees? */
+	balance(troot);
 	return(0);
     }
     else
@@ -908,6 +992,7 @@ int P_copygroup(int fromtree, int totree, int group)
 	  jsetcopyGVars( 0 );
 #endif 
 	copyGVars(froot,troot,group);
+        balance(troot);
 #ifdef VNMRJ
         if (totree == CURRENT)
 	  jsetcopyGVars( -1 );
@@ -1031,7 +1116,8 @@ int P_creatvar(int tree, const char *name, int type)
 
     if ( (root = getTreeRoot(getRoot(tree))) )
     {	if (goodName(name))
-	{   RcreateVar(name,root,type);
+	{
+            RcreateVar(name,root,type);
 	    return(0);
 	}
 	else
@@ -2407,6 +2493,120 @@ int readGroupfromdisk(symbol **root, FILE *stream, int groupIndex)
 	}
     }
     return -1;
+}
+
+/*------------------------------------------------------------------------------
+|
+|	worker function for P_ispar
+|
+|	This function determines if the open file contains parameters
+|       Returns 1 is true, 0 if not
+|
++-----------------------------------------------------------------------------*/
+
+static int readParsFromDisk(FILE *stream)
+{
+    char        buf[1025];
+    char        name[256];
+    double      doub;
+    short       sval;
+    int         ival;
+    short       basicType;
+    int         i;
+    int         intptr;
+    int         num;
+    int         ret = 0;
+
+    for(;;)
+    {	if(fscanf(stream,"%s",name)==EOF)
+	    break;
+        ret = 1;
+	TPRINT1(2,"P_ispar: reading variable \"%s\"\n",name);
+	num =fscanf(stream,"%hd %hd %lf %lf %lf %hd %hd %d %hd %x",
+	    &sval,&basicType,&doub,&doub,&doub,&sval,&sval,&ival,&sval,&intptr);
+        if ((num == EOF) || (num != 10))
+           return(0);
+	TPRINT1(2,"P_ispar: we read  %d things \n",ret);
+	if (fscanf(stream,"%d",&num)== EOF)
+           return(0);
+	TPRINT1(2,"P_ispar: num of values =%d\n",num);
+	switch (basicType)
+	{ case T_REAL:
+		/*  Read the values */
+		for (i=1; i<num+1; i++)
+		{
+		    if (fscanf(stream,"%lg",&doub)==EOF)
+                       return(0);
+		}
+		/*  Read the enumeration values */
+		if (fscanf(stream,"%d",&num)== EOF)
+                    return(0);
+		TPRINT1(2,"P_ispar: num of enums =%d\n",num);
+		for (i=1; i<num+1; i++)
+		{
+		    if (fscanf(stream,"%lg",&doub)==EOF)
+                       return(0);
+		}
+		break;
+	  case T_STRING:
+		/*  Read values */
+		for (i=1; i<num+1; i++)
+		{   if (rscanf(stream,buf,1024)<0)
+		    {	Werrprintf("P_ispar: premature EOF\n");
+			return(0);
+		    }
+		}
+		/*  Read the enumeration values */
+		if (fscanf(stream,"%d",&num)== EOF)
+		    return(0);
+		TPRINT1(2,"P_ispar: num of enums =%d\n",num);
+		for (i=1; i<num+1; i++)
+		{   if (rscanf(stream,buf,1024)<0)
+		    {	Werrprintf("readNamesFromDisk: premature EOF\n");
+			return(0);
+		    }
+		}
+		break;
+	  default:
+		Werrprintf("P_ispar: %s has nonexistent type\n", name);
+		return(0);
+	}
+    }
+    return(ret);
+}
+
+/*------------------------------------------------------------------------------
+|
+|	P_ispar/1
+|
+|	This function determines if the open file contains parameters
+|       Returns 1 is true, 0 if not
+|
++-----------------------------------------------------------------------------*/
+
+int P_ispar(const char *filename)
+{   FILE    *stream;
+
+/*
+ * The fopen call is sometimes interrupted.  This following will
+ * retry the call.
+ */
+   errno = 0;
+   while ( ((stream = fopen(filename,"r")) == NULL) && (errno == EINTR) )
+   {
+      errno = 0;
+   }
+   if (stream)
+   {
+       int ret;
+       ret = readParsFromDisk(stream);
+       fclose(stream);
+       return(ret);
+   }
+   else
+   {
+      return(0); /* not such file */
+   }
 }
 
 /*------------------------------------------------------------------------------

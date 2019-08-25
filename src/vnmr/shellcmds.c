@@ -34,14 +34,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <regex.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/utsname.h>
 #define __USE_XOPEN 1
 #include <time.h>
+#include <libgen.h>
 
 #include "pvars.h"
 #include "wjunk.h"
+#include "allocate.h"
 
 #ifdef UNIX
 #include <sys/file.h>
@@ -74,6 +77,7 @@
 #define RMFILE	14
 #define UNAME  15
 #define HNAME  16
+#define TOUCH  17
 
 #ifdef  DEBUG
 extern int Tflag;
@@ -109,6 +113,8 @@ extern char *W_getInput(char *prompt, char *s, int n);
 extern void  restoreInput();
 extern void  setInputRaw();
 extern void  system_call(char *s);
+extern void  trLine(char inLine[], char subLine[], char newChar[], char outLine[] );
+extern int   Rmdir(char *dirname, int rmParent);
 static int   getcmd(char *cmd);
 static void  Shellret(FILE *stream, int retc, char *retv[]);
 int More(FILE *stream, int screenLength);
@@ -159,6 +165,8 @@ static int getcmd(char *cmd)
 	return SHELL;
     if ( ! strcmp(cmd,"shelli") )
 	return SHELLI;
+    if ( ! strcmp(cmd,"touch") )
+	return TOUCH;
     if ( ! strcmp(cmd,"uname") )
 	return UNAME;
     if ( ! strcmp(cmd,"host") )
@@ -354,6 +362,37 @@ int Hname(int argc, char *argv[], int retc, char *retv[]) {
 		Winfoprintf("host = %s", host);
 	}
 	RETURN;
+}
+
+/*---------------------------------------------------------------------------
+|
+|    Touch
+|
+|    This routine does equivalent of touch
+|
++----------------------------------------------------------------------------*/
+int Touch(int argc, char *argv[], int retc, char *retv[]) {
+	int res = 0;
+     
+   if (argc != 2)
+   {
+      Werrprintf( "%s: file name must be passed as an argument", argv[ 0 ] );
+      ABORT;
+   }
+   res = open(argv[1], O_WRONLY|O_CREAT|O_NOCTTY|O_NONBLOCK, 0666);
+   if (res < 0)
+   {
+      res = 0;
+   }
+   else
+   {
+      close(res);
+      res = 1;
+   }
+   if (retc > 0) {
+      retv[0] = intString(res);
+   }
+   RETURN;
 }
 
 /*---------------------------------------------------------------------------
@@ -606,6 +645,99 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
     int  i,len;
     int res;
 
+    if ( (argc == 3) || ( (argc == 4) && ! strcmp(argv[1],"-p") ) )  // simple copy
+    {
+       mode_t mode;
+       char *fromFile;
+       char toFile[MAXPATH];
+       struct stat buf;
+       ino_t inode;
+       nlink_t nlink;
+
+       if (argc == 3)
+       {
+          fromFile = argv[1];
+       }
+       else
+       {
+          fromFile = argv[2];
+       }
+       if (stat(fromFile, &buf))
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          Werrprintf ( "%s: error for %s: %s", argv[0], fromFile, strerror(errno) );
+          ABORT;
+       }
+       if (S_ISDIR(buf.st_mode))
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          Werrprintf ( "%s: cannot copy directory %s", argv[0], fromFile );
+          ABORT;
+       }
+       if (argc == 3)
+       {
+          strcpy(toFile,argv[2]);
+          mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
+       }
+       else
+       {
+          strcpy(toFile,argv[3]);
+          mode = buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO);
+       }
+       inode = buf.st_ino;
+       nlink = buf.st_nlink;
+       buf.st_ino = 0;
+       if ( (stat(toFile, &buf) == 0) && (S_ISDIR(buf.st_mode)) )
+       {
+          char tmpFile[MAXPATH];
+          char *bname;
+
+          strcpy(tmpFile,fromFile);
+          bname = basename(tmpFile);
+          strcat(toFile,"/");
+          strcat(toFile,bname);
+          if (stat(toFile, &buf))
+             buf.st_ino = 0;
+       }
+       if ((inode == buf.st_ino) && (nlink == buf.st_nlink) )
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          Werrprintf ( "%s: %s and %s are the same file", argv[0], fromFile, toFile );
+          RETURN;
+       }
+       if ( (res = copyFile(fromFile, toFile, mode)) )
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          if (res == NO_FIRST_FILE)
+             Werrprintf("%s: cannot copy file %s\n", argv[0],  fromFile);
+          else if (res == NO_SECOND_FILE)
+             Werrprintf("%s: could not open %s for writing", argv[0],  toFile );
+          else
+             Werrprintf("%s: error writing to file: %s", argv[0], strerror(errno) );
+          ABORT;
+       }
+       if (retc)
+       {
+	  retv[ 0] = realString((double) 1);
+       }
+       RETURN;
+    }
     if ( (argc == 4) && ! strcmp(argv[3],"symlink") )
     {
        res = 0;
@@ -623,66 +755,57 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        }
        else if ( ! res)
        {
+          Werrprintf("cannot symlink file %s\n", argv[1]);
+          ABORT;
+       }
+       RETURN;
+    }
+    if ( (argc == 4) && ! strcmp(argv[3],"link") )
+    {
+       res = 0;
+       if (!access(argv[1],F_OK))
+       {  
+          res = 1;
+          if (link(argv[1],argv[2]))
+          {
+            res = 0;
+          }
+       }
+       if (retc)
+       {
+	  retv[ 0] = realString((double) res);
+       }
+       else if ( ! res)
+       {
           Werrprintf("cannot link file %s\n", argv[1]);
           ABORT;
        }
        RETURN;
     }
-#ifdef UNIX
     strcpy(cmdstr,"/bin/cp ");
-#else 
-    if (argc != 3) {
-      Werrprintf( "%s:  use exactly 2 arguments", argv[ 0 ] );
-      ABORT;
-    }
-    strcpy(cmdstr,"copy ");
-#endif 
     for (i=1; i<argc; i++)
     {
-	if (verify_fname( argv[ i ] ) != 0)
-	{
-	    Werrprintf( "%s:  cannot use '%s' as a file name", argv[ 0 ], argv[ i ] );
-#ifdef VNMRJ
-	    writelineToVnmrJ("invalidfile",argv[i]);
-#endif 
-	    ABORT;
-	}
 	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
 	len = MAXSHSTRING - strlen(cmdstr) -1;
-	strncat(cmdstr,check_spaces(argv[i],chkbuf,len),len);
+	strncat(cmdstr,argv[i],len);
     }
-    res = access(argv[ argc - 2 ],R_OK);
+    
     TPRINT1("cp: command string \"%s\"\n",cmdstr);
-    if ( !res )
-    {
-       strncat(cmdstr," 2> /dev/null", MAXSHSTRING - strlen(cmdstr) - 14);
-       system_call(cmdstr);
-    }
-    else if ( !retc )
-    {
-       Werrprintf( "%s: input file '%s' does not exist", argv[ 0 ], argv[ argc - 2 ] );
-    }
+    strncat(cmdstr," 2> /dev/null", MAXSHSTRING - strlen(cmdstr) - 14);
+    system_call(cmdstr);
+    res = access(argv[ argc - 1 ],R_OK);
     if (retc)
     {
-       if (res)
-       {
-	  retv[ 0] = realString((double) 0);
-       }
-       else
-       {
-          res = access(argv[ argc - 1 ],R_OK);
-	  retv[ 0] = realString( (res) ? (double) 0 : (double) 1);
-       }
+       retv[ 0] = realString( (res) ? (double) 0 : (double) 1);
     }
-    else if ( !res )
+    else if ( res )
     {
-       res = access(argv[ argc - 1 ],R_OK);
-       if (res)
-          Werrprintf( "%s: could not write to file '%s'", argv[ 0 ], argv[ argc - 1 ] );
+       Werrprintf( "%s: could not write to file '%s'", argv[ 0 ], argv[ argc - 1 ] );
     }
     RETURN;
 }
 
+#ifdef XXX
 /*------------------------------------------------------------------------------
 |
 |	CpTree
@@ -695,7 +818,6 @@ int CpTreE(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i;
 
-#ifdef UNIX
     strcpy(cmdstr,"/bin/cp -r ");
     for (i=1; i<argc; i++)
     {	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
@@ -704,10 +826,8 @@ int CpTreE(int argc, char *argv[], int retc, char *retv[])
     TPRINT1("CpTreE: command string \"%s\"\n",cmdstr);
     system_call(cmdstr);
     RETURN;
-#else 
-    Werrprintf( "%s:  command not supported, sorry!", argv[ 0 ] );
-#endif 
 }
+#endif
 
 /*------------------------------------------------------------------------------
 |
@@ -891,15 +1011,10 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
 
-#ifdef UNIX
-    strcpy(cmdstr,"/bin/mv");
-#else 
     if (argc != 3) {
       Werrprintf( "%s:  use exactly 2 arguments", argv[ 0 ] );
       ABORT;
     }
-    strcpy(cmdstr,"rename ");
-#endif 
     for (i=1; i<argc; i++)
     {
 	if (verify_fname( argv[ i ] ) != 0)
@@ -910,12 +1025,19 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
 #endif 
 	    ABORT;
 	}
+    }
+    if ( rename(argv[1], argv[2]) )
+    {
+       strcpy(cmdstr,"/bin/mv");
+       for (i=1; i<argc; i++)
+       {
 	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
 	len = MAXSHSTRING - strlen(cmdstr) -1;
 	strncat(cmdstr,check_spaces(argv[i],chkbuf,len),len);
+       }
+       TPRINT1("mv: command string \"%s\"\n",cmdstr);
+       system_call(cmdstr);
     }
-    TPRINT1("mv: command string \"%s\"\n",cmdstr);
-    system_call(cmdstr);
     RETURN;
 }
 
@@ -944,7 +1066,6 @@ mode_t str_to_octal(char *ptr )
 	case '6': ret += fac * 6; break;
 	case '7': ret += fac * 7; break;
 	default:
-	  Werrprintf("str_to_octal: invalid character '%c'\n", *cptr);
 	  ABORT;
 	  break;
     }
@@ -958,7 +1079,7 @@ mode_t str_to_octal(char *ptr )
 |	mk_dir_args - process -p -m mode arguments for mk_dir
 |
 +-----------------------------------------------------------------------------*/
-static int mk_dir_args(int *mode, int *psub, int *ict, int argc, char *argv[])
+static int mk_dir_args(mode_t *mode, int *psub, int *ict, int argc, char *argv[])
 {
   int i;
 
@@ -973,7 +1094,8 @@ static int mk_dir_args(int *mode, int *psub, int *ict, int argc, char *argv[])
       *psub = 1;
     if (argv[i][1] == 'm')
     {
-      int len, tmpmode;
+      int len;
+      mode_t tmpmode;
       len = strlen(argv[i]);
       if (len > 3)
       {
@@ -989,6 +1111,35 @@ static int mk_dir_args(int *mode, int *psub, int *ict, int argc, char *argv[])
   RETURN;
 }
 
+int do_mkdir(char *dir, int psub, mode_t mode)
+{
+   int	ival=0;
+   if (psub == 1)
+   {
+      char path[MAXPATH*2];   
+      char lastpath[MAXPATH*2];   
+      char tmppath[MAXPATH*2];   
+      char dirpath[MAXPATH*2];   
+      char *ptr;
+      strcpy(path,dir);
+      while ( access(path, F_OK) && (ival == 0) )
+      {
+         strcpy(tmppath,path);
+         ptr = tmppath;
+         while ( access(ptr, F_OK) )
+         {
+            strcpy(lastpath,ptr);
+            strcpy(dirpath,ptr);
+            ptr = dirname(dirpath);
+         }
+         ival = mkdir( lastpath, mode );
+      }
+      ival = access( dir, F_OK );
+   }
+   else
+      ival = mkdir( dir, mode );
+   return(ival);
+}
 /*------------------------------------------------------------------------------
 |
 |	mkdir
@@ -998,13 +1149,14 @@ static int mk_dir_args(int *mode, int *psub, int *ict, int argc, char *argv[])
 +-----------------------------------------------------------------------------*/
 
 int mk_dir(int argc, char *argv[], int retc, char *retv[])
-{   char cmdstr[1024];   
-    int  i, ict=1, mode=0, psub=0;
+{
+    int  i, ict=1, psub=0;
+    mode_t  mode=0777;
 
     mk_dir_args(&mode, &psub, &ict, argc, argv);
     for (i=ict; i<argc; i++)
     {
-	int	ival;
+	int	ival=0;
 
 	if (verify_fname( argv[ i ] ) != 0)
 	{
@@ -1016,18 +1168,7 @@ int mk_dir(int argc, char *argv[], int retc, char *retv[])
 #endif 
 	    ABORT;
 	}
-/*	ival = mkdir( argv[ i ], 0777 ); */
-	if (psub == 1)
-	{
-          if (mode)
-	     sprintf(cmdstr, "mkdir -m %o -p %s", mode, check_spaces(argv[i],chkbuf,1005));
-          else
-	     sprintf(cmdstr, "mkdir -p %s", check_spaces(argv[i],chkbuf,1005));
-	  system_call( cmdstr );
-          ival = access( argv[i], F_OK );
-	}
-	else
-	  ival = mkdir( argv[ i ], 0777 );
+        ival = do_mkdir(argv[i], psub, mode);
         if (retc)
         {
 	   retv[ 0 ] = intString( (ival) ? 0 : 1 );
@@ -1050,26 +1191,67 @@ int mk_dir(int argc, char *argv[], int retc, char *retv[])
 
 int Rm(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
-#ifdef VMS
-    char *ival;
-#endif
     int  i,len;
 
-#ifdef UNIX
+    if ( (argc == 2) || ( (argc == 3) && ! strcmp(argv[1],"-f") ) )
+    {
+       int argnum = (argc == 2) ? 1 : 2;
+       
+       if ( ! access(argv[argnum],F_OK))
+       {
+          unlink(argv[argnum]);
+          if ( access(argv[argnum],F_OK))
+             RETURN;
+       }
+    }
+    else if ( (argc == 3) &&
+              ( !strcmp(argv[1],"-rf") || !strcmp(argv[1],"-r") || !strcmp(argv[1],"-R") ) )
+    {
+       int noWildCard = 1;
+       for (i=0; i<strlen(argv[2]); i++)
+          if (argv[2][i] == '*')
+          {
+             noWildCard = 0;
+          }
+       if (noWildCard && ! access(argv[2],F_OK|W_OK|R_OK) )
+       {
+          if ( !strcmp(argv[1],"-R") )
+          {
+             if ( ! Rmdir(argv[2],0) )
+                RETURN;
+          }
+          else
+          {
+             if ( ! Rmdir(argv[2],1) )
+                RETURN;
+          }
+       }
+       if ( !strcmp(argv[1],"-R") )
+       {
+          // Don't let it continue with system command since that will
+          // also remove the parent directory
+          if (!retc)
+          {
+             if ( noWildCard == 0 )
+                Werrprintf("%s: cannot use -R with wildcards (*) in the path name %s",argv[0],argv[2]);
+             else if ( access(argv[2],F_OK|W_OK|R_OK) )
+                Werrprintf("%s: cannot use -R with non-accessible directory %s",argv[0],argv[2]);
+             else
+                Werrprintf("%s: cannot remove contents of %s",argv[0],argv[2]);
+             ABORT;
+          }
+          else
+          {
+             RETURN;
+          }
+       }
+    }
     strcpy(cmdstr,"/bin/rm");
-#else 
-    strcpy(cmdstr,"delete ");
-#endif 
     for (i=1; i<argc; i++)
     {
         strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
 	len = MAXSHSTRING - strlen(cmdstr) -1;
 	strncat(cmdstr,check_spaces(argv[i],chkbuf,len),len);
-#ifdef VMS
-	ival = strchr( argv[ i ], ';' );
-	if (ival == NULL)
-	  strncat(cmdstr,";",MAXSHSTRING - strlen(cmdstr) -1 );
-#endif 
     }
     TPRINT1("rm: command string \"%s\"\n",cmdstr);
     system_call(cmdstr);
@@ -1078,7 +1260,8 @@ int Rm(int argc, char *argv[], int retc, char *retv[])
       {
           if ( access(argv[i],F_OK) == 0)
 	  {
-             Werrprintf("cannot delete %s",argv[i]);
+             if (!retc)
+                Werrprintf("cannot delete %s",argv[i]);
 #ifdef VNMRJ
 	     writelineToVnmrJ("nodelete",argv[i]);
 #endif 
@@ -1091,6 +1274,7 @@ int Rm(int argc, char *argv[], int retc, char *retv[])
     RETURN;
 }
 
+#ifdef XXX
 /*------------------------------------------------------------------------------
 |
 |	RmTree
@@ -1104,7 +1288,6 @@ int RmTree(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i;
 
-#ifdef UNIX
     strcpy(cmdstr,"/bin/rm -r ");
     for (i=1; i<argc; i++)
     {	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
@@ -1122,10 +1305,8 @@ int RmTree(int argc, char *argv[], int retc, char *retv[])
 #endif 
 	  }
     RETURN;
-#else 
-    Werrprintf( "%s:  command not supported, sorry!", argv[ 0 ] );
-#endif 
 }
+#endif
 
 /*------------------------------------------------------------------------------
 |
@@ -1139,7 +1320,6 @@ int rm_dir(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
 
-#ifdef UNIX
     strcpy(cmdstr,"/bin/rmdir");
     for (i=1; i<argc; i++)
     {
@@ -1149,10 +1329,6 @@ int rm_dir(int argc, char *argv[], int retc, char *retv[])
     }
     TPRINT1("rmdir: command string \"%s\"\n",cmdstr);
     system_call(cmdstr);
-#else 
-    for (i=1; i<argc; i++)
-      rmdir( argv[i] );
-#endif 
     for (i=1; i<argc; i++)
       if (argv[i][0] != '-')
       {
@@ -1280,105 +1456,117 @@ int del_file2(int argc, char *argv[], int retc, char *retv[])
 +-----------------------------------------------------------------------------*/
 
 int del_file(int argc, char *argv[], int retc, char *retv[])
-{   char cmdstr[MAXPATH+20];   
-#ifdef VNMRJ
+{
     char jstr[ 3*MAXPATH ], jstrn[ MAXPATH ];
-#endif 
     int  i,j;
+    int isDir;
 
     for (i=1; i<argc; i++)
        for (j=0; j<strlen(argv[i]); j++)
           if (argv[i][j] == '*')
           {
              Werrprintf("No wildcards are permitted in the delete command");
-#ifdef VNMRJ
 	     writelineToVnmrJ("noRmFile","nowildcards");
-#endif 
              ABORT;
           }
     for (i=1; i<argc; i++)
-       if ( access(argv[i],F_OK) == 0)
+    {
+       if ( !strcmp(argv[i],"") )
+          continue;
+       isDir = (strstr(argv[i],".fid") || strstr(argv[i],".par") );
+       if ( !isDir &&  access(argv[i],F_OK) == 0)
        {
           if ( access(argv[i],W_OK|R_OK) == 0)
           {
-#ifdef UNIX
-             sprintf(cmdstr,"/bin/rm %s",check_spaces(argv[i],chkbuf,MAXPATH));
-#else 
-	     if (strchr(argv[i],';') != NULL)
-	      sprintf(cmdstr,"delete %s",argv[i]);
-	     else
-	      sprintf(cmdstr,"delete %s;*",argv[i]);
-#endif 
-             TPRINT1("delete: command string \"%s\"\n",cmdstr);
-             system_call(cmdstr);
+             unlink(argv[i]);
           }
-#ifdef VNMRJ
-          if (argv[i][0] != '/')
+          if (!Bnmr)
           {
-              if (getcwd(jstr,256) == NULL)
-                  strcpy(jstr,"");
-              strcat(jstr,"/");
-              strcat(jstr,argv[i]);
-              strncpy(jstrn,jstr,MAXPATH);
-              i = strlen(jstrn);
-              if (jstrn[i] != '\0')
-                  jstrn[i] = '\0';
-              sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+             if (argv[i][0] != '/')
+             {
+                 if (getcwd(jstr,256) == NULL)
+                     strcpy(jstr,"");
+                 strcat(jstr,"/");
+                 strcat(jstr,argv[i]);
+                 strncpy(jstrn,jstr,MAXPATH);
+                 i = strlen(jstrn);
+                 if (jstrn[i] != '\0')
+                     jstrn[i] = '\0';
+                 sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+             }
+             else
+                 sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,argv[i]);
+             if ( access(argv[i],F_OK) == 0)
+	     {
+                Werrprintf("cannot delete %s",argv[i]);
+	        writelineToVnmrJ("noRmFile",jstr);
+	     }
+	     else
+	        writelineToVnmrJ("RmFile",jstr);
           }
           else
-              sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,argv[i]);
-#endif 
-          if ( access(argv[i],F_OK) == 0)
-	  {
-             Werrprintf("cannot delete %s",argv[i]);
-#ifdef VNMRJ
-	     writelineToVnmrJ("noRmFile",jstr);
-#endif 
-	  }
-#ifdef VNMRJ
-	  else
-	     writelineToVnmrJ("RmFile",jstr);
-#endif 
+          {
+             if ( !retc &&  access(argv[i],F_OK) == 0)
+	     {
+                Werrprintf("cannot delete %s",argv[i]);
+	     }
+          }
        }
-#ifdef UNIX
+       else if ( !isDir &&  (i+1 < argc) && strcmp(argv[i+1],"") == 0)
+       {
+          // don't check .par and .fid if file name followed by null string
+          i++;
+          continue;
+       }
        else
        {  char tmp[MAXPATH];
 
-          sprintf(tmp,"%s.fid",argv[i]);
+          if (isDir)
+             strcpy(tmp,argv[i]);
+          else
+             sprintf(tmp,"%s.fid",argv[i]);
           if ( access(tmp,F_OK) == 0)
           {
              if ( access(tmp,W_OK|R_OK) == 0)
              {
-                sprintf(cmdstr,"/bin/rm -r %s",check_spaces(tmp,chkbuf,MAXPATH));
-                TPRINT1("delete: command string \"%s\"\n",cmdstr);
-                system_call(cmdstr);
-#ifdef VNMRJ
-                if (tmp[0] != '/')
+                int res;
+                res = Rmdir(tmp,1);
+                if (!Bnmr)
                 {
-                    if (getcwd(jstr,256) == NULL)
-                        strcpy(jstr,"");
-                    strcat(jstr,"/");
-                    strcat(jstr,tmp);
-                    strncpy(jstrn,jstr,MAXPATH);
-                    i = strlen(jstrn);
-                    if (jstrn[i] != '\0')
-                        jstrn[i] = '\0';
-                    sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+                   if (tmp[0] != '/')
+                   {
+                       if (getcwd(jstr,256) == NULL)
+                           strcpy(jstr,"");
+                       strcat(jstr,"/");
+                       strcat(jstr,tmp);
+                       strncpy(jstrn,jstr,MAXPATH);
+                       i = strlen(jstrn);
+                       if (jstrn[i] != '\0')
+                           jstrn[i] = '\0';
+                       sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+                   }
+                   else
+                       sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,tmp);
+                   if ( res )
+		   {
+                      if (!retc)
+                         Werrprintf("cannot delete %s",argv[i]);
+		      writelineToVnmrJ("noRmFile",jstr);
+		   }
+		   else
+		      writelineToVnmrJ("RmFile",jstr);
                 }
                 else
-                    sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,tmp);
-#endif 
-                if ( access(tmp,F_OK) == 0)
-		{
-                   Werrprintf("cannot delete %s",argv[i]);
-#ifdef VNMRJ
-		   writelineToVnmrJ("noRmFile",jstr);
-#endif 
-		}
-#ifdef VNMRJ
-		else
-		   writelineToVnmrJ("RmFile",jstr);
-#endif 
+                {
+                   if ( !retc &&  res )
+	           {
+                      Werrprintf("cannot delete %s",argv[i]);
+	           }
+                }
+             }
+             else if ( !retc )
+	     {
+                Werrprintf("no permission to delete %s",argv[i]);
              }
           }
           else
@@ -1388,16 +1576,58 @@ int del_file(int argc, char *argv[], int retc, char *retv[])
              {
                 if ( access(tmp,W_OK|R_OK) == 0)
                 {
-                   sprintf(cmdstr,"/bin/rm -r %s",check_spaces(tmp,chkbuf,MAXPATH));
-                   TPRINT1("delete: command string \"%s\"\n",cmdstr);
-                   system_call(cmdstr);
-#ifdef VNMRJ
-                   if (tmp[0] != '/')
+                   int res;
+                   res = Rmdir(tmp,1);
+                   if (!Bnmr)
+                   {
+                      if (tmp[0] != '/')
+                      {
+                         if (getcwd(jstr,256) == NULL)
+                             strcpy(jstr,"");
+                         strcat(jstr,"/");
+                         strcat(jstr,tmp);
+                         strncpy(jstrn,jstr,MAXPATH);
+                         i = strlen(jstrn);
+                         if (jstrn[i] != '\0')
+                             jstrn[i] = '\0';
+                         sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
+                      }
+                      else
+                         sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,tmp);
+                      if ( res )
+		      {
+                         if (!retc)
+                            Werrprintf("cannot delete %s",argv[i]);
+		         writelineToVnmrJ("noRmFile",jstr);
+		      }
+		      else
+		         writelineToVnmrJ("RmFile",jstr);
+                   }
+                   else
+                   {
+                      if ( !retc &&  res )
+	              {
+                         Werrprintf("cannot delete %s",argv[i]);
+	              }
+                   }
+                }
+                else if ( !retc )
+	        {
+                   Werrprintf("no permission to delete %s",argv[i]);
+	        }
+             }
+             else
+	     {
+                if (!retc)
+                   Werrprintf("file %s not found",argv[i]);
+                if (!Bnmr)
+                {
+                   if (argv[i][0] != '/')
                    {
                       if (getcwd(jstr,256) == NULL)
                           strcpy(jstr,"");
                       strcat(jstr,"/");
-                      strcat(jstr,tmp);
+                      strcat(jstr,argv[i]);
                       strncpy(jstrn,jstr,MAXPATH);
                       i = strlen(jstrn);
                       if (jstrn[i] != '\0')
@@ -1405,72 +1635,13 @@ int del_file(int argc, char *argv[], int retc, char *retv[])
                       sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
                    }
                    else
-                      sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,tmp);
-#endif 
-                   if ( access(tmp,F_OK) == 0)
-		   {
-                      Werrprintf("cannot delete %s",argv[i]);
-#ifdef VNMRJ
-		      writelineToVnmrJ("noRmFile",jstr);
-#endif 
-		   }
-#ifdef VNMRJ
-		   else
-		      writelineToVnmrJ("RmFile",jstr);
-#endif 
+                      sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,argv[i]);
+		   writelineToVnmrJ("noRmFile",jstr);
                 }
-             }
-             else
-	     {
-                Werrprintf("file %s not found",argv[i]);
-#ifdef VNMRJ
-                if (argv[i][0] != '/')
-                {
-                   if (getcwd(jstr,256) == NULL)
-                       strcpy(jstr,"");
-                   strcat(jstr,"/");
-                   strcat(jstr,argv[i]);
-                   strncpy(jstrn,jstr,MAXPATH);
-                   i = strlen(jstrn);
-                   if (jstrn[i] != '\0')
-                       jstrn[i] = '\0';
-                   sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,jstrn);
-                }
-                else
-                   sprintf(jstr,"%s vnmr_data %s",VnmrJHostName,argv[i]);
-		writelineToVnmrJ("noRmFile",jstr);
-#endif 
 	     }
           }
        }
-#else 
-       else
-       {
-          char tmp[MAXPATH];
-
-          sprintf( tmp, "%s_fid.dir", argv[ i ] );
-          if (access( tmp, F_OK ) == 0)
-          {
-             sprintf( cmdstr, "rm_recur %s", tmp );
-             system_call( cmdstr );
-             if (access( tmp, F_OK ) == 0)
-               Werrprintf( "cannot delete %s", argv[ i ] );
-          }
-          else
-          {
-             sprintf( tmp, "%s_par.dir", argv[ i ] );
-             if (access( tmp, F_OK ) == 0)
-             {
-                sprintf( cmdstr, "rm_recur %s", tmp );
-                system_call( cmdstr );
-                if (access( tmp, F_OK ) == 0)
-                  Werrprintf( "cannot delete %s", argv[ i ] );
-             }
-             else
-               Werrprintf( "file %s not found", argv[ i ] );
-          }
-       }
-#endif 
+    }
     RETURN;
 }
 
@@ -1494,8 +1665,8 @@ int shellcmds(int argc, char *argv[], int retc, char *retv[])
       case W:		return (Whoinfo(argc,argv,retc,retv));
       case UNAME:	return (Uname(argc,argv,retc,retv));
       case HNAME:	return (Hname(argc,argv,retc,retv));
-      default:		fprintf(stderr,"shellcmd: (%d) unknown command\n",
-				getcmd(argv[0]));
+      case TOUCH:	return (Touch(argc,argv,retc,retv));
+      default:		Werrprintf("unknown shell command %s\n",argv[0]);
 			ABORT;
     }
 }
@@ -1620,6 +1791,682 @@ int unixtime(int argc, char *argv[], int retc, char *retv[])
 	      Winfoprintf( "UNIX time: %d\n", (int) mktime( &timeptr) );
         }
 
+   }
+   RETURN;
+}
+
+int appendCmd(int argc, char *argv[], int retc, char *retv[])
+{
+   FILE *inFile;
+   FILE *outFile = NULL;
+   int lineCount = 0;
+   int tailTotal = 0;
+   int tailArg = 0;
+   int tailStage = -1;
+   int tailSkip = 0;
+   int headOK = 1;
+   int lineOK;
+   char inLine[2048];
+
+   if (argc < 3)
+   {
+      Werrprintf("%s: at least two arguments must be provided",argv[0]);
+      ABORT;
+   }
+   if ( ! strcmp(argv[1],argv[argc-1]) )
+   {
+      Werrprintf("%s: cannot append to the same file as the source file",argv[0]);
+      ABORT;
+   }
+   if (argc > 3)
+   {
+      int index;
+      int tailCount=0;
+      int headCount=0;
+      for (index=2; index<argc-1; index += 2)
+      {
+         if ( !strcmp(argv[index],"head") )
+            headCount++;
+         else if ( !strcmp(argv[index],"tail") )
+            tailCount++;
+// sed, sed g, and tr require two arguments
+         else if ( !strcmp(argv[index],"sed") ||
+                   !strcmp(argv[index],"sed g") ||
+                   !strcmp(argv[index],"tr") )
+            index++;
+      }
+      if (headCount > 1)
+      {
+         Werrprintf("%s: can only use the 'head' option once",argv[0]);
+         ABORT;
+      }
+      if (tailCount > 1)
+      {
+         Werrprintf("%s: can only use the 'tail' option once",argv[0]);
+         ABORT;
+      }
+   }
+   if ( strcmp(argv[argc-1],"|wc") && strcmp(argv[argc-1],"| wc"))
+   {
+      outFile = fopen(argv[argc-1],"a");
+      if (outFile == NULL)
+      {
+         if (retc)
+         {
+            retv[ 0 ] = intString(0);
+            RETURN;
+         }
+         Werrprintf("%s: cannot append to file %s",argv[0],argv[argc-1]);
+         ABORT;
+      }
+   }
+   inFile = fopen(argv[1],"r");
+   if (inFile == NULL)
+   {
+      if (outFile)
+         fclose(outFile);
+      if (retc)
+      {
+         retv[ 0 ] = intString(0);
+         RETURN;
+      }
+      Werrprintf("%s: Input file %s not found",argv[0],argv[1]);
+      ABORT;
+   }
+
+   while ( headOK )
+   {
+      size_t len;
+
+      if (fgets(inLine, sizeof(inLine), inFile) == NULL)
+      {
+         if (tailStage)
+            break;
+         if (tailStage == 0)
+         {
+            tailStage = 1;
+            rewind(inFile);
+            if (fgets(inLine, sizeof(inLine), inFile) == NULL)
+               break;
+            tailSkip = tailTotal - tailArg;
+            lineCount = 0;
+            tailTotal = 0;
+         }
+      }
+      len = strlen(inLine);          /* get buf length */
+      if (len && inLine[len-1] == '\n')      /* check last char is '\n' */
+         inLine[--len] = '\0'; 
+      lineOK = 1;
+      if (argc > 3)
+      {
+         int index;
+         for (index=2; index<argc-1; index += 2)
+         {
+            if ( !strcmp(argv[index],"sed") ||
+                 !strcmp(argv[index],"sed g") )
+            {
+               regex_t regex;
+               regmatch_t matches;
+               int reti;
+               char newline[MAXPATH*2];
+               char tmpline[MAXPATH*2];
+               int doGlobal;
+               int sindex;
+               int found = 0;
+
+               if (index + 2 >= argc-1)
+               {
+                  Werrprintf("%s: sed options require two arguments",argv[0]);
+                  continue;
+               }
+               doGlobal = (strcmp(argv[index],"sed g") == 0) ? 1 : 0;
+               index++;
+
+               
+/* Compile regular expression */
+               reti = regcomp(&regex, argv[index], REG_EXTENDED);
+               if (reti)
+               {
+                  Werrprintf("%s: Could not compile regex",argv[0]);
+                  continue;
+               }
+/* Execute regular expression */
+               strcpy(tmpline,inLine);
+               newline[0] = '\0';
+               sindex = 0;
+               while ( (reti = regexec(&regex, &tmpline[sindex], 1, &matches, 0)) == 0)
+               {
+                   found = 1;
+                   if (doGlobal)
+                   {
+                      strncat(newline, &tmpline[sindex], matches.rm_so);
+                      strcat(newline, argv[index+1]);
+                      sindex += matches.rm_eo;
+                      if (tmpline[sindex] == '\0')
+                         break;
+                   }
+                   else
+                   {
+                      tmpline[matches.rm_so] = '\0';
+                      sprintf(inLine,"%s%s%s",tmpline, argv[index+1], &tmpline[matches.rm_eo]);
+                      break;
+                   }
+               }
+               if ( found && doGlobal )
+               {
+                  strcpy(inLine,newline);
+                  strcat(inLine, &tmpline[sindex]);
+               }
+
+/* Free memory allocated to the pattern buffer by regcomp() */
+               regfree(&regex);
+            }
+            else if ( !strcmp(argv[index],"awk") )
+            {
+               char tmpLine[2048];
+               size_t lIndex;
+               int wordNumber;
+               char *awkPtr;
+
+               strcpy(tmpLine,inLine);
+               awkPtr = argv[index+1];
+               len = strlen(argv[index+1]);
+               inLine[0] = '\0';
+               lIndex=0;
+               while ( *awkPtr != '\0' )
+               {
+                  if (*awkPtr == '$')
+                  {
+                     if ((*(awkPtr+1) >= '0') && (*(awkPtr+1) <= '9'))
+                     {
+                        char *ptr;
+                        int iWord;
+
+                        awkPtr++;
+                        wordNumber=atoi(awkPtr);
+                        while ((*awkPtr >= '0') && (*awkPtr <= '9'))
+                           awkPtr++;
+                        ptr = tmpLine;
+                        // skip initial white space unless $0 requested
+                        if (wordNumber)
+                           while ( (*ptr != '\0') && ((*ptr == ' ') || (*ptr == '\t')) )
+                              ptr++;
+                        iWord = 1;
+                        while (iWord < wordNumber)
+                        {
+                           while ( (*ptr != '\0') && (*ptr != ' ') && (*ptr != '\t') )
+                              ptr++;
+                           iWord++;
+                           while ( (*ptr != '\0') && ((*ptr == ' ') || (*ptr == '\t')) )
+                              ptr++;
+                        }
+                        if (wordNumber)
+                        {
+                           while ( (*ptr != '\0') && (*ptr != ' ') && (*ptr != '\t') )
+                              inLine[lIndex++] = *ptr++;
+                        }
+                        else
+                        {
+                           while (*ptr != '\0')
+                              inLine[lIndex++] = *ptr++;
+                        }
+                     }
+                     else
+                     {
+                        inLine[lIndex++] = *awkPtr++;
+                     }
+                  }
+                  else
+                  {
+                     inLine[lIndex++] = *awkPtr++;
+                  }
+               }
+               inLine[lIndex]= '\0';
+            }
+            else if ( !strcmp(argv[index],"tr") )
+            {
+               char tmpLine[MAXPATH*2];
+               
+               trLine(inLine, argv[index+1], argv[index+2], tmpLine );
+               strcpy(inLine,tmpLine);
+               index++;
+            }
+            else if ( !strcmp(argv[index],"head") )
+            {
+               int headCount;
+               headCount = atoi(argv[index+1]);
+               if (headCount < lineCount+1)
+               {
+                  lineOK = 0;
+                  if (tailStage)
+                     headOK = 0;
+               }
+            }
+            else if ( !strcmp(argv[index],"tail") )
+            {
+               tailArg = atoi(argv[index+1]);
+               if (lineOK)
+                  tailTotal++;
+               if (argv[index+1][0] == '+')
+               {
+                  if (tailTotal < tailArg)
+                     lineOK = 0;
+               }
+               else
+               {
+                  if (tailStage == -1)
+                     tailStage = 0;
+                  if (tailStage == 0)
+                  {
+                     headOK = 1;
+                  }
+                  else if (tailStage == 1)
+                  {
+                     if (tailSkip > 0)
+                        lineOK = 0;
+                     tailSkip--;
+                  }
+               }
+            }
+            else if (argv[index+1][0] == '^')
+            {
+               int res;
+               size_t len = strlen(argv[index+1])-1;
+               res=strncmp(inLine,&argv[index+1][1], len);
+               if ( !strcmp(argv[index],"grep") )
+               {
+                  if (res)
+                  {
+                    lineOK = 0;
+                    break;
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -v") )
+               {
+                  if (!res)
+                  {
+                    lineOK = 0;
+                    break;
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -w") )
+               {
+                  if ( (res) ||  
+                        ( (*(inLine+len) != ' ') && (*(inLine+len) != '\t') && (*(inLine+len) != '\0')) )
+                  {
+                    lineOK = 0;
+                    break;
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -vw") || !strcmp(argv[index],"grep -wv") )
+               {
+                  if ( (!res) &&
+                         ((*(inLine+len) == ' ') || (*(inLine+len) == '\t') || (*(inLine+len) == '\0')))
+                  {
+                    lineOK = 0;
+                    break;
+                  }
+               }
+            }
+            else
+            {
+               if ( !strcmp(argv[index],"grep") )
+               {
+                  if ( ! strstr(inLine,argv[index+1]) )
+                  {
+                     lineOK = 0;
+                     break;
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -v") )
+               {
+                  if ( strstr(inLine,argv[index+1]) )
+                  {
+                     lineOK = 0;
+                     break;
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -w") )
+               {
+                  char *ptr;
+                  if ( (ptr = strstr(inLine,argv[index+1])) == NULL )
+                  {
+                     lineOK = 0;
+                     break;
+                  }
+                  else
+                  {
+                     char *ptr2;
+                     len = strlen(argv[index+1]);
+                     ptr2 = ptr;
+ 
+                     while ((ptr == ptr2) && (strlen(ptr2) >= len) &&
+                            (*(ptr+len) != ' ') && (*(ptr+len) != '\t') && (*(ptr+len) != '\0'))
+                     {
+                        ptr2++;
+                        if ( (ptr  = strstr(ptr2,argv[index+1])) == NULL )
+                        {
+                            lineOK = 0;
+                            break;
+                        }
+                        ptr2 = ptr;
+                     }
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -vw") || !strcmp(argv[index],"grep -wv") )
+               {
+                  char *ptr;
+                  if ( (ptr = strstr(inLine,argv[index+1])) != NULL )
+                  {
+                     char *ptr2;
+                     len = strlen(argv[index+1]);
+                     ptr2 = ptr;
+ 
+                     while ((ptr == ptr2) && (strlen(ptr2) >= len) &&
+                            (*(ptr+len) != ' ') && (*(ptr+len) != '\t') && (*(ptr+len) != '\0'))
+                     {
+                         ptr2++;
+                         if ( (ptr  = strstr(ptr2,argv[index+1])) == NULL )
+                         {
+                             break;
+                         }
+                         ptr2=ptr;
+                     }
+                     if (ptr != NULL)
+                        lineOK = 0;
+                  }
+               }
+            }
+         }
+      }
+      if (lineOK)
+      {
+         lineCount++;
+         if (outFile && tailStage)
+            fprintf(outFile,"%s\n",inLine);
+         else if (tailStage && (lineCount <= retc) )
+         {
+            retv[lineCount] = newString(inLine);
+         }
+      }
+   }
+
+   if (outFile != NULL)
+   {
+      /* when appending to a file, not just counting lines, just indicate success */
+      lineCount = 1;
+      fclose(outFile);
+   }
+   fclose(inFile);
+   if (retc)
+      retv[ 0 ] = intString(lineCount);
+   RETURN;
+}
+
+static char *kflags(char *in, int k1Flag, int k2Flag)
+{
+   static char *wPtr;
+   wPtr = in;
+   if (k1Flag)
+   {
+      int index;
+
+      for (index=1; index<k1Flag; index++)
+      {
+         /* skip white space */
+         while (( (*wPtr == ' ') || (*wPtr == '\t')) && (*wPtr != '\0'))
+            wPtr++;
+         /* and skip word */
+         while ((*wPtr != ' ') && (*wPtr != '\t') && (*wPtr != '\0'))
+            wPtr++;
+      }
+      if (k2Flag != 0)
+      {
+         char *ePtr = wPtr;
+            
+         for (index=k1Flag; index<=k2Flag; index++)
+         {
+            /* skip white space */
+            while (( (*ePtr == ' ') || (*ePtr == '\t')) && (*ePtr != '\0'))
+               ePtr++;
+            /* and skip word */
+            while ((*ePtr != ' ') && (*ePtr != '\t') && (*ePtr != '\0'))
+               ePtr++;
+         }
+         *ePtr = '\0';
+      }
+      /* skip white space */
+      while (( (*wPtr == ' ') || (*wPtr == '\t')) && (*wPtr != '\0'))
+         wPtr++;
+   }
+   return(wPtr);
+}
+
+#define SORTSIZE 100
+
+int sortCmd(int argc, char *argv[], int retc, char *retv[])
+{
+   FILE *inFile;
+   FILE *outFile = NULL;
+   int uFlag = 0;
+   int rFlag = 0;
+   int nFlag = 0;
+   int k1Flag = 0;
+   int k2Flag = 0;
+   char inLine1[2048];
+   char inLine2[2048];
+   char *ptr1 = NULL;
+   char *ptr2 = NULL;
+   long *posPtr = NULL;
+   double *valPtr = NULL;
+   long   pos[SORTSIZE];
+   double val[SORTSIZE];
+   long ipos;
+   int numLines = 0;
+   int i,j;
+   
+
+   if (argc < 3)
+   {
+      Werrprintf("%s: at least two arguments must be provided",argv[0]);
+      ABORT;
+   }
+   if (argc == 4)
+   {
+      char *kPtr;
+      if (strstr(argv[2],"u"))
+         uFlag=1;
+      if (strstr(argv[2],"r"))
+         rFlag=1;
+      if (strstr(argv[2],"n"))
+         nFlag=1;
+      if ( (kPtr = strstr(argv[2],"k")) )
+      {
+         k1Flag=atoi(kPtr+1);
+         if ( (kPtr = strstr(argv[2],",")) )
+            k2Flag=atoi(kPtr+1);
+      }
+   }
+   if ( ! strcmp(argv[1],argv[argc-1]) )
+   {
+      Werrprintf("%s: cannot append to the same file as the source file",argv[0]);
+      ABORT;
+   }
+   outFile = fopen(argv[argc-1],"w");
+   if (outFile == NULL)
+   {
+      if (retc)
+      {
+         retv[ 0 ] = intString(0);
+         RETURN;
+      }
+      Werrprintf("%s: cannot write to file %s",argv[0],argv[argc-1]);
+      ABORT;
+   }
+   inFile = fopen(argv[1],"r");
+   if (inFile == NULL)
+   {
+      fclose(outFile);
+      if (retc)
+      {
+         retv[ 0 ] = intString(0);
+         RETURN;
+      }
+      Werrprintf("%s: Input file %s not found",argv[0],argv[1]);
+      ABORT;
+   }
+
+   ipos = ftell(inFile);
+   while (fgets(inLine1, sizeof(inLine1), inFile) != NULL)
+   {
+      if (numLines < SORTSIZE)
+      {
+         pos[numLines] = ipos;
+         if (nFlag)
+         {
+            ptr1=kflags(inLine1,k1Flag,k2Flag);
+            val[numLines] = strtod(ptr1,NULL);
+         }
+      }
+      numLines++;
+      ipos = ftell(inFile);
+   }
+   if (numLines > SORTSIZE)
+   {
+      posPtr = (long *) allocateWithId(numLines*sizeof(long),"sortCmd");;
+      if (nFlag)
+      {
+         valPtr = (double *) allocateWithId(numLines*sizeof(double),"sortCmd");;
+      }
+      rewind(inFile);
+      ipos = ftell(inFile);
+      numLines = 0;
+      while (fgets(inLine1, sizeof(inLine1), inFile) != NULL)
+      {
+         *(posPtr+numLines) = ipos;
+         if (nFlag)
+         {
+            ptr1=kflags(inLine1,k1Flag,k2Flag);
+            *(valPtr+numLines) = strtod(ptr1,NULL);
+         }
+         numLines++;
+         ipos = ftell(inFile);
+      }
+   }
+   else
+   {
+      posPtr = &pos[0];
+      valPtr = &val[0];
+   }
+   rewind(inFile);
+   for (i=1; i<numLines; i++)
+   {
+      double dval = 0.0;
+      size_t len;
+
+      ipos = *(posPtr+i);
+      if ( !nFlag )
+      {
+         fseek(inFile, *(posPtr+i), SEEK_SET);
+         fgets(inLine1, sizeof(inLine1), inFile);
+         len = strlen(inLine1);          /* get buf length */
+         if (len && inLine1[len-1] == '\n')      /* check last char is '\n' */
+            inLine1[--len] = '\0'; 
+         ptr1=kflags(inLine1,k1Flag,k2Flag);
+      }
+      else
+      {
+         dval = *(valPtr+i);
+      }
+      j = i - 1;
+      while (j>=0)
+      {
+         if (*(posPtr+j) >= 0)
+         {
+            if ( !nFlag )
+            {
+               fseek(inFile, *(posPtr+j), SEEK_SET);
+               fgets(inLine2, sizeof(inLine2), inFile);
+               len = strlen(inLine2);          /* get buf length */
+               if (len && inLine2[len-1] == '\n')      /* check last char is '\n' */
+                  inLine2[--len] = '\0'; 
+               ptr2=kflags(inLine2,k1Flag,k2Flag);
+               if (uFlag && (strcmp(ptr2,ptr1) == 0) )
+               {
+                  ipos = *(posPtr+j+1) = -1;
+                  break;
+               }
+               else if (strcmp(ptr2,ptr1) > 0)
+               {
+                  *(posPtr+j+1) = *(posPtr+j);
+                  j--;
+               }
+               else
+               {
+                  break;
+               }
+            }
+            else
+            {
+               if (uFlag && (*(valPtr+j) == dval))
+               {
+                  ipos = *(posPtr+j+1) = -1;
+                  break;
+               }
+               else if (*(valPtr+j) > dval)
+               {
+                  *(posPtr+j+1) = *(posPtr+j);
+                  *(valPtr+j+1) = *(valPtr+j);
+                  j--;
+               }
+               else
+               {
+                  break;
+               }
+            }
+         }
+         else
+         {
+            *(posPtr+j+1) = *(posPtr+j);
+            if (nFlag)
+               *(valPtr+j+1) = *(valPtr+j);
+            j--;
+         }
+      }
+      *(posPtr+j+1) = ipos;
+      if (nFlag)
+      {
+         *(valPtr+j+1) = dval;
+      }
+   }
+   if (rFlag)
+   {
+      for (j=numLines-1; j>=0; j--)
+      {
+         if (*(posPtr+j) == -1)
+            continue;
+         fseek(inFile, *(posPtr+j), SEEK_SET);
+         fgets(inLine1, sizeof(inLine1), inFile);
+         fprintf(outFile,"%s",inLine1);
+      }
+   }
+   else
+   {
+      for (j=0; j<numLines; j++)
+      {
+         if (*(posPtr+j) == -1)
+            continue;
+         fseek(inFile, *(posPtr+j), SEEK_SET);
+         fgets(inLine1, sizeof(inLine1), inFile);
+         fprintf(outFile,"%s",inLine1);
+      }
+   }
+   fclose(inFile);
+   fclose(outFile);
+   releaseAllWithId("sortCmd");
+   if (retc)
+   {
+      retv[ 0 ] = intString(1);
    }
    RETURN;
 }

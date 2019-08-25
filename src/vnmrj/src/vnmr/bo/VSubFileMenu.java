@@ -88,6 +88,7 @@ public class VSubFileMenu extends VSubMenu
                 Messages.writeStackTrace(e);
             }
         }
+/*
         updateChild = true;
         int m = getMenuComponentCount();
         for (int k = 0; k < m; k++) {
@@ -101,6 +102,7 @@ public class VSubFileMenu extends VSubMenu
                 obj.updateValue();
             }
         }
+ */
     }
 }
 

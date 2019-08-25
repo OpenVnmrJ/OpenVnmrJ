@@ -101,6 +101,7 @@ extern int annotation();
 
 extern int aph();
 extern int appdir();
+extern int appendCmd(int argc, char *argv[], int retc, char *retv[]);
 extern int atCmd();
 extern int auargs(int argc, char *argv[], int retc, char *retv[]);
 extern int autocmd();
@@ -435,6 +436,7 @@ extern int show_remote_files();		/* magnetom */
 extern int showbuf();
 extern int small();
 extern int solvinfo();
+extern int sortCmd(int argc, char *argv[], int retc, char *retv[]);
 extern int spa();
 extern int spins();
 extern int splmodprepare();
@@ -589,6 +591,7 @@ static cmd_t vnmr_table[] = {
 	{"aphb"       , aph,		NO_REEXEC, 10},
 	{"aphold"     , aph,		NO_REEXEC, 10},
 	{"appdir"     , appdir,		NO_REEXEC, 0},
+	{"append"     , appendCmd,	NO_REEXEC, 0},
 	{"asin"       , ln,		NO_REEXEC, 10},
 	{"atan"       , ln,		NO_REEXEC, 10},
 	{"atan2"      , ln,		NO_REEXEC, 10},
@@ -1073,6 +1076,7 @@ static cmd_t vnmr_table[] = {
 	{"sleep"      , vnmrSleep,	NO_REEXEC, 0},
 	{"small"      , small,		NO_REEXEC, 0},
 	{"solvinfo"   , solvinfo,	NO_REEXEC, 0},
+	{"sortCmd"    , sortCmd,	NO_REEXEC, 0},
 	{"spa"        , spa,		NO_REEXEC, 0},
 	{"spadd"      , addsub,		NO_REEXEC, 10},
 	{"spin"       , acq,		NO_REEXEC, 0},
@@ -1112,6 +1116,7 @@ static cmd_t vnmr_table[] = {
 	{"teststr"    , teststr,   	NO_REEXEC, 0},
 	{"text"       , text,		NO_REEXEC, 0},
 	{"textis"     , text_is,	NO_REEXEC, 0},
+	{"touch"      , shellcmds,	NO_REEXEC, 0},
 	{"tune"       , tune,	        NO_REEXEC, 0},
 #ifdef VNMRJ
 	{"trackCursor", trackCursor,    NO_REEXEC, 0},

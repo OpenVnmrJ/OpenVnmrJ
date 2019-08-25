@@ -94,6 +94,7 @@ extern int   find_param_file(char *init, char *final);
 extern int   goodType(char *type);
 extern int   goodGroup(char *group);
 extern void  copyGVars(symbol **fp, symbol **tp, int group);
+extern void  P_balance(symbol **tp);
 extern void  jsetcopyGVars(int flag);
 extern void  resetMagicVar(varInfo *v, char *name);
 extern void  nmr_exit(char *modeptr);
@@ -224,6 +225,63 @@ int is_whitespace(char c, int len, char delimiter[])
   return(0);
 }
 
+void trLine(char inLine[], char subLine[], char newChar[], char outLine[] )
+{
+   int i=0;
+   int j=0;
+   int k;
+   int foundOne = 0;
+   int ch;
+   int trCh;
+
+   while ( (ch = inLine[i]) != '\0')
+   {
+      if (j < MAXSTR*4 - 1)
+      {
+         k = 0;
+         foundOne = 0; 
+         while ( (trCh = subLine[k]) != '\0')
+         {
+            if ( (trCh == '\\') && (subLine[k+1] != '\0'))
+            {
+               if (subLine[k+1] == 'r')
+               {
+                  trCh ='\r';
+                  k++;
+               }
+               else if (subLine[k+1] == 'n')
+               {
+                  trCh ='\n';
+                  k++;
+               }
+               else if (subLine[k+1] == 't')
+               {
+                  trCh ='\t';
+                  k++;
+               }
+            }
+            if (ch == trCh)
+            {
+               foundOne = 1;
+               break;
+            }
+            k++;
+         }
+         if ( foundOne )
+         {
+            if (newChar[0] != '\0')
+               outLine[j++] = newChar[0];
+         }
+         else
+         {
+            outLine[j++] = ch;
+         }
+      }
+      i++;
+   }
+   outLine[j] = '\0';
+}
+
 /*-----------------------------------------------------------------------
 |
 |       substr
@@ -244,6 +302,8 @@ int substr(int argc, char *argv[], int retc, char *retv[])
        replace = 2;
        mode = 3;
     }
+    else if ((argc == 5) && (strcmp(argv[2],"tr")==0))
+       mode = 3;
     else if (argc == 5)
     {
        if (strcmp(argv[3],"delimiter")==0)
@@ -960,6 +1020,15 @@ int substr(int argc, char *argv[], int retc, char *retv[])
             else
                Winfoprintf("trimed:  %s",trimmed);
         }
+        else if (! strcmp(argv[2],"tr"))
+        {
+            char trimmed[MAXSTR*4];
+            trLine(argv[1], argv[3], argv[4], trimmed);
+            if (retc)
+               retv[0] = newString(  trimmed );
+            else
+               Winfoprintf("substr tr:  %s",trimmed);
+        }
         else
         {   Werrprintf("substr: bad word index!");
             clearRets(retc,retv);
@@ -1539,6 +1608,7 @@ int groupcopy(int argc, char *argv[], int retc, char *retv[])
 			  jsetcopyGVars( 0 );
 #endif 
 			copyGVars(fromroot,toroot,group);
+                        P_balance(toroot);
 #ifdef VNMRJ
 			if (strcmp(to_tree,"current")==0)
 			  jsetcopyGVars( -1 );
@@ -1568,8 +1638,26 @@ int groupcopy(int argc, char *argv[], int retc, char *retv[])
             ABORT;
         }
     }
+    else if (argc == 3)
+    {
+       int fromTree = getTreeIndex(argv[1]);
+       int toTree = getTreeIndex(argv[2]);
+       if (fromTree < 0)
+       {
+          Werrprintf("groupcopy: \"%s\" is not valid tree!",argv[1]);
+          ABORT;
+       }
+       if (toTree < 0)
+       {
+          Werrprintf("groupcopy: \"%s\" is not valid tree!",argv[2]);
+          ABORT;
+       }
+       P_pruneTree(toTree,fromTree);
+       P_copy(fromTree,toTree);
+       RETURN;
+    }
     else
-    {   Werrprintf("Usage -- groupcopy(fromtree,totree,group)!");
+    {   Werrprintf("Usage -- groupcopy(fromtree,totree<,group>)!");
         ABORT;
     }
 }
@@ -2343,112 +2431,10 @@ static int isDirectory(const char *dirname)
 |       Files beginning with a "." are ignored.
 |
 +-----------------------------------------------------------------------*/
-static int countitems(char *dirname)	
-{
-  DIR            *dirp;
-  int		  index;
-  struct dirent  *dp;
-
-  index = 0;
-  if ( (dirp = opendir(dirname)) )
-  {
-    for (dp = readdir(dirp); dp != NULL; dp = readdir(dirp))
-      if (*dp->d_name != '.')  /* no . files */
-        index++;
-    closedir(dirp);
-  }
-  else
-  {
-    Werrprintf("trouble opening %s",dirname);
-    return(0);
-  }	
-  return(index);
-}
-
-/*------------------------------------------------------------------------
-|
-|	This module returns the name of the n th file
-|	in the selected directory
-|
-+-----------------------------------------------------------------------*/
-static int getitem(char *dirname, int index, char filename[])	
-{
-    DIR            *dirp;
-    struct dirent  *dp;
-    int             temp;
-
-    if ( (dirp = opendir(dirname)) )
-    {
-      dp = NULL;
-      temp = 0;
-      while ((temp < index) && ((dp = readdir(dirp)) != NULL))
-        if (*dp->d_name != '.')  /* no . files */
-          temp++;
-      if ((index == temp) && (dp != NULL))
-        strcpy(filename,dp->d_name);
-      else
-      {
-        closedir(dirp);
-        Werrprintf("cannot get item %d from %s",index,dirname);
-	ABORT;
-      }	
-      closedir(dirp);
-      RETURN;
-    }
-    else
-    {	Werrprintf("trouble opening %s",dirname);
-	ABORT;
-    }	
-}
-
-/*------------------------------------------------------------------------
-|
-|	This module returns the name of the n th file
-|	in the selected directory, sorted
-|
-+-----------------------------------------------------------------------*/
-static int nodotfiles(const struct dirent * dp) { return dp->d_name[0] != '.'; }
-static int getitem_sorted(char *dirname, int index, char filename[], const char * sorttype)
-{
-  int             temp;
-  struct dirent **namelist;
-  int             n;
-
-  /* make index 0-based */
-  index--;
-
-  if (strcmp(sorttype, "alphasort"))
-  {
-    Werrprintf("unknown sort type '%s'", sorttype);
-    ABORT;
-  }
-
-  if (-1 != (n = scandir(dirname, &namelist, nodotfiles, alphasort)))
-  {
-    if (index >= 0 && index < n)
-      strcpy(filename, namelist[index]->d_name);
-
-    /* cleanup for scandir */
-    for (temp = 0; temp < n; temp++) {
-      free(namelist[temp]);
-    }
-    free(namelist);
-
-    /* return */
-    if (index >= 0 && index < n)
-      RETURN;
-    else
-    {
-      Werrprintf("cannot get item %d from %s", index+1, dirname);
-      ABORT;
-    }
-  }
-  else
-  {
-    Werrprintf("trouble opening %s", dirname);
-    ABORT;
-  }
-}
+extern int getitem(char *dirname, int index, char *filename, char *fileCmp, int recurse,
+                   int regExp, int saveInPar, varInfo *v1);
+extern int getitem_sorted(char *dirname, int index, char *filename, char *fileCmp, int recurse,
+                   int regExp, int saveInPar, varInfo *v1);
 
 /*------------------------------------------------------------------------
 |
@@ -2464,34 +2450,100 @@ static int getitem_sorted(char *dirname, int index, char filename[], const char 
 int getfile(int argc, char *argv[], int retc, char *retv[])
 {
   int  index;
-  char filename[MAXPATHL];
-  char extension[MAXPATHL];
-  int  temp,len,i;
+  char filename[MAXPATH];
+  char fileCmp[MAXPATH];
+  int  i;
+  int res;
+  int recurse = 0;
+  int regExp = 0;
+  int saveInPar = 0;
+  varInfo *v1 = NULL;
 
-  if (argc == 3 || argc == 4)       /* a specific file name is wanted */
+  if ( (argc == 1) || ! isDirectory(argv[1]) )
   {
-    filename[0] = '\0';
-    if ((isReal(argv[2])) && (isDirectory(argv[1])))
-    {
-      index = (int) stringReal(argv[2]);
-      if (index <= 0)
-      {
-        Werrprintf("file index %d does not exist",index);
+     if (argc > 1)
+     {
+       if (retc>0)
+          retv[0] = intString(0);
+       else
+          Werrprintf("getfile: %s is not a directory", argv[1]);
+       RETURN;
+     }
+     Werrprintf("Usage -- getfile(directory <,index[,'alphasort'][,match]>)");
+     ABORT;
+  }
+  res = 2;
+  index = 0;
+  if ( (argc > 2) && isReal(argv[2]))
+  {
+     index = (int) stringReal(argv[2]);
+     if (index <= 0)
+     {
+        Werrprintf("%s: file index %d does not exist",argv[0],index);
         ABORT;
-      }
-      else if (argc == 3)
-      {
-        if (getitem(argv[1],index,filename))
-          ABORT;
-      }
-      else if (getitem_sorted(argv[1],index,filename,argv[3]))
+     }
+     res = 3;
+  }
+  else if ( (argc > 2) && !strcmp(argv[2],"RETURNPAR") )
+  {
+     symbol **root;
+
+     if ( (argc < 3) || (argv[3][0] != '$') )
+     {
+        Werrprintf("%s: 'RETURNPAR' option must be following by local parameter name",argv[0]);
         ABORT;
-    }
-    else
-    {
-      Werrprintf("Usage -- getfile(directory <,index[,'alphasort']>)");
-      ABORT;
-    }
+     }
+     if ((root=selectVarTree(argv[3])) == NULL)
+     {
+        Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[3]);
+        ABORT;
+     }
+     if ((v1 = rfindVar(argv[3],root)) == NULL)
+     {   Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[3]);
+         ABORT;
+     }
+     if (v1->T.basicType == T_REAL)
+     {
+        Werrprintf("%s: variable \"%s\" must be string type",argv[0],argv[3]);
+        ABORT;
+     }
+     saveInPar = 1;
+     res = 4;
+  }
+  int alphaSort = 0;
+  fileCmp[0] = '\0';
+  filename[0] = '\0';
+  for (i=res; i<argc; i++)
+  {
+     if (! strcmp(argv[i],"alphasort") )
+        alphaSort = 1;
+     else if (! strcmp(argv[i],"-R") )
+        recurse = 1;
+     else if (! strcmp(argv[i],"regex") )
+        regExp = 1;
+     else if (! strcmp(argv[i],"regexdot") )
+        regExp = 2;
+     else
+        strcpy(fileCmp,argv[i]);
+  }
+  // alphasort not needed if just counting items
+  if (!index && !saveInPar)
+     alphaSort = 0;
+  if (regExp && (fileCmp[0] == '\0') )
+  {
+     regExp = 0;
+  }
+  if ( ! alphaSort)
+  {
+     if ( (res = getitem(argv[1],index,filename,fileCmp,recurse,regExp, saveInPar, v1)) < 0)
+        ABORT;
+  }
+  else if ( (res = getitem_sorted(argv[1],index,filename,fileCmp, recurse, regExp, saveInPar, v1)) < 0 )
+     ABORT;
+  if (index)       /* a specific file name is wanted */
+  {
+    char extension[MAXPATH];
+    int  temp,len;
     extension[0] = '\0';
     temp = len = strlen(filename);
     while ((len) && (filename[len-1] != '.'))
@@ -2513,31 +2565,12 @@ int getfile(int argc, char *argv[], int retc, char *retv[])
       Winfoprintf("file %d in %s is named %s with extension %s",
                    index,argv[1],filename,extension);
   }
-  else if (argc == 2)  /* the number of files is wanted  */
+  else  /* the number of files is wanted  */
   {
-    if (isDirectory(argv[1]))
-      index = countitems(argv[1]);
-    else
-    {
-       if (retc>0)
-       {
-          index = 0;
-       }
-       else
-       {
-          Werrprintf("getfile: %s is not a directory", argv[1]);
-          RETURN;
-       }
-    }
     if (retc>0)
-      retv[0] = realString((double) index);
+      retv[0] = intString(res);
     else
-      Winfoprintf("%s has %d files",argv[1],index);
-  }
-  else
-  {
-    Werrprintf("Usage -- getfile(directory <,index>)");
-    ABORT;
+      Winfoprintf("%s has %d files",argv[1],res);
   }
   RETURN;
 }
