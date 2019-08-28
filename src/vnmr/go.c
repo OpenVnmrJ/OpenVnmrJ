@@ -154,6 +154,7 @@ extern int p11_saveFDAfiles_raw(char* func, char* orig, char* dest);
 extern int setfrq(int argc, char *argv[], int retc, char *retv[]);
 extern int verify_fnameChar(char tchar);
 extern int check_ShimPowerPars();
+extern int do_mkdir(char *dir, int psub, mode_t mode);
 extern int Rmdir(char *dirname, int rmParent);
 
 extern int psg_pid;
@@ -1229,8 +1230,7 @@ int acq(int argc, char *argv[], int retc, char *retv[])
        {
           sprintf(dirpath,"%s/acqqueue/acq/%s",systemdir, tmpStr);
        }
-       sprintf(tmpStr,"mkdir -p %s; chmod %o %s\n",dirpath,0777,dirpath);
-       system(tmpStr);
+       do_mkdir(dirpath, 1, 0777);
     }
     GPRINT1(1,"Acqfile to use: '%s' \n",dirpath);
 
@@ -4373,7 +4373,6 @@ int makeautoname(char *cmdname, char *a_name, char *sif_name, char *dirname,
 char	*ptr;
 char	*aptr;
 char	*sptr;
-char	buffer[MAXPATH*2 + 40];
 char	filea[MAXPATH];
 char	fileb[MAXPATH];
 char	search_str[MAXSTR];
@@ -4383,7 +4382,7 @@ char	tmpSuffix[MAXPATH];
 char	tmp2Str[MAXSTR];
 char	revision[20];
 double	rval;
-int	filemode;
+mode_t	filemode;
 int	itemp;
 int	dlen,len;
 int	R_speced,R_start,R_width,rev;
@@ -4705,10 +4704,9 @@ char    recDir[MAXPATH];
 #endif 
 
    strcat(tmp,suffix);
-   sprintf(buffer,"mkdir -p %s; chmod %o %s\n",tmp,filemode,tmp);
-   itemp=system(buffer);
+   itemp = do_mkdir(tmp, 1, filemode);
    if (itemp)
-   {  printf("Cannot create directory '%s',return=%d\n",tmp,itemp);
+   {  Werrprintf("Cannot create directory '%s',return=%d\n",tmp,itemp);
       ABORT;
    }
 

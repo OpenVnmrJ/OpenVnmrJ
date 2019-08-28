@@ -1,0 +1,47 @@
+sortCmd('fromFile',<flags>,'toFile'):$ok - sort lines from fromFile to toFile
+
+The sortCmd command will sort the contents of "fromFile" to "toFile".
+The fromFile and toFile cannot be the same file. If toFile does not exist,
+it will be created.
+
+There can be optional flags to determine the ordering options. All flags
+are concatenated into a single argument. The order of the flags does not matter.
+The default is an alphanumeric sort in ascending order.  The sort command will
+return either a 1 or 0 for success or failure, respectively.
+
+  n     - compare according to string numerical value
+  r     - reverse the result of comparisons
+  u     - output only the first of an equal run
+  k#    - sort starting from the #th field
+  k#,#2 - sort starting from the #th field until the end of the #2 field
+
+A field is defined as characters separated by a space or tab. Field numbering
+starts with 1. For example, the second field in
+line1:  20 values
+is 20
+When using the 'u' flag, the "uniqueness" of a line depends only on the parts
+of the line being compared. For example, with the following four lines
+
+1: 20.0
+2: 21.0
+3: 20.0
+4: 20.0  alpha
+
+using flags 'u' would give all four lines. Using 'uk2'  would give lines 1, 2, and 4.
+Using 'uk2,2' would give lines 1 and 2 only.  The k2 flag compares from the beginning
+of word 2 to the end of the line. The k2,2 flag compares from the beginning of word 2
+to the end of word 2.
+
+Examples:
+
+sortCmd(<fromFile>,<toFile>)          // alphanumeric sort
+sortCmd(<fromFile>,'nr',<toFile>)     // numeric sort in descending order
+sortCmd(<fromFile>,'k2',<toFile>)     // alphanumeric sort starting from the 2nd field
+                                      // to the end of the line
+sortCmd(<fromFile>,'k2,2',<toFile>)   // alphanumeric sort starting from the 2nd field
+                                      // to the end of 2nd field
+sortCmd(<fromFile>,'unk2,2',<toFile>) // numeric sort starting from the 2nd field
+                                      // to the end of 2nd field and removing lines with
+                                      // non-unique 2nd fields.
+
+

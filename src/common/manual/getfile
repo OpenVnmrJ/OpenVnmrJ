@@ -1,42 +1,105 @@
 
 *******************************************************************************
-getfile('directory'):$x  	           - how many files are in a directory?
-getfile('directory',i<,'alphasort'>):$name,$ext - return the name and extension
-                                                - of the ith file.
+getfile('directory'<,OPTIONS>):$num  	    - how many files are in a directory?
+getfile('directory',i<,OPTIONS>):$name,$ext - return the name and extension
+                                              of the ith file.
+
+getfile('directory','RETURNPAR','$par'<,OPTIONS>):$num - return files into local
+                                                         parameter. 
 *******************************************************************************
 
-  Allows one to determine the number of files within a directory.
-  The names of each of these files can then be successively returned.
-  Files which begin with a "." are ignored.  The last file extension is
-  returned as a second argument.  With the 'alphasort' argument, the
-  filenames will be returned in alphabetic order, at some cost in speed.
-  Without it the order is random and dependent on the underlying
-  filesystem.  For example:
+  There are two ways to use getfile. The first is to get the number of files
+  in a directory and then use getfile to access each in turn. 
+  When getfile is called without an index, it returns the number of files
+  to the calling macro. When getfile is called with an index, the file name
+  is returned to the calling macro.  The file extension is returned as a
+  second argument.
 
-    filename		first argument		second argument
+  The second way to use getfile is with the 'RETURNPAR' keyword, which will return
+  all of the file names in the supplied local parameter. The name of the local
+  parameter must follow the 'RETURNPAR' keyword. The local parameter must already
+  exist as a string parameter. In this case, getfile returns the number of files
+  to the calling macro.
+
+  A number of options control the behavior of getfile. These options can be given
+  in any order following the required parameters.
+
+  With the 'alphasort' option, the file names will be returned in alphabetic
+  order, at some cost in speed.  Without 'alphasort', the order is random and
+  dependent on the underlying filesystem.
+
+  With the '-R' option, the 'directory' will be searched recursively. When
+  the '-R' option is used, the paths relative to the supplied directory name
+  are returned.
+
+  A comparison string may be provided for matching the file name. The comparison
+  string can be an ordinary string. Any occurrence of that string within the
+  file name will be identified as a match. Alternatively, if the 'regex' option
+  is present, the comparison string will be interpreted as a "regular expression"
+  and "regular expression" rules will be used to determine if the file name is a
+  match. File names that begin with a "." are ignored except in the case
+  of the 'regexdot' option. In all other ways, the 'regexdot' option is the
+  same as the 'regex' option.
+
+  When the file names are returned to the calling macro, the extension 
+  returned as the second argument are all characters after the final
+  dot (.) in the file name.
+
+    file name		first argument		second argument
     s2pul.fid		s2pul			fid
     tmp_01.dat		tmp_01			dat
     dummy		dummy
-    fid.tmp.par		fid.tmp			par
+    some.tmp.par	some.tmp		par
 
-  Example:
-    getfile('dir'):$entrys
-    $temp = 0
-    while ($temp < $entrys)
-      $temp = $temp + 1
-      getfile('dir',$temp):$filename,$ext
+  Example of the first way of using getfile:
+    getfile($dir):$entrys
+    $index = 0
+    while ($index < $entrys)
+      $index = $index + 1
+      getfile($dir,$index,'alphasort'):$file,$ext
       .
       .
       .
     endwhile
 
-  Complete pathnames can be reconstructed as
+  Complete file names can be reconstructed as
     if ($ext = '') then
-      $path = 'dir' + $filename
+      $filename = $file
     else
-      $path = 'dir' + $filename + '.' + $ext
+      $filename = $file + '.' + $ext
     endif
 
-  Pathnames for the rt command would always be reconstructed as
-    $path = 'dir' + '/' + $filename
+  Path names for the rt command would be reconstructed as
+    $path = $dir + '/' + $filename
 
+  To get only the files with a .fid in their name, one could use
+
+  getfile('dir','.fid'):$entrys
+
+  Note however that this would match the file name my.fid.file. To
+  match only file names that end in .fid, use the 'regex' option.
+
+  getfile(<dir>,'regex','\\.fid$'):$entrys
+
+  The dot (.) must be "escaped" with the backslash or the "regular expression"
+  rules would match it with any character. Also note that two backslashes must
+  be used since the magical interpreter also treats the backslash as an escape
+  character.
+
+  When file names are returned in a supplied local parameter, they are not
+  broken into file names and extensions.
+
+  Example of the second way of using getfile:
+    $filename=''
+    getfile($dir,'RETURNPAR','$filename','-R','regex','\\.fid$'):$entrys
+    $index = 0
+    while ($index < $entrys)
+      $index = $index + 1
+      write('line3','file %d: %s',$index,$filename[$index])
+      .
+      .
+      .
+    endwhile
+
+  The path names for the rt command would be reconstructed as
+    $path = $dir + '/' + $filename[$index]

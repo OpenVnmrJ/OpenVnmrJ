@@ -8,55 +8,52 @@ walkupQ_init
 //      before copying from the temporary directory
 //      Similar approach is taken for all files in curexp
 
-   flush
+   flush2
    $oldseq=seqfil
    exists($dir+'/fid','file'):$isthere
    if ($isthere>0.5) then
-      shell('rm -f '+curexp+'/acqfil/fid'):$dum
-      shell('cp -p '+$dir+'/fid '+curexp+'/acqfil/fid'):$dum
+     mv($dir+'/fid',curexp+'/acqfil/fid')
    endif
 
-   rm('-f',curexp+'/acqfil/sampling.sch'):$dum
+   delete(curexp+'/acqfil/sampling.sch',''):$dum
    exists($dir+'/sampling.sch','file'):$isthere
    if ($isthere>0.5) then
-        shell('cp -p '+$dir+'/sampling.sch '+curexp+'/acqfil/sampling.sch'):$dum
+     mv($dir+'/sampling.sch',curexp+'/acqfil/sampling.sch')
    endif
 
    exists($dir+'/data','file'):$isthere
    if ($isthere>0.5) then
-      shell('rm -f '+curexp+'/datdir/data'):$dum
-      shell('cp -p '+$dir+'/data '+curexp+'/datdir/data'):$dum
+      mv($dir+'/data',curexp+'/datdir/data')
    endif
 
    exists($dir+'/phasefile','file'):$isthere
    if ($isthere>0.5) then
-      shell('rm -f '+curexp+'/datdir/phasefile'):$dum
-      shell('cp -p '+$dir+'/phasefile '+curexp+'/datdir/phasefile'):$dum
+      mv($dir+'/phasefile',curexp+'/datdir/phasefile')
    endif
 
    exists($dir+'/procpar','file'):$isthere
    if ($isthere>0.5) then
-      shell('cp -p '+$dir+'/procpar '+curexp+'/procpar'):$dum
+      mv($dir+'/procpar',curexp+'/procpar')
       fread(curexp+'/procpar','processed','reset')
    endif
 
    exists($dir+'/curpar','file'):$isthere
    if ($isthere>0.5) then
-      shell('cp -p '+$dir+'/curpar '+curexp+'/curpar'):$dum
+      mv($dir+'/curpar',curexp+'/curpar')
       fread(curexp+'/curpar','current','reset')
    endif
 
    exists($dir+'/text','file'):$isthere
    if ($isthere>0.5) then
-      shell('cp -p '+$dir+'/text '+curexp+'/text'):$dum
+      mv($dir+'/text',curexp+'/text')
    endif
 
-   rm('-f',curexp+'/sampling.sch'):$dum
+   delete(curexp+'/sampling.sch',''):$dum
    exists($dir+'/cur_sampling.sch','file'):$isthere
    if ($isthere>0.5) then
-        shell('cp -p '+$dir+'/cur_sampling.sch '+curexp+'/sampling.sch'):$dum
+        mv($dir+'/cur_sampling.sch',curexp+'/sampling.sch')
    endif
 
-   shell('rm -rf '+$dir):$dum
+   rm('-rf',$dir):$dum
 
    if ($oldseq<>seqfil) then dg newdg endif

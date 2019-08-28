@@ -5,12 +5,25 @@ rm		-       implementation of the UNIX rm command
 *******************************************************************************
 
   The rm command removes one or more files from the file system. 
-  It works like the unix rm command.   All arguments and options
-  are passed.  This command is very powerful and its use is not
-  recommended.
+  It works like the Linux rm command with the exception of the -R
+  option. The -R option removes the contents of the directory but not
+  the directory itself. It is like the Linux command
+    rm -rf directory/*
+  If the -R is used, the directory name cannot contain the wildcard (*)
+  and the directory must exist. Otherwise, the rm command will abort.
+  By returning an argument to the calling macro, as in
+     rm('-R','directory'):$dum
+  the rm command will not abort.
+  If only a single file name is given, it does not contain wildcards, it
+  exists,  and only zero or one of the options '-f', '-rf', '-fr', or
+  '-R' are given, the rm command uses fast built-in functions. Otherwise,
+  the actual /bin/rm Linux command is called, which is slower than the
+  built-in functions. 
 
   Usage  -  rm('filename')
-	    rm('filename1','filename2')
+            rm('-rf','directory1')
+            rm('-R','directory1')
+	    rm('filename1','filename2')  // calls slower external /bin/rm
 
   The delete command is a safer command than rm.  It will not allow
   "wildcard" characters nor the -r option.  It will, however, delete
@@ -22,7 +35,11 @@ rm		-       implementation of the UNIX rm command
   it will be deleted.  If the file is not found,  a .fid is appended
   to the file name.  If that directory is found, it will be removed.
   If the .fid file does not exist, a .par is appended and that file
-  will be removed if it is found.
+  will be removed if it is found. If the filename is following be a
+  null string, then files with .fid or .par will not be searched for.
 
   Usage  -  delete('filename')
 	    delete('filename1','filename2')
+            delete('filea','')   // useful if you are not sure 'filea' exists
+                                 // but do not want to delete filea.fid or
+                                 // filea.par

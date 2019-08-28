@@ -3060,6 +3060,8 @@ makefid command to read the data into an experiment.
 
 static int *iptrJcamp = NULL;
 static int *jptrJcamp = NULL;
+static double *iptrJcampDouble = NULL;
+static double *jptrJcampDouble = NULL;
 
 static char *getValue(char *buf)
 {
@@ -3220,8 +3222,68 @@ static void checkchar(int ch, char *val, int *ycheck, int *dup, int *diff)
    }
 }
 
+static int writedatadouble(FILE *oFile, char *buffer,
+                     int totalPts, int *pts, double factor)
+{
+   int len;
+   int i;
+   int j;
+   char num[1024];
+   double last;
+
+   len = strlen(buffer);
+
+   i = 0;
+   // skip white space
+   while ( ( buffer[i] == ' ' ) || (buffer[i] == '\t') )
+      i++;
+   // skip first number
+   while ((buffer[i] != ' ') && (buffer[i]!= '\t') &&
+          (buffer[i] != '\0') )
+      i++;
+
+   while (i < len)
+   {
+      while ( ( buffer[i] == ' ' ) || (buffer[i] == '\t') )
+         i++;
+      
+      j = 0;
+      while ((buffer[i] != ' ') && (buffer[i]!= '\t') &&
+             (buffer[i] != '\0') )
+      {
+            num[j++] = buffer[i++];
+      }
+      // Ignore whitespace at the end of buffer
+      if (j == 0)
+         continue;
+      num[j] = '\0';
+      last = atof(num);
+         if (factor == 0.0)
+         {
+            if ( *pts < totalPts)
+            {
+               (*pts)++;
+               *iptrJcampDouble = last;
+               iptrJcampDouble++;
+            }
+            else
+            {
+               Werrprintf("JCAMP number of points mismatch");
+               return(-1);
+            }
+         }
+         else
+         {
+            fprintf(oFile,"%-12.7f %-12.7f\n", *jptrJcampDouble * factor, last * factor);
+            jptrJcampDouble++;
+         }
+
+   }
+   return(0);
+}
+
 static int writedata(FILE *oFile, char *buffer, int *xcheck, int *ycheck,
-                     int totalPts, int *pts, float factor)
+                     int totalPts, int *pts, double factor)
 {
    int len;
    int i;
@@ -3437,10 +3499,27 @@ static int getlineNoComments(FILE *path, char line[], int limit)
      return(1);
 }
 
+/* If the line has spaces or tabs, it is a list of ascii numbers */
+static int checkLineForAscii(char *buffer)
+{
+   char *ptr = buffer;
+   /* Skip initial white space */
+   while ( ( *ptr == ' ' ) || (*ptr == '\t') )
+      ptr++;
+   while ( (*ptr != '\0') )
+   {
+      if ( (*ptr == ' ') || (*ptr == '\t') )
+         return(1);
+      ptr++;
+   }
+   return(0);
+}
+
 static int jcamp(FILE *iFile, varInfo *v1, varInfo *v2)
 {
    FILE *oFile = NULL;
-   float factor = 0.0;
+   FILE *oFileArray = NULL;
+   double factor = 0.0;
    int xcheck, ycheck;
    char buffer[2048];
    char outFile[2048];
@@ -3452,16 +3531,22 @@ static int jcamp(FILE *iFile, varInfo *v1, varInfo *v2)
    int npx = 0;
    int dataPage = 0;
    int doingData = 0;
+   int asciidata = -1;
+   int numdim=1;
+   int pages=1;
+   int npts=1;
+   int resetPtr = 0;
 
-   iptrJcamp= NULL;
+   int *iptrJcamp_orig = NULL;
+   int *jptrJcamp_orig = NULL;
+   double *iptrJcampDouble_orig = NULL;
+   double *jptrJcampDouble_orig = NULL;
+
+   iptrJcamp = NULL;
    jptrJcamp = NULL;
+   iptrJcampDouble = NULL;
+   jptrJcampDouble = NULL;
 
-   sprintf(outFile,"%s/jcampData",curexpdir);
-   if ( (oFile = fopen(outFile,"w")) == NULL)
-   {
-      Werrprintf("Cannot open JCAMP data file %s",outFile);
-      error = 1;
-   }
 
    xcheck = -1;
    ycheck = 0;
@@ -3476,8 +3561,6 @@ static int jcamp(FILE *iFile, varInfo *v1, varInfo *v2)
                 xcheck = -1;
                 ycheck = 0;
                 numPts = 0;
-                if (dataPage == 1)
-                   dataPage = 2;
 
                 index = getLDR(buffer,ldr);
                 if (index > 0)
@@ -3491,11 +3574,70 @@ static int jcamp(FILE *iFile, varInfo *v1, varInfo *v2)
                       } 
                    }
                    if ( ! strcmp(ldr,"DATATABLE") )
+                   {
                       doingData = 1;
+                      dataPage++;
+                      if (dataPage % 2) 
+                      {
+                         if (oFile != NULL)
+                            fclose(oFile);
+                         sprintf(outFile,"%s/jcampData.%d",curexpdir,dataPage/2 + 1);
+
+                         if ( (oFile = fopen(outFile,"w")) == NULL)
+                         {
+                            Werrprintf("Cannot open JCAMP data file %s",outFile);
+                            error = 1;
+                         }
+                         resetPtr = 1;
+                      }
+                   }
                    else
+                   {
                       doingData = 0;
+                   }
+                   if ( numdim > 1 )
+                   {
+                      if ( ! strcmp(ldr,"PAGE") )
+                      {
+                         if (oFileArray == NULL)
+                         {
+                            sprintf(outFile,"%s/jcampArray",curexpdir);
+
+                            if ( (oFileArray = fopen(outFile,"w")) == NULL)
+                            {
+                               Werrprintf("Cannot open JCAMP array file %s",outFile);
+                               error = 1;
+                            }
+                         }
+                         if ( (oFileArray != NULL) && (dataPage % 2) )
+                         {
+                            char *ptr = buffer+index;
+                            while ( ( *ptr == ' ' ) || (*ptr == '\t') || (*ptr == '=') )
+                               ptr++;
+                            while ( *ptr != '=' )
+                               ptr++;
+                            ptr++;
+                            fprintf(oFileArray,"%s\n", ptr);
+                         }
+                            
+                      }
+                   }
+                   if ( ! strcmp(ldr,"NUMDIM") )
+                      numdim=atoi(getValue(buffer+index));
+                   if ( ! strcmp(ldr,"NPOINTS") )
+                      npts=atoi(getValue(buffer+index));
                    if ( ! strcmp(ldr,"VARDIM") )
-                      npx = atoi(getValue(buffer+index));
+                   {
+                      if (numdim == 1)
+                      {
+                         npx = atoi(getValue(buffer+index));
+                      }
+                      else
+                      {
+                         pages = atoi(getValue(buffer+index));
+                         npx =  npts / pages;
+                      }
+                   }
                    if ( ! strcmp(ldr,"FACTOR") )
                    {
                       char *ptr = buffer+index;
@@ -3506,7 +3648,22 @@ static int jcamp(FILE *iFile, varInfo *v1, varInfo *v2)
                       if ( *ptr == ',' )
                       {
                          ptr++;
-                         factor = atof(ptr);
+                         if (numdim == 1)
+                         {
+                            factor = atof(ptr);
+                         }
+                         else
+                         {
+                            while ( ( *ptr == ' ' ) || (*ptr == '\t') )
+                               ptr++;
+                            while ( (*ptr != ',') && (*ptr != '\0') )
+                               ptr++;
+                            if ( *ptr == ',' )
+                            {
+                               ptr++;
+                               factor = atof(ptr);
+                            }
+                         }
                       }
                       else
                       {
@@ -3514,7 +3671,7 @@ static int jcamp(FILE *iFile, varInfo *v1, varInfo *v2)
                          error = 1;
                       }
                    }
-                   if ( ! error )
+                   if ( ! error && !dataPage )
                    {
                       numRows++;
                       assignString(ldr,v1,numRows);
@@ -3548,18 +3705,49 @@ static int jcamp(FILE *iFile, varInfo *v1, varInfo *v2)
                    if ( ! error )
                    {
                       int ret;
-                      if ( iptrJcamp == NULL )
+                      if (asciidata == -1)
+                         asciidata = checkLineForAscii(buffer);
+                      if ( ! asciidata )
                       {
-                         jptrJcamp = iptrJcamp = (int *)allocateWithId(npx * sizeof(int),"jcamp");
-                      }
-                      if (dataPage == 0)
-                         dataPage = 1;
-                      if (dataPage == 1)
-                         ret = writedata(oFile, buffer, &xcheck, &ycheck,
+                         if ( iptrJcamp_orig == NULL )
+                         {
+                            jptrJcamp_orig = iptrJcamp_orig = (int *)allocateWithId(npx *
+                                                     sizeof(int),"jcamp");
+                         }
+                         if (resetPtr)
+                         {
+                            iptrJcamp = iptrJcamp_orig;
+                            jptrJcamp = jptrJcamp_orig;
+                            resetPtr = 0;
+                         }
+                         if (dataPage % 2)
+                            ret = writedata(oFile, buffer, &xcheck, &ycheck,
                                          npx, &numPts, 0.0);
-                      else
-                         ret = writedata(oFile, buffer, &xcheck, &ycheck,
+                         else
+                            ret = writedata(oFile, buffer, &xcheck, &ycheck,
                                          npx, &numPts, factor);
+                      }
+                      else
+                      {
+                         if ( iptrJcampDouble_orig == NULL )
+                         {
+                            jptrJcampDouble_orig = iptrJcampDouble_orig =
+                                 (double *)allocateWithId(npx *
+                                                     sizeof(double),"jcamp");
+                         }
+                         if (resetPtr)
+                         {
+                            iptrJcampDouble = iptrJcampDouble_orig;
+                            jptrJcampDouble = jptrJcampDouble_orig;
+                            resetPtr = 0;
+                         }
+                         if (dataPage % 2)
+                            ret = writedatadouble(oFile, buffer,
+                                         npx, &numPts, 0.0);
+                         else
+                            ret = writedatadouble(oFile, buffer,
+                                         npx, &numPts, factor);
+                      }
                       if (ret == -1)
                          error = 1;
                    }
@@ -3569,9 +3757,12 @@ static int jcamp(FILE *iFile, varInfo *v1, varInfo *v2)
                 break;
        }
    }
-   if (iptrJcamp)
+   if (iptrJcamp_orig || iptrJcampDouble_orig)
       releaseWithId("jcamp");
-   fclose(oFile);
+   if (oFile != NULL)
+      fclose(oFile);
+   if (oFileArray != NULL)
+      fclose(oFileArray);
    if (error)
       return(0);
    return(numRows);
@@ -3592,6 +3783,8 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
     char *path, *cmpstr=NULL;
     int jcampFlag = 0;
     int hasPar2 = 1;
+    int cmpLen = 0;
+    int cmpHash = 0;
 
     /* Put args into variables */ 
     /* Must be at least 3 args */
@@ -3609,6 +3802,9 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
         cmpstr = argv[4];
         if ( ! strcmp(cmpstr,"JCAMP"))
            jcampFlag = 1;
+        cmpLen = strlen(cmpstr);
+        if ( (*cmpstr == '#') || ((*cmpstr == '^') && (*(cmpstr+1) == '#')) )
+           cmpHash = 1;
       }
     }
     tree = "current";
@@ -3624,11 +3820,6 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
        if ((root=selectVarTree(argv[2])) == NULL)
        {
           Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[2]);
-          ABORT;
-       }
-       if ( hasPar2 && ( (root=selectVarTree(argv[3])) == NULL) )
-       {
-          Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[3]);
           ABORT;
        }
     }
@@ -3686,18 +3877,43 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
     {
         numRows = jcamp(inputFile, v1, v2); 
     }
-    else while (priv_getline(inputFile, line1, LINE_LIMIT)) {
+    else while (priv_getline(inputFile, line1, LINE_LIMIT))
+    {
         length = strlen(line1);
         if(length == 0)
             continue;
+        /* Now see if cmpstr is set and if so, weed out any lines that
+           don't match */
+        if(cmpLen) {
+            if (*cmpstr == '^')
+            {
+               if(strncmp(line1, (cmpstr+1), cmpLen-1) != 0) {
+                /* Not a match, bail out before setting pars */
+                continue;
+               }
+            }
+            else
+            {
+               int start = 0;
+               while ((line1[start] == ' ') || (line1[start] == '\t'))
+                  start++;
+               if(strncmp((line1+start), cmpstr, cmpLen) != 0) {
+                /* Not a match, bail out before setting pars */
+                continue;
+               }
+            }
+        }
     	/* skip # and empty lines */
         for(i=0; i < length; i++) {
             c = line1[i];
             /* Skip comment lines */
             if(c == '#') {
                 /* let code below know we don't want this line */
-                i = length;
-                break;
+                if (!cmpHash)
+                {
+                   i = length;
+                   break;
+                }
             }
 
             /* skip white space */
@@ -3713,7 +3929,7 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
         if ( hasPar2 )
         {
 
-           /* Get the part of the string fillowing any leading white space */
+           /* Get the part of the string following any leading white space */
            strcpy(line2, &line1[i]);
 
            /* Get first word */
@@ -3758,16 +3974,6 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
         else // no Par2
         {
            strcpy(first, line1); // Copy entire line, incuding white space
-        }
-
-        /* Now see if cmpstr is set and if so, weed out any lines that
-           don't match */
-        if(cmpstr != NULL && cmpstr[0] != '\0') {
-            length = strlen(cmpstr);
-            if(strncmp(first, cmpstr, length) != 0) {
-                /* Not a match, bail out before setting pars */
-                continue;
-            }
         }
 
         /* Count up the rows which we kept and this is the param index. */

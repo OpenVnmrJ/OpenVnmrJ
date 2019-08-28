@@ -39,15 +39,8 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef UNIX
 #include <sys/types.h>
 #include <sys/stat.h>
-#else 
-#include <file.h>
-#define  F_OK	0
-#define  X_OK	1
-#define  R_OK	4
-#endif 
 
 #include "data.h"
 #include "group.h"
@@ -117,8 +110,11 @@ extern int lockExperiment(int expn, int mode );
 extern int unlockExperiment(int expn, int mode );
 extern int expdir_to_expnum(char *expdir);
 extern int flush( int argc, char *argv[], int retc, char *retv[] );
+extern int Rmdir(char *dirname, int rmParent);
+extern int Cpdir(char *fromdir, char *toDir);
 
 extern int part11System;
+extern int doingAutoJexp;
 extern int save_optFiles(char* dest, char *type);
 extern int isFDARec(char *s);
 extern int isRec(char *s);
@@ -134,7 +130,6 @@ float *aipGetTrace(char *key, int ind, double scale, int npt);
    extern int jexp_timer_no;
 #endif 
 
-static char chkbuf[MAXPATH+2];
 /*  Define the Search Sequence for EXISTS, RTS and SVS  */
 
 static int rjexpnum = 0;
@@ -154,7 +149,7 @@ void doingAutoExp()
    autoexp = 1;
 }
 
-int nextexp_d(int *expi, char *expn )
+int nextexp_d(int *expi, char *expn)
 {
    double tmp;
    int addsubexp = 5;
@@ -165,7 +160,6 @@ int nextexp_d(int *expi, char *expn )
       addsubexp = 5;
    else
       addsubexp = (int) (tmp+0.001);
-   *expi=1;
    while ( !found  && ( *expi < 10000) )
    {
       *expi += 1;
@@ -186,10 +180,16 @@ int nextexp_d(int *expi, char *expn )
 int nextexp(int argc, char *argv[], int retc, char *retv[])
 /***************************/
 {
-   int expi;
+   int expi=5;
    char expn[32];
    int found;
-
+   
+   if (argc > 1)
+   {
+      expi = atoi(argv[1]);
+      if (expi < 1)
+         expi = 1;
+   }
    found = nextexp_d( &expi, expn );
    if (retc)
    {
@@ -209,23 +209,13 @@ static int access_exp(char *exppath, char *estring)
 
 /* Only verifies the existance of an experiment. */
   strcpy(exppath, userdir);
-#ifdef UNIX
   strcat(exppath, "/exp");
   strcat(exppath, estring);
   if ( access(exppath, R_OK | W_OK) )
-#else 
-  strcat(exppath,"exp");
-  strcat(exppath, estring);
-  strcat(exppath, ".dir");
-  if ( access(exppath, R_OK) )		/*  Can't check for write  */
-#endif 
   {
      Werrprintf("experiment %s is not accessible", exppath);
      ABORT;
   }
-#ifdef VMS
-  make_vmstree(exppath,exppath,MAXPATHL);
-#endif 
   RETURN;
 }
 
@@ -523,7 +513,6 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
      strcpy(estring, argv[1]);
      strcpy(epath, userdir);
   }
-#ifdef UNIX
   else if (argc == 3)
   {
      if (strcmp(argv[2], "nodb")==0)
@@ -549,13 +538,6 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
      sprintf(msg,"usage - cexp(<'expdir'>, n) for n = [1,%d]", MAXEXPS);
      goto abortCexp;
   }
-#else 
-  else 
-  {
-     sprintf(msg,"usage - cexp(n) for n = [1,%d]", MAXEXPS);
-     goto abortCexp; 
-  }
-#endif 
 
   if ( (atoi(estring) < 1) || (atoi(estring) > MAXEXPS) )
   {
@@ -564,14 +546,8 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
   }
 
   strcpy(exppath, epath);
-#ifdef UNIX
   strcat(exppath, "/exp");
   strcat(exppath, estring);
-#else 
-  strcat(exppath, "exp");
-  strcat(exppath, estring);
-  strcat(exppath, ".dir");
-#endif 
 
   oldexpnum = expdir_to_expnum(curexpdir);
 /*  makeuser -
@@ -598,9 +574,6 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
      }
   }
 
-#ifdef VMS
-  make_vmstree(exppath, exppath, MAXPATHL);
-#endif 
 #ifdef SIS
   if (mkdir(exppath,0755))
 #else 
@@ -612,11 +585,7 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
   }
 
   strcpy(path, exppath);
-#ifdef UNIX
   strcat(path, "/acqfil");
-#else 
-  vms_fname_cat(path, "[.acqfil]");
-#endif 
 #ifdef SIS
   if ( mkdir(path, 0755) )
 #else 
@@ -628,11 +597,7 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
   }
 
   strcpy(path, exppath);
-#ifdef UNIX
   strcat(path, "/datdir");
-#else 
-  vms_fname_cat(path, "[.datdir]");
-#endif 
 #ifdef SIS
   if ( mkdir(path, 0755) )
 #else 
@@ -656,25 +621,17 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
         sprintf(msg,"%s: %s does not exist", argv[0], epath);
         goto abortCexp;
      }
-     else
+     else if ( ! doingAutoJexp )
      {
-        char cmdstr[MAXPATH*3];
+        char toPath[MAXPATH];
 
-        strcpy(cmdstr,"/bin/cp ");
-        strcat(cmdstr,epath);
-        strcat(cmdstr," ");
-        strcat(cmdstr,exppath);
-        strcat(cmdstr,"/curpar");
-        system(cmdstr);
-
-        strcpy(cmdstr,"/bin/cp ");
-        strcat(cmdstr,epath);
-        strcat(cmdstr," ");
-        strcat(cmdstr,exppath);
-        strcat(cmdstr,"/procpar");
-        system(cmdstr);
+        strcpy(toPath,exppath);
+        strcat(toPath,"/curpar");
+        copyFile(epath, toPath, 0);
+        strcpy(toPath,exppath);
+        strcat(toPath,"/procpar");
+        copyFile(epath, toPath, 0);
      }
-
   }
   else
   {
@@ -706,11 +663,7 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
 
   setfilepaths(getactivefile());
   strcpy(path, exppath);
-#ifdef UNIX
   strcat(path, "/text");
-#else 
-  strcat(path, "text");
-#endif 
 
   if ( (textfile = fopen(path,"w")) == NULL )
   {
@@ -724,14 +677,8 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
   }
 
   strcpy(path, userdir);
-#ifdef UNIX
   strcat(path, "/exp");
   strcat(path, estring);
-#else 
-  strcat(path, "exp");
-  strcat(path, estring);
-  strcat(path, ".dir");
-#endif 
 
   if ((argc==3) && (doDB))
   {
@@ -831,76 +778,98 @@ static void remove_data(char *exppath)
 void remove_3d(char *exppath )
 /***********************/
 {
-	char	subdirpath[ MAXPATH+10 ], remove_it_cmd[ MAXPATH+10 ];
+	char	subdirpath[ MAXPATH+10 ];
 
 /*  Remove "datadir3d" subdirectory  */
 
 	strcpy( &subdirpath[ 0 ], exppath );
-#ifdef UNIX
 	strcat( &subdirpath[ 0 ], "/datadir3d" );
-	strcpy( &remove_it_cmd[ 0 ], "rm -rf " );
-#else 
-	vms_fname_cat( &subdirpath[ 0 ], "[.datadir3d]" );
-	strcpy( &remove_it_cmd[ 0 ], "rm_recur " );
-#endif 
-	strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
-	system( &remove_it_cmd[ 0 ] );
+        if ( ! access(subdirpath,F_OK) )
+        {
+           Rmdir(subdirpath,1);
+        }
 
 /*  Remove "info" subdirectory  */
 
 	strcpy( &subdirpath[ 0 ], exppath );
-#ifdef UNIX
 	strcat( &subdirpath[ 0 ], "/info" );
-	strcpy( &remove_it_cmd[ 0 ], "rm -rf " );
-#else 
-	vms_fname_cat( &subdirpath[ 0 ], "[.info]" );
-	strcpy( &remove_it_cmd[ 0 ], "rm_recur " );
-#endif 
-	strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
-	system( &remove_it_cmd[ 0 ] );
+        if ( ! access(subdirpath,F_OK) )
+        {
+           Rmdir(subdirpath,1);
+        }
 
 /*  Remove "auto" file  */
 
 	strcpy( &subdirpath[ 0 ], exppath );
-#ifdef UNIX
 	strcat( &subdirpath[ 0 ], "/auto" );
-	strcpy( &remove_it_cmd[ 0 ], "rm -f " );
-#else 
-	strcat( &subdirpath[ 0 ], "auto;" );
-	strcpy( &remove_it_cmd[ 0 ], "delete " );
-#endif 
-	strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
-	system( &remove_it_cmd[ 0 ] );
+        m_unlink(subdirpath);
 
 /*  Remove "coef" file  */
 
 	strcpy( &subdirpath[ 0 ], exppath );
-#ifdef UNIX
 	strcat( &subdirpath[ 0 ], "/coef" );
-	strcpy( &remove_it_cmd[ 0 ], "rm -f " );
-#else 
-	strcat( &subdirpath[ 0 ], "coef;" );
-	strcpy( &remove_it_cmd[ 0 ], "delete " );
-#endif 
-	strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
-	system( &remove_it_cmd[ 0 ] );
+        m_unlink(subdirpath);
 }
 
 /************************************/
 void remove_shapelib(char *exppath )
 /************************************/
 {
-	char	subdirpath[ MAXPATH+10 ], remove_it_cmd[ MAXPATH+10 ];
+	char	subdirpath[ MAXPATH+10 ];
 
 /*  Remove "shapelib" subdirectory  */
 
 	strcpy( &subdirpath[ 0 ], exppath );
-#ifdef UNIX
 	strcat( &subdirpath[ 0 ], "/shapelib" );
-	strcpy( &remove_it_cmd[ 0 ], "rm -rf " );
-#endif 
-	strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
-	system( &remove_it_cmd[ 0 ] );
+        if ( ! access(subdirpath,F_OK) )
+        {
+           Rmdir(subdirpath,1);
+        }
+}
+
+int check_and_clean_exp(char *cmd)
+{
+   char remove_it_cmd[ MAXPATH+10 ];
+   int this_expnum;
+   int r;
+
+   this_expnum = expdir_to_expnum( curexpdir );
+   r = is_exp_acquiring( this_expnum ); /* A value of 0 means nothing */
+                                        /* is active.  A value of -1  */
+                                        /* means an error occured in  */
+                                        /* is exp active, in which    */
+                                        /* case we proceed.           */
+   if (r > 0)
+   {
+      Werrprintf( "Cannot use %s when an acquisition is active or queued",cmd);
+      return(1);
+   }
+   set_nodata();        /* remove data in data and phasefile */
+   remove_3d( curexpdir );
+   remove_shapelib( curexpdir );
+   strcpy( remove_it_cmd, curexpdir );
+   strcat( remove_it_cmd, "/acqfil" );
+   Rmdir(remove_it_cmd,0);
+   strcpy( remove_it_cmd, curexpdir);
+   strcat( remove_it_cmd, "/sampling.sch");
+   unlink(remove_it_cmd);
+   if (strcmp(cmd,"convertdelta"))
+   {
+      strcpy( remove_it_cmd, curexpdir);
+      strcat( remove_it_cmd, "/jdfpar");
+      unlink(remove_it_cmd);
+   }
+   else
+   {
+      strcpy( remove_it_cmd, curexpdir);
+      strcat( remove_it_cmd, "/brupar");
+      unlink(remove_it_cmd);
+      strcpy( remove_it_cmd, curexpdir);
+      strcat( remove_it_cmd, "/brupar2");
+      unlink(remove_it_cmd);
+   }
+   specIndex = 1;
+   return(0);
 }
 
 /********************************/
@@ -910,8 +879,7 @@ int delexp(int argc, char *argv[], int retc, char *retv[])
   char	estring[MAXPATH],
 	exppath[MAXPATH],
 	userexppath[MAXPATH],
-	msg[MAXPATH],
-	rm_r_cmd[MAXPATH+7];		/* strlen( "rm -rf " ) = 7 */
+	msg[MAXPATH];
   int lval;
   int doDB = TRUE;
   int autoDel=0;
@@ -952,19 +920,10 @@ int delexp(int argc, char *argv[], int retc, char *retv[])
   strcpy(exppath, userdir);
 
   strcpy(userexppath, userdir);
-#ifdef UNIX
   strcat(exppath,"/exp");
   strcat(exppath, estring);
   strcat(userexppath,"/exp");
   strcat(userexppath, estring);
-#else 
-  vms_fname_cat(exppath,"[.exp");
-  strcat(exppath, estring);
-  strcat(exppath, "]");
-  vms_fname_cat(userexppath,"[.exp");
-  strcat(userexppath, estring);   
-  strcat(userexppath, "]");
-#endif 
 
   if ( ! autoDel && (strcmp(curexpdir, userexppath) == 0) )
   {
@@ -1015,23 +974,9 @@ int delexp(int argc, char *argv[], int retc, char *retv[])
   if ( strcmp(exppath, userexppath) != 0 )
      unlink(userexppath);	/* not a local experiment */
 
-#ifdef UNIX
-  strcpy( &rm_r_cmd[ 0 ], "rm -rf " );
-#else 
-  strcpy( &rm_r_cmd[ 0 ], "rm_recur " );
-#endif 
-  strcat( &rm_r_cmd[ 0 ], exppath );
-  system( &rm_r_cmd[ 0 ] );
-
-  if (access( exppath, F_OK ) == 0)
+  if ( Rmdir(exppath,1) )
   {
      sprintf(msg,"Cannot remove experiment %s", estring );
-
-     strcpy( &rm_r_cmd[ 0 ], "ls -l " );
-     strcat( &rm_r_cmd[ 0 ], exppath );
-
-     Wscrprintf( " Contents:\n" );
-     system( &rm_r_cmd[ 0 ] );
      goto abortDelexp;
   }
 
@@ -1589,7 +1534,6 @@ int svf(int argc, char *argv[], int retc, char *retv[])
   int  diskIsFull;
   int  ival;
   char *name;
-  char systemcall[2*MAXPATH+8];
   int svf_update;
   int svf_nofid;		/* saving FID, but do not copy FID.  See below */
   int nolog, no_arch, i;
@@ -1731,8 +1675,7 @@ int svf(int argc, char *argv[], int retc, char *retv[])
 
 	    if (fid_is_link( filepath ) == 0) {
                 svf_update = 1;
-                sprintf(systemcall,"rm -rf %s",check_spaces(filepath,chkbuf,MAXPATH+2));
-                system(systemcall);
+                Rmdir(filepath,1);
                 if (mkdir(filepath,permission)) {
                        Werrprintf("cannot overwrite existing file: %s",filepath);
                        disp_status("        ");
@@ -1781,13 +1724,8 @@ int svf(int argc, char *argv[], int retc, char *retv[])
 /*  Remember the original path is constrained
     to MAXPATH-32 or fewer letters.		*/
 
-#ifdef UNIX
   sprintf( &origpath[ 0 ], "%s/text", curexpdir );
   sprintf( &destpath[ 0 ], "%s/text", filepath );
-#else 
-  sprintf( &origpath[ 0 ], "%stext", curexpdir );
-  sprintf( &destpath[ 0 ], "%stext", filepath );
-#endif 
 
   ival = isDiskFullFile( filepath, &origpath[ 0 ], &diskIsFull );
   if (ival == 0 && diskIsFull) {
@@ -1850,15 +1788,8 @@ int svf(int argc, char *argv[], int retc, char *retv[])
       RETURN;
   }
 
-#ifdef UNIX
   sprintf( &origpath[ 0 ], "%s/acqfil/fid", curexpdir );
   sprintf( &destpath[ 0 ], "%s/fid", filepath );
-#else 
-  strcpy(path,curexpdir);
-  vms_fname_cat(path,"[.acqfil]");
-  sprintf( &origpath[ 0 ], "%sfid", path );
-  sprintf( &destpath[ 0 ], "%sfid", filepath );
-#endif 
 
   ival = isDiskFullFile( filepath, &origpath[ 0 ], &diskIsFull );
   if (ival == 0 && diskIsFull) {
@@ -1876,33 +1807,20 @@ int svf(int argc, char *argv[], int retc, char *retv[])
   sprintf(origpath , "%s/acqfil/sampling.sch",curexpdir);
   if ( ! access(origpath,F_OK))
   {
-     char systemcall[4*MAXPATH];
-
      sprintf(destpath, "%s/sampling.sch", filepath );
-     sprintf(systemcall,"cp %s %s", origpath, destpath);
-     system(systemcall);
+     copyFile(origpath,destpath,0);
   }
 /* When the FID is already a link then so is the 'log' file (see rt)
    So this is the place to copy the 'log' file or we would already
    have returned from this call */
 
   strcpy(path,curexpdir);
-#ifdef UNIX
   strcat(path,"/acqfil/log");
-#else 
-     vms_fname_cat(path,"[.acqfil]log");
-#endif 
   if (!nolog && !access(path,F_OK))
   {
-#ifdef UNIX
      strcpy( &origpath[ 0 ], path );
      strcpy( &destpath[ 0 ], filepath );
      strcat( &destpath[ 0 ], "/log" );
-#else 
-     strcpy( &origpath[ 0 ], path );
-     strcpy( &destpath[ 0 ], filepath );
-     strcat( &destpath[ 0 ], "log" );
-#endif 
 
      ival = isDiskFullFile( filepath, &origpath[ 0 ], &diskIsFull );
      if (ival == 0 && diskIsFull) {
@@ -2024,19 +1942,11 @@ static int copytext(char *frompath, char *topath)
   int   ch;
 
   strcpy(path,frompath);
-#ifdef UNIX
   strcat(path,"/text");
-#else 
-  strcat(path,"text");
-#endif 
   if ( (infile=fopen(path,"r")) )
   {
     strcpy(path,topath);
-#ifdef UNIX
     strcat(path,"/text");
-#else 
-    strcat(path,"text");
-#endif 
     if ( (outfile=fopen(path,"w")) )
       while ((ch=getc(infile)) != EOF) putc(ch,outfile);
     else
@@ -2100,7 +2010,7 @@ void set_vnmrj_rt_params(int do_call )
 int delexpdata(int argc, char *argv[], int retc, char *retv[])
 /*************************/
 {
-   char remove_it_cmd[ MAXPATH+10 ];
+   char dirname[ MAXPATH+10 ];
    int this_expnum;
    int r;
 
@@ -2121,10 +2031,9 @@ int delexpdata(int argc, char *argv[], int retc, char *retv[])
    set_nodata();	/* remove data in data and phasefile */
    remove_3d( curexpdir );
    remove_shapelib( curexpdir );
-   strcpy( remove_it_cmd, "rm -rf " );
-   strcat( remove_it_cmd, curexpdir );
-   strcat( remove_it_cmd, "/acqfil/*" );
-   system( &remove_it_cmd[ 0 ] );
+   strcpy( dirname, curexpdir );
+   strcat( dirname, "/acqfil" );
+   Rmdir(dirname,0);
    specIndex = 1;
    RETURN;
 }
@@ -2160,6 +2069,7 @@ int rt(int argc, char *argv[], int retc, char *retv[])
   int nolog;
   int doDisp;
   int doMenu;
+  int noFixpar;
   int parFile;
   int rtvStrcmp;
   int this_expnum;
@@ -2172,8 +2082,6 @@ int rt(int argc, char *argv[], int retc, char *retv[])
   extern void resetdatafiles();
 
 /*  Verify no acquisition is active or queued for the current experiment.  */
-
-  if(argc>2 && strcmp(argv[2],"nofixpar") == 0) { argc--; turnOffFixpar(); }
 
   this_expnum = expdir_to_expnum( curexpdir );
   gettxtflag = (strcmp(argv[0],"gettxt")==0 || strcmp(argv[0],"puttxt") == 0);
@@ -2222,6 +2130,7 @@ int rt(int argc, char *argv[], int retc, char *retv[])
       }
   }
   nolog = FALSE;
+  noFixpar = FALSE;
   doDisp = TRUE;
   doMenu = TRUE;
   if ( !strcmp(argv[0],"RT") || !strcmp(argv[0],"RTP") )
@@ -2231,6 +2140,7 @@ int rt(int argc, char *argv[], int retc, char *retv[])
        if (!strcmp(argv[i],"nolog") ) nolog = TRUE; 
        if (!strcmp(argv[i],"nodg") ) doDisp = FALSE; 
        if (!strcmp(argv[i],"nomenu") ) doMenu = FALSE; 
+       if (!strcmp(argv[i],"nofixpar") ) noFixpar = TRUE; 
      }
   }
   if (doMenu && rtvStrcmp)
@@ -2238,6 +2148,11 @@ int rt(int argc, char *argv[], int retc, char *retv[])
   if (nolog) argc--;
   if (!doDisp) argc--;
   if (!doMenu) argc--;
+  if (noFixpar)
+  {
+     argc--;
+     turnOffFixpar();
+  }
   if (argc<2)
     {
       if (Bnmr)
@@ -2271,7 +2186,6 @@ int rt(int argc, char *argv[], int retc, char *retv[])
   if (doDisp && rtvStrcmp)
      disp_status("RT      ");
 
-#ifdef UNIX
   if (name[0]!='/')
     { /* getcwd(filepath0, sizeof( filepath0 ) - 1); */
       pathptr = get_cwd();
@@ -2280,7 +2194,6 @@ int rt(int argc, char *argv[], int retc, char *retv[])
       strcat(filepath0,name);
     }
   else
-#endif 
     strcpy(filepath0,name);
   strcpy(filepath,filepath0);
 
@@ -2309,9 +2222,8 @@ int rt(int argc, char *argv[], int retc, char *retv[])
      }
   }
 
-#ifdef VNMRJ
-  frame_update(argv[0], filepath);
-#endif 
+  if ( !Bnmr)
+     frame_update(argv[0], filepath);
 
   recFile=p11_isRecord(filepath);
   if ( !strcmp(argv[0],"RT") && recFile ) {
@@ -2319,7 +2231,8 @@ int rt(int argc, char *argv[], int retc, char *retv[])
 	fidflag, nolog, doDisp, doMenu, do_update_params, recFile);
 #ifdef VNMRJ
 /* update jviewportlabels*/
-        execString("vpLayout('updateLabel')\n");
+        if ( !Bnmr)
+           execString("vpLayout('updateLabel')\n");
 #endif
 	RETURN;
   }
@@ -2687,9 +2600,8 @@ if (gettxtflag)
   set_nodata();	/* remove data in data and phasefile */
   remove_3d( curexpdir );
   remove_shapelib( curexpdir );
-#ifdef VNMRJ
-  clearGraphFunc();  /* prevent auto redraw of data */
-#endif
+  if ( !Bnmr)
+     clearGraphFunc();  /* prevent auto redraw of data */
 
   strcpy(newpath,curexpdir);
   strcat(newpath,"/acqfil/fid");
@@ -2713,32 +2625,24 @@ if (gettxtflag)
         }
     }
   specIndex = 1;
-  if (link(path,newpath))
-    {
-#ifdef AUTOMOUNT
-      char oldPath[MAXPATH];
-
-      strcpy(oldPath,path);
-      fix_automount_dir( oldPath, path );
-#endif
-      if (symlink(path,newpath))
-        { Werrprintf("cannot link the fid file");
-          P_treereset(TEMPORARY);
-          disp_status("        ");
-          if (doFixpar)
-             execString("fixpar\n");
-          doFixpar = 1;
-          set_vnmrj_rt_params( do_update_params );
+  if (copyFile(path,newpath,0))
+  {
+     Werrprintf("cannot copy the fid file");
+     P_treereset(TEMPORARY);
+     disp_status("        ");
+     if (doFixpar)
+        execString("fixpar\n");
+     doFixpar = 1;
+     set_vnmrj_rt_params( do_update_params );
 #ifdef VNMRJ
-          if (do_update_params > 0)
-	  {
-	    appendTopPanelParam();
-	    disp_current_seq();
-	  }
+     if (do_update_params > 0)
+     {
+        appendTopPanelParam();
+        disp_current_seq();
+     }
 #endif 
-          ABORT;
-        }
-    }
+     ABORT;
+  }
   /* Remove any old sampling schedules */
   strcpy(newpath,curexpdir);
   strcat(newpath,"/acqfil/sampling.sch");
@@ -2752,11 +2656,12 @@ if (gettxtflag)
   strcat(path,"/sampling.sch");
   if ( ! access(path,F_OK))
   {
-     char systemcall[4*MAXPATH];
+     char destpath[MAXPATH];
 
-     sprintf(systemcall,"cp %s %s/sampling.sch; cp %s %s/acqfil/sampling.sch",
-                         path, curexpdir, path, curexpdir);
-     system(systemcall);
+     sprintf(destpath,"%s/sampling.sch", curexpdir);
+     copyFile(path, destpath, 0);
+     sprintf(destpath,"%s/acqfil/sampling.sch", curexpdir);
+     copyFile(path, destpath, 0);
   }
   /* The following lines copy the 'log' file from automation files to the
      experiment directory (if there is one). Svf has been changes to carry
@@ -2770,16 +2675,14 @@ if (gettxtflag)
         Werrprintf("cannot delete current log file %s",newpath);
   if (!nolog)
   {  if (!access(path,F_OK))
-     {  if (link(path,newpath))
-        {  if (symlink(path,newpath))
-              Werrprintf("cannot link the log file");
-        }
+     {  if (copyFile(path,newpath,0))
+              Werrprintf("cannot copy the log file");
      }
   }
 
   /* if everything ok, copy parameters */
   P_setstring(CURRENT,"file",filepath0,0);
-  P_treereset(PROCESSED);	/* clear the tree first */
+  P_pruneTree(PROCESSED,CURRENT);
   P_copy(CURRENT,PROCESSED);
   P_treereset(TEMPORARY);
   resetdatafiles();
@@ -2791,10 +2694,9 @@ if (gettxtflag)
   doFixpar = 1;
   releasevarlist();
 
-#ifdef VNMRJ
 /* update jviewportlabels*/
-  execString("vpLayout('updateLabel')\n");
-#endif
+  if ( !Bnmr)
+     execString("vpLayout('updateLabel')\n");
 
   sprintf(path,"%s/datdir", filepath);
   sprintf(newpath,"%s/datdir", curexpdir);
@@ -3267,11 +3169,7 @@ int svs(int argc, char *argv[], int retc, char *retv[])
 	}
 
 	final_path[ 0 ] = '\0';
-#ifdef UNIX
 	if (input_path[ 0 ] == '/') {
-#else 
-	if (abspath( &input_path[ 0 ] )) {
-#endif 
 		strcpy( &final_path[ 0 ], &input_path[ 0 ] );
 		where_stored = 1;
 	}
@@ -3382,7 +3280,6 @@ int mp(int argc, char *argv[], int retc, char *retv[])
   char e_current[MAXPATH];
   char e_from[MAXPATH];
   char e_to[MAXPATH];
-  char systemcall[2*MAXPATH+8];
   int  from_current,index,ival,lval,to_current;
 
   (void) retc;
@@ -3533,13 +3430,8 @@ int mp(int argc, char *argv[], int retc, char *retv[])
   if (strcmp(argv[0],"md")==0)
   {
     disp_status("MD      ");
-#ifdef UNIX
     strcat(frompath,"/sx");
     strcat(topath,"/sx");
-#else 
-    strcat(frompath,"sx");
-    strcat(topath,"sx");
-#endif 
     for (index='1'; index<='9'; index++)
     {
       frompath[strlen(frompath)-1] = index;
@@ -3616,7 +3508,7 @@ int mp(int argc, char *argv[], int retc, char *retv[])
 
   if (strcmp(argv[0],"mf")==0)
   {
-    int fileid,len;
+    int fileid;
     double tProcdim;
 
     disp_status("MF      ");
@@ -3682,26 +3574,10 @@ int mp(int argc, char *argv[], int retc, char *retv[])
     remove_data(topath);
     remove_3d( topath );
     remove_shapelib( topath );
-#ifdef UNIX
-    strcpy(systemcall,"/bin/rm -f ");
-    len = 2*MAXPATH+8 - strlen(systemcall) -1;
-    strncat(systemcall,check_spaces(topath,chkbuf,len),len);
-    len = 2*MAXPATH+8 - strlen(systemcall) -22;
-    strncat(systemcall,"/acqfil/*;/bin/cp -p ",len);
-    len = 2*MAXPATH+8 - strlen(systemcall) -1;
-    strncat(systemcall,check_spaces(frompath,chkbuf,len),len);
-    len = 2*MAXPATH+8 - strlen(systemcall) -11;
-    strncat(systemcall,"/acqfil/* ",len);
-    len = 2*MAXPATH+8 - strlen(systemcall) -1;
-    strncat(systemcall,check_spaces(topath,chkbuf,len),len);
-    len = 2*MAXPATH+8 - strlen(systemcall) -10;
-    strncat(systemcall,"/acqfil/.",len);
-#else 
-    vms_fname_cat(frompath,"[.acqfil]");
-    vms_fname_cat(topath,  "[.acqfil]");
-    sprintf(systemcall,"copy %sfid %sfid",frompath,topath);
-#endif 
-    system(systemcall);
+    strcat(topath,"/acqfil");
+    strcat(frompath,"/acqfil");
+    Rmdir(topath,0);
+    Cpdir(frompath,topath);
   }
   if ( !to_current )
    unlockExperiment( atoi(e_to), mode_of_vnmr );
@@ -3905,6 +3781,21 @@ int exists(int argc, char *argv[], int retc, char *retv[])
       else
          retv[0] = realString((double)is_ascii);
   }
+  else if (strcmp( argv[ 2 ], "parfile" ) == 0)
+  {
+      int is_parfile=0;
+
+      is_parfile = P_ispar( argv[1] );
+      if (retc==0)
+      {
+         if (is_parfile)
+            Winfoprintf("%s is a parameter file",argv[1]);
+         else
+            Winfoprintf("%s is not an parameter file",argv[1]);
+      }
+      else
+         retv[0] = realString((double)is_parfile);
+  }
   else if (strcmp( argv[2], "command" ) == 0)
   {
       int found;
@@ -3985,7 +3876,6 @@ int exists(int argc, char *argv[], int retc, char *retv[])
 
 static int fid_is_link(char *filepath )
 {
-#ifdef UNIX
 	char		curexp_fid[ MAXPATH ],
 			curfid_link[ MAXPATH*2 ],
 			fidpath[ MAXPATH ];
@@ -4038,9 +3928,6 @@ static int fid_is_link(char *filepath )
 	  return( 0 );
 	else
 	  return( 1 );
-#else 
-	return( 0 );			/* no special action required on VMS */
-#endif 
 }
 
 int expdir_to_expnum(char *expdir )
@@ -4050,11 +3937,6 @@ int expdir_to_expnum(char *expdir )
 		this_expnum;
 
 	strcpy(tmpexpdir, expdir);
-#ifndef UNIX
-        tmpexpdir[strlen(tmpexpdir - 1)] = '\0';
-		/* get rid of "]" */
-#endif 
-
 	i = 0;
         while ( tmpexpdir[strlen(tmpexpdir) - i - 1] != 'p' )
            i += 1;
