@@ -37,19 +37,15 @@ optionsInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
 # define with absolute path where built files will be copied for bin/p11
 optionsInstallP11Path = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
                                   'options', 'standard', 'P11', 'p11', 'bin')
+optionsInstallP11Path2 = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
+                                  'options', 'standard', 'P11', 'p11', 'sbin')
 
 vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir,
                                   'vnmr', 'bin')
-# make sure the path(s) exist
-if not os.path.exists(optionsInstallPath):
-   os.makedirs(optionsInstallPath)
-
-# make sure the path(s) exist
-if not os.path.exists(optionsInstallP11Path):
-   os.makedirs(optionsInstallP11Path)
-
-if not os.path.exists(vnmrInstallPath):
-   os.makedirs(vnmrInstallPath)
+Execute(Mkdir(optionsInstallPath))
+Execute(Mkdir(optionsInstallP11Path))
+Execute(Mkdir(optionsInstallP11Path2))
+Execute(Mkdir(vnmrInstallPath))
 
 # actual builds
 for i in safep11TargetList:
@@ -95,6 +91,10 @@ for i in md5AndPToolsDependantTargetList:
    buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, [i + '.c'])
    buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, ['p11Tools.c'])
    buildMethods.makeSymLinks(env, tempBuildObj, cwd, vnmrPath, ['md5c.c'])
-   env.AddPostAction(tempBuildObj,
+   if i == 'chchsums':
+      env.AddPostAction(tempBuildObj,
+                     Action(Copy(optionsInstallP11Path2, os.path.join(cwd, i))))
+   else:
+      env.AddPostAction(tempBuildObj,
                      Action(Copy(optionsInstallPath, os.path.join(cwd, i))))
 

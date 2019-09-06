@@ -1,5 +1,4 @@
-: '@(#)makeP11checksums.sh 22.1 03/24/08 2003-2004 '
-#
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -9,7 +8,6 @@
 # For more information, see the LICENSE file.
 # 
 #
-#!/bin/sh
 
 if test $# -lt 1
 then
@@ -59,6 +57,7 @@ then
     exit
 fi
 
+sbindir="/vnmr/p11/sbin"
 if test $1 = "/vnmr"
 then
 
@@ -71,7 +70,7 @@ then
     fi
     
     cd /vnmr 
-    cp /usr/varian/sbin/vnmrMD5 /tmp
+    cp /vnmr/bin/vnmrMD5 /tmp
 
     p11Config=/vnmr/p11/part11Config
     if [ -f $p11Config ]
@@ -83,11 +82,11 @@ then
   
         if [ -d $path ]
         then
-          /usr/varian/sbin/makeP11checksums $path
+          $sbindir/makeP11checksums $path
         else
            if [ -f $path ] 
            then
-             /usr/varian/sbin/makeP11checksums $path
+             $sbindir/makeP11checksums $path
            fi
         fi
 
@@ -112,7 +111,7 @@ then
 
     /vnmr/bin/chVJlist -l /vnmr/bin > $sysListAll
     /vnmr/bin/chVJlist -l /vnmr/p11/bin >> $sysListAll
-    /vnmr/bin/chVJlist -l /usr/varian/sbin >> $sysListAll
+    /vnmr/bin/chVJlist -l $sbindir >> $sysListAll
     /vnmr/bin/chVJlist -l /vnmr/adm/bin >> $sysListAll
     /vnmr/bin/chVJlist -l /vnmr/acqbin >> $sysListAll
     /vnmr/bin/chVJlist -l /vnmr/java >> $sysListAll
@@ -125,7 +124,7 @@ then
     fi
     /vnmr/bin/chVJlist -l /vnmr/bin > $sysList
     /vnmr/bin/chVJlist -l /vnmr/p11/bin >> $sysList
-    /vnmr/bin/chVJlist -l /usr/varian/sbin >> $sysList
+    /vnmr/bin/chVJlist -l $sbindir >> $sysList
     /vnmr/bin/chVJlist -l /vnmr/adm/bin >> $sysList
     /vnmr/bin/chVJlist -l /vnmr/acqbin >> $sysList
     /vnmr/bin/chVJlist -l /vnmr/java >> $sysList
@@ -165,7 +164,7 @@ else
    str=`date '+%T-%m-%d-%y'`
    path=$dir/checksum.$str
 
-   /usr/varian/sbin/vnmrMD5 -f $1 $1 $path
+   /vnmr/bin/vnmrMD5 -f $1 $1 $path
 
    echo $path
 fi

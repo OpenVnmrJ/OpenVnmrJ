@@ -98,7 +98,7 @@ public class WGlobal
     
     public static String getSbin()
     {
-        String strSbin = "/usr/varian/sbin/";
+        String strSbin = "/vnmr/p11/sbin/";
         if (Util.iswindows())
         {
            strSbin = "/vnmr/bin/";

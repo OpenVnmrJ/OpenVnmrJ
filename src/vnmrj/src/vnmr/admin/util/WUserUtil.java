@@ -324,12 +324,12 @@ public class WUserUtil
         if (strName != null && strName.length() > 0 && (Util.OSNAME == null ||
             !Util.OSNAME.startsWith("Mac")))
         {
-            String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.SYS_VNMR + "/bin/getgroup"};
+            String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.sysdir() + "/bin/getgroup"};
             msg = WUtil.runScript(cmd);
             String group = msg.getMsg();
             if (group == null || group.equals(""))
                 group = "nmr";
-            String strScript = WGlobal.SBIN + "makeuser";
+            String strScript = FileUtil.sysdir() + "/bin/makeuser";
 
             // the check for windows will fail, since can't find paths with /vnmr,
             // so skip it
@@ -1146,10 +1146,7 @@ public class WUserUtil
         boolean bUnix = false;
         if (strName == null || strName.length() == 0)
             return bUnix;
-        String strScript =  WGlobal.SBIN + "jtestuser";
-        if (Util.OSNAME != null && Util.OSNAME.startsWith("Mac"))
-            strScript = FileUtil.SYS_VNMR + "/bin/jtestuser";
-
+        String strScript = FileUtil.sysdir() + "/bin/jtestuser";
         String[] aStrTestUser = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, WGlobal.SUDO +
                                    strScript + " " + strName };
         // check for windows will fail, since can't find paths with /vnmr so skip it
@@ -1276,7 +1273,7 @@ public class WUserUtil
         String strHomeDir = "";
         if (Util.OSNAME == null || !Util.OSNAME.startsWith("Mac"))
         {
-            String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.SYS_VNMR + "/bin/getuserinfo " +
+            String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.sysdir() + "/bin/getuserinfo " +
                               strName };
             WMessage msg = WUtil.runScript(cmd);
             String strMsg = msg.getMsg();
@@ -1298,7 +1295,7 @@ public class WUserUtil
         if (strUser == null || strUser.trim().equals(""))
             return;
 
-        String strScript = WGlobal.SBIN + "makeuser";
+        String strScript = FileUtil.sysdir() + "/bin/makeuser";
         if (!Util.iswindows() && !WFileUtil.scriptExists(strScript))
                 Messages.postError("File not found: " + strScript);
         else
@@ -1316,7 +1313,7 @@ public class WUserUtil
      */
     public static void setUserHome(String strName, HashMap hmDef)
     {
-        String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.SYS_VNMR + "/bin/getuserinfo " +
+        String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.sysdir() + "/bin/getuserinfo " +
                           strName };
         String strHomeDir = null;
         String strLongName = null;
@@ -1354,7 +1351,7 @@ public class WUserUtil
         String strName = "";
         if (Util.OSNAME == null || !Util.OSNAME.startsWith("Mac"))
         {
-            String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.SYS_VNMR + "/bin/getuserinfo " +
+            String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.sysdir() + "/bin/getuserinfo " +
                              strUser };
             WMessage msg = WUtil.runScript(cmd);
             String strMsg = msg.getMsg();
@@ -2047,11 +2044,11 @@ public class WUserUtil
             // move the directory being deleted to .del, because rm -r might take some time
             String strHomeDel = strHome + ".del";
             String[] cmdMv = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, WGlobal.SUDO +
-                               WGlobal.SBIN + "vcmdm " + strHome + " " +
+                               FileUtil.sysdir() + "/bin/vcmdm " + strHome + " " +
                                strHomeDel + " adMin"};
             WUtil.runScript(cmdMv);
             String[] cmdRm = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, WGlobal.SUDO +
-                                WGlobal.SBIN + "vcmdr " + strHomeDel + " adMin"};
+                                FileUtil.sysdir() + "/bin/vcmdr " + strHomeDel + " adMin"};
             WUtil.runScriptInThread(cmdRm);
         }
 

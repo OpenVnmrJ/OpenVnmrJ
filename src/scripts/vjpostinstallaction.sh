@@ -1,6 +1,4 @@
-#!/bin/sh
-# 'vjpostinstallaction.sh 2009 '
-# 
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -53,14 +51,6 @@ fi
 osname=`uname -s`
 rootuser="root"
 
-# lsb_release not present on RHEL 5.X,  so just comment them out, not used anyway.
-#distro=`lsb_release -is`    # RedHatEnterpriseWS; Ubuntu
-#distrover=`lsb_release -rs` # 4, 5; 8.04, 9.04, etc.
-# distrover=`cat /etc/redhat-release | sed -r 's/[^0-9]+//' | sed -r 's/[^0-9.]+$//'`    # yield 5.1, 5.3 , 6.1, etc..
-# VersionNoDot=`cat /etc/redhat-release | sed -e 's#[^0-9]##g' -e 's#7[0-2]#73#'`    # yields 51, 53, 61, etc.
-# MajorVersionNum=`cat /etc/redhat-release | sed -e 's#[^0-9]##g' | cut -c1`            # yields  5, 5,  6,  etc.
-
-
 if [  -r /etc/debian_version ]
 then
    lflvr="debian"
@@ -82,67 +72,17 @@ echo "Starting Post Installation Actions"
 if [ x$did_vnmr = "xy" ]; 
 then
    echo "Running VnmrJ Admin, Please Update User(s)"
-   cmd="$dest_dir/bin/vnmrj admin -debug needupdateuser"
+   cmd="$dest_dir/bin/vnmrj admin -Ddebug=needupdateuser"
    if [ "x$login_user" != "x$nmr_adm" ];
    then
        # echo "Switching to administrator $nmr_adm and running $cmd"
        if [ x$lflvr != "xdebian" ]
        then
-          # echo "touch $nmr_home/$nmr_adm/.vnmrsilent"
-          # echo "su - $nmr_adm -c $cmd"
-
-          # check for admin home being NFS mount, if it is, we probably will
-          # not be able to create the .vnmrsilent files as root
-          # so we will abort and tell user, to manual run VnmrJ Admin
-          admstr=`mount | grep nfs | grep "^$nmr_home"`
-          if [ ! -z "$admstr" ]
-          then
-             echo " "
-             echo "Note: "
-             echo "  Appears the $nmr_adm home directory \"$nmr_home\" is NFS mounted."
-             echo "  VnmrJ Admin will have to be run manually"
-             echo "  to update the users."
-             echo " "
-          else
-             # create the .vnmrsilent so the .login doesn't ask for the display
-             # get home dir of admin
-             admhomedir=`eval echo ~$nmr_adm`
-             touch $admhomedir/.vnmrsilent
-             chmod 777 $admhomedir/.vnmrsilent
-             #touch $nmr_home/$nmr_adm/.vnmrsilent
-             #chmod 777 $nmr_home/$nmr_adm/.vnmrsilent
-             xhost + > /dev/null
-             su - $nmr_adm -c "$cmd" > /dev/null 2>&1
-             sleep 5
-          fi
+          xhost + > /dev/null
+          su -l $nmr_adm -s /bin/csh -c "setenv DISPLAY $DISPLAY; $cmd" > /dev/null 2>&1
        else
-          # check for admin home being NFS mount, if it is, we probably will
-          # not be able to create the .vnmrsilent files as root
-          # so we will abort and tell user, to manual run VnmrJ Admin
-          admstr=`mount | grep nfs | grep $nmr_home`
-          if [ ! -z "$admstr" ]
-          then
-             echo " "
-             echo "Note: "
-             echo "  Appears the $nmr_adm home directory \"$nmr_home\" is NFS mounted."
-             echo "  VnmrJ Admin will have to be run manually"
-             echo "  to update the users."
-             echo " "
-          else
-             # create the .vnmrsilent so the .login doesn't ask for the display
-             # echo "sudo -u $nmr_adm $cmd"
-             # create the .vnmrsilent so the .login doesn't ask for the display
-             # echo "touch $nmr_home/$nmr_adm/.vnmrsilent"
-             # get home dir of admin
-             admhomedir=`eval echo ~$nmr_adm`
-             touch $admhomedir/.vnmrsilent
-             chmod 777 $admhomedir/.vnmrsilent
-             #touch $nmr_home/$nmr_adm/.vnmrsilent
-             ## echo "chmod 777 $nmr_home/$nmr_adm/.vnmrsilent"
-             #chmod 777 $nmr_home/$nmr_adm/.vnmrsilent
-             ## echo "sudo -i -u $nmr_adm $cmd"
-             sudo -i -u $nmr_adm $cmd
-          fi
+          ## echo "sudo -i -u $nmr_adm $cmd"
+          sudo -i -u $nmr_adm $cmd
        fi
    else
       $cmd
@@ -153,4 +93,7 @@ fi
 # Java ProgressMeter is expecting this text string in order to complete.
 echo " "
 echo "Post Action Completed. "
+if [ -f $dest_dir/tmp/.ovj_installed ]; then
+   sleep 5
+fi
 exit 0

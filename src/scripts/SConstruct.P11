@@ -3,14 +3,22 @@ import os
 #get current working directory
 cwd = os.getcwd()
 
-# get options settings
-boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
-if not os.path.exists(boFile):
-   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
-execfile(boFile)
+binList =     ['arAuditing',
+		'ckDaemon',
+              ]
 
-# the file list fro this bunch
-fileList =     ['arAuditing',
+# for sure copy it to options/standard/P11/bin
+p11Path = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','standard','P11')
+binPath = os.path.join(p11Path,'bin')
+Execute(Mkdir(binPath))
+Execute(Chmod(binPath,0755))
+
+for i in binList:
+   dest = os.path.join(binPath,i)
+   Execute(Copy(dest,i+'.sh'))
+   Execute(Chmod(dest,0755))
+
+sbinList =     [
                 'auconvert',
 		'auevent',
 		'auinit',
@@ -18,36 +26,19 @@ fileList =     ['arAuditing',
 		'aupw',
 		'auredt',
 		'aureduce',
-		'ckDaemon',
 		'killau',
 	 	'killch',
 		'makeP11checksums',
-		'p_install_p11_as_root',
 		'S99scanlog',
 		'scanlog',
 		'setupscanlog']
 
+sbinPath = os.path.join(p11Path,'p11','sbin')
+Execute(Mkdir(sbinPath))
+Execute(Chmod(sbinPath,0755))
 
-
-# for sure copy it to options/standard/P11/bin
-optionsP11BinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','standard','P11','bin')
-if not os.path.exists(optionsP11BinPath) :
-    os.makedirs(optionsP11BinPath)
-
-for i in fileList:
-   dest = os.path.join(optionsP11BinPath,i)
+for i in sbinList:
+   dest = os.path.join(sbinPath,i)
    Execute(Copy(dest,i+'.sh'))
    Execute(Chmod(dest,0755))
-
-print boEnv['P11']
-# optionally copy it tp vnmr/bin
-if boEnv['P11'] == 'y':
-   vnmrBinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'vnmr','bin')
-   if not os.path.exists(vnmrBinPath) :
-      os.makedirs(vnmrBinPath)
-   #
-   for i in fileList:
-      dest = os.path.join(vnmrBinPath,i)
-      Execute(Copy(dest,i+'.sh'))
-      Execute(Chmod(dest,0755))
 

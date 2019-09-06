@@ -276,11 +276,9 @@ if [ ! -x /usr/bin/dpkg ]; then
   kdiff3
  '
  if [ $version -ne 7 ]; then
-#  Add older motif packages
+#  Add older motif package
    ver6List='
-      openmotif22
-      openmotif.i686
-      openmotif-devel.i686
+      openmotif
    '
    packagelist="$ver6List $item68List $commonList $bit32List $pipeList"
  else

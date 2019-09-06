@@ -668,23 +668,16 @@ public class ProgressMonitor extends JFrame {
                     System.out.println(getExitMesg());
                     System.out.println();
 
-                    // Write out contents of textArea to log file
-                    Date date = new Date();
-                    SimpleDateFormat sdf;
-                    sdf = new SimpleDateFormat("yyyyMMdd-HHmm");
-                    String datestr = sdf.format(date);
-
-		    strPath = new String(destDir+"/adm/log");
+		    strPath = new String("/tmp");
 		    if (bwindows)
                         strPath = InstallVJ.unixPathToWindows(strPath);
                     file = new File(strPath);
 		    if (!file.exists())
                         file.mkdirs();
-		    file = new File(strPath + File.separator + "vnmrj" + datestr);
+		    file = new File(strPath + File.separator + "vnmrjInstallLog");
 
                     FileWriter writer = new FileWriter(file);
                     textArea.write(writer);
-                    System.out.println("Log written to: " + file.toString());
                 }
                 catch (IOException e) {
                     System.out.println(e);
@@ -713,26 +706,11 @@ public class ProgressMonitor extends JFrame {
                   }
                 }
                     
-                if (loadedVnmrJ) {
-                  System.out.println("\n\n");
- 		  System.out.println("Check www.spinsights.net for the latest patches.");
- 		  System.out.println("If your system is a spectrometer:");
-                  System.out.println("    1. Log in as the VnmrJ adminstrator account, vnmr1.");
-                  System.out.println("    2. Exit all Vnmr/VnmrJ programs.");
-                  System.out.println("    3. Be sure Ethernet ports have been configured properly.");
-                  System.out.println("    4. SeLinux and the Firewall must be disabled.");
-                  System.out.println("    5. Run /vnmr/bin/setacq");
-                  System.out.println("On all systems:");
-                  System.out.println("    1. Update all users.");
-                  System.out.println("       You can use vnmrj adm for this");
-                  System.out.println("       See Configure -> Users-> Update users...");
-		  System.out.println("       Or each user can run /vnmr/bin/makeuser");
-                  System.out.println("    2. In the VnmrJ interface from the");
-                  System.out.println("       Edit (non-imaging) or Tools (imaging) menu,");
-                  System.out.println("       select 'System Settings...' and then click");
-                  System.out.println("       'System config'");
+                if (cancelButton.getActionCommand() == "Done") {
+                   System.exit(0);
+                } else {
+                   System.exit(1);
                 }
-                System.exit(0);
             }
     }
 }

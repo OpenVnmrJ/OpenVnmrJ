@@ -1,5 +1,4 @@
-: '@(#)makesuacqproc.sh 22.1 03/24/08 1991-1996 '
-# 
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -9,23 +8,6 @@
 # For more information, see the LICENSE file.
 # 
 #
-: /bin/sh
-
-#  common_env and common_whoami are currently for SunOS and Solaris only
-
-common_env()
-{
-    ostype=`uname -s`
-    osmajor=`uname -r | awk 'BEGIN { FS = "." } { print $1 }'`
-
-    if [ $osmajor -lt  5 ]
-    then
-        svr4="n"
-    else
-        svr4="y"
-        ostype="solaris"
-    fi
-}
 
 ####################################################################
 #  script function to obtain value for vnmrsystem
@@ -43,7 +25,7 @@ get_vnmrsystem() {
 
     if test "x$vnmrsystem" = "x"
     then
-        echo "Please enter location of VNMR system directory [/vnmr]: \c"
+        echo "Please enter location of VNMR system directory [/vnmr]: "
         read vnmrsystem
         if test "x$vnmrsystem" = "x"
         then
@@ -84,26 +66,22 @@ add_shadow_entry() {
 
 # ------------- main ------------------
 
-common_env
-
-notroot=0
-userId=`/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }'`
-if [ x$userId != x"uid=0(root)" ]; then
-  notroot=1
+userId=$(/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }')
+if [[ x$userId != x"uid=0(root)" ]]; then
   echo
   echo "To create the acqproc user you will need to be the system's root user."
   echo "Or type cntrl-C to exit."
   echo
   s=1
   t=3
-  while [ $s = 1 -a ! $t = 0 ]; do
+  while [[ $s = 1 ]] && [[ ! $t = 0 ]]; do
      echo "Please enter this system's root user password"
-     su root -c "$0 ${ARGS}";
+     su root -c "$0 $*";
      s=$?
-     t=`expr $t - 1`
+     t=$((t-1))
      echo " "
   done
-  if [ $t = 0 ]; then
+  if [[ $t = 0 ]]; then
       echo "Access denied. Type cntrl-C to exit this window."
       echo "Type $0 to start the installation program again"
       echo
@@ -113,8 +91,7 @@ fi
 
 get_vnmrsystem
 
-if test -x "$vnmrsystem"/bin/execkillacqproc
-then
+if [[ -x "$vnmrsystem"/bin/execkillacqproc ]] ; then
     chown root "$vnmrsystem"/bin/execkillacqproc
     chmod 500  "$vnmrsystem"/bin/execkillacqproc
 else
@@ -148,8 +125,7 @@ END {if (AlreadyExists==0)
 #  If new entry required, insert it on
 #  the next to the last line in the file
 
-if test -s /tmp/newuser
-then
+if [[ -s /tmp/newuser ]] ; then
      new_account="y"
      cp /etc/passwd /etc/passwd.bk
      read stuff </tmp/newuser
@@ -162,22 +138,14 @@ else
 fi
 (cd /etc; chgrp sys passwd; chmod 444 passwd;)
 
-if [ x$ostype = "xsolaris" -o x$ostype = "xLinux" ]
-then
-    add_shadow_entry
-fi
+add_shadow_entry
 
 #  Username now in password, group file
-#  use backquotes to move output from script function into script variable
 
-if test $new_account = "y"
-then
+if [[ $new_account = "y" ]] ; then
     echo
-    echo $name" is now a login that will start or kill Acqproc"
-else
+    echo "\"su acqproc\" will start or stop acquisition communications"
+elif [[ $# -eq 0 ]] ; then
     echo
     echo $name" is already a defined user"
 fi
-
-echo "$0 complete."
-

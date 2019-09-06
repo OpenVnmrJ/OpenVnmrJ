@@ -1,5 +1,4 @@
-#! /bin/bash
-# 
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -8,6 +7,7 @@
 # 
 # For more information, see the LICENSE file.
 # 
+# set -x
 
 #-----------------------------------------------
 
@@ -15,7 +15,8 @@
 # or append to the log file, i.e.    >> $logfile 2>&1
 
 logdir="/tmp/vnmrjinstall"
-logfile="/tmp/vnmrjinstall/VnmrjInstallationScript.log"
+logname="VnmrjInstallationScript.log"
+logfile="$logdir/$logname"
 
 initlog() {
      mkdir -p $logdir
@@ -41,6 +42,7 @@ logdone() {
      echo " " >> $logfile
      # copy the log file into the vnmr log directory
      cp $logfile /vnmr/adm/log
+     chown $nmr_adm /vnmr/adm/log/$logname
      rm -rf $logdir
 
 }
@@ -52,67 +54,35 @@ logmsg() {
 
 #-----------------------------------------------
 update_user_group() {
-
-   test_file="/tmp/testfile_willberemoved"
-   touch $test_file
-   chgrp $nmr_group $test_file 2>/dev/null
-   if [ $? -ne 0 ]
+   # Just make the group. groupadd will fail if it
+   # already exists
+   if [ x$lflvr != "xdebian" ]
    then
-       if [ x$os_version = "xwin" ]
-       then
-          $src_code_dir/win/bin/groupadd $nmr_group
-       else
-          logmsg "groupadd -g  $nmr_group_no $nmr_group"
-          if [ x$lflvr != "xdebian" ]
-          then
-             /usr/sbin/groupadd  -g $nmr_group_no $nmr_group
-          else
-             sudo /usr/sbin/groupadd -g $nmr_group_no $nmr_group
-          fi
-       fi
-   elif [ x$os_version != "xwin" ]
-   then
-       nmr_group_no=$(grep "^${nmr_group}:" /etc/group | awk 'BEGIN { FS = ":" } { print $3}')
+      /usr/sbin/groupadd  $nmr_group 2> /dev/null
+   else
+      sudo /usr/sbin/groupadd $nmr_group 2> /dev/null
    fi
 
-   #Only copy the passwd file if there is no nmr_adm account
-
-   chown $nmr_adm $test_file 2>/dev/null
+   getent passwd $nmr_adm > /dev/null
    if [ $? -ne 0 ]
    then
        if [ x$os_version = "xrht" ]
        then
           if [ x$lflvr != "xdebian" ]
           then
-             logmsg "/usr/sbin/useradd -d$nmr_home/$nmr_adm -s/bin/csh -g$nmr_group $nmr_adm"
-             /usr/sbin/useradd -d$nmr_home/$nmr_adm -s/bin/csh -g$nmr_group $nmr_adm
+             logmsg "/usr/sbin/useradd -d$nmr_home/$nmr_adm -s/bin/bash -g$nmr_group $nmr_adm"
+             /usr/sbin/useradd -d$nmr_home/$nmr_adm -s/bin/bash -g$nmr_group $nmr_adm 2> /dev/null
              logmsg "chmod 755 $nmr_home/$nmr_adm"
              chmod 755 "$nmr_home/$nmr_adm"
              logmsg "/usr/bin/passwd -f -u $nmr_adm"
              /usr/bin/passwd -f -u $nmr_adm >> $logfile 2>&1
-             # for a new user copy these environment parameter files into place
-             # so that the search paths and other VnmrJ env parameters are setup on login
-             logmsg "cp $src_code_dir/.login $nmr_home/$nmr_adm"
-             cp $src_code_dir/.login $nmr_home/$nmr_adm
-             logmsg "cp $src_code_dir/.cshrc $nmr_home/$nmr_adm"
-             cp $src_code_dir/.cshrc $nmr_home/$nmr_adm
-             logmsg "cp $src_code_dir/.vnmrenv $nmr_home/$nmr_adm"
-             cp $src_code_dir/.vnmrenv $nmr_home/$nmr_adm
-             logmsg "cp $src_code_dir/.vxresource $nmr_home/$nmr_adm"
-             cp $src_code_dir/.vxresource $nmr_home/$nmr_adm
-             mkdir "$nmr_home/$nmr_adm/vnmrsys"
-             chmod 755 "$nmr_home/$nmr_adm/vnmrsys"
-             ${chown_cmd} $nmr_adm -R "$nmr_home/$nmr_adm"
-             ${chgrp_cmd} $nmr_group -R "$nmr_home/$nmr_adm"
           else
              # --home-create == -m, --home == -d, --shell == -s, --gid == -g
              # must give the account a temp password 'abcd1234' to get the account active 
              # since passwd does not have the -f to force activation as does RHEL
              # passwd abcd1234 = $1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1
-             # Prior to 12.04 we used useradd to set all the groups, however with 12.04 the admin group did not exist and the useradd completely failed.
-             # Thus we no longer do that part in the useradd command, but perform that operation below.
-             logmsg "sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell /bin/bash --gid $nmr_group --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $nmr_adm"
-             sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell /bin/bash --gid $nmr_group --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $nmr_adm
+             logmsg "sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell $(which bash) --gid $nmr_group --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $nmr_adm"
+             sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell $(which bash) --gid $nmr_group --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $nmr_adm
 
              # add vnmr1 to appropriate groups as well the most important, admin or sudo (12.04) so it is permitted to sudo.
              # this method adds the group one by one, if one doesn't exist it fails but no harm done.
@@ -128,186 +98,28 @@ update_user_group() {
              # we give a temp default password,  use the --expire option to force to user to change password on login
              logmsg "sudo /usr/bin/passwd --expire $nmr_adm 2>/dev/null"
              sudo /usr/bin/passwd --expire $nmr_adm >> $logfile 2>&1
-             # setup the bash env for VnmrJ
-             logmsg "sudo cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm"
-             sudo cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm
-             logmsg "sudo $src_code_dir/setupbashenv $nmr_home/$nmr_adm"
-             sudo $src_code_dir/setupbashenv "$nmr_home/$nmr_adm"
           fi
-       elif [ x$os_version = "xwin" ]
-       then
-          if [ ! -d "$nmr_home" ]
-          then
-            mkdir $nmr_home
-          fi
-          chmod 775 $nmr_home
-          "$src_code_dir"/win/bin/useradd -d"$nmr_home"/$nmr_adm -s/bin/csh -g$nmr_group $nmr_adm
-       else
-           add_to_passwd
        fi
 
-   elif [ x$os_version = "xwin" ]
-   then
-      nmrhomedir=`"$src_code_dir"/win/bin/getuserinfo "$nmr_adm" | awk 'BEGIN {FS=";"} {print $2}'`
-      echo "$nmrhomedir"
-      if [ x"$nmrhomedir" = "x" -o x"$nmrhomedir" = "x " ]
-      then
-         if [ ! -d "$nmr_home" ]
-         then
-             mkdir "$nmr_home"
-         fi
-         mkdir "$nmr_home/$nmr_adm"
-         homedir=`unixpath2win "$nmr_home/$nmr_adm"` 
-         net user "$nmr_adm" /homedir:"$homedir"
-      fi
    else  # user is already present, let's be sure the user is configured correctly
        if [ x$os_version = "xrht" ]
        then
-          if [ x$lflvr != "xdebian" ]
+          logmsg "User already present, be sure user is configured."
+          curGroup=$(id -gn $nmr_adm)
+          if [[ x$curGroup != x$nmr_group ]]
           then
-             logmsg "User already present, be sure user is configured."
-             logmsg "chmod 755 $nmr_home/$nmr_adm"
-             chmod 755 "$nmr_home/$nmr_adm"
              logmsg "/usr/sbin/usermod -g$nmr_group $nmr_adm"
-             /usr/sbin/usermod -g$nmr_group $nmr_adm
-             if [ ! -f $nmr_home/$nmr_adm/.login ] ; then
-               logmsg "cp $src_code_dir/.login $nmr_home/$nmr_adm"
-               cp $src_code_dir/.login $nmr_home/$nmr_adm
+             if [ x$lflvr != "xdebian" ]
+             then
+                /usr/sbin/usermod -g$nmr_group $nmr_adm 2>/dev/null
+                /usr/sbin/groupdel $curGroup 2>/dev/null
+             else
+                sudo /usr/sbin/usermod -g$nmr_group $nmr_adm 2>/dev/null
+                sudo /usr/sbin/groupdel $curGroup 2>/dev/null
              fi
-             if [ ! -f $nmr_home/$nmr_adm/.cshrc ] ; then
-               logmsg "cp $src_code_dir/.cshrc $nmr_home/$nmr_adm"
-               cp $src_code_dir/.cshrc $nmr_home/$nmr_adm
-             fi
-             if [ ! -f $nmr_home/$nmr_adm/.vnmrenv ] ; then
-               logmsg "cp $src_code_dir/.vnmrenv $nmr_home/$nmr_adm"
-               cp $src_code_dir/.vnmrenv $nmr_home/$nmr_adm
-             fi
-             if [ ! -f $nmr_home/$nmr_adm/.vxresource ] ; then
-               logmsg "cp $src_code_dir/.vxresource $nmr_home/$nmr_adm"
-               cp $src_code_dir/.vxresource $nmr_home/$nmr_adm
-             fi
-             userShell=`getent passwd $nmr_adm | cut -d: -f7`
-             if [ "x$userShell" = "x/bin/bash" ]; then
-                if [ -f $nmr_home/$nmr_adm/.bash_profile ] ; then
-                   envFound=`grep vnmrenvbash $nmr_home/$nmr_adm/.bash_profile`
-                   if [ -z "$envFound" ] ; then
-                      cat "$src_code_dir/profile" >> $nmr_home/$nmr_adm/.bash_profile
-                   fi
-                elif [ -f $nmr_home/$nmr_adm/.profile ] ; then
-                   envFound=`grep vnmrenvbash $nmr_home/$nmr_adm/.profile`
-                   if [ -z "$envFound" ] ; then
-                      cat "$src_code_dir/profile" >> $nmr_home/$nmr_adm/.profile
-                   fi
-                fi
-                if [ ! -f $nmr_home/$nmr_adm/.vnmrenvbash ] ; then
-                  logmsg "cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm"
-                  cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm
-                fi
-             fi
-             if [ ! -d $nmr_home/$nmr_adm/vnmrsys ] ; then
-               logmsg "mkdir $nmr_home/$nmr_adm/vnmrsys"
-               mkdir "$nmr_home/$nmr_adm/vnmrsys"
-               chmod 755 "$nmr_home/$nmr_adm/vnmrsys"
-             fi
-             ${chown_cmd} $nmr_adm -R "$nmr_home/$nmr_adm"
-             ${chgrp_cmd} $nmr_group -R "$nmr_home/$nmr_adm"
-          else
-             # sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell /bin/bash --gid $nmr_group --groups admin,cdrom,floppy,audio,video,plugdev,fuse,lpadmin,adm --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $nmr_adm
-             # make sure the user belongs the the nmr group
-             grpval=`grep ${nmr_group}: /etc/group | grep $nmr_adm`
-             if [ -z "$grpval" ] ; then
-                 logmsg "/usr/sbin/adduser $nmr_adm $nmr_group "
-                 /usr/sbin/adduser $nmr_adm $nmr_group >> $logfile 2>&1
-             fi
-             logmsg "sudo chmod 755 $nmr_home/$nmr_adm"
-             sudo chmod 755 "$nmr_home/$nmr_adm"
-             # setup the bash env for VnmrJ
-             if [ ! -f $nmr_home/$nmr_adm/.vnmrenvbash ] ; then
-               logmsg "sudo cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm"
-               sudo cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm
-               logmsg "sudo $src_code_dir/setupbashenv $nmr_home/$nmr_adm"
-               sudo $src_code_dir/setupbashenv "$nmr_home/$nmr_adm"
-             fi
+             touch /tmp/newgrp
           fi
-      fi
-   fi
-   rm -f $test_file
-
-   # update the env where we created the account or it already existed.
-   if [ x$lflvr = "xdebian" ]
-   then
-      # setup the bash env for VnmrJ
-      logmsg "sudo cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm"
-      sudo cp $src_code_dir/.vnmrenvbash $nmr_home/$nmr_adm
-      logmsg "sudo $src_code_dir/setupbashenv $nmr_home/$nmr_adm"
-      sudo $src_code_dir/setupbashenv "$nmr_home/$nmr_adm"
-   fi
-
-   #if windows, then add the vnmrj adminstrator to Administrators group
-   if [ x$os_version = "xwin" ]
-   then
-      net localgroup Administrators | grep $nmr_adm  2>/dev/null
-      if [ $? -ne 0 ]
-      then
-       "$src_code_dir"/win/bin/groupadd Administrators $nmr_adm
-      fi
-   fi
-}
-
-#-----------------------------------------------
-add_to_passwd() {
-
-# make backup copy of password file
-# scan password file for largest user-id
-# add one to that user-id to obtain id for vnmr1
-# insert before last line in password file
-# keep user-id number within bounds of positive 16-bit numbers,
-#  that is, less than 32768
-
-   echo "add_to_passwd() ---"
-   logmsg "add_to_passwd() ---"
-
-   awk '
-      BEGIN { N=0
-              AlreadyExists=0
-              NewUser="'$nmr_adm'"
-              FS=":"
-      }
-
-      {
-        if ($3>N && $3<32768) N=$3
-        if ($1==NewUser) AlreadyExists=1
-      }
-
-      END { if (AlreadyExists==0)
-            printf "%s::%d:'$nmr_group_no':%s:'$nmr_home'/%s:/bin/csh\n",NewUser,N+1,NewUser,NewUser
-      }
-   ' < /etc/passwd >/tmp/newuser
-
-   #Insert new entry before the last line in the password file
-
-   if [ -s /tmp/newuser ]
-   then
-      echo "add_to_passwd():add new entry ----"
-      logmsg "add_to_passwd():add new entry ----"
-      if [ x$lflvr != "xdebian" ]
-      then
-         cp /etc/passwd /etc/passwd.bk
-         read stuff </tmp/newuser
-         (sed '$i\
-'"$stuff"'' /etc/passwd >/tmp/newpasswd)
-         mv /tmp/newpasswd /etc/passwd
-         chmod 644 /etc/passwd
-         rm /tmp/newuser
-      else
-         sudo cp /etc/passwd /etc/passwd.bk
-         read stuff </tmp/newuser
-         (sed '$i\
-'"$stuff"'' /etc/passwd >/tmp/newpasswd)
-         sudo mv /tmp/newpasswd /etc/passwd
-         sudo chmod 644 /etc/passwd
-         rm /tmp/newuser
-      fi
+       fi
    fi
 }
 
@@ -581,7 +393,7 @@ logmsg "console type: $cons_type"
 logmsg "Dest Directory: $dest_dir"
 logmsg "Admin: $nmr_adm"
 logmsg "Group: $nmr_group"
-logmsg "Admin Home DIr: $nmr_home"
+logmsg "Admin Home Dir: $nmr_home"
 logmsg "Install List: $gen_list"
 logmsg "Install Options List: $opt_list"
 logmsg " "
@@ -593,10 +405,9 @@ NAWK="nawk"
 
 rootuser="root"
 taroption="jxpf"
-sbindir="/usr/varian/sbin"
+sbindir="/vnmr/p11/sbin"
 lflvr=" "
 
-nmr_group_no=30
 case x$os_version in
     xwin)
 
@@ -641,12 +452,6 @@ case x$os_version in
 
         file_ext=$os_version
 
-        #group 30 in RedHat system taken by gopher
-        # also 30 is group 'dip' (Dialup IP) on RHEL and Ubuntu
-        while [ x$(grep ":${nmr_group_no}:" /etc/group) != "x" ]
-        do
-           nmr_group_no=$((nmr_group_no+1))
-        done
         ;;
 esac
 
@@ -775,7 +580,7 @@ then
          rm /tmp/probes/probe.tmplt
          cp_files="y"
 
-         if [ -r /vnmr/p11/part11Config -a x$configP11="xyes" ]
+         if [ -r /vnmr/p11/part11Config ] && [ x$configP11 = "xyes" ]
          then
              save_p11_users="y"
          fi
@@ -816,11 +621,13 @@ cp_amptables='n'
 cp_vast='n'
 mv_probeid='n'
 cp_overlay='n'
+old_link=""
 
 rm -f "$dest_dir"/pw_fault
 
 if [ x$cp_files = "xy" ]
 then
+      old_link=$(readlink /vnmr)
       if [ -d /vnmr/imaging/gradtables ]
       then
          if [ -f imaging/coilIDs ]
@@ -891,11 +698,11 @@ then
               if [ -d /vnmr/adm/users/userProfiles ]
               then
                # Do not transfer the All* nor Basic* profiles.  The user should not modify these.
-               # We need to be able to install new ones at install time.  Also don't transfer
+               # We need to be able to install new ones at install time.  Also do not transfer
                # the appdirXXX files.  Old ones can cause problems.
-               tar -cj --exclude='All*' --exclude='BasicLiquids*' --exclude='CommonLiquids*' --exclude='appdir*' -f /tmp/admusers.tar users/group users/profiles users/userlist users/properties users/operators users/administrators users/userProfiles
+               tar -cj --exclude='All*' --exclude='BasicLiquids*' --exclude='CommonLiquids*' --exclude='appdir*' -f /tmp/admusers.tar users/group users/profiles users/userlist users/properties users/operators users/administrators users/userProfiles 2> /dev/null
               else
-               tar cjf /tmp/admusers.tar users/group users/profiles users/userlist users/properties users/operators users/administrators
+               tar cjf /tmp/admusers.tar users/group users/profiles users/userlist users/properties users/operators users/administrators 2> /dev/null
               fi
             )
          else
@@ -904,9 +711,9 @@ then
                 (cd /vnmr/adm; 
        if [ -d /vnmr/adm/users/userProfiles ]
        then
-          tar -cj --exclude='All*' --exclude='BasicLiquids*' --exclude='CommonLiquids*' --exclude='appdir*' -f /tmp/admusers.tar users/group users/profiles users/userlist users/operators users/userProfiles
+          tar -cj --exclude='All*' --exclude='BasicLiquids*' --exclude='CommonLiquids*' --exclude='appdir*' -f /tmp/admusers.tar users/group users/profiles users/userlist users/operators users/userProfiles 2> /dev/null
        else
-          tar cjf /tmp/admusers.tar users/group users/profiles users/userlist users/operators
+          tar cjf /tmp/admusers.tar users/group users/profiles users/userlist users/operators 2> /dev/null
        fi 
                  )
         fi
@@ -920,8 +727,11 @@ then
       fi
       if [ -d /vnmr/p11 ]
       then
-         (cd /vnmr; tar cjf /tmp/p11.tar p11)
-         cp_p11='y'
+         if [[ $configP11 = "yes" ]]
+         then
+            cp_p11='y'
+#           (cd /vnmr; tar cjf /tmp/p11.tar p11)
+         fi
       fi
       if ( test -d /vnmr/gshimlib)
       then
@@ -1078,7 +888,6 @@ else
 
          if (test $tar_name = "code/tarfiles/jre.tar")
               then
-                    cd "$source_dir"
                     echo "  Extracting  \"$Item\"  $(basename $tar_name .tar)"
           if [ x$os_version != "xwin" ]
           then
@@ -1234,6 +1043,9 @@ then
    chmod 777   "$dest_dir"/tmp
    chmod 666   "$dest_dir"/acq/info
    chmod 775   "$dest_dir"/tune
+   # Signal to vjpostinstallaction to display final install instructions
+   touch /tmp/.ovj_installed
+   chmod 666 /tmp/.ovj_installed
    if [ ! -d "$dest_dir"/acqqueue ]
    then
       mkdir "$dest_dir"/acqqueue
@@ -1270,10 +1082,8 @@ then
       chmod 775 "$dest_dir"/cryo/data
    fi
 
-   old_link=""
    if [ x$vnmr_link = "xyes" ]
    then
-      old_link=$(readlink /vnmr)
       cd /
       rm -f /vnmr
       ln -s "$dest_dir" /vnmr
@@ -1496,6 +1306,18 @@ then
 SampleReuse/' > auto.conf2
                     mv auto.conf2 $file
                 fi
+                grep Agilent $file > /dev/null;
+                if [ $? -eq 0 ]
+                then
+                    cat $file | grep -v "# Copyright" |
+                                grep -v "# This software" |
+                                grep -v "# information of" |
+                                grep -v "# Use, " |
+                                grep -v "# prior" > auto.conf2
+                    mv auto.conf2 $file
+                fi
+                chown ${nmr_adm}:${nmr_group} $file
+                chmod 644 $file
              fi
              file="automation.en.conf"
              if [ -f $file ]
@@ -1507,6 +1329,18 @@ SampleReuse/' > auto.conf2
 SampleReuse/' > auto.conf2
                     mv auto.conf2 $file
                 fi
+                grep Agilent $file > /dev/null;
+                if [ $? -eq 0 ]
+                then
+                    cat $file | grep -v "# Copyright" |
+                                grep -v "# This software" |
+                                grep -v "# information of" |
+                                grep -v "# Use, " |
+                                grep -v "# prior" > auto.conf2
+                    mv auto.conf2 $file
+                fi
+                chown ${nmr_adm}:${nmr_group} $file
+                chmod 644 $file
              fi
              file="automation.ja.conf"
              if [ -f $file ]
@@ -1518,6 +1352,18 @@ SampleReuse/' > auto.conf2
 SampleReuse/' > auto.conf2
                     mv auto.conf2 $file
                 fi
+                grep Agilent $file > /dev/null;
+                if [ $? -eq 0 ]
+                then
+                    cat $file | grep -v "# Copyright" |
+                                grep -v "# This software" |
+                                grep -v "# information of" |
+                                grep -v "# Use, " |
+                                grep -v "# prior" > auto.conf2
+                    mv auto.conf2 $file
+                fi
+                chown ${nmr_adm}:${nmr_group} $file
+                chmod 644 $file
               fi
            )
 
@@ -1555,57 +1401,60 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
    fi
    if [ x$cp_p11 = "xy" ]
    then
-      echo "Restoring part11 files."
+      echo "Restoring part11Config file."
+      file="$dest_dir"/p11/part11Config
+      rm -f $file
+      cp  $old_link/p11/part11Config $file
+      chown ${nmr_adm}:${nmr_group} $file
+      chmod 644 $file
+#     if [[ -d $old_link/p11/checksums ]]
+#     then
+#        (cd $old_link/p11 && tar cf - checksums | (cd "$dest_dir"/p11 && tar xpf -) )
+#        chown -R ${nmr_adm}:${nmr_group}  "$dest_dir"/p11/checksums
+#        chmod 755 "$dest_dir"/p11/checksums
+#        chmod 755 "$dest_dir"/p11/checksums/*
+#        chmod 644 "$dest_dir"/p11/checksums/*/*
+#     fi
+#     p11Config="$dest_dir"/p11/part11Config
+#     lines=$(grep ":checksum:" $p11Config | wc -l)
+#     if [ $lines != 0 ]
+#     then
+#        echo "Update part11Config file"
+#        cp $p11Config /tmp/part11Config
+#        rm -rf "$dest_dir"/p11
+#        if [ x$os_version != "xwin" ]
+#        then
+#           if [ x$lflvr != "xdebian" ]
+#           then
+#              (cd "$dest_dir"; su $nmr_adm -fc "tar $taroption /tmp/p11.tar")
+#           else
+#              (cd "$dest_dir"; sudo -u $nmr_adm tar $taroption /tmp/p11.tar )
+#           fi
+#        else
+#           (cd "$dest_dir"; tar $taroption /tmp/p11.tar)
+#        fi
 
-      p11Config="$dest_dir"/p11/part11Config
+#        lines=`grep ":checksum:" $p11Config | wc -l`
 
-      lines=`grep ":checksum:" $p11Config | wc -l`
-
-      if [ $lines != 0 ]
-      then
-
-         echo "Update part11Config file"
-
-         cp $p11Config /tmp/part11Config
-
-         rm -rf "$dest_dir"/p11
-    if [ x$os_version != "xwin" ]
-    then
-            if [ x$lflvr != "xdebian" ]
-            then
-          (cd "$dest_dir"; su $nmr_adm -fc "tar $taroption /tmp/p11.tar")
-       else
-          (cd "$dest_dir"; sudo -u $nmr_adm tar $taroption /tmp/p11.tar )
-            fi
-    else
-       (cd "$dest_dir"; tar $taroption /tmp/p11.tar)
-    fi
-
-         lines=`grep ":checksum:" $p11Config | wc -l`
-
-         if [ $lines = 0 ]
-         then
-           awk 'BEGIN {FS=":"} {if( $2=="auto" || $2=="study" || $2=="checksum") print $0}' /tmp/part11Config >> $p11Config
-         fi
-         rm /tmp/part11Config
-
-      else
-
-         rm -rf "$dest_dir"/p11
-    if [ x$os_version != "xwin" ]
-    then
-       if [ x$lflvr != "xdebian" ]
-       then
-          (cd "$dest_dir"; su $nmr_adm -fc "tar $taroption /tmp/p11.tar")
-       else
-          (cd "$dest_dir"; sudo -u $nmr_adm tar $taroption /tmp/p11.tar )
-       fi
-    else
-       (cd "$dest_dir"; tar $taroption /tmp/p11.tar)
-    fi
-
-      fi
-
+#        if [ $lines = 0 ]
+#        then
+#          awk 'BEGIN {FS=":"} {if( $2=="auto" || $2=="study" || $2=="checksum") print $0}' /tmp/part11Config >> $p11Config
+#        fi
+#        rm /tmp/part11Config
+#     else
+#        rm -rf "$dest_dir"/p11
+#        if [ x$os_version != "xwin" ]
+#        then
+#           if [ x$lflvr != "xdebian" ]
+#           then
+#              (cd "$dest_dir"; su $nmr_adm -fc "tar $taroption /tmp/p11.tar")
+#           else
+#              (cd "$dest_dir"; sudo -u $nmr_adm tar $taroption /tmp/p11.tar )
+#           fi
+#        else
+#           (cd "$dest_dir"; tar $taroption /tmp/p11.tar)
+#        fi
+#     fi
    fi
 
    if [ x$cp_gshimlib = "xy" ]
@@ -1670,6 +1519,17 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
          (cd "$dest_dir"; tar xf /tmp/jaccount.tar)
          rm /tmp/jaccount.tar
       fi
+      afile=$dest_dir/adm/accounting/accounts/accounting.prop
+      if [ -f $afile ]
+      then
+         grep -s agilentlogo $afile > /dev/null
+         if [ $? -eq 0 ]
+         then
+            sed 's/agilentlogo/vnmrjNameBW/' $afile > $afile.new
+            mv $afile.new $afile
+            chown $nmr_adm:$nmr_group $afile
+         fi
+      fi
       if [ -f /tmp/acctLog.xml ]
       then
          (cd "$dest_dir"; cp /tmp/acctLog.xml adm/accounting)
@@ -1729,6 +1589,7 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
    if [ x$cp_overlay = "xy" ]
    then
       touch  "$dest_dir"/msg/noHelpOverlay
+      chown ${nmr_adm}:${nmr_group} "$dest_dir"/msg/noHelpOverlay
    fi
 
    # restore vast files is the vast.tar files exists in /tmp
@@ -1958,21 +1819,17 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
 
      else
         ( cd /etc/init.d; sudo /usr/sbin/update-rc.d -f pgsql remove > /dev/null 2>&1; sudo /usr/sbin/update-rc.d pgsql defaults > /dev/null 2>&1; )
-        # if a non Vnmr postgres install disable it from start at boot, most likely they use the same port number
-        # Ubuntu installs with a version number, making it bit more difficult, must find the correct postgres-version# script
-        postgrescript=`cd /etc/init.d; ls postgresql*`
+        # Ubuntu installs with a version number, making it bit more difficult
+        # must find the correct postgres-version# script
+        postgrescript=$(cd /etc/init.d; ls postgresql* 2> /dev/null)
         if [ ! -z "$postgrescript" ]; then
            sudo /etc/init.d/$postgrescript stop
-           ( cd /etc/init.d; postgrscript=`ls postgresql*` ; sudo /usr/sbin/update-rc.d -f $postgrscript remove > /dev/null 2>&1; )
+           ( cd /etc/init.d; postgrscript=$(ls postgresql*) ; sudo /usr/sbin/update-rc.d -f $postgrscript remove > /dev/null 2>&1; )
         fi
-
-        #(cd /etc/${r_levl}; if [ ! -f S99pgsql ]; then \
-        #sudo ln -s ../init.d/pgsql S99pgsql ; fi)
-        #(cd /etc/${r_levl0}; if [ ! -f K99pgsql ]; then \
-        #sudo ln -s ../init.d/pgsql K99pgsql ; fi)
-        ##Remove old versions
-        #sudo rm -f /etc/init.d/S99pgsql
-        #sudo rm -f /etc/rc2.d/S99pgsql
+        # Use older version. New version has problem with client server protocol
+        if [ $distmajor -gt 16 ] && [ -d "$dest_dir"/pgsql/bin_ver7 ] ; then
+           mv "$dest_dir"/pgsql/bin_ver7 "$dest_dir"/pgsql/bin
+        fi
      fi
    fi
 
@@ -1992,28 +1849,8 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
 #     fi
 #   fi
 
-   #Open Source Sudo package
-   sudoers="/etc/sudoers"
-   sudofile="/usr/local/bin/sudo"
-
    if [ x$os_version = "xrht" ]
    then
-      #special precaution for Linux
-#     /usr/bin/file /usr/local/bin/sudo | grep Intel 2>&1 >/dev/null
-#     if [ $? -ne 0 ]
-#     then
-#        rm -f /usr/local/bin/sudo
-#     fi
-
-#     if [ -f /etc/redhat-release ]
-#     then
-#        lv=`/bin/cat /etc/redhat-release | grep 4` 
-#        if [ x"$lv" != "x" ]
-#        then
-#           rm -f /usr/local/bin/sudo
-#        fi
-#     fi
-
       # for debian these packages would need to be already installed (tftp, rarpd)
       if [ x$lflvr != "xsuse" -a x$lflvr != "xdebian" ]
       then
@@ -2111,14 +1948,6 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       #   echo "check on termcap link  (cd /vnmr/pgsql/lib; ln -s libtermcap.so.2.0.8 libtermcap.so.2) "
       #fi
 
-      # now done in the varian_preinstall scripts
-      #if [ x$lflvr = "xdebian" ]
-      #then
-      #    echo "Installation of rarpd (/usr/sbin/rarpd) and tftpd must be check.."
-      #    echo "     Use apt-get to install rarpd & tftpd packages."
-      #fi
-
-      # decide to go ahead and upgrade it even if there is one already present   GMB  7/22/09
       # if [ ! -x /usr/bin/acroread  -a  ! -x /usr/X11R6/bin/acroread ]
       # then
          if [ x$lflvr = "xrhat" ]
@@ -2238,15 +2067,13 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       if [ -x /usr/bin/convert ] ; then
           logmsg "symlink /usr/bin/convert /vnmr/bin/convert"
           ln -s /usr/bin/convert /vnmr/bin/convert
+          chown ${nmr_adm}:${nmr_group} /vnmr/bin/convert
       fi
 
-      # Debian (Ubuntu) does not have the following directory structure for CUPS
       if [ ! -r /usr/share/cups/model/laserjet.ppd ] 
       then
-         if [  x$lflvr = "xdebian" ]; then
-            # echo "   Are the proper CUPS filters already in place on Ubuntu???"
-            echo "CUPS filters already in place on Ubuntu"  # ??
-         else
+         cups=$(ls /usr/share/cups/model/*.gz 2> /dev/null)
+         if [  x$cups != "x" ]; then
             echo "Unpacking cups filters"
             logmsg "Unpacking cups filters"
             /bin/gunzip /usr/share/cups/model/*.gz >> $logfile 2>&1
@@ -2255,52 +2082,6 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
          chmod 666 /dev/console
       fi
    fi
-#  debain releases depend on its own sudo for many operations, so don't add another one for VnmrJ
-#  VnmrJ admin invokes sudo from /usr/local/bin  so if it does not exist we need to copy it
-#  otherwise VnmrJ admin will not be able to function properly    GMB 5/1/2009
-#  if [ ! -f "$sudofile" ]
-#  then
-#     case x$os_version in
-#        "xrht") 
-#                if [ x$lflvr != "xdebian" ]
-#                then
-#                  logmsg "cp -rf /vnmr/sudo.lnx/usr/local /usr"
-#                  cp -rf /vnmr/sudo.lnx/usr/local /usr
-#              # else
-#                  # copy sudo over to /usr/local/bin for VNmrJ admin to use, should be fixed in VnmrJ
-#                  # echo "sudo mkdir -p /usr/local/bin"
-#                  # echo "sudo cp -p /usr/bin/sudo /usr/local/bin"
-#                fi
-#                ;;
-
-#        "xsol") cp -rf /vnmr/sudo/usr/local /usr ;;
-#             *) ;;
-#     esac
-#  fi
-#  debain release will always have /etc/sudoers file, so this is skipped
-#  if [ ! -f "$sudoers" -a x$os_version != "xwin" ]
-#  then
-#      logmsg "cp -f $dest_dir/sudo/etc/sudoers /etc"
-#      cp -f "$dest_dir"/sudo/etc/sudoers /etc
-#  fi
-
-#  debain releases depend on its own sudo for many operations, so don't mess with it!
-#  VnmrJ admin invokes sudo from /usr/local/bin  so if it does not exist we need to copy it
-#  otherwise VnmrJ admin will not be able to function properly    GMB 5/1/2009
-#  if [ x$os_version = "xrht" -a x$lflvr != "xdebian" ]
-#  then
-#      if [ ! -x /usr/local/bin/sudo ]
-#      then
-#          logmsg "cp /usr/bin/sudo /usr/local/bin/sudo"
-#          cp /usr/bin/sudo /usr/local/bin/sudo
-#      fi
-
-#      if [ ! -x /usr/local/sbin/visudo ]
-#      then
-#         logmsg "cp /usr/sbin/visudo /usr/local/sbin/visudo"
-#         cp /usr/sbin/visudo /usr/local/sbin/visudo
-#      fi
-#  fi
 
    if [ x$os_version != "xwin" ]
    then
@@ -2308,102 +2089,20 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       # sudoins script has been modified for proper Debian (Ubuntu operation)
       # add, admin username and the programs/scripts to run without passwords
       logmsg "Running sudoers script"
-      "$dest_dir"/bin/sudoins $NAWK $configP11 $os_version $nmr_adm $nmr_group >> $logfile 2>&1
+      "$dest_dir"/bin/sudoins $nmr_adm $nmr_group >> $logfile 2>&1
       chown $rootuser "$dest_dir"/bin/sudoins
       chmod 500 "$dest_dir"/bin/sudoins
-  
-#     if [ x$lflvr != "xdebian" ]
-#     then
-#        chmod 4111 /usr/local/bin/sudo
-#        chmod 111 /usr/local/sbin/visudo
-#  
-#        chmod 440 "$sudoers"
-#        chown $rootuser "$sudoers"
-#        chgrp $rootuser "$sudoers"
-#        rm -rf "$dest_dir"/sudo
-#     fi
       logmsg "sudoers script complete"
    fi
 
-## Sudo cmds go to /usr/varian/sbin
-## might not need the following
-##
-##
-## since these Vnmr commands will be executed as root, 
-## root better own them so others # can't edit them and
-## run their own scripts as root, i.e.  *security hole"   GMB
-##
-#   for cmd in $sudo_cmds
-#   do
-#       bdir=`echo $cmd | cut -d '/' -f1-2`
-#       # just change the /vnmr commands not the /usr system commands
-#       if [ "x/vnmr" = "x$bdir" ]
-#       then
-#    # get rid of the comma
-#          ccmd=`echo $cmd | cut -d ',' -f1`
-#          chown root $ccmd
-#          chmod 555 $ccmd
-#      fi
-#  done
-#
-
-   if [ ! -d /usr/varian/config -a  x$os_version != "xwin" ]
-   then
-       mkdir -p /usr/varian/config
-       chmod 777 /usr/varian/config
-   fi
-   if [ ! -d "$sbindir" -a x$os_version != "xwin" ]
-   then
-       mkdir "$sbindir"
-   fi
- 
-   /bin/echo "#!/bin/sh
-   if [ \$# -eq 3 -a x\$3 = \"xadMin\" ]
-   then
-   /bin/mv \$1 \$2
-   fi"> "$dest_dir"/bin/vcmdm
    chmod 700 "$dest_dir"/bin/vcmdm
- 
-   /bin/echo "#!/bin/sh
-   if [ \$# -eq 2 -a x\$2 = \"xadMin\" ]
-   then
-   /bin/rm -rf \$1
-   fi"> "$dest_dir"/bin/vcmdr
    chmod 700 "$dest_dir"/bin/vcmdr
-
-   if [ x$os_version != "xwin" ]
+   if [ -f "$dest_dir"/bin/probe_mount ]
    then
-      cd "$dest_dir"/bin
-      cp adddevices makeuser vnmr_accounting dtsharcntrl "$sbindir"
-      if [ -f "$src_code_dir"/.nv ]
-      then
-        cp probe_mount probe_unmount "$sbindir"
-      fi
-      mv jtestgroup jtestuser vcmdm vcmdr "$sbindir"
-
-      cp create_pgsql_user "$sbindir"
-
+      chmod 700 "$dest_dir"/bin/probe_mount
+      chmod 700 "$dest_dir"/bin/probe_unmount
    fi
 
-   if [ x$os_version = "xrht" ]
-   then
-      chown root:root "$sbindir"/jtest*
-      if [ x$lflvr != "xdebian" ]
-      then
-         chown root:root "$sbindir"/jtest*
-      else
-         sudo chown root:root "$sbindir"/jtest*
-      fi
-   elif [ x$os_version != "xwin" ]
-   then
-      chown root:other "$sbindir"/jtest*
-   fi
-   if [ x$os_version != "xwin" ]
-   then
-      chmod 755 /usr/varian
-      chmod 755 "$sbindir"
-      chmod 700 "$sbindir"/*
-   fi
 # Special macros for new system.
 
    if [ -f "$src_code_dir"/.nv ]
@@ -2435,8 +2134,6 @@ then
            cat kudzu | sed s/KUDZU_ARGS=$/KUDZU_ARGS=\"-s\"/ > ./Varian_kudzu.safe-mode
            mv kudzu kudzu.orig
            cp Varian_kudzu.safe-mode kudzu
-         else
-           cp Varian_kudzu.safe-mode kudzu
          fi
       fi
    fi
@@ -2446,17 +2143,10 @@ fi
 # no doubt for some of these command under debian will require sudo  GMB
 # just incase the wrong password was given to P11 and the files weren't installed
 # test to see if one of them exists, if not skipp the whole p11    GMB  5/01/2009
-if [ x$configP11 = "xyes" -a -e ${dest_dir}/bin/vnmrMD5 ]
+if [ x$configP11 = "xyes" -a -e ${sbindir} ]
 then
-   ( cd ${dest_dir}/bin
+   (
 
-      cp chchsums "$sbindir"
-      cp /vnmr/bin/vnmrMD5 /tmp
-      mv auconvert auevent auinit aupurge aureduce auredt aupw \
-         makeP11checksums vnmrMD5 killau killch scanlog "$sbindir"
-
-     mv -f ${dest_dir}/bin/S99scanlog "$sbindir"
-     mv -f ${dest_dir}/bin/setupscanlog "$sbindir"
      "$sbindir"/setupscanlog
 
      # Have the scanlog started at system boot up.  We want this to run
@@ -2490,11 +2180,6 @@ then
     
     "$sbindir"/makeP11checksums /vnmr $nmr_adm $nmr_group
 
-    #for cmd in $sudo_p11_cmds
-    #do
-    #    chmod 500 $cmd
-    #done
-    
     #moved over from the patch
     chmod 644 "$dest_dir"/adm/users/profiles/accPolicy
 
@@ -2556,17 +2241,6 @@ THEEND
     chown ${nmr_adm}:${nmr_group} "$auditdir" "$p11dir"
     chmod 755 "$auditdir" "$p11dir"
 
-    cd "$sbindir"
-    chown $rootuser:$rootuser auconvert aureduce auevent auinit aupurge aupw \
-       auredt makeP11checksums vnmrMD5 killau killch scanlog chchsums
-    chmod 700 auconvert aureduce auevent auinit aupurge aupw auredt \
-              makeP11checksums vnmrMD5 killau killch scanlog chchsums
-    if [ -f "$src_code_dir"/.nv ]
-    then
-       chown $rootuser:$rootuser probe_mount probe_unmount
-       chmod 700 probe_mount probe_unmount
-    fi
-
     # Set sticky bit for files in /vnmr/p11/bin
     chmod ug+sw "$dest_dir/p11/bin/safecp"
     chmod ug+sw "$dest_dir/p11/bin/writeAaudit"
@@ -2598,8 +2272,31 @@ then
 fi
 #pw_fault is deleted in ProgressMonitor.java
 
+if [[ -f /usr/varian/config/NMR_NETWORK_DB ]] || [[ -f $old_link/pgsql/config/NMR_NETWORK_DB ]]
+then
+   touch $dest_dir/pgsql/config/NMR_NETWORK_DB
+   chown ${nmr_adm}:${nmr_group} $dest_dir/pgsql/config/NMR_NETWORK_DB
+fi
+if [[ -f $old_link/pgsql/config/mount_name_table ]]
+then
+   cp $old_link/pgsql/config/mount_name_table $dest_dir/pgsql/config/mount_name_table
+   chown ${nmr_adm}:${nmr_group} $dest_dir/pgsql/config/mount_name_table
+elif [[ -f /usr/varian/mount_name_table ]]
+then
+   cp /usr/varian/mount_name_table $dest_dir/pgsql/config/mount_name_table
+   chown ${nmr_adm}:${nmr_group} $dest_dir/pgsql/config/mount_name_table
+fi
+
 if [ x$old_link != "x" ]
 then
+    if [[ -f $old_link/pgsql/persistence/LocatorOff ]] ; then
+       if [[ ! -d $dest_dir/pgsql/persistence ]] ; then
+          mkdir $dest_dir/pgsql/persistence
+       fi
+       touch $dest_dir/pgsql/persistence/LocatorOff
+       chown -R ${nmr_adm}:${nmr_group} $dest_dir/pgsql/persistence
+       chmod 666 $dest_dir/pgsql/persistence/LocatorOff
+    fi
     su ${nmr_adm} -fc "/vnmr/bin/update_OpenVnmrJ /vnmr $old_link fromInstall"
 fi
 if [ x$did_vnmr = "xy" ]

@@ -55,7 +55,6 @@ typedef struct {
 
 void dump_pboxpulse(PBOXPULSE a)
 {
-   int i;
    printf("PBOXPULSE INFORMATION\n"); 
    printf("seqName = %10s : Parameter Group Name\n",a.seqName);
    printf("pattern = %10s : Filename for Shape\n",a.pattern); 

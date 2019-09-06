@@ -6725,7 +6725,7 @@ int mergeGradient (char *waveform1, char *waveform2,
       {
          /* normalize waveform values */
          dacValue = ROUND(atoi(inString1) * scale);
-         if (abs(dacValue) > MAX_DAC_NUM)
+         if (labs(dacValue) > MAX_DAC_NUM)
          {
             error = ERR_MERGE_SCALE;
             displayError(error, __FILE__, __FUNCTION__, __LINE__);
@@ -6760,7 +6760,7 @@ int mergeGradient (char *waveform1, char *waveform2,
       {
          /* normalize waveform values */
          dacValue = ROUND(atoi(inString1) * scale);
-         if (abs(dacValue) > MAX_DAC_NUM)
+         if (labs(dacValue) > MAX_DAC_NUM)
          {
             error = ERR_MERGE_SCALE;
             displayError(error, __FILE__, __FUNCTION__, __LINE__);
