@@ -302,7 +302,7 @@ class CryoDirect:
                 else:
                     self._oops=(he,n2,t,m)
                     logging.debug('measured he=%s n2=%s t=%s'% (h3,n2,t,))
-            except Exception, e:
+            except Exception as e:
                 logging.debug('Exception reading cryogen levels directly '+str(e))
                 time.sleep(5)
         logging.debug('could not read cryogen levels after %d attempts'% (attempts,))
@@ -322,7 +322,7 @@ class CryoDirect:
                 if self._process:
                     try:
                         self._process.terminate()
-                    except Exception, e:
+                    except Exception as e:
                         logging.debug('exception terminating process '+str(e))
                         pass
                     finally:

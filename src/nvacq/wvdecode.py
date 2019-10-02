@@ -183,7 +183,7 @@ def readWV_CSV_file(filename):
                  # print "User Event: %d  - '%s'" % (userId,wvevdic[userId])
                  try :
                      ename = wvevdic[userId].lstrip('EVENT_')
-                 except KeyError, e:
+                 except KeyError as e:
                      ename = "User"+str(userId)
            else:
               ename = name
