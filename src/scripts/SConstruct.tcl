@@ -20,5 +20,5 @@ if not os.path.exists(vnmrTclBinPath) :
 for i in fileList:
    dest = os.path.join(vnmrTclBinPath,i)
    Execute(Copy(dest,i+'.sh'))
-   Execute(Chmod(dest,0755))
+   Execute(Chmod(dest,0o755))
 

@@ -274,8 +274,8 @@ if ( 'darwin' not in platform):
 #    os.makedirs(vnmracqueuPath)
 # if not os.path.exists(vnmrtmpPath):
 #    os.makedirs(vnmrtmpPath)
-# os.chmod(vnmracqueuPath,0777)
-# os.chmod(vnmrtmpPath,0777)
+# os.chmod(vnmracqueuPath,0o777)
+# os.chmod(vnmrtmpPath,0o777)
 
 vnmrSha1Path = os.path.join(vnmrPath,'adm','sha1')
 if not os.path.exists(vnmrSha1Path):

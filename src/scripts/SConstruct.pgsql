@@ -28,4 +28,4 @@ else:
 
 configPath = os.path.join(installPath,'config')
 Execute(Mkdir(configPath))
-Execute(Chmod(configPath,0777))
+Execute(Chmod(configPath,0o777))
