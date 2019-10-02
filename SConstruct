@@ -1,5 +1,6 @@
 #
 
+from __future__ import print_function
 import os
 import sys
 import string
@@ -7,13 +8,13 @@ import subprocess
 
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    print("OVJ_TOOLS env not found.")
+    print("For bash and variants, use export OVJ_TOOLS=<path>")
+    print("For csh and variants,  use setenv OVJ_TOOLS <path>")
     sys.exit(1)
 
 if not os.path.exists(ovjtools):
-    print "OVJ_TOOLS path "+ovjtools+" not found."
+    print("OVJ_TOOLS path "+ovjtools+" not found.")
     sys.exit(1)
 
 # os.environ['OPENVNMRJ']="true"
@@ -21,7 +22,7 @@ if not os.path.exists(ovjtools):
 # os.environ['OPENVNMRJ_GSL']="true"
 
 platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
-print "Platform: ", platform
+print("Platform: ", platform)
 
 
 #
@@ -52,7 +53,7 @@ SetOption('warn', ['no-duplicate-environment'] + GetOption('warn'))
 cwd = os.getcwd()
 
 # non-java builds
-buildList = string.split("""
+buildList = """
                          app-defaults
                          acq
                          adm
@@ -73,7 +74,7 @@ buildList = string.split("""
                          sudo.lnx
                          xml
                          xmllayout
-                         """);
+                         """.split();
 
 #  Done in common
 #                        BIR
@@ -101,7 +102,7 @@ buildList = string.split("""
 #                        ncomm  done by psglib
 #                        kpsg  done by kpsglib
 
-buildList = string.split("""
+buildList = """
                          3D
                          autotest
                          backproj
@@ -130,9 +131,9 @@ buildList = string.split("""
                          tcl
                          veripulse
                          vnmrbg
-                         """);
+                         """.split();
 
-acqBuildList = string.split("""
+acqBuildList = """
                          768AS
                          craft
                          Cryo2
@@ -145,9 +146,9 @@ acqBuildList = string.split("""
                          nvacqkernel
                          nvdsp
                          servicetools
-                         """);
+                         """.split();
 
-acqBuildList = string.split("""
+acqBuildList = """
                          ampfit
                          atproc
                          bootpd.rh51
@@ -172,39 +173,39 @@ acqBuildList = string.split("""
                          sendproc
                          stat
                          web
-                         """);
+                         """.split();
 
-gslBuildList = string.split("""
+gslBuildList = """
                          aslmirtime
                          bin_image
                          xrecon
-                         """);
+                         """.split();
 
 # N.B. probeid was being built by apt, and vjclient by probeid.
 #      SCons shortcomings have forced the use of hardlinks.
 #
-javaBuildList = string.split("""
+javaBuildList = """
                              admin
                              dialog
                              jplot
                              managedb
                              vjmol
                              vnmrj
-                             """);
+                             """.split();
 
-javaAcqBuildList = string.split("""
+javaAcqBuildList = """
                              apt
                              cryo
 			     cryomon
                              jaccount
                              probeid
-                             """);
+                             """.split();
 
-thirdPartyList = string.split("""
+thirdPartyList = """
                               JavaPackages
-                              """);
+                              """.split();
 
-# print "Update versions file's keyword __GITDESCRIBE__ if present"
+# print("Update versions file's keyword __GITDESCRIBE__ if present"
 #  copy Version to the versions file so if it has the __GITDESCRBE__ key it
 #  will be replaced. For releases, the File <git-repo>/scripts/ReleaseVersion 
 #  is copied to <git-repo>/Version and it does not have the __GITDESCRIBE__
@@ -225,13 +226,13 @@ if os.path.exists(javaLink) or 'linux' not in platform:
    for i in javaBuildList:
       SConscript(os.path.join('src',i, 'SConstruct'))
 else:
-   print "java link in "+ovjtools+" not found. Skipping java compiles"
+   print("java link in "+ovjtools+" not found. Skipping java compiles")
 
 if ( os.path.exists(os.path.join('/usr','include','gsl')) ):
    for i in gslBuildList:
       SConscript(os.path.join('src',i, 'SConstruct'))
 else:
-   print "gsl includes not found. Skipping compiles requiring gsl"
+   print("gsl includes not found. Skipping compiles requiring gsl")
 
 vnmrPath    = os.path.join(cwd, os.pardir,'vnmr')
 
@@ -249,10 +250,10 @@ if ( 'darwin' not in platform):
       if not os.path.exists(binPath):
          os.makedirs(binPath)
       cmd = 'cp '+wkLink+'/wkhtmltopdf '+binPath+';chmod 755 '+binPath+'/wkhtmltopdf'
-#     print "cmd: ",cmd
+#     print("cmd: ",cmd)
       os.system(cmd)
       cmd = 'cp '+wkLink+'/wkhtmltopdf-i386 '+binPath+';chmod 755 '+binPath+'/wkhtmltopdf-i386'
-#     print "cmd: ",cmd
+#     print("cmd: ",cmd)
       os.system(cmd)
 
 # end of if platform group
@@ -286,7 +287,7 @@ def runSconsPostAction(dir):
       sconsFile = os.path.join(dir,i,'sconsPostAction')
       if os.path.exists(sconsFile):
          cmd='cd '+os.path.join(dir,i)+';chmod +x sconsPostAction; ./sconsPostAction; rm sconsPostAction'
-         print "cmd: ",cmd
+         print("cmd: ",cmd)
          os.system(cmd)
 
 # this must come last, since it creates sha1sum for all files
@@ -294,12 +295,12 @@ def afterScons():
    runSconsPostAction(vnmrPath)
    runSconsPostAction(os.path.join(vnmrPath, 'craft'))
 
-   print "Build ID file"
+   print("Build ID file")
    command = 'cd scripts; ./genBuildId.pl'
    idproc = subprocess.Popen( command, shell=True)
    status = os.waitpid(idproc.pid, 0)
 
-   print "Build Sha1 SnapShot of files"
+   print("Build Sha1 SnapShot of files")
    command = 'cd scripts; ./createSha1ChkList.sh'
    idproc = subprocess.Popen( command, shell=True)
    status = os.waitpid(idproc.pid, 0)

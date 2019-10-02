@@ -1,5 +1,7 @@
 #!
 
+from __future__ import print_function
+from past.builtins import execfile
 import os
 import sys
 import shutil
@@ -12,17 +14,17 @@ cwd = os.getcwd()
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
 # If not defined, try the default location
-    print "OVJ_TOOLS env not found. Trying default location."
+    print("OVJ_TOOLS env not found. Trying default location.")
     ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
 
 if not os.path.exists(ovjtools):
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    print("OVJ_TOOLS env not found.")
+    print("For bash and variants, use export OVJ_TOOLS=<path>")
+    print("For csh and variants,  use setenv OVJ_TOOLS <path>")
     sys.exit(1)
 
 platform = sys.platform
-print sys.platform
+print(sys.platform)
 
 #
 # define function to convert SUA paths to Windows
@@ -30,7 +32,7 @@ print sys.platform
 def Sua2WinPath(suaPath):
    if ( '/dev/fs/' in suaPath ):
      dLetter = suaPath[8:9]
-     # print dLetter
+     # print(dLetter)
      return dLetter + ':' + suaPath[9:]
    else:
       return suaPath
@@ -57,13 +59,13 @@ execfile(boFile)
 # if interix then replace /dev/fs/C/ with C:/
 #
 if ( 'interix' in platform ):
-   # print cwd
-   # print cwd[0:8]
+   # print(cwd)
+   # print(cwd[0:8])
    #tcwd = cwd[9:]
-   # print tcwd
+   # print(tcwd)
    #fbpath = 'C:' + tcwd
    fbpath = Sua2WinPath(cwd)
-   print fbpath
+   print(fbpath)
 
 # jsmooth lists
 JSmoothFileList = [os.path.join(fbpath, 'vnmrj.xml.jsmooth'),
@@ -94,7 +96,7 @@ jarFileList = [os.path.join(fbpath, 'gluegen-rt.jar'),
                os.path.join(fbpath, 'JTattoo.jar'),
                os.path.join(fbpath, 'xml.jar')]
 
-propFileList = string.split("""
+propFileList = """
                             AdmLabels_ja.properties
                             Labels_ja.properties
                             Options.properties
@@ -103,7 +105,7 @@ propFileList = string.split("""
                             ShimLabels.properties
                             AdmLabels_zh_CN.properties
                             Labels_zh_CN.properties
-                            """)
+                            """.split()
 
 
 ThirdPartyJarPath = os.path.join(ovjtools, 'JavaPackages')
@@ -116,10 +118,10 @@ env = Environment()
 #keys = dict.keys()
 #keys.sort()
 #for key in keys:
-#   print key, dict[key]
+#   print(key, dict[key])
 #
 #platform = sys.platform
-#print sys.platform
+#print(sys.platform)
 
 
 # Java envs
@@ -150,11 +152,11 @@ elif ( 'interix3' in platform): # Interix
    javaBinDir = os.path.join('/','dev','fs','C','"Program Files"','Java','jdk1.6.0_23','bin')
    jarBin = os.path.join(javaBinDir, 'jar.exe')
 else: 
-   print "Unknown Platform: ", platform
+   print("Unknown Platform: ", platform)
    sys.exit()
 
-#print javaBinDir
-#print jarBin
+#print(javaBinDir)
+#print(jarBin)
 
 # make sure the path(s) exist
 classesPath = os.path.join(cwd, 'classes')
@@ -230,14 +232,14 @@ elif ( 'interix' in platform ):
                        #                  '\'' + os.path.join(fbpath, 'classes') + '\'', 
                        #                  '\'' + os.path.join(javaWinBaseDir,'jre','lib')  + '\'' ],
 
-print jEnv['ENV']
-#print jEnv['JAVAC']
-#print jEnv['JAVACLASSPATH']
+print(jEnv['ENV'])
+#print(jEnv['JAVAC'])
+#print(jEnv['JAVACLASSPATH'])
 #dict = jEnv.Dictionary()
 #keys = dict.keys()
 #keys.sort()
 #for key in keys:
-#   print key, dict[key]
+#   print(key, dict[key])
 
 
 # just a double check of which javac is being used for the build
@@ -250,7 +252,7 @@ javaBuildVJMol = vjmolEnv.Java(source = os.path.join(cwd, 'vjmol_src'),
 
 findAction = 'find ' + os.path.join(cwd,'classes') + ' \( -name "*.java" -o -name "*.out" \) -exec rm -f {} \;'
 
-# print findAction
+# print(findAction)
 vjmolEnv.AddPostAction(javaBuildVJMol,
                        Action(findAction))
 if ( 'interix' not in platform):
@@ -277,7 +279,7 @@ f.close()
 #jEnv.AddPostAction(javaBuildObject,
 #                   Action(os.path.join(cwd,'removeJava.sh')))
 
-# print findAction
+# print(findAction)
 jEnv.AddPostAction(javaBuildObject,
                    Action(findAction))
 

@@ -1,7 +1,8 @@
+from __future__ import print_function
 import os
 
 
-print 'SConstruct.768AS'
+print('SConstruct.768AS')
 #get current working directory
 cwd = os.getcwd()
 
