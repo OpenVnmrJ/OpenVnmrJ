@@ -453,11 +453,13 @@ char *strval;
               fprintf(stderr,"%s %s\n",txt,strval);
 /* fprintf(stderr,"%s + %s\n",txt,strval); */
 	  }
+#ifdef MOTIF
 	  else
 	  {
             set_item_string( item_no, strval);
             show_item( item_no, ON);
 	  }
+#endif
         }
         else
         {
@@ -469,11 +471,13 @@ char *strval;
             else if(!logging)
               fprintf(stderr,"%s - %s\n",txt,strval);
 	  }
+#ifdef MOTIF
 	  else
 	  {
             set_item_string( item_no, " ");
             show_item( item_no, OFF);
 	  }
+#endif
 	}
     }
 }
@@ -511,11 +515,13 @@ unsigned long val;
                 fprintf(stderr,"%s %s\n",txt,s);
 /* fprintf(stderr,"%s + %s\n",txt,s); */
 	    }
+#ifdef MOTIF
 	    else
 	    {
               set_item_string( item_no, s );
               show_item( item_no, ON);
 	    }
+#endif
         }
         else
         {
@@ -527,11 +533,13 @@ unsigned long val;
               else
                 fprintf(stderr,"%s - %s\n",txt,s);
 	    }
+#ifdef MOTIF
 	    else
 	    {
               set_item_string( item_no, s );
               show_item( item_no, OFF);
 	    }
+#endif
         }
     }
 }
@@ -662,6 +670,7 @@ AcqStatBlock *statblock;
     static float damp = 0.4;    /* Lock level damping; 0=>none, 1=>complete */
     static int lastFTS = -500;
     static int skipFTS = 0;
+    static int lastLocklevel = -1;
     float damplevel;
     int i;
     struct tm *tmtime;
@@ -881,8 +890,12 @@ AcqStatBlock *statblock;
         }
         else
             buf[0]=0;
+        if (lastLocklevel != Locklevel)
+        {
         disp_string(LKVal,buf);
         checkLogEntry(LKVal,buf);
+        }
+        lastLocklevel = Locklevel;
 
     }
     LockPercent = damplevel;
@@ -936,7 +949,9 @@ AcqStatBlock *statblock;
         if (CurrentStatBlock.AcqSpinSet >= 0)
         {
             if (!SPNpan2)  {
+#ifdef MOTIF
                 show_item(SPN2Title, ON);
+#endif
                 SPNpan2 = 1;
             }
             sprintf(buf,"%d Hz",CurrentStatBlock.AcqSpinSet);
@@ -944,7 +959,9 @@ AcqStatBlock *statblock;
         else
         {
             if (SPNpan2)  {
+#ifdef MOTIF
                 show_item( SPN2Title, ON);
+#endif
                 SPNpan2 = 0;
             }
             buf[0]=0;
@@ -1048,7 +1065,9 @@ AcqStatBlock *statblock;
         if (CurrentStatBlock.AcqVTSet != 30000)
         {
             if (!VTpan2)  {
+#ifdef MOTIF
                 show_item( VT2Title, ON);
+#endif
                 VTpan2 = 1;
             }
             sprintf(buf,"%4.1f C",(float) CurrentStatBlock.AcqVTSet/10);
@@ -1056,7 +1075,9 @@ AcqStatBlock *statblock;
         else
         {
             if (VTpan2)  {
+#ifdef MOTIF
                 show_item( VT2Title, ON);
+#endif
                 VTpan2 = 0;
             }
             buf[0]=0;
@@ -1075,7 +1096,9 @@ AcqStatBlock *statblock;
         if (CurrentStatBlock.AcqVTAct != 30000)
         {
             if (!VTpan1)  {
+#ifdef MOTIF
                 show_item( VTTitle, ON);
+#endif
                 VTpan1 = 1;
             }
             sprintf(buf,"%4.1f C",(float) CurrentStatBlock.AcqVTAct/10);
@@ -1083,7 +1106,9 @@ AcqStatBlock *statblock;
         else
         {
             if (VTpan1)  {
+#ifdef MOTIF
                 show_item( VTTitle, ON);
+#endif
                 VTpan1 = 0;
             }
             buf[0]=0;
@@ -1268,6 +1293,7 @@ showstatus()
 +-------------------------------------------------------------------*/
 showInfostatus()
 {
+    static char lastMessage[50] = "\0";
     char message[50];
  
     switch(CurrentStatBlock.Acqstate)
@@ -1368,7 +1394,9 @@ showInfostatus()
                         strcpy(message, (acq_ok) ? "Active" : "Inactive");
 			break;
     }
-    disp_string(StatusVal,message);
+    if (strcmp(lastMessage, message) )
+       disp_string(StatusVal,message);
+    strcpy(lastMessage, message);
 }    
 /*-------------------------------------------------------
 |
@@ -1538,7 +1566,9 @@ showLSDV()
     if (stat == NOTPRESENT)
     { 
 	    if (VTpan)  {
+#ifdef MOTIF
                 show_item( VT_Title, OFF);
+#endif
 /*              disp_string(VT_Val,""); */
 	        VTpan = 0; 
 	        }
@@ -1549,7 +1579,9 @@ showLSDV()
     else
     {
 	if (!VTpan)  {
+#ifdef MOTIF
 	    show_item( VT_Title, ON);
+#endif
 	    VTpan = 1; 
 	}
         if (VTstat != stat)

@@ -127,10 +127,6 @@
 
 #include "ACQPROC_strucs.h"
 
-
-extern struct ybar *out[2];
-extern int old,new;
-
 int debug = 0;
 int canvasOn = 0;
 int acq_ok;
@@ -164,6 +160,7 @@ static int	 local_addr;
 static void create_Statuspanel();
 static void initDvals();
 static int setup_signal_handlers();
+void DoTheChores(int sig);
 
 void setLogFilePath(char *path);
 
@@ -174,19 +171,60 @@ AcqStatBlock  CurrentStatBlock;
 #define	FALSE   !TRUE
 #endif
 
+void sleepMilliSeconds(int msecs)
+{
+   struct timespec req;
+   req.tv_sec = msecs / 1000;
+   req.tv_nsec = (msecs % 1000) * 1000000;
+   nanosleep( &req, NULL);
+}
+
+static int input_fd = -1;
+
+void register_input_event(int fd)
+{
+   input_fd = fd;
+}
+
+
+void acqstat_window_loop()
+{
+   int  res;
+   fd_set  rfds;
+
+   while (1)
+    {
+       if (input_fd == -1)
+       {
+//          DoTheChores();
+          sleepMilliSeconds(IntervalTime*1000);
+       }
+       else
+       {
+       FD_ZERO( &rfds );
+       FD_SET( input_fd, &rfds);
+       res = select(input_fd+1, &rfds, 0, 0, 0);
+       if (res > 0)
+       {
+          int ch;
+          if (FD_ISSET(input_fd, &rfds) )
+             DoTheChores(0);
+       }
+       }
+    }
+}
 
 /*------------------------------------------------------------------
 |
 |
 |
 +------------------------------------------------------------------*/
-main(argc, argv)
-	int argc;char **argv; {
+int main(int argc, char *argv[])
+{
 	int n;
 	int pid;
 	int ival;
 	char *d_opt = "-debug";
-	struct passwd *getpwuid();
 	struct passwd *pasinfo;
 	struct hostent *local_hp;
 
@@ -350,13 +388,7 @@ main(argc, argv)
 	if ((strcmp(RemoteHost, LocalHost)) && (RemoteHost[0] != '\0'))
 		initrpctcp(RemoteHost);
 	/* to obtain acq. status info */
-	DoTheChores();
-	/*  while (1)
-	 {
-	 sleep(1);
-	 DoTheChores();
-	 }
-	 */
+	DoTheChores(0);
 #ifdef MOTIF
 	load_proc();
 #endif
@@ -372,15 +404,17 @@ main(argc, argv)
 |	3. get the acquisition status information and update
 |	     the status screen
 +-------------------------------------------------------------------*/
-DoTheChores() {
+void DoTheChores(int sig)
+{
 	struct timeval clock;
 	static long lastgettime = 0L;
 	static long lastregister = 0L;
 	extern void exitproc();
 	char buffer[256];
 	int ret;
+        static int first = 1;
 
-	inittimer(0.0, 0.0, NULL);
+	alarm(0);
 	if (pPid != 0) {
 		if ((kill(pPid, 0) == -1) && (errno == ESRCH)) {
 			exitproc();
@@ -415,17 +449,26 @@ DoTheChores() {
 		} else if (ret <= -1)
 			acq_ok = Acqproc_ok(RemoteHost);
 		if (debug)
-			fprintf(stderr, " result = %d\n", ret);
+			fprintf(stderr, " result = %d acq_ok= %d\n", ret, acq_ok);
 		if (!acq_ok)
+                {
 			initDvals();
+                    first = 0;
+                }
 		else if (PresentTime - lastregister > REREGISTERTIME) {
 			reregister();
 			lastregister = PresentTime;
 		}
-		inittimer(2.0, 2.0, DoTheChores);
-		IntervalTime = 2;
+//		inittimer(2.0, 2.0, DoTheChores);
+		if (acq_ok)
+		   IntervalTime = 5;
+                else
+		   IntervalTime = 1;
+                alarm(IntervalTime);
 	} else {
-		initDvals();
+                if (first)
+		   initDvals();
+                first = 0;
 		acq_ok = initIPCinfo(RemoteHost);
 		if (acq_ok) {
 			if (debug)
@@ -447,13 +490,12 @@ DoTheChores() {
 					exit(1);
 				}
 		}
-		if (useInfostat == 0) {
-			inittimer(5.0, 5.0, DoTheChores);
+		if (acq_ok) {
 			IntervalTime = 5;
 		} else {
-			inittimer(2.0, 2.0, DoTheChores);
 			IntervalTime = 2;
 		}
+                alarm(IntervalTime);
 	}
 }
 /*--------------------------------------------------------------------------
@@ -655,6 +697,13 @@ static int setup_signal_handlers()
 
 		ival = sigaction( signum, &intserv, NULL );
 	}
+		sigemptyset( &qmask );
+		sigaddset( &qmask, SIGIO );
+		intserv.sa_handler = DoTheChores;
+		intserv.sa_mask = qmask;
+		intserv.sa_flags = 0;
+
+		ival = sigaction( SIGALRM, &intserv, NULL );
 
 	return( 0 );
 }

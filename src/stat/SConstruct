@@ -21,7 +21,7 @@ vnmrFileList = ['shims.c']
 xracqPath    = os.path.join(cwd, os.pardir, 'xracq')
 xracqHdrList = ['STAT_DEFS.h']
 
-acqStatFileList = ['acqstat_win.c',
+acqStatFileList = [
                    'statusscrn.c',
                    'statdispfuncs.c',
                    'statIPCfuncs.c',
@@ -45,8 +45,7 @@ acqMeterFileList = ['acqmeter_win.c']
 statEnv = Environment(CCFLAGS    = '-O -m32',
                       CPPDEFINES = ['ACQSTAT', 'LINUX', 'SUN', 'BSDACQ', 'X11'],
                       LINKFLAGS  = '-O2 -m32 -Wl,-rpath,/vnmr/lib ',
-                      CPPPATH    = [cwd,
-                                    os.path.join(os.sep, 'usr', 'include', 'X11')])
+                      CPPPATH    = [cwd])
 
 buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, xracqPath, xracqHdrList)
 buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, acqProcPath, acqProcHdrList)
@@ -58,18 +57,14 @@ infostat = statEnv.Program(target  = infostatTarget,
                                       'acqinfo_xdr.c',
                                       vnmrFileList],
                            LIBPATH = [cwd,
-                                      ncommPath,
-                                      os.path.join(os.sep, 'usr', 'lib32', 'i386-linux-gnu'),
-                                      os.path.join(os.sep, 'usr', 'X11R6', 'lib')],
-                           LIBS    = ['Xt', 'X11', 'm', 'acqcomm'])
+                                      ncommPath],
+                           LIBS    = ['m', 'acqcomm'])
 
 showstat = statEnv.Program(target  = showstatTarget,
                            source  = [showStatFileList,
                                       infoServerFileList],
                            LIBPATH = [cwd,
-                                      ncommPath,
-                                      os.path.join(os.sep, 'usr', 'lib32', 'i386-linux-gnu'),
-                                      os.path.join(os.sep, 'usr', 'X11R6', 'lib')],
+                                      ncommPath],
                            LIBS    = [])
 
 # define with absolute path where built files will be copied

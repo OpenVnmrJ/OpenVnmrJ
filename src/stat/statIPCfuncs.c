@@ -11,6 +11,8 @@
 |	File contains the interprocess communications functions
 +-----------------------------------------------------------------------*/
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <pwd.h>
 #include <string.h>
 #include <errno.h>
@@ -66,7 +68,6 @@ static CLIENT *client = NULL;  /* RPC client handle */
 
 int    newAcq = 0;
 
-extern char *getenv();
 extern char RemoteHost[];
 
 extern struct hostent	local_entry;
@@ -135,8 +136,7 @@ int Ping_Pid()
 |       obtain system,user, acquisition process information
 |
 +-------------------------------------------------------------------*/
-initIPCinfo(remotehost)
-char *remotehost;
+initIPCinfo(char *remotehost)
 {
     char *tmpptr;
     FILE *stream;
@@ -153,7 +153,10 @@ char *remotehost;
     {
 #endif
       tmpptr = (char *)getenv("vnmrsystem");            /* vnmrsystem */
-      strcpy(filepath,tmpptr);
+      if (tmpptr)
+         strcpy(filepath,tmpptr);
+      else
+         strcpy(filepath,"/vnmr");
       strcat(filepath,"/acqqueue/acqinfo");
       if (stream = fopen(filepath,"r"))
       {
@@ -270,6 +273,10 @@ char *hostname;
    if (prog_num == -1)
    {
       tmpptr = (char *)getenv("vnmrsystem");            /* vnmrsystem */
+      if (tmpptr)
+         strcpy(filepath,tmpptr);
+      else
+         strcpy(filepath,"/vnmr");
       strcpy(filepath,tmpptr);
       strcat(filepath,"/acqqueue/acqinfo.port");
       if (stream = fopen(filepath,"r"))
