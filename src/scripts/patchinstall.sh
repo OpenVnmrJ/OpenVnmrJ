@@ -489,8 +489,8 @@ installPatch () {
 
 # Update checksums if it is an SE system
 fixSE () {
-
-    if [ -f /usr/varian/sbin/makeP11checksums ]
+    cmd = "/vnmr/p11/sbin/makeP11checksums"
+    if [ -f $cmd ]
     then
        nmr_adm=`ls -l $vnmrsystem/vnmrrev | awk '{print $3}'`
        nmr_group=`ls -l $vnmrsystem/vnmrrev | awk '{print $4}'`
@@ -508,7 +508,7 @@ fixSE () {
        else
              SUDO=""
        fi
-       $SUDO /usr/varian/sbin/makeP11checksums $vnmrsystem $nmr_adm $nmr_group
+       $SUDO $cmd $vnmrsystem $nmr_adm $nmr_group
     fi
     cd $vnmrsystem
     dir=`/bin/pwd`
@@ -568,31 +568,27 @@ clean_up () {
 #                Main
 #-----------------------------------------------------------
 
-if [ $# -ne 1 ]
-then
-    echo ""
-    echo "Usage:   $0 \"patch filename\" "
-    exit 1
-fi
-user=`id -un`
+user=$(id -un)
 if [ x$user = "xroot" ]
 then
     echo "Patch can not be loaded by root. Exit patchinstall."
     exit 1
 fi
 
-
-###Is this an old format patch
-teststring=`basename "$1" | cut -c17-`
-if [ x$teststring = "x.tar.Z" ]
-then
-   echo ""
-   echo "Using version 1 of patchinstall. Patchuninstall is not available"
-   patchinstall_ver1 $1
-   exit 1
-fi
-
 get_vnmrsystem
+
+if [ $# -ne 1 ]
+then
+   patch=$(ls $vnmrsystem/tmp/*.ptc)
+   if [[ -z $patch ]]
+   then
+      echo ""
+      echo "$0 No patch file found in $vnmrsystem/tmp"
+      exit 1
+   fi
+else
+   patch=$1
+fi
 
 if touch "$vnmrsystem"/testpermission 2>/dev/null
 then
@@ -605,15 +601,15 @@ else
      exit 1
 fi
 
-firstchar=`echo $1 | cut -c1-1`
+firstchar=$(echo $patch | cut -c1-1)
 if [ x$firstchar = "x/" ]  #absolute path
 then
-   patchfile=$1
+   patchfile=$patch
 else
-   patchfile=`pwd`/$1
+   patchfile=`pwd`/$patch
 fi
 
-patch_id=`basename $patchfile .ptc`
+patch_id=$(basename $patchfile .ptc)
 
 checkPatchName "$patchfile"
 if [ $? -ne 0 ]

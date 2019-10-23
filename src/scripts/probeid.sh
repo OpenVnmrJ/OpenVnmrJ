@@ -1,5 +1,4 @@
-#!/bin/sh
-# @(#)probid.sh 22.1 03/24/08 2010 
+#!/bin/bash
 #
 # change 1st line to "#! /bin/sh -x" or pass in -x flag for debug
 # 
@@ -70,10 +69,9 @@ ACTION=""               	      # default to "help" if action unspecified
 MOUNT_NOCRYPTO_DFLT="/vnmr/probeid/mnt"
 MOUNT_DFLT="/vnmr/probeid/mnt"        # default encrypted probe mount point
 MOUNT="/mnt/probe"                    # default probe mount point
-SBIN="/usr/varian/sbin"
 MOUNT_ONLY=0                          # exit right after mounting probe
-PROBE_MOUNT="$SBIN/probe_mount"
-PROBE_UNMOUNT="$SBIN/probe_unmount"
+PROBE_MOUNT="$SYSDIR/bin/probe_mount"
+PROBE_UNMOUNT="$SYSDIR/bin/probe_unmount"
 DOMOUNT=""
 DOSIM="false"                         # simulate probe
 

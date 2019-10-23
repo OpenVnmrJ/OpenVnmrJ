@@ -1,5 +1,4 @@
-: '@(#)aupurge.sh 22.1 03/24/08 1999-2002 '
-#
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -9,7 +8,6 @@
 # For more information, see the LICENSE file.
 # 
 #
-#!/bin/sh
 #aupurge.sh
 
     if test x"$vnmrsystem" = "x"
@@ -43,8 +41,6 @@
     p11conf=$vnmrsystem/p11/part11Config
 
     bsm_audit_dir=`grep dir: $aucontrl | cut -d: -f2,3`
-    #for testing only
-    #bsm_audit_dir=/usr25/chin/test-au
 
     #will remove this dir at the end, no need to save .praud files
     dot_praud_tmp_dir=/tmp/uaudit
@@ -78,16 +74,10 @@
 	rm -rf $dot_cond_tmp_dir/*.cond
     fi
 
-    #for testing only
-    #dot_cond_dest_dir=/usr25/chin/test-au/d-dir
-
-    /usr/varian/sbin/auconvert $bsm_audit_dir $dot_praud_tmp_dir
-    #/usr25/chin/part11/auconvert.sh $bsm_audit_dir $dot_praud_tmp_dir
-
+    /vnmr/p11/sbin/auconvert $bsm_audit_dir $dot_praud_tmp_dir
 
     rm -f $dot_cond_tmp_dir/*.not_terminated.*
-    /usr/varian/sbin/aureduce $dot_praud_tmp_dir $dot_cond_tmp_dir
-    #/usr25/chin/part11/aureduce.sh $dot_praud_tmp_dir $dot_cond_dest_dir 
+    /vnmr/p11/sbin/aureduce $dot_praud_tmp_dir $dot_cond_tmp_dir
 
     #do not want to keep these files 
     rm -rf $dot_praud_tmp_dir

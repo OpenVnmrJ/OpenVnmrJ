@@ -1,5 +1,4 @@
-: /bin/sh
-# 
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -43,79 +42,36 @@ then
 fi
 echo "Updating OpenVnmrJ from $prev"
 
-if [ -d $prev/bin ]
-then
-  echo "Collecting misc programs"
-  cd $prev
-  newdir=$ovj
-  if [ -f bin/dcdump -a ! -f $newdir/bin/dcdump ]
-  then
-    cp bin/dcdump $newdir/bin/dcdump
-  fi
-  if [ -f bin/dciodvfy -a ! -f $newdir/bin/dciodvfy ]
-  then
-    cp bin/dciodvfy $newdir/bin/dciodvfy
-  fi
-  if [ -f bin/vjLCAnalysis -a ! -f $newdir/bin/vjLCAnalysis ]
-  then
-    cp bin/vjLCAnalysis $newdir/bin/vjLCAnalysis
-  fi
-  if [ -d kermit -a ! -d $newdir/kermit ]
-  then
-    cp -r kermit $newdir/.
-  fi
-fi
-if [ -d $prev/biopack -a -d $ovj/biopack -a ! -d $ovj/biopack/fidlib ]
+if [ -d $prev/biopack/fidlib ] && [ -d $ovj/biopack ] && [ ! -d $ovj/biopack/fidlib ]
 then
   echo "Collecting biopack files"
   cd $prev/biopack
   newdir=$ovj/biopack
-  zip -ryq $newdir/b.zip bin BioPack.dir/BP_doc fidlib
-  cd $newdir
-  unzip -qn b.zip
-  rm b.zip
+  tar cf - bin BioPack.dir/BP_doc fidlib 2> /dev/null | (cd $newdir && tar xpf -)
 fi
-if [ -d $prev/nmrpipe -a ! -d $ovj/nmrpipe ]
-then
-  echo "Collecting nmrpipe"
-  cd $prev
-  newdir=$ovj
-  zip -ryq $newdir/b.zip nmrpipe
-  cd $newdir
-  unzip -qn b.zip
-  rm b.zip
-fi
-if [ -d $prev/help -a ! -d $ovj/help ]
+if [ -d $prev/help ] && [ ! -d $ovj/help ]
 then
   echo "Collecting help"
   cd $prev
   newdir=$ovj
-  zip -ryq $newdir/b.zip help
-  cd $newdir
-  unzip -qn b.zip
-  rm b.zip
+  tar cf - help | (cd $newdir && tar xpf -)
 fi
-if [ -d $prev/fidlib -a ! -d $ovj/fidlib ]
+if [ -d $prev/fidlib/Ethylindanone ] && [ ! -d $ovj/fidlib/Ethylindanone ]
 then
   echo "Collecting fidlib"
   cd $prev
   newdir=$ovj
-  zip -ryq $newdir/b.zip fidlib
-  cd $newdir
-  unzip -qn b.zip
-  rm b.zip
+  rm -rf $newdir/fidlib
+  tar cf - fidlib | (cd $newdir && tar xpf -)
 fi
-if [ -d $prev/imaging/data -a ! -d $ovj/imaging/data ]
+if [ -d $prev/imaging/data ] && [ ! -d $ovj/imaging/data ]
 then
   echo "Collecting imaging data"
   cd $prev/imaging
   newdir=$ovj/imaging
-  zip -ryq $newdir/b.zip data
-  cd $newdir
-  unzip -qn b.zip
-  rm b.zip
+  tar cf - data | (cd $newdir && tar xpf -)
 fi
-if [ -f $prev/imaging/seqlib/gems -a ! -f $ovj/imaging/seqlib/gems ]
+if [ -f $prev/imaging/seqlib/gems ] && [ ! -f $ovj/imaging/seqlib/gems ]
 then
   echo "Collecting imaging files"
   cd $prev/imaging
@@ -134,7 +90,7 @@ then
 
   for mac in $macList
   do
-      if [ -f maclib/$mac -a ! -f $newdir/maclib/$mac ]
+      if [ -f maclib/$mac ] && [ ! -f $newdir/maclib/$mac ]
       then
         cp maclib/$mac $newdir/maclib/$mac
       fi
@@ -157,7 +113,7 @@ then
 
   for par in $parList
   do
-      if [ -d parlib/$par -a ! -d $newdir/parlib/$par ]
+      if [ -d parlib/$par ] && [ ! -d $newdir/parlib/$par ]
       then
         cp -r parlib/$par $newdir/parlib/$par
       fi
@@ -181,16 +137,16 @@ then
 
   for seq in $seqList
   do
-      if [ -f seqlib/$seq -a ! -f $newdir/seqlib/$seq ]
+      if [ -f seqlib/$seq ] && [ ! -f $newdir/seqlib/$seq ]
       then
         cp seqlib/$seq $newdir/seqlib/$seq
         cp psglib/"$seq".c $newdir/psglib/"$seq".c
       fi
-      if [ -f templates/vnmrj/protocols/"$seq".xml -a ! -f $newdir/templates/vnmrj/protocols/"$seq".xml ]
+      if [ -f templates/vnmrj/protocols/"$seq".xml ] && [ ! -f $newdir/templates/vnmrj/protocols/"$seq".xml ]
       then
         cp templates/vnmrj/protocols/"$seq".xml $newdir/templates/vnmrj/protocols/"$seq".xml
       fi
-      if [ -d templates/layout/"$seq" -a ! -d $newdir/templates/layout/"$seq" ]
+      if [ -d templates/layout/"$seq" ] && [ ! -d $newdir/templates/layout/"$seq" ]
       then
         cp -r templates/layout/"$seq" $newdir/templates/layout/"$seq"
       fi
@@ -203,27 +159,13 @@ then
           "
   for def in $defList
   do
-      if [ -f templates/layout/default/$def -a ! -f $newdir/templates/layout/default/$def ]
+      if [ -f templates/layout/default/$def ] && [ ! -f $newdir/templates/layout/default/$def ]
       then
         cp templates/layout/default/$def $newdir/templates/layout/default/$def
       fi
-      if [ -f templates/layout/fsems/$def -a ! -f $newdir/templates/layout/fsems/$def ]
+      if [ -f templates/layout/fsems/$def ] && [ ! -f $newdir/templates/layout/fsems/$def ]
       then
         cp templates/layout/fsems/$def $newdir/templates/layout/fsems/$def
-      fi
-  done
-  cd $prev
-  newdir=$ovj
-  binList="   \
-              echoscu    \
-              storescp    \
-              storescu    \
-          "
-  for def in $binList
-  do
-      if [ -f dicom/bin/$def -a ! -f $newdir/dicom/bin/$def ]
-      then
-        cp dicom/bin/$def $newdir/dicom/bin/$def
       fi
   done
 fi

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Add Bluetooth Remote Status Unit components
 #
@@ -175,12 +175,19 @@ check_tornado_version()
 install_tornado()
 {
   msg_ "installing web server"
-  pushd /tmp > /dev/null
-  tar xf ${tornado_dist}
-  cd ${tornado}
-  python setup.py build >> ${install_log}
-  /usr/bin/sudo python setup.py install >> ${install_log}
-  popd > /dev/null
+  if [[ $rhel_rel > 7.1 ]]; then
+    if [ "$(rpm -q python-tornado | grep 'not installed' > /dev/null;echo $?)" == "0" ]
+    then
+      yum -y install ${vnmrsystem}/web/dist/python-tornado-4.2.1-1.el7.x86_64.rpm &>> ${install_log}
+    fi
+  else
+    pushd /tmp > /dev/null
+    tar xf ${tornado_dist}
+    cd ${tornado}
+    python setup.py build >> ${install_log}
+    /usr/bin/sudo python setup.py install >> ${install_log}
+    popd > /dev/null
+  fi
   check_tornado_version || error "tornado installation failed"
   msg ".. OK"
 }
@@ -359,21 +366,20 @@ check_ip_config()
   wormhole=wormhole
   wormholeip=`gethostip $wormhole | awk '{print $2}'`
   if [[ "$wormholeip" != "172.16.0.1" && "$wormholeip" != "10.0.0.1" ]]; then
-    echo "console port has not been configured correctly - please run setacq first"
+    echo "console port has not been configured correctly - run setacq"
     exit 2
   fi
 
   msg_ "determining console network interface"
   consolenic=""
-  for nic in `/sbin/ifconfig -a | awk '/^eth/ { print $1}' | grep -v :`; do
-    addr=`/sbin/ifconfig $nic | awk '/inet addr/ { print $2}' | sed 's/addr://'`
-    if [[ "$addr" == "$wormholeip" ]]; then
-      msg ".. selected $nic for tablet network"
-      consolenic=$nic
-    fi
-  done
+  file=${vnmrsystem}/adm/log/CONSOLE_NIC
+  if [[ -e ${file} ]]; then
+    nic=$(cat ${file})
+    msg ".. selected $nic for tablet network"
+    consolenic=$nic
+  fi
   if [[ "$consolenic" == "" ]]; then
-    error "console NIC ($wormhole) could not be determined - has it been configured?"
+    error "console NIC ($wormhole) could not be determined - run setacq"
   fi
 }
 

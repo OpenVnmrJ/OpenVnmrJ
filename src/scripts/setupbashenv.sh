@@ -3,75 +3,40 @@
 # script to modify the .profile and .bashrc to source the
 # .vnmrenvbash file
 # .profile is read for the desktop and non-interactive shell
-#    important for VnmrJ adm use and for desktop icon to be able to
-#    start VnmrJ
+#    important for OpenVnmrJ adm use and for desktop icon to be able to
+#    start OpenVnmrJ
 #  
 # .bashrc is read for interactive bash shell
 #
-#    Author:  Greg Brissey    5/06/2009
 #
 #set -x
 
-SUDO="/usr/bin/sudo"
-ED="/bin/ed"
-
+if [ "x$vnmrsystem" = "x" ]
+then
+   vnmrsystem="/vnmr"
+fi
 userpath=$1
 if [ -z $userpath ] ; then
-  echo "Enter user path: "
-  read userpath
+  userpath=$HOME
 fi 
 
-# if path valid then proceed with checking/modifing .profile & .bashrc
+# if path valid then proceed with checking/modifing .profile & .bash_profile
 if [ -d  $userpath ] 
 then
-#   echo "cd: $userpath"
-
-#  $SUDO cd $userpath ;  won't work because cd is a builtin shell cmd
-
-   cd $userpath ;
-
-#
-# test if the .profile has already has been modified
-# if not then append the text to the end of the file
-#
-profilefind=`grep .vnmrenvbash .profile`
-if [ -z "$profilefind" ] ; then
-   $SUDO $ED -s ".profile" <<+
-a
-#
-# source Varian VnmrJ envs for the desktop
-#
-if [ -f "\$HOME/.vnmrenvbash" ]; then
-    . "\$HOME/.vnmrenvbash"
-fi
-
-.
-w
-q
-+
-fi
-
-#
-# test if the .bashrc has already has been modified
-# if not then append the text to the end of the file
-#
-bashrcfind=`grep .vnmrenvbash .bashrc`
-if [ -z "$bashrcfind" ] ; then
-   $SUDO $ED -s ".bashrc" <<+
-a
-#
-# source the VnmrJ envs for interactive bash/sh shells
-#
-if [ -f "\$HOME/.vnmrenvbash" ]; then
-    . "\$HOME/.vnmrenvbash"
-fi
-
-.
-w
-q
-+
-fi
-
+   if [ -f $userpath/.bash_profile ] ; then
+      envFound=$(grep vnmrenvbash $userpath/.bash_profile)
+      if [ -z "$envFound" ] ; then
+         cat "$vnmrsystem/user_templates/profile" >> $userpath/.bash_profile
+      fi
+   elif [ -f $userpath/.profile ] ; then
+      envFound=$(grep vnmrenvbash $userpath/.profile)
+      if [ -z "$envFound" ] ; then
+         cat "$vnmrsystem/user_templates/profile" >> $userpath/.profile
+      fi
+   fi
+   if [ ! -f $userpath/.vnmrenvbash ] ; then
+      cp $vnmrsystem/user_templates/.vnmrenvbash $userpath/.
+   fi
 else
   echo "Invalid user path: $userpath"
 fi

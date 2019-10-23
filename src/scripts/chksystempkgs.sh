@@ -35,8 +35,8 @@ if [ ! -x /usr/bin/dpkg ]; then
    elif [ $version -eq 6 ]
    then
 #     for RHEL 6.X must list 32-bit packages, since these are no longer installed with the 64-bit versions
-      package61list='libgfortran openmotif22 gnome-power-manager'
-      package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686 openmotif openmotif-devel mesa-libGL-devel mesa-libGL mesa-libGLU'
+      package61list='libgfortran openmotif gnome-power-manager'
+      package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686 mesa-libGL-devel mesa-libGL mesa-libGLU'
       packagelist="$packagecommonlist $package61list $package32Bitlist"
    else
       packagecommonlist='compat-libf2c-34 compat-gcc-34-g77 openmotif22 gnome-power-manager'

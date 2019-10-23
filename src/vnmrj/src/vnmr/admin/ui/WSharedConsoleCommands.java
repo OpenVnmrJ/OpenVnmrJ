@@ -15,13 +15,14 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 import vnmr.util.Messages;
+import vnmr.util.FileUtil;
 
 
 public class WSharedConsoleCommands {
 
     static String status() {
         String output=null;
-        String cmd = WGlobal.SUDO + " " + WGlobal.SBIN + "dtsharcntrl status";
+        String cmd = WGlobal.SUDO + " " + FileUtil.sysdir() + "/bin/dtsharcntrl status";
         Runtime rt = Runtime.getRuntime();
         Process prcs = null;
         try {
@@ -67,7 +68,7 @@ public class WSharedConsoleCommands {
 
     static String enable(String password) {
         String output=null;
-        String cmd = WGlobal.SUDO + " " + WGlobal.SBIN + "dtsharcntrl start "
+        String cmd = WGlobal.SUDO + " " + FileUtil.sysdir() + "/bin/dtsharcntrl start "
                      + password;
         Runtime rt = Runtime.getRuntime();
         Process prcs = null;
@@ -114,7 +115,7 @@ public class WSharedConsoleCommands {
 
     static String disable() {
         String output=null;
-        String cmd = WGlobal.SUDO + " " + WGlobal.SBIN + "dtsharcntrl stop";
+        String cmd = WGlobal.SUDO + " " + FileUtil.sysdir() + "/bin/dtsharcntrl stop";
         Runtime rt = Runtime.getRuntime();
         Process prcs = null;
         try {

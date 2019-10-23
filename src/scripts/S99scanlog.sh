@@ -1,5 +1,4 @@
-#!/bin/sh
-# 
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -15,11 +14,11 @@
 
 case "$1" in
 'start')
-        if [ -r /usr/varian/sbin/scanlog ]
+        if [ -r /vnmr/p11/sbin/scanlog ]
 	then
                 echo 'starting scanlog daemon'
 
-                /usr/varian/sbin/scanlog &
+                /vnmr/p11/sbin/scanlog &
 		echo $! > /vnmr/adm/scanlogpid
 		chmod 600 /vnmr/adm/scanlogpid
         fi

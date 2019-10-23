@@ -1,5 +1,4 @@
-: '@(#)mkvnmrjadmin.sh 22.1 03/24/08 1999-2000 '
-# 
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -9,7 +8,6 @@
 # For more information, see the LICENSE file.
 # 
 #
-: /bin/sh
 
 if test $# -lt 2
 then
@@ -25,12 +23,7 @@ export vnmrsystem user
 ostype=`uname -s`
 if [ x$ostype != "xInterix" ]
 then
-    $vnmrsystem/bin/makeuser $user << +++
-y
-y
-y
-y
-+++
+    $vnmrsystem/bin/makeuser $user "" "" "y"
 else
     homedir=`"$vnmrsystem"/bin/getuserinfo "$user" | awk '{FS=";"} {print $2}' | awk '{FS=" "} {print $1}'`
     homedir_interix=`winpath2unix "$homedir"`

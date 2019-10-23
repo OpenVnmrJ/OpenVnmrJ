@@ -1,6 +1,4 @@
-#!/bin/sh
-# '@(#)patchuninstall.sh ' 
-#
+#!/bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -92,7 +90,8 @@ uninstallPatch () {
 # Update checksums if it is an SE system
 fixSE () {
 
-    if [ -f /usr/varian/sbin/makeP11checksums ]
+    cmd = "/vnmr/p11/sbin/makeP11checksums"
+    if [ -f $cmd ]
     then
        nmr_adm=`ls -l $vnmrsystem/vnmrrev | awk '{print $3}'`
        nmr_group=`ls -l $vnmrsystem/vnmrrev | awk '{print $4}'`
@@ -110,7 +109,7 @@ fixSE () {
        else
              SUDO=""
        fi
-       $SUDO /usr/varian/sbin/makeP11checksums $vnmrsystem $nmr_adm $nmr_group
+       $SUDO $cmd $vnmrsystem $nmr_adm $nmr_group
     fi
     cd $vnmrsystem
     dir=`/bin/pwd`
