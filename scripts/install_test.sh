@@ -199,14 +199,21 @@ vnmr_cmd() {
 }
 
 is_ovj_installed() {
+    local errcnt=$ERRCOUNT
+    local numerr=1
     # does ovj appear to be installed already?
     # todo: could check more thoroughly!
-    [ -d /vnmr ] && [ -d /usr/varian ] && \
-        [ -d "${OVJ_HOME}/${OVJ_VERSION}" ] && \
-        [ -d ~vnmr1 ] && \
-        [ -d ~testuser ] && \
-        getent passwd testuser && \
-        getent passwd vnmr1 > /dev/null 2>&1
+    [ -d /vnmr ] || log_error "Missing /vnmr"
+    [ -d /vnmr/templates ] || log_error "Missing /vnmr/templates"
+    #[ -d /vnmr/p11/sbin ] || log_error "Missing /vnmr/p11/sbin (pre-OpenVnmrJ2 installation?)"
+    [ -d "${OVJ_HOME}/${OVJ_VERSION}" ] || log_error "Missing '${OVJ_HOME}/${OVJ_VERSION}'"
+    [ -d ~vnmr1 ] || log_error "Missing ~vnmr1/"
+    [ -d ~testuser ] || log_error "Missing ~testuser/"
+    getent passwd vnmr1 || log_error "'vnmr1' missing passwd entry via getent"
+    getent passwd testuser || log_error "'testuser' missing passwd entry via getent"
+    numerr=$(( ERRCOUNT - errcnt ))
+    ERRCOUNT=$errcnt
+    return $numerr
 }
 
 join_by() { local IFS="$1"; shift; echo "$*"; }
@@ -352,7 +359,7 @@ for ACTION in $ACTIONS ; do
         # make sure there's an installation
         if ! is_ovj_installed ; then
             log_error "Cant run tests without OpenVnmrJ installation"
-            return 1
+            break
         fi
 
         # The test suite is in OpenVnmrJ/src/vjqa. This is not included in
