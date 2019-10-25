@@ -70,6 +70,17 @@ log_setup () {
     trap 'exec 1>&3 2>&4' 0
     trap 'exec 1>&3 2>&4; exit 1' 1 2 3
     #trap 'onerror' 0 1 2 3
+    # move old LOGFILE
+    if [ -f "${LOGFILE}" ]; then
+        for SEQ in $(seq -w 1 10); do
+            if [ ! -f "${LOGFILE}.${SEQ}" ] || [ $SEQ -eq 10 ]; then
+                echo "Moving old logfile ${LOGFILE} to ${LOGFILE}.${SEQ}"
+                mv "${LOGFILE}" "${LOGFILE}.${SEQ}"
+                break
+            fi
+        done
+    fi
+    # redirect output to LOGFILE
     if [ ${VERBOSE} -gt 3 ]; then
         # at VERBOSE >= DEBUG level, also send cmd output to terminal
         exec 1> >(tee -a "${LOGFILE}") 2>&1
