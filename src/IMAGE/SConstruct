@@ -1,5 +1,6 @@
 import os
 import sys
+import glob
 sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import myShutil # for better copytree()
 
@@ -22,6 +23,25 @@ if ('darwin' not in platform):
    # build image math functions addms, subms, etc.. 
    mathfuncPath = os.path.join(cwd, 'user_templates', 'ib_initdir', 'math', 'functions', 'src')
    SConscript(os.path.join(mathfuncPath, 'SConstruct'))
+
+   ovjtools=os.getenv('OVJ_TOOLS')
+   if not ovjtools:
+# If not defined, try the default location
+       print "OVJ_TOOLS env not found. Trying default location."
+       ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+   if not os.path.exists(ovjtools):
+       print "OVJ_TOOLS env not found."
+       print "For bash and variants, use export OVJ_TOOLS=<path>"
+       print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+       sys.exit(1)
+   libPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'vnmr','lib')
+   Execute(Mkdir(libPath))
+   libList = glob.glob(os.path.join(ovjtools,'jogl_libs')+"/*.so")
+   for i in libList:
+      name = os.path.basename(i)
+      dest = os.path.join(libPath,name)
+      Execute(Copy(dest,i))
+
 
 
 # we need to specify an absolute path so this SConstruct file
