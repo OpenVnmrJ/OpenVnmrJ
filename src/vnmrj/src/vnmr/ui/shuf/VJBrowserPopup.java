@@ -44,7 +44,7 @@ public class VJBrowserPopup extends JFrame implements PropertyChangeListener {
 
         DisplayOptions.addChangeListener(this);
         
-        Image img = Util.getImage("vnmrj.gif");
+        Image img = Util.getImage("OVJ.png");
         if (img != null)
             this.setIconImage(img);
 
