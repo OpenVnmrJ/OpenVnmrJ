@@ -28,6 +28,12 @@ usage:
     has intrenet access, then entering $SCRIPT will do the installion. Any currently
     installed NMRPipe will be backed up.
 
+    $SCRIPT tests internet access by "pinging" the NMRPipe web site.
+    The ping command may also fail due to a firewall blocking it.
+    If you are sure the system is connected to the internet
+    and want to bypass this "ping" test, use
+    $SCRIPT noPing
+
     If your system does not have internet access but does have access to shared
     directories with systems that do have internet access, then one can use a
     two-step process.
@@ -55,6 +61,14 @@ options:
 EOF
     exit 1
 }
+
+noPing=0
+for arg in "$@"
+do
+  if [[ "x$arg" = "xnoPing" ]]; then
+     noPing=1
+  fi
+done
 
 # process flag args
 while [ $# -gt 0 ]; do
@@ -172,7 +186,7 @@ downloadFiles() {
          rm -f "aDuMmYfIlE"
          pingRecv=`ping -c 1 -q -W 1 $URL | grep received | awk '{ print $4 }'`
          
-         if [ ${pingRecv} -eq 1 ]; then
+         if [[ ${pingRecv} -eq 1 ]] || [[ $noPing -eq 1 ]] ; then
             $OVJ_VECHO "Test for internet access to $URL passed"
             if [ "x${OVJ_LOG}" != "x" ] ; then
                if [ ${OVJ_LOG:0:1} = '/' ]; then
@@ -191,6 +205,12 @@ downloadFiles() {
             fi
          else
             echo "Internet access to $URL failed"
+            echo "This is tested by doing \"ping $URL\". The ping"
+            echo "command may also fail due to a firewall blocking it."
+            echo "If you are sure the system is connected to the internet"
+            echo "and want to bypass this \"ping\" test, use"
+            echo "$SCRIPT noPing"
+            echo ""
             return 1
          fi
       else
