@@ -1011,7 +1011,8 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
 
-    if (argc != 3) {
+    if ( !((argc == 3) || ( (argc == 4) && ! strcmp(argv[1],"-f") )) )
+    {
       Werrprintf( "%s:  use exactly 2 arguments", argv[ 0 ] );
       ABORT;
     }
@@ -1026,7 +1027,10 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
 	    ABORT;
 	}
     }
-    if ( rename(argv[1], argv[2]) )
+    i = 1;
+    if (argc == 4)
+       i = 2;
+    if ( rename(argv[i], argv[i+1]) )
     {
        strcpy(cmdstr,"/bin/mv");
        for (i=1; i<argc; i++)
