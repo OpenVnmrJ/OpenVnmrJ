@@ -10,11 +10,101 @@
 #
 # set -x
 
-ping -W 1 -c 1 www.github.com > /dev/null 2>&1
-if [ $? -ne 0 ]
+userId=$(/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }')
+if [ $userId != "uid=0(root)" ]; then
+  echo
+  if [ x$distroType = "xdebian" ]; then
+     echo "Installing OpenVnmrJ for Ubuntu."
+  else
+     echo "Installing OpenVnmrJ for RHEL / CentOS."
+  fi
+  echo "Or type cntrl-C to exit."
+  echo
+  s=1
+  t=3
+  while [[ $s = 1 ]] && [[ ! $t = 0 ]]; do
+     if [ x$distroType = "xdebian" ]; then
+        echo "If requested, enter the admin (sudo) password"
+        sudo $0 $* ;
+     else
+        echo "Please enter this system's root user password"
+        su root -c "$0 $*";
+     fi
+     s=$?
+     t=$((t-1))
+     echo " "
+  done
+  if [ $t = 0 ]; then
+      echo "Access denied. Type cntrl-C to exit this window."
+      echo "Type $0 to start the installation program again"
+      echo ""
+  fi
+  exit
+fi
+
+
+turboRepo() {
+   cat >/etc/yum.repos.d/TurboVNC.repo  <<EOF
+
+[TurboVNC]
+name=TurboVNC official RPMs
+baseurl=https://sourceforge.net/projects/turbovnc/files
+gpgcheck=1
+gpgkey=http://pgp.mit.edu/pks/lookup?op=get&search=0x6BBEFA1972FEB9CE
+enabled=1
+exclude=turbovnc-*.*.9[0-9]-*
+EOF
+}
+
+if [[ -f /etc/yum.repos.d/openvnmrj.repo ]]; then
+  ovjRepo=1
+else
+  ovjRepo=0
+fi
+
+repoGet=0
+if [[ "x$(basename $0)" = "xovjGetRepo" ]]; then
+  if [ ! -f /etc/centos-release ]; then
+    if [ ! -f /etc/redhat-release ]; then
+      echo "$0 can only be used for CentOS or RedHat systems"
+      exit 1
+    fi
+  fi
+  repoGet=1
+  if [[ $ovjRepo -eq 1 ]]; then
+    rm -f /etc/yum.repos.d/openvnmrj.repo
+    ovjRepo=0
+  fi
+  repoPath=$(dirname $(dirname $(readlink -f $0)))
+  repoPath=$(dirname $repoPath)/openvnmrj.repo
+  repoArg="--download_path=$repoPath"
+  repoArg="--downloadonly --downloaddir=$repoPath"
+fi
+
+noPing=0
+for arg in "$@"
+do
+  if [[ "x$arg" = "xnoPing" ]]; then
+     noPing=1
+  fi
+done
+
+if [[ $ovjRepo -eq 0 ]] && [[ $noPing -eq 0 ]]
 then
-   echo "Must be connected to the internet for $0 to function"
-   exit 1
+   ping -W 1 -c 1 google.com > /dev/null 2>&1
+   if [ $? -ne 0 ]
+   then
+      echo "Must be connected to the internet for $0 to function"
+      echo "This is tested by doing \"ping google.com\". The ping"
+      echo "command may also fail due to a firewall blocking it."
+      echo "If you are sure the system is connected to the internet"
+      echo "and want to bypass this \"ping\" test, use"
+      echo "./load.nmr noPing"
+      echo "or"
+      echo "$0 noPing"
+      echo ""
+      exit 2
+   fi
 fi
 
 if [ ! -x /usr/bin/dpkg ]; then
@@ -99,7 +189,6 @@ if [ ! -x /usr/bin/dpkg ]; then
 # The following were removed from the CentOS 6.8 kickstart
 # gnome-python2-desktop
 # compat-gcc-34-g77
-# mutt
 # openmotif22
 # openmotif-devel.i686
 # rpmforge-release
@@ -110,8 +199,6 @@ if [ ! -x /usr/bin/dpkg ]; then
 # @desktop-platform-devel
 # @eclipse
 # @general-desktop
-# rsh
-# rsh-server
 # sendmail-cf
 # unix2dos
 # @server-platform
@@ -145,14 +232,15 @@ if [ ! -x /usr/bin/dpkg ]; then
 # libgnomeui-devel
 # libbonobo-devel
 # kdegraphics
+# @debugging
+# @graphics
 
  package68List=' 
-  @debugging
-  @graphics
   libstdc++
   libstdc++-devel
   glibc
   glibc-devel
+  libX11
  '
 
  offList=' 
@@ -182,6 +270,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   rpmdevtools
   javapackages-tools
   rpmlint
+  samba
   samba-winbind
   certmonger
   pam_krb5
@@ -192,10 +281,6 @@ if [ ! -x /usr/bin/dpkg ]; then
   perl-DBD-SQLite
   libvirt-java
   python-psycopg2
-  xinetd
-  xterm
-  createrepo
-  gconf-editor
   gsl-devel
   hplip-gui
   icedtea-web
@@ -203,15 +288,14 @@ if [ ! -x /usr/bin/dpkg ]; then
   logwatch
   recode
   syslinux-extlinux
-  perl-Compress-Raw-Bzip2
  '
 
  item68List='
-  motif
-  libX11
   libXt
+  motif
   mtools
   expect
+  gimp
   gpm
   ImageMagick
   k3b
@@ -229,9 +313,14 @@ if [ ! -x /usr/bin/dpkg ]; then
   dos2unix
   gitk
   gnuplot
-  samba
+  gsl
   tftp
   fuseiso
+  xinetd
+  xterm
+  createrepo
+  gconf-editor
+  perl-Compress-Raw-Bzip2
  '
 #These do not need to be installed for running OpenVnmrJ
 #Just if you intend to build it
@@ -280,10 +369,9 @@ if [ ! -x /usr/bin/dpkg ]; then
    ver6List='
       openmotif
    '
-   packagelist="$ver6List $item68List $commonList $bit32List $pipeList"
+   packageList="$ver6List $item68List $commonList $bit32List $pipeList"
  else
-   packagelist="$item68List $commonList $bit32List $pipeList"
-   packagelist="$item68List $commonList $pipeList"
+   packageList="$item68List $commonList $pipeList"
  fi
 
  postfix=`date +"%F_%T"`
@@ -295,6 +383,10 @@ if [ ! -x /usr/bin/dpkg ]; then
 
 # The PackageKit script often holds a yum lock.
 # This prevents this script from executing
+# On CentOS 7, the systemctl command should stop the PackageKit
+ if [ $version -eq 7 ]; then
+   systemctl --now --runtime mask packagekit > /dev/null 2>&1
+ fi
  npids=$(ps -ef  | grep PackageKit | grep -v grep | awk '{ printf("%d ",$2) }')
  for prog_pid in $npids
  do
@@ -311,92 +403,146 @@ if [ ! -x /usr/bin/dpkg ]; then
  npids=$(ps -ef  | grep PackageKit | grep -v grep | awk '{ printf("%d ",$2) }')
  if [ ! -z $npids ]
  then
-    echo "CentOS PackageKit is preventing installation"
+    echo "CentOS / RedHat PackageKit is preventing installation"
+    echo "Please try again in 5-10 minutes, after this tool completes its task."
     exit 1
  fi
 
  echo "You can monitor the progress in a separate terminal window with the command"
  echo "tail -f $logfile"
- echo "Installing standard packages (1 of 3)"
- echo "Installing standard packages (1 of 3)" > $logfile
- yum -y install $package68List &>> $logfile
- yum -y upgrade glibc glibc-devel libstdc++ libstdc++-devel libX11 libXt &>> $logfile
 
- echo "Installing required packages (2 of 3)"
- echo "Installing required packages (2 of 3)" >> $logfile
- yumList=''
- for xpack in $packagelist
+ yum68List=''
+ for xpack in $package68List
  do
-#  rpm -q $xpack
-   if [ "$(rpm -q $xpack | grep 'not installed' > /dev/null;echo $?)" == "0" ]
-   then
-#     echo "VnmrJ required RHEL package \"$xpack\" NOT installed"
-      yumList="$yumList $xpack"
-   fi
+    yum68List="$yum68List ${xpack}.i686"
  done
- if [ "x$yumList" != "x" ]; then
-   yum -y install $yumList &>> $logfile
+ yum68List="$yum68List ncurses-libs.i686"
+ if [[ $repoGet -eq 1 ]]; then
+   echo "Downloading standard packages (1 of 3)"
+   echo "Downloading standard packages (1 of 3)" > $logfile
+   yum -y install $repoArg $package68List &>> $logfile
+   yum -y upgrade $repoArg $package68List &>> $logfile
  fi
- yum -y install glibc.i686 glibc-devel.i686 libstdc++.i686 libstdc++-devel.i686 libX11.i686 libXt.i686 &>> $logfile
+ echo "Installing standard packages (1 of 3)"
+ echo "Installing standard packages (1 of 3)" &>> $logfile
+ if [[ $ovjRepo -eq 1 ]]; then
+   yum -y install --disablerepo="*" --enablerepo="openvnmrj" $package68List &>> $logfile
+   yum -y upgrade --disablerepo="*" --enablerepo="openvnmrj" $package68List &>> $logfile
+ else
+   yum -y install $package68List &>> $logfile
+   yum -y upgrade $package68List &>> $logfile
+ fi
+ if [[ $repoGet -eq 1 ]]; then
+   echo "Downloading required packages (2 of 3)"
+   echo "Downloading required packages (2 of 3)" >> $logfile
+   yum -y install $repoArg $packageList &>> $logfile
+   yum -y install $repoArg $yum68List &>> $logfile
+ fi
+   echo "Installing required packages (2 of 3)"
+   echo "Installing required packages (2 of 3)" >> $logfile
+   yumList=''
+   for xpack in $packageList
+   do
+     if [ "$(rpm -q $xpack | grep 'not installed' > /dev/null;echo $?)" == "0" ]
+     then
+        yumList="$yumList $xpack"
+     fi
+   done
+   if [[ $ovjRepo -eq 1 ]]; then
+     if [ "x$yumList" != "x" ]; then
+       yum -y install --disablerepo="*" --enablerepo="openvnmrj" $yumList &>> $logfile
+     fi
+     yum -y install --disablerepo="*" --enablerepo="openvnmrj" $yum68List &>> $logfile
+   else
+     if [ "x$yumList" != "x" ]; then
+       yum -y install $yumList &>> $logfile
+     fi
+     yum -y install $yum68List &>> $logfile
+   fi
 
 # perl-homedir creates a perl5 directory in every acct. This fixes it so it does not do that.
- if [ $perlHomeInstalled -eq 0 ]
- then
-   echo "Removing perl-home rpm" &>> $logfile
-   yum -y erase perl-homedir &>> $logfile
- fi
+   if [ $perlHomeInstalled -eq 0 ]
+   then
+     echo "Removing perl-home rpm" &>> $logfile
+     yum -y erase perl-homedir &>> $logfile
+   fi
 
- echo "Installing additional packages (3 of 3)"
- echo "Installing additional packages (3 of 3)" >> $logfile
+ # No need to add repos if OVJ repo is being used
+ if [[ $ovjRepo -eq 1 ]]; then
+   epelInstalled=1
+   turbovncFileInstalled=1
+ fi
  if [ $epelInstalled -eq 0 ]
  then
    yum -y install epel-release &>> $logfile
  fi
- yum -y install $epelList &>> $logfile
+ if [[ $repoGet -eq 1 ]]; then
+   echo "Downloading additional packages (3 of 3)"
+   echo "Downloading additional packages (3 of 3)" >> $logfile
+   yum -y install $repoArg $epelList &>> $logfile
+ fi
+   echo "Installing additional packages (3 of 3)"
+   echo "Installing additional packages (3 of 3)" >> $logfile
+
+   if [[ $ovjRepo -eq 1 ]]; then
+     yum -y install --disablerepo="*" --enablerepo="openvnmrj" $epelList &>> $logfile
+   else
+     yum -y install $epelList &>> $logfile
+   fi
  if [ $epelInstalled -eq 0 ]
  then
    yum -y erase epel-release &>> $logfile
  fi
-#Add turbovnc
- if [ "$(rpm -q turbovnc | grep 'not installed' > /dev/null;echo $?)" == "0" ]
- then
+   if [ "$(rpm -q turbovnc | grep 'not installed' > /dev/null;echo $?)" == "0" ]
+   then
    if [ $turbovncFileInstalled -eq 0 ]
    then
-      cat >/etc/yum.repos.d/TurboVNC.repo  <<EOF
-
-[TurboVNC]
-name=TurboVNC official RPMs
-baseurl=https://sourceforge.net/projects/turbovnc/files
-gpgcheck=1
-gpgkey=http://pgp.mit.edu/pks/lookup?op=get&search=0x6BBEFA1972FEB9CE
-enabled=1
-exclude=turbovnc-*.*.9[0-9]-*
-EOF
+     turboRepo
    fi
-   yum -y install turbovnc &>> $logfile
-   if [ $turbovncFileInstalled -eq 0 ]
-   then
-      rm -f /etc/yum.repos.d/TurboVNC.repo
-   fi
+ if [[ $repoGet -eq 1 ]]; then
+   yum -y install $repoArg turbovnc &>> $logfile
  fi
+     if [[ $ovjRepo -eq 1 ]]; then
+       yum -y install --disablerepo="*" --enablerepo="openvnmrj" turbovnc &>> $logfile
+     else
+       yum -y install turbovnc &>> $logfile
+     fi
+     if [ $turbovncFileInstalled -eq 0 ]
+     then
+        rm -f /etc/yum.repos.d/TurboVNC.repo
+     fi
 
- dir=$(dirname $0)
- if [ "$(rpm -q gftp | grep 'not installed' > /dev/null;echo $?)" == "0" ]
- then
-   if [ -f $dir/linux/gftp-2.0.19-4.el6.rf.x86_64.rpm ]
+   dir=$(dirname $0)
+   if [ "$(rpm -q gftp | grep 'not installed' > /dev/null;echo $?)" == "0" ]
    then
-      yum -y install $dir/linux/gftp-2.0.19-4.el6.rf.x86_64.rpm &>> $logfile
+     if [ -f $dir/linux/gftp-2.0.19-4.el6.rf.x86_64.rpm ]
+     then
+        yum -y install $dir/linux/gftp-2.0.19-4.el6.rf.x86_64.rpm &>> $logfile
+     fi
    fi
- fi
- if [ "$(rpm -q numlockx | grep 'not installed' > /dev/null;echo $?)" == "0" ]
- then
-   if [ -f $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm ]
+   if [ "$(rpm -q numlockx | grep 'not installed' > /dev/null;echo $?)" == "0" ]
    then
-      yum -y install $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm &>> $logfile
+     if [ -f $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm ]
+     then
+        yum -y install $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm &>> $logfile
+     fi
    fi
- fi
+ fi 
 
- echo "CentOS / RedHat package installation complete"
+ if [ $version -eq 7 ]; then
+   systemctl unmask packagekit
+ fi
+ if [[ $ovjRepo -eq 1 ]]; then
+    rm -f /etc/yum.repos.d/openvnmrj.repo
+ fi
+ chown $(stat -c "%U.%G" $0) $logfile
+ if [[ $repoGet -eq 1 ]]; then
+   chown -R $(stat -c "%U.%G" $0) $repoPath
+   echo "CentOS / RedHat package download complete"
+   echo "Packages stored in $repoPath"
+ else
+   echo "CentOS / RedHat package installation complete"
+ fi
  echo " "
 else
  distrover=$(lsb_release -rs)
@@ -419,6 +565,9 @@ else
  echo "Installing standard packages (1 of 2)" > $logfile
 # The unattended-upgrade script often holds a yum lock.
 # This prevents this script from executing
+ if [[ -x /bin/systemctl ]]; then
+    systemctl --now --runtime mask unattended-upgrades > /dev/null 2>&1
+ fi
  npids=$(ps -ef  | grep unattended-upgrade | grep -v grep | awk '{ printf("%d ",$2) }')
  for prog_pid in $npids
  do
@@ -436,6 +585,7 @@ else
  if [ ! -z $npids ]
  then
     echo "Ubuntu unattended-update is preventing installation"
+    echo "Please try again in 5-10 minutes, after this tool completes its task."
     exit 1
  fi
  dpkg --add-architecture i386
@@ -464,10 +614,13 @@ else
  fi
  # apt-get uninstalls these if an amd64 version is installed for something else >:(
  # so install them last...
- apt-get install -y libmotif-dev libx11-dev libxt-dev libx11-dev:i386 libxt-dev:i386 &>> $logfile
+ apt-get install -y libmotif-dev libx11-dev libxt-dev &>> $logfile
  unset DEBIAN_FRONTEND
  echo "dash dash/sh boolean false" | debconf-set-selections &>> $logfile
  dpkg-reconfigure -u dash &>> $logfile
+ if [[ -x /bin/systemctl ]]; then
+    systemctl unmask unattended-upgrades > /dev/null 2>&1
+ fi
  echo "Ubuntu package installation complete"
  echo " "
 fi

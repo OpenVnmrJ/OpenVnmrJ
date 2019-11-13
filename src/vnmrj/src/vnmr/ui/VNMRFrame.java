@@ -335,9 +335,9 @@ public class VNMRFrame extends JFrame implements AppInstaller {
         setTitle(m_title);
         Image img = null;
         if (m_title.indexOf("Admin") < 0)
-           img = Util.getImage("vnmrj.gif");
+           img = Util.getImage("OVJ.png");
         else
-           img = Util.getImage("vnmrjadmin.gif");
+           img = Util.getImage("OVJ_ADMIN.png");
         if (img != null)
             this.setIconImage(img);
         Util.setMainFrame(this);

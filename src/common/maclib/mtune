@@ -55,6 +55,9 @@ if ($action = 'setup') then
   endif
   if Console='mercury' then
     tugain=0
+    if sfrq>0.8*h1freq then
+      tupwr=20
+    endif
   endif
   gain = tugain
   werr=''
@@ -93,6 +96,7 @@ elseif ($action = 'reset') then
 elseif ($action = 'process') then
   ft('noft','nodc')
   dss
+  if ct=1 then vsadj endif
   dscale('rev','magenta','MHz',0,sfrq-tunesw/2*1e-6,tunesw*1e-6)
   pen('graphics','magenta')
   move(wcmax-sc-wc/2,-20)
@@ -142,17 +146,19 @@ elseif ($action = 'changemarker2') then
 elseif ($action = 'setbetweenmarkers') then
 
   if (marker1 <> '') and (marker1 <> 'none') and (marker2 <> '') and (marker2 <> 'none') then
+    if np<1024 then np=1024 endif
     if (markerfrq1 >= markerfrq2) then
       $setfreq=markerfrq2+(markerfrq1-markerfrq2)/2
+      tunesw=(markerfrq1-markerfrq2)*1.15e6
     else
       $setfreq=markerfrq1+(markerfrq2-markerfrq1)/2
+      tunesw=(markerfrq2-markerfrq1)*1.15e6
     endif
     sfrq=$setfreq setvalue('sfrq',sfrq,'processed')
     halt('  ')
   else
     write('error','Two markers needed!')
   endif
-
 
 elseif ($action = 'quit') then
   expactive:$e
