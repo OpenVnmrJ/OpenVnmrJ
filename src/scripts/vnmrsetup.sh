@@ -264,7 +264,11 @@ userId=$(/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }')
 if [ $userId != "uid=0(root)" ]; then
   notroot=1
   echo
-  echo "To install OpenVnmrJ you will need to be the system's root user."
+  if [ x$distroType = "xdebian" ]; then
+     echo "Installing OpenVnmrJ for Ubuntu."
+  else
+     echo "Installing OpenVnmrJ for RHEL / CentOS"
+  fi
   echo "Or type cntrl-C to exit."
   echo
   #
@@ -290,10 +294,11 @@ if [ $userId != "uid=0(root)" ]; then
   s=1
   t=3
   while [[ $s = 1 ]] && [[ ! $t = 0 ]]; do
-     echo "Please enter this system's root user password"
      if [ x$distroType = "xdebian" ]; then
+        echo "If requested, please enter the admin (sudo) password"
         sudo $base_dir/load.nmr $* ;
      else
+        echo "Please enter this system's root user password"
         su root -c "$base_dir/load.nmr $*";
      fi
      s=$?
@@ -325,20 +330,17 @@ if [ "x$distroType" = "xrhel" -o "x$distroType" = "xdebian" ]; then
   if [ ! -e /tmp/vskippkgchk ]; then
     dirpath=$base_dir
     # check for required RPM packages
-    $dirpath/code/chksystempkgs
+    echo "Checking for Linux packages required by OpenVnmrJ"
+    $dirpath/code/chksystempkgs > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      ping -W 1 -c 1 www.openvnmrj.com > /dev/null 2>&1
-      if [ $? -ne 0 ]
-      then
-         cat $dirpath/code/rpmInstruction.txt
-         exit 2
-      fi
-      echo "This may take up to 40 minutes to update............."
+      echo "Package update may take up to 40 minutes to complete..........."
       mkdir -p /tmp/ovj_preinstall
       chmod 777 /tmp/ovj_preinstall
-      $dirpath/code/installpkgs
+      $dirpath/code/installpkgs "$@"
       if [ $? -ne 0 ]; then
-         cat $dirpath/code/rpmInstruction.txt
+         if [[ $? -ne 2 ]]; then
+           cat $dirpath/code/rpmInstruction.txt
+         fi
          exit 2
       fi
     fi 
@@ -533,7 +535,8 @@ if [ -e /tmp/.ovj_installed ]; then
 
    echo " "
    echo "The latest version of NMRPipe can be installed."
-   echo "It takes about 10 minutes"
+   echo "Depending on network speed, it can take from"
+   echo "10 to 60 minutes."
    echo "Would you like to install it now? (y/n) "
    read ans
    if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
@@ -550,6 +553,27 @@ if [ -e /tmp/.ovj_installed ]; then
    echo "New updates of NMRPipe may be installed at any time by running"
    echo "/vnmr/bin/ovjGetpipe"
    echo " "
+
+   
+   if [ ! -d /vnmr/help/WebHelp ]
+   then
+      echo " "
+      echo "The VnmrJ 4.2 manuals can be installed."
+      echo "Depending on network speed, it can take from"
+      echo "5 to 35 minutes."
+      echo "Would you like to install them now? (y/n) "
+      read ans
+      if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
+         echo "Installing VnmrJ manuals" >> $insLog
+         su - $nmr_user -c "/vnmr/bin/ovjGetManuals -l $insLog"
+         echo " "
+      else
+         echo "The VnmrJ manuals may be installed at any time by running"
+         echo "/vnmr/bin/ovjGetManuals"
+      fi
+   echo " "
+   fi
+
    if [ -d /vnmr/acq/download ] || [ -d /vnmr/acq/vxBoot ]
    then
       echo "Shall this system be configured as a spectrometer."
