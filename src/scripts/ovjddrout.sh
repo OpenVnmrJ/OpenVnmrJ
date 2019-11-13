@@ -552,6 +552,9 @@ case x$dir in
 #       mv code/setup setup
        ln -s code/vnmrsetup load.nmr
        ln -s code/rpmInstruction.txt rpmInstruction.txt
+       ln -s code/installpkgs ovjGetRepo
+       cp $gitdir/src/scripts/ovjUseRepo.sh ovjUseRepo
+       chmod +x ovjUseRepo
    ;;
 
    xlicense )
