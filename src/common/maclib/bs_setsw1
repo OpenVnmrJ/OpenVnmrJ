@@ -1,0 +1,43 @@
+"macro bs_setsw1"
+"***********************************************************************"
+" bs_setsw1 - sets F1 spectal width (sw1) for selective excitation      "
+"             independent from the selected pulse bandwidth. Use this   "
+"             Use this to keep the pulse width of the selective pulses  "
+"             short (set a broad selection bandwidth if overlap is not  "
+"             a big problem which leads to shorter pulses) while at the "
+"             same time squeezing sw1 as much as possible for best F1   "
+"             resolution.                                               "
+"***********************************************************************"
+
+$crmode=1
+if (crmode='c') then $crmode=0 endif
+
+if ($# = 2) then
+ $cr=$1 $delta=$2
+else
+ if ($crmode=0) then
+   write('error','You MUST use 2 cursors - Please make selection again')
+   crmode='b'
+   return
+ endif
+    $delta=delta1
+    $cr=cr1-($delta/2)
+endif
+
+if r5=0 then r5=dof r6=sw1 endif
+sw1 = $delta
+
+$rflrfp = rfl1-rfp1
+$center = r6/2-$rflrfp
+
+if (refsource1='dfrq') then
+   dof = r5+$cr-$center
+elseif (refsource1 = 'dfrq2') then
+   dof2 = dof2+$cr-$center
+elseif (refsource1 = 'dfrq3') then
+   dof3 = dof3+$cr-$center
+endif
+
+write('line3','The sw1 [width: %6.1f] centered at %4.1f ppm selected',$delta,$cr/reffrq1)
+
+
