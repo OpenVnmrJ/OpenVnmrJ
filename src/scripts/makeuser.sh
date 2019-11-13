@@ -8,6 +8,7 @@
 # For more information, see the LICENSE file.
 # 
 #
+# set -x
 
 ostype=`uname -s`
 set_system_stuff() {
@@ -252,6 +253,18 @@ cp_backup() {
     /bin/cp "$srcfile" "$dstfile"
     chown "$name_add":"$nmr_group" "$dstfile"
     echo "  $base updated from templates."
+}
+
+setWallPaper() {
+  if [[ $as_root = "y" ]]; then
+    if [[ x$lflvr != "xdebian" ]]; then
+      su - ${user_name} -c "/vnmr/bin/ovjWallPaper"
+    else
+      sudo su - ${user_name} -c "/vnmr/bin/ovjWallPaper"
+    fi
+  else
+    /vnmr/bin/ovjWallPaper
+  fi
 }
 
 ##########################
@@ -1315,6 +1328,7 @@ then
          chown "$name_add":"$nmr_group" vnmrjzh.desktop 
       fi
    fi
+   setWallPaper
 fi
 
 if [ x$ostype = "xInterix" ]
