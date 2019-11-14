@@ -814,7 +814,10 @@ int writeparam(int argc, char *argv[], int retc, char *retv[] )
    }
    else if (type == 1)
    {
-      stream = fopen( argv[ 1 ], "w" );
+      char tmpPath[MAXPATH+20];
+
+      sprintf(tmpPath,"%s%d",argv[ 1 ], getpid());
+      stream = fopen(tmpPath, "w" );
       if (stream == NULL) {
          Werrprintf( "%s: can't open %s", argv[ 0 ], argv[ 1 ] );
          ABORT;
@@ -831,6 +834,7 @@ int writeparam(int argc, char *argv[], int retc, char *retv[] )
          }
       }
       fclose( stream );
+      rename( tmpPath, argv[1] );
    }
    RETURN;
 }
