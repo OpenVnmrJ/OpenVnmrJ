@@ -2452,6 +2452,7 @@ int getfile(int argc, char *argv[], int retc, char *retv[])
   int  index;
   char filename[MAXPATH];
   char fileCmp[MAXPATH];
+  char dirname[MAXPATH];
   int  i;
   int res;
   int recurse = 0;
@@ -2533,12 +2534,15 @@ int getfile(int argc, char *argv[], int retc, char *retv[])
   {
      regExp = 0;
   }
+  strcpy(dirname,argv[1]);
+  if ( dirname[strlen(dirname) -1] != '/')
+     strcat(dirname,"/");
   if ( ! alphaSort)
   {
-     if ( (res = getitem(argv[1],index,filename,fileCmp,recurse,regExp, saveInPar, v1)) < 0)
+     if ( (res = getitem(dirname,index,filename,fileCmp,recurse,regExp, saveInPar, v1)) < 0)
         ABORT;
   }
-  else if ( (res = getitem_sorted(argv[1],index,filename,fileCmp, recurse, regExp, saveInPar, v1)) < 0 )
+  else if ( (res = getitem_sorted(dirname,index,filename,fileCmp, recurse, regExp, saveInPar, v1)) < 0 )
      ABORT;
   if (index)       /* a specific file name is wanted */
   {
