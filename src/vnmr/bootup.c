@@ -1303,9 +1303,9 @@ int flush( int argc, char *argv[], int retc, char *retv[] )
   int  ival;
   extern int start_from_ft;
   static int flushed = -1;
+  int noPars = 0;
+  int noGlobal = 0;
 
-  (void) argc;
-  (void) argv;
   (void) retc;
   (void) retv;
 
@@ -1338,87 +1338,99 @@ int flush( int argc, char *argv[], int retc, char *retv[] )
      RETURN;
   }
 
+  if ( (argc == 2) &&  ! strcasecmp(argv[1],"noPars") )
+     noPars = 1;
+  if ( (argc == 2) &&  ! strcasecmp(argv[1],"noGlobal") )
+     noGlobal = 1;
+
   Wturnoff_buttons();
-  if (showFlushDisp)
-     disp_status("SVPAR   ");
 
   /* save parameters in curexp/curpar file */
 
-  D_getparfilepath(CURRENT, parampath, curexpdir);
-  if (P_save(CURRENT,parampath))
+  if (noPars == 0)
   {
-     ival = isDiskFullFile( curexpdir, parampath, &diskIsFull );
-     if (ival == 0 && diskIsFull)
+     if (showFlushDisp)
+        disp_status("SVPAR   ");
+     D_getparfilepath(CURRENT, parampath, curexpdir);
+     if (P_save(CURRENT,parampath))
      {
-        Werrprintf("problem saving current parameters: disk is full");
+        ival = isDiskFullFile( curexpdir, parampath, &diskIsFull );
+        if (ival == 0 && diskIsFull)
+        {
+           Werrprintf("problem saving current parameters: disk is full");
+        }
+        else
+          Werrprintf("problem saving current parameters");
+        ABORT;
      }
-     else
-       Werrprintf("problem saving current parameters");
-     ABORT;
-  }
 
   /* save parameters in curexp/procpar file */
 
-  if ((mode_of_vnmr == AUTOMATION) && (datadir[0] != '\0') && (flushed == 0))
-  {
-    setfilepaths(0);  /* reset file paths to main data files for automation */
-    P_copygroup(CURRENT,PROCESSED,G_DISPLAY);
-    sprintf(parampath,"%s.fid",datadir);
-    if (access(parampath,W_OK))  /* If .fid file is missing, assume it was deleted on purpose. */
-    {
-       strcpy(parampath,curexpdir);
-    }
-  }
-  else
-    strcpy(parampath,curexpdir);
-
-  D_getparfilepath(PROCESSED, parampath, parampath);
-  if (P_save(PROCESSED,parampath))
-  {
-     ival = isDiskFullFile( curexpdir, parampath, &diskIsFull );
-     if (ival == 0 && diskIsFull)
+     if ((mode_of_vnmr == AUTOMATION) && (datadir[0] != '\0') && (flushed == 0))
      {
-        Werrprintf("problem saving processed parameters: disk is full");
+       setfilepaths(0);  /* reset file paths to main data files for automation */
+       P_copygroup(CURRENT,PROCESSED,G_DISPLAY);
+       sprintf(parampath,"%s.fid",datadir);
+       if (access(parampath,W_OK))  /* If .fid file is missing, assume it was deleted on purpose. */
+       {
+          strcpy(parampath,curexpdir);
+       }
      }
      else
-     {
-       Werrprintf("problem saving processed parameters");
-     }
-     ABORT;
-  }
+       strcpy(parampath,curexpdir);
 
-  if ((mode_of_vnmr == AUTOMATION) && (datadir[0] != '\0') && (flushed == 0))
-    flushed = 1;
+     D_getparfilepath(PROCESSED, parampath, parampath);
+     if (P_save(PROCESSED,parampath))
+     {
+        ival = isDiskFullFile( curexpdir, parampath, &diskIsFull );
+        if (ival == 0 && diskIsFull)
+        {
+           Werrprintf("problem saving processed parameters: disk is full");
+        }
+        else
+        {
+          Werrprintf("problem saving processed parameters");
+        }
+        ABORT;
+     }
+
+     if ((mode_of_vnmr == AUTOMATION) && (datadir[0] != '\0') && (flushed == 0))
+       flushed = 1;
   /* save parameters in global file except when doing automation or running in background */
-  if ( (mode_of_vnmr != AUTOMATION) && ! Bnmr)
-  {
+     if ( (mode_of_vnmr != AUTOMATION) && ! Bnmr)
+     {
 #ifdef VNMRJ
-    if (flushGlobal) // write shared and unshared
+       if (flushGlobal && (noGlobal == 0))
 #endif 
-    {
-     strcpy(parampath,userdir);
-     strcat(parampath,"/global");
-     if (P_save(GLOBAL,parampath)) 
-     {
-	ival = isDiskFullFile( userdir, parampath, &diskIsFull );
-	if (ival == 0 && diskIsFull)
-	   Werrprintf("problem saving global parameters: disk is full");
-	else
-	   Werrprintf("problem saving global parameters");
-        ABORT;
-     }
-    }
+       {
 
+        strcpy(parampath,userdir);
+        strcat(parampath,"/global");
+        if (P_save(GLOBAL,parampath)) 
+        {
+	   ival = isDiskFullFile( userdir, parampath, &diskIsFull );
+	   if (ival == 0 && diskIsFull)
+	      Werrprintf("problem saving global parameters: disk is full");
+	   else
+	      Werrprintf("problem saving global parameters");
+           ABORT;
+        }
+       }
+
+       if (noGlobal == 0)
+       {
      // always write un-shared globals 
-     sprintf(parampath,"%s/global%d",userdir,VnmrJViewId);
-     if (P_saveUnsharedGlobal(parampath)) 
-     {
-	ival = isDiskFullFile( userdir, parampath, &diskIsFull );
-	if (ival == 0 && diskIsFull)
-	   Werrprintf("problem saving unshared global parameters: disk is full");
-	else
-	   Werrprintf("problem saving unshared global parameters");
-        ABORT;
+        sprintf(parampath,"%s/global%d",userdir,VnmrJViewId);
+        if (P_saveUnsharedGlobal(parampath)) 
+        {
+	   ival = isDiskFullFile( userdir, parampath, &diskIsFull );
+	   if (ival == 0 && diskIsFull)
+	      Werrprintf("problem saving unshared global parameters: disk is full");
+	   else
+	      Werrprintf("problem saving unshared global parameters");
+           ABORT;
+        }
+       }
      }
   }
 
