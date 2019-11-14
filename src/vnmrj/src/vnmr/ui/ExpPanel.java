@@ -3830,7 +3830,7 @@ public class ExpPanel extends JPanel
 	Util.setAppDirs(m_appDirs, m_appDirLabels, true);
     }
 
-    private void openFpBrowser(String cmd) {
+    private void openFpBrowser(String cmd, String path) {
         File dir;
 
         if (fpDialog == null) {
@@ -3873,7 +3873,9 @@ public class ExpPanel extends JPanel
         if (files.length < 1)
              return;
         StringBuffer sb = new StringBuffer(cmd).append("(");
-        for (int n = 0; n < files.length; n++) {
+        if ((files.length == 1) || (path == null))
+        {
+           for (int n = 0; n < files.length; n++) {
              if (files[n] != null) {
                  if (n > 0)
                      sb.append(",");
@@ -3883,6 +3885,29 @@ public class ExpPanel extends JPanel
                      sb.append("'file','");
                  sb.append(files[n].getAbsolutePath()).append("'");
              }
+           }
+        }
+        else
+        {
+           PrintWriter os;
+           try {
+              os = new PrintWriter(new FileWriter(path));
+              if (os == null)
+                 return;
+           }
+           catch(IOException er) { 
+              return;
+           }
+           for (int n = 0; n < files.length; n++) {
+             if (files[n] != null) {
+                 if (files[n].isDirectory())
+                     os.println("directory "+files[n].getAbsolutePath());
+                 else
+                     os.println("file "+files[n].getAbsolutePath());
+             }
+           }
+           os.close();
+           sb.append("'path','").append(path).append("'");
         }
         sb.append(")\n");
         sendToVnmr(sb.toString());
@@ -4742,7 +4767,14 @@ public class ExpPanel extends JPanel
                           fpPanel.setCurrentDirectory(dir);
                     }
                 }
-                openFpBrowser(cmd);
+                if (tok.hasMoreTokens())
+                {
+                   openFpBrowser(cmd,tok.nextToken().trim());
+                }
+                else
+                {
+                   openFpBrowser(cmd,null);
+                }
                 return;
             }
             return;
