@@ -174,9 +174,14 @@ void pulsesequence()
 
       if (satmode[1] == 'y')
 	{
-	if (getflag("slpsat"))
+	  if (getflag("slpsat"))
+	  {
+	     if ((gt1 == 0.0) && (gstab == 0.0))
+		shaped_satpulse("mixN",(mixN-mixNcorr),v7);
+	     else
 		shaped_satpulse("mixN1",(mixN-mixNcorr)*0.7,v7);
-	else
+	  }
+	  else
 		satpulse((mixN-mixNcorr)*0.7,v7,rof1,rof1);
 	}
       else
@@ -200,9 +205,12 @@ void pulsesequence()
       }
       if (satmode[1] == 'y')
 	{
-	if (getflag("slpsat"))
+	   if (getflag("slpsat"))
+           {
+	      if ((gt1 > 0.0) && (gstab > 0.0))
 		shaped_satpulse("mixN2",(mixN-mixNcorr)*0.3,v7);
-	else
+           }
+	   else
         	satpulse((mixN-mixNcorr)*0.3,v7,rof1,rof1);
 	}
       else
