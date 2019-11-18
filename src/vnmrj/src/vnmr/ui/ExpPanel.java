@@ -3830,7 +3830,7 @@ public class ExpPanel extends JPanel
 	Util.setAppDirs(m_appDirs, m_appDirLabels, true);
     }
 
-    private void openFpBrowser(String cmd, String path) {
+    private void openFpBrowser(String cmd) {
         File dir;
 
         if (fpDialog == null) {
@@ -3873,7 +3873,7 @@ public class ExpPanel extends JPanel
         if (files.length < 1)
              return;
         StringBuffer sb = new StringBuffer(cmd).append("(");
-        if ((files.length == 1) || (path == null))
+        if (files.length == 1)
         {
            for (int n = 0; n < files.length; n++) {
              if (files[n] != null) {
@@ -3890,7 +3890,11 @@ public class ExpPanel extends JPanel
         else
         {
            PrintWriter os;
+           File f;
+           String path;
            try {
+              f = File.createTempFile("fpB",null);
+              path = f.getAbsolutePath();
               os = new PrintWriter(new FileWriter(path));
               if (os == null)
                  return;
@@ -4767,14 +4771,7 @@ public class ExpPanel extends JPanel
                           fpPanel.setCurrentDirectory(dir);
                     }
                 }
-                if (tok.hasMoreTokens())
-                {
-                   openFpBrowser(cmd,tok.nextToken().trim());
-                }
-                else
-                {
-                   openFpBrowser(cmd,null);
-                }
+                openFpBrowser(cmd);
                 return;
             }
             return;
