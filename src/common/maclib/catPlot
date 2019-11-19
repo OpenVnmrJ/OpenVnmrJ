@@ -1,0 +1,226 @@
+/* macro catPlot */
+// Plots full spectrum, its expansions (upto 3) and append all
+// The final concatenated plot is stored as a PDF document
+// Uses the macros: setPiv, setppa1D 
+// Usage	| call catPlot and follow onscreen instructions
+// Tested with VnmrJ_4.2A
+// 2018_07_05  	| Hari, N.; SASTRA University
+
+$myfname=''
+$mydir=''
+$mydir=systemdir+'/tmp'
+input('Filename to store: '):$myfname
+cd:$pwd
+
+input('Enter No. of Expansions [0, 1, 2 or 3]: '):$expandnum
+
+if ($expandnum=0) then
+ write('graphics','black',10,wc2max-35,'You opted for no expansion!!')
+ $pagenum=$expandnum
+ $pagenumt=$pagenum+1
+ vp=25 wc=0.8*wcmax
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl1.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl1.ps'):$dum
+
+ cd($mydir):$dum
+ write('graphics','black',10,wc2max-35,'Total No. of Pages  : %d',$pagenumt)
+ shell('cat pl1.ps > myplot.ps')
+ shell('ps2pdfwr myplot.ps '+$myfname)
+ sleep(1)
+ write('graphics','black',10,wc2max-45,'Plots are saved in   : %s',$mydir)
+ write('graphics','black',10,wc2max-55,'Under the name     : %s',$myfname)
+ shell('rm pl1.ps myplot.ps'):$dum
+endif
+
+if ($expandnum=1) then
+ write('graphics','black',10,wc2max-25,'Creating 1 Expansion & Appending')
+ vp=25 wc=0.8*wcmax
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl1.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl1.ps'):$dum
+
+ cd($mydir):$dum
+ $pagenum=$expandnum
+ $pagenumt=$pagenum+1
+ input('Enter upfield PPM value for expansion 1 : ') : $spuf
+ input('Enter downfield PPM value for expansion 1 : ') : $wpdf
+ wp=($wpdf-$spuf)*sfrq 
+ sp=$spuf*sfrq
+ vp=25 wc=0.8*wcmax $vsf=vs vsadjh(0.5*wc2max) thadj
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl2.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl2.ps'):$dum vs=$vsf
+
+ write('graphics','black',10,wc2max-35,'Total No. of Pages  : %d',$pagenumt)
+ shell('cat pl1.ps pl2.ps > myplot.ps')
+ shell('ps2pdfwr myplot.ps '+$myfname)
+ sleep(1)
+ write('graphics','black',10,wc2max-45,'Plots are saved in   : %s',$mydir)
+ write('graphics','black',10,wc2max-55,'Under the name     : %s',$myfname)
+ shell('rm pl1.ps pl2.ps myplot.ps'):$dum
+endif
+ 
+if ($expandnum=2) then
+ write('graphics','black',10,wc2max-25,'Creating 2 Expansions & Appending')
+ vp=25 wc=0.8*wcmax
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl1.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl1.ps'):$dum
+
+ cd($mydir):$dum
+ $pagenum=$expandnum
+ $pagenumt=$pagenum+1
+ input('Enter upfield PPM value for expansion 1 : ') : $spuf
+ input('Enter downfield PPM value for expansion 1 : ') : $wpdf
+ wp=($wpdf-$spuf)*sfrq
+ sp=$spuf*sfrq
+ vp=25 wc=0.8*wcmax $vsf=vs vsadjh(0.5*wc2max) thadj
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl2.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl2.ps'):$dum vs=$vsf
+
+ input('Enter upfield PPM value for expansion 2 : ') : $spuf
+ input('Enter downfield PPM value for expansion 2 : ') : $wpdf
+ wp=($wpdf-$spuf)*sfrq
+ sp=$spuf*sfrq
+ vp=25 wc=0.8*wcmax $vsf=vs vsadjh(0.5*wc2max) thadj
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl3.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl3.ps'):$dum vs=$vsf
+
+ write('graphics','black',10,wc2max-35,'Total No. of Pages  : %d',$pagenumt)
+ shell('cat pl1.ps pl2.ps pl3.ps > myplot.ps')
+ shell('ps2pdfwr myplot.ps '+$myfname)
+ sleep(1)
+ write('graphics','black',10,wc2max-45,'Plots are saved in   : %s',$mydir)
+ write('graphics','black',10,wc2max-55,'Under the name     : %s',$myfname)
+ shell('rm pl1.ps pl2.ps pl3.ps myplot.ps'):$dum
+endif
+
+if ($expandnum=3) then
+ write('graphics','black',10,wc2max-25,'Creating 3 Expansions & Appending')
+ vp=25 wc=0.8*wcmax
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl1.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl1.ps'):$dum
+
+ cd($mydir):$dum
+ $pagenum=$expandnum
+ $pagenumt=$pagenum+1
+ input('Enter upfield PPM value for expansion 1 : ') : $spuf
+ input('Enter downfield PPM value for expansion 1 : ') : $wpdf
+ wp=($wpdf-$spuf)*sfrq
+ sp=$spuf*sfrq
+ vp=25 wc=0.8*wcmax $vsf=vs vsadjh(0.5*wc2max) thadj
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl2.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl2.ps'):$dum vs=$vsf
+
+ input('Enter upfield PPM value for expansion 2 : ') : $spuf
+ input('Enter downfield PPM value for expansion 2 : ') : $wpdf
+ wp=($wpdf-$spuf)*sfrq
+ sp=$spuf*sfrq
+ vp=25 wc=0.8*wcmax $vsf=vs vsadjh(0.5*wc2max) thadj
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl3.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl3.ps'):$dum vs=$vsf
+
+ input('Enter upfield PPM value for expansion 3 : ') : $spuf
+ input('Enter downfield PPM value for expansion 3 : ') : $wpdf
+ wp=($wpdf-$spuf)*sfrq
+ sp=$spuf*sfrq
+ vp=25 wc=0.8*wcmax $vsf=vs vsadjh(0.5*wc2max) thadj
+ pl pscale setPiv(vp-15) vp=75 ppf('top') vp=25
+
+// If company's or institution's logo has to be printed then,
+// Ensure that setplLogo is available in ~/vnmrsys/maclib and
+// uncomment the below statement 
+
+// setppa1D setplLogo page($mydir+'/pl4.ps'):$dum
+
+// Comment the below statement, if the above statement is uncommented
+
+ setppa1D page($mydir+'/pl4.ps'):$dum vs=$vsf
+ write('graphics','black',10,wc2max-35,'Total No. of Pages  : %d',$pagenumt)
+ shell('cat pl1.ps pl2.ps pl3.ps pl4.ps > myplot.ps')
+ shell('ps2pdfwr myplot.ps '+$myfname)
+ sleep(1)
+ write('graphics','black',10,wc2max-45,'Plots are saved in   : %s',$mydir)
+ write('graphics','black',10,wc2max-55,'Under the name     : %s',$myfname)
+ shell('rm pl1.ps pl2.ps pl3.ps pl4.ps myplot.ps'):$dum
+endif
+
+cd($pwd):$dum

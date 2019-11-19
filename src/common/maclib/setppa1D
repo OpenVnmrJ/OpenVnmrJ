@@ -1,0 +1,114 @@
+/* macro setppa1D */
+// Plots parameters as bullets and also called by catPlot
+// Usage	| call setppa1D
+// 2018_07_05	| Hari, N.; SASTRA University
+
+groupcopy('processed','current','acquisition')
+groupcopy('processed','current','processing')
+$x=2
+$y=wc2max-10
+$y=$y-5
+write('plotter',$x,$y,'NUCLEUS  :%11s',tn)
+$y=$y-5
+write('plotter',$x,$y,'FRQ (MHz):%11.2f',sfrq)
+$y=$y-5
+write('plotter',$x,$y,'AT  (sec):%11.2f',at)
+$y=$y-5
+$sw_ppm=sw/sfrq
+write('plotter',$x,$y,'SW  (ppm):%11.2f',$sw_ppm)
+$y=$y-5
+write('plotter',$x,$y,'RD  (sec):%11.2f',d1)
+$y=$y-5
+write('plotter',$x,$y,'PW (usec):%11.2f',pw)
+$y=$y-5
+write('plotter',$x,$y,'NT       :%11d',nt)
+$y=$y-5
+write('plotter',$x,$y,'Solvent  :%11s',solvent)
+$y=$y-5
+write('plotter',$x,$y,'NP       :%11d',nt)
+$y=$y-5
+on('lb'):$on
+if $on then
+ if lb>0 then
+write('plotter',$x,$y,'LB   (Hz):%11.1f',lb)
+ endif
+endif
+$y=$y-5
+$temp_k=temp+273.15
+write('plotter',$x,$y,'TEMP  (K):%11.2f',$temp_k)
+$y=$y-5
+write('plotter',$x,$y,'EXP      :%11s',seqfil)
+$y=$y-5
+write('plotter',$x,$y,'DATE     :%11s',date)
+$y=$y-5
+$h='' $m='' $s='' $time=''
+substr(time_run,10,2):$h
+substr(time_run,12,2):$m
+substr(time_run,14,2):$s
+$time=$h+':'+$m+':'+$s
+write('plotter',$x,$y,'TIME     :%s',$time)
+$y=$y-5
+$width=0
+$file=curexp+'/text'
+$farg=0
+if $#>0 then
+  if typeof('$1') then
+    $file=$1
+    $farg=1
+    $arg1num=0
+  else
+    $x=$1
+    $arg1num=1
+  endif
+  if $#>1 then
+    if $arg1num=0 then $x=$2 else $y=$2 endif
+    if $#>2 then
+      if $arg1num=0 then
+	$y=$3
+	if $#>3 then $width=$4 endif
+      else
+	$width=$3
+      endif
+    endif
+  endif
+endif
+write('plotter',100,160,''):$ys	   
+$y = $y - $ys			   
+// plot text
+$ok = 1
+$line=''
+lookup('file',$file)
+repeat
+  lookup('readline'):$line,$ok
+  if ($ok = 1) then
+    if $width=0 then
+      write('plotter',$x,$y,'%s',$line)
+      $y = $y - $ys
+    else
+      length($line):$len
+      if $len<$width then
+	write('plotter',$x,$y,'%s',$line)
+	$y = $y - $ys
+      else
+        $char=''
+        $part=''
+	repeat
+	  $ix=1 $linelen=$width
+	  repeat
+	    substr($line,$ix,1):$char
+	    if $char=' ' then $linelen=$ix-1 endif
+	    $ix=1+$ix
+	  until $ix>$width
+	  substr($line,1,$linelen):$part
+	  write('plotter',100,160,'%s',$part)
+	  $y = $y - $ys
+	  if $linelen<$width then $linelen=$linelen+1 endif
+	  substr($line,$linelen+1,$len-$linelen):$line
+	  $len=$len-$linelen
+	until $len<1
+      endif
+    endif
+  endif
+until ($ok = 0)
+$y=$y-$ys
+return($x,$y,$ys)
