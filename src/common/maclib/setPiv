@@ -1,0 +1,167 @@
+/* macro setPiv */
+// Plots integrals and also used in catPlot
+// Usage	| After performing integration, call  		
+// 2018_07_05	| Hari, N.; SASTRA University
+
+numreg:$numreg
+if $numreg<1 then
+  write('error','%s:  no integral regions defined',$0)
+  return
+endif
+
+// Ensure intmod is not set to 'full'
+
+if intmod='full' then
+  write('error','%s:  intmod must not be set to \'full\'',$0)
+  return
+endif
+
+substr($0,1,1):$disp
+if $disp='d' then
+  $device='graphics'
+  $color='pen2'
+  $active=1
+else
+  $device='plotter'
+  $color='black'  
+  $active=0
+endif
+
+if $device='plotter' then
+  $ymarkoffset=2.3	
+  $charxyratio=0.55	
+  plotinfo(plotter):$stdname,$plttype
+  if $plttype=0 then	
+    $xlabelcorr=0.35	
+  else			
+    if ($plttype=1)or($plttype=2) then
+      $xlabelcorr=-0.6	
+    else		
+      $xlabelcorr=-0.1	
+    endif
+  endif
+else
+  $ymarkoffset=1.7	
+  $charxyratio=0.6	
+  $xlabelcorr=-1.0	
+endif
+
+$wysiwyg=wysiwyg wysiwyg='y'
+write($device,$color,0,0,''):$lineheight
+wysiwyg=$wysiwyg
+$ticlength=0.3*$lineheight
+$markvpos= - 5 - $ymarkoffset*$lineheight
+$xlabelwidth=0.7*$lineheight
+$xlabelcorr=$xlabelcorr*$xlabelwidth
+$charwidth=$charxyratio*$lineheight
+$labelvpos=$markvpos-7*$charwidth
+$specvpos=sc2+vp
+if $#>0 then
+  $labelvpos=$1+sc2-($markvpos-$labelvpos)
+  $markvpos=$1+sc2
+else
+  $markvpos=$specvpos+$markvpos
+  $labelvpos=$specvpos+$labelvpos
+endif
+if $labelvpos<-20 then
+  $diff=-20-$labelvpos
+  $labelvpos=-20
+  $markvpos=$markvpos+$diff
+  if $#=0 then
+    $vpmin=trunc($markvpos-sc2+2)
+    if $markvpos>-1+$specvpos then
+      write('error','%s: integral labels overlap with spectrum - increase vp to %1.0f',$0,$vpmin)
+      return
+    endif
+  endif
+endif
+nli
+$amp=0
+$liampsize=size('liamp')
+if ($0='dpivn')or($0='pivn') then
+  $norm=0
+  $ix=2
+  repeat
+    $norm=$norm+liamp[$ix]
+    $ix=$ix+2
+  until $ix>$liampsize
+  $norm=ins/$norm
+else
+    $norm=ins/fn
+    exists('insref','parameter'):$e
+    if $e then
+      on('insref'):$on
+      if $on then
+        if insref>0 then
+	  $norm=$norm/insref
+	endif
+      else
+        $norm=0
+        $ix=2
+        repeat
+          $norm=$norm+liamp[$ix]
+          $ix=$ix+2
+        until $ix>$liampsize
+        $norm=ins/$norm
+      endif
+    endif
+endif
+$ix=1
+repeat
+  $amp[$ix]=liamp[$ix]*$norm
+  $ix=$ix+1
+until $ix>$liampsize
+
+$rflrfp=rfl-rfp
+$lo=lifrq[1]-$rflrfp
+$hi=lifrq[2]-$rflrfp
+$ix=1
+while ($hi>=sp+wp)and($ix<$numreg) do
+  $ix=1+$ix
+  $lo=lifrq[2*$ix-1]-$rflrfp
+  $hi=lifrq[2*$ix]-$rflrfp
+endwhile
+pen($device,$color)
+$lastxpos=wcmax-sc-wc-$xlabelwidth
+while ($lo>sp)and($ix<=$numreg) do
+  if $lo>sp+wp then $lo=sp+wp endif
+  $lopos=wcmax-(($lo-sp)/wp*wc+sc)
+  if $hi<sp    then $hi=sp    endif
+  $hipos=wcmax-(($hi-sp)/wp*wc+sc)
+  $int=$amp[2*$ix]
+  if $lo-$hi>0.1 then
+    if $active>0 then
+      select:$specno
+      dssn($specno) dssn($specno)
+      $active=0
+    endif
+    move($lopos,$markvpos)
+    draw($lopos,$markvpos-$ticlength)
+    draw($hipos,$markvpos-$ticlength)
+    draw($hipos,$markvpos)
+    $midmark=($lopos+$hipos)/2
+    $endticx=$midmark
+    $xpos=$midmark+$xlabelcorr
+    if $xpos-$lastxpos<$xlabelwidth then
+      $xpos=$lastxpos+$xlabelwidth
+      if $xpos-$midmark-$xlabelcorr>=0 then
+        $endticx=$endticx+$xpos-$midmark-$xlabelcorr
+      endif
+    endif
+    if $endticx<wcmax-sc then
+      move($midmark,$markvpos-$ticlength)
+      draw($endticx,$markvpos-2*$ticlength)
+      draw($endticx,$markvpos-2.5*$ticlength)
+      write($device,$color,'reverse',$xpos,$labelvpos,'%6.2f',$int)
+    endif
+    $lastxpos=$xpos
+  endif
+  $ix=1+$ix
+  if $ix<=$numreg then
+    $lo=lifrq[2*$ix-1]-$rflrfp
+    $hi=lifrq[2*$ix]-$rflrfp
+  endif
+endwhile
+if $device='graphics' then
+  menu('display_1D')
+endif
