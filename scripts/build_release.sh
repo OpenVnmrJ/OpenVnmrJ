@@ -233,7 +233,7 @@ do_package () {
     #shortDate=$(date +%F)
 
     if [ ! -x "${PACK_SCRIPT_SRC}" ]; then
-        log_error "package: invalid packaging script requeted: '${PACK_SCRIPT_SRC}'"
+        log_error "package: requested packaging script '${PACK_SCRIPT_SRC}' is not executable."
         exit 1
     fi
 
