@@ -1,6 +1,6 @@
 "macro suselfrq1"
 "*********************************************************************"
-" suselfrq - macro to setup selective frequency pulse, power, and     "
+" suselfrq1 - macro to setup selective frequency pulse, power, and     "
 "		shape and continue exp chain.   Used by tocsy1d     "
 "		and noesy1d macros.              		      "
 "*********************************************************************"
@@ -81,19 +81,30 @@ if ($nexplist='') then $list='' endif
 		assignshapename(pslabel):$name
 		setF1selshp(selfrq1w[$i],0,$name):$shape1[$i],$shape2[$i],$selpwr1[$i],$selpwr2[$i],$selpw1[$i],$selpw2[$i]
 		if ($list='chain') then
-       			shell('cp '+userdir+'/shapelib/'+$shape1[$i]+'.RF '+$shapedir):$dum
-        		shell('cp '+userdir+'/shapelib/'+$shape2[$i]+'.RF '+$shapedir):$dum
+       		   cp(userdir+'/shapelib/'+$shape1[$i]+'.RF',$shapedir):$dum
+        	   cp(userdir+'/shapelib/'+$shape2[$i]+'.RF',$shapedir):$dum
 		endif
 		$sw1[$i]=selfrq1w[$i]
 		$dof[$i]=selfrq1c[$i]
 		$i=$i+1
         until $i > $selfrqcsize
 
-        sw1=$sw1[1]
-        if ($f1of<>'') then {$f1of}=$dof[1] endif
-	reff1:$dum
-        sw1=$sw1 
-	if ($f1of<>'') then {$f1of}=$dof endif
+	$diff=0		// option required for dual-band selective bsEXSIDE
+	exists('diffsw1','parameter'):$diff
+	if $diff then $diff=(diffsw1='y') endif
+
+	if $diff=0 then
+        	sw1=$sw1[1]
+        	if ($f1of<>'') then {$f1of}=$dof[1] endif
+		reff1:$dum
+        	sw1=$sw1 
+	        if ($f1of<>'') then {$f1of}=$dof endif
+        else
+                // In this else branch, sw1 and {$f1of} are not arrayed
+	        if ($f1of<>'') then {$f1of}=$dof[1] endif
+                $f1of = '' // prevent $f1of from being included in the diagonal array
+	endif
+
 	{$parshape1}=$shape1
 	{$parshape2}=$shape2
 	{$parpw1}=$selpw1
@@ -105,7 +116,11 @@ if ($nexplist='') then $list='' endif
 	saveshapes('add',$shapepar,$parshape2,$parpwr2,$parpw2)
 
 	if ($selfrqcsize > 1) then
+	if $diff=0 then
 	    $newarray='(sw1,'+$parshape1+','+$parshape2+','+$parpw1+','+$parpwr1
+	else
+	    $newarray='('+$parshape1+','+$parshape2+','+$parpw1+','+$parpwr1
+	endif
 	    if ($f1of<>'') then
 		$newarray=$newarray+','+$f1of
 	    endif
