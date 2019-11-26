@@ -20,7 +20,7 @@ if ($op = 'init') or ($op = 'auto') then
       delete($tmpfile)
     endif
     fsave($tmpfile,'systemglobal')
-    shell('chmod 666 '+ $tmpfile):$e
+    chmod(666,$tmpfile):$e
 
     exists(systemdir+'/adm/log/CONSOLE','file'):$e
     if ($e) then
@@ -76,17 +76,17 @@ if ($op = 'init') or ($op = 'auto') then
        endif
     endif
 
-    $file='/vnmr/tmp/sysgcoil'
+    $file=systemdir+'/tmp/sysgcoil'
     write('reset',$file)
     if ($update) then
-      $gfile='/vnmr/imaging/gradtables'
+      $gfile=systemdir+'/imaging/gradtables'
       exists($gfile,'directory'):$e
       if ($e) then
-        shell('ls '+$gfile+' > /vnmr/tmp/gtmp;cat'):$dum
+        shell('ls '+$gfile+' > '+systemdir+'/tmp/gtmp;cat'):$dum
       else
-        write('reset','/vnmr/tmp/gtmp')
+        write('reset',systemdir+'/tmp/gtmp')
       endif
-      lookup('mfile','/vnmr/tmp/gtmp','filekey'):$key
+      lookup('mfile',systemdir+'/tmp/gtmp','filekey'):$key
       $more = 2
       write('file',$file,'None None')
       while ($more = 2) do
@@ -95,20 +95,17 @@ if ($op = 'init') or ($op = 'auto') then
           write('file',$file,'%s %s',$val,$val)
         endif
       endwhile
-      delete('/vnmr/tmp/gtmp')
+      delete(systemdir+'/tmp/gtmp')
     else
       write('file',$file,'%s %s',sysgcoil,sysgcoil)
     endif
-    shell('chmod 666 '+ $file):$e
+    chmod(666,$file):$e
 
-    shell('vnmr_uname'):$osname
-    $file='/vnmr/tmp/smsport'
+    uname:$osname
+    $file=systemdir+'/tmp/smsport'
     write('reset',$file)
     write('file',$file,'None n')
-    if ($osname='SOLARIS') then
-       write('file',$file,'"Port A" a')
-       write('file',$file,'"Port B" b')
-    elseif ($osname='Linux') then
+    if ($osname='Linux') then
        write('file',$file,'Com1 c1')
     else
        write('file',$file,'Port_A a')
@@ -165,7 +162,7 @@ if ($op = 'init') or ($op = 'auto') then
       ptsval[2]=456
     endif
     if ($op <> 'auto') then
-      shell('uname -n'):$host
+      host:$host
       vnmrjcmd('popup', 'mode:modal', 'file:vconfig.xml', 'rebuild:yes', 'location:topMenuBar', \
                'help:/vnmr/jhelp/dialog/iconfig.html', 'pnewupdate:true', 'cancel:vconfig(`cancel`)', \
                'title:'+$host+ ' ' + $consoletype + ' Configuration')
@@ -415,7 +412,7 @@ if ($op = 'ok') or ($op = 'auto') then
     substr(preAmpConfig,1,1,'h'):preAmpConfig
     substr(preAmpConfig,2,1,'l'):preAmpConfig
 
-    shell('uname -n'):$host
+    host:$host
     setvalue('instrument',$host,'systemglobal')
 
     fsave(systemdir+'/conpar','systemglobal')
@@ -429,10 +426,10 @@ if ($op = 'ok') or ($op = 'auto') then
     endif
     $h1=''
     format(h1freq,1,0):$h1
-    shell('ln -s '+systemdir+'/par'+$h1+'/tests '+systemdir+'/tests'):$e
-    shell('ln -s '+systemdir+'/par'+$h1+'/stdpar '+systemdir+'/stdpar'):$e
-    rm('/vnmr/tmp/sysgcoil'):$e
-    rm('/vnmr/tmp/smsport'):$e
+    cp('par'+$h1+'/tests',systemdir+'/tests','symlink'):$e
+    cp('par'+$h1+'/stdpar',systemdir+'/stdpar','symlink'):$e
+    rm(systemdir+'/tmp/sysgcoil'):$e
+    rm(systemdir+'/tmp/smsport'):$e
     _rftype
     isvnmrj:$j
     if ($j > 0.5) then
@@ -486,7 +483,7 @@ if ($op = 'ok') or ($op = 'auto') then
     wsram(6,$lk1,7,$lk2,8,$lk3, 9, h1freq, 10, trunc(iffreq*10+0.1))
     setvtairlimits
     if (vttype=3) then
-      shell('cd '+systemdir+'/bin;ln -s airjet fts'):$e
+      cp('airjet',systemdir+'/bin/fts','symlink'):$e
     else
       rm('-f',systemdir+'/bin/fts'):$e
     endif
@@ -499,8 +496,8 @@ if ($op = 'ok') or ($op = 'auto') then
 elseif ($op = 'cancel') then
   fread($tmpfile,'systemglobal','reset')
   delete($tmpfile):$e
-  rm('/vnmr/tmp/sysgcoil'):$e
-  rm('/vnmr/tmp/smsport'):$e
+  rm(systemdir+'/tmp/sysgcoil'):$e
+  rm(systemdir+'/tmp/smsport'):$e
 elseif ($op = 'readhw') then
   $tmpfile=systemdir+'/tmp/conf'
   exists(systemdir+'/psg/psgmain.cpp','file'):$e
