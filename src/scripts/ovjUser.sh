@@ -55,17 +55,23 @@ if [ $vnmr_adm = $name ]; then
 else
    label=$name
 fi
+ostype=$(uname -s)
+if [[ x$ostype = "xDarwin" ]]; then
+   homedir="/Users"
+else
+   homedir="/home"
+fi
 file=$dir/$name
 if [ ! -f $file ]; then
   cat <<- EOF | sed -e s/USER/$name/ | sed -e s/ITYPE/$itype/ | \
-                sed -e s/LABEL/"${label}"/ > $file
+                sed -e s/LABEL/"${label}"/ | sed -e s?HOME?${homedir}? > $file
 	update	Yes
 	accname	USER
-	home	/home/USER
+	home	HOME/USER
 	name	LABEL
 	access	all
 	itype	ITYPE
-	owned	/home/USER
+	owned	HOME/USER
 	EOF
 fi
 chmod 644 $file
@@ -76,7 +82,7 @@ if [ ! -d $dir ]; then
    chmod 755 $dir
 fi
 file=$dir/$name
-userdir=/home/$name/vnmrsys
+userdir=$homedir/$name/vnmrsys
 if [ ! -f $file ]; then
   cat <<- EOF | sed -e s?USERDIR?${userdir}?g | sed -e s/ITYPE/$itype/ | \
                 sed -e s?SYSDIR?${vnmrsystem}? > $file

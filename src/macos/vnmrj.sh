@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -99,15 +99,11 @@ else
     fi
     if [[ -d $vnmrsystem/p11 ]] || [[ -f $vnmruser/persistence/singleSession ]]
     then
-       session=$(ls $vnmruser/lock_*.primary >& /dev/null)
+       cvnmr=$(ps -fu $USER | grep "/java/vnmrj.jar" | grep -v grep)
        if [ $? -eq 0 ]
        then
-          cvnmr=$(ps -ef | grep "/java/vnmrj.jar" | grep -v grep | awk '{print $1}')
-          if [ x$cvnmr = x$id ]
-          then
-             sel=$(java -jar $vnmrsystem/java/dialog.jar "An OpenVnmrJ session is already active")
-             exit
-          fi
+          sel=$(java -jar $vnmrsystem/java/dialog.jar "An OpenVnmrJ session is already active")
+          exit
        fi
     fi
 fi

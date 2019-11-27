@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Copyright (C) 2017  Dan Iverson
+#
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+#
+# For more information, see the LICENSE file.
+#
+#Uncomment next line for debugging output
+set -x
+
+SCRIPT=$(basename "$0")
+
+ovj_usage() {
+    cat <<EOF
+
+usage:
+    $SCRIPT <png file to convert>
+    For example,
+
+    ./$SCRIPT ../common/iconlib/OVJ.png
+
+    The resulting appIcon.icns file is placed in VnmrJ
+    VnmrJ.app/Contents/Resources
+EOF
+    exit 1
+}
+
+# process flag args
+if [ $# -ne 1 ]; then
+   ovj_usage
+   exit 1
+fi
+
+pngpath=$1
+
+dir=appIcon.iconset
+rm -rf $dir
+mkdir $dir
+
+sips -z 16 16 $pngpath --out $dir/icon_16x16.png
+sips -z 32 32 $pngpath --out $dir/icon_32x32.png
+sips -z 128 128 $pngpath --out $dir/icon_128x128.png
+sips -z 256 256 $pngpath --out $dir/icon_256x256.png
+
+iconutil -c icns $dir
+rm -rf $dir
+mv -f appIcon.icns VnmrJ.app/Contents/Resources/.
+
+exit 0
