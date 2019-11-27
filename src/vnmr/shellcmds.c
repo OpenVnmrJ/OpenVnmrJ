@@ -740,14 +740,11 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
     }
     if ( (argc == 4) && ! strcmp(argv[3],"symlink") )
     {
-       res = 0;
-       if (!access(argv[1],F_OK))
-       {  
-          res = 1;
-          if (symlink(argv[1],argv[2]))
-          {
-            res = 0;
-          }
+       res = 1;
+       // symlink does not care if argv[1] exists
+       if (symlink(argv[1],argv[2]))
+       {
+          res = 0;
        }
        if (retc)
        {
