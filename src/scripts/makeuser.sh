@@ -10,45 +10,23 @@
 #
 # set -x
 
-ostype=`uname -s`
+ostype=$(uname -s)
 set_system_stuff() {
     #  ostype:  IBM: AIX , Sun: SunOS or solaris , SGI: IRIX , RedHat: Linux, Windows: Interix
     case x$ostype in
-	"xIRIX64" | "xIRIX")
-                           sysV="y"
-	                   default_dir="/usr/people"
-                           ;;
-
-          "xAIX")
-                           sysV="y"
-	                   default_dir="/home"
-                           ;;
           "xLinux")
                            sysV="n"
                            default_dir="/home"
                            ;;
 	 
-	  "xInterix")
+	  "xDarwin")
                            sysV="n"
-                           default_dir="$SFUDIR_INTERIX/home"
+                           default_dir="/Users"
                            ;;
 
-	                  *)
-             		   osver=`uname -r`
-             		   osmajor=`echo $osver | awk 'BEGIN { FS = "." } { print $1 }'`
-             		   if test $osmajor = "5"
-             		   then
-				   ostype="solaris"
-           			   sysV="y"
-	        		   default_dir="/export/home"
-				   if test ! -d $default_dir
-				   then
-		   		       default_dir="/space"
-				   fi
-             		   else
-          			   sysV="n"
-	        		   default_dir="/home"
-             		   fi
+	   *)
+                           sysV="n"
+                           default_dir="/home"
 			   ;;
 esac
 
@@ -400,7 +378,7 @@ else  #current user is root
     then
        if test $# -eq 2
        then
-          su - "$1" -c "/vnmr/bin/makeuser \"$1\" \"$2\""
+          su - "$1" -c "$vnmrsystem/bin/makeuser \"$1\" \"$2\""
           exit
        else
           echo "Cannot run makeuser as root"

@@ -1,0 +1,43 @@
+#!/bin/bash
+
+dir="/Applications/OpenVnmrJ_2.0.app/Contents/Resources/OpenVnmrJ"
+osver=$(sw_vers -productVersion | tr "." " " | awk '{print $2}')
+if [[ $osver -lt 15 ]]; then
+   rm -rf /vnmr
+   ln -s $dir /vnmr
+else
+   if [[ -f /etc/synthetic.conf ]]; then
+      grep -w vnmr /etc/synthetic.conf
+      if [[ $? -eq 0 ]]; then
+         grep -vw vnmr /etc/synthetic.conf > /etc/synthetic
+         mv /etc/synthetic /etc/synthetic.conf
+      fi
+      printf "vnmr\t%s\n" $dir >> /etc/synthetic.conf  
+   else
+      printf "vnmr\t%s\n" $dir > /etc/synthetic.conf  
+   fi
+fi
+
+username=$(/usr/bin/stat -f%Su /dev/console)
+chown -R -L $username $dir
+export vnmrsystem=$dir
+su $username $dir/bin/makeuser $username y
+$dir/bin/ovjuser $username
+cmd="source $dir/user_templates/.vnmrenvsh; $dir/bin/Vnmrbg -mback -n1 -s config auto; cd ~/vnmrsys; rm -f vnmr;  ln -s $dir vnmr"
+su $username -c "$cmd"
+# /vnmr/bin/dbsetup root /vnmr 
+if [ -f /tmp/fidlib.zip ]
+then
+  mv /tmp/fidlib.zip $dir
+  (cd $dir; unzip -q fidlib.zip; rm -f fidlib.zip)
+fi
+if [ -f /tmp/help.zip ]
+then
+  mv /tmp/help.zip $dir
+  (cd $dir; unzip -q help.zip; rm -f help.zip)
+fi
+if [ -f /tmp/nmrpipe.zip ]
+then
+  mv /tmp/nmrpipe.zip $dir
+  (cd $dir; unzip -q nmrpipe.zip; rm -f nmrpipe.zip)
+fi
