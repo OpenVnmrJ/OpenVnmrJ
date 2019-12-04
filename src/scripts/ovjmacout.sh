@@ -62,7 +62,7 @@ chmod +x $resdir/p*
 
 cd "$vnmrdir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
 cd "$ddrconsoledir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
-rm -rf $vjdir/craft/Bayes3
+rm -rf $vjdir/Bayes3
 
 optionslist=`ls $standardsdir`
 for file in $optionslist
