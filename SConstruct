@@ -292,7 +292,6 @@ def runSconsPostAction(dir):
 # this must come last, since it creates sha1sum for all files
 def afterScons():
    runSconsPostAction(vnmrPath)
-   runSconsPostAction(os.path.join(vnmrPath, 'craft'))
 
    print "Build ID file"
    command = 'cd scripts; ./genBuildId.pl'
