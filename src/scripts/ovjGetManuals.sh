@@ -24,7 +24,7 @@ usage:
     $SCRIPT [options...]
 
     $SCRIPT will install thge VnmrJ 4.2 manuals into the OpenVnmrJ
-    environment.  If your system has intrenet access, then entering
+    environment.  If your system has internet access, then entering
     $SCRIPT will do the installion.  Any currently installed manuals
     will be backed up.
 

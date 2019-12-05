@@ -3,7 +3,17 @@
 
 $filename = ''
 if ($# > 0.5) then
-  $args = 'SVF(\''+$1
+  length($1):$len
+  if $len>220 then
+      $curdir=''
+      pwd:$curdir
+      $svfdir='' $svfbase=''
+      substr($1,'dirname'):$svfdir,$svfbase
+      cd($svfdir):$dum
+      $args = 'SVF(\''+$svfbase
+  else
+      $args = 'SVF(\''+$1
+  endif
   $i = 1
   while ($i<$#) do
     $i = $i + 1
@@ -11,6 +21,9 @@ if ($# > 0.5) then
   endwhile
   $args = $args+'\')'
   exec($args)
+  if $len>220 then
+      cd($curdir):$dum
+  endif
   $filename = $1
 else
   SVF:$filename

@@ -168,6 +168,8 @@ disableSelinux() {
        echo ""
        echo "Disabling SELinux, System Reboot Required."
        echo "You must reboot the system prior to continuing the install."
+       echo "After the reboot, login again, open a terminal window,"
+       echo "change to the dvdimage directory, and rerun ./load.nmr"
        echo ""
        echo ""
        # replace the two possibilites enforcing or permissive, to be disabled
@@ -550,8 +552,12 @@ if [ -e /tmp/.ovj_installed ]; then
          tar cf - nmrpipe | (cd /vnmr && tar xpf -)
       fi
    fi
+   echo " "
    echo "New updates of NMRPipe may be installed at any time by running"
    echo "/vnmr/bin/ovjGetpipe"
+   echo "To see all the NMRPipe installation options, such as installing"
+   echo "NMRPipe without network access, use"
+   echo "/vnmr/bin/ovjGetpipe -h"
    echo " "
 
    
@@ -571,7 +577,11 @@ if [ -e /tmp/.ovj_installed ]; then
          echo "The VnmrJ manuals may be installed at any time by running"
          echo "/vnmr/bin/ovjGetManuals"
       fi
-   echo " "
+      echo " "
+      echo "To see all the manuals installation options, such as installing"
+      echo "the manuals without network access, use"
+      echo "/vnmr/bin/ovjGetManuals -h"
+      echo " "
    fi
 
    if [ -d /vnmr/acq/download ] || [ -d /vnmr/acq/vxBoot ]
@@ -605,6 +615,13 @@ then
    chown $nmr_user /vnmr/adm/log/vnmr$date
    echo "Log written to: /vnmr/adm/log/vnmr$date"
 fi
+
+echo ""
+echo "Installation of OpenVnmrJ is now complete"
+echo "The package OpenVnmrJ*.zip and the dvdimage directory"
+echo "may now be removed"
+echo ""
+
 
 rm -f $base_link
 # echo "\n>>>>>>  Finished the VnmrJ installation program.  <<<<<<"

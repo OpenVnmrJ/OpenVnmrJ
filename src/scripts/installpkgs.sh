@@ -595,7 +595,7 @@ else
  export DEBIAN_FRONTEND=noninteractive
  apt-get install -y csh make expect bc git scons g++ gfortran \
       openssh-server mutt sharutils sendmail-cf gnome-power-manager \
-      kdiff3 ghostscript imagemagick \
+      kdiff3 libcanberra-gtk-module ghostscript imagemagick vim xterm \
       gedit dos2unix zip cups gnuplot gnome-terminal enscript &>> $logfile
  echo "Installing version specific packages (2 of 2)"
  echo "Installing version specific packages (2 of 2)" >> $logfile
