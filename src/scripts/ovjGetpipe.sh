@@ -25,8 +25,8 @@ usage:
     $SCRIPT [options...]
 
     $SCRIPT will install NMRPipe into the OpenVnmrJ environment. If your system
-    has intrenet access, then entering $SCRIPT will do the installion. Any currently
-    installed NMRPipe will be backed up.
+    has internet access, then entering $SCRIPT will do the installion.
+    Any currently installed NMRPipe will be backed up.
 
     $SCRIPT tests internet access by "pinging" the NMRPipe web site.
     The ping command may also fail due to a firewall blocking it.
