@@ -12,7 +12,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-#define MAXSTR 1024
+#define MAXSTR 512
 #define MAXFILES 10000 
 
 typedef char string[MAXSTR];

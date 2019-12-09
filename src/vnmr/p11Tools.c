@@ -22,7 +22,7 @@
 
 #undef MAXSTR
 #endif
-#define MAXSTR 1024
+#define MAXSTR 512
 #define MAXWORDS 64
 #define BUFSIZE 1024
 #define PERMS 0644
