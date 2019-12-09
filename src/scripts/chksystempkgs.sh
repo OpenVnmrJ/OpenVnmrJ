@@ -49,7 +49,7 @@ else
    echo "Checking for Ubuntu / Debian packages required by OpenVnmrJ"
    distrover=$(lsb_release -rs)
    distmajor=${distrover:0:2}
-   packagecommonlist='csh make gcc gfortran expect openssh-server mutt sharutils sendmail-cf gnome-power-manager kdiff3 ghostscript imagemagick'
+   packagecommonlist='csh make gcc gfortran expect openssh-server mutt sharutils sendmail-cf gnome-power-manager kdiff3 ghostscript imagemagick xterm'
    if [ $distmajor -ge 16 ] ; then
      packageXlist='openjdk-8-jre bc libmotif-dev'
    elif [ $distmajor -ge 14 ] ; then
@@ -77,7 +77,7 @@ if [ ! -x /usr/bin/dpkg ]; then
 else
    for xpack in $packagelist
    do
-      if [ "$(dpkg --get-selections $xpack 2>&1 | grep 'install' > /dev/null;echo $?)" != "0" ] 
+      if [ "$(dpkg --get-selections $xpack 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
       then
           echo "OpenVnmrJ required Ubuntu package \"$xpack\" not installed"
           status=1

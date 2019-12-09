@@ -543,26 +543,28 @@ then
     # Look in /usr/lib/postgresql/ and find the dir with the largest number.
     # echo finding pgpath for Ubuntu
     # See if Postgres is installed
-    if [ ! -d "/usr/lib/postgresql" ]
+    if [ -d "/usr/lib/postgresql" ]
     then
+
+       dirlist=`ls -1 /usr/lib/postgresql`
+
+#    echo "dirlist: $dirlist"
+       version="0.0"
+       for dir in $dirlist
+       do
+           if [ $( echo "$version < $dir" | bc ) = 1 ]; then
+               version=$dir
+           fi
+       done
+
+       pgpath="/usr/lib/postgresql/"$version/bin/
+    elif [ -d "$vnmrsystem/pgsql/bin" ]
+    then
+       pgpath="$vnmrsystem/pgsql/bin/"
+    else
         echo "Postgres Not Installed.  Aborting dbsetup"
         exit
     fi
-
-    dirlist=`ls -1 /usr/lib/postgresql`
-
-#    echo "dirlist: $dirlist"
-    version="0.0"
-    for dir in $dirlist
-    do
-        if [ $( echo "$version < $dir" | bc ) = 1 ]; then
-            version=$dir
-        fi
-    done
-
-    pgpath="/usr/lib/postgresql/"$version/bin/
-    # needed to run postgresql as other user on Ubuntu14
-#    chmod a+rw /var/run/postgresql
 fi
 if [ x$lflvr = "xdarwin" ]
 then

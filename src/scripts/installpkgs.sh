@@ -13,7 +13,7 @@
 userId=$(/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }')
 if [ $userId != "uid=0(root)" ]; then
   echo
-  if [ x$distroType = "xdebian" ]; then
+  if [ -x /usr/bin/dpkg ]; then
      echo "Installing OpenVnmrJ for Ubuntu."
   else
      echo "Installing OpenVnmrJ for RHEL / CentOS."
@@ -23,7 +23,7 @@ if [ $userId != "uid=0(root)" ]; then
   s=1
   t=3
   while [[ $s = 1 ]] && [[ ! $t = 0 ]]; do
-     if [ x$distroType = "xdebian" ]; then
+     if [ -x /usr/bin/dpkg ]; then
         echo "If requested, enter the admin (sudo) password"
         sudo $0 $* ;
      else
@@ -117,7 +117,9 @@ if [ ! -x /usr/bin/dpkg ]; then
       rel=redhat-release
    fi
  fi
- version=`rpm -q $rel | cut -d'-' -f3`
+ version=$(rpm -q $rel | cut -d'-' -f3)
+# Convert version to an integer
+ version=${version%.*}
 
 # Determine if some packages are already installed. If they are, do not remove them.
 
@@ -364,7 +366,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   fuse-ntfs-3g
   kdiff3
  '
- if [ $version -ne 7 ]; then
+ if [ $version -lt 7 ]; then
 #  Add older motif package
    ver6List='
       openmotif
@@ -374,7 +376,7 @@ if [ ! -x /usr/bin/dpkg ]; then
    packageList="$item68List $commonList $pipeList"
  fi
 
- postfix=`date +"%F_%T"`
+ postfix=$(date +"%F_%T")
  if [ -d /tmp/ovj_preinstall ]; then
    logfile="/tmp/ovj_preinstall/pkgInstall.log_$postfix"
  else
@@ -384,7 +386,7 @@ if [ ! -x /usr/bin/dpkg ]; then
 # The PackageKit script often holds a yum lock.
 # This prevents this script from executing
 # On CentOS 7, the systemctl command should stop the PackageKit
- if [ $version -eq 7 ]; then
+ if [ $version -ge 7 ]; then
    systemctl --now --runtime mask packagekit > /dev/null 2>&1
  fi
  npids=$(ps -ef  | grep PackageKit | grep -v grep | awk '{ printf("%d ",$2) }')
@@ -529,7 +531,7 @@ if [ ! -x /usr/bin/dpkg ]; then
    fi
  fi 
 
- if [ $version -eq 7 ]; then
+ if [ $version -ge 7 ]; then
    systemctl unmask packagekit
  fi
  if [[ $ovjRepo -eq 1 ]]; then
@@ -596,7 +598,7 @@ else
  apt-get install -y csh make expect bc git scons g++ gfortran \
       openssh-server mutt sharutils sendmail-cf gnome-power-manager \
       kdiff3 libcanberra-gtk-module ghostscript imagemagick vim xterm \
-      gedit dos2unix zip cups gnuplot gnome-terminal enscript &>> $logfile
+      gedit dos2unix zip cups gnuplot gnome-terminal enscript rpcbind &>> $logfile
  echo "Installing version specific packages (2 of 2)"
  echo "Installing version specific packages (2 of 2)" >> $logfile
  if [ $distmajor -gt 16 ] ; then

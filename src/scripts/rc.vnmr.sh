@@ -27,7 +27,9 @@
 
 # set -x 
 
-. /etc/rc.d/init.d/functions
+if [[ -d /etc/rc.d ]]; then
+   . /etc/rc.d/init.d/functions
+fi
 
 nmrwebd_root=/vnmr/web
 nmrwebd_home=${nmrwebd_root}/scripts

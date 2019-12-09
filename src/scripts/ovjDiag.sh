@@ -16,15 +16,17 @@ if [[ $? -ne 0 ]]; then
   echo "This hostname should be added to the /etc/hosts file"
 fi
 
-ldd /vnmr/bin/Vnmrbg | grep -i "not found" > /dev/null 2>&1
-if [[ $? -eq 0 ]]; then
-  echo "Some libraries appear to be missing."
-  echo "They appear as \"not found\" in the following output"
-  ldd /vnmr/bin/Vnmrbg
-  echo ""
-  echo "Use /vnmr/bin/installpkgs"
-  echo "to install the missing libraries"
-  echo ""
+if hash ldd 2> /dev/null; then
+  ldd /vnmr/bin/Vnmrbg | grep -i "not found" > /dev/null 2>&1
+  if [[ $? -eq 0 ]]; then
+    echo "Some libraries appear to be missing."
+    echo "They appear as \"not found\" in the following output"
+    ldd /vnmr/bin/Vnmrbg
+    echo ""
+    echo "Use /vnmr/bin/installpkgs"
+    echo "to install the missing libraries"
+    echo ""
+  fi
 fi
 
 echo ""
