@@ -51,7 +51,7 @@ extern int setSafecpPath(char* safecpPath, char* dest);
 extern void getTimeString(char* timestr);
 extern int fileExist(char* path);
 
-#define MAXSTR 1024
+#define MAXSTR 512
 #define MAXWORDS 64
 #define BUFSIZE 1024
 typedef char string[MAXSTR];

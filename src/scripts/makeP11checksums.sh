@@ -58,11 +58,11 @@ then
 fi
 
 sbindir="/vnmr/p11/sbin"
+nmr_adm=$("$vnmrsystem"/bin/fileowner "$vnmrsystem"/vnmrrev)
+nmr_group=nmr
 if test $1 = "/vnmr"
 then
 
-    nmr_adm=vnmr1
-    nmr_group=nmr
     if test $# -gt 2
     then
        nmr_adm=$2 
@@ -103,7 +103,7 @@ then
        mkdir $admp11dir
     fi
 
-    sysListAll=/vnmr/adm/p11/sysListAll
+    sysListAll=$admp11dir/sysListAll
     if [ -f $sysListAll ]
     then
        rm -f $sysListAll
@@ -117,7 +117,7 @@ then
     /vnmr/bin/chVJlist -l /vnmr/java >> $sysListAll
     /vnmr/bin/chVJlist -l /vnmr/maclib >> $sysListAll
 
-    sysList=/vnmr/adm/p11/sysList
+    sysList=$admp11dir/sysList
     if [ -f $sysList ]
     then
        rm -f $sysList
@@ -129,17 +129,17 @@ then
     /vnmr/bin/chVJlist -l /vnmr/acqbin >> $sysList
     /vnmr/bin/chVJlist -l /vnmr/java >> $sysList
 
-    notice=/vnmr/adm/p11/notice
+    notice=$admp11dir/notice
     if [ ! -f  $notice ]
     then
         touch $notice
     fi
 
-    syschksm=/vnmr/adm/p11/syschksm
+    syschksm=$admp11dir/syschksm
     /tmp/vnmrMD5 -l $sysList $vnmrsystem > $syschksm
     rm /tmp/vnmrMD5
 
-    chown ${nmr_adm}:${nmr_group} $sysListAll $sysList $notice $syschksm
+    chown -R ${nmr_adm}:${nmr_group} $admp11dir
     chmod 644 $sysListAll $sysList $notice $syschksm
 
 else
@@ -165,6 +165,7 @@ else
    path=$dir/checksum.$str
 
    /vnmr/bin/vnmrMD5 -f $1 $1 $path
+   chown -R ${nmr_adm}:${nmr_group} $dir
 
    echo $path
 fi

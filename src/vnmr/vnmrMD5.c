@@ -19,7 +19,7 @@
 #include <errno.h>
 #include <ctype.h>
 
-#define MAXSTR	1024 
+#define MAXSTR	512 
 #define MAXFILES	10000 
 #define MAXWORDS  32
 #define BUFSIZE 1024

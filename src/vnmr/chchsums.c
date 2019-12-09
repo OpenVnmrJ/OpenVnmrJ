@@ -22,10 +22,9 @@
 #include "md5global.h"
 #include "md5.h"
 
-#define MAXSTR	1024 
+#define MAXSTR	512 
 #define MAXWORDS  32
 #define BUFSIZE 1024
-#define MAXFILE 50000
 
 typedef char string[MAXSTR];
 

@@ -24,7 +24,7 @@
 #include <sys/statvfs.h>
 
 
-#define MAXSTR 1024
+#define MAXSTR 512
 #define MAXFSIZE 50000 
 #define PERMS 0644
 
