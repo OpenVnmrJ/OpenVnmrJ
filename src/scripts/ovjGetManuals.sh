@@ -110,7 +110,7 @@ downloadLinux() {
       wget $url
    else
       $OVJ_VECHO "Downloading VnmrJ 4.2 manuals"
-      echo "Downloading VnmrJ 4.3 manuals" >> ${OVJ_LOG}
+      echo "Downloading VnmrJ 4.2 manuals" >> ${OVJ_LOG}
       wget  -nv $url 2>> ${OVJ_LOG}
    fi
 }

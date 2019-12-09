@@ -505,7 +505,11 @@ if [ -e /tmp/.ovj_installed ]; then
    nmr_user=$(/vnmr/bin/fileowner /vnmr/vnmrrev)
    echo "Configuring $nmr_user with the standard configuration (stdConf)"
    echo "Configuring $nmr_user with the standard configuration (stdConf)" >> $insLog
-   su - $nmr_user -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog"
+   if [ x$distroType = "xdebian" ]; then
+      sudo -i -u $nmr_user /vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog
+   else
+      su - $nmr_user -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog"
+   fi
    if [ ! -d /home/walkup ] || [ ! -d /home/service ]
    then
       echo ""
@@ -524,12 +528,21 @@ if [ -e /tmp/.ovj_installed ]; then
                echo "Making $name account" >> $insLog
                /vnmr/bin/makeuser $name /home $nmr_group y >> $insLog
                echo "Adding $name as Locator account"
-               su - $nmr_user -c "/vnmr/bin/create_pgsql_user $name 2>> $insLog"
-               echo "Adding $name to OpenVnmrJ configuration files"
-               su - $nmr_user -c "/vnmr/bin/ovjUser $name"
-               echo "Configuring $name with the standard configuration (stdConf)"
-               echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
-               su - $name -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog" 2> /dev/null
+               if [ x$distroType = "xdebian" ]; then
+                  sudo -i -u $nmr_user /vnmr/bin/create_pgsql_user $name &>> $insLog
+                  echo "Adding $name to OpenVnmrJ configuration files"
+                  sudo -i -u $nmr_user /vnmr/bin/ovjUser $name
+                  echo "Configuring $name with the standard configuration (stdConf)"
+                  echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
+                  sudo -i -u $name /vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog 2> /dev/null
+               else
+                  su - $nmr_user -c "/vnmr/bin/create_pgsql_user $name 2>> $insLog"
+                  echo "Adding $name to OpenVnmrJ configuration files"
+                  su - $nmr_user -c "/vnmr/bin/ovjUser $name"
+                  echo "Configuring $name with the standard configuration (stdConf)"
+                  echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
+                  su - $name -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog" 2> /dev/null
+               fi
             fi
          done
       fi
@@ -543,7 +556,11 @@ if [ -e /tmp/.ovj_installed ]; then
    read ans
    if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
       echo "Installing NMRPipe" >> $insLog
-      su - $nmr_user -c "/vnmr/bin/ovjGetpipe -l $insLog"
+      if [ x$distroType = "xdebian" ]; then
+         sudo -i -u $nmr_user /vnmr/bin/ovjGetpipe -l $insLog
+      else
+         su - $nmr_user -c "/vnmr/bin/ovjGetpipe -l $insLog"
+      fi
       echo " "
    elif [[ x$oldVnmr != "x" ]] ; then
       if [[ -d $oldVnmr/nmrpipe ]] ; then
@@ -571,7 +588,11 @@ if [ -e /tmp/.ovj_installed ]; then
       read ans
       if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
          echo "Installing VnmrJ manuals" >> $insLog
-         su - $nmr_user -c "/vnmr/bin/ovjGetManuals -l $insLog"
+         if [ x$distroType = "xdebian" ]; then
+            sudo -i -u $nmr_user /vnmr/bin/ovjGetManuals -l $insLog
+         else
+            su - $nmr_user -c "/vnmr/bin/ovjGetManuals -l $insLog"
+         fi
          echo " "
       else
          echo "The VnmrJ manuals may be installed at any time by running"

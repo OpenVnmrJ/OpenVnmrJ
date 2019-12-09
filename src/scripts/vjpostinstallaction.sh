@@ -76,9 +76,9 @@ then
    if [ "x$login_user" != "x$nmr_adm" ];
    then
        # echo "Switching to administrator $nmr_adm and running $cmd"
+       xhost + > /dev/null
        if [ x$lflvr != "xdebian" ]
        then
-          xhost + > /dev/null
           su -l $nmr_adm -s /bin/csh -c "setenv DISPLAY $DISPLAY; $cmd" > /dev/null 2>&1
        else
           ## echo "sudo -i -u $nmr_adm $cmd"

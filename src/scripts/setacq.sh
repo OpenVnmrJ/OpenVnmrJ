@@ -191,8 +191,44 @@ rmTFTPBootFiles() {
    rm -f "$tftpdir"/*.o   "$tftpdir"/*.bdx  "$tftpdir"/nvScript
 }
 
+installTftp() {
+# Install tftp if needed
+ if [ -f /etc/debian_version ]; then
+   if [ "$(dpkg --get-selections tftp 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
+   then
+      echo "Installing console communication tool (tftp)..."
+      apt-get -y install tftp &>> ${vnmrsystem}/adm/log/tftp.log
+   fi
+   if [ "$(dpkg --get-selections tftpd 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
+   then
+      apt-get -y install tftpd &>> ${vnmrsystem}/adm/log/tftp.log
+   fi
+   if [ "$(dpkg --get-selections xinetd 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
+   then
+      apt-get -y install xinetd &>> ${vnmrsystem}/adm/log/tftp.log
+   fi
+   file=/etc/xinetd.d/tftp
+   if [[ ! -f $file ]]; then
+     cat <<EOF >  $file
+service tftp
+{
+protocol        = udp
+port            = 69
+socket_type     = dgram
+wait            = yes
+user            = nobody
+server          = /usr/sbin/in.tftpd
+server_args     = /tftpboot
+disable         = no
+}
+EOF
+   fi
+ fi
+}
+
 installRarp() {
 # Install rarp if needed
+ if [ ! -f /etc/debian_version ]; then
    rarp=$(rpm -qa | grep rarpd)
    if [[ -z $rarp ]] ; then
       file=${vnmrsystem}/adm/acq/rarpd-ss981107-22.2.2.x86_64.rpm
@@ -203,6 +239,12 @@ installRarp() {
    else
       stop_program rarpd
    fi
+ else
+   if [ "$(dpkg --get-selections rarpd 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
+   then
+      apt-get -y install rarpd &> ${vnmrsystem}/adm/log/rarp.log
+   fi
+ fi
 }
 
 configureRarp() {
@@ -693,6 +735,7 @@ fi
 # determine location of the tftpboot directory which the tftpd is configured for
 # usually /tftpboot or /var/lib/tftpboot
 #-----------------------------------------------------------------
+installTftp
 getTFTPBootDir
 
 if [[ x${cons} = "xinova" ]] || [[ x${cons} = "xmerc"* ]] ; then

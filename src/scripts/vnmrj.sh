@@ -180,7 +180,7 @@ fi
 
 # Set the "MultiClickTime"
 if [ -e $HOME/.vxresource ]; then
-   xrdb -merge $HOME/.vxresource
+   xrdb -merge $HOME/.vxresource >& /dev/null
 fi
 
 # Remember which X DISPLAY to use
