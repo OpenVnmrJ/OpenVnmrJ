@@ -23,6 +23,8 @@ else
 endif
 
 $fidf1=$filedir+'/fidf1r'
+$imgf1=$filedir+'/fidf1i'
+
 exists($fidf1,'file'):$fex
 if $fex then
     exists('readf1','command'):$fex
@@ -35,7 +37,10 @@ if $ex2 then rename($fidf1+'_crft_aph',$fidf1+'_crftaph'):$dum endif
 
 if $1<>curexp and $1<>'' then
     exists($fidf1+'_'+$1,'file'):$fex1
-    if $fex1 then $fidf1=$fidf1+'_'+$1 endif
+    if $fex1 then 
+	$fidf1=$fidf1+'_'+$1 
+	$imgf1=$imgf1+'_'+$1 
+    endif
 endif
 
 //if $fex and $1<>curexp then
@@ -47,6 +52,17 @@ endif
 
 if $fex then
     readheader($fidf1):$f1np,$f2np
+    if $imgf1<>'' then
+	exists($imgf1,'file'):$imgex
+	if not $imgex then $imgf1='' endif
+    endif
+    if $imgf1<>'' then
+	readheader($imgf1):$f1npimg,$f2npimg
+	if $f1npimg<>$f1np or $f2npimg<>$f2np then
+	    $imgf1=''
+	endif
+    endif
+
     $f2np=2*$f2np
     if fn<>$f2np then
 	write('line3','Warning: fn (%d) mismatch with the dimension (%d) of fidf1. fn reset to %d',fn,$f2np,$f2np)
@@ -54,6 +70,9 @@ if $fex then
     endif
     if $filedir<>curexp then
     	copy($fidf1,curexp+'/fidf1r'):$dum
+	if $imgf1<>'' then
+	    copy($imgf1,curexp+'/fidf1i'):$dum
+	endif
     endif
     $origni=ni 
     readheader(curexp+'/acqfil/fid'):$np,$origdim
@@ -61,7 +80,11 @@ if $fex then
     $mult=$origdim/$origni
 //    fn1=$f1np
 //    trace='f1'
-    pmode='partial'
+    if $imgf1<>'' then
+	pmode='full'
+    else
+        pmode='partial'
+    endif
     if $1<>curexp then
         setLP1(0)
     endif
@@ -85,8 +108,14 @@ if $fex then
     endif
     if fn1<$f1np then
 	downsizefid(fn1,curexp+'/fidf1r')
+	if $imgf1<>'' then
+	    downsizefid(fn1,curexp+'/fidf1i')
+	endif
     elseif fn1>$f1np then
 	zerofillfid(fn1,curexp+'/fidf1r')
+	if $imgf1<>'' then
+	    zerofillfid(fn1,curexp+'/fidf1i')
+	endif
     endif
     readf1
     ni=$f1np/2
@@ -102,6 +131,9 @@ if $fex then
     setvalue('arraydim',$origdim,'processed')
     if $1<>curexp then
         rm('-f',curexp+'/fidf1r'):$dum
+	if $imgf1<>'' then
+	    rm('-f',curexp+'/fidf1i'):$dum
+	endif
     endif
 else
     wft2da
