@@ -8,9 +8,9 @@ endif
 $macropath=userdir+'/maclib/'+$1
 exists($macropath,'file'):$e
 if (not $e) then
-  shell('touch '+$macropath):$dum
+  touch($macropath):$dum
 endif
-shell('uname -s'):$osname
+uname:$osname
 if ($osname = 'Darwin') then
   write('line3','You must Quit TextEdit to resume VnmrJ')
 endif
@@ -21,7 +21,10 @@ if ($e = 1) then
     shell('wc -w '+$macropath):$ans
     substr($ans,1):$e
     if ($e > 0) then
-      macrold($1)
+      // check macro syntax
+      macrold($1):$e
+      // remove macro from memory
+      purge($1)
     else
       delete($macropath)
     endif

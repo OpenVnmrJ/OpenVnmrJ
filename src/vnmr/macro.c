@@ -260,8 +260,13 @@ void showMacros()
 
 int purgeCache(int argc, char *argv[], int retc, char *retv[])
 {  if (argc == 1)
+   {
+      // Schedule purge to run after all macros exit.
+      if ( ! Bnmr )
+         sendTripleEscToMaster( 'C',"purge(0,0,0,0)");
+   }
+   else if (argc == 5)
    {  purgeAllMacros();
-      ABORT;
    }
    else if (argc == 2)
    {
