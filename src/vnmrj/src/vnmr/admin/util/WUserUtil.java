@@ -792,7 +792,8 @@ public class WUserUtil
                    strlist = strOperatorlist.substring(0, nIndex);
                 if (strlist != null && strlist.equals("null"))
                     strlist = "";
-                strlist = strlist.substring(operator.length()+1).trim();
+                if (strlist != null)
+                    strlist = strlist.substring(operator.length()+1).trim();
                 // List of users that have this operator in their list in
                 // the operatorlist file.
                 ArrayList<String> alistOperatorsFile = WUtil.strToAList(strlist, false, ",");
