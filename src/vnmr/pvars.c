@@ -459,6 +459,23 @@ int P_getsize(int tree, const char *name, int *val)
 	return(-1); /* tree doesn't exist */
 }
 
+int P_getsizeLocal(char *name)
+{   symbol **root;
+
+    if ( (root = selectVarTree(name)) )
+    {	varInfo *v;
+
+     	if ( (v = rfindVar(name,root)) )
+	{
+	    return(v->T.size);
+	}
+	else
+	    return(-2); /* variable doesn't exist */
+    }
+    else
+	return(-1); /* tree doesn't exist */
+}
+
 #ifdef VNMRJ
 /*------------------------------------------------------------------------------
 |
@@ -1225,6 +1242,43 @@ int P_getreal(int tree, const char *name, double *value, int index)
 {   symbol **root;
 
     if ( (root = getTreeRoot(getRoot(tree))) )
+    {	varInfo *v;
+
+     	if ( (v = rfindVar(name,root)) )  /* if variable exists */
+	{   
+	    if ( (0 < index)  && (index <= v->T.size) )  /* within bounds ? */
+	    {	int   i;
+	     	Rval *r;
+
+		i = 1;
+		r = v->R;
+		while ( r && i < index ) /* travel down Rvals  */
+		{   r = r->next;
+		    i += 1;
+		}
+		if (r)	
+		{   *value = r->v.r;
+		    return(0);
+		}
+		else
+		{   *value = 0;
+		    return(-99);  /* unknown error */
+		}
+	    }
+	    else
+		return(-9); /* index out of bounds */
+	}
+	else
+	    return(-2); /* variable doesn't exist */
+    }
+    else
+	return(-1); /* tree doesn't exist */
+}
+
+int P_getrealLocal(char *name, double *value, int index)
+{   symbol **root;
+
+    if ( (root = selectVarTree(name)) )
     {	varInfo *v;
 
      	if ( (v = rfindVar(name,root)) )  /* if variable exists */
