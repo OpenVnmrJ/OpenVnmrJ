@@ -1,0 +1,30 @@
+"macro dsnmax"
+" ******************************** "
+" *dsnmax--calculates maximum S/N* "
+" ******************************** "
+" Usage: dsnmax(<noise region>) "
+"  	 If no argument, dsnmax finds the best S/N based on the noise"
+"	 region defined by delta. If given the noise region as an    "
+"	 argument, e.g. dsnmax(400), the macro calculates the best   "
+"	 S/N ratio based on 400 Hz of noise region.		     "
+
+if $#>0 then delta1=$1 endif
+$diff=cr1-sp1
+if $diff < 0 then $diff=-$diff endif 
+cr1=delta1+sp1
+$n=0
+$best=0
+$crbest=0
+repeat
+   dsn:$try
+   if $try>$best then $best=$try $crbest=cr1 endif
+   cr1=cr1+delta1/40
+   $n=$n+1
+until $n>=2000 or cr1>sp1+wp1
+cr1=$crbest
+if $## < 1 then
+    dsn
+else
+    dsn:$ret
+    return($ret)
+endif

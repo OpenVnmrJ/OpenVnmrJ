@@ -69,6 +69,7 @@ extern FILE   *popen_call(char *cmdstr, char *mode);
 extern int More(FILE *stream, int screenLength);
 extern void showTree(int n, char *m, node *p);
 extern void dispose(node *p);
+extern int  sendTripleEscToMaster(char code, char *string_to_send );
 
 static FILE   *stream;
 static symbol *macroCache = NULL;
@@ -260,8 +261,13 @@ void showMacros()
 
 int purgeCache(int argc, char *argv[], int retc, char *retv[])
 {  if (argc == 1)
+   {
+      // Schedule purge to run after all macros exit.
+      if ( ! Bnmr )
+         sendTripleEscToMaster( 'C',"purge(0,0,0,0)");
+   }
+   else if (argc == 5)
    {  purgeAllMacros();
-      ABORT;
    }
    else if (argc == 2)
    {

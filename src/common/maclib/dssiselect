@@ -1,4 +1,6 @@
 // Chempacker macro
+//  default arg1 is empty string
+//  default arg2 is '1 thru datadim'
 
 // multiple arguments
 //  First argument is either add or remove or empty string
@@ -10,6 +12,25 @@
 //	- real (the supplied index will be included)
 //  	- string (example 'N thru M' - N, M and all indices in between will be included)
 
+
+readheader(curexp+'/datdir/data'):$np,$datdim
+if $# < 2 then
+    write('line3','1 thru %d',$datdim):$2
+endif
+if $# < 1 then $1='' endif
+
+if $# < 3 then
+    exists('craft_dssiselect','maclib'):$macex
+	// branch off to craft_dssiselect
+	//  it serves both craft results and non-craft results
+	// but, if the number of argument is greater than 2
+	//   then there is no difference betwen this macro
+	//   and the craft_dssiselect macro
+    if $macex then
+	craft_dssiselect($1,$2)
+	return
+    endif
+endif
 
 if $1<>'' and $1<>'add' and $1<>'remove' and $1<>'stack' then
     write('error','invalid first argument for %s',$0)
@@ -64,9 +85,8 @@ endif
     exists('dssitrace','parameter'):$pex
     if $pex then if dssitrace[1]=0 then $pex=0 endif endif
     if not $pex then
-	readheader(curexp+'/datdir/data'):$np,$tdim
 	$i=1
-	while $i<=$tdim do
+	while $i<=$datdim do
 	    $oldtrace[$i]=$i
 	    $i=$i+1
 	endwhile

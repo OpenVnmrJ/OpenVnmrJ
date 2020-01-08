@@ -141,6 +141,25 @@ ${OVJ_IP}     wormhole
 EOF
 }
 
+addToInterfaces() {
+   file=/etc/network/interfaces
+   grep OpenVnmrJ $file
+   if [[ $? -eq 0 ]]; then
+      sed --in-place '/# OpenVnmrJ Start/,/# OpenVnmrJ End/d' $file
+   fi
+   cat <<EOF >> ${file}
+# OpenVnmrJ Start
+auto ${OVJ_NIC}
+iface ${OVJ_NIC} inet static
+   address $OVJ_IP
+EOF
+   if [[ -f /sys/class/net/${OVJ_NIC}/address ]]; then
+      hwaddr=$(awk '{ print toupper($0) }' < /sys/class/net/${OVJ_NIC}/address)
+      echo "   hwaddress ${hwaddr}" >> ${file}
+   fi
+   echo "# OpenVnmrJ End" >> ${file}
+}
+
 addIfcfgFile() {
    file=/etc/sysconfig/network-scripts/ifcfg-${OVJ_NIC}
 #   file=/tmp/ifcfg-${OVJ_NIC}
@@ -1017,13 +1036,17 @@ if [[ ${OVJ_VERIFY} -eq 0 ]] ; then
    read ans
    if [[ "x$ans" = "xn" ]] || [[ "x$ans" = "xN" ]] ; then
       echo "Aborting NIC configuration"
-      exit 0
+      exit 1
    fi
    checkWormhole
    if [[ $? -ne 0 ]] ; then
       exit 1
    fi
-   addIfcfgFile
+   if [[ -d /etc/sysconfig ]]; then
+      addIfcfgFile
+   elif [[ -f /etc/network/interfaces ]];  then
+      addToInterfaces
+   fi
    if [[ -e ${vnmrsystem}/adm/log/CONSOLE ]] ; then
       cons=$(cat ${vnmrsystem}/adm/log/CONSOLE)
    else
@@ -1046,6 +1069,7 @@ if [[ ${OVJ_VERIFY} -eq 0 ]] ; then
    saveNICinfo
    echo "Restarting network"
    /etc/init.d/network restart &> /dev/null
+   exit 0
 else
    echo "Verify NIC setup"
    exitCode=0

@@ -84,12 +84,103 @@ int AspDisAnno::aspAnno(int argc, char *argv[], int retc, char *retv[]) {
 		retv[0] = newString(anno->getProperty(argv[2]).c_str()); 
 	   }
    } else if(argc>4 && strcasecmp(argv[1],"set") == 0) {
-           AspAnno *anno = frame->getAnnoList()->getAnno(atoi(argv[2])-1);
-	   if(anno) {
-		anno->setProperty(argv[3],argv[4],frame->getFirstCell());
-   	   	frame->displayTop();
-	   }
-   	 frame->displayTop();
+      AspAnno *anno;
+      int annIndex;
+      if ( argv[2][0] == '$')
+      {
+         int index;
+         int num;
+         double tmp;
+
+         num = P_getsizeLocal(argv[2]);
+         if (num < 0)
+         {
+          Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[2]);
+          ABORT;
+         }
+            for (index=1; index <= num; index++)
+            {
+                 P_getrealLocal(argv[2], &tmp, index);
+                 annIndex = (int) tmp;
+                 if (annIndex == 0)
+                 {
+                    AspAnnoList *annoList = frame->getAnnoList();
+                    AspAnnoMap::iterator itr;
+                    for (anno= annoList->getFirstAnno(itr); anno != NULL;
+                         anno= annoList->getNextAnno(itr))
+                    {
+                       int val = 3;
+                       while (val < argc)
+                       {
+         		   anno->setProperty(argv[val],argv[val+1],frame->getFirstCell());
+            	           frame->displayTop();
+                           val += 2;
+                       }
+                    }
+                    break;
+                 }
+                 else
+                 {
+                    anno = frame->getAnnoList()->getAnno(annIndex-1);
+	            if(anno) {
+                       int val = 3;
+                       while (val < argc)
+                       {
+         		   anno->setProperty(argv[val],argv[val+1],frame->getFirstCell());
+            	           frame->displayTop();
+                           val += 2;
+                       }
+	            }
+                 }
+            }
+      }
+      else
+      {
+           char *str, *endptr;
+
+           str = argv[2];
+           while (str)
+           {
+              annIndex = strtol(str, &endptr, 10);
+              if (str != endptr)
+              {
+                 str = endptr;
+                 if (annIndex == 0)
+                 {
+                    AspAnnoList *annoList = frame->getAnnoList();
+                    AspAnnoMap::iterator itr;
+                    for (anno= annoList->getFirstAnno(itr); anno != NULL;
+                         anno= annoList->getNextAnno(itr))
+                    {
+                       int val = 3;
+                       while (val < argc)
+                       {
+         		   anno->setProperty(argv[val],argv[val+1],frame->getFirstCell());
+            	           frame->displayTop();
+                           val += 2;
+                       }
+                    }
+                    break;
+                 }
+                 else
+                 {
+                    anno = frame->getAnnoList()->getAnno(annIndex-1);
+	            if(anno) {
+                       int val = 3;
+                       while (val < argc)
+                       {
+         		   anno->setProperty(argv[val],argv[val+1],frame->getFirstCell());
+            	           frame->displayTop();
+                           val += 2;
+                       }
+	            }
+                 }
+              }
+              else
+                 break;
+           }
+      }
+      frame->displayTop();
    } else if(argc>3 && strcasecmp(argv[1],"set") == 0) {
            AspAnno *anno = frame->getAnnoList()->getSelAnno();
 	   if(anno) {

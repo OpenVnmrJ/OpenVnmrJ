@@ -63,6 +63,8 @@ extern "C" {
     int P_getstring(int tree, const char *name, char *buf, int index,
 		    int maxbuf);
     int P_getreal(int tree, const char *name, double *value, int index) ;
+    int P_getrealLocal(char *name, double *value, int index) ;
+    int P_getsizeLocal(char *name);
     int P_getsize(int tree, const char *name, int *val);
     int P_creatvar(int tree, const char *name, int type);
     int P_setdgroup(int tree, const char *name, int value);

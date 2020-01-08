@@ -541,7 +541,7 @@ else  #current user is root
                 if [ "x$name_add" = "xvnmr1" ] ; then
                     sudo /usr/sbin/useradd --create-home --home-dir "$dir_name/$name_add" \
                          --shell /bin/bash --uid $num --gid "$nmr_group" \
-                         --groups admin,cdrom,floppy,audio,video,plugdev,lpadmin,adm \
+                         --groups cdrom,floppy,audio,video,plugdev,lpadmin \
                          --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' "$name_add"
                 else
                     sudo /usr/sbin/useradd --create-home --home-dir "$dir_name/$name_add" \
@@ -552,7 +552,7 @@ else  #current user is root
                 sudo chmod 755 "$dir_name/$name_add"
                 # we give a temp default password, use the --expire
                 # option to force to user to change password on login
-                sudo /usr/bin/passwd --expire "$name_add" 2>/dev/null
+                # sudo /usr/bin/passwd --expire "$name_add" 2>/dev/null
                 sudo /vnmr/bin/setupbashenv "$dir_name/$name_add"
             fi
 	elif [ x$ostype = "xInterix" ]
