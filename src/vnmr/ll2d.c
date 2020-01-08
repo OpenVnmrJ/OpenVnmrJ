@@ -144,14 +144,15 @@ static peak_table_struct *peak_table=NULL;	/* peak table for all ll2d
 extern int expdir_to_expnum(char *expdir);
 extern void set_line_thickness(const char *thick);
 
-double           dist_from_diag();
+double dist_from_diag(double f1, double f2);
 static int peak_bounds(peak_table_struct *peak_table, float stdev,
            double f1, double f2, double amp,
            double *f1_1, double *f1_2, double *f2_1, double *f2_2,
            double *fwhh1, double *fwhh2, double *vol,
            double thresh, int **array_status);
-static int       argtest(), ll2d_mark(), ll2d_unmark(), ll2d_label();
-static int       ll2d_info(), ll2d_comment(), ll2d_combine();
+static int argtest(int argc, char *argv[], char *argname);
+static int       ll2d_unmark(), ll2d_label();
+static int       ll2d_info(), ll2d_comment();
 static double    calc_volume();
 int              ll2d_frq_to_dp(double frq, double sw, int fn);
 double           ll2d_dp_to_frq(double, double, int);
@@ -168,7 +169,6 @@ static void init_peak_table(peak_table_struct **);
 static peak_table_struct *create_peak_table();
 static int insert_peak_in_table(/*peak_table,peak*/);
 static int insert_peak(/*peak_table,peak*/);
-static void delete_peak_from_table(/*peak_table,f1,f2*/);
 static void delete_peak(peak_table_struct *peak_table, double f1, double f2);
 static void insert_peak_bounds(/*peak_table,f1,f2,x1,x2,y1,y2,fwhh1,fwhh2,vol*/);
 static int peak_in_table(peak_table_struct *, double, double);
@@ -183,7 +183,8 @@ static peak_struct *read_peak_file_record(/*peak_table,record*/);
 static void update_peak_file_version(/*peak_table*/);
 static int read_ascii_peak_file(/*peak_table,filename*/);
 static void write_peak_file_entry(/*fp,peak*/);
-static int write_ascii_peak_file(/*peak_table,filename*/);
+static int write_ascii_peak_file(peak_table_struct *peak_table,
+                                 char *filename, int peakMode);
 static int calculate_noise(float *, float *, float, int, int, int, int);
 static void interpolate_cg(double *, double *, double *);
 static int peak_table_valid(peak_table_struct *);
@@ -197,11 +198,48 @@ void ll2d_draw_peaks();
 
 static void adjust_peak_bounds();
 static void draw_peaks();
+static int ll2d_combine(int mark_mode, int weight, double *list, int numlist,
+                        int retc, char *retv[]);
+static void ll2d_autocombine(int weight, double f1box, double f2box);
+static int ll2d_mark(int mark_mode, int retc);
+static void rekey_peaks(peak_table_struct *peak_table);
+static void delete_peak_from_table(peak_table_struct *peak_table, double f1, double f2);
 
 peak_struct *create_peak(double f1, double f2, double amp);
 void delete_peak_table(/*peak_table*/);
 int read_peak_file(/*peak_table,filename*/);
 void write_peak_file_record(/*peak_table,peak,record*/);
+
+#ifdef DEBUG
+void dispPeak(peak_struct *peak)
+{
+   fprintf(stderr,"Peak %d\n",peak->key);
+   fprintf(stderr,"  Label:   %s\n",peak->label);
+   fprintf(stderr,"  Comment: %s\n",peak->comment);
+   fprintf(stderr,"  f1: %g f2: %g amp: %g vol: %g\n",peak->f1, peak->f2, peak->amp, peak->vol);
+   fprintf(stderr,"  f1_min: %g f1_max: %g fwhh1: %g\n",peak->f1_min, peak->f1_max, peak->fwhh1);
+   fprintf(stderr,"  f2_min: %g f2_max: %g fwhh2: %g\n",peak->f2_min, peak->f2_max, peak->fwhh2);
+}
+
+int showPeaks(char *msg)
+{
+  peak_struct *pk_ptr;
+  int index=1;
+  fprintf(stderr,"%s\n",msg );
+  fprintf(stderr,"Peak Table num_peaks %d\n",(peak_table)->num_peaks );
+  fprintf(stderr,"header[0] = %d\n", (peak_table)->header[0]);
+  pk_ptr = peak_table->head;
+  while (pk_ptr != NULL)  {
+//    fprintf(stderr,"header[%d] = %d key= %d\n",index, (peak_table)->header[index], pk_ptr->key);
+    fprintf(stderr,"key:%d amp= %g f2= %g f1= %g\n",
+                    pk_ptr->key, pk_ptr->amp, pk_ptr->f2, pk_ptr->f1);
+    index++;
+    pk_ptr = pk_ptr->next;
+    }
+  return 0;
+
+}
+#endif
 
 /*************/
 int ll2d(int argc, char *argv[], int retc, char *retv[])
@@ -226,26 +264,18 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	mark_flag, unmark_flag, adjust_flag, pos_neg_flag, clear_flag,
 	draw_flag, writetext_flag, comment_flag, readtext_flag,
 	combine_flag, label_peak, unmark_peak;
+   int writepeak_flag;
+   int autocombine_flag, weight_flag;
    char ch, *filename = NULL, *label = NULL, mode_string[NUM_LL2DMODE+1];
-   char *get_filename();
    char *fname0;
    double h_rflrfp, v_rflrfp, cr, cr1, delta, delta1, diag_dist;
    double *comblist;
    int new_fpnt, new_npnt, new_fpnt1, new_npnt1;
-   int create_peak_file();
 
    extern int dconi_newdcon();/* from dconi.c */
    extern int dconi_cursor();  /* from dconi.c */
    extern int dconi_mode;  /* from dconi.c */
 
-   int argtest(), ll2d_mark(), ll2d_unmark(), ll2d_label(),
-		  ll2d_info(), ll2d_comment(), ll2d_combine(),
-		  check_axis_labels();
-   double calc_volume(), dist_from_diag();
-   int write_ascii_peak_file(); 
-   void delete_peak_table(),
-	adjust_peak_bounds(), write_peak_file_record();
-   int read_peak_file(), insert_peak();
    extern int set_turnoff_routine(), turnoff_dconi();
 
 
@@ -314,7 +344,10 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
     clear_flag = NO;
     draw_flag = NO;
     writetext_flag = NO;
+    writepeak_flag = NO;
     combine_flag = NO;
+    autocombine_flag = NO;
+    weight_flag = NO;
     label_peak = 0;
     unmark_peak = 0;
     comblist = NULL;
@@ -328,6 +361,11 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	  }
 	else if (strcmp(argv[1],"writetext")==0) {
 	  writetext_flag = YES;
+	  filename = NULL;
+	  }
+	else if (strcmp(argv[1],"writepeaks")==0) {
+	  writetext_flag = YES;
+          writepeak_flag = YES;
 	  filename = NULL;
 	  }
 	else if (strcmp(argv[1],"reset")==0) {
@@ -398,23 +436,30 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	  ll2d_info(dconi_mode,0,retc,retv);
 	  info_flag = YES;
 	  }
-	else if (strcmp(argv[1],"combine")==0)  {
+	else if ( (strcmp(argv[1],"combine")==0) || (strcmp(argv[1],"combinewt")==0) )  {
 	  if (!WgraphicsdisplayValid( "dconi" )) {
 		Werrprintf("ll2d:  must be in dconi mode to do combine");
 		ABORT;
 	    }
 	  combine_flag = YES;
+          weight_flag = (strcmp(argv[1],"combinewt")) ? 0 : 1;
 	  }
+	else if ( (strcmp(argv[1],"autocombine")==0) || (strcmp(argv[1],"autocombinewt")==0) )  {
+	  Werrprintf("ll2d: %s option requires F1 and F2 box bounds\n",argv[1]);
+	  ABORT;
+          }
 	else  {
 	  Werrprintf("ll2d: illegal option \"%s\"\n",argv[1]);
 	  ABORT;
 	  }
 	}
-    else if ((argc > 2) && (strcmp(argv[1],"combine")==0))  {
+    else if ((argc > 2) &&
+             ((strcmp(argv[1],"combine")==0) || (strcmp(argv[1],"combinewt")==0)) )  {
       comblist = (double *)allocateWithId(sizeof(double)*(argc-2),"ll2d");
       for (i=0;i<argc-2;i++)
 	comblist[i] = stringReal(argv[i+2]);
       combine_flag = YES;
+      weight_flag = (strcmp(argv[1],"combinewt")) ? 0 : 1;
       }
     else if (argc == 3)  {
       if (strcmp(argv[1],"read")==0)  {
@@ -427,6 +472,11 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	}
       else if (strcmp(argv[1],"writetext")==0)  {
 	writetext_flag = YES;
+	filename = argv[2];
+	}
+      else if (strcmp(argv[1],"writepeaks")==0)  {
+	writetext_flag = YES;
+	writepeak_flag = YES;
 	filename = argv[2];
 	}
       else if (strcmp(argv[1],"label")==0) {
@@ -499,6 +549,8 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	clear_flag = YES;
 	}
       else if (strcmp(argv[1],"info")==0)  {
+        if (!peak_table)
+          ll2d_init();
 	if (isReal(argv[2]))  {
 	  i = (int) (stringReal(argv[2]) + 0.5);
 	  ll2d_info(dconi_mode,i,retc,retv);
@@ -533,7 +585,16 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	}
       }
     else if (argc == 4)  {
-      if (argtest(argc,argv,"reset") && argtest(argc,argv,"peak") &&
+      if ( (strcmp(argv[1],"autocombine")==0) || (strcmp(argv[1],"autocombinewt")==0) )  {
+	if ( isReal(argv[2]) && isReal(argv[3]) )  {
+          weight_flag = (strcmp(argv[1],"autocombinewt")) ? 0 : 1;
+          autocombine_flag = YES;
+          } else {
+	  Werrprintf("ll2d: %s option requires F1 and F2 box bounds\n",argv[1]);
+	  ABORT;
+          }
+        }
+      else if (argtest(argc,argv,"reset") && argtest(argc,argv,"peak") &&
 		argtest(argc,argv,"volume"))  {
 	reset_flag = YES;
 	peak_flag = YES;
@@ -695,18 +756,18 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
       }
 
     if (mark_flag == YES)  {
-      ll2d_mark(dconi_mode);
+      ll2d_mark(dconi_mode, retc);
       }
     if (unmark_flag == YES)  {
       if (peak_table)
 	if (peak_table->num_peaks > 0)  {
-	  ll2d_unmark(dconi_mode, FALSE,pos_neg_flag,unmark_peak);
+	  ll2d_unmark(dconi_mode, FALSE,pos_neg_flag,unmark_peak,retc);
 	  }
       }
     if (clear_flag == YES)  {
       if (peak_table)
 	if (peak_table->num_peaks > 0)  {
-	  ll2d_unmark(dconi_mode, TRUE,pos_neg_flag,unmark_peak);
+	  ll2d_unmark(dconi_mode, TRUE,pos_neg_flag,unmark_peak,retc);
 	  }
       }
     if (comment_flag == YES)
@@ -732,7 +793,7 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
     if (combine_flag == YES)  {
       if (peak_table)
 	if (peak_table->num_peaks > 0)
-	  if (ll2d_combine(dconi_mode,comblist,argc-2,retc,retv))  {
+	  if (ll2d_combine(dconi_mode,weight_flag,comblist,argc-2,retc,retv))  {
 	    disp_status("    ");
 	    dconi_mode = -1;
 	    dconi_cursor();
@@ -743,6 +804,14 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
       if (comblist)
 	release(comblist);
       }
+    if (autocombine_flag == YES)  {
+      if (peak_table && (peak_table->num_peaks > 0))
+	  ll2d_autocombine(weight_flag, stringReal(argv[2]), stringReal(argv[3]) );
+//      disp_status("    ");
+//      dconi_mode = -1;
+//      dconi_cursor();
+//      RETURN;
+    }
     if (draw_flag == YES)  {
       ll2d_draw_peaks();
       if (!WgraphicsdisplayValid( "dconi" ) &&
@@ -754,7 +823,7 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
       RETURN;
       }
     if (writetext_flag == YES)  {
-      if (write_ascii_peak_file(peak_table,filename))  {
+      if (write_ascii_peak_file(peak_table,filename, writepeak_flag))  {
         disp_status("    ");
 	return(ERROR);
 	}
@@ -1697,7 +1766,6 @@ static int peak_bounds(peak_table_struct *peak_table, float stdev,
 
     char ch;
     double slope, slope_thresh = 0.0;
-    double calc_volume();
 
     /* find data points corresponding to f1, f2 */
     get_display_label(HORIZ,&ch);
@@ -2027,7 +2095,7 @@ static void adjust_peak_bounds(peak_table_struct *peak_table)
     struct node *peaks, *pres, *new;
     peak_struct *pk_ptr;
     char ch;
-    double ave, temp, f1_rflrfp, f2_rflrfp, calc_volume();
+    double ave, temp, f1_rflrfp, f2_rflrfp;
     double f1_min, f1_max, f2_min, f2_max;
 
     init_peak_table(&peak_table);
@@ -2416,11 +2484,8 @@ static double calc_volume(peak_table_struct *peak_table,
 /******************************************************************************
 *  PEAK_TO_PIXEL() -  get drawing coordinates for the position of a peak
 ******************************************************************************/
-static void peak_to_pixel(peak_ptr,ch,h_rflrfp,v_rflrfp,x,y)
-peak_struct *peak_ptr;
-char ch;
-double h_rflrfp, v_rflrfp;
-int *x, *y;
+static void peak_to_pixel(peak_struct *peak_ptr, char ch,
+                          double h_rflrfp, double v_rflrfp, int *x, int *y)
 {
     double f1, f2;
 
@@ -2523,7 +2588,6 @@ static void draw_peaks(peak_table_struct *peak_table)
     char ch, mode_string[NUM_LL2DMODE+1];
     int x1,y1,x2,y2;
     double h_rflrfp, v_rflrfp;
-    void peak_to_pixel();
 
     get_rflrfp(HORIZ,&h_rflrfp);
     get_rflrfp(VERT,&v_rflrfp);
@@ -2590,7 +2654,6 @@ static void draw_one_peak(peak_struct *peak_ptr, int mode)
     char ch, mode_string[NUM_LL2DMODE+1];
     int x1,y1;
     double h_rflrfp, v_rflrfp;
-    void peak_to_pixel();
 
     get_rflrfp(HORIZ,&h_rflrfp);
     get_rflrfp(VERT,&v_rflrfp);
@@ -2683,7 +2746,6 @@ static void write_one_label(peak_struct *peak_ptr, int mode)
     int x1,y1;
     double h_rflrfp, v_rflrfp;
     char mode_string[NUM_LL2DMODE+1];
-    void peak_to_pixel();
 
     get_rflrfp(HORIZ,&h_rflrfp);
     get_rflrfp(VERT,&v_rflrfp);
@@ -2811,7 +2873,6 @@ static int intRound(double x)		/* utility routine */
 static void ll2d_init()
 {
     char *fname0, fname[MAXPATHL];
-    char *get_filename();
 
     disp_status("LL2D  ");
     delete_peak_table(&peak_table);
@@ -2834,7 +2895,7 @@ LL2D_MARK(mark_mode)
 *	area defined by the cursors, finds the highest point in that area,
 *	marks it as a peak, and assigns the cursor area as that peak's bounds.
 *****************************************************************************/
-static int ll2d_mark(int mark_mode)
+static int ll2d_mark(int mark_mode, int retc)
 {
 	int		 first_point, first_trace;
 	float		*phasfl;
@@ -2852,9 +2913,6 @@ static int ll2d_mark(int mark_mode)
 	int		 h_min_pt, h_max_pt, v_min_pt, v_max_pt, i, j;
 	int		 max_i, max_j;
 	char 		 ch;
-	double		 calc_volume();
-	void		 insert_peak_bounds();
-	int		 insert_peak();
 
 extern  int		dconi_mode;  /* from dconi */
 extern  int		dconi_reset(), dconi_cursor();
@@ -2903,16 +2961,19 @@ extern  int		dconi_reset(), dconi_cursor();
 			peak->f2,f1_min,f1_max,f2_min,f2_max,
 			(double)0.0,(double)0.0,intval);
 		  draw_peak = peak;
-		  if (peak_table->f2_label == ch)
-		    Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  vol= %f",
+                  if (retc == 0)
+                  {
+		     if (peak_table->f2_label == ch)
+		       Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  vol= %f",
 			peak->key,peak_table->f1_label,
 			(peak->f1-v_rflrfp)/v_axis_scl, peak_table->f2_label,
 			(peak->f2-h_rflrfp)/h_axis_scl, intval*ins2val);
-		  else
-		    Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  vol= %f",
+		     else
+		       Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  vol= %f",
 			peak->key,peak_table->f1_label,
 			(peak->f1-h_rflrfp)/h_axis_scl,peak_table->f2_label,
 			(peak->f2-v_rflrfp)/v_axis_scl,intval*ins2val);
+                   }
 		  }
 		 }
 		peak = peak->next;
@@ -2994,16 +3055,19 @@ extern  int		dconi_reset(), dconi_cursor();
 		  insert_peak_bounds(peak_table,peak->f1,
 			peak->f2,f1_min,f1_max,f2_min,f2_max,
 			(double)0.0,(double)0.0,intval);
-		  if (peak_table->f2_label == ch)
-		    Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  vol= %f",
+                  if (retc == 0)
+                  {
+		     if (peak_table->f2_label == ch)
+		       Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  vol= %f",
 			peak->key,peak_table->f1_label,
 			(peak->f1-v_rflrfp)/v_axis_scl, peak_table->f2_label,
 			(peak->f2-h_rflrfp)/h_axis_scl, intval*ins2val);
-		  else
-		    Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  vol= %f",
+		     else
+		       Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  vol= %f",
 			peak->key,peak_table->f1_label,
 			(peak->f1-h_rflrfp)/h_axis_scl,peak_table->f2_label,
 			(peak->f2-v_rflrfp)/v_axis_scl,intval*ins2val);
+                   }
 	          draw_one_peak(peak,NORMALMODE);
 	          draw_one_box(peak,NORMALMODE);
 		  }
@@ -3032,7 +3096,8 @@ extern  int		dconi_reset(), dconi_cursor();
 		if (!peak_in_table(peak_table,cr1+v_rflrfp,cr+h_rflrfp))  {
 		  peak = create_peak(cr1+v_rflrfp,cr+h_rflrfp,datamax);
 		  insert_peak(peak_table,peak);
-		  Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  amp= %f",
+                  if (retc == 0)
+		     Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  amp= %f",
 			peak->key,peak_table->f1_label,
 			(peak->f1-v_rflrfp)/v_axis_scl, peak_table->f2_label,
 			(peak->f2-h_rflrfp)/h_axis_scl, datamax);
@@ -3043,7 +3108,8 @@ extern  int		dconi_reset(), dconi_cursor();
 		if (!peak_in_table(peak_table,cr+h_rflrfp,cr1+v_rflrfp))  {
 		  peak = create_peak(cr+h_rflrfp,cr1+v_rflrfp,datamax);
 		  insert_peak(peak_table,peak);
-		  Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  amp= %f",
+                  if (retc == 0)
+		     Winfoprintf("Peak: %d  f%c= %5.3f  f%c= %5.3f  amp= %f",
 			peak->key,peak_table->f1_label,
 			(peak->f1-h_rflrfp)/h_axis_scl, peak_table->f2_label,
 			(peak->f2-v_rflrfp)/v_axis_scl, datamax);
@@ -3051,7 +3117,8 @@ extern  int		dconi_reset(), dconi_cursor();
              }
 	     if (WgraphicsdisplayValid("dconi")) {
 	       dconi_reset();
-	       draw_one_peak(peak,NORMALMODE);
+               if (peak != NULL)
+	          draw_one_peak(peak,NORMALMODE);
 	       dconi_mode = -1;   /* force dconi CURSOR_MODE */
 	       dconi_cursor();
 	       }
@@ -3070,7 +3137,7 @@ LL2D_UNMARK(mark_mode, clear_flag)
 *	region in CURSOR mode or all peaks within the cursor area in BOX mode.
 *****************************************************************************/
 static int ll2d_unmark(int mark_mode, int clear_flag,
-                       int pos_neg_flag, int unmark_peak)
+                       int pos_neg_flag, int unmark_peak, int retc)
 /*************************/
 {
 	peak_struct	*peak,*min_dist_peak = NULL;
@@ -3228,7 +3295,8 @@ static int ll2d_unmark(int mark_mode, int clear_flag,
 	      if (min_dist < 1.0e+20)
 		delete_peak(peak_table,min_dist_peak->f1,
 					min_dist_peak->f2);
-       Winfoprintf("Number of peaks in 2D Spectrum:  %d",peak_table->num_peaks);
+              if (!retc)
+                 Winfoprintf("Number of peaks in 2D Spectrum:  %d",peak_table->num_peaks);
 	  }
 	}
       else  {
@@ -3240,6 +3308,7 @@ static int ll2d_unmark(int mark_mode, int clear_flag,
 	if (peak != NULL)
 	  delete_peak(peak_table,peak->f1,peak->f2);
 	}
+      rekey_peaks(peak_table);
 
       return 0;
 }
@@ -3254,7 +3323,7 @@ LL2D_COMBINE(mark_mode)
 *	of the peaks' centers, and whose bounds contain the bounds of all
 *	deleted peaks.
 *****************************************************************************/
-static int ll2d_combine(int mark_mode, double *list, int numlist,
+static int ll2d_combine(int mark_mode, int weight, double *list, int numlist,
                         int retc, char *retv[])
 /*************************/
 {
@@ -3263,6 +3332,7 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	double		 f1_min, f1_max, f2_min, f2_max;
 	double		 cr, delta, cr1, delta1;
 	double		 min_f1, min_f2, max_f1, max_f2, ave_f1, ave_f2;
+        double           sum;
 	int		 num, done, all_found, i, *tmplist;
 
 	char 		 ch, label[LABEL_LEN+1], comment[COMMENT_LEN+1];
@@ -3273,7 +3343,7 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	get_rflrfp(VERT,&v_rflrfp);
 	get_display_label(HORIZ,&ch);
 	init_peak_table(&peak_table);
-        num = 0;
+//  showPeaks("start of combine");
 
       if (numlist <= 0)  {
 	if (mark_mode != BOX_MODE) {
@@ -3302,6 +3372,7 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	     ave_f1 = 0.0;
 	     ave_f2 = 0.0;
 	     num = 0;
+             sum = 0.0;
 	     done = FALSE;
 	/* search through peaks within area defined by cursors */
 	     peak = peak_table->head;
@@ -3314,8 +3385,18 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 		    strcpy(comment,peak->comment);
 		    }
 		  num++;
-		  ave_f1 += peak->f1;
-		  ave_f2 += peak->f2;
+                  if (weight)
+                  {
+                     double absAmp = fabs(peak->amp);
+                     sum += absAmp;
+		     ave_f1 += peak->f1 * absAmp;
+		     ave_f2 += peak->f2 * absAmp;
+                  }
+                  else
+                  {
+		     ave_f1 += peak->f1;
+		     ave_f2 += peak->f2;
+                  }
 		  if ((peak->f1_min != 0.0) && (peak->f1_min < min_f1))
 		    min_f1 = peak->f1_min;
 		  if ((peak->f2_min != 0.0) && (peak->f2_min < min_f2))
@@ -3334,10 +3415,26 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 		peak = peak->next;
 		}
 	   if (num > 1)  {
+             int doVol;
 	     delete_peak(peak_table,first_peak->f1,first_peak->f2);
-	     ave_f1 /= num;
-	     ave_f2 /= num;
+             if (weight)
+             {
+	        ave_f1 /= sum;
+	        ave_f2 /= sum;
+             }
+             else
+             {
+	        ave_f1 /= num;
+	        ave_f2 /= num;
+             }
 	     peak = create_peak(ave_f1,ave_f2,0.0);
+             if ( (min_f1 == 1.0e+18) &&
+	          (max_f1 == -1.0e+18) &&
+	          (min_f2 == 1.0e+18) &&
+	          (max_f2 == -1.0e+18) )
+                doVol = 0;
+             else
+                doVol = 1;
 	     if (min_f1 == 1.0e+18)
 	       min_f1 = 0.0;
 	     else if (min_f1 >= ave_f1)
@@ -3358,13 +3455,17 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	     peak->f2_min = min_f2;
 	     peak->f1_max = max_f1;
 	     peak->f2_max = max_f2;
-	     peak->vol = calc_volume(peak_table,min_f1,max_f1,min_f2,max_f2);
+             if (doVol)
+	        peak->vol = calc_volume(peak_table,min_f1,max_f1,min_f2,max_f2);
+             else
+	        peak->vol = 0.0;
 	     if (!done)  {	/* if all peaks' labels were the same, use
 					that label and comment for new peak */
 	       strcpy(peak->label,label);
 	       strcpy(peak->comment,comment);
 	       }
 	     insert_peak(peak_table,peak);
+             rekey_peaks(peak_table);
 	     }
 	   else if (num == 1)  {
 	     peak = first_peak;
@@ -3382,6 +3483,7 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	ave_f1 = 0.0;
 	ave_f2 = 0.0;
 	num = 0;
+        sum = 0.0;
 	done = FALSE;
 	all_found = FALSE;
 	peak = peak_table->head;
@@ -3397,8 +3499,18 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	    num++;
 	    if (num == numlist)
 	      all_found = TRUE;
-	    ave_f1 += peak->f1;
-	    ave_f2 += peak->f2;
+            if (weight)
+            {
+               double absAmp = fabs(peak->amp);
+               sum += absAmp;
+	       ave_f1 += peak->f1 * absAmp;
+	       ave_f2 += peak->f2 * absAmp;
+            }
+            else
+            {
+	       ave_f1 += peak->f1;
+	       ave_f2 += peak->f2;
+            }
 	    if ((peak->f1_min != 0.0) && (peak->f1_min < min_f1))
 	      min_f1 = peak->f1_min;
 	    if ((peak->f2_min != 0.0) && (peak->f2_min < min_f2))
@@ -3417,8 +3529,16 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	  }
 	release(tmplist);
 	if (num > 0)  {
-	  ave_f1 /= num;
-	  ave_f2 /= num;
+          if (weight)
+          {
+	     ave_f1 /= sum;
+	     ave_f2 /= sum;
+          }
+          else
+          {
+	     ave_f1 /= num;
+	     ave_f2 /= num;
+          }
 	  peak = create_peak(ave_f1,ave_f2,0.0);
 	  if (min_f1 == 1.0e+18)
 	    min_f1 = 0.0;
@@ -3447,6 +3567,7 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	    strcpy(peak->comment,comment);
 	    }
 	  insert_peak(peak_table,peak);
+          rekey_peaks(peak_table);
 	  }
 	}
       else if (numlist == 1)  {
@@ -3455,9 +3576,140 @@ static int ll2d_combine(int mark_mode, double *list, int numlist,
 	}
       if (num > 0 && retc > 0)
 	retv[0] = realString((double)(peak->key));
+//  showPeaks("end of combine");
       return(COMPLETE);
 }
 
+/*****************************************************************************
+LL2D_AUTOCOMBINE
+*****************************************************************************/
+static void ll2d_autocombine(int weight, double f1box, double f2box)
+{
+   peak_struct	*peak, *largest;
+   double	 f1, f2;
+   double	 ave_f1, ave_f2, sum, vol;
+   double        maxAmp;
+   double        absAmp;
+   int		 done;
+   int num;
+
+   done = 0;
+   while ( !done )
+   {
+      largest = NULL;
+      peak = peak_table->head;
+      maxAmp = 0.0;
+      while (peak)
+      {
+         if (peak->key > 0)
+         {
+            absAmp = fabs(peak->amp);
+            if (absAmp > maxAmp)
+            {
+               maxAmp = absAmp;
+               largest = peak;
+            }
+         }
+         peak = peak->next;
+      }
+      if (largest)
+      {
+         f1 = largest->f1;
+         f2 = largest->f2;
+         peak = peak_table->head;
+	 ave_f1 = 0.0;
+	 ave_f2 = 0.0;
+	 num = 0;
+         vol = sum = 0.0;
+         while (peak)
+         {
+            if (peak->key > 0)
+            {
+               if ( ( fabs(f1 - peak->f1) <= f1box/2.0 ) &&
+                    ( fabs(f2 - peak->f2) <= f2box/2.0 ) )
+               {
+		  num++;
+                  if (weight)
+                  {
+                     double absAmp = fabs(peak->amp);
+                     sum += absAmp;
+		     ave_f1 += peak->f1 * absAmp;
+		     ave_f2 += peak->f2 * absAmp;
+                  }
+                  else
+                  {
+		     ave_f1 += peak->f1;
+		     ave_f2 += peak->f2;
+                  }
+                  vol += peak->vol;
+                  if (peak == largest)
+                     peak->key = 0;
+                  else
+                     peak->key = -1;
+                  if (peak->f1_min < largest->f1_min)
+                     largest->f1_min = peak->f1_min;
+                  if (peak->f1_max < largest->f1_max)
+                     largest->f1_max = peak->f1_max;
+                  if (peak->f2_min < largest->f2_min)
+                     largest->f2_min = peak->f2_min;
+                  if (peak->f2_max < largest->f2_max)
+                     largest->f2_max = peak->f2_max;
+               }
+            }
+            peak = peak->next;
+         }
+         if (num)
+         {
+            if (weight)
+            {
+	       ave_f1 /= sum;
+	       ave_f2 /= sum;
+            }
+            else
+            {
+	       ave_f1 /= num;
+	       ave_f2 /= num;
+            }
+            largest->f1 = ave_f1;
+            largest->f2 = ave_f2;
+            largest->vol = vol;
+            if (num > 1)
+            {
+               largest->amp = 0.0;
+               largest->fwhh1 = 0.0;
+               largest->fwhh2 = 0.0;
+            }
+         }
+         largest->key = 0;
+      }
+      else
+      {
+         done = 1;
+      }
+   }
+   peak = peak_table->head;
+   num = 0;
+   while (peak)
+   {
+      if (peak->key < 0)
+      {
+         delete_peak_from_table(peak_table,peak->f1,peak->f2);
+         num++;
+      }
+      peak = peak->next;
+   }
+   rekey_peaks(peak_table);
+   if (num)
+   {
+      write_peak_file_header(peak_table);
+      peak = peak_table->head;
+      while (peak)
+      {
+         write_peak_file_record(peak_table,peak,peak->key);
+         peak = peak->next;
+      }
+   }
+}
 
 /*****************************************************************************
 LL2D_INFO(mark_mode)
@@ -3892,8 +4144,7 @@ Following this are the routines used to create and maintain the peak table.
 *   FRQ_EQ - check if frequencies "a" and "b" are equal to the level of
 *	FRQ_ACC.
 *****************************************************************************/
-static int frq_eq(a,b)
-double a, b;
+static int frq_eq(double a, double b)
 {
    if (fabs(a-b) < FRQ_ACC)
      return(TRUE);
@@ -3983,8 +4234,7 @@ static peak_table_struct *create_peak_table()
 /*****************************************************************************
 *  DELETE_PEAK_TABLE - deletes all peak structures and peak table symbol tree.
 *****************************************************************************/
-void delete_peak_table(peak_table)
-peak_table_struct **peak_table;
+void delete_peak_table(peak_table_struct **peak_table)
 {
     peak_table_struct *pk_tab;
     peak_struct *pk_ptr, *tmp_ptr;
@@ -4043,7 +4293,7 @@ peak_struct *create_peak(double f1, double f2, double amp)
 *****************************************************************************/
 static int insert_peak_in_table(peak_table_struct *peak_table, peak_struct *peak)
 {
-  int done, index, found;
+  int done;
   peak_struct *pk_ptr;
     
   pk_ptr = peak_table->head;
@@ -4077,30 +4327,29 @@ static int insert_peak_in_table(peak_table_struct *peak_table, peak_struct *peak
       }
 
   peak_table->num_peaks++;
-  index = 0;
-  found = 0;
-  while ((index<PEAK_FILE_MAX) && !found)  {
-      index++;
-      if (peak_table->header[index] == PEAK_FILE_EMPTY)
-	found = 1;
-      }
-  if (index == PEAK_FILE_MAX)  {
-      Werrprintf("ll2d: Can't insert peak - peak table full.");
-      return(ERROR);
-      }
   if (peak->key == 0)
-      peak->key = index;
-  peak_table->header[peak->key] = PEAK_FILE_FULL;
+      peak->key = peak_table->num_peaks;
   peak_table->header[0]++;
   return(COMPLETE);
+}
+
+static void rekey_peaks(peak_table_struct *peak_table)
+{
+   peak_struct *pk_ptr;
+   int key;
+   key = peak_table->num_peaks;
+   pk_ptr = peak_table->head;
+   while (pk_ptr)  {
+      pk_ptr->key = key;
+      key -= 1;
+      pk_ptr = pk_ptr->next;
+   }
 }
 
 /*****************************************************************************
 *  DELETE_PEAK_FROM_TABLE - delete peak "peak" from the in-memory peak table.
 *****************************************************************************/
-static void delete_peak_from_table(peak_table,f1,f2)
-peak_table_struct *peak_table;
-double f1,f2;
+static void delete_peak_from_table(peak_table_struct *peak_table, double f1, double f2)
 {
   peak_struct *pk_ptr, *last_ptr;
   int done;
@@ -4113,14 +4362,11 @@ double f1,f2;
       if (frq_eq(pk_ptr->f2, f2))  {
 	if (pk_ptr != last_ptr)  {
 	  last_ptr->next = pk_ptr->next;
-          peak_table->header[pk_ptr->key] = PEAK_FILE_EMPTY;
-	  release(pk_ptr);
 	  }
-	else  {	  /* only one peak in table */
+	else  {	  /* first peak in table */
 	  peak_table->head = pk_ptr->next;
-          peak_table->header[pk_ptr->key] = PEAK_FILE_EMPTY;
-	  release(pk_ptr);
 	  }
+	release(pk_ptr);
         peak_table->num_peaks--;
         peak_table->header[0]--;
         done = TRUE;
@@ -4156,6 +4402,8 @@ static void delete_peak(peak_table_struct *peak_table, double f1, double f2)
 {
       delete_peak_from_table(peak_table,f1,f2);
       write_peak_file_header(peak_table);
+//  showPeaks("from delete_peak");
+    
 }
 
 /*****************************************************************************
@@ -4334,7 +4582,7 @@ peak_table_struct *peak_table;
     char ch[2], ch1;
     double f1_freq, f2_freq, f1_rflrfp, f2_rflrfp, info[4], tmp;
 
-    fseek(peak_table->file,0,0);	/* go to beginning of file */
+    fseek(peak_table->file,0L,SEEK_END);	/* go to beginning of file */
     if (fwrite(&(peak_table->version),sizeof(float),1,peak_table->file) != 1) {
       Werrprintf("write_peak_file_header: cannot write peak file header");
       }
@@ -4383,9 +4631,9 @@ peak_struct *peak;
 int record;
 {
     if (fseek(peak_table->file,calc_header_size(peak_table)+ 
-			(record-1)*sizeof(peak_struct),0))  {
+			(record-1)*sizeof(peak_struct),SEEK_SET))  {
 					/* if file not big enough, */
-      fseek(peak_table->file,0,2);	/* go to end of file */
+      fseek(peak_table->file,0L,SEEK_END);	/* go to end of file */
       }
     /* write peak record into file */
     if (fwrite(peak,sizeof(peak_struct),1,peak_table->file) != 1)  {
@@ -4415,7 +4663,7 @@ peak_table_struct *peak_table;
     char ch[2];
     double info[4];
 
-    fseek(peak_table->file,0,0);	/* go to beginning of file */
+    fseek(peak_table->file,0L,SEEK_SET);	/* go to beginning of file */
     if (fread(&(peak_table->version),sizeof(float),1,peak_table->file) != 1)  {
       Werrprintf("read_peak_file_header: cannot read peak file header");
       }
@@ -4455,7 +4703,7 @@ int record;
       Werrprintf("read_peak_file_record: cannot allocate peak");
       }
     if (fseek(peak_table->file,calc_header_size(peak_table)+
-			(record-1)*sizeof(peak_struct),0))  {
+			(record-1)*sizeof(peak_struct),SEEK_SET))  {
       Werrprintf("read_peak_file_record: peak file record does not exist");
       release(peak);
       return(NULL);
@@ -4477,10 +4725,10 @@ int read_peak_file(peak_table,filename)
 peak_table_struct **peak_table;
 char *filename;
 {
-    int i, j, npeaks, header_count, max_peak;
+    int j, npeaks, header_count;
     char filenm0[MAXPATHL], *peak_fn;
     char filenm[MAXPATHL], cmdstr[MAXPATHL];
-    char str[MAXPATHL], *name, *get_filename();
+    char str[MAXPATHL], *name;
     peak_struct *peak;
     FILE *fp;
     struct stat unix_fab;
@@ -4556,16 +4804,6 @@ char *filename;
       Werrprintf("read_peak_file: incorrect peak file format");
       return(ERROR);
       }
-    max_peak = 0;
-    for (i=1;i<PEAK_FILE_MAX+1;i++)  {
-      if ((*peak_table)->header[i]!=PEAK_FILE_EMPTY &&
-	  (*peak_table)->header[i]!=PEAK_FILE_FULL)  {
-        Werrprintf("read_peak_file: incorrect peak file format");
-        return(ERROR);
-        }
-      if ((*peak_table)->header[i] == PEAK_FILE_FULL)
-	max_peak = i;
-      }
     (*peak_table)->num_peaks = 0;
     header_count = (*peak_table)->header[0];
     (*peak_table)->header[0] = 0;
@@ -4573,7 +4811,6 @@ char *filename;
     j = 0;
     while ((npeaks < header_count) && (j < PEAK_FILE_MAX))  {
         j++;
-        if ((*peak_table)->header[j] != PEAK_FILE_EMPTY)  {
 	  peak = read_peak_file_record(*peak_table,j);
           if (peak == NULL)  {
 	    delete_peak_table(peak_table);
@@ -4586,7 +4823,6 @@ char *filename;
 	    return(ERROR);
 	    }
 	  npeaks++;
-	  }
         }
     if (header_count != npeaks)  {
       Werrprintf("peak file inconsistency detected - cannot be read");
@@ -4681,7 +4917,7 @@ char *filename;
     int i, j, key, length;
     char filenm0[MAXPATHL],label[LABEL_LEN+1], line[133], *ch_ptr, *peak_fn;
     char filenm[MAXPATHL], comment[COMMENT_LEN+1];
-    char str[MAXPATHL], *get_filename();
+    char str[MAXPATHL];
     double f1, f2, f1_min, f1_max, f2_min, f2_max, amp, vol, fwhh1, fwhh2;
     double f1_rflrfp, f2_rflrfp, f1_axis_scl, f2_axis_scl;
     float ver;
@@ -4886,9 +5122,8 @@ char *format1, *format2, *format3;
 *  WRITE_ASCII_PEAK_FILE - write peak table into ascii file.  If filename ==
 *	NULL, prompt for filename.
 *****************************************************************************/
-static int write_ascii_peak_file(peak_table,filename)
-peak_table_struct *peak_table;
-char *filename;
+static int write_ascii_peak_file(peak_table_struct *peak_table,
+                                 char *filename, int peakMode)
 {
     int done, reversed, length;
     double f1_rflrfp, f2_rflrfp, tmp, f1_axis_scl, f2_axis_scl, start, len;
@@ -4940,12 +5175,19 @@ char *filename;
       f1_axis_scl = f2_axis_scl;
       f2_axis_scl = tmp;
       }
-    get_formats(line1,line2,line3,format1,format2,format3,REG_FORMAT);
-    fprintf(fp,"%3.1f  %17.8f  %17.8f  %17.8f  %17.8f\n",peak_table->version,
+    if (peakMode)
+    {
+       fprintf(fp,"# Index    F1(ppm)      F2(ppm)      Amplitude\n");
+    }
+    else
+    {
+       get_formats(line1,line2,line3,format1,format2,format3,REG_FORMAT);
+       fprintf(fp,"%3.1f  %17.8f  %17.8f  %17.8f  %17.8f\n",peak_table->version,
 		f1_axis_scl,f2_axis_scl,f1_rflrfp,f2_rflrfp);
-    fprintf(fp,line1);
-    fprintf(fp,line2);
-    fprintf(fp,line3);
+       fprintf(fp,line1);
+       fprintf(fp,line2);
+       fprintf(fp,line3);
+    }
     
     peaks = NULL;
     pk_ptr = peak_table->head;
@@ -4978,7 +5220,15 @@ char *filename;
       }
     pointer = peaks;
     while (pointer)  {
-      write_peak_file_entry(fp,pointer->ptr,f1_rflrfp,f2_rflrfp,f1_axis_scl,f2_axis_scl,format1,format2,format3);
+      if (peakMode)
+         fprintf(fp,"%5d    %9.3f    %9.3f      %g\n", 
+            pointer->ptr->key,
+            (pointer->ptr->f1 - f1_rflrfp)/f1_axis_scl,
+            (pointer->ptr->f2 - f2_rflrfp)/f2_axis_scl,
+            pointer->ptr->amp);
+      else
+         write_peak_file_entry(fp,pointer->ptr,f1_rflrfp,f2_rflrfp,f1_axis_scl,f2_axis_scl,
+                               format1,format2,format3);
       pointer = pointer->next;
       }
     releaseAllWithId("peak_temp");
@@ -6387,7 +6637,8 @@ int retc; char *retv[];
 {  register int i,ctrace,maxtrace,maxpoint;
    register double max;
    register float *phasfl;
-   register double noise;
+   double noise;
+   double sum, sumsq, ave;
    int switchf1f2 = 0;
 
    if (argc == 5)
@@ -6464,15 +6715,15 @@ int retc; char *retv[];
    max = 0;
    maxtrace = 0;
    maxpoint = 0;
-   noise = 0.0;
+   sum = sumsq = noise = 0.0;
    for (ctrace=fpnt1; ctrace<fpnt1+npnt1; ctrace++)
      { if ((phasfl = gettrace(ctrace,fpnt)) == 0)
 	 return 1;
        i = 0;
        while (i<npnt)	/* go though the trace */
          { 
-
-  	    noise += fabs(*phasfl);
+            sum += *phasfl;
+            sumsq += *phasfl * *phasfl;
 	    if (fabs(*phasfl)>fabs(max))
              { max = *phasfl;
                maxtrace = ctrace;
@@ -6483,6 +6734,37 @@ int retc; char *retv[];
          }
      }
 
+   if (retc > 3)
+   {
+      double stddev;
+      int cnt;
+
+      ave = sum / (double) (npnt*npnt1);
+      stddev = sqrt( sumsq/((double) (npnt*npnt1)) - ave*ave);
+      noise = fabs(ave) + 3.0*stddev;
+      sum = sumsq = 0.0;
+      cnt = 0;
+      for (ctrace=fpnt1; ctrace<fpnt1+npnt1; ctrace++)
+     { if ((phasfl = gettrace(ctrace,fpnt)) == 0)
+	 return 1;
+       i = 0;
+       while (i<npnt)	/* go though the trace */
+         { 
+	    if (fabs(*phasfl)<noise)
+            {
+            sum += *phasfl;
+            sumsq += *phasfl * *phasfl;
+            cnt++;
+            }
+           i++;
+           phasfl++;
+         }
+        }
+      ave = sum / (double) cnt;
+      stddev = sqrt( sumsq/((double) cnt) - ave*ave);
+      noise = fabs(ave) + 3.0*stddev;
+   }
+
    if (argc == 5)
    {
       double val_cr;
@@ -6492,13 +6774,13 @@ int retc; char *retv[];
       val_cr1 = ll2d_dp_to_frq((double)(maxtrace),sw1,fn1) - rflrfp1;
       if (switchf1f2)
          P_setstring(CURRENT, "trace", "f1", 1);
-      if (retc >= 1)
+      if (retc)
       {
          retv[0] = realString(vs2d*max);
-         if (retc >= 1)
+         if (retc > 1)
          {
             retv[1] = realString(val_cr);
-            if (retc >= 2)
+            if (retc > 2)
                retv[2] = realString(val_cr1);
          }
       }
@@ -6506,12 +6788,12 @@ int retc; char *retv[];
       {
          Winfoprintf("maximum = %g, F2 freq=%g, F1 freq=%g",vs2d*max,val_cr,val_cr1);
       }
-      RETURN;
    }
 
-    noise /= (double) (npnt*npnt1);
 
-   if (retc > 3)
+#ifdef XXX
+   noise /= (double) (npnt*npnt1);
+   if (retc >= 3)
    {
 /* calculates the threshold for 2-D displaying such that the number of points above the threshold is between 70% to 90% of all the points and the difference of mean(peak) and mean(noise) is maximized.
 */
@@ -6537,6 +6819,31 @@ int retc; char *retv[];
 
      stdev /=(double) (npnt*npnt1);
      stdev = sqrt (stdev);
+
+     if (retc == 4)
+     {
+        Winfoprintf("init noise = %g",noise);
+        noise = 0.0;
+        for (ctrace=fpnt1; ctrace<fpnt1+npnt1; ctrace++)
+          { if ((phasfl = gettrace(ctrace,fpnt)) == 0)
+     	 return 1;
+            i = 0;
+            while (i<npnt)	/* go though the trace */
+            {      
+
+                 level = fabs( (double) *phasfl);
+                 if (level > stdev)
+  	            noise += level;
+              i++;
+              phasfl++;
+            }
+        }
+        noise /= (double) (npnt*npnt1);
+        Winfoprintf("final noise = %g",noise);
+        retv[3] = realString(noise);
+        RETURN;
+
+     }
 
 /*
      level = noise + 3.0*stdev;
@@ -6660,12 +6967,15 @@ int retc; char *retv[];
      }
 
   }
+#endif
 
 
 /*  noise /= (npnt * npnt1);  */
 
 
   D_allrelease();
+  if (argc != 5)
+  {
   if (retc==0)
     Winfoprintf("maximum = %g, trace=%d, point=%d",vs2d*max,maxtrace,maxpoint);
   if (retc>0)
@@ -6674,6 +6984,7 @@ int retc; char *retv[];
     retv[1] = realString((double)maxtrace);
   if (retc>2)
     retv[2] = realString((double)maxpoint);
+  }
   if (retc>3)
     retv[3] = realString((double)noise*vs2d);
   RETURN;
