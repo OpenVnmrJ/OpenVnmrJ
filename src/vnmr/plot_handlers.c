@@ -180,7 +180,7 @@ static int infoPlotY = 0;
 static int infoPlotGapX = 0;
 static int tableColumns = 0;
 static int tableHeaderNum = 0;
-static int pageMax = 12;
+// static int pageMax = 12;
 static int pageNo = 1;
 static int layoutMode = 4;
 static int pageHeaderY = 40;   // the top position of header
@@ -4243,8 +4243,8 @@ new_plot_page()
          return(0);
     ps_flush();
     pageNo++;
-    if(pageNo > pageMax)
-         return(0);
+//    if(pageNo > pageMax)
+//         return(0);
     plotHeader();
     plotLogo();
 #ifdef VNMR
