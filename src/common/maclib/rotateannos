@@ -1,14 +1,71 @@
 "macro rotateannos"
 // Chempacker macro
 
+// Optional one argument.  
+//	BOX - rotate only boxes
+//	OVAL - rotate only ovals
+//  By default both BOX and OVAL annotations are rotated
+
+$oval=1 $box=1
+if $# > 0 then
+    $oval=0 $box=0
+    if $1='OVAL' then $oval=1
+    elseif $1='BOX' then $box=1 endif
+endif
+$e=0 $n=0
+aspAnno:$e,$n
+if $e and $n then
     $annos=curexp+'/tmpannos'
     aspAnno('save',$annos)
     aspAnno('clear')
-    shell('(cat '+$annos+' | grep -w BOX | awk \'{print $1" "$2" "$6" "$5" "$4" "$3}\' > '+$annos+'2)'):$devnull
-    shell('(cat '+$annos+' | grep -v \'^#\' | grep -vw BOX >> '+$annos+'2)'):$devnull
-    rename($annos+'2',$annos)
-    if trace='f2' then trace='f1' else trace='f2' endif
-    dconi
+    $annos2=$annos+'2'
+    $annos3=$annos+'3'
+
+    write('reset',$annos2)
+    if $box then
+    	append($annos,'grep -w','BOX',$annos2)
+    endif
+    if $oval then
+	append($annos,'grep -w','OVAL',$annos2)
+    endif
+    $s1='' readfile($annos2,'$s1','','','local'):$total
+    write('reset',$annos2)
+    $i=1
+    while $i<=$total do
+	substr($s1[$i],'squeeze',' '):$s1[$i]
+	write('file',$annos2,'%s',$s1[$i])
+	$i=$i+1
+    endwhile
+    $s1='' readfile($annos2,'$s1','','','local'):$total
+    write('reset',$annos3)
+    append($annos2,'awk','$1 $2 $3 $4 $5 $6',$annos3)
+    $s2='' readfile($annos3,'$s2','','','local')
+    write('reset',$annos3)
+    append($annos2,'awk','$1 $2 $6 $5 $4 $3',$annos3)
+    $s3='' readfile($annos3,'$s3','','','local')
+    rm('-f',$annos3):$dum
+
+    write('reset',$annos2)
+    $i=1
+    while $i<=$total do
+	$sx='' $sy=''
+	strstr($s1[$i],$s2[$i]):$ret,$sx,$sy
+	write('file',$annos2,'%s %s',$s3[$i],$sy)
+	$i=$i+1
+    endwhile
+    if $box then
+        append($annos,'grep -vw','BOX',$annos2)
+	rename($annos2,$annos)
+    endif
+    if $oval then
+	append($annos,'grep -vw','OVAL',$annos2)
+	rename($annos2,$annos)
+    endif
+    rm('-f',$annos2):$dum
+    rm('-f',$annos3):$dum
+		// Load new annotations
     aspAnno('load',$annos)
     rm('-f',$annos):$dum
+
+endif
 

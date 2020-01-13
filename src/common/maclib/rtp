@@ -2,7 +2,17 @@
 " rtp - retrieve parameter set"
 
 if ($# > 0.5) then
-  $args = 'RTP(\''+$1
+  length($1):$len
+  if $len>220 then
+      $curdir=''
+      pwd:$curdir
+      $rtpdir='' $rtpbase=''
+      substr($1,'dirname'):$rtpdir,$rtpbase
+      cd($rtpdir):$dum
+      $args = 'RTP(\''+$rtpbase
+  else
+      $args = 'RTP(\''+$1
+  endif
   $i = 1
   while ($i<$#) do
     $i = $i + 1
@@ -10,6 +20,9 @@ if ($# > 0.5) then
   endwhile
   $args = $args+'\')'
   exec($args):$ret
+  if $len>220 then
+      cd($curdir):$dum
+  endif
   if (not $ret) then abort endif
 else
   RTP
