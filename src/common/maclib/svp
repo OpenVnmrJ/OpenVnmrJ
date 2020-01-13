@@ -2,7 +2,17 @@
 " svp - save parameter set"
 
 if ($# > 0.5) then
-  $args = 'SVP(\''+$1
+  length($1):$len
+  if $len>220 then
+      $curdir=''
+      pwd:$curdir
+      $svpdir='' $svpbase=''
+      substr($1,'dirname'):$svpdir,$svpbase
+      cd($svpdir):$dum
+      $args = 'SVP(\''+$svpbase
+  else
+      $args = 'SVP(\''+$1
+  endif
   $i = 1
   while ($i<$#) do
     $i = $i + 1
@@ -10,6 +20,9 @@ if ($# > 0.5) then
   endwhile
   $args = $args+'\')'
   exec($args)
+  if $len>220 then
+      cd($curdir):$dum
+  endif
 else
   SVP
 endif
