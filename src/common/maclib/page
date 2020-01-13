@@ -6,11 +6,19 @@ setplotdev:$fmt,$host,$ppmm,$raster
 if ($# = 1) then
   if (typeof('$1')) then
     if ($1 = 'clear') or ($fmt <> 'DICOM') then
-      plotpage($1)
+      if ($## = 0) then
+        plotpage($1)
+      else
+        plotpage($1):$dum
+      endif
       return
     endif
   else
-    plotpage($1)
+    if ($## = 0) then
+      plotpage($1)
+    else
+      plotpage($1):$dum
+    endif
     return
   endif
 elseif(auto='y') then
@@ -25,8 +33,13 @@ elseif(auto='y') then
      $suf='ps'
   endif
   $path = curexp+'/datdir/spec.'+$suf
-  writeDataID plotpage($path)
-  shell('lp "'+$path+'"')
+  writeDataID
+  if ($## = 0) then
+    plotpage($path)
+  else
+    plotpage($path):$dum
+  endif
+  shell('lp "'+$path+'"'):$e
   return
  endif
 endif
@@ -36,11 +49,14 @@ else
   exists('printout','parameter','global'):$expo
   if $expo then
     if (auto='n') and ((printout='preview') or (printout='file')) then
-      plotpage('/vnmr/tmp/tmpplot.ps')
+      plotpage('/vnmr/tmp/tmpplot.ps'):$dum
     else
-      plotpage
+      plotpage:$dum
     endif
   else
-    plotpage
+    plotpage:$dum
+  endif
+  if ($## = 0) then
+    write('line3',$dum)
   endif
 endif
