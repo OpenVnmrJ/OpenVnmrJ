@@ -1,0 +1,38 @@
+nll:$peaks
+alphatextname:$file
+$file1='/tmp/t1file1'
+$file2='/tmp/t1file2'
+$file3='/tmp/t1file3'
+$file4='/tmp/t1file4'
+$file5='/tmp/t1file5'
+$header='/tmp/t1fheader'
+$emptyline='/tmp/t1fempty'
+
+$arg='' if $#>0 then $arg=$1 endif
+
+shell('rm /tmp/t1f*')
+
+$origlines='' $origlinesn=0 $lines0='' $lines1='' $lines2='' $lines3=''  $lines4='' $s=''
+shell('wc -l < '+$file+';cat'):$origlines
+format($origlines,1,0):$origlinesn
+format($peaks,'lower'):$lines0
+format($peaks+1,'lower'):$lines1
+format($peaks*2+4,'lower'):$lines2
+format($origlinesn-$peaks*2,'lower'):$lines3
+
+shell('echo > '+$emptyline+';cat')
+shell('echo -e peak"\t"frq"\/"ppm"\t"intens"\t"T1"\t"error > '+$header+';cat')
+shell('head -'+$lines1+' '+$file+' | tail -'+$lines0+' > '+$file1+';cat')
+shell('head -'+$lines2+' '+$file+' | tail -'+$lines0+' > '+$file2+';cat')
+shell('tail -'+$lines3+' '+$file+' > '+$file3)
+
+shell('join -1 1 -2 1 '+$file1+' '+$file2+' | sed "s/ /\t/g" > '+$file4+';cat')
+shell('cat '+$header+' '+$file4+' > '+$file5+'; echo > '+$file5+'; cat '+$file3+' > '+$file5+';cat')
+if $arg = 'tableonly' then
+  shell('cat '+$header+' '+$file4+' > '+$file5+';cat')
+else
+  shell('cat '+$header+' '+$file4+' '+$emptyline+' '+$file3+' > '+$file5+';cat')
+endif
+mv($file5,$file)
+shell('rm /tmp/t1f*')
+
