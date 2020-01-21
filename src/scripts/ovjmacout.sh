@@ -8,6 +8,7 @@
 # 
 # For more information, see the LICENSE file.
 # 
+# set -x
 
 # Default Declarations
 #
@@ -27,10 +28,8 @@ standardsdir="${gitdir}/../options/standard"
 optddrdir="${gitdir}/../options/console/ddr"
 ddrconsoledir="${gitdir}/../console/ddr"
 
-if [ x$ovjAppName = "x" ]
-then
-   ovjAppName=OpenVnmrJ.app
-fi
+VnmrRevId=$(grep RevID ${gitdir}/src/vnmr/revdate.c | cut -s -d\" -f2 | cut -d\  -f3)
+ovjAppName=OpenVnmrJ_${VnmrRevId}.app
 
 # TODO replace this with spiffy OS X app that does away with installer...
 packagedir="${workspacedir}/${dvdBuildName1}/Package_contents"
