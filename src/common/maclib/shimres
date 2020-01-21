@@ -1,0 +1,39 @@
+"Macro to handle the Spectrum FID scan/Lineshape display on the Spin/Temp panel"
+
+$arg=''
+if $#>0 then $arg=$1 endif
+
+if $arg='setup' then
+  exists('shimrespar','parameter','global'):$e
+  if not $e then create('shimrespar','string','global') shimrespar='','' endif
+  exists('origwbs','parameter','global'):$e
+  if not $e then create('origwbs','string','global') origwbs=wbs endif
+  exists('shimresperc','parameter','global'):$e
+  if not $e then create('shimresperc','real','global') shimresperc=50,10,2 endif
+  return
+endif
+
+if $arg='start' then
+  origwbs=wbs
+  wbs=wbs+' shimres'
+elseif $arg='stop' then
+  $nct='' format(ct+1,'lower'):$nct
+  wbs=origwbs +' if ct='+$nct+' then ds wbs=origwbs endif'
+endif
+
+peak(sp,wp+sp):$dum,cr
+if shimrespar[1]='dc' then dc endif
+if shimrespar[2]='aph' then aph0 endif
+
+ds
+$perc=''
+dres(cr,shimresperc[1]/100):$lw
+format(shimresperc[1],1,1):$perc
+write('graphics',95,wc2max-20,'%s%% linewidth %6.2f',$perc,$lw)
+dres(cr,shimresperc[2]/100):$lw
+format(shimresperc[2],1,1):$perc
+write('graphics',95,wc2max-30,'%s%% linewidth %6.2f',$perc,$lw)
+dres(cr,shimresperc[3]/100):$lw
+format(shimresperc[3],1,1):$perc
+write('graphics',95,wc2max-40,'%s%% linewidth %6.2f',$perc,$lw)
+
