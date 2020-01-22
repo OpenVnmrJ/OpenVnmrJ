@@ -14,7 +14,7 @@ For data processing only, OpenVnmrJ Version 2 is also compatible with:
 ## Download instructions
 - For VNMRS and later systems download the OpenVnmrJ_2.1_DDR.zip file.
 - For Mercury and Inova systems download the OpenVnmrJ_2.1_MI.zip file.
-- For the native MacOS version download OpenVnmrJ21A.pkg file.
+- For the native MacOS version download OpenVnmrJ_2.1.pkg file.
 
 ## Installation
 See the [Install](../../blob/master/Install.md) file for installation instructions.
