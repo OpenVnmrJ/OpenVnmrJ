@@ -20,8 +20,8 @@
 #  Add more values as needed 
 #
 
-opts = Options()
-boEnv = Environment(options = opts,
+vars = Variables()
+boEnv = Environment(variables = vars,
                 apt_0='n',
                 AS768='n',
                 BACKPROJ='y',
