@@ -21,32 +21,34 @@ endif
 
 "create marker persistence file"
 
-$out=userdir+'/persistence/mtune_nuc'
-getProbePath:$e,$probe
-if ($e=0) then $probe='none' endif
+if ($action = 'setup') or ($action = 'prep') then
+  "Read nuclei present in probe file"
+  $out=userdir+'/persistence/mtune_nuc'
+  getProbePath:$e,$probe
+  if ($e=0) then $probe='none' endif
+  write('reset',$out)
 
-write('reset',$out)
-if $probe='none' then     "For imaging, no probe file set"
-  write('file',$out,'"H1" H1')
-  write('file',$out,'"H2" H2')
-  write('file',$out,'"C13" C13')
-  write('file',$out,'"F19" F19')
-  write('file',$out,'"P31" P31')
-  write('file',$out,'"Na23" Na23')
-  write('file',$out,'"Xe129" Xe129')
-else                      "Read nuclei present in probe file"
-  lookup('file',$probe)
-  repeat
-    lookup('readline'):$string,$nret
-    $b=''
-    strstr($string,'dmf '):$a,$b
-    if ($b<>'') and ($b<>'lkgn_') and ($b<>'lkpwr_') then
-      write('file',$out,'"'+$b+'" '+$b)
-    endif
-  until ($nret=0)
+  if $probe='none' then     "For imaging, no probe file set"
+    write('file',$out,'"H1" H1')
+    write('file',$out,'"H2" H2')
+    write('file',$out,'"C13" C13')
+    write('file',$out,'"F19" F19')
+    write('file',$out,'"P31" P31')
+    write('file',$out,'"Na23" Na23')
+    write('file',$out,'"Xe129" Xe129')
+  else  "Read nuclei present in probe file"
+    lookup('file',$probe)
+    repeat
+      lookup('readline'):$string,$nret
+      $b=''
+      strstr($string,'dmf '):$a,$b
+      if ($b<>'') and ($b<>'lkgn_') and ($b<>'lkpwr_') then
+        write('file',$out,'"'+$b+'" '+$b)
+      endif
+    until ($nret=0)
+  endif
+  if $action='prep' then return endif
 endif
-
-if $action='prep' then return endif
 
 "save current experiment"
 
@@ -150,7 +152,6 @@ elseif ($action = 'process') then
     mfShowAxis=1
     ds('rev')
     if tunesw < 0.1 then tunesw = 0.1 endif
-    if ct=1 then vsadj endif
     dscale('rev','MHz',0,$freq-tunesw/2*1e-6,tunesw*1e-6)
   else
     ds('fidshim')
@@ -388,6 +389,7 @@ elseif ($action = 'betweenmarkers') then
     dscale('rev','MHz',0,$setfreq-tunesw/2*1e-6,tunesw*1e-6)
   else
     write('error','Two markers needed!')
+    {$0}('disp')
   endif
  
 
