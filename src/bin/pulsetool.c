@@ -143,6 +143,7 @@ void                    start_pulsechild(),
                         create_cycle_proc(),
                         large_canvas_event_handler(),
                         plot_canvas_event_handler();
+extern void normal_mode(int which);
 
 char	                pattern_name[80],
                         directory_name[256],
@@ -188,7 +189,7 @@ static double           pulse[5][MAX_PULSE_STEPS],
                         *pattern[] = {pulse[0], pulse[1], pulse[2], pulse[3], pulse[4],
                             fourier[0], fourier[1], fourier[2]},
 
-                        bloch_array[5][MAX_PULSE_STEPS],
+                        bloch_array[6][MAX_PULSE_STEPS],
                         min_max[13][2] = {
                             {0.0, MAX_AMP}, {0.0, 0.0}, {0.0, 0.0}, {-MAX_AMP, MAX_AMP},
                             {-MAX_AMP, MAX_AMP}, {0.0, 1.0}, {-1.0, 1.0}, {-1.0, 1.0},
@@ -2788,8 +2789,8 @@ static void plot_large_canvas(int num)
 
     double   data_width, ft_freq, min_val, max_val;
     
-    char     label1[20], label2[20], label3[20],
-             label4[20], label5[20], label6[20];
+    char     label1[64], label2[64], label3[64],
+             label4[64], label5[64], label6[64];
     int data[2*MAX_PULSE_STEPS];
 
     if (!nsteps)
@@ -3709,7 +3710,7 @@ void do_simulate_3d_proc()
 ******************************************************************/
 static void polar_display(int button, int down, int up, int drag, int x, int y, int source_identifier)
 {
-    char           label[32], string[32];
+    char           label[32], string[512];
     int            i, j, k, x1, x2, y1, y2, time;
 
     static int     phi=40, theta=20, x_old, y_old, ready_flag=0;

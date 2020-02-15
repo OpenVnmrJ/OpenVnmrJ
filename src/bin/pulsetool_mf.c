@@ -430,7 +430,7 @@ caddr_t call_data;
     XtSetValues(w,args,n);
 }
 
-PostIt(w,popup,event)
+void PostIt(w,popup,event)
 Widget w, popup;
 XButtonEvent *event;
 {
@@ -881,12 +881,14 @@ char *str;
     n = 0;
     XtSetArg(args[n],XmNlabelString, string); n++;
     XtSetValues(textfield[which-FIRST_TEXTFIELD].label,args,n);
+    XmStringFree(string);
     }
   else  {
     string = XmStringCreate(str,charset);
     n = 0;
     XtSetArg(args[n],XmNlabelString, string); n++;
     XtSetValues(object[which],args,n);
+    XmStringFree(string);
     }
 }
 
@@ -1568,8 +1570,11 @@ signal1_handler()
 void send_to_pulsechild(char *string)
 {
     int    returnval;
-    strcat(string, "\0");
-    returnval = write(tochild, string, strlen(string)+1);
+    char str[512];
+
+    strcpy(str,string);
+    strcat(str, "\0");
+    returnval = write(tochild, str, strlen(str));
 }
 
 
@@ -1873,8 +1878,7 @@ int which;
 /******************************************************************************
 *	Change GC to draw in Normal mode.
 ******************************************************************************/
-void normal_mode(which)
-int which;
+void normal_mode(int which)
 {
     xor_flag=FALSE;
     XSetFunction(display,gc,GXcopy);

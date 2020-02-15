@@ -479,12 +479,14 @@ char *argv[];
 /*****************************************************************
 *  Send "string" to the parent pulsetool, via the pipe at fd 1.
 *****************************************************************/
-void send_to_parent(string)
-char   *string;
+void send_to_parent(char *string)
 {
     int  return_val;
-    strcat(string, "\0");
-    return_val = write(1, string, strlen(string)+1);
+    char str[512];
+
+    strcpy(str,string);
+    strcat(str, "\0");
+    return_val = write(1, str, strlen(str));
 }
 
 /*****************************************************************
