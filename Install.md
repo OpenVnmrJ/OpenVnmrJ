@@ -119,3 +119,11 @@ OpenVnmrJ, run the script
 
 A system reboot will then be necessary.
 
+The open-source version of java for MacOS may be obtained from https://jdk.java.net.
+Download, for example, the JDK 13.0.2 release. Unpack the java package with the commands
+  gunzip openjdk-13.0.2_osx-x64_bin.tar.gz
+  tar xvf openjdk-13.0.2_osx-x64_bin.tar
+Then move the jdk-13.0.2.jdk directory with the command
+  sudo mv jdk-13.0.2.jdk /Library/Java/JavaVirtualMachines
+
+
