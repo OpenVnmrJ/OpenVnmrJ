@@ -1,4 +1,7 @@
 import os
+import sys
+
+platform = sys.platform
 
 # targets
 pulsetoolTarget = 'pulsetool'
@@ -18,16 +21,21 @@ pulseChildFileList = ['pulsechild.c',
 # build environments
 pulseEnv = Environment(CCFLAGS    = '-O2',
                        CPPDEFINES = ['LINUX'],
-                       LINKFLAGS  = '-Wl,-rpath,/vnmr/lib ')
+                       LIBS    = ['Xm', 'Xt', 'X11', 'm'])
+
+if ('darwin' in platform):
+     pulseEnv.Replace(CC = 'clang')
+     pulseEnv.Replace(CCFLAGS = '-Wall -Os -arch x86_64 -I/opt/X11/include -I/Applications/OpenMotif21/include ')
+     pulseEnv.Replace(LINKFLAGS = '-Wall -Os -arch x86_64 -L/opt/X11/lib -L/Applications/OpenMotif21/lib ')
+     pulseEnv.Replace(LIBS = ['Xm', 'Xext', 'Xt', 'Xp', 'X11', 'm'])
+
 
 # actual builds
 pulsetool = pulseEnv.Program(target  = pulsetoolTarget,
-                             source  = [pulseToolFileList],
-                             LIBS    = ['Xm', 'Xt', 'X11', 'm'])
+                             source  = [pulseToolFileList])
 
 pulsechild = pulseEnv.Program(target  = pulsechildTarget,
-                              source  = [pulseChildFileList],
-                              LIBS    = ['Xm', 'Xt', 'X11', 'm'])
+                              source  = [pulseChildFileList])
 
 # define with absolute path where built files will be copied
 vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
