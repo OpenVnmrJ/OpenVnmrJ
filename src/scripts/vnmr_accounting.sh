@@ -19,6 +19,11 @@ then
    echo "OpenVnmrJ administrator account $admin"
    exit
 fi
+javabin="$vnmrsystem/jre/bin/java"
+if [ ! -f $javabin ]
+then
+   javabin="java"
+fi
 
-$vnmrsystem/jre/bin/java -jar $vnmrsystem/java/account.jar "$@"
+$javabin -jar $vnmrsystem/java/account.jar "$@"
 exit 0
