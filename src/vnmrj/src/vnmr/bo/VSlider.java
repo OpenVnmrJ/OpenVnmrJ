@@ -484,6 +484,7 @@ public class VSlider extends ComboSlider implements VObjIF, VEditIF,
                 }
                 slider_incr1 = (int) vincr1;
                 setSliderSteps();
+                setSliderLimits();
                 return;
             }
             break;
@@ -497,6 +498,7 @@ public class VSlider extends ComboSlider implements VObjIF, VEditIF,
                 }
                 slider_incr2 = (int) vincr2;
                 setSliderSteps();
+                setSliderLimits();
                 return;
             }
             break;

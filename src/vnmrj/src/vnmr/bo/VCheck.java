@@ -466,7 +466,15 @@ public class VCheck extends JCheckBox
             String parm = tok.nextToken();
             if (parm.equals(statusParam)) {
                 String status = tok.nextToken();
-                setSelected(Boolean.valueOf(status).booleanValue());
+                try {
+                   int ival = Integer.parseInt(status);
+                   if (ival <= 0)
+                       setSelected(false);
+                   else
+                       setSelected(true);
+                } catch (NumberFormatException e) {
+                   setSelected(Boolean.valueOf(status).booleanValue());
+                }
             }
         }
     }
