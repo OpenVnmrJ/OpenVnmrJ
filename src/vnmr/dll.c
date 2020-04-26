@@ -573,7 +573,7 @@ static int print_lines()
 }
 
 /*****************************************/
-static void getpeak(float *spectrum, int fp, int np, float *max, double *freq)
+static void getpeak(float *spectrum, int fp, int np, int posNeg, float *max, double *freq)
 /*****************************************/
 {
   float  absmax;
@@ -582,21 +582,48 @@ static void getpeak(float *spectrum, int fp, int np, float *max, double *freq)
   absmax = *max = 0.0;
   index = datapntr = spectrum + fp;
 /* GM 14xii09 loop over np points not np-1 */
-  while (--np > -1 )
+  if (posNeg == 0)  // find largest absolute value
   {
-    if (fabs(*datapntr) > absmax)
-    {
-      index = datapntr;
-      *max = *datapntr++;
-      absmax = fabs((double) *max);
-    }
-    else datapntr++;
+     while (--np > -1 )
+     {
+       if (fabs(*datapntr) > absmax)
+       {
+         index = datapntr;
+         *max = *datapntr++;
+         absmax = fabs((double) *max);
+       }
+       else datapntr++;
+     }
+  }
+  else if (posNeg == 1)  // find largest positive value
+  {
+     while (--np > -1 )
+     {
+       if (*datapntr > *max)
+       {
+         index = datapntr;
+         *max = *datapntr++;
+       }
+       else datapntr++;
+     }
+  }
+  else if (posNeg == -1)  // find largest negative value
+  {
+     while (--np > -1 )
+     {
+       if (*datapntr < *max)
+       {
+         index = datapntr;
+         *max = *datapntr++;
+       }
+       else datapntr++;
+     }
   }
   *freq = dp_to_frq((int) (index - spectrum),sw,fn / 2) - rflrfp;
 }
 
 void getNearestPeak(float *spectrum, int fp, int np, float *max, double *freq) {
-    getpeak(spectrum, fp, np, max, freq);
+    getpeak(spectrum, fp, np, 0, max, freq);
 }
 
 /*****************************************/
@@ -664,7 +691,7 @@ static double nearest_line(double cr, double rflrfp, int retc, char *retv[])
   if (start + le >= fn/2)
 /* GM 14xii09 last point to search = fn/2 - 1, so le points from start */
     start = fn / 2 - le;
-  getpeak(spectrum,start,le,&max,&freq);
+  getpeak(spectrum,start,le, 0, &max,&freq);
   disp_line((double) max, freq, retc, retv);
   return(freq);
 }
@@ -707,7 +734,7 @@ static int priv_getline(int argc, char *argv[], int retc, char *retv[])
 }
 
 /**********************************/
-static void printmaxpeak(int fp, int np, int retc, char *retv[])
+static void printmaxpeak(int fp, int np, int posNeg, int retc, char *retv[])
 /**********************************/
 {
   int dummy;
@@ -719,10 +746,22 @@ static void printmaxpeak(int fp, int np, int retc, char *retv[])
   double frq=0.0;
   while(numspec > 0) {
     if ( (spectrum = calc_spec(i,0,FALSE,TRUE,&dummy)) ) {
-      getpeak(spectrum,fp,np,&maxpeak,&freq);
-      if(maxpeak > maxp) {
-	maxp=maxpeak;
-	frq=freq;
+      getpeak(spectrum,fp,np, posNeg, &maxpeak,&freq);
+      if (posNeg == -1)
+      {
+         if(maxpeak < maxp)
+         {
+	   maxp=maxpeak;
+	   frq=freq;
+         }
+      }
+      else
+      {
+         if(maxpeak > maxp)
+         {
+	   maxp=maxpeak;
+	   frq=freq;
+         }
       }
     }
     numspec--;
@@ -732,18 +771,18 @@ static void printmaxpeak(int fp, int np, int retc, char *retv[])
 }
 
 /**********************************/
-static void printpeak(int fp, int np, int retc, char *retv[])
+static void printpeak(int fp, int np, int posNeg, int retc, char *retv[])
 /**********************************/
 {
   float  maxpeak;
   double freq;
 
-  getpeak(spectrum,fp,np,&maxpeak,&freq);
+  getpeak(spectrum,fp,np, posNeg, &maxpeak,&freq);
   disp_line((double) maxpeak, freq, retc, retv);
 }
 
 /*************/
-static int checkinput(int argc, char *argv[])
+static int checkinput(int argc, char *argv[], int *posNeg)
 /*************/
 {
   if (isReal(*++argv))
@@ -765,13 +804,16 @@ static int checkinput(int argc, char *argv[])
     Werrprintf("argument 1 must be less than argument 2");
     return(ERROR);
   }
-  if (argc != 3)
-  {
-    Werrprintf("only two arguments may be supplied");
-    return(ERROR);
-  }
   set_sp_wp(&sp, &wp, sw, fn/2, rflrfp);
   exp_factors(TRUE);
+  *posNeg = 0;
+  if (argc == 4)
+  {
+     if ( ! strcmp(*++argv,"pos") )
+        *posNeg = 1;
+     else if ( ! strcmp(*argv,"neg") )
+        *posNeg = -1;
+  }
   return(COMPLETE);
 }
 
@@ -793,27 +835,32 @@ int dll(int argc, char *argv[], int retc, char *retv[])
   if (normflag)
     scale *= normalize;
   if (strcmp(argv[0],"maxpeak")==0) {
+    int posNegFlag = 0;
+
     if (argc>1)
-      if (checkinput(argc,argv))
+      if (checkinput(argc,argv, &posNegFlag))
         return(ERROR);
-    printmaxpeak(fpnt,npnt,retc,retv);
+    printmaxpeak(fpnt,npnt, posNegFlag, retc,retv);
     appendvarlist("dummy");
   } 
   else if (strcmp(argv[0],"peak")==0)
   {
+    int posNegFlag = 0;
+
     if (argc>1)
-      if (checkinput(argc,argv))
+      if (checkinput(argc,argv, &posNegFlag))
         return(ERROR);
-    printpeak(fpnt,npnt,retc,retv);
+    printpeak(fpnt,npnt, posNegFlag, retc,retv);
     appendvarlist("dummy");
   }
   else if (strcmp(argv[0],"peakmin")==0)
   {
     float  minpeak;
     double freq;
+    int posNegFlag = 0;
 
     if (argc>1)
-      if (checkinput(argc,argv))
+      if (checkinput(argc,argv, &posNegFlag))
         return(ERROR);
     getpeakmin(spectrum,fpnt,npnt,&minpeak,&freq);
     disp_line((double) minpeak, freq, retc, retv);
