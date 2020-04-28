@@ -23,17 +23,12 @@ get_vnmrsystem() {
 #  Use /vnmr as the default
 #  make sure directory exists
 
-    if test "x$vnmrsystem" = "x"
+    if [ "x$vnmrsystem" = "x" ]
     then
-        echo "Please enter location of VNMR system directory [/vnmr]: "
-        read vnmrsystem
-        if test "x$vnmrsystem" = "x"
-        then
-            vnmrsystem="/vnmr"
-        fi
+       vnmrsystem="/vnmr"
     fi
 
-    if test ! -d "$vnmrsystem"
+    if [ ! -d "$vnmrsystem" ]
     then
         echo "$vnmrsystem does not exist, cannot proceed:"
         exit
@@ -76,7 +71,12 @@ if [[ x$userId != x"uid=0(root)" ]]; then
   t=3
   while [[ $s = 1 ]] && [[ ! $t = 0 ]]; do
      echo "Please enter this system's root user password"
-     su root -c "$0 $*";
+     echo
+     if [ -f /etc/debian_version ]; then
+        sudo $0 $* ;
+     else
+        su root -c "$0 $*";
+     fi
      s=$?
      t=$((t-1))
      echo " "
@@ -144,7 +144,11 @@ add_shadow_entry
 
 if [[ $new_account = "y" ]] ; then
     echo
-    echo "\"su acqproc\" will start or stop acquisition communications"
+    if [ -f /etc/debian_version ]; then
+       echo "\"sudo su acqproc\" will start or stop acquisition communications"
+    else
+       echo "\"su acqproc\" will start or stop acquisition communications"
+    fi
 elif [[ $# -eq 0 ]] ; then
     echo
     echo $name" is already a defined user"

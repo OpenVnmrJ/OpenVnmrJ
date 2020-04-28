@@ -104,6 +104,7 @@ extern void tossVars(symbol **pp);
 extern const char *goodGroupIndex(int group);
 extern void disposeStringRvals(Rval *r);
 extern void disposeRealRvals(Rval *r);
+extern symbol **selectVarTree(char *n);
 
 #ifdef VNMRJ
 static int vjcopyflag = -1;
@@ -3517,75 +3518,72 @@ int P_getmin(int tree, const char *pname, double *pval)
 #define MESSIZE 128
 void P_err(int res, const char *s, const char *t)
 {   char littleBuf[MESSIZE];
-    char biggerBuf[MESSIZE + 30];
     
     sprintf(littleBuf,"%s%s",s,t);
     switch(res)
     { case -1:
-		sprintf(biggerBuf,"%sTree doesn't exist",littleBuf);
+		Werrprintf("%sTree doesn't exist",littleBuf);
 		break;
       case -2:
-		sprintf(biggerBuf,"%sVariable doesn't exist",littleBuf);
+		Werrprintf("%sVariable doesn't exist",littleBuf);
 		break;
       case -3:
-		sprintf(biggerBuf,"%sValue exceeds upper limit",littleBuf);
+		Werrprintf("%sValue exceeds upper limit",littleBuf);
 		break;
       case -4:
-		sprintf(biggerBuf,"%sValue exceeds lower limit",littleBuf);
+		Werrprintf("%sValue exceeds lower limit",littleBuf);
 		break;
       case -5:
-		sprintf(biggerBuf,"%sValue violates step size",littleBuf);
+		Werrprintf("%sValue violates step size",littleBuf);
 		break;
       case -6:
-		sprintf(biggerBuf,"%sValue violates enum type",littleBuf);
+		Werrprintf("%sValue violates enum type",littleBuf);
 		break;
       case -7:
-		sprintf(biggerBuf,"%sVariable is write protected",littleBuf);
+		Werrprintf("%sVariable is write protected",littleBuf);
 		break;
       case -8:
-		sprintf(biggerBuf,"%sMalloc error (couldn't get any memory) ",
+		Werrprintf("%sMalloc error (couldn't get any memory) ",
 			littleBuf);
 		break;
       case -9:
-		sprintf(biggerBuf,"%sIndex out-of-bounds",littleBuf);
+		Werrprintf("%sIndex out-of-bounds",littleBuf);
 		break;
       case -10:
-		sprintf(biggerBuf,"%sWrong type ",littleBuf);
+		Werrprintf("%sWrong type ",littleBuf);
 		break;
       case -11:
-		sprintf(biggerBuf,"%sString larger than max length",littleBuf);
+		Werrprintf("%sString larger than max length",littleBuf);
 		break;
       case -12:
-		sprintf(biggerBuf,
-			"%sReal variable value adjusted to nearest enumeral",
+		Werrprintf("%sReal variable value adjusted to nearest enumeral",
 			littleBuf);
 		break;
       case -13:
-		sprintf(biggerBuf,"%sString Enumeral value not matched",
+		Werrprintf("%sString Enumeral value not matched",
 			littleBuf);
 		break;
       case -14:
-		sprintf(biggerBuf,"%sNo such file",littleBuf);
+		Werrprintf("%sNo such file",littleBuf);
 		break;
       case -15:
-		sprintf(biggerBuf,"%sPremature EOF (ran out of file)",littleBuf);
+		Werrprintf("%sPremature EOF (ran out of file)",littleBuf);
 		break;
       case -16:
-		sprintf(biggerBuf,"%sError number out of range",littleBuf);
+		Werrprintf("%sError number out of range",littleBuf);
 		break;
       case -17:
-		sprintf(biggerBuf,"%sInvalid group",littleBuf);
+		Werrprintf("%sInvalid group",littleBuf);
 		break;
       case -18:
-		sprintf(biggerBuf,"%sBad filename ",littleBuf);
+		Werrprintf("%sBad filename ",littleBuf);
 		break;
       case -19:
-		sprintf(biggerBuf,"%serror writing file",littleBuf);
+		Werrprintf("%serror writing file",littleBuf);
 		break;
      default:
-		sprintf(biggerBuf,"%sUdefined error number %d",
+		Werrprintf("%sUdefined error number %d",
 				littleBuf,res);
 		break;
      }
-     Werrprintf(biggerBuf);
 }

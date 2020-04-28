@@ -39,6 +39,8 @@ extern "C" {
 
  
 extern int initExpQs(int clean);
+extern int expQaddToHead(int priority, char* expidstr,
+                         char* expinfostr);
 extern int expQaddToTail(int priority, char* expidstr,
                          char* expinfostr);
 extern int expQget(int* priority, char* expidstr);
@@ -65,6 +67,7 @@ extern  int  activeExpQshow(void);
 #else
  
 extern	int  initExpQs();
+extern	int  expQaddToHead();
 extern	int  expQaddToTail();
 extern	int  expQget();
 extern  int expQgetinfo();

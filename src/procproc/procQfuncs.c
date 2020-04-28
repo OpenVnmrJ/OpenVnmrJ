@@ -153,11 +153,13 @@ int initProcQs(int clean)
      procQlist.procQstart = queue;
      procQlist.shrMem = smem;
 
+     startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
+#ifdef PROC_DEBUG
      DPRINT3(3,"ProcQ Addr: 0x%lx, len %d, End Addr: 0x%lx\n",
 	queue, sizeof(procQ), ((char*)queue + sizeof(procQ)) - (char*)1);
-     startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
      DPRINT3(3,"ProcQ Offset: 0x%lx, len %d, End Offset: 0x%lx\n",
 	 startOffset, sizeof(procQ), (startOffset + sizeof(procQ) - (char*)1));
+#endif
 
      if (clean)				/* if clean flag set set in queue to zero */
         queue->numInQ = 0;
@@ -250,6 +252,7 @@ int procQadd(int proctype, char* expidstr, long elemId, long ct, int dcode, int 
     return(-1);
   }
   startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
+#ifdef PROC_DEBUG
   DPRINT2(4,"\n\nprocQadd: %d, ProcQ Offset: 0x%lx, \n", proctype+1, startOffset);
 
   DPRINT5(4,
@@ -265,6 +268,7 @@ int procQadd(int proctype, char* expidstr, long elemId, long ct, int dcode, int 
   	  ((char*) ((char*)&Qentries[queue->numInQ].fidId - (char*)procQlist.procQstart)),
   	  ((char*) ((char*)&Qentries[queue->numInQ].ctNum - (char*)procQlist.procQstart)),
   	  ((char*) ((char*)Qentries[queue->numInQ].ExpIdStr - (char*)procQlist.procQstart)));
+#endif
 
 
   shrmTake(procQlist.shrMem);
@@ -348,7 +352,9 @@ int procQget(int* proctype, char* expidstr, long* elemId, long* ct, int* dcode, 
        return(-1);
 
      startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
+#ifdef PROC_DEBUG
      DPRINT2(4,"\nprocQget: ProcQ Addr: 0x%lx, Offset: 0x%lx, \n", queue, startOffset);
+#endif
 
      stat = 0;
      Qentries = (procQentry *)((char*)queue + sizeof(procQ));
@@ -358,6 +364,7 @@ int procQget(int* proctype, char* expidstr, long* elemId, long* ct, int* dcode, 
        sigprocmask(SIG_SETMASK, &savemask, (sigset_t *)NULL);
        return(-1);
      }
+#ifdef PROC_DEBUG
      DPRINT5(4,
 	"Addrs: Qentry: 0x%lx, procType: 0x%lx, fid: 0x%lx, ct: 0x%lx, str: 0x%lx\n",
 	Qentries, &Qentries[0].procType, &Qentries[0].fidId,
@@ -368,6 +375,7 @@ int procQget(int* proctype, char* expidstr, long* elemId, long* ct, int* dcode, 
   	  ((char*) ((char*)&Qentries[0].fidId - (char*)procQlist.procQstart)),
   	  ((char*) ((char*)&Qentries[0].ctNum - (char*)procQlist.procQstart)),
   	  ((char*) ((char*)Qentries[0].ExpIdStr - (char*)procQlist.procQstart)));
+#endif
 
      *proctype = Qentries[0].procType;
      *elemId = Qentries[0].fidId;
@@ -963,7 +971,7 @@ int activeQtoBG(int oldfgbg, long key, int newfgbg, int procpid)
   }
   if (entry == -1)
   {
-     errLogRet(ErrLogOp,debugInfo,"activeQdelete: Entry doen't Exist for key %d\n",
+     errLogRet(ErrLogOp,debugInfo,"activeQdelete: Entry doen't Exist for key %ld\n",
 	key);
      sigprocmask(SIG_SETMASK, &savemask, (sigset_t *)NULL);
      return(-1);
