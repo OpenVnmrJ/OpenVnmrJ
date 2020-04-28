@@ -151,7 +151,7 @@ char   *cmd_13[] = {"starthardloop", "set_observech", "sync_on_event",
 		    "SweepNAcquire", "triggerSelect", "gen_shapelist",
                     "parallelstart", "dec2shapelist", "dec3shapelist",
                     "S_setloopsize" };
-static int  cmd13Num = 15;
+static int  cmd13Num = 16;
 
 char   *cmd_14[] = {"shapedgradient", "decshapedpulse", "simshapedpulse",
 		    "apshaped_pulse", "CGradientPulse", "pbox_dec2pulse",
@@ -372,6 +372,7 @@ main(int argc, char *argv[])
    char            baseName[MAXPATH];
    char		   *tptr, *sptr, *rptr;
    int		   tlen, k, fd;
+   int ret __attribute__((unused));
 
    if (argc <= 1)
    {
@@ -436,7 +437,7 @@ main(int argc, char *argv[])
    strcat(input, sourcei);
    if (debug)
 	fprintf(stderr, " dps_ps_gen: %s\n", input);
-   system(input);
+   ret = system(input);
    compilePhase = 0;
    if (argc > 3)
    {
@@ -546,7 +547,7 @@ main(int argc, char *argv[])
    else
    {
       sprintf(cmd_name, "mv %s  %s", tmp_file1, tmp_file2);
-      system(cmd_name);
+      ret = system(cmd_name);
    }
 
 
@@ -585,7 +586,7 @@ main(int argc, char *argv[])
 	else
 	{
 	  sprintf(cmd_name, "mv %s  %s", time_file1, time_file2);
- 	  system(cmd_name);
+ 	  ret = system(cmd_name);
    	}
    }
 
@@ -607,7 +608,7 @@ main(int argc, char *argv[])
    sprintf(input, "cat %s %s %s %s > %sdps.c",rptr,tmp_file1,tmp_file2,time_file2,baseName);
    if (debug)
 	fprintf(stderr, "%s \n", input);
-   system(input);
+   ret = system(input);
    unlink(tmp_file1);
    unlink(tmp_file2);
    unlink(time_file2);
@@ -7893,10 +7894,8 @@ get_args(FILE *fin)
    int  pl, pr;
    int	bl, br;
    int  quot, slash;
-   char *cmd;
    char tmp_input[2048];
 
-   cmd=str_in;
    tmp_input[0] = '\0';
 
    argNum = 0;

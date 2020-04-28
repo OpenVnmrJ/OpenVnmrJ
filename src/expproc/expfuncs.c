@@ -8,6 +8,8 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -24,17 +26,23 @@
 #include "expentrystructs.h"
 
 
+extern void killEmAll(void);
+extern void shutdownComm(void);
+extern void expQRelease(void);
+extern void resetState(void);
+extern void showAuthRecord(void);
+extern void expStatusRelease(void);
+extern int expQshow(void);
+
 extern int chanId;	/* Channel Id */
 
 SHR_EXP_INFO expInfo = NULL;   /* start address of shared Exp. Info Structure */
 
 extern ExpEntryInfo ActiveExpInfo;
 
-static char command[256];
-static char response[256];
 static SHR_MEM_ID  ShrExpInfo = NULL;
 
-strtExp(char *argstr)
+int strtExp(char *argstr)
 {
     char *filename;
     filename = strtok(NULL," ");
@@ -42,13 +50,13 @@ strtExp(char *argstr)
     return(0);
 }
 
-abortCodes(char *str)
+int abortCodes(char *str)
 {
    DPRINT(1,"abortCodes: \n");
    return(0);
 }
 
-echoCmd(char *str)
+int echoCmd(char *str)
 {
    int stat;
    MSG_Q_ID pMsgId;
@@ -69,7 +77,7 @@ echoCmd(char *str)
   return(0);
 }
 
-terminate(char *str)
+void terminate(char *str)
 {
    DPRINT(1,"terminate: \n");
    killEmAll();		/* terminate the rest of the Proc Family */
@@ -78,12 +86,12 @@ terminate(char *str)
    activeExpQRelease();
    expStatusRelease();
    killEmAll();
-   exit(0);
+   exit(EXIT_SUCCESS);
 }
 
 /* this is invoked by the exception handler (excepthandler.c), 
    when process is sent a terminate signal */
-ShutDownProc()
+void ShutDownProc()
 {
    resetState();
    killEmAll();		/* terminate the rest of the Proc Family */
@@ -93,7 +101,7 @@ ShutDownProc()
    expStatusRelease();
 }
 
-debugLevel(char *str)
+int debugLevel(char *str)
 {
     extern int DebugLevel;
     char *value;
@@ -109,15 +117,14 @@ debugLevel(char *str)
     if (strlen(ActiveExpInfo.ExpId) > (size_t) 1)
     {
       DPRINT(0,"Running Experiment\n");
-      DPRINT3(0,"Id: '%s', Priority: %d, ExpInfo Addr: 0x%lx\n",
-		ActiveExpInfo.ExpId,ActiveExpInfo.ExpPriority,
-		ActiveExpInfo.ExpInfo);
+      DPRINT2(0,"Id: '%s', Priority: %d\n",
+		ActiveExpInfo.ExpId,ActiveExpInfo.ExpPriority);
       shrmShow(ActiveExpInfo.ShrExpInfo);
     }
     return(0);
 }
 
-mapInExp(ExpEntryInfo *expid)
+int mapInExp(ExpEntryInfo *expid)
 {
     DPRINT1(2,"mapInExp: map Shared Memory Segment: '%s'\n",expid->ExpId);
 
@@ -132,7 +139,7 @@ mapInExp(ExpEntryInfo *expid)
     if (expid->ShrExpInfo->shrmem->byteLen < sizeof(SHR_EXP_STRUCT))
     {
        errLogRet(LOGOPT,debugInfo,
-        "mapInExp: File: '%s'  is not the size of the shared Exp Info Struct: %d vs %d(correct size) bytes\n",
+        "mapInExp: File: '%s'  is not the size of the shared Exp Info Struct: %llu vs %lu(correct size) bytes\n",
      	    expid->ExpId, expid->ShrExpInfo->shrmem->byteLen, sizeof(SHR_EXP_STRUCT));
         /* hey, this file is not a shared Exp Info file */
        shrmRelease(expid->ShrExpInfo);         /* release shared Memory */
@@ -154,7 +161,7 @@ mapInExp(ExpEntryInfo *expid)
     return(0);
 }
 
-mapOutExp(ExpEntryInfo *expid)
+int mapOutExp(ExpEntryInfo *expid)
 {
     DPRINT1(2,"mapOutExp: unmap Shared Memory Segment: '%s'\n",expid->ExpId);
 
@@ -169,7 +176,7 @@ mapOutExp(ExpEntryInfo *expid)
     return(0);
 }
 
-mapIn(char *str)
+int mapIn(char *str)
 {
     char* filename;
 
@@ -194,7 +201,7 @@ mapIn(char *str)
     return(0);
 }
 
-mapOut(char *str)
+int mapOut(char *str)
 {
     char* filename;
 
@@ -208,6 +215,6 @@ mapOut(char *str)
     return(0);
 }
 
-expQTask()
+void expQTask()
 {
 }

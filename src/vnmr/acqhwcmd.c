@@ -1454,7 +1454,7 @@ static int verify_sethw(int argc, char *argv[], char *msgptr,
                         int msglen, int quiet )
 {
 	int	first_arg;
-        int     robot_arg;
+        int     hw_arg;     // Special arg for ROBOT and MPS
 	char	rftype[ 12 ];
 
 /*  Defensive programming  */
@@ -1550,16 +1550,16 @@ static int verify_sethw(int argc, char *argv[], char *msgptr,
 	init_req_table();
 	cur_table_entry = -1;				/* no current table */
 
-        if ( (robot_arg = find_arg(argc,argv,"robot") ) != 0)
+        if ( (hw_arg = find_arg(argc,argv,"robot") ) != 0)
         {
-           if (robot_arg+1 < argc)
+           if (hw_arg+1 < argc)
            {
-              if ((int) strlen(argv[robot_arg+1]) > msglen - 20)
+              if ((int) strlen(argv[hw_arg+1]) > msglen - 20)
               {
-                 Werrprintf("sethw('robot') command '%s' is too long", argv[robot_arg+1] );
+                 Werrprintf("sethw('robot') command '%s' is too long", argv[hw_arg+1] );
 	         return( -1 );
               }
-              if ( ! strcmp(argv[robot_arg+1],"term") )
+              if ( ! strcmp(argv[hw_arg+1],"term") )
                  sethw_wait = 0;
               if (sethw_wait)
               {
@@ -1568,11 +1568,11 @@ static int verify_sethw(int argc, char *argv[], char *msgptr,
                  unlink(msgptr);
                  /* Added semi-colons to facilitate parsing */
                  sprintf(msgptr,"userCmd outfile %s/sethw; %s;",
-                         curexpdir,argv[robot_arg+1]);
+                         curexpdir,argv[hw_arg+1]);
               }
               else
               {
-                 sprintf(msgptr,"userCmd %s",argv[robot_arg+1]);
+                 sprintf(msgptr,"userCmd %s",argv[hw_arg+1]);
               }
 	      return( 0 );
            }
@@ -2306,7 +2306,10 @@ int sethw(int argc, char *argv[], int retc, char *retv[] )
 
 	if (stat != FAILED)
         {
-          cmd = find_arg(argc,argv,"robot") ? ROBOT : ACQHARDWARE;
+          if ( find_arg(argc,argv,"robot") )
+             cmd = ROBOT;
+          else
+             cmd = ACQHARDWARE;
 	  if (talk_to_acqproc( cmd,
                                &message[ 0 ], &message[ 0 ], sizeof(message)) )
 	    stat = FAILED;

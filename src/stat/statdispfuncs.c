@@ -8,13 +8,15 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <time.h>
+#include <sys/time.h>
 #include <math.h>
-#include <netinet/in.h>
-#include <netdb.h>
+// #include <netinet/in.h>
+// #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
 #include "ACQPROC_strucs.h"
@@ -52,6 +54,9 @@ extern int acq_ok;
 extern int newAcq;
 extern int useInfostat;
 extern int StatPortId;
+extern int writestatToVnmrJ( char *cmd, char *message );
+extern int Wissun(void);
+
 static char infoModeOn[6] = "uuu";
 
 #define TXT_LEN 19
@@ -63,6 +68,13 @@ static void write_info_val(int item, int value);
 static void checkLogEntry(int item, char *txt );
 static void find_item_string( int item_no, char *txt );
 static int isStatlogItem(int item, char *txt);
+static void getstatmode(int bits, char *msgeptr);
+void initCurrentStatBlock(AcqStatBlock *statblock);
+void getspinmode(int bits, char *msgeptr);
+void showLSDV();
+void showInfostatus();
+void showstatus();
+void disp_string(int item_no, char *strval);
 
 /* list of currently supported status items */
 #define NUM_STAT_ITEMS 7
@@ -433,9 +445,7 @@ static void find_item_string( int item_no, char *txt )
 |       at the position according to panel item
 |
 +----------------------------------------------------------------------*/
-disp_string(item_no,strval)
-int   item_no;
-char *strval;
+void disp_string(int item_no, char *strval)
 /* display the processing status characters */
 {
     char txt[TXT_LEN+1];
@@ -489,15 +499,13 @@ char *strval;
 |       This procedure displays an 4 byte integer
 |
 +----------------------------------------------------------------------*/
-disp_val(item_no,val,show)
-int      item_no, show;
-unsigned long val;
+static void disp_val(int item_no, unsigned int val, int show)
 /* display a processing index, 0 clears field */
 {   char s[TXT_LEN+1];
     char txt[TXT_LEN+1];
 
     if (val)
-        sprintf(s,"%lu",val);
+        sprintf(s,"%u",val);
     else
         sprintf(s,"    ");
 
@@ -515,13 +523,6 @@ unsigned long val;
                 fprintf(stderr,"%s %s\n",txt,s);
 /* fprintf(stderr,"%s + %s\n",txt,s); */
 	    }
-#ifdef MOTIF
-	    else
-	    {
-              set_item_string( item_no, s );
-              show_item( item_no, ON);
-	    }
-#endif
         }
         else
         {
@@ -533,19 +534,12 @@ unsigned long val;
               else
                 fprintf(stderr,"%s - %s\n",txt,s);
 	    }
-#ifdef MOTIF
-	    else
-	    {
-              set_item_string( item_no, s );
-              show_item( item_no, OFF);
-	    }
-#endif
         }
     }
 }
 
 static void
-power_format(char *buf, long uwatts, char justify, int width, char *units)
+power_format(char *buf, int uwatts, char justify, int width, char *units)
 {
     float watts;
 
@@ -587,8 +581,8 @@ power_format(char *buf, long uwatts, char justify, int width, char *units)
 }
 
 static void
-updateRfMon(unsigned long *newval,
-	    unsigned long *oldval,
+updateRfMon(unsigned int *newval,
+	    unsigned int *oldval,
 	    char justify,
 	    int width,
 	    char *unitstr,
@@ -603,7 +597,7 @@ updateRfMon(unsigned long *newval,
 }
 
 static double
-calcRfMonPct(unsigned long power, unsigned long limit)
+calcRfMonPct(unsigned int power, unsigned int limit)
 {
   double rtn;
   if ((limit <= 0) || (power <= 0))
@@ -614,8 +608,7 @@ calcRfMonPct(unsigned long power, unsigned long limit)
 }
 
 static void
-updateRfMonAvg(statblock)
-AcqStatBlock *statblock;
+updateRfMonAvg(AcqStatBlock *statblock)
 {
 	int i, ok=0;
 	for (i=0; i<4 && ok==0; i++)
@@ -663,8 +656,7 @@ AcqStatBlock *statblock;
 |       UpdateStatScrn()
 |       Update the acquisition status screen
 +------------------------------------------------------------------*/
-updatestatscrn(statblock)
-AcqStatBlock *statblock;
+int updatestatscrn(AcqStatBlock *statblock)
 {
     static int firsttime = 1;
     static float damp = 0.4;    /* Lock level damping; 0=>none, 1=>complete */
@@ -721,7 +713,7 @@ AcqStatBlock *statblock;
     if (statblock->Acqstate < ACQ_IDLE)
     {   if (statblock->Acqstate > ACQ_INACTIVE)
     {
-        disp_val(PendVal,(unsigned long) 0,HIDE);
+        disp_val(PendVal,(unsigned int) 0,HIDE);
         return(0);
     }
     }
@@ -732,7 +724,7 @@ AcqStatBlock *statblock;
         /*fprintf(stderr,"Que\n");*/
         CurrentStatBlock.AcqExpInQue = statblock->AcqExpInQue;
         mode = (CurrentStatBlock.AcqExpInQue) ? SHOWIT : HIDE;
-        disp_val(PendVal,(unsigned long) CurrentStatBlock.AcqExpInQue,mode);
+        disp_val(PendVal,CurrentStatBlock.AcqExpInQue,mode);
     }
 
     if (strcmp(CurrentStatBlock.AcqUserID,statblock->AcqUserID) != 0)
@@ -756,9 +748,9 @@ AcqStatBlock *statblock;
             CurrentStatBlock.AcqFidElem = statblock->AcqFidElem;
             /*fprintf(stderr,"FID\n");*/
             if (CurrentStatBlock.AcqFidElem > 0)
-                disp_val(ArrayVal,(unsigned long) CurrentStatBlock.AcqFidElem,SHOWIT);
+                disp_val(ArrayVal,CurrentStatBlock.AcqFidElem,SHOWIT);
             else
-                disp_val(ArrayVal,(unsigned long) 0,HIDE);
+                disp_val(ArrayVal,(unsigned int) 0,HIDE);
         }
 
         if (CurrentStatBlock.AcqCT != statblock->AcqCT)
@@ -766,9 +758,9 @@ AcqStatBlock *statblock;
             CurrentStatBlock.AcqCT = statblock->AcqCT;
             /*fprintf(stderr,"CT\n");*/
             if (CurrentStatBlock.AcqCT > 0L)
-                disp_val(CT_Val,(unsigned long) CurrentStatBlock.AcqCT,SHOWIT);
+                disp_val(CT_Val,CurrentStatBlock.AcqCT,SHOWIT);
             else
-                disp_val(CT_Val,(unsigned long) 0,HIDE);
+                disp_val(CT_Val,(unsigned int) 0,HIDE);
         }
     }
     else
@@ -779,8 +771,8 @@ AcqStatBlock *statblock;
         {
             if (infoState == 0)
             {
-                disp_val(ArrayVal,(unsigned long) CurrentStatBlock.AcqFidElem,HIDE);
-                disp_val(CT_Val,(unsigned long) CurrentStatBlock.AcqCT,HIDE);
+                disp_val(ArrayVal, CurrentStatBlock.AcqFidElem,HIDE);
+                disp_val(CT_Val, CurrentStatBlock.AcqCT,HIDE);
             }
             if (CurrentStatBlock.Acqstate == ACQ_INACTIVE
                     || CurrentStatBlock.Acqstate == ACQ_IDLE
@@ -792,8 +784,8 @@ AcqStatBlock *statblock;
         }
         else
         {
-            disp_val(ArrayVal,(unsigned long) CurrentStatBlock.AcqFidElem,HIDE);
-            disp_val(CT_Val,(unsigned long) CurrentStatBlock.AcqCT,HIDE);
+            disp_val(ArrayVal, CurrentStatBlock.AcqFidElem,HIDE);
+            disp_val(CT_Val, CurrentStatBlock.AcqCT,HIDE);
         }
     } 
 
@@ -810,7 +802,7 @@ AcqStatBlock *statblock;
         /*fprintf(stderr,"CmpltT\n");*/
         if (CurrentStatBlock.AcqCmpltTime > 0L)
         {
-            tmtime = localtime(&(CurrentStatBlock.AcqCmpltTime));
+            tmtime = localtime((const time_t *) &(CurrentStatBlock.AcqCmpltTime));
             chrptr = asctime(tmtime);
             strcpy(datetim,chrptr);
             datetim[19] = 0;
@@ -824,7 +816,7 @@ AcqStatBlock *statblock;
     if (CurrentStatBlock.AcqRemTime != statblock->AcqRemTime)
     {
         int hrs,mins,sec;
-        long time;
+        int time;
         char remtime[20];
 
         remtime[0] = 0;
@@ -849,7 +841,7 @@ AcqStatBlock *statblock;
         /*fprintf(stderr,"DataT\n");*/
         if (CurrentStatBlock.AcqDataTime > 0L)
         {
-            tmtime = localtime(&(CurrentStatBlock.AcqDataTime));
+            tmtime = localtime((const time_t *) &(CurrentStatBlock.AcqDataTime));
             chrptr = asctime(tmtime);
             strcpy(datetim,chrptr);
             datetim[19] = 0;
@@ -1136,9 +1128,9 @@ AcqStatBlock *statblock;
     {
         CurrentStatBlock.AcqSample = statblock->AcqSample;
         if (CurrentStatBlock.AcqSample > 0)
-            disp_val(SampleVal,(unsigned long) CurrentStatBlock.AcqSample,SHOWIT);
+            disp_val(SampleVal, CurrentStatBlock.AcqSample,SHOWIT);
         else
-            disp_val(SampleVal,(unsigned long) 0,HIDE);
+            disp_val(SampleVal,(unsigned int) 0,HIDE);
     }
 
     if (useInfostat == 0)  /* VnmrJ VNMRS system */
@@ -1147,17 +1139,17 @@ AcqStatBlock *statblock;
         {
             CurrentStatBlock.AcqRack = statblock->AcqRack;
             if (CurrentStatBlock.AcqRack > 0)
-                disp_val(SampleRackVal,(unsigned long) CurrentStatBlock.AcqRack,SHOWIT);
+                disp_val(SampleRackVal, CurrentStatBlock.AcqRack,SHOWIT);
             else
-                disp_val(SampleRackVal,(unsigned long) 0,HIDE);
+                disp_val(SampleRackVal,(unsigned int) 0,HIDE);
         }
         if (CurrentStatBlock.AcqZone != statblock->AcqZone)
         {
             CurrentStatBlock.AcqZone = statblock->AcqZone;
             if (CurrentStatBlock.AcqZone > 0)
-                disp_val(SampleZoneVal,(unsigned long) CurrentStatBlock.AcqZone,SHOWIT);
+                disp_val(SampleZoneVal, CurrentStatBlock.AcqZone,SHOWIT);
             else
-                disp_val(SampleZoneVal,(unsigned long) 0,HIDE);
+                disp_val(SampleZoneVal,(unsigned int) 0,HIDE);
         }
     }
 
@@ -1199,7 +1191,7 @@ AcqStatBlock *statblock;
 |         display the apropriate acqusition status message
 |
 +-------------------------------------------------------------------*/
-showstatus()
+void showstatus()
 {
     char message[50];
 
@@ -1291,7 +1283,7 @@ showstatus()
 |         display the apropriate acqusition status message
 |
 +-------------------------------------------------------------------*/
-showInfostatus()
+void showInfostatus()
 {
     static char lastMessage[50] = "\0";
     char message[50];
@@ -1418,7 +1410,7 @@ showInfostatus()
 |                Pro - Probe Type 0=Liquids; 1=Solids;
 |
 +--------------------------------------------------------*/
-showLSDV()
+void showLSDV()
 {
     char message[20];
     int status;
@@ -1429,6 +1421,7 @@ showLSDV()
     if (debug)
        fprintf(stderr,"LSDV = 0x%x\n",status);
 
+#ifdef XXX
     /*  ------------- N o t  U S E D ---------------------------------------
     switch(stat)
     {
@@ -1458,13 +1451,14 @@ showLSDV()
 		break;
     }
     ----------------------------------------------------------------- */
+#endif
 
     stat = (status >> 2) & 0x0003;
     if (debug)
         fprintf(stderr,"Lockstate = 0x%x\n",stat);
     if (LKstat != stat)
     {
-        getmode(stat,message);
+        getstatmode(stat,message);
         disp_string(LockVal,message);
 	LKstat = stat;
 	write_info_mode("lockon",0,stat);
@@ -1475,7 +1469,7 @@ showLSDV()
         fprintf(stderr,"Spinstate = 0x%x\n",stat);
     if (Spinstat != stat)
     {
-        getmode(stat,message);
+        getstatmode(stat,message);
     	disp_string(SpinVal,message);
 	Spinstat = stat;
 	write_info_mode("spinon",1,stat);
@@ -1493,6 +1487,7 @@ showLSDV()
        }
     }
 
+#ifdef XXX
 /*    if (!stat)
     {
 	if (Sampstat != 0)
@@ -1535,6 +1530,7 @@ showLSDV()
 	/*printf("Solids  ");*/
     /*}
    ------------------------------------------------------------  */
+#endif
 
     stat = (status >> 9) & 0x0003;
     if (debug)
@@ -1566,27 +1562,21 @@ showLSDV()
     if (stat == NOTPRESENT)
     { 
 	    if (VTpan)  {
-#ifdef MOTIF
-                show_item( VT_Title, OFF);
-#endif
 /*              disp_string(VT_Val,""); */
 	        VTpan = 0; 
 	        }
-            getmode(stat,message);
+            getstatmode(stat,message);
             disp_string(VT_Val,message);
 	    write_info_mode("vton",2,stat);
     }
     else
     {
 	if (!VTpan)  {
-#ifdef MOTIF
-	    show_item( VT_Title, ON);
-#endif
 	    VTpan = 1; 
 	}
         if (VTstat != stat)
         {
-            getmode((stat&0x3),message);
+            getstatmode((stat&0x3),message);
             
 //	    if (status >> 13) 
 //              strcat(message,"HW error");
@@ -1598,13 +1588,11 @@ showLSDV()
 }
 /*-----------------------------------------------------------------
 |
-|       getmode()
+|       getstatmode()
 |          returns the string message discribing the condition of the
 |          device, (Regulated, Not Regulated, Off)
 +------------------------------------------------------------------*/
-getmode(bits,msgeptr)
-int bits;
-char *msgeptr;
+static void getstatmode(int bits, char *msgeptr)
 {
   if (useInfostat == 0)
   {
@@ -1649,6 +1637,7 @@ char *msgeptr;
     }
   }
 }
+
 #define EJECT 0
 #define INSERT 1
 /*-----------------------------------------------------------------
@@ -1657,9 +1646,7 @@ char *msgeptr;
 |          returns the string message discribing the condition of the
 |          device, (insert, eject)
 +------------------------------------------------------------------*/
-getspinmode(bits,msgeptr)
-int bits;
-char *msgeptr;
+void getspinmode(int bits, char *msgeptr)
 {
   if (useInfostat == 0)
   {
@@ -1750,7 +1737,7 @@ static void write_shim_info(shimset, dacno, value)
     if (useInfostat == 0 && !logging) {
 	sprintf(val, "%d", value);
 	init_shimnames_by_setnum(shimset);
-	if (shimname = get_shimname(dacno)) {
+	if ( (shimname = get_shimname(dacno)) ) {
 	    if (*shimname == '\0') {
 		sprintf(name, "shim_%d", dacno);
 		shimname = name;
@@ -1790,8 +1777,7 @@ static void write_info_val(item, value)
 |	from a given "statblock".  This ensures that the values
 |	in the given statblock will be printed.
 +------------------------------------------------------------------*/
-initCurrentStatBlock(statblock)
-AcqStatBlock *statblock;
+void initCurrentStatBlock(AcqStatBlock *statblock)
 {
     int i;
 
