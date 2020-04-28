@@ -892,7 +892,7 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
        diag_dist = 0.0;
 
 
-     point_status = (int **) allocateWithId(sizeof(int) * new_npnt1,"ll2d");
+     point_status = (int **) allocateWithId(sizeof(int *) * new_npnt1,"ll2d");
      for (i = 0; i<new_npnt1; i++)
 	point_status [i] = (int *) allocateWithId(sizeof(int) * new_npnt,"ll2d");
 
@@ -994,7 +994,7 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
        f2_rflrfp = temp;
        }
 
-     array_status = (int **) allocateWithId(sizeof(int) * INTERP_PTS,"ll2d");
+     array_status = (int **) allocateWithId(sizeof(int *) * INTERP_PTS,"ll2d");
      for (i = 0; i<INTERP_PTS; i++)
 	array_status [i] = (int *) allocateWithId(sizeof(int) * INTERP_PTS,"ll2d");
 
@@ -3333,7 +3333,7 @@ static int ll2d_combine(int mark_mode, int weight, double *list, int numlist,
 	double		 cr, delta, cr1, delta1;
 	double		 min_f1, min_f2, max_f1, max_f2, ave_f1, ave_f2;
         double           sum;
-	int		 num, done, all_found, i, *tmplist;
+	int		 num=0, done, all_found, i, *tmplist;
 
 	char 		 ch, label[LABEL_LEN+1], comment[COMMENT_LEN+1];
 
