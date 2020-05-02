@@ -510,7 +510,7 @@ to be done in setEditMode()
     }
 
     public void group_hide(){
-        if(isShowing() && hideCmd !=null && hideCmd.length()>0)
+        if(isVisible() && hideCmd !=null && hideCmd.length()>0)
             vnmrIf.sendVnmrCmd(this, hideCmd);
         bShowTab = false;
     }
