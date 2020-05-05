@@ -1,13 +1,53 @@
 
 *******************************************************************************
-proj(expno,<'sum'><,start<,width>>)	- project 2D data
+proj(expno<,'sum'><,'new'><,'complex'><,start<,width><,start2><,width2>>) - project 2D data
+proj(expno<,'sum'><,'trace',index><,start<,width><,start2><,width2>>)	  - project 2D data
 *******************************************************************************
   Project 2D data onto the axis parallel to the screen X-axis, which
   may be either f1 or f2,  depending upon the parameter 'trace'.
   expno is the number of the experiment in which the resulting spectrum
   is stored.  If the 'sum' keyword is given, the projection is calculated
   as the sum of the data, otherwise as the maximum (skyline projection).
-  start and width (in hz) define the traces to be projected. If omitted, the
-  whole data is projected.   If the width argument width is supplied
-  as a zero,  then a single trace corresponding to the start frequency
-  will be stored.
+
+  If the 'new' keyword is given, the projection will be created as a new
+  array element in the "expno" experiment. If the "expno" experiment does
+  not exist and the 'new' argument is given, the experiment will be created
+  and the projection will be the first element in the new experiment.
+
+  If the 'trace' keyword is given, the projection will be added to an
+  existing trace in the "expno" experiemnt. The 'trace' keyword must be
+  following by the trace index.
+
+  When proj is called without the 'new' option, or if the 'new' option is
+  given but the "expno" experiment does not exist, an optional 'complex'
+  keyword can be supplied. In this case, complex data will be created in the
+  the "expno" experiment. The imaginary values of the complex data will be zero.
+  The default is to create real data in the "expno" experiment.
+
+  In cases where the 'new' argument creates a new element in the "expno"
+  experiment or when the "trace" keyword is used, the existing data in the
+  "expno" experiment is checked to decide if the projection data needs
+  to be real or complex.
+
+  start and width (in Hz) define the traces along the Y-axis to be projected.
+  If omitted, the whole data is projected.   If the width argument width
+  is supplied as a zero,  then a single trace corresponding to the start
+  frequency will be stored.
+
+  start2 and width2 (in Hz) define the range of data along the X-axis to
+  be projected.  If all four parameters start, width, start2, and width2
+  are supplied, only the data defined within that box will be projected.
+
+  The expno argument must be the first argument. The optional 'sum',
+  'new', 'complex', or 'trace',index arguments can be supplied in any order
+  but must follow the expno argument. The optional start and width and
+  start2 and width2 are the final arguments.
+
+  If proj is called with illegal arguments, such as "expno" is not the
+  first argument or using both 'new' and 'trace' together, or it has
+  file access problems, the command will abort. Other failures, such
+  as the 'trace' index is out of range, can be determined with a return
+  argument, as in
+     proj(12,'trace',8):$ok,$blks
+  $ok will be set to 1 if the command succeeded and 0 if it failed.
+  $blks will be set to the number of FIDs in the "expno" experiemnt.
