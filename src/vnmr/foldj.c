@@ -19,6 +19,7 @@
 ********************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
@@ -83,19 +84,21 @@
         ( (fabs(arg1) > MINDEGREE) ||                   \
           (fabs(arg2) > MINDEGREE) )
 
-extern int  check_other_experiment(char *exppath, char *exp_no);
+extern int  check_other_experiment(char *exppath, char *exp_no, int showError);
 extern void get_weightpar_names(int dim, struct wtparams *wtpar);
 extern int get_weightpar_vals(int tree, struct wtparams *wtpar);
 extern void set_weightpar_vals(int tree, struct wtparams *wtpar);
 extern int transpose(void *matrix, int ncols, int nrows, int datatype);
 extern void dodc(float *ptr, int offset, double oldlvl, double oldtlt);
+extern int cexpCmd(int argc, char *argv[], int retc, char *retv[]);
 
 extern int		debug1;			/* debug flag */
 
 static void foldj_cleanup(char *message, int dataerror);
 static int symmfunc(int operation, float *data1, float *data2, int nelems,
 			int dtype, int b1scale, int b2scale);
-static int i_proj(int argc, char *argv[]);
+static int i_proj(int argc, char *argv[], int retc,
+                  int *newbuf, int *cmplx, int trace, int *blocks);
 static void dc2d_cleanup(char *message);
 static void cmplx_lvltlt(float *dataptr, int typeofdata,
                     double oldlvl, double oldtlt);
@@ -841,19 +844,75 @@ int foldt(int argc, char *argv[], int retc, char *retv[])
 +--------------------------------------*/
 int proj(int argc, char *argv[], int retc, char *retv[])
 {
-   int			trace,
+   int			trace_no,
 			r,
 			argnumber,
 			sumflag;
+   int newbuf;
+   int cmplx;
+   int incr;
+   int trace;
+   int blocks;
    float		hzpp1;
-   register float	*phasfl;
+   float	*phasfl;
+   float	*dptr;
    dpointers		block;
-
+   int spwp = 0;
 
    Wturnoff_buttons();
-   if (i_proj(argc, argv))
+   argnumber = 2;
+   sumflag = FALSE;
+   newbuf = FALSE;
+   cmplx = FALSE;
+   blocks = trace = 0;
+   while ( (argc > argnumber) && !isReal(argv[argnumber]) )
    {
-      disp_status("        ");
+      if (strcmp(argv[argnumber], "sum") == 0)
+      {
+         sumflag = TRUE;
+      }
+      else if (strcmp(argv[argnumber], "new") == 0)
+      {
+         newbuf = TRUE;
+      }
+      else if (strcmp(argv[argnumber], "complex") == 0)
+      {
+         cmplx = TRUE;
+      }
+      else if (strcmp(argv[argnumber], "trace") == 0)
+      {
+         if ( (argc > argnumber+1) && isReal(argv[argnumber+1]) )
+         {
+            argnumber++;
+            trace = atoi(argv[argnumber]);
+         }
+         else
+         {
+             Werrprintf("proj: trace option must be followed by trace index");
+	     return ERROR;
+         }
+         if (trace < 1)
+         {
+             Werrprintf("proj: trace index must be between 1 and arraydim");
+	     return ERROR;
+         }
+      }
+      argnumber++;
+   }
+   if (trace && newbuf)
+   {
+      Werrprintf("proj: trace and new options cannot both be used");
+      return ERROR;
+   }
+   if (i_proj(argc, argv, retc, &newbuf, &cmplx, trace, &blocks))
+   {
+      if (retc)
+      {
+         retv[0] = intString(0);
+         if (retc > 1)
+            retv[1] = intString(blocks);
+         return COMPLETE;
+      }
       return ERROR;
    }
 
@@ -863,17 +922,6 @@ int proj(int argc, char *argv[], int retc, char *retv[])
 *  full spectral width is used.         *
 ****************************************/
 
-   argnumber = 2;
-   sumflag = FALSE;
-   if (argc > argnumber)
-   {
-      if (strcmp(argv[argnumber], "sum") == 0)
-      {
-         argnumber++;
-         sumflag = TRUE;
-      }
-   }
-
    if (argc > argnumber)
    {
       if (isReal(argv[argnumber]))
@@ -882,7 +930,7 @@ int proj(int argc, char *argv[], int retc, char *retv[])
       }
       else
       {
-         Werrprintf("usage - proj(exp_no<,'sum', sp, wp>)");
+         Werrprintf("usage - proj(exp_no<,'sum', 'new', start, width, start2, width2>)");
 	 return ERROR;
       }
 
@@ -901,14 +949,44 @@ int proj(int argc, char *argv[], int retc, char *retv[])
       }
       else
       {
-         Werrprintf("usage - proj(exp_no<,'sum', sp, wp>)");
+         Werrprintf("usage - proj(exp_no<,'sum', 'new', start, width, start2, width2>)");
 	 return ERROR;
       }
+      argnumber++;
    }
    else
    {
       wp1 = sw1 - sp1 - rflrfp1;
    }
+
+   if (argc > argnumber)
+   {
+      if (isReal(argv[argnumber]))
+      {
+	 sp = stringReal(argv[argnumber]);
+      }
+      else
+      {
+         Werrprintf("usage - proj(exp_no<,'sum', 'new', start, width, start2, width2>)");
+	 return ERROR;
+      }
+
+      argnumber++;
+   }
+   if (argc > argnumber)
+   {
+      if (isReal(argv[argnumber]))
+      {
+	 wp = stringReal(argv[argnumber]);
+         spwp=1;
+      }
+      else
+      {
+         Werrprintf("usage - proj(exp_no<,'sum', 'new', start, width, start2, width2>)");
+	 return ERROR;
+      }
+   }
+
 
 
 /*********************************************
@@ -925,56 +1003,126 @@ int proj(int argc, char *argv[], int retc, char *retv[])
    checkreal(&sp1, (-1)*rflrfp1, sw1 - wp1 - rflrfp1);
    npnt1 = (int)(wp1/hzpp1) + 1;
    fpnt1 = (int)((sw1 - rflrfp1 - sp1 - wp1) / hzpp1);
+   if (spwp)
+   {
+      float hzpp;
+      hzpp = sw / (double)(fn/2 - 1);
+      if (wp < hzpp)
+         wp = 0.0;
+      else
+         checkreal(&wp, 2.0*sw/(double)(fn/2), sw);
+      checkreal(&sp, (-1)*rflrfp, sw - wp - rflrfp);
+      npnt = (int)(wp/hzpp) + 1;
+      fpnt = (int)((sw - rflrfp - sp - wp) / hzpp);
+   }
 
+   if ( ! spwp)
+   {
+      fpnt = 0;
+      npnt = fn/2;
+   }
 /********************************************
 *  Allocate buffer for data and initialize  *
 *  the block header.  D_USERFILE refers to  *
 *  the DATAFILE in the new experiment.      *
 ********************************************/
 
-   if ( (r = D_allocbuf(D_USERFILE, 0, &block)) )
+   if (trace)
    {
-      D_error(r);
-      D_close(D_USERFILE);
-      return ERROR;
-   }
-
-   block.head->scale = 0;
-   block.head->status = (S_DATA|S_SPEC|S_FLOAT);
-   block.head->index = 0;
-   block.head->mode = 0;
-   block.head->rpval = 0.0;
-   block.head->lpval = 0.0;
-   block.head->lvl = 0.0;
-   block.head->tlt = 0.0;
-   block.head->ctcount = 0;
-
-   zerofill(block.data, fn/2);
-
-   disp_status("PROJ");
-
-   for (trace = fpnt1; trace < (fpnt1 + npnt1); trace++)
-   {
-      if (!(trace & 31))
-         disp_index(trace);
-
-      if ((phasfl = gettrace(trace, 0)) == NULL)
+      if ( (r = D_getbuf(D_USERFILE, trace, trace - 1, &block)) )
       {
+         D_error(r);
          D_close(D_USERFILE);
-         disp_status("      ");
-         disp_index(0);
-	 return ERROR;
+         return ERROR;
+      }
+      incr = (cmplx) ? 2 : 1;
+      dptr = allocateWithId(incr * fn/2 * sizeof(float), "proj");
+      zerofill(dptr, incr * fn/2);
+   }
+   else
+   {
+      if ( (r = D_allocbuf(D_USERFILE, newbuf - 1, &block)) )
+      {
+         D_error(r);
+         D_close(D_USERFILE);
+         return ERROR;
       }
 
-
-      if (sumflag)
+      block.head->scale = 0;
+      block.head->status = (S_DATA|S_SPEC|S_FLOAT);
+      block.head->index = newbuf;
+      block.head->mode = 0;
+      block.head->rpval = 0.0;
+      block.head->lpval = 0.0;
+      block.head->lvl = 0.0;
+      block.head->tlt = 0.0;
+      block.head->ctcount = 0;
+ 
+      if (cmplx)
       {
-         skyadd(block.data, phasfl, block.data, fn/2);
+         block.head->status |= S_COMPLEX;
+         incr = 2;
       }
       else
       {
-         skymax(block.data, phasfl, block.data, fn/2);
+         incr = 1;
       }
+
+      dptr = block.data;
+      zerofill(block.data, incr * fn/2);
+   }
+
+
+   for (trace_no = fpnt1; trace_no < (fpnt1 + npnt1); trace_no++)
+   {
+      int i;
+      float *in1;
+      float *in2;
+
+      if ((phasfl = gettrace(trace_no, 0)) == NULL)
+      {
+         D_close(D_USERFILE);
+	 return ERROR;
+      }
+
+      i = npnt;
+      in1 = dptr+(fpnt*incr);
+      in2 = phasfl+fpnt;
+
+      if (sumflag)
+      {
+         while (i--)
+         {
+            *in1 += *in2;
+            in1 += incr;
+            in2++;
+         }
+      }
+      else
+      {
+         while (i--)
+         {
+            if (*in2 > *in1)
+               *in1 = *in2;
+            in1 += incr;
+            in2++;
+         }
+      }
+   }
+   if (trace)
+   {
+      int i;
+      float *in;
+      float *out;
+      i = incr * fn/2;
+      in = dptr;
+      out = block.data;
+      while (i--)
+      {
+         *out++ += *in++;
+      }
+      releaseAllWithId("proj");
+      newbuf = trace;
    }
 
 /******************************************
@@ -982,16 +1130,14 @@ int proj(int argc, char *argv[], int retc, char *retv[])
 *  does NOT contain complex pairs.        *
 ******************************************/
 
-   disp_status("    ");
-   disp_index(0);
-   if ( (r = D_markupdated(D_USERFILE, 0)) )
+   if ( (r = D_markupdated(D_USERFILE, newbuf - 1)) )
    {
       D_error(r);
       D_close(D_USERFILE);
       return ERROR;
    }
 
-   if ( (r = D_release(D_USERFILE, 0)) )
+   if ( (r = D_release(D_USERFILE, newbuf - 1)) )
    {
       D_error(r);
       D_close(D_USERFILE);
@@ -1004,7 +1150,47 @@ int proj(int argc, char *argv[], int retc, char *retv[])
       return ERROR;
    }
 
+   if (retc)
+   {
+      retv[0] = intString(1);
+      if (retc > 1)
+         retv[1] = intString(blocks);
+   }
    return COMPLETE;
+}
+
+static int saveProjPars(char *exppath, int dim)
+{
+   char	path[MAXPATH];
+   int r;
+
+   T_SETPAR("arraydim", (double) dim);
+   if ( (r = D_getparfilepath(CURRENT, path, exppath)) )
+   {
+      D_error(r);
+      return(ERROR);
+   }
+
+   if ( (r = P_save(TEMPORARY, path)) )
+   {
+      Werrprintf("Problem storing parameters in %s", path);
+      return(ERROR);
+   }
+
+   if ( (r = D_getparfilepath(PROCESSED, path, exppath)) )
+   {
+      D_error(r); 
+      return(ERROR); 
+   }
+
+   if ( (r = P_save(TEMPORARY, path)) )
+   {
+      Werrprintf("Problem storing parameters in %s", path);
+      return(ERROR);
+   }
+
+   P_treereset(TEMPORARY);
+   return(COMPLETE);
 }
 
 
@@ -1013,10 +1199,11 @@ int proj(int argc, char *argv[], int retc, char *retv[])
 |		i_proj()/2		|
 |					|
 +--------------------------------------*/
-static int i_proj(int argc, char *argv[])
+static int i_proj(int argc, char *argv[], int retc,
+                  int *newbuf, int *cmplx, int trace, int *blocks)
 {
-   char		exppath[MAXPATHL],
-		path[MAXPATHL],
+   char		exppath[MAXPATH],
+		path[MAXPATH],
                 axisval[2];
    int          r;
    double	rfl_val,rfp_val;
@@ -1026,12 +1213,34 @@ static int i_proj(int argc, char *argv[])
 
    if (argc < 2)
    {
-      Werrprintf("usage - proj(exp_number, <'sum',sp,wp>)");
+      Werrprintf("usage - proj(exp_no<,'sum', 'new', start, width, start2, width2>)");
       return(ERROR);
    }
 
-   if (check_other_experiment(exppath, argv[1]))
-      return(ERROR);
+   *blocks = 0;
+   if (check_other_experiment(exppath, argv[1], 0))
+   {
+      if (*newbuf)
+      {
+         char *argv2[3];
+         char tmp[2*MAXPATH];
+         char sysdir[2*MAXPATH];
+         int ret __attribute__((unused));
+
+         strcpy(tmp,argv[1]);
+         argv2[0] = "cexp";
+         argv2[1] = tmp;
+         argv2[2] = NULL;
+         cexpCmd(2,argv2,1,NULL);
+         *newbuf = 0;
+         sprintf(tmp,"%s/maclib/jexp%s",userdir,argv[1]);
+         ret = unlink(tmp);
+         sprintf(sysdir,"%s/maclib/jexp1",systemdir);
+         ret = symlink(sysdir,tmp);
+      }
+      else
+         return(ERROR);
+   }
    if (init2d(1, 0))
       return(ERROR);
 
@@ -1055,7 +1264,6 @@ static int i_proj(int argc, char *argv[])
 *  the temporary tree.                    *
 ******************************************/
 
-   disp_status("CP");
    P_treereset(TEMPORARY);
    if ( (r = P_copy(CURRENT, TEMPORARY)) )
    {
@@ -1088,8 +1296,8 @@ static int i_proj(int argc, char *argv[])
 
    T_SETPAR("fn", (double) fn);
    T_SETPAR("sw", sw);
-   T_SETPAR("rp", rp);
-   T_SETPAR("lp", lp);
+   T_SETPAR("rp", (*cmplx) ? 0.0 : rp);
+   T_SETPAR("lp", (*cmplx) ? 0.0 : lp);
    get_reference(HORIZ,&rfl_val, &rfp_val);
    T_SETPAR("rfl", rfl_val);
    T_SETPAR("rfp", rfp_val);
@@ -1100,41 +1308,9 @@ static int i_proj(int argc, char *argv[])
    get_scale_axis(HORIZ, axisval);
    axisval[1] = '\0';
    T_SETSTRING("axis", axisval);
-   T_SETPAR("arraydim", 1.0);
    T_SETPAR("procdim", 1.0);
    T_SETPAR("ni", 0.0);
    T_SETSTRING("array", "");
-
-/**************************************
-*  Write the temporary tree into the  *
-*  requested experiment directory.    *
-**************************************/
-
-   if ( (r = D_getparfilepath(CURRENT, path, exppath)) )
-   {
-      D_error(r);
-      return(ERROR);
-   }
-
-   if ( (r = P_save(TEMPORARY, path)) )
-   {
-      Werrprintf("Problem storing parameters in %s", path);
-      return(ERROR);
-   }
-
-   if ( (r = D_getparfilepath(PROCESSED, path, exppath)) )
-   {
-      D_error(r); 
-      return(ERROR); 
-   }
-
-   if ( (r = P_save(TEMPORARY, path)) )
-   {
-      Werrprintf("Problem storing parameters in %s", path);
-      return(ERROR);
-   }
-
-   P_treereset(TEMPORARY);
 
 /******************************
 *  Remove existing FID file.  *
@@ -1142,97 +1318,207 @@ static int i_proj(int argc, char *argv[])
 
    D_close(D_USERFILE);		/* do not check for "close" error here */
 
-   if ( (r = D_getfilepath(D_USERFILE, path, exppath)) )
+   if ( ! *newbuf && (trace == 0) )
    {
-      D_error(r);
-      return(ERROR);
-   }
+      if ( (r = D_getfilepath(D_USERFILE, path, exppath)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
 
-   if (unlink(path))
-   {
-      if (debug1)
-         Wscrprintf("cannot remove file %s\n", path);
-   }
+      if (unlink(path))   // rm acqfil/fid
+      {
+         if (debug1)
+            Wscrprintf("cannot remove file %s\n", path);
+      }
 
 /*******************************
 *  Remove existing data file.  *
 *******************************/
 
-   if ( (r = D_getfilepath(D_DATAFILE, path, exppath)) )
-   {
-      D_error(r);
-      return(ERROR);
-   }
+      if ( (r = D_getfilepath(D_DATAFILE, path, exppath)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
 
-   if (unlink(path))
-   {
-      if (debug1)
-         Wscrprintf("cannot remove file %s\n", path);
-   }
+      if (unlink(path)) // remove datdir/data
+      {
+         if (debug1)
+            Wscrprintf("cannot remove file %s\n", path);
+      }
 
 /***********************************
 *  Remove existing phase file and  *
 *  prepare a new phase file.       *
 ***********************************/
 
-   if ( (r = D_getfilepath(D_PHASFILE, path, exppath)) )
-   {
-      D_error(r);
-      return(ERROR);
-   }
+      if ( (r = D_getfilepath(D_PHASFILE, path, exppath)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
 
-   if (unlink(path))
-   {
-      if (debug1)
-         Wscrprintf("cannot remove file %s\n", path);
-   }
+      if (unlink(path)) // remove datdir/phasefile
+      {
+         if (debug1)
+            Wscrprintf("cannot remove file %s\n", path);
+      }
 
-   userhead.nblocks = 1;
-   userhead.ntraces = 1;
-   userhead.np = fn/2;
-   userhead.nbheaders = 1;
-   userhead.ebytes = 4;
+      userhead.nblocks = 1;
+      userhead.ntraces = 1;
+      userhead.np = fn/2;
+      userhead.nbheaders = 1;
+      userhead.ebytes = 4;
 
-   userhead.tbytes = userhead.ebytes * userhead.np;
-   userhead.bbytes = userhead.nbheaders * sizeof(dblockhead) +
+      userhead.tbytes = userhead.ebytes * userhead.np;
+      userhead.bbytes = userhead.nbheaders * sizeof(dblockhead) +
 			userhead.tbytes * userhead.ntraces;
-   userhead.status = 0;
-   userhead.vers_id &= (P_VERS|P_VENDOR_ID);
-   userhead.vers_id += PHAS_FILE;
+      userhead.status = 0;
+      userhead.vers_id = (P_VERS|P_VENDOR_ID);
+      userhead.vers_id += PHAS_FILE;
 
-   if ( (r = D_newhead(D_USERFILE, path, &userhead)) )
-   {
-      D_error(r);
-      return(ERROR);
-   }
+      if ( (r = D_newhead(D_USERFILE, path, &userhead)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
 
-   if ( (r = D_close(D_USERFILE)) )
-   {
-      D_error(r);
-      return(ERROR);
-   }
+      if ( (r = D_close(D_USERFILE)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
 
 /**************************
 *  Prepare new data file  *
 **************************/
 
-   if ( (r = D_getfilepath(D_DATAFILE, path, exppath)) )
-   {
-      D_error(r);
-      return(ERROR);
+      if ( (r = D_getfilepath(D_DATAFILE, path, exppath)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
+
+      userhead.status = (S_DATA|S_SPEC|S_FLOAT|S_NP);
+      if (*cmplx)
+      {
+         userhead.np = fn;
+         userhead.tbytes = userhead.ebytes * userhead.np;
+         userhead.bbytes = userhead.nbheaders * sizeof(dblockhead) +
+                           userhead.tbytes * userhead.ntraces;
+         userhead.status |= S_COMPLEX;
+      }
+      userhead.vers_id &= (P_VERS|P_VENDOR_ID);
+      userhead.vers_id += DATA_FILE;
+
+      if ( (r = D_newhead(D_USERFILE, path, &userhead)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
+      D_updatehead(D_USERFILE, &userhead);
+      *newbuf = 1;
+      *blocks = 1;
    }
-
-   userhead.status = (S_DATA|S_SPEC|S_FLOAT|S_NP);
-   userhead.vers_id &= (P_VERS|P_VENDOR_ID);
-   userhead.vers_id += DATA_FILE;
-
-   if ( (r = D_newhead(D_USERFILE, path, &userhead)) )
+   else if (*newbuf)
    {
-      D_error(r);
-      return(ERROR);
-   }
+      if ( (r = D_getfilepath(D_PHASFILE, path, exppath)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
+      if ( (r = D_open(D_USERFILE, path, &userhead)) )
+      {
+           Werrprintf("cannot open addsub exp phase file: error = %d",r);
+           return(ERROR);
+      }
+      if (userhead.np != fn/2)
+      {
+           Werrprintf("fn mismatch between current(%d) and projection(%d) phasefile",
+                    fn,(int) (userhead.np*2));
+           D_trash(D_USERFILE);
+           return(ERROR);
+      }
 
-   disp_status("  ");
+      userhead.nblocks += 1;
+      *newbuf = userhead.nblocks;
+      D_updatehead(D_USERFILE, &userhead);
+      D_release(D_USERFILE, *newbuf - 1);
+      if ( (r = D_close(D_USERFILE)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
+      if ( (r = D_getfilepath(D_DATAFILE, path, exppath)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
+      if ( (r = D_open(D_USERFILE, path, &userhead)) )
+      {
+           Werrprintf("cannot open addsub exp phase file: error = %d",r);
+           return(ERROR);
+      }
+      userhead.nblocks += 1;
+      D_updatehead(D_USERFILE, &userhead);
+      *newbuf = userhead.nblocks;
+      *cmplx = ( (userhead.status & S_COMPLEX) == S_COMPLEX) ? 1 : 0;
+      *blocks = *newbuf;
+      
+   }
+   else // add to existing trace
+   {
+      if ( (r = D_getfilepath(D_PHASFILE, path, exppath)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
+      if ( (r = D_open(D_USERFILE, path, &userhead)) )
+      {
+           Werrprintf("cannot open addsub exp phase file: error = %d",r);
+           return(ERROR);
+      }
+      if (userhead.np != fn/2)
+      {
+           Werrprintf("fn mismatch between current(%d) and projection(%d) phasefile",
+                    fn,(int) (userhead.np*2));
+           D_trash(D_USERFILE);
+           return(ERROR);
+      }
+
+      if ( (r = D_close(D_USERFILE)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
+      if ( (r = D_getfilepath(D_DATAFILE, path, exppath)) )
+      {
+         D_error(r);
+         return(ERROR);
+      }
+      if ( (r = D_open(D_USERFILE, path, &userhead)) )
+      {
+           Werrprintf("cannot open addsub exp phase file: error = %d",r);
+           return(ERROR);
+      }
+      *blocks = userhead.nblocks;
+      if  (trace > userhead.nblocks)
+      {
+           if ( retc == 0 )
+              Werrprintf("proj: trace %d does not exist",trace);
+           return(ERROR);
+      }
+      *cmplx = ( (userhead.status & S_COMPLEX) == S_COMPLEX) ? 1 : 0;
+   }
+/**************************************
+*  Write the temporary tree into the  *
+*  requested experiment directory.    *
+**************************************/
+
+   if ( !trace)
+      saveProjPars(exppath, *newbuf);
+
    return(COMPLETE);
 }
 
@@ -1463,7 +1749,7 @@ int dc2d(int argc, char *argv[], int retc, char *retv[])
          return ERROR;
       }
 
-      if (!c_block.head->status & S_DATA)
+      if ( !(c_block.head->status & S_DATA) )
       {
          Werrprintf("no data in block %d", block_no + 1);
          dc2d_cleanup("");
@@ -1733,7 +2019,7 @@ int rotate(int argc, char *argv[], int retc, char *retv[])
          return ERROR;
       }
 
-      if (!c_block.head->status & S_DATA)
+      if (!(c_block.head->status & S_DATA))
       {
          ccrot_cleanup("no data in file");
 	 return ERROR;
@@ -1903,7 +2189,7 @@ int foldcc(int argc, char *argv[], int retc, char *retv[])
          return ERROR;
       }
 
-      if (!c_block.head->status & S_DATA)
+      if (!(c_block.head->status & S_DATA))
       {
          ccrot_cleanup("no data in file");
 	 return ERROR;

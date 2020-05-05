@@ -54,7 +54,7 @@ extern int	bufferscale,		/* scaling factor for Vnmr buffers */
 		c_last,
 		c_buffer;
 
-extern int  check_other_experiment(char *exppath, char *exp_no);
+extern int  check_other_experiment(char *exppath, char *exp_no, int showError);
 extern void ds_digfilter(double *dbuffer, double decfactor, int ntaps, int norm);
 extern int  init_downsample_files(ftparInfo *ftpar);
 extern int  dim1count();
@@ -1441,7 +1441,7 @@ int i_ift(int argc, char *argv[], int arg_no, ftparInfo *ftpar,
       Werrprintf("usage - ft(<options>,'inverse',exp_number,expansion_factor)");      return(ERROR);
    }
 
-   if (check_other_experiment(exppath, argv[arg_no]))
+   if (check_other_experiment(exppath, argv[arg_no], 1))
       return(ERROR);
  
    if (isReal(argv[arg_no+1]))

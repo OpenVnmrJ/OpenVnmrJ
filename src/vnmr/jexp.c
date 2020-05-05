@@ -492,6 +492,11 @@ int jexp(int argc, char *argv[], int retc, char *retv[])
 }
 
 
+/* create a new experiment
+ * one can suppress messages by passing a non-zero value for retc
+ * retv is separately checked for the actual message
+ * If retv is NULL, it won't try to save the message
+ */
 /******************************/
 int cexpCmd(int argc, char *argv[], int retc, char *retv[])
 /******************************/
@@ -708,10 +713,13 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
   sprintf(msg,"experiment %s has been created", estring);
   if (retc)
   {
-     retv[ 0 ] = intString( 1 );
-     if (retc > 1)
+     if (retv)
      {
-        retv[ 1 ] = newString( msg );
+        retv[ 0 ] = intString( 1 );
+        if (retc > 1)
+        {
+           retv[ 1 ] = newString( msg );
+        }
      }
   }
   else
@@ -724,10 +732,13 @@ abortCexp:
 
   if (retc)
   {
-     retv[ 0 ] = intString( 0 );
-     if (retc > 1)
+     if (retv)
      {
-        retv[ 1 ] = newString( msg );
+        retv[ 0 ] = intString( 0 );
+        if (retc > 1)
+        {
+           retv[ 1 ] = newString( msg );
+        }
      }
      RETURN;
   }

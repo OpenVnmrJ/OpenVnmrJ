@@ -84,7 +84,7 @@ extern double getfpmult(int fdimname, int ddr);
 extern int getzfnumber(int ndpts, int fnsize);
 extern int getzflevel(int ndpts, int fnsize);
 extern int fnpower(int fni);
-extern int  check_other_experiment(char *exppath, char *exp_no);
+extern int  check_other_experiment(char *exppath, char *exp_no, int showError);
 extern int init_wt1(struct wtparams *wtpar, int fdimname);
 extern int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
              register int n, int rftflag, int fdimname, double fpmult, int rdwtflag);
@@ -441,7 +441,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
 	         disp_status("        ");
 	         ABORT;
 	       }
-	       if (check_other_experiment(ftpar.dspar.newpath,argv[arg_no]))
+	       if (check_other_experiment(ftpar.dspar.newpath,argv[arg_no], 1))
 	       {
 	         return(ERROR);
 	       }
@@ -1745,7 +1745,7 @@ int ft(int argc, char *argv[], int retc, char *retv[])
 	         disp_status("        ");
 	         ABORT;
 	       }
-	       if (check_other_experiment(ftpar.dspar.newpath,argv[arg_no]))
+	       if (check_other_experiment(ftpar.dspar.newpath,argv[arg_no], 1))
 	       {
 	         return(ERROR);
 	       }
@@ -2775,7 +2775,7 @@ int ft(int argc, char *argv[], int retc, char *retv[])
 
 
 /************************************/
-int check_other_experiment(char *exppath, char *exp_no)
+int check_other_experiment(char *exppath, char *exp_no, int showError)
 /************************************/
 {
 /*  On VMS, use "expN.dir" format in call to access().  Then
@@ -2783,30 +2783,25 @@ int check_other_experiment(char *exppath, char *exp_no)
 
   int exptmp = 0;
   if (!(exptmp = atoi(exp_no)) || (exptmp < 1) || (exptmp > MAXEXPS))
-    { Werrprintf("illegal experiment number");
+    {
+      if (showError)
+         Werrprintf("illegal experiment number");
       ABORT;
     }
   strcpy(exppath,userdir);
-#ifdef UNIX
   strcat(exppath,"/exp");
   strcat(exppath,exp_no);
   if (access(exppath,6))
-#else 
-  strcat(exppath,"exp");
-  strcat(exppath,exp_no);
-  strcat(exppath,".dir");
-  if (access(exppath,5))
-#endif 
-    { Werrprintf("experiment %s is not accessible ",exppath);
+    {
+      if (showError)
+         Werrprintf("experiment %s is not accessible ",exppath);
       ABORT;
     }
 
-#ifdef VMS
-  make_vmstree(exppath,exppath,MAXPATHL);
-#endif 
-
   if (strcmp(exppath,curexpdir)==0)
-    { Werrprintf("cannot store in current experiment");
+    {
+      if (showError)
+         Werrprintf("cannot store in current experiment");
       ABORT;
     }
   RETURN;
