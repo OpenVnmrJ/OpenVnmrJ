@@ -26,8 +26,6 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "SUN_HAL.h"
-#include "ACQ_HALstruc.h"
 #include "ACQPROC_strucs.h"
 
 #define MAXRETRY 8
@@ -764,7 +762,7 @@ char **strptr;
     if (nchr < BUFLEN-2)
     {
         strncpy(buffer,*strptr,nchr);
-        buffer[nchr] = (char) NULL;
+        buffer[nchr] = '\0';
     }
     else
     {
@@ -799,12 +797,12 @@ int maxlen;
     if (nchr < maxlen-2)
     {
         strncpy(substring,*strptr,nchr);
-        substring[nchr] = (char) NULL;
+        substring[nchr] = '\0';
     }
     else
     {
         strncpy(substring,*strptr,maxlen);
-        substring[maxlen-1] = (char) NULL;
+        substring[maxlen-1] = '\0';
     }
     if (Acqdebug > 2)
         fprintf(stdout,"GETSTRTOKEN(): substring: '%s'\n",substring);

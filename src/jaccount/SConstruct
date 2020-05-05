@@ -3,6 +3,8 @@
 import os
 import datetime
 import shutil
+import sys
+import platform
 
 # current working directory
 cwd = os.getcwd()
@@ -22,16 +24,21 @@ if not os.path.exists(ovjtools):
 # target
 accountTarget = 'account.jar'
 
-# paths
-javaPath = os.path.join(ovjtools, 'java', 'bin')
 
 # make sure the path(s) exist
 classesPath = os.path.join(cwd, 'classes')
 if not os.path.exists(classesPath):
    os.makedirs(classesPath)
 
-# define build environment
-jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
+platform = sys.platform
+if (platform=="darwin"):
+   javaPath = os.path.join('/', 'usr', 'bin')
+   jEnv = Environment(ENV = {'CLASSPATH' : classesPath,
+                             'PATH' : javaPath + ':' + os.environ['PATH']})
+else:
+   javaPath = os.path.join(ovjtools, 'java', 'bin')
+   # define build environment
+   jEnv = Environment(ENV = {'JAVA_HOME' : javaPath,
                           'PATH' : javaPath + ':' + os.environ['PATH']})
 
 # actual builds

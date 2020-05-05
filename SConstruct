@@ -186,6 +186,7 @@ gslBuildList = string.split("""
 javaBuildList = string.split("""
                              admin
                              dialog
+                             jaccount
                              jplot
                              managedb
                              vjmol
@@ -196,7 +197,6 @@ javaAcqBuildList = string.split("""
                              apt
                              cryo
 			     cryomon
-                             jaccount
                              probeid
                              """);
 

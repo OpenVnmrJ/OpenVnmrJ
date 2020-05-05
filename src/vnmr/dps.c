@@ -40,6 +40,7 @@ extern void Wactivate_mouse();
 extern void register_dismiss_proc(char *name, int (*func)());
 extern void set_turnoff_routine(int (*funct)());
 extern void Wprintf(char *format, ...);
+extern int do_mkdir(char *dir, int psub, mode_t mode);
 extern int run_calcdim();
 extern int nvAcquisition();
 extern int initacqqueue(int argc, char *argv[]);
@@ -3316,8 +3317,6 @@ clear_dps_window()
 static void
 batch_draw()
 {
-	int	y;
-
 	if (src_start_node == NULL || disp_start_node == NULL)
 	    return;
 #ifdef SUN
@@ -3334,7 +3333,6 @@ batch_draw()
 
 	if (clearDraw)
 	{
-	    y = mnumypnts - dpsY2;
 	    graph_batch(1);
 	    if (xwin)
 	       clearPixmap();
@@ -6491,8 +6489,7 @@ int listFlag;
 }
 
 static void
-setup_rfgrp_attr(snode, type)
-SRC_NODE  *snode;
+setup_rfgrp_attr(SRC_NODE *snode, int type)
 {
 	int	      n;
     	COMMON_NODE   *cnode;
@@ -7167,7 +7164,7 @@ static int
 build_dps_node(origin)
 int	origin;
 {
-    int	          type, dev, org_dev, item, rval, k, k2, len;
+    int	          type, dev, org_dev, item, rval, k;
     char          *label;
     SRC_NODE      *new_node, *cur_node, *t_node;
     COMMON_NODE   *comnode;
@@ -7300,11 +7297,6 @@ int	origin;
 		    comnode->val[0]  = k;
 		    comnode->val[1]  = 0;
 
-		    len = strlen(dmstr[item]);
-                    if (len > k)
-			k2 = k;
-                    else
-			k2 = k - 1;
                     if (dmstr[item][k] != 'n' && dmstr[item][k] !='N')
 		       activeCh[item] = 1;
 
@@ -10124,9 +10116,8 @@ SRC_NODE  *node;
 int       x, doFlag;
 {
      PARALLEL_XNODE *xnode, *pnode, *new_node;
-     int retX, dev;
+     int retX;
 
-     dev = node->device;
      sync_node[node->device] = node; // save the node in parallel mode
                                      // every node was appended a
                                      // XEND node to adjust its x2 position
@@ -11042,10 +11033,7 @@ static void
 dps_color(num, save)
 int	num, save;
 {
-#ifdef SUN
 	Pixel  pix;
-	int	n;
-	static int  pNum = 0;
 	static Pixel  prev = 0;
 
 	if (dpsPlot)
@@ -11058,39 +11046,20 @@ int	num, save;
 	    return;
 	if (num < COLORS) {
 	    pix = dpsPix[num];
-	    n = num;
 	}
 	else {
 	    pix = prev;
-	    n = pNum;
 	}
 	if (save) {
 	   prev = pix;
-	   pNum = num;
 	}
 	if (!xwin) {
-#ifdef VNMRJ
             if (num >= COLORS)
                num = 0;
             set_vj_color(dpsColorNames[num]);
-#else 
-	    color(n + vjColor);
-#endif 
 	    return;
 	}
-#ifdef MOTIF
-	if (xorFlag)
-	   pix = pix ^ winBack;
-	XSetForeground(xdisplay, vnmr_gc, pix);
-#ifdef VNMRJ
-	if (pxm_gc == NULL)
-	    return;
-	XSetForeground(xdisplay, pxm_gc, pix);
-#endif 
-#else 
 	color(num);
-#endif 
-#endif  /* MOTIF */
 }
 
 static double
@@ -12099,11 +12068,10 @@ int	   solid;
 }
 
 static void
-draw_spare(node)
-SRC_NODE   *node;
+draw_spare(SRC_NODE *node)
 {
 	int	h, w;
-	int	x, y, y2;
+	int	x, y;
 
 	x = node->x2 + xDiff;
 	if (x < dpsX)
@@ -12112,7 +12080,6 @@ SRC_NODE   *node;
 	h = spH / 2;
 	node->x1 = node->x2 - w;
 	node->x3 = node->x1 + spW;
-	y2 = node->y2;
 	y = node->y2 - h;
 	x = node->x1 + xDiff;
  	amove(x, y);
@@ -12757,13 +12724,10 @@ acquireWave(node, show_label, sx, dx)
 {
 	double  deg, rate, dr;
 	int	chan;
-	int	x1, x2;
+	int	x1;
         int     y1, y2, i, m, k, h1, h2, width;
-        COMMON_NODE  *comnode;
 
-	comnode = (COMMON_NODE *) &node->node.common_node;
 	x1 = sx;
-	x2 = dx;
 	width = dx - sx;
 /****
 	if ( !show_label )
@@ -13256,9 +13220,6 @@ draw_tune(node, show_label, sx, dx)
 	double  deg, incr, fw, fw2, fh, fh2;
         int     y2, x2, i, k;
 
-        COMMON_NODE  *comnode;
-
-	comnode = (COMMON_NODE *) &node->node.common_node;
 	x = node->x1 + xDiff;
 	y = orgy[node->device];
 	w = node->x2 - node->x1;
@@ -13411,7 +13372,7 @@ draw_node(cnode, d_level)
 SRC_NODE	*cnode;
 int		d_level;
 {
-    int		dev, k, h;
+    int		dev, k;
     int		cx, cy, dx;
     int		d_link;
     SRC_NODE    *dnode;
@@ -13896,7 +13857,7 @@ int		d_level;
 	case SHINCGRAD:
 	case PEOBLVG:
 	case DPESHGR:
-                h = cnode->y2 - orgy[dev];
+                // h = cnode->y2 - orgy[dev];
 		cy = cnode->y2;
                 if (cnode->type == DPESHGR) {
                     dnode = cnode->bnode;
@@ -14024,7 +13985,7 @@ int		d_level;
                 if (gradshape[0] != 'y')
 		    draw_gen_pulse(cnode, d_link);
                 else {
-                    h = cnode->y2 - orgy[dev];
+                    // h = cnode->y2 - orgy[dev];
                     if (cnode->power >= 0.0)
                        k = draw_gradient_shape(cnode, d_link, 0, 0, 1);
                     else
@@ -14656,7 +14617,7 @@ draw_pulse(snode, show_value, sweep_pulse)
 {
 	int	     chan, x1, x2, xp1, xp2, y1, y2;
 	int	     yp1, w, h, d, t, dx;
-	double	     fw, fh, r;
+	double	     r;
 	COMMON_NODE  *cnode;
 
 	chan = snode->device;
@@ -14717,8 +14678,6 @@ draw_pulse(snode, show_value, sweep_pulse)
 	    if (dx < 2)
 		dx = 2;
 	    if (h > 4 || w > 4) {
-	       fw = (double) w;
-	       fh = (double) h;
 	       d = spW;
 	       t = w / d; 
 	       while (t < 4) {
@@ -14991,22 +14950,21 @@ draw_shape_pulse(snode, level)
 }
 
 static void
-draw_origin_grpshaped(snode)
-   SRC_NODE  *snode;
+draw_origin_grpshaped(SRC_NODE *snode)
 {
-        COMMON_NODE  *cnode;
         int          x1, x2, y1;
-        int          ws, wx, hx, mx;
+        int          ws, wx, hx;
         double  deg; 
 
-        cnode = (COMMON_NODE *) &snode->node.common_node;
         x1 = snode->x1 + xDiff;
         x2 = snode->x2 + xDiff;
         wx = x2 - x1;
+/*
         if (snode->mx > 0)
            mx = snode->mx + xDiff;
         else
            mx = x1 + wx;
+ */
         y1 = snode->y1;
         hx = pulseHeight / 2;
         main_shaped(x1, y1, hx, wx, 1);
@@ -15887,7 +15845,7 @@ SRC_NODE  *snode;
       COMMON_NODE  *cnode;
       RFGRP_NODE   *rnode, *rfroot;
       char         s[180];
-      char         v[12];
+      char         v[16];
 
       cnode = (COMMON_NODE *) &snode->node.common_node;
       n = cnode->val[0];
@@ -16736,7 +16694,7 @@ SRC_NODE     *cnode;
 	case ACTIVERCVR:
                 if (comnode->dname != NULL)
 		   info_print(" Set: %s = '%s'", comnode->dname, comnode->pattern);
-		   info_print("      numrcvrs is %d", rcvrsNum);
+		info_print("      numrcvrs is %d", rcvrsNum);
 		break;
 	case RLLOOP:
                 info_print(" Number of loops:  %s = %d", vlabel[0], val[0]);
@@ -18543,12 +18501,10 @@ caddr_t  call_data;
 
 
 static void
-do_but_proc(num)
-int num;
+do_but_proc(int num)
 {
 	int	old_off, old_diff, old_ratio;
 	double   old_mult;
-	SRC_NODE   *old_start_node;
 
 	switch (num) {
 	 case  CLOSE:
@@ -18721,7 +18677,6 @@ int num;
 	   	    return;
         	if(setplotter())
 	   	    return;
-		old_start_node = draw_start_node;
 		old_off = xOffset;
 		old_diff = xDiff;
 		old_mult = xMult;
@@ -19772,8 +19727,8 @@ save_dps_resource()
         fd = fopen(inputs,"w+");
         if (fd == NULL)
         {
-	    sprintf(inputs,"mkdir -p  %s/templates/dps",userdir);
-            system(inputs);
+	    sprintf(inputs,"%s/templates/dps",userdir);
+            do_mkdir(inputs, 1, 0777);
 	    sprintf(inputs, "%s/templates/dps/defaults", userdir);
             fd = fopen(inputs,"w+");
             if (fd == NULL)
