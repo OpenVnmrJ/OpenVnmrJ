@@ -205,6 +205,7 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
    struct stat s;
    mode_t old_umask;
    long pagesize;
+   int ret __attribute__((unused));
 
    if (permit != O_RDONLY)
    {
@@ -216,18 +217,21 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
       {
          if (old_euid == -1)
             old_euid = geteuid();
-         seteuid( old_uid );
+         ret = seteuid( old_uid );
       }
    }
    /* open file, thus checking most error possibilities of file create, etc. */
    old_umask = umask(000); /* clear file creation mode mask,so that open has control */
    if ((fd = open(filename,permit,0666)) < 0)
    {
-     errLogSysRet(ErrLogOp,debugInfo,"mOpen: open of %s failed (%s)\n",
-                  filename,strerror(errno) );
+// There are cases where the file may not exist and we don't want a
+// confusing error message. Calling routine should handle NULL return
+//
+//     errLogSysRet(ErrLogOp,debugInfo,"mOpen: open of %s failed (%s)\n",
+//                  filename,strerror(errno) );
      umask(old_umask);  /* restore umask control over open. */
      if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-       seteuid( old_euid );
+       ret = seteuid( old_euid );
      return (NULL);
    }
    umask(old_umask);  /* restore umask control over open. */
@@ -239,7 +243,7 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
                   filename,strerror(errno) );
      close(fd);
      if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-        seteuid( old_euid );
+        ret = seteuid( old_euid );
      return (NULL);
    }
 
@@ -249,7 +253,7 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
      errLogSysRet(ErrLogOp,debugInfo,"mOpen: malloc of Object struct failed\n");
      close(fd);
      if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-        seteuid( old_euid );
+        ret = seteuid( old_euid );
      return(NULL);
    }
 
@@ -259,7 +263,7 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
    {
      close(fd);
      if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-        seteuid( old_euid );
+        ret = seteuid( old_euid );
      free(mfileObj);
      return(NULL);
    }
@@ -310,7 +314,7 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
                       filename,strerror(errno) );
          close(fd);
          if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-            seteuid( old_euid );
+            ret = seteuid( old_euid );
          free(mfileObj->filePath);
          free(mfileObj);
          return(NULL);
@@ -330,7 +334,7 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
         free(mfileObj->filePath);
         free(mfileObj);
         if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-           seteuid( old_euid );
+           ret = seteuid( old_euid );
         return(NULL);
    }
   
@@ -343,7 +347,7 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
                   filename,strerror(errno) );
      close(fd);
      if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-        seteuid( old_euid );
+        ret = seteuid( old_euid );
      free(mfileObj->filePath);
      free(mfileObj);
      return(NULL);
@@ -354,7 +358,7 @@ MFILE_ID mOpen(char *filename, uint64_t size, int permit)
    if (mfileObj->fd == -1)
       close(fd);
    if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-      seteuid( old_euid );
+      ret = seteuid( old_euid );
 
    return( mfileObj );
 }
@@ -382,6 +386,7 @@ int mClose(MFILE_ID mFileId)
 {
    int fd,access;
    mode_t old_umask;
+   int ret __attribute__((unused));
 
    if (mFileId == NULL)
       return(-1);
@@ -398,7 +403,7 @@ int mClose(MFILE_ID mFileId)
      {
         if (old_euid == -1)
            old_euid = geteuid();
-        seteuid( old_uid );
+        ret = seteuid( old_uid );
      }
      if (mFileId->newByteLen != mFileId->byteLen)
      {
@@ -438,7 +443,7 @@ int mClose(MFILE_ID mFileId)
    (void) munmap(mFileId->mapStrtAddr,mFileId->mapLen);
 
    if ( (mFileId->fileAccess != O_RDONLY) && (old_uid == ROOT_UID) )
-      seteuid( old_euid );
+      ret = seteuid( old_euid );
    free(mFileId->filePath);
    free(mFileId);
    return(0);

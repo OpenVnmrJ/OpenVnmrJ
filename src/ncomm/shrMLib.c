@@ -99,7 +99,10 @@ SHR_MEM_ID  shrmCreate(char *filename,int keyid, unsigned long size)
    perm = (keyid == SHR_EXP_INFO_KEY) ? O_RDONLY : (O_RDWR | O_CREAT);
    if ( (shrmid->shrmem = mOpen(filename,size,perm)) == NULL)
    {
-      errLogRet(ErrLogOp,debugInfo,"shrmCreate: mOpen failed\n");
+// There are cases where the file may not exist and we don't want a
+// confusing error message. Calling routine should handle NULL return
+//
+//    errLogRet(ErrLogOp,debugInfo,"shrmCreate: mOpen failed\n");
       free(shrmid);
       return(NULL);
    }
