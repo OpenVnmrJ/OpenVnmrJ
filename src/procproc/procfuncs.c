@@ -456,7 +456,7 @@ int mapInExp(ExpInfoEntry *expid)
     expid->ShrExpInfo = shrmCreate(expid->ExpId,SHR_EXP_INFO_KEY,(unsigned long)sizeof(SHR_EXP_STRUCT)); 
     if (expid->ShrExpInfo == NULL)
     {
-       errLogSysRet(LOGOPT,debugInfo,"mapInExp: shrmCreate() failed:");
+//       errLogSysRet(LOGOPT,debugInfo,"mapInExp: shrmCreate() failed:");
        return(-1);
     }
     if (expid->ShrExpInfo->shrmem->byteLen < sizeof(SHR_EXP_STRUCT))
