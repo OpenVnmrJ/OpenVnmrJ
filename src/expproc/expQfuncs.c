@@ -80,9 +80,9 @@ int initExpQs(int clean)
 {
   int i,qSize,retstat;
   procQ *queue;
-  char *startOffset;
   SHR_MEM_ID smem;
 #ifdef EXPQ_DEBUG
+  char *startOffset;
   expQentry *Qentries;
   char *endAddr;
   int j;
@@ -111,8 +111,8 @@ int initExpQs(int clean)
      ExpPendQ[i].procQstart = queue;   /* ExpPendQ[] in priority order */
      ExpPendQ[i].shrMem = smem;   /* ExpPendQ[] in priority order */
 
-     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
 #ifdef EXPQ_DEBUG
+     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
      DPRINT4(3,"%d, ProcQ Addr: 0x%lx, len %d, End Addr: 0x%lx\n",
 	i+1, queue, sizeof(procQ), ((char*)queue + sizeof(procQ)) - (char*)1);
      DPRINT4(3,"%d, ProcQ Offset: 0x%lx, len %d, End Offset: 0x%lx\n",
@@ -163,7 +163,9 @@ int expQaddToTail(int priority, char* expidstr, char* expinfostr)
   expQentry *Qentries;
   procQ *queue;
   sigset_t    savemask;
+#ifdef EXPQ_DEBUG
   char *startOffset;
+#endif
  
   blockSignals(&savemask);
     
@@ -188,8 +190,8 @@ int expQaddToTail(int priority, char* expidstr, char* expinfostr)
     errLogRet(ErrLogOp,debugInfo,"expQaddToTail: Queue Entry pointer is NULL\n");
     return(-1);
   }
-  startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
 #ifdef EXPQ_DEBUG
+  startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
   DPRINT2(3,"\n\nprocQadd: %d, ProcQ Offset: 0x%lx, \n", priority, startOffset);
 
   DPRINT2(3,
@@ -235,7 +237,9 @@ int expQaddToHead(int priority, char* expidstr, char* expinfostr)
   expQentry *Qentries;
   procQ *queue;
   sigset_t    savemask;
+#ifdef EXPQ_DEBUG
   char *startOffset;
+#endif
  
   blockSignals(&savemask);
     
@@ -260,8 +264,8 @@ int expQaddToHead(int priority, char* expidstr, char* expinfostr)
     errLogRet(ErrLogOp,debugInfo,"expQaddToTail: Queue Entry pointer is NULL\n");
     return(-1);
   }
-  startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
 #ifdef EXPQ_DEBUG
+  startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
   DPRINT2(3,"\n\nprocQadd: %d, ProcQ Offset: 0x%lx, \n", priority, startOffset);
 
   DPRINT2(3,
@@ -314,7 +318,9 @@ int expQget(int* priority, char* expidstr)
   procQ *queue;
   int i,stat;
   sigset_t    savemask;
+#ifdef EXPQ_DEBUG
   char* startOffset;
+#endif
 
   blockSignals(&savemask);
  
@@ -332,8 +338,8 @@ int expQget(int* priority, char* expidstr)
      if (queue->numInQ == 0)	/* non in this Q, goto next */
        continue;
 
-     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
 #ifdef EXPQ_DEBUG
+     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
      DPRINT3(3,"\nexpQget: priority %d, ProcQ Addr: 0x%lx, Offset: 0x%lx, \n", 
 		i+1, queue, startOffset);
 #endif
@@ -386,8 +392,10 @@ int expQsearch(char *userName,char* expnum,int *priority,char *expidstr)
   procQ *queue;
   int i,stat,qindx;
   sigset_t    savemask;
-  char* startOffset;
   char  infostr[EXPID_LEN];
+#ifdef EXPQ_DEBUG
+  char* startOffset;
+#endif
 
 
   blockSignals(&savemask);
@@ -409,8 +417,8 @@ int expQsearch(char *userName,char* expnum,int *priority,char *expidstr)
      if (queue->numInQ == 0)	/* none in this Q, goto next */
        continue;
 
-     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
 #ifdef EXPQ_DEBUG
+     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
      DPRINT3(3,"\nexpQget: priority %d, ProcQ Addr: 0x%lx, Offset: 0x%lx, \n", 
 		i+1, queue, startOffset);
 #endif
@@ -490,7 +498,9 @@ int expQIdsearch(char *expidstr, int *priority)
   procQ *queue;
   int i,stat,qindx;
   sigset_t    savemask;
+#ifdef EXPQ_DEBUG
   char* startOffset;
+#endif
 
 
   blockSignals(&savemask);
@@ -511,8 +521,8 @@ int expQIdsearch(char *expidstr, int *priority)
      if (queue->numInQ == 0)	/* none in this Q, goto next */
        continue;
 
-     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
 #ifdef EXPQ_DEBUG
+     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
      DPRINT3(3,"\nexpQget: priority %d, ProcQ Addr: 0x%lx, Offset: 0x%lx, \n", 
 		i+1, queue, startOffset);
 #endif
@@ -560,8 +570,10 @@ int expQgetinfo(int index, char* expinfostr)
   procQ *queue;
   int i,stat;
   sigset_t    savemask;
-  char* startOffset;
   int qindex = 0;
+#ifdef EXPQ_DEBUG
+  char* startOffset;
+#endif
 
   blockSignals(&savemask);
  
@@ -579,8 +591,8 @@ int expQgetinfo(int index, char* expinfostr)
      if (queue->numInQ == 0)	/* non in this Q, goto next */
        continue;
 
-     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
 #ifdef EXPQ_DEBUG
+     startOffset = (char*) ((char*)queue - (char*)ExpPendQ[0].procQstart);
      DPRINT3(3,"\nexpQget: priority %d, ProcQ Addr: 0x%lx, Offset: 0x%lx, \n", 
 		i+1, queue, startOffset);
 #endif
@@ -786,7 +798,7 @@ void expQRelease()
 int expQshow(void )
 {
   int i,j;
-  expQentry *Qentries;
+  expQentry *Qentries __attribute__((unused));
   procQ *queue;
   int totalq = 0;
 
@@ -1107,7 +1119,7 @@ void activeExpQRelease()
 int activeExpQshow(void)
 {
   int j;
-  activeQentry *Qentries;
+  activeQentry *Qentries __attribute__((unused));
   procQ *queue;
 
   queue = activeQ.procQstart;

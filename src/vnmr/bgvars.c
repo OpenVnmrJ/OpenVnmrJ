@@ -114,13 +114,14 @@ pipeTransfer(int tree, char *name, varInfo *v, vInfo *vI, int fd)
     register int   i;
     int   size;
     register Rval *r;
+    int ret __attribute__((unused));
 
     size = strlen(name);
     sigprocmask( SIG_BLOCK, &blockMask, &saveMask );
-    write(fd,&tree,sizeof(int)); /* send out op code */
-    write(fd,&size,sizeof(int));
-    write(fd,name,size);
-    write(fd,vI,sizeof(vInfo)); 
+    ret = write(fd,&tree,sizeof(int)); /* send out op code */
+    ret = write(fd,&size,sizeof(int));
+    ret = write(fd,name,size);
+    ret = write(fd,vI,sizeof(vInfo)); 
 
     /*  write out good stuff */
     if (v->T.basicType == T_STRING)  /* send string values */
@@ -128,8 +129,8 @@ pipeTransfer(int tree, char *name, varInfo *v, vInfo *vI, int fd)
      	r = v->R;
 	while (r && i < v->T.size+1)
 	{   size = strlen(r->v.s);
-	    write(fd,&size,sizeof(int));
-	    write(fd,r->v.s,size);
+	    ret = write(fd,&size,sizeof(int));
+	    ret = write(fd,r->v.s,size);
 	    i += 1;
 	    r = r->next;
 	}
@@ -138,7 +139,7 @@ pipeTransfer(int tree, char *name, varInfo *v, vInfo *vI, int fd)
     {	i = 1; 
      	r = v->R;
 	while (r && i < v->T.size+1)
-	{   write(fd,&r->v.r,sizeof(double));
+	{   ret = write(fd,&r->v.r,sizeof(double));
 	    i += 1;
 	    r = r->next;
 	}
@@ -176,8 +177,9 @@ int P_sendTPVars(int tree, int fd)
 
 void P_endPipe(int fd)
 {   
+    int ret __attribute__((unused));
     sigprocmask( SIG_BLOCK, &blockMask, &saveMask );
-    write(fd,&endop,sizeof(int));
+    ret = write(fd,&endop,sizeof(int));
     sigprocmask( SIG_SETMASK, &saveMask, NULL );
 }
 
@@ -492,19 +494,20 @@ static void jPipeTransfer(char *name, varInfo *v, vInfo *vI, int fd)
     doubleUnion swap;
 #endif
     double dtmp;
+    int ret __attribute__((unused));
 
     size = strlen(name);
     longSwap = htonl(size);
     sigprocmask( SIG_BLOCK, &blockMask, &saveMask );
-    write(fd,&longSwap,sizeof(int));
-    write(fd,name,size);
+    ret = write(fd,&longSwap,sizeof(int));
+    ret = write(fd,name,size);
     /* write(fd,vI,sizeof(vInfo));  not for Jpsg but the following 3 items instead */
     shortSwap = htons(vI->subtype);
-    write(fd,&shortSwap,sizeof(short));
+    ret = write(fd,&shortSwap,sizeof(short));
     shortSwap = htons(vI->basicType);
-    write(fd,&shortSwap,sizeof(short));
+    ret = write(fd,&shortSwap,sizeof(short));
     shortSwap = htons(v->T.size);
-    write(fd,&shortSwap,sizeof(short));
+    ret = write(fd,&shortSwap,sizeof(short));
 
     /*  write out good stuff */
     if (v->T.basicType == T_STRING)  /* send string values */
@@ -513,8 +516,8 @@ static void jPipeTransfer(char *name, varInfo *v, vInfo *vI, int fd)
 	while (r && i < v->T.size+1)
 	{   size = strlen(r->v.s);
             longSwap = htonl(size);
-	    write(fd,&longSwap,sizeof(int));
-	    write(fd,r->v.s,size);
+	    ret = write(fd,&longSwap,sizeof(int));
+	    ret = write(fd,r->v.s,size);
 	    i += 1;
 	    r = r->next;
 	}
@@ -532,7 +535,7 @@ static void jPipeTransfer(char *name, varInfo *v, vInfo *vI, int fd)
             swap.out->s1 = htonl(swap.out->s2);
             swap.out->s2 = tmp;
 #endif
-            write(fd,&dtmp,sizeof(double));
+            ret = write(fd,&dtmp,sizeof(double));
 	    i += 1;
 	    r = r->next;
 	}
