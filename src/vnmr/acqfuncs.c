@@ -181,8 +181,8 @@ int acqproc_msge(int argc, char *argv[], int retc, char *retv[])
    char            user[MAXPATHL];
    char            message[MAXPATHL];
    int             cmdval;
-   int             buglevel,
-                   ival, len;
+   int             buglevel, len;
+   int             ival __attribute__((unused));
 
    if ( is_datastation() )
    {
@@ -1556,7 +1556,7 @@ int setfrq(int argc, char *argv[], int retc, char *retv[])
 static void
 get_nuctab_name(double h1freq, char rftype, char *nuctable)
 {
-    char suffix[8];
+    char suffix[16];
 
     if (fabs(h1freq - 127) < 10){
 	strcpy(suffix, "3T");
@@ -2087,9 +2087,10 @@ interact_is_alive(char *tag, char *message)
 		}
 		else
                 {
+                   int ret __attribute__((unused));
                    sprintf(cmd,"(umask 0; echo %s > %s/acqqueue/%s_info_%d)\n",
                         message, systemdir, pl->tagname, pl->pid);
-                   system(cmd);
+                   ret = system(cmd);
                    kill(pl->pid, SIGUSR2);      /* Issue  command */
                 }
 	    }
@@ -2181,6 +2182,7 @@ void interact_disconnect(char *tag)
 static void interact_disconnect_by_pid(PidList *pl)
 {
     char cmd[256];
+    int ret __attribute__((unused));
 
     if (pl && pl->pid && pl->connected){
         sigset_t        emptymask;
@@ -2188,7 +2190,7 @@ static void interact_disconnect_by_pid(PidList *pl)
         sigemptyset( &emptymask );
 	sprintf(cmd,"(umask 0; echo go > %s/acqqueue/%s_info_%d)\n",
 		systemdir, pl->tagname, pl->pid);
-	system(cmd);
+	ret = system(cmd);
 	kill(pl->pid, SIGUSR2);	/* Issue disconnect command */
 	while (pl->connected){
 	    sigsuspend( &emptymask );	/* Wait for a signal */
@@ -2246,11 +2248,12 @@ static void interact_kill_by_pid(PidList *pl)
 	    pl->pid = pl->connected = 0;
 	}else{
             sigset_t        emptymask;
+            int ret __attribute__((unused));
 
             sigemptyset( &emptymask );
 	    sprintf(cmd, "(umask 0; echo exit > %s/acqqueue/%s_info_%d)\n"
 		    ,systemdir, pl->tagname, pl->pid);
-	    system(cmd);
+	    ret = system(cmd);
 	    kill(pl->pid, SIGUSR2);
 	    while (pl->pid && pl->connected){ /* Flags changed by signal */
 		sigsuspend( &emptymask );	/* Wait for a signal */
@@ -2466,7 +2469,7 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
    int port, pid;
    int matchOnly;
    struct timeval clock;
-   struct tm *local;
+   struct tm *local __attribute__((unused));
    int repeatAt;
    char *argvTmp[1];
 

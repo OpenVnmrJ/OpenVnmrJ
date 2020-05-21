@@ -1042,7 +1042,6 @@ then
    fi
    chmod 777   "$dest_dir"/tmp
    chmod 666   "$dest_dir"/acq/info
-   chmod 775   "$dest_dir"/tune
    # Signal to vjpostinstallaction to display final install instructions
    touch /tmp/.ovj_installed
    chmod 666 /tmp/.ovj_installed
@@ -1058,9 +1057,13 @@ then
    ${chgrp_cmd} $nmr_group "$dest_dir"/acqqueue
       fi
    fi
-   if [ ! -d "$dest_dir"/tune/OptimaFirmware ]
+   if [ -d "$dest_dir"/tune ]
    then
+      chmod 775   "$dest_dir"/tune
+      if [ ! -d "$dest_dir"/tune/OptimaFirmware ]
+      then
          mkdir "$dest_dir"/tune/OptimaFirmware
+      fi
    fi
 
 

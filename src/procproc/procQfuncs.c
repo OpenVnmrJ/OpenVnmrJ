@@ -129,7 +129,9 @@ int initProcQs(int clean)
 {
   int qSize,retstat;
   procQ *queue;
+#ifdef PROC_DEBUG
   char *startOffset;
+#endif
   SHR_MEM_ID smem;
 
   retstat = 0;
@@ -153,8 +155,8 @@ int initProcQs(int clean)
      procQlist.procQstart = queue;
      procQlist.shrMem = smem;
 
-     startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
 #ifdef PROC_DEBUG
+     startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
      DPRINT3(3,"ProcQ Addr: 0x%lx, len %d, End Addr: 0x%lx\n",
 	queue, sizeof(procQ), ((char*)queue + sizeof(procQ)) - (char*)1);
      DPRINT3(3,"ProcQ Offset: 0x%lx, len %d, End Offset: 0x%lx\n",
@@ -206,7 +208,9 @@ int procQadd(int proctype, char* expidstr, long elemId, long ct, int dcode, int 
   procQentry *Qentries;
   procQ *queue;
   sigset_t    blockmask, savemask;
+#ifdef PROC_DEBUG
   char *startOffset;
+#endif
  
   /* --- mask to block SIGALRM, SIGIO and SIGCHLD interrupts --- */
   sigemptyset( &blockmask );
@@ -251,8 +255,8 @@ int procQadd(int proctype, char* expidstr, long elemId, long ct, int dcode, int 
     sigprocmask(SIG_SETMASK, &savemask, (sigset_t *)NULL);
     return(-1);
   }
-  startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
 #ifdef PROC_DEBUG
+  startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
   DPRINT2(4,"\n\nprocQadd: %d, ProcQ Offset: 0x%lx, \n", proctype+1, startOffset);
 
   DPRINT5(4,
@@ -318,7 +322,9 @@ int procQget(int* proctype, char* expidstr, long* elemId, long* ct, int* dcode, 
   procQ *queue;
   int stat;
   sigset_t    blockmask, savemask;
+#ifdef PROC_DEBUG
   char* startOffset;
+#endif
  
   /* --- mask to block SIGALRM, SIGIO and SIGCHLD interrupts --- */
   sigemptyset( &blockmask );
@@ -351,8 +357,8 @@ int procQget(int* proctype, char* expidstr, long* elemId, long* ct, int* dcode, 
      if (queue->numInQ == 0)	/* non in this Q */
        return(-1);
 
-     startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
 #ifdef PROC_DEBUG
+     startOffset = (char*) ((char*)queue - (char*)procQlist.procQstart);
      DPRINT2(4,"\nprocQget: ProcQ Addr: 0x%lx, Offset: 0x%lx, \n", queue, startOffset);
 #endif
 
