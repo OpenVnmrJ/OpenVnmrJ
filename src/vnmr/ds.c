@@ -1910,7 +1910,7 @@ static void b_mark()
 /*****************/
 static void b_integral()
 /*****************/
-{ int res;
+{ int res __attribute__((unused));
 
   if (get_dis_setup() != 1)
     select_init(
@@ -3269,6 +3269,11 @@ Winfoprintf("##ds %d %d %s",argc,i,argv[i]);
        do_menu = TRUE;
     }
     redisplay_flag = 0;
+    if (argc == 1)
+    {
+       setButtonMode(SELECT_MODE);
+       ds_mode = -1; /* force b_cursor() into the CURSOR_MODE */
+    }
     if ( (argc == 2) && ! strcmp(argv[1],"rev") )
        dscaleRevFlag  = TRUE;
     else
@@ -4289,7 +4294,7 @@ void ds_noCrosshair() {
 }
 
 void ds_inset(float c, float d)
-{ double spsav,wpsav;
+{
 /*
 	if (ok_to_inset() != 0)
 	  ABORT;
@@ -4309,8 +4314,6 @@ void ds_inset(float c, float d)
 
   cr = c;
   delta = d;
-  spsav = sp;
-  wpsav = wp;
     dsstatus("EXPAND");
     /* set sp,wp according to expansion box */
        sp  = (interfero) ? cr : cr - delta;

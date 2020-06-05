@@ -91,7 +91,7 @@ processAcceptSocket( Socket *pSocket )
 	registerSocketNonAsync( pSocket );
         blockSignals(&savemask);  /* Block all Signals */
 	bcount = readSocketNonblocking( pSocket, (char*) &msgeSize, sizeof( long ) );
-        DPRINT2(1,"processAcceptSocket: bcount: %d, msgesize:  %ld\n",bcount,msgeSize);
+        // DPRINT2(1,"processAcceptSocket: bcount: %d, msgesize:  %ld\n",bcount,msgeSize);
         if (bcount > 0)
         {
           /* malloc if we need to otherwise used constbuf */
@@ -117,7 +117,7 @@ processAcceptSocket( Socket *pSocket )
 	  if (bcount > 0) 
           {
 	    buffer[ bcount ] = '\0';
-            DPRINT2(1,"processAcceptSocket: size: %d,  msge: '%s'\n",bcount,buffer);
+//            DPRINT2(1,"processAcceptSocket: size: %d,  msge: '%s'\n",bcount,buffer);
 
 	    /* Go Parse the Command and Do It */
 	    parser( buffer );
