@@ -1,7 +1,8 @@
+from __future__ import print_function
 import os
 
 
-print 'SConstruct.768AS'
+print('SConstruct.768AS')
 #get current working directory
 cwd = os.getcwd()
 
@@ -19,5 +20,5 @@ if not os.path.exists(vnmrTclBinPath) :
 for i in fileList:
    dest = os.path.join(vnmrTclBinPath,i)
    Execute(Copy(dest,i+'.sh'))
-   Execute(Chmod(dest,0755))
+   Execute(Chmod(dest,0o755))
 

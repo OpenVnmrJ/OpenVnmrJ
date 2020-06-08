@@ -292,7 +292,7 @@ class QueryHandler(tornado.web.RequestHandler, VnmrJInterface):
             reply = unicode(str(self.monitor._cache[target]))
             logging.debug("post(%s) = %s" % (target, reply,))
             self.write(reply)
-        except ValueError, ve:
+        except ValueError as ve:
             logging.error("post(%s) not formatted properly (%s)" % (target, ve))
             self.send_error(400, mesg="Data is not properly formatted: <br />%s" % (ve,))
         finally:
@@ -541,7 +541,7 @@ class EventSourceHandler(tornado.web.RequestHandler):
 
         try:
             self.write(self.monitor._cache[target])
-        except ValueError, ve:
+        except ValueError as ve:
             self.send_error(400, mesg="Data is not properly formatted: <br />%s" % (ve,))
 
     # Asynchronous actions

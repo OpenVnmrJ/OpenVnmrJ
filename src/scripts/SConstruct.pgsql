@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import sys
 #get current working directory
@@ -5,13 +6,13 @@ cwd = os.getcwd()
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
 # If not defined, try the default location
-    print "OVJ_TOOLS env not found. Trying default location."
+    print("OVJ_TOOLS env not found. Trying default location.")
     ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
 
 if not os.path.exists(ovjtools):
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    print("OVJ_TOOLS env not found.")
+    print("For bash and variants, use export OVJ_TOOLS=<path>")
+    print("For csh and variants,  use setenv OVJ_TOOLS <path>")
     sys.exit(1)
 
 
@@ -27,4 +28,4 @@ else:
 
 configPath = os.path.join(installPath,'config')
 Execute(Mkdir(configPath))
-Execute(Chmod(configPath,0777))
+Execute(Chmod(configPath,0o777))

@@ -4,6 +4,7 @@
 #        Also the inttypes.h that was used for SFU required a file name changed since it 
 #        was overriding the system inittypes.h 
 #
+from __future__ import print_function
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
@@ -16,13 +17,13 @@ cwd = os.getcwd()
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
 # If not defined, try the default location
-    print "OVJ_TOOLS env not found. Trying default location."
+    print("OVJ_TOOLS env not found. Trying default location.")
     ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
 
 if not os.path.exists(ovjtools):
-    print "OVJ_TOOLS env not found."
-    print "For bash and variants, use export OVJ_TOOLS=<path>"
-    print "For csh and variants,  use setenv OVJ_TOOLS <path>"
+    print("OVJ_TOOLS env not found.")
+    print("For bash and variants, use export OVJ_TOOLS=<path>")
+    print("For csh and variants,  use setenv OVJ_TOOLS <path>")
     sys.exit(1)
 
 #import variables  and environment from SConstruct
@@ -33,21 +34,21 @@ Import("*")
 boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
 if not os.path.exists(boFile):
    boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
-execfile(boFile)
+exec(compile(open(boFile).read(), boFile, 'exec'))
 
 # define target file names
 # expProcTarget = 'Expproc'
 
 ## NDDS include/lib paths
-print 'nvExpproc NDDS_VERSION ' + boEnv['NDDS_VERSION']
+print('nvExpproc NDDS_VERSION ' + boEnv['NDDS_VERSION'])
 
 # if 'Expproc4x' in COMMAND_LINE_TARGETS:   
 #  generate NDDS home path from NDDS_VERSION
 nddsdir = 'ndds.' + boEnv['NDDS_VERSION']
-print 'Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this'
+print('Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this')
 expProcTarget = 'Expproc'
 nddsHome = os.path.join(ovjtools, 'NDDS', nddsdir)
-print nddsHome
+print(nddsHome)
 nddsGen = os.path.join(nddsHome, 'scripts', 'nddsgen')
 nddsJreBin = os.path.join(nddsHome, 'jre', 'i86Linux','bin')
 
@@ -282,7 +283,7 @@ ovjconsole=os.getenv('ovjConsole')
 if not ovjconsole:
     ovjconsole = "yes"
 if (ovjconsole!="yes"):
-    print "DDR console software not requested."
+    print("DDR console software not requested.")
 else:
 # Copy console software
     fromPath = os.path.join(ovjtools, 'console', 'ddr')
@@ -297,4 +298,4 @@ else:
        Execute('cd '+acqPath+'; chmod 644 */acq/d*/nvSc*.md5')
        Execute('cd '+acqPath+'; chmod 755 ddr/acqbin/*')
     else:
-       print "cannot access <OVJ_TOOLS>/console/ddr. Update ovjTools to get compiled console software."
+       print("cannot access <OVJ_TOOLS>/console/ddr. Update ovjTools to get compiled console software.")
