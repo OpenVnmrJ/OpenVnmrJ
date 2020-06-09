@@ -5,8 +5,16 @@ import os
 import sys
 import datetime
 
+# current working directory
+cwd = os.getcwd()
+
 ovjtools=os.getenv('OVJ_TOOLS')
 if not ovjtools:
+# If not defined, try the default location
+    print("OVJ_TOOLS env not found. Trying default location.")
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
     print("OVJ_TOOLS env not found.")
     print("For bash and variants, use export OVJ_TOOLS=<path>")
     print("For csh and variants,  use setenv OVJ_TOOLS <path>")
@@ -34,7 +42,7 @@ cwd = os.getcwd()
 env = Environment()
 
 # paths
-if ( 'linux' in platform):
+if (platform.startswith('linux')):
    javaBinPath = os.path.join(ovjtools, 'java', 'bin')
    jarBin = os.path.join(javaBinPath, 'jar')
 elif ( 'darwin' in platform):
@@ -62,7 +70,7 @@ if not os.path.exists(classesPath):
 
 
 # define build environment
-if ( 'linux' in platform):
+if (platform.startswith('linux')):
    jEnv = Environment(ENV = {'JAVA_HOME' : javaBinPath,
                           'CLASSPATH' : classesPath,
                           'PATH' : javaBinPath + ':' + os.environ['PATH']})

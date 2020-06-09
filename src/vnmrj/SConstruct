@@ -48,12 +48,6 @@ vjmolTarget = 'vjmol.jar'
 fbpath= cwd
 
 
-# get options environment
-boFile = os.path.join(cwd, os.pardir, os.pardir, 'buildoptions.py')
-if not os.path.exists(boFile):
-   boFile = os.path.join(cwd, os.pardir, os.pardir, 'scripts', 'buildoptions.py')
-exec(compile(open(boFile).read(), boFile, 'exec'))
-
 #
 # if interix then replace /dev/fs/C/ with C:/
 #
@@ -136,7 +130,7 @@ env = Environment()
 classPath = cwd
 
 
-if (platform=="linux2"):
+if (platform.startswith('linux')):
    javaBinDir = os.path.join(ovjtools, 'java', 'bin')
    jarBin = os.path.join(javaBinDir, 'jar')
 elif (platform=="darwin"):
@@ -326,18 +320,7 @@ Execute(Copy(os.path.join(installPath,'simplemovie.jar'), moviePath))
 #                   Action(os.path.join(cwd,'removeJava.sh')))
 
 # actions to be performed after targets are built
-if boEnv['dasho']=='y' or boEnv['vnmrj_O']=='y':
-   jEnv.AddPostAction(jarBuildObject,
-                      Action(os.path.join(cwd,'VnmrJProGuard.sh')))
-
-#                   Action(os.path.join(cwd,'VnmrJDasho.sh')))
-
-if boEnv['vnmrj_O']=='y':
-   jEnv.AddPostAction(jarBuildObject,
-                      Action(Copy(os.path.join(installPath,vnmrjTarget),
-                                  os.path.join(cwd, vnmrjProGuardTarget))))
-else:
-   jEnv.AddPostAction(jarBuildObject,
+jEnv.AddPostAction(jarBuildObject,
                       Action(Copy(installPath, os.path.join(cwd, vnmrjTarget))))
 
 # finally copy vjmol.jar
