@@ -575,7 +575,6 @@ connectSocket( Socket *pSocket, char *hostName, int portAddr )
 /* char *hostName  -  name of (perhaps) remote host */
 /* int portAddr    -  port address of remote socket */
 {
-#ifdef OLD
 	struct hostent		*hp;
 #if  !defined(__INTERIX) && !defined(MACOS)
 	int			 result;
@@ -584,10 +583,6 @@ connectSocket( Socket *pSocket, char *hostName, int portAddr )
         char   hpIPBuffer[256];
 #endif
 	struct sockaddr_in	 sin;
-#endif
-        struct addrinfo hints, *res;
-        int status;
-        char portName[256];
 
 
 	if (pSocket == NULL) {
@@ -599,7 +594,6 @@ connectSocket( Socket *pSocket, char *hostName, int portAddr )
 		return( -1 );
 	}
 
-#ifdef OLD
         /* Since this maybe used in threaded programs better use the reentrant version
          * of gethostbyname()
          * was hp = gethostbyname( hostName );
@@ -618,23 +612,23 @@ connectSocket( Socket *pSocket, char *hostName, int portAddr )
 #endif
 
 
-#ifdef XXX
-        {
-        char **p;
-        unsigned char *ip;
-        fprintf(stderr,"hp->h_name: '%s'\n",hp->h_name);
-        ip = hp->h_addr;
-        fprintf(stderr,"%d.%d.%d.%d\n",*ip,*(ip+1),*(ip+2),*(ip+3));
-        ip = *(hp->h_addr_list);
-        fprintf(stderr,"%d.%d.%d.%d\n",*ip,*(ip+1),*(ip+2),*(ip+3));
-        fprintf(stderr,"\n---------------\n");
-        for (p=hp->h_addr_list; *p != 0; p++) 
-        {
-            ip =*p;
-            printf("%d.%d.%d.%d\n",*ip,*(ip+1),*(ip+2),*(ip+3));
-        }  
-        fflush(stderr);
-        }
+#ifdef XXXX    /* for debugging */
+*        {
+*        char **p;
+*        unsigned char *ip;
+*        fprintf(stdout,"hp->h_name: '%s'\n",hp->h_name);
+*        ip = hp->h_addr;
+*        fprintf(stdout,"%d.%d.%d.%d\n",*ip,*(ip+1),*(ip+2),*(ip+3));
+*        ip = *(hp->h_addr_list);
+*        fprintf(stdout,"%d.%d.%d.%d\n",*ip,*(ip+1),*(ip+2),*(ip+3));
+*        fprintf(stdout,"\n---------------\n");
+*        for (p=hp->h_addr_list; *p != 0; p++) 
+*        {
+*            ip =*p;
+*            printf("%d.%d.%d.%d\n",*ip,*(ip+1),*(ip+2),*(ip+3));
+*        }  
+*        fflush(stdout);
+*        }
 #endif
 
 	memset( (char *) &sin, 0, sizeof( struct sockaddr_in ) );
@@ -664,27 +658,6 @@ connectSocket( Socket *pSocket, char *hostName, int portAddr )
            if (errno != EINTR)
               return(-1);
         }
-#endif
-        memset(&hints, 0, sizeof hints);
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_flags = AI_NUMERICSERV;
-        sprintf(portName,"%d",portAddr);
-
-        if ((status = getaddrinfo(hostName, portName, &hints, &res)) != 0)
-        {
-           fprintf(stderr,"getaddrinfo error '%s'\n",gai_strerror(status));
-           return(-1);
-        }
-        while ( (connect(pSocket->sd, res->ai_addr, res->ai_addrlen) == -1)
-                 && (errno != EISCONN) )
-        {
-           if (errno != EINTR)
-              return(-1);
-        }
-           
-
-        freeaddrinfo(res);
         
 #ifdef TEDIOUS
         if ( connect (fd, &name, namelen) == -1 )
