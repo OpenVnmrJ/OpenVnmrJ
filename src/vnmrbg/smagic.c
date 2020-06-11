@@ -643,9 +643,7 @@ static int sendToVnmrJinit(int nodelay, Socket *pSD )
     ival = -1;
     for( i=0; i < 5; i++)
     {
-//      ival = connectSocket(pSD,VnmrJHostName,VnmrJPortId);
-//      The NULL for hostname causes connectSocket to use localhost
-        ival = connectSocket(pSD,NULL,VnmrJPortId);
+        ival = connectSocket(pSD,VnmrJHostName,VnmrJPortId);
         if (ival == 0)
 	    break;
         sleep(1);
