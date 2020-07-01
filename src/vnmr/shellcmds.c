@@ -1796,6 +1796,7 @@ int unixtime(int argc, char *argv[], int retc, char *retv[])
    RETURN;
 }
 
+#define APPENDLINE 2048
 int appendCmd(int argc, char *argv[], int retc, char *retv[])
 {
    FILE *inFile;
@@ -1807,7 +1808,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    int tailSkip = 0;
    int headOK = 1;
    int lineOK;
-   char inLine[2048];
+   char inLine[APPENDLINE];
 
    if (argc < 3)
    {
@@ -1909,8 +1910,8 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                regex_t regex;
                regmatch_t matches;
                int reti;
-               char newline[MAXPATH*2];
-               char tmpline[MAXPATH*2];
+               char newline[APPENDLINE];
+               char tmpline[APPENDLINE];
                int doGlobal;
                int sindex;
                int found = 0;
@@ -1964,7 +1965,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             }
             else if ( !strcmp(argv[index],"awk") )
             {
-               char tmpLine[2048];
+               char tmpLine[APPENDLINE];
                size_t lIndex;
                int wordNumber;
                char *awkPtr;
@@ -2026,7 +2027,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             }
             else if ( !strcmp(argv[index],"tr") )
             {
-               char tmpLine[MAXPATH*2];
+               char tmpLine[APPENDLINE];
                
                trLine(inLine, argv[index+1], argv[index+2], tmpLine );
                strcpy(inLine,tmpLine);
