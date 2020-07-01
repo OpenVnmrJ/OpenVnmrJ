@@ -51,7 +51,7 @@ extern int BigEndian;
 #define RETURN		return(0)  
 #define ABORT		return(1)  
 
-#define MAXSPEC  128 
+#define MAXSPEC  512
 
 /* these file path names are made available to application programs */
 
