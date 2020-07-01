@@ -19,7 +19,8 @@ else
    nmr_adm=$1
    nmr_group=$2
 fi
-host_name=`uname -n`
+host_name=$(uname -n)
+abindir="/vnmr/acqbin"
 sbindir="/vnmr/p11/sbin"
 vbindir="/vnmr/bin"
 file=/etc/sudoers.d/16openvnmrj
@@ -28,6 +29,7 @@ sudoFile() {
    cat <<EOF | sed s:USER:${nmr_adm}: | \
                sed s:GROUP:${nmr_group}: | \
                sed s:HOST:${host_name}: | \
+               sed s:ABIN:"${abindir}": | \
                sed s:SBIN:"${sbindir}": | \
                sed s:VBIN:"${vbindir}": > ${file}
 # SUDO file for OpenVnmrJ
@@ -39,6 +41,7 @@ USER HOST = NOPASSWD: \\
    VBIN/jtestuser,\\
    VBIN/vcmdr,\\
    VBIN/vcmdm,\\
+   ABIN/startStopProcs,\\
    /usr/bin/getent,\\
    /usr/bin/passwd,\\
    /usr/sbin/useradd,\\

@@ -62,6 +62,9 @@ if [[ ! -d $repoPath ]]; then
 fi
 
 rm -f /etc/yum.repos.d/openvnmrj.repo
+if ! hash createrepo 2> /dev/null; then
+   yum -y install --disablerepo="*" $repoPath/createrepo* $repoPath/drpm* > /dev/null
+fi
 createrepo $repoPath
 ovjRepo
 if hash sysytemctl 2> /dev/null; then

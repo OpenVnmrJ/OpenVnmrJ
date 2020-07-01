@@ -12,7 +12,7 @@
 #----------------------------------------------------------
 #  patchinstall "path-name of patch file"
 #
-#  The patch name is encoded with the VnmrJ version, OS, Console
+#  The patch name is encoded with the OpenVnmrJ version, OS, Console
 #  and patch number.
 #  These attributes are separated by underscores in the path name.
 #  For example  3.2_LNX_VNMRS_101.ptc
@@ -21,10 +21,10 @@
 #  Patches have a .ptc suffix. They are actually zip files, but files
 #  with a .zip suffix are often blocked by email systems.
 #
-#  The VnmrJ software versions are of the form VERSION x.y REVISION z
+#  The OpenVnmrJ software versions are of the form VERSION x.y REVISION z
 #  and are in the first line of the /vnmr/vnmrrev file.
 #  The first field of the patch name can match the VERSION or the VERSION
-#  and REVISION. The special key ANY will match any VnmrJ version.
+#  and REVISION. The special key ANY will match any OpenVnmrJ version.
 #
 #  The second field of the patch name signifies the computer operating system.
 #  Supported OS values are LNX, MAC, and WIN. The special key ANY will match
@@ -116,14 +116,14 @@ checkPatchName () {
    if [ x$patch_filename.ptc != x`basename "$patchfile"` ]
    then
        echo ""
-       echo " $patchfile is not a VnmrJ (*.ptc) patch name"
+       echo " $patchfile is not a OpenVnmrJ (*.ptc) patch name"
        echo ""
        ok=0
    fi
 
 #  Patch name information
    patch_vers=`echo $patch_filename | awk 'BEGIN { FS = "_" } { print tolower($1) }'`
-#  echo "VnmrJ Version: $patch_vers"
+#  echo "OpenVnmrJ Version: $patch_vers"
    patch_os=`echo $patch_filename | awk 'BEGIN { FS = "_" } { print tolower($2) }'`
 #  echo "OS Version: $patch_os"
    patch_cons=`echo $patch_filename | awk 'BEGIN { FS = "_" } { print tolower($3) }'`
@@ -152,9 +152,9 @@ checkPatchName () {
    vnmr_rev=`grep VERSION "$vnmrsystem"/vnmrrev`
    vnmr_rev_1=`echo $vnmr_rev | awk '{ print tolower($3) }'`
    vnmr_rev_2=`echo $vnmr_rev | awk '{ print tolower($3)tolower($5) }'`
-#  echo "Installed VnmrJ: $vnmr_rev"
-#  echo "Installed VnmrJ VERSION:  $vnmr_rev_1"
-#  echo "Installed VnmrJ REVISION: $vnmr_rev_2"
+#  echo "Installed OpenVnmrJ: $vnmr_rev"
+#  echo "Installed OpenVnmrJ VERSION:  $vnmr_rev_1"
+#  echo "Installed OpenVnmrJ REVISION: $vnmr_rev_2"
    console_name=`sed -n '3,3p' "$vnmrsystem"/vnmrrev`
    console_type=`echo $console_name | cut -c1-2`
    spectrometer=$console_name
@@ -189,7 +189,7 @@ checkPatchName () {
       if [ x$patch_vers != x$vnmr_rev_1 -a x$patch_vers != x$vnmr_rev_2 ]
       then
             echo ""
-            echo "$patchfile  is not for the installed VnmrJ version"
+            echo "$patchfile  is not for the installed OpenVnmrJ version"
             echo ""
             ok=0
       fi
@@ -373,7 +373,7 @@ validatePatch () {
 #-----------------------------------------------------------
 installPatch () {
 
-   # This is where this the patch record is kept
+   # This is where the patch record is kept
    if [ -d "$patch_save_dir" ]
    then
        echo ""
@@ -385,7 +385,7 @@ installPatch () {
 
    cd "$patch_temp_dir"
 
-   FileList=`unzip -Z -1 patch.zip`
+   FileList=$(unzip -Z -1 patch.zip)
    unzip -q patch.zip
 
    if [ -f p_required ]
@@ -402,6 +402,8 @@ installPatch () {
    tmp_save=$patch_adm_dir/tmp$patch_id
    mkdir "$tmp_save"
 
+   OLDIFS=$IFS
+   IFS=$'\n'
    for File in $FileList
    do
       if [ x$File = "xReadme" ]
@@ -420,20 +422,20 @@ installPatch () {
          continue
       fi
       # If 'File' is a directory and it already exists in
-      # the VnmrJ system directory, no action is required.
-      if [ -d $vnmrsystem/$File ]
+      # the OpenVnmrJ system directory, no action is required.
+      if [ -d "$vnmrsystem/$File" ]
       then
          continue
       fi
       # If 'File' is a directory and it does not already exist in
-      # the VnmrJ system directory, update p_uninstall to remove it
-      if [ -d $patch_temp_dir/$File ]
+      # the OpenVnmrJ system directory, update p_uninstall to remove it
+      if [ -d "$patch_temp_dir/$File" ]
       then
-         printf "rm -rf %s\n" $vnmrsystem/$File >> $tmp_save/p_uninstall
+         printf "rm -rf \"%s\"\n" "$vnmrsystem/$File" >> $tmp_save/p_uninstall
          continue
       fi
 
-      check=`echo $File | awk 'BEGIN { FS = "/" } { print $1 }'`
+      check=$(echo $File | awk 'BEGIN { FS = "/" } { print $1 }')
       case "x$check" in
 
         "xacq" )  reboot=yes
@@ -446,30 +448,31 @@ installPatch () {
                  ;;
       esac
 
-      if [ -f $vnmrsystem/$File ]
+      if [ -f "$vnmrsystem/$File" ]
       then
-         dir=`dirname $File`
-         if [ ! -d $tmp_save/$dir ]
+         dir=$(dirname "$File")
+         if [ ! -d "$tmp_save/$dir" ]
          then
-            mkdir -p $tmp_save/$dir
+            mkdir -p "$tmp_save/$dir"
          fi
          #save the original
-         mv $vnmrsystem/$File $tmp_save/$dir
+         mv "$vnmrsystem/$File" "$tmp_save/$dir"
          #This is the bug fixed file
-         mv $patch_temp_dir/$File $vnmrsystem/$File
+         mv "$patch_temp_dir/$File" "$vnmrsystem/$File"
       else
 
-         newdir=`dirname $vnmrsystem/$File`
-         if [ ! -d $newdir ]
+         newdir=$(dirname "$vnmrsystem/$File")
+         if [ ! -d "$newdir" ]
          then
-            mkdir -p $newdir
+            mkdir -p "$newdir"
          fi
 
          #This is the bug fixed file
-         mv $patch_temp_dir/$File $vnmrsystem/$File
-         printf "rm -f %s\n" $vnmrsystem/$File >> $tmp_save/p_uninstall
+         mv "$patch_temp_dir/$File" "$vnmrsystem/$File"
+         printf "rm -f \"%s\"\n" "$vnmrsystem/$File" >> $tmp_save/p_uninstall
       fi
    done
+   IFS=$OLDIFS
 
 
    if [ -f "$patch_temp_dir"/p_install ]

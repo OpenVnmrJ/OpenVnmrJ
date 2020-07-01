@@ -91,10 +91,7 @@ fi
 
 get_vnmrsystem
 
-if [[ -x "$vnmrsystem"/bin/execkillacqproc ]] ; then
-    chown root "$vnmrsystem"/bin/execkillacqproc
-    chmod 500  "$vnmrsystem"/bin/execkillacqproc
-else
+if [[ ! -x "$vnmrsystem"/bin/execkillacqproc ]] ; then
      echo "$vnmrsystem/bin/execkillacqproc  does not exist, cannot proceed:"
      exit
 fi 

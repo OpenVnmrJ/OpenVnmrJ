@@ -23,15 +23,22 @@ if [ ! -x /usr/bin/dpkg ]; then
    else
       rel=redhat-release
    fi
-   version=$(rpm -q $rel | cut -d'-' -f3)
+ # remove all characters up to the first digit
+   version=$(cat /etc/$rel | sed -E 's/[^0-9]+//')
+ # remove all characters from end including first dot
+   version=${version%%.*}
+
    packagecommonlist='make gcc gcc-c++ gdb libtool binutils automake strace autoconf glibc-devel expect rsh-server tftp-server mutt k3b ghostscript ImageMagick'
-   if [ $version -eq 7 ]
+   if [[ $version -eq 7 ]] || [[ $version -eq 8 ]]
    then
 #     for RHEL 7.X must list 32-bit packages, since these are no longer installed with the 64-bit versions
       package71list='libgfortran motif'
       package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686 mesa-libGL-devel mesa-libGL mesa-libGLU'
       package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686'
       packagelist="$packagecommonlist $package71list $package32Bitlist"
+      if [[ $version -eq 8 ]]; then
+        packagelist="$packageList tcsh libnsl compat-openssl10"
+      fi
    elif [ $version -eq 6 ]
    then
 #     for RHEL 6.X must list 32-bit packages, since these are no longer installed with the 64-bit versions

@@ -23,6 +23,8 @@
 #start running LoadNmr
 #
 
+xhost + > /dev/null
+
 set_system_stuff() {
    distroType="na"
    ostype=$(uname -s)
@@ -241,6 +243,12 @@ else
    else
       base_dir=$(pwd)/$(dirname $0)
    fi
+fi
+if [[ ${base_dir#/root} != ${base_dir} ]]
+then
+   echo "Can not install OpenVnmrJ from /root"
+   echo "Move $base_dir to /tmp"
+   exit 1
 fi
 
 # Handle case where "base_dir" has a space in the path
@@ -501,8 +509,21 @@ if [ -e /tmp/vskippkgchk ]; then
    rm -f /tmp/vskippkgchk
 fi
 
+if ! hash python 2> /dev/null; then
+   if [ -d /vnmr/web ]; then
+      mv /vnmr/web /vnmr/web_off
+   fi
+fi
+
 if [ -e /tmp/.ovj_installed ]; then
    nmr_user=$(/vnmr/bin/fileowner /vnmr/vnmrrev)
+   # temporary fix
+   fixName="/vnmr/adm/users/operators/operatorlist"
+   if [[ -f $fixName ]]; then
+      grep -v ^null$ $fixName > ${fixName}.tmp
+      mv -f ${fixName}.tmp $fixName
+      chown $nmr_user:$nmr_group $fixName
+   fi
    echo "Configuring $nmr_user with the standard configuration (stdConf)"
    echo "Configuring $nmr_user with the standard configuration (stdConf)" >> $insLog
    if [ x$distroType = "xdebian" ]; then
@@ -643,6 +664,15 @@ echo "The package OpenVnmrJ*.zip and the dvdimage directory"
 echo "may now be removed"
 echo ""
 
+if [[ -z $oldVnmr ]]; then
+   echo " "
+   echo "To update OpenVnmrJ with configuration, shim, probe, operator, etc. information"
+   echo "from a previous installation, copy the ovjUpdate script to /vnmr/bin on the"
+   echo "previous host computer. Executing ovjUpdate on that computer will create"
+   echo "a patch that can be installed on this computer"
+   echo " "
+fi
+
 
 rm -f $base_link
 # echo "\n>>>>>>  Finished the VnmrJ installation program.  <<<<<<"
@@ -669,4 +699,3 @@ then
       echo " "
    fi
 fi
-

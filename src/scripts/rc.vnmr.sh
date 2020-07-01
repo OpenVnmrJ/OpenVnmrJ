@@ -1,4 +1,9 @@
 #!/bin/sh
+# chkconfig: 5 99 99
+# description: Saves and restores
+### BEGIN INIT INFO
+# Required-Start: $network
+# Default-Start: 5
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -78,7 +83,7 @@ start_proc () {
 if [ -f $vnmrsystem/acqbin/acqpresent ]; then
    (echo "     clearing $vnmrsystem/acqqueue ") >/dev/console
    (cd $vnmrsystem/acqqueue; rm -f exp*)
-   ($vnmrsystem/bin/execkillacqproc start >/dev/console &)
+   ($vnmrsystem/acqbin/startStopProcs >/dev/console &)
    bootp_d=/usr/sbin/bootpd
    if [ -f $bootp_d ]
    then
@@ -90,7 +95,7 @@ fi
 }
 
 stop_proc () {
-   ($vnmrsystem/bin/execkillacqproc stop >/dev/console &)
+   ($vnmrsystem/acqbin/startStopProcs >/dev/console &)
 }
 
 
@@ -114,7 +119,7 @@ case $# in
 
 	    'stop')
 		if [[ $# == 1 || $# > 1 && "$2" == "procs" ]]; then
-		    stop_proc
+		    stop_pro:
 		fi
 		if [[ $# == 1 || $# > 1 && "$2" == "nmrwebd" ]]; then
 		    stop_nmrwebd
