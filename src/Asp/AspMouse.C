@@ -30,7 +30,7 @@ char AspMouse::userCursor[128];
 char AspMouse::userMacro[128];
 AspMouse::mouseState_t AspMouse::state = noState;
 AspMouse::mouseState_t AspMouse::origState = noState;
-AspMouse::mouseState_t AspMouse::restoreState = select;
+AspMouse::mouseState_t AspMouse::restoreState = noState;
 spAspRoi_t AspMouse::roi = nullAspRoi;
 AspAnno *AspMouse::anno = NULL;
 spAspTrace_t AspMouse::trace = nullAspTrace;
@@ -187,7 +187,17 @@ AspMouse::mouseState_t AspMouse::setState(mouseState_t newState) {
 	frame->draw();
     }
 
-    if(state != oldState) frame->updateMenu();
+    if(state != oldState)
+    {
+       frame->updateMenu();
+       if (state == noState)
+       {
+	   char str[20];
+           Wgetgraphicsdisplay(str, 20);
+	   if( ! strcmp(str,"dconi") ) execString("dconi('restart')\n");
+	   else if( ! strcmp(str,"ds") ) execString("ds('restart')\n");
+       }
+    }
     return state;
 }
 
@@ -668,7 +678,7 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 		else if(state == createBand && numCursors ==2)
 		  restoreState = ((mask & ctrl) || (mask & shift)) ? state : cursor2;
 		else
-		  restoreState = ((mask & ctrl) || (mask & shift)) ? state : select;
+		  restoreState = ((mask & ctrl) || (mask & shift)) ? state : noState;
 		//mouseHandled = true;
                 switch (state) {
 /*
