@@ -34,7 +34,7 @@
 
 // MAXSPEC 128
 typedef struct {
-  char key[MAXSTR];
+  char key[STR64];
   int yoff; // pixels
   char color[16];
   double scale; // additional scale to vs
@@ -545,7 +545,7 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
      if(last<first) last=first;
      if(last>ntraces) last=ntraces;
      count=0;
-     for(i=first;i<MAXSPEC && i<=last;i+=step) {
+     for(i=first;count<MAXSPEC && i<=last;i+=step) {
 /* 123456789 123456789
         ind = count % 9 + 1;
 */
@@ -562,8 +562,8 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
 	count++;
      }
 
-     if(ntraces>MAXSPEC || last>MAXSPEC) 
-       Winfoprintf("%d of %d spectra are displayed.",MAXSPEC,ntraces);
+     if( (ntraces>MAXSPEC || last>MAXSPEC) && ( ! retc) )
+       Winfoprintf("%d of %d spectra are displayed.",count,ntraces);
 
      argv++;
      argc--;
@@ -594,9 +594,14 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
      mspecShow=1;
      i = atoi(argv[1]);
      if(i<1 || i>MAXSPEC) {
-        Werrprintf("Invalid spec # %d (range: 1-128).",i);
+        Werrprintf("Invalid spec # %d (range: 1-%d).",i,MAXSPEC);
         ABORT;
      } else i--;
+     if (strlen(argv[2]) > sizeof(specList[i].key))
+     {
+        Werrprintf("mspec: key length limited to %d characters",sizeof(specList[i].key));
+        ABORT;
+     }
      strcpy(specList[i].key,argv[2]);
      if(argc>3) yoff=atoi(argv[3]);
      else if(!P_getreal(CURRENT,"vo", &voff, 1) && voff >= 0.0) {
@@ -638,12 +643,6 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
      argv++;
      argc--;
      while(argc) {
-        if(i>=MAXSPEC) {
-               Werrprintf("Invalid spec # %d (range: 1-128).",i);
-               ABORT;
-        }
-        specList[i].yoff=i*yoff;
-        specList[i].scale=scale;
 /*
         ind = floor(i/9);
         if(ind%2 == 0) ind = i % 9 + 1;
@@ -654,7 +653,6 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
 	else ind = 9 - i % 8;
 
 	sprintf(color,"Spectrum%d",ind); 
-        strcpy(specList[i].color, color);
         if(isdigit(argv[0][0]) && strstr(argv[0],"0x")==NULL &&
 		strstr(argv[0],",") == NULL) {
           trace = atoi(argv[0]);
@@ -664,15 +662,36 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
             argc--;
             continue;
 	  }
+        if(i>=MAXSPEC) {
+               Werrprintf("Invalid spec # %d (range: 1-%d).",i+1, MAXSPEC);
+               ABORT;
+        }
+        specList[i].yoff=i*yoff;
+        specList[i].scale=scale;
+        strcpy(specList[i].color, color);
 	  sprintf(specList[i].key,"SPEC:%d",trace); 
           i++;
         } else if(strstr(argv[0],":") != NULL) {
+          if(i>=MAXSPEC) {
+               Werrprintf("Invalid spec # %d (range: 1-%d).",i+1, MAXSPEC);
+               ABORT;
+          }
+          specList[i].yoff=i*yoff;
+          specList[i].scale=scale;
+          strcpy(specList[i].color, color);
+          if (strlen(argv[0]) > sizeof(specList[i].key))
+          {
+             Werrprintf("mspec: key length limited to %d characters",sizeof(specList[i].key));
+             ABORT;
+          }
           strcpy(specList[i].key,argv[0]);
           i++;
         } else if(!isdigit(argv[0][0]) || strstr(argv[0],"0x")==argv[0] || 
 		strstr(argv[0],",") != NULL) {
+        if(iColor<MAXSPEC) {
           strcpy(specList[iColor].color, argv[0]);
 	  iColor++;
+         }
         }
         argv++;
         argc--;
@@ -702,7 +721,7 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
      argc--;
      while(argc) {
         if(i>=MAXSPEC) {
-               Werrprintf("Invalid spec # %d (range: 1-128).",i);
+               Werrprintf("Invalid spec # %d (range: 1-%d).",i,MAXSPEC);
                ABORT;
         }
         if(isdigit(argv[0][0])) {

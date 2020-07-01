@@ -43,7 +43,7 @@
 #define FALSE	0
 #define TRUE	1
 #define BAND		10
-#define OUT_NUM		130	
+#define OUT_NUM		(MAXSPEC+2)
 
 #define OVERLAID_ALIGNED 3
 
