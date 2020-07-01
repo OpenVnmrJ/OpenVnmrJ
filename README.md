@@ -13,8 +13,8 @@ If you want to use or test OpenVnmrJ, download the release appropriate for your 
 
 The latest binary releases for OpenVnmrJ are available from [Releases](https://github.com/OpenVnmrJ/OpenVnmrJ/releases).  
 There are releases for:
-- RHEL/CentOS: Versions 6 and 7.
-- Ubuntu: Versions 14, 16, and 18.
+- RHEL/CentOS: Versions 6, 7, and 8.
+- Ubuntu: Versions 14, 16, 18, and 20.
 - MacOS: Versions 10.10 (Yosemite) to 10.15 (Catalina).
 
 ## Read more
