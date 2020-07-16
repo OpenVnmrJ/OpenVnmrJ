@@ -7,6 +7,7 @@ See the [Notes.txt](../../blob/master/Notes.txt) file for the release notes.
 As a spectrometer host, OpenVnmrJ Version 2 is compatible with:
 - RHEL/CentOS: Versions 6.8, 6.9, and 6.10
 - RHEL/CentOS: Versions 7.5, 7.6, 7.7, 8.1, and 8.2
+
 For data processing only, OpenVnmrJ Version 2 is also compatible with:
 - Ubuntu: Versions 14, 16, 18, and 20.
 - MacOS: Versions 10.10 (Yosemite) to 10.15 (Catalina).
