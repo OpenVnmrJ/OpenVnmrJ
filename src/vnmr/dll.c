@@ -734,7 +734,8 @@ static int priv_getline(int argc, char *argv[], int retc, char *retv[])
 }
 
 /**********************************/
-static void printmaxpeak(int fp, int np, int posNeg, int retc, char *retv[])
+static void printmaxpeak(int fp, int np, int posNeg, int first, int last,
+                         int retc, char *retv[])
 /**********************************/
 {
   int dummy;
@@ -744,6 +745,11 @@ static void printmaxpeak(int fp, int np, int posNeg, int retc, char *retv[])
   int i = 0;
   float maxp=0.0;
   double frq=0.0;
+  if (last && (last < numspec))
+     numspec=last;
+  if (first && (first > 0) && (first <= numspec))
+    i = first-1;
+    
   while(numspec > 0) {
     if ( (spectrum = calc_spec(i,0,FALSE,TRUE,&dummy)) ) {
       getpeak(spectrum,fp,np, posNeg, &maxpeak,&freq);
@@ -782,7 +788,8 @@ static void printpeak(int fp, int np, int posNeg, int retc, char *retv[])
 }
 
 /*************/
-static int checkinput(int argc, char *argv[], int *posNeg)
+static int checkinput(int argc, char *argv[], int *posNeg,
+                      int *first, int *last)
 /*************/
 {
   if (isReal(*++argv))
@@ -807,12 +814,34 @@ static int checkinput(int argc, char *argv[], int *posNeg)
   set_sp_wp(&sp, &wp, sw, fn/2, rflrfp);
   exp_factors(TRUE);
   *posNeg = 0;
-  if (argc == 4)
+  if (argc >= 4)
   {
      if ( ! strcmp(*++argv,"pos") )
+     {
         *posNeg = 1;
+        argv++;
+      
+     }
      else if ( ! strcmp(*argv,"neg") )
+     {
         *posNeg = -1;
+        argv++;
+     }
+  }
+  if (argc > 3)
+  {
+     if (first != NULL)
+     {
+        if ( *argv && isReal(*argv))
+        {
+          *first = stringReal(*argv);
+          argv++;
+        }
+        if ( *argv && isReal(*argv))
+        {
+          *last = stringReal(*argv);
+        }
+     }
   }
   return(COMPLETE);
 }
@@ -836,11 +865,13 @@ int dll(int argc, char *argv[], int retc, char *retv[])
     scale *= normalize;
   if (strcmp(argv[0],"maxpeak")==0) {
     int posNegFlag = 0;
+    int first=0;
+    int last=0;
 
     if (argc>1)
-      if (checkinput(argc,argv, &posNegFlag))
+      if (checkinput(argc,argv, &posNegFlag, &first, &last))
         return(ERROR);
-    printmaxpeak(fpnt,npnt, posNegFlag, retc,retv);
+    printmaxpeak(fpnt,npnt, posNegFlag, first, last, retc,retv);
     appendvarlist("dummy");
   } 
   else if (strcmp(argv[0],"peak")==0)
@@ -848,7 +879,7 @@ int dll(int argc, char *argv[], int retc, char *retv[])
     int posNegFlag = 0;
 
     if (argc>1)
-      if (checkinput(argc,argv, &posNegFlag))
+      if (checkinput(argc,argv, &posNegFlag, NULL, NULL))
         return(ERROR);
     printpeak(fpnt,npnt, posNegFlag, retc,retv);
     appendvarlist("dummy");
@@ -860,7 +891,7 @@ int dll(int argc, char *argv[], int retc, char *retv[])
     int posNegFlag = 0;
 
     if (argc>1)
-      if (checkinput(argc,argv, &posNegFlag))
+      if (checkinput(argc,argv, &posNegFlag, NULL, NULL))
         return(ERROR);
     getpeakmin(spectrum,fpnt,npnt,&minpeak,&freq);
     disp_line((double) minpeak, freq, retc, retv);
