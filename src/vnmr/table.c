@@ -139,6 +139,7 @@ extern int create();
 extern int createparams();
 extern int CSschedule(int argc, char *argv[], int retc, char *retv[]);
 extern int data_dir();		/* magnetom */
+extern int datafit(int argc, char *argv[], int retc, char *retv[]);
 extern int dc2d();
 extern int dcon();
 extern int dconi();
@@ -651,6 +652,7 @@ static cmd_t vnmr_table[] = {
 	{"cz"         , dli,		NO_REEXEC, 0},
 	{"da"         , dg,		NO_REEXEC, 0},
 	{"data_dir"   , data_dir,	NO_REEXEC, 0},
+	{"datafit"    , datafit,	NO_REEXEC, 0},
 	{"db"         , ai,		NO_REEXEC, 10},
 	{"dc"         , ai,		NO_REEXEC, 10},
 	{"dc2d"       , dc2d,		NO_REEXEC, 10},

@@ -680,6 +680,192 @@ int averag(int argc, char *argv[], int retc, char *retv[])
 
 /*----------------------------------------------------------------------
 |
+|       datafit
+|       Fit a file of data points to zero (average) or first (linear)
+|       order polynomial
+|
++---------------------------------------------------------------------*/
+int datafit(int argc, char *argv[], int retc, char *retv[])
+{
+    int polyOrder=0;
+    int col[5];
+    double val[5];
+    FILE *fd = NULL;
+    symbol **root;
+    varInfo *v1 = NULL;
+    varInfo *v2 = NULL;
+    Rval *r1 = NULL;
+    Rval *r2 = NULL;
+    double sumx = 0.0;
+    double sumx2 = 0.0;
+    double sumy = 0.0;
+    double sumxy = 0.0;
+    double sumy2 = 0.0;
+    int index;
+    int ret;
+    char line[512];
+    int moreToDo = 1;
+
+    if (argc < 3)
+    {   Werrprintf("usage: %s(<polynomial order>,'file',<datafile>) or", argv[0]);
+        Werrprintf("usage: %s(<polynomial order>,'parX',<'parY'>)", argv[0]);
+        ABORT;
+    }
+    if ( ! strcmp(argv[1],"poly0")  )
+       polyOrder = 0;
+    else if ( ! strcmp(argv[1],"poly1") )
+       polyOrder = 1;
+    else
+    {  Werrprintf("%s: first argument must be 'poly0' or 'poly1'",argv[0]);
+       ABORT;
+    }
+    for (index=0; index<sizeof(col)/sizeof(int); index++)
+       col[index] = index;
+    if ( ! strcmp(argv[2],"file") )
+    {
+       if ( (fd = fopen( argv[3], "r" )) == NULL)
+       {
+          Werrprintf( "%s:  problem opening data file %s", argv[0], argv[2]);
+          ABORT;
+       }
+       index = 5;
+       while (index <= argc)
+       {
+          col[index-5] =  (int) stringReal(argv[index-1]) -1;
+          index++;
+       }
+    }
+    else
+    {
+       if ( argv[2][0] == '$' )
+       {
+          if ((root=selectVarTree(argv[2])) == NULL)
+          {
+             Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[2]);
+             ABORT;
+          }
+       }
+       else
+       {
+          root = getTreeRoot("current");
+       }
+       if ((v1 = rfindVar(argv[2],root)) == NULL)
+       {   Werrprintf("%s: x variable \"%s\" doesn't exist",argv[0],argv[2]);
+           ABORT;
+       }
+       r1 = v1->R;
+       if (polyOrder == 1)
+       {
+          if (argc < 4)
+          {
+             Werrprintf("usage: %s('poly1','parX','parY')", argv[0]);
+             ABORT;
+          }
+          if ( argv[3][0] == '$' )
+          {
+             if ((root=selectVarTree(argv[3])) == NULL)
+             {
+                Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[2]);
+                ABORT;
+             }
+          }
+          else
+          {
+             root = getTreeRoot("current");
+          }
+          if ((v2 = rfindVar(argv[3],root)) == NULL)
+          {   Werrprintf("%s: y variable \"%s\" doesn't exist",argv[0],argv[3]);
+              ABORT;
+          }
+          if ( v1->T.size != v2->T.size )
+          {   Werrprintf("%s: number of x variables (%d) not the same as y variables (%d)",
+                             argv[0],v1->T.size,v2->T.size);
+              ABORT;
+          }
+          r2 = v2->R;
+       }
+    }
+//    for (index=0; index<sizeof(col)/sizeof(int); index++)
+//        fprintf(stderr,"col[%d]: %d\n",index, col[index]);
+    index = 0;
+    while ( moreToDo )
+    {
+       if (fd)
+       {
+          moreToDo = (fscanf(fd, "%[^\n]\n", line) != EOF );
+          if ( ! moreToDo )
+             break;
+          ret = sscanf(line, "%lg %lg %lg %lg %lg\n", &(val[0]), &(val[1]), &(val[2]), &(val[3]), &(val[4]));
+       }
+       else
+       {
+          moreToDo = (index < v1->T.size);
+          if ( ! moreToDo )
+             break;
+          val[0] = r1->v.r;
+          r1 = r1->next; 
+          if (polyOrder == 1)
+          {
+             val[1] = r2->v.r;
+             r2 = r2->next; 
+          }
+       }
+       sumx += val[col[0]];
+       sumx2 += (val[col[0]]*val[col[0]]);
+       if (polyOrder == 1)
+       {
+          sumy += val[col[1]];
+          sumxy += (val[col[0]]*val[col[1]]);
+          sumy2 += (val[col[1]]*val[col[1]]);
+       }
+       index++;
+    }
+    if (fd)
+       fclose(fd);
+    if (polyOrder == 0)
+    {
+       double average;
+       double stddev;
+       double N;
+
+       N = (double) index;
+       average = sumx/N;
+       stddev = sqrt(fabs(sumx2 - sumx*sumx/N)/(N - 1.0));
+       if (retc)
+       {
+          retv[0] = realString(average);
+          if (retc>=2) retv[1] = realString(stddev);
+       }
+       else
+          Winfoprintf("average: %g  std. dev.: %g",average,stddev);
+    }
+    else
+    {
+       double denom;
+       double slope;
+       double intercept;
+       double rSquared;
+       double N;
+
+       N = (double) index;
+       denom = N*sumx2 - (sumx*sumx);
+       slope = ( N*sumxy - sumx*sumy ) / denom;
+       intercept = ( sumx2*sumy - sumx*sumxy ) / denom;
+       rSquared = (sumxy -sumx*sumy/N) / sqrt((sumx2 - sumx*sumx/N) * (sumy2 - sumy*sumy/N));
+       if (retc)
+       {
+          retv[0] = realString(slope);
+          if (retc>=2) retv[1] = realString(intercept);
+          if (retc>=3) retv[2] = realString(rSquared);
+       }
+       else
+          Winfoprintf("slope: %g  intercept: %g R squared: %g",slope,intercept,rSquared);
+    }
+    RETURN;
+}       
+
+/*----------------------------------------------------------------------
+|
 |       ernst(t1,<90degree>)
 |       Calculate the ernst angle pulse with a guess at t1 
 |               and the 90-degree pulse calibration.
