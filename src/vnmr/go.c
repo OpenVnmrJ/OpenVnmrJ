@@ -467,11 +467,12 @@ protectedRead(int fd)
 {
    sigset_t    blockmask, savemask;
    int   ready;
+   int   ret __attribute__((unused));
 
    sigemptyset( &blockmask );
    sigaddset( &blockmask, SIGALRM );
    sigprocmask( SIG_BLOCK, &blockmask, &savemask );
-   read(fd,&ready,sizeof(int));
+   ret = read(fd,&ready,sizeof(int));
    sigprocmask( SIG_SETMASK, &savemask, NULL );
    return(ready);
 }
@@ -569,8 +570,9 @@ static int checkVpMode(char *label)
                   sprintf(path,"%s/persistence/.vp_%d_%d", userdir, jParent, i);
                   if ( (fd = open(path, O_RDONLY)) != -1)
                   {
-                     read(fd, &processPort, sizeof(processPort));
-                     read(fd, &processPid, sizeof(processPid));
+		     int ret __attribute__((unused));
+                     ret = read(fd, &processPort, sizeof(processPort));
+                     ret = read(fd, &processPid, sizeof(processPid));
                      close(fd);
                      if (label)
                         strcpy(label,tmpStr);
@@ -633,7 +635,7 @@ int acq(int argc, char *argv[], int retc, char *retv[])
     double  saveAcqCycles;
 
     int   ret;
-    int   psg_return_val=0;
+    int   psg_return_val __attribute__((unused));
 
 #ifdef CLOCKTIME
     /* Turn on a clocktime timer */
@@ -1591,7 +1593,7 @@ static int jacq(int acqi_fid, int spinCadCheck,
     Socket  *tSocket;
     Socket* connect2Jpsg(int,char*);
 
-    int   psg_busted;		/* added September 1994 */
+    int   psg_busted __attribute__((unused));	/* added September 1994 */
 
     double  maxsw;
     double   max,min,step;
@@ -4385,7 +4387,7 @@ double	rval;
 mode_t	filemode;
 int	itemp;
 int	dlen,len;
-int	R_speced,R_start,R_width,rev;
+int	R_start,R_width,rev;
 int     R_offset,R_offsetTmp;
 int     R_any = 0;
 int	tree;
@@ -4407,7 +4409,7 @@ char    recDir[MAXPATH];
    aptr = a_name;
 
    R_offset = -1;
-   R_speced=0; R_start=1; R_width=2;
+   R_start=1; R_width=2;
    dlen=MAXPATH;
 
 /*---------------------------------------------------------
@@ -4973,10 +4975,12 @@ static int isTemplateFeature(char *ptr, char *dateChar, char *val, int len)
    return(0);
 }
 
-static int checkChar( register int ptr, int charType, register char *defChars, int replaceChar )
+static int checkChar( int ptr, int charType,
+		      char *defChars, int replaceChar, int *subst )
 {
-   register int i;
+   int i;
 
+   *subst=0;
    switch (charType)
    {
       case 1:   {
@@ -4989,6 +4993,7 @@ static int checkChar( register int ptr, int charType, register char *defChars, i
                       if (ptr == *(defChars+i) )
                          return(ptr);
                    }
+                   *subst=1;
                    return(replaceChar);
                 }
                 break;
@@ -4999,7 +5004,10 @@ static int checkChar( register int ptr, int charType, register char *defChars, i
                    for (i=0; i < numChars; i++)
                    {
                       if (ptr == *(defChars+i) )
+		      {
+                         *subst=1;
                          return(replaceChar);
+		      }
                    }
 
                 }
@@ -5038,6 +5046,7 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
    char replaceChar = '_';
    int  replaceTemplate = 1;
    int  replacePair = 0;     /* This selects default of par for third argument */
+   int  previousReplace = 0;
    char *pptr;
    char *rptr;
    char *sptr;
@@ -5116,6 +5125,7 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
          strcat(extraChars,"/");
          defChars = extraChars;
       }
+
       if (replaceTemplate)
          currentDateLocal(dateChar, MAXPATH);
       strcpy(parlist,"");
@@ -5167,15 +5177,21 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
                while(*sptr != '\000')
                {
                   int newChar;
+		  int subst;
 
-                  newChar = checkChar( *sptr, charType, defChars, replaceChar );
+                  newChar = checkChar( *sptr, charType, defChars,
+				       replaceChar, &subst );
                   if ( (plen < MAXCHKNAME) && newChar &&
-                       ( (plen == 1) || (*(pptr-1) != newChar) || (newChar != replaceChar) ) )
+                       ( (plen == 1) || (*(pptr-1) != newChar) ||
+		         (newChar != replaceChar) ||
+		         ( ! subst ) ||
+		         ( ! previousReplace) ) )
                   {
                      *pptr++ = newChar;
                      plen++;
                      *pptr='\000';
                   }
+	          previousReplace = subst;
                   if ( replacePair && (rlen < MAXCHKNAME) && newChar &&
                        ( (rlen == 1) || (*(rptr-1) != newChar) || (newChar != replaceChar) ) )
                   {
@@ -5213,15 +5229,21 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
                while(*sptr != '\000')
                {
                   int newChar;
+		  int subst;
 
-                  newChar = checkChar( *sptr, charType, defChars, replaceChar );
+                  newChar = checkChar( *sptr, charType, defChars,
+				       replaceChar, &subst );
                   if ( (plen < MAXCHKNAME) && newChar &&
-                       ( (plen == 1) || (*(pptr-1) != newChar) || (newChar != replaceChar) ) )
+                       ( (plen == 1) || (*(pptr-1) != newChar) ||
+		         (newChar != replaceChar) ||
+		         ( ! subst ) ||
+		         ( ! previousReplace) ) )
                   {
                      *pptr++ = newChar;
                      plen++;
                      *pptr='\000';
                   }
+	          previousReplace = subst;
                   if ( replacePair && (rlen < MAXCHKNAME) && newChar &&
                        ( (rlen == 1) || (*(rptr-1) != newChar) || (newChar != replaceChar) ) )
                   {
@@ -5265,15 +5287,21 @@ int chkname(int argc, char *argv[], int retc, char *retv[])
          else
          {
             int newChar;
+	    int subst;
 
-            newChar = checkChar( *ptr, charType, defChars, replaceChar );
+            newChar = checkChar( *ptr, charType, defChars,
+				 replaceChar, &subst );
             if ( (plen < MAXCHKNAME) && newChar &&
-                 ( (plen == 1) || (*(pptr-1) != newChar) || (newChar != replaceChar) ) )
+                 ( (plen == 1) || (*(pptr-1) != newChar) ||
+		   (newChar != replaceChar) ||
+		   ( ! subst ) ||
+		   ( ! previousReplace) ) )
             {
                *pptr++ = newChar;
                plen++;
                *pptr='\000';
             }
+	    previousReplace = subst;
             if ( (rlen < MAXCHKNAME) && newChar &&
                  ( (rlen == 1) || (*(rptr-1) != newChar) || (newChar != replaceChar) ) )
             {
@@ -5396,7 +5424,6 @@ static int fireUpJPSG()
     {
         char cmd[256];
         int RevID = 5;
-        int ret;
 
        /*
         sprintf(cmd,"/usr25/greg/projects/NewPSG/java/code/jpsg/Jpsg %d %d &",
@@ -5443,10 +5470,10 @@ static int fireUpJPSG()
            sprintf(pidstr,"%ld", (long) HostPid);
            /* set_effective_user(); */
     
-            ret = execlp("java","java",Arg1,Arg2,"Jpsg",RevIdStr,pidstr,NULL);
             /* ret = execlp(cmd,"Jpsg",RevIdStr,pidstr,NULL); */
             /* execlp("/vnmr/jpsg/Jpsg","Jpsg",RevIdStr,pidstr,NULL); */
-	    Werrprintf("java could not execute");
+            if ( execlp("java","java",Arg1,Arg2,"Jpsg",RevIdStr,pidstr,NULL) )
+	       Werrprintf("JPSG could not execute");
         }
 
 

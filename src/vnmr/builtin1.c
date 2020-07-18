@@ -1041,7 +1041,7 @@ int f_read(int argc, char *argv[], int retc, char *retv[])
 	ABORT;
     }
     if ( (stream = fopen(argv[1],"r")) )
-    {	int ret;
+    {	int ret __attribute__((unused));
         char saveOperator[MAXSTR] = "";
 
 
@@ -2579,8 +2579,7 @@ int printoff(int argc, char *argv[], int retc, char *retv[])
       {
           if (access(argv[1], F_OK))  
           {
-             sprintf(s,"rm -f \"%s\"", printpath);
-             system(s);
+             unlink(printpath);
           }
       }
 
@@ -3298,7 +3297,6 @@ static int writedata(FILE *oFile, char *buffer, int *xcheck, int *ycheck,
    int xch;
    int diff;
    int lastnum = 0;
-   int lastdiff = 0;
    int doXcheck = 0;
 
    len = strlen(buffer);
@@ -3398,7 +3396,6 @@ static int writedata(FILE *oFile, char *buffer, int *xcheck, int *ycheck,
          }
          num[j] = '\0';
          lastnum = atoi(num);
-         lastdiff = diff;
          if (diff)
          {
             xch = lastnum + last;
@@ -3789,6 +3786,7 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
     int hasPar2 = 1;
     int cmpLen = 0;
     int cmpHash = 0;
+    int bom = 1;
 
     /* Put args into variables */ 
     /* Must be at least 3 args */
@@ -3883,6 +3881,26 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
     }
     else while (priv_getline(inputFile, line1, LINE_LIMIT))
     {
+        if (bom)
+        {
+           // Remove any potential byte order mark (bom) at the beginning
+           // of the file
+           if ( ! isascii(line1[0]) )
+           {
+              int i = 0;
+
+              bom = 0;
+              while ( ! isascii(line1[bom]) )
+                 bom++;
+              while ( line1[bom+i] != '\0' )
+              {
+                 line1[i] = line1[bom+i];
+                 i++;
+              }
+              line1[i] = '\0';
+           }
+           bom = 0;
+        }
         length = strlen(line1);
         if(length == 0)
             continue;
@@ -4212,6 +4230,7 @@ int encipher(int argc, char *argv[], int retc, char *retv[])
    int inplace = 0;
    int origIsText = 1;
    char *toFile;
+   int ret __attribute__((unused));
 
    if ((argc >= 4) && ! strcmp(argv[1],"mac") )
    {
@@ -4265,10 +4284,10 @@ int encipher(int argc, char *argv[], int retc, char *retv[])
       Werrprintf( "%s: can't open %s", argv[0], toFile );
       ABORT;
    }
-   read( binfile, &ch,  sizeof(int));
+   ret = read( binfile, &ch,  sizeof(int));
    if (ch == 616)
    {
-      read( binfile, &ch,  sizeof(int));
+      ret = read( binfile, &ch,  sizeof(int));
       if (ch == 1954)
          origIsText = 0;
    }
@@ -4310,12 +4329,12 @@ int encipher(int argc, char *argv[], int retc, char *retv[])
                ABORT;
             }
             ch = 616;
-            write(outfile, &ch, sizeof(int) );
+            ret = write(outfile, &ch, sizeof(int) );
             ch = 1954;
-            write(outfile, &ch, sizeof(int) );
+            ret = write(outfile, &ch, sizeof(int) );
             while ( read( binfile, &ch,  sizeof(int)) > 0)
             {
-               write(outfile, &ch, sizeof(int) );
+               ret = write(outfile, &ch, sizeof(int) );
             }
             close(binfile);
             close(outfile);
@@ -4338,13 +4357,13 @@ int encipher(int argc, char *argv[], int retc, char *retv[])
             ABORT;
          }
          outch = 616;
-         write(outfile, &outch, sizeof(int) );
+         ret = write(outfile, &outch, sizeof(int) );
          outch = 1954;
-         write(outfile, &outch, sizeof(int) );
+         ret = write(outfile, &outch, sizeof(int) );
          while ( (ch = getc(txtfile)) != EOF)
          {
             outch = ch + 666;
-            write(outfile, &outch, sizeof(int) );
+            ret = write(outfile, &outch, sizeof(int) );
          }
          fclose(txtfile);
          txtfile = NULL;

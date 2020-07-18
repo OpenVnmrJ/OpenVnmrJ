@@ -7,6 +7,7 @@
 #
 # For more information, see the LICENSE file.
 #
+# set -x
 
 
 if [ x$vnmrsystem = "x" ]
@@ -30,8 +31,13 @@ if [[ $# -ge 1 ]]; then
 fi
 if hash gsettings 2> /dev/null; then
     schema="org.gnome.desktop.background"
-    gsettings set $schema picture-uri $icon
-    gsettings set $schema picture-options $style
+    if [[ -z $DBUS_SESSION_BUS_ADDRESS ]]; then
+       dbus-launch gsettings set $schema picture-uri $icon 2> /dev/null
+       dbus-launch gsettings set $schema picture-options $style 2> /dev/null
+    else
+       gsettings set $schema picture-uri $icon 2> /dev/null
+       gsettings set $schema picture-options $style 2> /dev/null
+    fi
 else
     schema="/desktop/gnome/background/"
     gconftool-2 --type=string --set ${schema}/picture_filename $icon

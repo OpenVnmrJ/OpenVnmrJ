@@ -723,12 +723,11 @@ fi
 disableSelinux
 
 #-----------------------------------------------------------------
-# Check if the Expproc is still running. If so run 
-# ${vnmrsystem}/execkillacqproc,  afterall, we are already root.
+# Check if the Expproc is still running. If so, terminate it
 #-----------------------------------------------------------------
-npids=$(ps -e  | grep Expproc | awk '{ printf("%d ",$1) }')
-if [[ x"$npids" != "x" ]] ; then 
-    ${vnmrsystem}/bin/execkillacqproc
+npids=$(pgrep Expproc)
+if [[ ! -z $npids ]]; then
+    ${vnmrsystem}/acqbin/startStopProcs
 fi
 
 #-----------------------------------------------------------------
@@ -837,11 +836,25 @@ fi
 rm -f /etc/init.d/rc.vnmr
 cp -p $vnmrsystem/acqbin/rc.vnmr /etc/init.d
 chmod +x /etc/init.d/rc.vnmr
-(cd /etc/rc5.d; if [ ! -h S99rc.vnmr ]; then 
-    ln -s ../init.d/rc.vnmr S99rc.vnmr; fi)
-(cd /etc/rc0.d; if [ ! -h K99rc.vnmr ]; then
-    ln -s ../init.d/rc.vnmr K99rc.vnmr; fi)
 touch $vnmrsystem/acqbin/acqpresent
+owner=$(ls -l $vnmrsystem/vnmrrev | awk '{ printf($3) }')
+group=$(ls -l $vnmrsystem/vnmrrev | awk '{ printf($4) }')
+chown $owner:$group $vnmrsystem/acqbin/acqpresent
+chmod 644 $vnmrsystem/acqbin/acqpresent
+if [[ -x /usr/bin/systemctl ]] ; then
+   /sbin/chkconfig --level 5 rc.vnmr on 2> /dev/null
+   rm -f /usr/lib/systemd/system/vnmr.service
+   cp $vnmrsystem/acqbin/vnmr.service /usr/lib/systemd/system/.
+   chmod 644 /usr/lib/systemd/system/vnmr.service
+#   if [ ! hash systemctl ]; then
+#      systemctl enable rc.vnmr
+#   fi
+else
+   (cd /etc/rc5.d; if [ ! -h S99rc.vnmr ]; then 
+    ln -s ../init.d/rc.vnmr S99rc.vnmr; fi)
+   (cd /etc/rc0.d; if [ ! -h K99rc.vnmr ]; then
+    ln -s ../init.d/rc.vnmr K99rc.vnmr; fi)
+fi
 
 #-----------------------------------------------------------------
 # Connection to FTS chiller if present
@@ -910,6 +923,6 @@ then
    echo "You must reboot Linux for these changes to take effect"
    echo "As root type 'reboot' to reboot Linux"
 else
-   ${vnmrsystem}/bin/execkillacqproc
+   ${vnmrsystem}/acqbin/startStopProcs
 fi
 

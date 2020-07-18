@@ -245,6 +245,19 @@ setWallPaper() {
   fi
 }
 
+setDeskTop() {
+   cp "$vnmrsystem"/user_templates/$1 Desktop/.
+   if [[ $as_root = "y" ]]; then
+      chown "$name_add":"$nmr_group" $1
+   fi
+   if [[ -d ./.local/share/applications ]]; then
+      cp "$vnmrsystem"/user_templates/$1 .local/share/applications/.
+      if [[ $as_root = "y" ]]; then
+         chown "$name_add":"$nmr_group" .local/share/applications/$1
+      fi
+   fi
+}
+
 ##########################
 #  start of main script
 ##########################
@@ -526,7 +539,7 @@ else  #current user is root
         then
             if [ x$lflvr != "xdebian" ]
             then
-                /usr/sbin/useradd -d"$dir_name/$name_add" -s/bin/csh -u$num -g$nmrgnum "$name_add"
+                /usr/sbin/useradd -d"$dir_name/$name_add" -s/bin/bash -u$num -g$nmrgnum "$name_add"
                 /usr/bin/passwd -f -u "$name_add"
 	        chmod 755 "$dir_name/$name_add"
             else
@@ -563,7 +576,7 @@ else  #current user is root
             # $ostype not Linux, not Interix
             /bin/cp /etc/passwd /etc/passwd.bk
             
-            stuff="$name_add::$num:$nmrgnum:$name_add:$dir_name/$name_add:/bin/csh"
+            stuff="$name_add::$num:$nmrgnum:$name_add:$dir_name/$name_add:/bin/bash"
 
             (sed '$i\
 '"$stuff"'' /etc/passwd >/tmp/newpasswd)
@@ -693,6 +706,7 @@ else  #current user is root
             if [ x$ostype = "xLinux" ]
             then
                 cp_backup "$vnmrsystem/user_templates/.vnmrenv" "$cur_homedir/.vnmrenv"
+                cp_backup "$vnmrsystem/user_templates/.vnmrenvbash" "$cur_homedir/.vnmrenvbash"
                 cp_backup "$vnmrsystem/user_templates/.vnmrenvsh" "$cur_homedir/.vnmrenvsh"
                 cp_backup "$vnmrsystem/user_templates/.vxresource" "$cur_homedir/.vxresource"
             fi
@@ -1276,35 +1290,15 @@ then
          chgrp "$nmr_group" Desktop
       fi
    fi
-   cd Desktop
-   cp "$vnmrsystem"/user_templates/vnmrj.desktop vnmrj.desktop
-   if test $as_root = "y"
-   then
-      chown "$name_add":"$nmr_group" vnmrj.desktop
+   setDeskTop vnmrj.desktop
+   if [ "x$name_add" = x$sys_user ]; then
+      setDeskTop vnmrjadmin.desktop
    fi
-   if [ "x$name_add" = x$sys_user ]
-   then
-      cp "$vnmrsystem"/user_templates/vnmrjadmin.desktop vnmrjadmin.desktop
-      if test $as_root = "y"
-      then
-         chown "$name_add":"$nmr_group" vnmrjadmin.desktop
-      fi
+   if [ -f "$vnmrsystem"/templates/vnmrj/properties/labelResources_ja.properties ]; then
+      setDeskTop vnmrjja.desktop
    fi
-   if [ -f "$vnmrsystem"/templates/vnmrj/properties/labelResources_ja.properties ]
-   then
-      cp "$vnmrsystem"/user_templates/vnmrjja.desktop vnmrjja.desktop
-      if test $as_root = "y"
-      then
-         chown "$name_add":"$nmr_group" vnmrjja.desktop
-      fi
-   fi
-   if [ -f "$vnmrsystem"/templates/vnmrj/properties/labelResources_zh_CN.properties ]
-   then
-      cp "$vnmrsystem"/user_templates/vnmrjzh.desktop vnmrjzh.desktop
-      if test $as_root = "y"
-      then
-         chown "$name_add":"$nmr_group" vnmrjzh.desktop 
-      fi
+   if [ -f "$vnmrsystem"/templates/vnmrj/properties/labelResources_zh_CN.properties ]; then
+      setDeskTop vnmrjzh.desktop
    fi
    setWallPaper
 fi

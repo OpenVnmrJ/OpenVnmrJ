@@ -1,0 +1,122 @@
+from __future__ import print_function
+import os
+import glob
+import sys
+import string
+import datetime
+sys.path.append(os.path.join(os.getcwd(), 'patch'))
+import myShutil # for better copytree()
+
+swDir = os.path.join(os.getcwd(),os.pardir)
+
+# ---------------   copy files and create the patch build ---------------------
+
+# get envirnment
+env = Environment(ENV = os.environ)
+
+# define the patch name
+patchTarget = datetime.date.today().strftime("custom_mmi_%Y-%m-%d")
+patchTarget = 'ver81'
+
+
+# patchDir = os.path.join(swDir,os.pardir,pardir,os.pardir,
+patchDir = os.path.join(os.getcwd(),patchTarget)
+
+cmd = 'rm -rf ' + patchDir
+Execute(cmd);
+cmd = 'rm -f ' + patchTarget + '.zip'
+Execute(cmd);
+os.makedirs(patchDir)
+
+# ---------------   Patch specific addition need to go here --------
+# You can add tiems here or create a separate SConstruct.105
+# eg: SConscript('SConstruct.105')
+# create any neccessary vnmr-subdirectories inside the patch directory
+# eg: binDir    = os.path.join(patchDir,'bin')
+#     if not os.path.exists(binDir):
+#         os.makedirs(binDir)
+#
+#---------------------------------------------------------------------
+#
+
+codeDir    = os.path.join(patchDir,'code')
+if not os.path.exists(codeDir):
+   os.makedirs(codeDir)
+
+binDir    = os.path.join(codeDir,'patch','bin')
+if not os.path.exists(binDir):
+   os.makedirs(binDir)
+
+acqbinDir    = os.path.join(codeDir,'patch','acqbin')
+if not os.path.exists(acqbinDir):
+   os.makedirs(acqbinDir)
+
+manualDir = os.path.join(codeDir,'patch','manual')
+if not os.path.exists(manualDir):
+   os.makedirs(manualDir)
+
+# src  = os.path.join(swDir,'scripts','99-CP210x.rules')
+# dest = os.path.join(acqbinDir,'99-CP210x.rules')
+# Execute(Copy(dest,src))
+# Execute(Chmod(dest,0o644))
+
+binList = [
+               'execkillacqproc',
+               'makesuacqproc',
+               'makeuser',
+               'ovjUpdate',
+               'ovjWallPaper',
+               'patchinstall',
+               'setacq',
+               'sudoins',
+             ]
+
+for i in binList:
+    dest = os.path.join(binDir,i)
+    src  = os.path.join(swDir,'scripts',i+'.sh')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0o755))
+
+acqbinList = [
+               'ovjProcs',
+               'rc.vnmr',
+               'startStopProcs',
+               'vnmr.service',
+             ]
+
+for i in acqbinList:
+    dest = os.path.join(acqbinDir,i)
+    src  = os.path.join(swDir,'scripts',i+'.sh')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0o755))
+
+codeList = [
+               'chksystempkgs',
+               'ins_vnmr2',
+               'installpkgs',
+               'vnmrsetup',
+             ]
+
+for i in codeList:
+    if (i=="ins_vnmr2"):
+       dest = os.path.join(codeDir,'ins_vnmr')
+    else:
+       dest = os.path.join(codeDir,i)
+    src  = os.path.join(swDir,'scripts',i+'.sh')
+    Execute(Copy(dest,src))
+    Execute(Chmod(dest,0o755))
+
+i = "ovjUseRepo"
+dest = os.path.join(patchDir,i)
+src  = os.path.join(swDir,'scripts',i+'.sh')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0o755))
+
+i = "ovjUpdate"
+dest = os.path.join(manualDir,i)
+src  = os.path.join(swDir,'common','manual',i)
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0o644))
+
+cmd = 'cd ' + patchDir + ';zip -ry ver81.zip *; mv ver81.zip ../.; cd ..; rm -rf '+patchDir
+Execute(cmd);

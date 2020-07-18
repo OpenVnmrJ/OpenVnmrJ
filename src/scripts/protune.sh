@@ -1,6 +1,4 @@
-#! /bin/sh
-# @(#)protune.sh 22.1 03/24/08 2005 
-# 
+#! /bin/bash
 #
 # Copyright (C) 2015  University of Oregon
 # 
@@ -10,6 +8,7 @@
 # For more information, see the LICENSE file.
 # 
 #
+# set -x
 
 # Run the ProTune algorithm
 
@@ -155,19 +154,17 @@ fi
 
 if [ x$AUTOFLAG = "xauto" ]; then
     # DISPLAY on the correct screen
-    if [ -r $vnmruser/.DISPLAY ]; then
-        export DISPLAY=`cat $vnmruser/.DISPLAY`
+    if [ -r $USERDIR/.DISPLAY ]; then
+       export DISPLAY=$(cat $USERDIR/.DISPLAY)
+    elif [[ -r $SYSDIR/acqbin/.DISPLAY ]]; then
+       export DISPLAY=$(cat $SYSDIR/acqbin/.DISPLAY)
+    fi
+    if [[ -z $DISPLAY ]]; then
+       export DISPLAY=:0
     fi
 fi
 
 # Note: The "eval" is needed to get the quotes right in the command string
-ostype=`uname -s`
-if [ x$ostype = "xInterix" ]
-then
-  eval $SYSDIR/bin/protune.exe $DEB $PROBEID -probe $PROBE $SW $STO $GUIFLAG $INFOFLAG $UCUT $LCUT -sweep mt $IP -lockPort $LOCKPORT $MATCH $TUNEMODE $TUNECMD $MATCH2 $TUNEMODE2 $TUNECMD2 &
-
-
-else
   #echo -------- vnmruser=$vnmruser
   #echo -------- USERDIR=$USERDIR
   #echo -------- DISPLAY=$DISPLAY
@@ -179,4 +176,3 @@ else
 
   eval $JAVA $DBG -mx128m -classpath $JAR -Dsysdir=$SYSDIR -Duserdir=$USERDIR $MAIN $DEB $PROBEID -probe $PROBE $SW $STO $GUIFLAG $INFOFLAG $UCUT $LCUT -sweep mt $IP -lockPort $LOCKPORT -systunedir $SYSTUNEDIR $MATCH $TUNEMODE $TUNECMD $MATCH2 $TUNEMODE2 $TUNECMD2 $EXEC > /dev/null &
 
-fi

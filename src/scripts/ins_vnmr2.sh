@@ -516,6 +516,7 @@ then
    fi
    nmr_home="/home"
    update_user_group
+   chmod 755 $nmr_home/$nmr_adm
 fi
 
 if [ ! -d "$dest_dir" ]
@@ -893,9 +894,9 @@ else
           then
              if [ x$lflvr != "xdebian" ]
              then
-                (su $nmr_adm -fc "cp -r $source_dir/code/jre.linux $dest_dir"/jre)
+                (su $nmr_adm -fc "cp -r $source_dir/code/jre.linux $dest_dir"/jre; chmod -R 755 $dest_dir/jre)
              else
-                (sudo -u $nmr_adm cp -r $source_dir/code/jre.linux $dest_dir/jre )
+                (sudo -u $nmr_adm cp -r $source_dir/code/jre.linux $dest_dir/jre; chmod -R 755 $dest_dir/jre)
              fi
           else
              (cp -r "$source_dir"/"$tar_name" "$dest_dir"/jre)
@@ -1698,6 +1699,16 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       sudo -u $nmr_adm chmod 644  "$dest_dir"/vnmrrev
    fi
 
+   if [[ -d $src_code_dir/patch ]]; then
+      echo "Updating for CentOS 8.1"
+      logmsg "Updating for CentOS 8.1"
+      if [ x$lflvr != "xdebian" ]
+      then
+         su - $nmr_adm -c "cp -r --preserve=mode $src_code_dir/patch/* /vnmr"
+      else
+         sudo -i -u $nmr_adm cp -r --preserve=mode $src_code_dir/patch/* /vnmr
+      fi
+   fi
    if [ x$os_version = "xwin" ]
    then
    prim_group=`/usr/bin/id -Gn $nmr_adm | $NAWK '{print $1}'`
@@ -1711,40 +1722,19 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       chgrp -hR $nmr_group "$dest_dir"
    fi
 
-   # finally make sure that execkill is owned by root, executable by root
+   # for VnmrJ set user ID on execution
+   # execkillacqproc so everyone can run "su acqproc"
+   # loginvjpassword so everyone can change password file which is owned by the admin
+   # cptoconpar so everyone can update sysgcoil in conpar
    if [ x$lflvr != "xdebian" ]
    then
-      chown $rootuser "$dest_dir"/bin/execkillacqproc
-      chmod 500  "$dest_dir"/bin/execkillacqproc
+      chmod 4775 "$dest_dir"/bin/execkillacqproc
+      chmod 4755 "$dest_dir"/bin/loginvjpassword
+      chmod 4755 "$dest_dir"/bin/cptoconpar
    else
-      sudo chown $rootuser "$dest_dir"/bin/execkillacqproc
-      sudo chmod 500  "$dest_dir"/bin/execkillacqproc
-   fi
-
-   if [ -f "$dest_dir"/bin/killroboproc ]
-   then
-     # make sure killroboproc is owned by root, executed as root
-     if [ x$lflvr != "xdebian" ]
-     then
-        chown $rooruser:$rootuser "$dest_dir"/bin/killroboproc
-        chmod 4755 "$dest_dir"/bin/killroboproc
-     else
-        sudo chown $rooruser:$rootuser "$dest_dir"/bin/killroboproc
-        sudo chmod 4755 "$dest_dir"/bin/killroboproc
-     fi
-   fi
-
-   # for VnmrJ set user ID on execution for /vnmr/bin/loginvjpassword
-   # this way everyone can change password file which is owned by the admin
-   if [ -f "$dest_dir"/bin/loginvjpassword ]
-   then
-       chmod 4755 "$dest_dir"/bin/loginvjpassword
-   fi
-   # for VnmrJ set user ID on execution for /vnmr/bin/cptoconpar
-   # this way everyone can update sysgcoil in conpar
-   if [ -f "$dest_dir"/bin/cptoconpar ]
-   then
-       chmod 4755 "$dest_dir"/bin/cptoconpar
+      sudo chmod 4775 "$dest_dir"/bin/execkillacqproc
+      sudo chmod 4755 "$dest_dir"/bin/loginvjpassword
+      sudo chmod 4755 "$dest_dir"/bin/cptoconpar
    fi
 
    if [ x$os_version = "xwin" ] 
@@ -1818,6 +1808,10 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
         if [ -f /etc/init.d/postgresql ];then
            /etc/init.d/postgresql stop
            mv /etc/init.d/postgresql /etc/init.d/postgresql.moveAside
+        fi
+        # Use older version. New version has problem with client server protocol
+        if [ $distmajor -eq 8 ] && [ -d "$dest_dir"/pgsql/bin_ver7 ] ; then
+           mv "$dest_dir"/pgsql/bin_ver7 "$dest_dir"/pgsql/bin
         fi
 
      else
@@ -2093,8 +2087,8 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       # add, admin username and the programs/scripts to run without passwords
       logmsg "Running sudoers script"
       "$dest_dir"/bin/sudoins $nmr_adm $nmr_group >> $logfile 2>&1
-      chown $rootuser "$dest_dir"/bin/sudoins
-      chmod 500 "$dest_dir"/bin/sudoins
+      # chown $rootuser "$dest_dir"/bin/sudoins
+      # chmod 500 "$dest_dir"/bin/sudoins
       logmsg "sudoers script complete"
    fi
 
