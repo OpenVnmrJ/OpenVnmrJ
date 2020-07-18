@@ -469,8 +469,7 @@ void AspAnno::setRoiColor(int &roiColor, int &thick) {
    if(selected == ROI_SELECTED) {
         roiColor = ACTIVE_COLOR;
    } else if(lineColor.length()>1) {
-        set_anno_color((char *)lineColor.c_str());
-        roiColor = -1;
+        roiColor = set_anno_color((char *)lineColor.c_str());
    } else roiColor = color;
 
    // set thickness

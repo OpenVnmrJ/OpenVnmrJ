@@ -85,7 +85,7 @@ void set_line_thickness(const char *thick);
 void set_spectrum_thickness(char *min, char *max, double ratio);
 void set_spectrum_width(int thick);
 void set_line_width(int thick);
-void set_anno_color(const char *colorName);
+int set_anno_color(const char *colorName);
 void set_anno_font(const char *fontName, const char *fontStyle, const char *fontColor, int fontSize);
 void set_transparency_level(double n); // 0: opaque,  1.0: transparent
 void draw_arrow(int x1, int y1, int x2, int y2, int thick, int color);
