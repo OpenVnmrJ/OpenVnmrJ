@@ -2933,7 +2933,7 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
             if (pv[1] < 0)
             {
                rgbAlpha = 255;
-               setIcolor(-pv[1]);
+               setIcolor(pv[1]);
             }
             else
             {

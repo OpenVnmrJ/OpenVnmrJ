@@ -183,6 +183,7 @@ extern unsigned char *get_blue_colors();
 extern unsigned char *get_ps_red_colors();
 extern unsigned char *get_ps_green_colors();
 extern unsigned char *get_ps_blue_colors();
+extern int colorindex(char *colorname, int *index);
 
 void show_color();
 void set_jframe_id(int id);
@@ -14651,11 +14652,14 @@ set_anno_font(const char *fontName, const char *fontStyle, const char *fontColor
     aip_dstring(1, ANNFONT, 0, 0, 0, 0, tmpStr);
 }
 
-void
-set_anno_color(const char *colorName) {
+int set_anno_color(const char *colorName) {
+    int color = 0;
     if (colorName == NULL)
-       return;
-    aip_dstring(1, ANNCOLOR, 0, 0, 0, 0, colorName);
+       return(color);
+    if(isdigit(colorName[0])) color = atoi(colorName);
+    else if(!colorindex((char *)colorName, &color)) color=-1;
+    aip_dstring(1, ANNCOLOR, 0, 0, 0, color, colorName);
+    return(color);
 }
 
 // this is for testing

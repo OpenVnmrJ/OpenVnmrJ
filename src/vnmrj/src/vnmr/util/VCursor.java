@@ -191,9 +191,9 @@ public class VCursor {
             if (hotspot == null) {
                 // Try to get a hardcoded hotspot location
                 hotspot = getPoint(strName);
-                Messages.postDebug("Warning: No hotspot found in cursor image: "
-                                   + filename
-                                   + "  Using hardcoded hotspot: " + hotspot);
+                // Messages.postDebug("Warning: No hotspot found in cursor image: "
+                //                    + filename
+                //                    + "  Using hardcoded hotspot: " + hotspot);
             }
             Toolkit tk = Toolkit.getDefaultToolkit();
             try {

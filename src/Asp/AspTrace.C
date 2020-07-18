@@ -21,7 +21,6 @@ int getSpecPoints();
 int writeFDFSpecfile_spectrum(char *fdfpath, int msg);
 int nblocks;
 int specperblock;
-void set_anno_color(const char *colorName);
 int colorindex(char *colorname, int *index);
 }
 
