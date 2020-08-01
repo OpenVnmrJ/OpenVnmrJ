@@ -12,7 +12,6 @@
 
 ostype=$(uname -s)
 set_system_stuff() {
-    #  ostype:  IBM: AIX , Sun: SunOS or solaris , SGI: IRIX , RedHat: Linux, Windows: Interix
     case x$ostype in
           "xLinux")
                            sysV="n"
@@ -112,7 +111,7 @@ get_group()
    if [ "x$1" != "x" ]
    then 
       nmr_group=$1
-   elif [ x$ostype = "xDarwin" ] || [ x$ostype = "xInterix" ]
+   elif [ x$ostype = "xDarwin" ]
    then
       nmr_group=`id -gn`
    else
@@ -127,11 +126,7 @@ get_group()
 ####################################################################
 
 get_homedir() {
-    if [ "x$ostype" = "xInterix" ]
-    then
-        home_dir=$(/vnmr/bin/getuserinfo "$1" | awk 'BEGIN { FS = ";" } {print $2}')
-        /bin/winpath2unix "$home_dir"
-    elif [ -d "$(eval echo "~$1")" ]; then
+    if [ -d "$(eval echo "~$1")" ]; then
         echo "$(eval echo "~$1")"
     else
         echo ""
@@ -146,11 +141,8 @@ make_homedir() {
     if mkdir "$cur_homedir"
     then
         chmod 775 "$cur_homedir"
-	if [ x$ostype != "xInterix" ] 
-	then
-	    chown -R "$name_add" "$cur_homedir"
-	    chgrp -R "$nmr_group" "$cur_homedir"
-	fi
+	chown -R "$name_add" "$cur_homedir"
+	chgrp -R "$nmr_group" "$cur_homedir"
         return 0
     else
         echo "Cannot create homedir '$cur_homedir'"
@@ -225,7 +217,7 @@ cp_backup() {
     dstfile="$2"
     base="$(basename "${dstfile}")"
     if [ -s "$dstfile" ]; then
-	mv "$dstfile" "${dstfile}.bkup.$date"
+	mv -f "$dstfile" "${dstfile}.bkup.$date"
 	echo "  ${base} backed up in ${base}.bkup.$date";
     fi
     /bin/cp "$srcfile" "$dstfile"
@@ -296,32 +288,13 @@ fi
 # run by vnmrj adm (when saving user) to set vnmrbg appmode
 if [ x$user_update = "xappmode" ]
 then
-  if [ x$ostype = "xInterix" ] 
-  then
-      # for Interix just call Vnmrbg as the user, assumption is one user and they installled VnmrJ
-      /vnmr/bin/Vnmrbg -mback -n1 'setappmode'
-  elif [ x$lflvr != "xdebian" ]
+  if [ x$lflvr != "xdebian" ]
   then
       # the carrage return is for the remote display question 
       su - "$user_name" -c "/vnmr/bin/Vnmrbg -mback -n1 'setappmode'" <<+
 
 +
   else
-      # this will not work, giving error :
-      # /vnmr/bin/Vnmrbg: /vnmr/bin/Vnmrbg: cannot execute binary file
-      # appears that sudo > 1.7 version maybe required to get this to work.
-      # take from the Web...
-      # In sudo 1.7.0 and higher you would do it like this:
-      # foo ALL=(ALL) NOPASSWD: /usr/local/bin/bash -c /usr/local/bin/bar
-      # and sudo will notice that you passed an argument to the -i
-      # flag and add the -c itself.
-      # There's no good way to do this for versions prior to 1.7.0.
-      # further investigation seem that debian sudo (Ubuntu) should work
-      # I'll test when I have a chance....  GMB 5/04/2009
-      # doesn't work --> sudo -u $user_name -s /vnmr/bin/Vnmrbg -mback -n1 setappmode
-      # 
-      # this hack works, until sudo 1.7 is standard  GMB  5/06/2009   
-      #
       sudo su - "$user_name" -s /bin/bash -c "/vnmr/bin/Vnmrbg -mback -n1 setappmode"
   fi
   exit 0
@@ -333,14 +306,7 @@ then
    intera_vnmr="n"
 fi
 
-if [ x$ostype = "xInterix" ] 
-then
-	rootuser=`/vnmr/bin/isAdmin "$curr_user" | awk '{print $1}'`
-	if [ "x$rootuser" != "x" ]
-	then 
-	    as_root="y"
-	fi
-elif [ "x$curr_user" = "xroot" ]
+if [ "x$curr_user" = "xroot" ]
 then
     as_root="y"
 fi
@@ -455,19 +421,6 @@ else  #current user is root
     rm -f /tmp/newuser
     if [ x"$cur_homedir" = "x" ]
     then
-	if [ x$ostype = "xInterix" ]
-	then
-	    cd "$vnmrsystem"
-	    interix_homedir=$(net user | grep "$name_add")
-	    echo "$interix_homedir" > /tmp/newuser
-	    if test -s /tmp/newuser
-	    then
-		if [ x"$cur_homedir" = "x" ]
-	  	then
-	    	   cur_homedir="$user_dir/$name_add"
-	  	fi
-	    fi
-	else
 	    awk '
 	    BEGIN {N=1000
 		AlreadyExists=0
@@ -482,7 +435,6 @@ else  #current user is root
 		printf "%d\n",N+1
 	    }
 	    ' < /etc/passwd > /tmp/newuser
-	fi
     else
         if [ ! -d "$cur_homedir" ]
         then
@@ -568,19 +520,14 @@ else  #current user is root
                 # sudo /usr/bin/passwd --expire "$name_add" 2>/dev/null
                 sudo /vnmr/bin/setupbashenv "$dir_name/$name_add"
             fi
-	elif [ x$ostype = "xInterix" ]
-	then
-	    /vnmr/bin/useradd -d "${dir_name}/${name_add}" -g "$nmr_group" "$name_add"
-	    #chown -R $name_add:$nmr_group "$dir_name"/$name_add 
         else
-            # $ostype not Linux, not Interix
             /bin/cp /etc/passwd /etc/passwd.bk
             
             stuff="$name_add::$num:$nmrgnum:$name_add:$dir_name/$name_add:/bin/bash"
 
             (sed '$i\
 '"$stuff"'' /etc/passwd >/tmp/newpasswd)
-            mv /tmp/newpasswd /etc/passwd
+            mv -f /tmp/newpasswd /etc/passwd
             chmod 644 /etc/passwd
 	    chown -R "$name_add" "$dir_name/$name_add"
         fi
@@ -600,8 +547,6 @@ else  #current user is root
 	fi
     fi
 
-    if [ x$ostype != "xInterix" ]
-    then
 	#  Now lookup username in the nmr group
 	#  If not present, add this user to the group
 	awk '
@@ -615,30 +560,15 @@ else  #current user is root
 	if [ $? -ne 0 ]
 	then
 	    sed -e '/^'"$nmr_group"'/ s/$/,'"$name_add"'/' < /etc/group > /tmp/newusergroup
-	    mv /tmp/newusergroup /etc/group
+	    mv -f /tmp/newusergroup /etc/group
 	    if [ x$new_account = "xn" ]
 	    then
 		echo "'$name_add' added to the '$nmr_group' group"
 	    fi
 	fi
-    fi
 
     #  Username now in password, group file
     cur_homedir=$(get_homedir "$name_add")
-    if [ x"$cur_homedir" = "x" ] && [ x$ostype = "xInterix" ]
-    then
-	cur_homedir="$user_dir/$name_add"
-    fi
-
-    if [ x$ostype = "xInterix" ]
-    then
-	chown "$curr_user" "$cur_homedir"
-	if [ -d "$cur_homedir/vnmrsys" ]
-	then
-	    chown "$curr_user" "$cur_homedir/vnmrsys"
-	fi
-    fi
-
     #  Make home directory if not present
     if [ ! -d "$cur_homedir" ]
     then
@@ -646,13 +576,6 @@ else  #current user is root
         then
             exit 1
         fi
-
-	# for interix, set $HOME
-	if [ x$ostype = "xInterix" ]
-	then
-	    cur_homedir_win=`unixpath2win "$cur_homedir"`
-	    net user "$user_name" /HOMEDIR:"$cur_homedir_win"
-	fi
     else
 
     #  the following test for exported file systems may well be redundant,
@@ -700,7 +623,7 @@ else  #current user is root
     fi
     if [ $# -ge 4 ]  #Called from Java
     then
-	if [ x$user_update = "xy" ] && [ x$ostype != "xInterix" ]
+	if [ x$user_update = "xy" ]
 	then
             cp_backup "$vnmrsystem/user_templates/.login" "$cur_homedir/.login"
             if [ x$ostype = "xLinux" ]
@@ -711,11 +634,13 @@ else  #current user is root
                 cp_backup "$vnmrsystem/user_templates/.vxresource" "$cur_homedir/.vxresource"
             fi
 	fi
-	if [ x$ostype != "xInterix" ] 
-	then 
-	    su - "$name_add" -c "/vnmr/bin/makeuser '$1' '$cur_homedir' '$nmr_group' $user_update '$vnmrsystem'" 2> /dev/null
-	    exit
-	fi
+        if [[ x$lflvr != "xdebian" ]]; then
+	  su - "$name_add" -c "/vnmr/bin/makeuser '$1' '$cur_homedir' '$nmr_group' $user_update '$vnmrsystem'" 2> /dev/null
+	  exit
+        else
+	  sudo su - "$name_add" -c "/vnmr/bin/makeuser '$1' '$cur_homedir' '$nmr_group' $user_update '$vnmrsystem'"
+	  exit
+        fi
     fi
 
 fi # end of root-specific commands
@@ -758,11 +683,6 @@ fi
 fi
 
 cd "$cur_homedir"
-if [ x$ostype = "xInterix" ]
-then
-   intera_unix="n"
-fi
-
 if [ x$ostype = "xDarwin" ]
 then
   vim_files=
@@ -788,7 +708,7 @@ do
    fi
    if test -d  $local_file
    then
-       mv "$local_file"  "$local_file.bkup.$date"
+       mv -f "$local_file"  "$local_file.bkup.$date"
        echo "  $local_file backed up in $file.bkup.$date";
    fi
    /bin/cp -R "$vnmrsystem/user_templates/$file" "$local_file"
@@ -815,7 +735,7 @@ do
     then
 	if [ x$user_update = "xy" ]
 	then
-	    if [ x$ostype != "xInterix" ] && [ "x$file" = "x.login" ]
+	    if [ "x$file" = "x.login" ]
  	    then	
 		continue
 	    fi
@@ -839,7 +759,7 @@ do
         then
           continue
         fi
-        mv "$file" "$file.bkup.$date"
+        mv -f "$file" "$file.bkup.$date"
         echo "  $file backed up in $file.bkup.$date";
     fi
     /bin/cp "$vnmrsystem/user_templates/$file" .
@@ -887,11 +807,6 @@ then
     else
         chgrp "$nmr_group" vnmrsys
     fi
-
-    if [ x$ostype = "xInterix" ]
-    then
-	  chmod 777 vnmrsys
-    fi
 fi
 
 # Imaging Files and Directories
@@ -913,7 +828,7 @@ do
 	   fi
 	   if test -d "$cur_homedir/vnmrsys/$file"
 	   then
-		mv "$cur_homedir/vnmrsys/$file" "$cur_homedir/vnmrsys/$file.bkup.$date"
+		mv -f "$cur_homedir/vnmrsys/$file" "$cur_homedir/vnmrsys/$file.bkup.$date"
 		echo "  $file backed up in $file.bkup.$date";
 	   fi
 	   # Copy with tar to preserve symbolic links:
@@ -993,43 +908,10 @@ for file in $bkupnoreplace
 do
     if [ -d "$file" ] || [ -f "$file" ]
     then
-	mv "$file" "$file.bkup.$date"
+	mv -f "$file" "$file.bkup.$date"
 	echo "  $file backed up as $file.bkup.$date";
     fi
 done
-
-# Make backup copies of app-default files for VNMR applications
-# files can be in either the home directory or in the subdirectory app-defaults
-# These files also are not replaced
-
-if [ x$ostype != "xLinux" ] && [ x$ostype != "xDarwin" ] && [ x$ostype != "xInterix" ]
-then
-    appdefaults=`(cd "$vnmrsystem"/app-defaults; ls *)`
-    if test x"$app-defaults" != "x"
-    then
-	for file in $appdefaults
-	do
-	    if test -f "$file"
-	    then
-		mv "$file" "$file.bkup.$date"
-		echo "  $file backed up in $file.bkup.$date";
-	    fi
-	done
-	if test -d app-defaults
-	then
-	    cd app-defaults
-	    for file in $appdefaults
-	    do
-		if test -f "$file"
-		then
-		    mv "$file" "$file.bkup.$date"
-		    echo "  app-defaults/$file backed up in app-defaults/$file.bkup.$date";
-		fi
-	    done
-	    cd "$cur_homedir"
-	fi
-    fi
-fi
 
 cd vnmrsys
 
@@ -1084,10 +966,6 @@ do
         fi
         mkdir $subdir
         chmod 775 $subdir
-	if [ x$ostype = "xInterix" ]
-	then
-	    chmod 777 $subdir
- 	 fi
         if test $as_root = "y"
         then
             chown "$name_add" $subdir
@@ -1099,10 +977,6 @@ do
         then
             mkdir $subdir/eddylib
             chmod 775 $subdir/eddylib
-	    if [ x$ostype = "xInterix" ]
-	    then
-		chmod 777 $subdir
-	    fi
             if test $as_root = "y"
             then
                 chown "$name_add" $subdir/eddylib
@@ -1147,16 +1021,6 @@ fi
 export vnmrsystem
 if test -d persistence
 then
-    if [ x$ostype = "xInterix" ] && [ x$as_root = "xy" ]
-    then
-	chmod 755 persistence
-	chown "$curr_user" persistence
-	persis_files=`ls persistence`
-	for persis_file in  $persis_files
-	do
-	    chown -R "$curr_user" "persistence/$persis_file"
-	done
-    fi
     rm -f persistence/LocatorHistory_*
     rm -f persistence/TagList
     rm -f persistence/session
@@ -1170,10 +1034,6 @@ if test ! -d exp1
 then
     mkdir exp1
     chmod 775 exp1
-    if [ x$ostype = "xInterix" ]
-    then
-   	chmod 777 exp1
-    fi
     /bin/cp "$vnmrsystem"/fidlib/fid1d.fid/text    exp1/.
     /bin/cat "$vnmrsystem"/fidlib/fid1d.fid/procpar | sed 's"/vnmr/fidlib/Ethylindanone/Ethylindanone_PROTON_01"exp"' > exp1/procpar
     /bin/cp exp1/procpar exp1/curpar
@@ -1218,10 +1078,7 @@ then
     chmod 644 global
     if test $as_root = "y"
     then
-	if [ x$ostype != "xInterix" ]
-	then
-	    chown "$name_add" global
-	fi
+	chown "$name_add" global
         chgrp "$nmr_group" global
     else
         chgrp "$nmr_group" global
@@ -1231,7 +1088,7 @@ then
 
 elif test $as_root = "y"
 then
-    mv global global.bkup.$date
+    mv -f global global.bkup.$date
     echo "  global backed up in global.bkup.$date"
     /bin/cp "$vnmrsystem"/user_templates/global .
     chmod 644 global
@@ -1303,34 +1160,10 @@ then
    setWallPaper
 fi
 
-if [ x$ostype = "xInterix" ]
-then
-   chmod -R 775 "$cur_homedir"/vnmrsys
-fi
-
 if test -d templates/vnmrj/properties
 then
-    if [ x$ostype = "xInterix" ]
-    then
-	chmod 755 templates/vnmrj/properties
-	chown "$curr_user" templates/vnmrj/properties
-	prop_files=`ls templates/vnmrj/properties`
-	for prop_file in  $prop_files
-	do
-	    chown -R "$curr_user" "templates/vnmrj/properties/$prop_file"
-	done
-	rm -rf templates/vnmrj/properties
-    else
-	rm -rf templates/vnmrj/properties 
-    fi
+    rm -rf templates/vnmrj/properties 
     echo "  templates/vnmrj/properties directory removed."
-fi
-
-if [ x$ostype = "xInterix" ] 
-then
-    chown "$name_add" "$cur_homedir"
-    chown "$name_add" "$cur_homedir/vnmrsys"
-    chown "$name_add" "$cur_homedir/vnmrsys/global"
 fi
 
 echo ""
