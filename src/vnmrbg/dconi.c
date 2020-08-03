@@ -35,6 +35,9 @@ static int s_overlayMode = 0;
 static int oldx_cursor[2],oldy_cursor[2],idelta,idelta1,xoffset,yoffset;
 static int last_trace,leveldisplay_active;
 static int rev_h, rev_v;
+static int freq_h, freq_v;
+static int revAxis_h, revAxis_v;
+static int axisonly = 0;
 
 static int level_y0,level_y1,level_x1;
 static int level_first;
@@ -191,6 +194,58 @@ extern void get_nuc_name(int direction, char *nucname, int n);
 extern void get_sw_par(int direction, double *val);
 extern void get_rflrfp(int direction, double *val);
 
+int getAxisOnly()
+{
+   return(axisonly);
+}
+
+static void getFreq(int dim,  double crval, double spval, double wpval, double *freq, int *pnt)
+{
+   if (dim == HORIZ)
+   {
+      if ( ! freq_h )
+      {
+        *freq = crval - spval;
+        if (pnt)
+           *pnt  = (int)((double)dfpnt  + (double)dnpnt  * *freq / wpval + 0.5);
+      }
+      else if (revAxis_h)
+      {
+        *freq = spval - crval;
+        if (pnt)
+           *pnt  = (int)((double)dfpnt  + (double) dnpnt - (double)dnpnt  * *freq / wpval + 0.5);
+      }
+      else
+      {
+        *freq = wpval + spval - crval;
+        if (pnt)
+           *pnt  = (int)((double)dfpnt  + (double)dnpnt  * *freq / wpval + 0.5);
+
+      }
+   }
+   else
+   {
+      if ( ! freq_v )
+      {
+        *freq = crval - spval;
+        if (pnt)
+           *pnt  = (int)((double)dfpnt2  + (double)dnpnt2  * *freq / wpval + 0.5);
+      }
+      else if (revAxis_v)
+      {
+        *freq = spval - crval;
+        if (pnt)
+           *pnt  = (int)((double)dfpnt2  + (double) dnpnt2 - (double)dnpnt2  * *freq / wpval + 0.5);
+      }
+      else
+      {
+        *freq = wpval + spval - crval;
+        if (pnt)
+           *pnt  = (int)((double)dfpnt2  + (double)dnpnt2  * *freq / wpval + 0.5);
+      }
+   }
+}
+
 /******************/
 void dconi_reset()
 /******************/
@@ -202,6 +257,8 @@ void dconi_reset()
   last_trace = -1;
   last_vs = 0;
   disp_status("      ");
+  if (!d2flag && axisonly)
+     setVertAxis();
   xoffset = mnumxpnts - dfpnt + 8*xcharpixels;
   yoffset = dfpnt2 + dnpnt2 + mnumypnts / 50;
   if (project_buffer) release(project_buffer);
@@ -355,14 +412,18 @@ static int dconi_newcursor(int butnum, int x, int y, int moveflag)
           disp_specIndex(specIndex);
         }
       update_cursor(0,x,y);
-      if (rev_h)
-         cr  =   (x - dfpnt ) * wp  / dnpnt  + sp;
-      else
+      if ( ! rev_h)
          cr  = - (x - dfpnt ) * wp  / dnpnt  + wp  + sp;
-      if (rev_v)
-         cr1 =   (y - dfpnt2) * wp1 / dnpnt2 + sp1;
+      else if ( revAxis_h )
+         cr  = (x - dfpnt - dnpnt ) * wp  / dnpnt  + sp;
       else
+         cr = (x - dfpnt) * wp  / dnpnt  + sp;
+      if ( ! rev_v)
          cr1 = - (y - dfpnt2) * wp1 / dnpnt2 + wp1 + sp1;
+      else if ( revAxis_v )
+         cr1  = (y - dfpnt2 - dnpnt2 ) * wp1  / dnpnt2  + sp1;
+      else
+         cr1 =   (y - dfpnt2) * wp1 / dnpnt2 + sp1;
       UpdateVal(HORIZ,CR_NAME,cr,SHOW);
       UpdateVal(VERT,CR_NAME,cr1,SHOW);
 
@@ -374,9 +435,8 @@ static int dconi_newcursor(int butnum, int x, int y, int moveflag)
 }
 
 /*********************/
-static int getxy(x,y,x1,y1)
+static int getxy(int *x, int *y, int *x1, int *y1)
 /*********************/
-int *x,*y,*x1,*y1;
 {
   double freq_val;
 
@@ -384,18 +444,15 @@ int *x,*y,*x1,*y1;
   get_cursor_pars(VERT,&cr1,&delta1);
 
 #ifdef DEBUG
-    Wscrprintf(
-        "getxy, dfpnt= %d  dnpnt= %d  wp= %.12g  cr= %.12g  sp= %.12g\n",
+  fprintf(stderr,"getxy, dfpnt= %d  dnpnt= %d  wp= %.12g  cr= %.12g  sp= %.12g\n",
 	 dfpnt, dnpnt, wp, cr, sp);
-    Wscrprintf(
-        "getxy, dfpnt2= %d  dnpnt2= %d  wp1= %.12g  cr1= %.12g  sp1= %.12g\n",
+  fprintf(stderr,"getxy, dfpnt2= %d  dnpnt2= %d  wp1= %.12g  cr1= %.12g  sp1= %.12g\n",
 	 dfpnt2, dnpnt2, wp1, cr1, sp1);
-#endif 
+#endif
 
-  freq_val = (rev_h) ? (cr - sp) : (wp + sp - cr);
-  *x  = (int)((double)dfpnt  + (double)dnpnt  * freq_val / wp + 0.5);
-  freq_val = (rev_v) ? (cr1 - sp1) : (wp1 + sp1 - cr1);
-  *y  = (int)((double)dfpnt2 + (double)dnpnt2 * freq_val / wp1 + 0.5);
+
+  getFreq(HORIZ, cr, sp, wp, &freq_val, x);
+  getFreq(VERT, cr1, sp1, wp1, &freq_val, y);
   *x1 = (int)((double)*x     + (double)dnpnt  * delta  / wp + 0.5);
   *y1 = (int)((double)*y     + (double)dnpnt2 * delta1 / wp1 + 0.5);
 
@@ -476,6 +533,8 @@ static void dconi_m_newtrace(butnum,x,y,moveflag)
 /****************************************/
 int butnum,x,y,moveflag;
 {
+  if (axisonly)
+     return;
   if (butnum == 3)  {
     Wturnoff_buttons();
     set_turnoff_routine(turnoff_dconi);
@@ -495,6 +554,8 @@ int butnum,x,y,moveflag;
 static int dconi_newtrace(int butnum, int x, int y, int moveflag)
 /****************************************/
 { int ctrace;
+  if (axisonly)
+     return(0);
   Wgmode();
   if (butnum==2)
     { dconi_multiply(x,y,moveflag);
@@ -533,6 +594,8 @@ static void dconi_trace()
 /******************/
 { int x,y,x1,y1;
   int dez;
+  if (axisonly)
+     return;
   Wgmode();
   Wturnoff_mouse();
   dconi_reset();
@@ -572,6 +635,8 @@ static void dconi_trace()
 static int update_hproj()
 /*******************/
 {
+  if (axisonly)
+     return(0);
   if (plot && hires_ps)
   {
      calc_hires_ps(project_buffer,discalib*vsproj,dfpnt,dnpnt,npnt,0,yoffset,
@@ -604,6 +669,8 @@ int sumflag;
   float *phasfl;
   int dez;
   
+  if (axisonly)
+     return;
   Wgmode();
   getxy(&x,&y,&x1,&y1);
   dconi_newcursor(1,x,y,0);
@@ -678,6 +745,8 @@ int sumflag;
 static int update_vproj()
 /*******************/
 {
+  if (axisonly)
+     return(0);
   if (plot && hires_ps)
   {
      calc_hires_ps(project_buffer,discalib*vsproj,dfpnt2,dnpnt2,npnt1,1,xoffset,
@@ -711,6 +780,8 @@ int sumflag;
   register float max;
   register float *p,*phasfl;
   int dez;
+  if (axisonly)
+     return;
   Wgmode();
   getxy(&x,&y,&x1,&y1);
   dconi_newcursor(1,x,y,0);
@@ -876,6 +947,8 @@ int dconi_mark(int mark_mode, int display_flag, int button_flag, float *int_v_pt
 /*  If this subroutine was called from the MARK command, initialize
     variables that are normally initialized when DCONI is started.	*/
 
+        if (axisonly)
+           return(0);
         (void) display_flag;
 	if (button_flag == FALSE ) {
 		discalib = (float)(mnumypnts-ymin) / wc2max;
@@ -1079,7 +1152,10 @@ int dconi_mark(int mark_mode, int display_flag, int button_flag, float *int_v_pt
 /*****************/
 static int dconi_plot()
 /*****************/
-{ Wgmode();
+{
+  if (axisonly)
+     return(0);
+  Wgmode();
   if (init_dconi(2)) return 1;
   if (trace_mode==TRACE_MODE)
     { disp_status("PLOT  ");
@@ -1128,8 +1204,6 @@ static int dconi_expand()
   	aspFrame("dconi",0,0,0,0,0);
       return 0;
     }
-/*  if (rev_h || rev_v)
-    return 0;*/
 #ifdef VNMRJ
   if(revflag) {
      addNewZoom("dconi",cr1,delta1,cr,delta);
@@ -1143,15 +1217,19 @@ static int dconi_expand()
   erase_projections();
   dconi_reset();
   /* set sp,wp,sp1,wp1 according to expansion box */
-  if ( get_axis_freq(HORIZ) )
-     sp  = cr - delta;
-  else
+  if ( ! freq_h )
      sp  = cr;
-  wp  = delta;
-  if ( get_axis_freq(VERT) )
-     sp1  = cr1 - delta1;
+  else if ( revAxis_h )
+     sp  = cr + delta;
   else
+     sp  = cr - delta;
+  wp  = delta;
+  if ( ! freq_v )
      sp1  = cr1;
+  else if ( revAxis_v )
+     sp1  = cr1 + delta1;
+  else
+     sp1  = cr1 - delta1;
   wp1 = delta1;
   dconi_checkSpwp(&sp, &sp1, &wp, &wp1, VnmrJViewId);
   UpdateVal(HORIZ,SP_NAME,sp,NOSHOW);
@@ -1188,8 +1266,6 @@ static void dconi_full()
 /*****************/
 {
   double c2,c1,d2,d1;
-/*  if (rev_h || rev_v)
-    return 0;*/
   Wgmode();
   disp_status("FULL  ");
   Wturnoff_mouse();
@@ -1201,14 +1277,18 @@ static void dconi_full()
       c2=cr; c1=cr1; d2=delta; d1=delta1;
   }
 #else 
-  if ( get_axis_freq(HORIZ) )
-     cr  = sp + delta;
-  else
+  if ( ! freq_h )
      cr = sp;
-  if ( get_axis_freq(VERT) )
-     cr1 = sp1 + delta1;
+  else if ( revAxis_h )
+     cr  = sp - delta;
   else
+     cr  = sp + delta;
+  if ( ! freq_v )
      cr1 = sp1;
+  else if ( revAxis_v )
+     cr1 = sp1 - delta1;
+  else
+     cr1 = sp1 + delta1;
   delta  = fabs(wp);
   delta1 = fabs(wp1);
 #endif
@@ -1415,6 +1495,8 @@ static int dconi_multiply(int x, int y, int moveflag)
 /*********************************/
 {
   float vs_mult();
+  if (axisonly)
+     return(0);
   Wgmode();
   if (x>dfpnt+dnpnt)
     { setcolorth(x,y);
@@ -1491,6 +1573,8 @@ void dconi_newdcon()
   Wturnoff_mouse();
   dconi_reset();
   run_dcon();
+  if (!d2flag && axisonly)
+     setVertAxis();
   dconi_mode = -1; /* force dconi_cursor() into the CURSOR_MODE */
   dconi_cursor();
   Wsetgraphicsdisplay("dconi");
@@ -1524,6 +1608,8 @@ static void vproj_sum()
 void dconi_redraw_trace()
 /**************************/
 {
+  if (axisonly)
+     return;
   Wshow_graphics();
   if (init_dconi(1)) {return;}
   if (!d2flag)
@@ -1565,15 +1651,27 @@ int init_dconi(int plotflag)
 {
   double start,len,axis_scl;
 
-  Wsetgraphicsdisplay("dconi");
   if (init2d(1,plotflag)) return 1;
   discalib = (float)(mnumypnts-ymin) / wc2max;
   yoffset = dfpnt2 + dnpnt2 + mnumypnts / 50;
   xoffset = mnumxpnts - dfpnt + 8*xcharpixels;
   get_scale_pars(HORIZ,&start,&len,&axis_scl,&rev_h);
   get_scale_pars(VERT,&start,&len,&axis_scl,&rev_v);
+  freq_h = get_axis_freq(HORIZ);
+  freq_v = get_axis_freq(VERT);
+  revAxis_h = 0;
+  revAxis_v = 0;
+  if ( freq_h )
+  {
+     revAxis_h = rev_h;
+  }
+  if ( freq_v )
+  {
+     revAxis_v = rev_v;
+  }
   dconi_sendSpecInfo(1);
   start_from_ft2d = 0;
+  Wsetgraphicsdisplay("dconi");
   aspFrame("clearAspSpec",0,0,0,0,0);
   return 0;
 }
@@ -1608,6 +1706,7 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
   int redisplay_param_flag, do_menu=FALSE;
   int calledWithRedisplay = 0;
   extern int ll2d_draw_peaks();
+  char cmd[20];
 
 /* Check for special menu commands :
 	toggle, trace, expand, plot	*/
@@ -1619,12 +1718,9 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
     Wturnoff_buttons();
     set_turnoff_routine(turnoff_dconi);
     }
+  Wgetgraphicsdisplay(cmd, 20);
   Wshow_graphics();
   if (init_dconi(1)) {return 1;}
-  if (!d2flag)
-    { Werrprintf("no 2D data in data file");
-      return 1;
-    }
   if (argc == 3)
   {
      if (strcmp(argv[1],"expandMacro") == 0)
@@ -1859,6 +1955,7 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
     or if the first argument is not "again"		*/
 
           argnum = 2;
+          axisonly = 0;
 
     /* If the first argument to dconi is the name of a display command
        or the word "dconi", then prepare a new value for dconi_runstring  */
@@ -1912,6 +2009,8 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
               while (argc>argnum)
                 { strcat(dconi_runstring,"'");
                   strcat(dconi_runstring,argv[argnum]);
+                  if ( ! strcmp(argv[argnum],"axisonly") )
+                     axisonly = 1;
                   strcat(dconi_runstring,"'");
                   argnum++;
                   if (argc>argnum)
@@ -1920,6 +2019,14 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
               strcat(dconi_runstring,")");
             }
           strcat(dconi_runstring,"\n");
+          if (!d2flag && !axisonly)
+            {
+              Wsetgraphicsdisplay(cmd);
+              Werrprintf("no 2D data in data file");
+              ABORT;
+            }
+          if (!d2flag && axisonly)
+            setVertAxis();
         }
 /* else */ /* ((argc==2) && (strcmp(argv[1],"again")==0)) */
 /* {} */
@@ -1932,6 +2039,10 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
           skip_save_graphics_cmd(0);
           return 1;
       }
+      if (!d2flag)
+        { Werrprintf("no 2D data in data file");
+          return 1;
+        }
     }
   else if ((argc>1) && (strcmp(argv[1],"restart")==0))
     {
@@ -2011,7 +2122,12 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
   releasevarlist();
   Wsetgraphicsdisplay("dconi");
   if (do_menu && !Bnmr)
-    execString("menu('dconi')\n");
+  {
+    if (axisonly)
+       execString("menu('dconi_ao')\n");
+    else
+       execString("menu('dconi')\n");
+  }
   set_turnoff_routine(turnoff_dconi);
   restore_original_cursor();
   grf_batch(0);
@@ -2347,8 +2463,19 @@ void dconi_sendCursor(double c1, double c2,
    else vps = (int)d;
    if(vps < 2) return;
 
-    f2 = (rev_h) ? (c2 - sp) : (wp + sp - c2);
-    f1 = (rev_v) ? (c1 - sp1) : (wp1 + sp1 - c1);
+    if ( ! freq_h )
+      f2 = c2 - sp;
+    else if (revAxis_h)
+      f2 = sp - c2;
+    else
+      f2 = wp + sp - c2;
+    if ( ! freq_v )
+      f1 = c1 - sp1;
+    else if (revAxis_v)
+      f1 = sp1 - c1;
+    else
+      f1 = wp1 + sp1 - c1;
+
     if(f2 < 0.5 && f1 < 0.5) return; 
     if(f2 > wp && f1 > wp1) return; 
 
@@ -2386,7 +2513,6 @@ void dconi_newCursor4freq(int num, double c1, double c2,
 
       int x, y, x1, y1, m;
       double d, f1, f2, cursor1, dt1;
-      double freq_val;
       char trace[5], axis1[8], axis2[8];
 
 /* return if cursorTracking is off */
@@ -2453,8 +2579,8 @@ void dconi_newCursor4freq(int num, double c1, double c2,
 	dconi_mode = mode;
     }
 
-    f2 = (rev_v) ? (c2 - sp1) : (wp1 + sp1 - c2);
-    f1 = (rev_h) ? (c1 - sp) : (wp + sp - c1);
+    getFreq(HORIZ, c1, sp, wp, &f1, NULL);
+    getFreq(VERT, c2, sp1, wp1, &f2, NULL);
 /*
     if(f2 < 0.5 || f1 < 0.5) return;
     if(f2 > wp1 || f1 > wp) return;
@@ -2479,10 +2605,8 @@ void dconi_newCursor4freq(int num, double c1, double c2,
     }
 
 
-  freq_val = (rev_h) ? (cr - sp) : (wp + sp - cr);
-  x  = (int)((double)dfpnt  + (double)dnpnt  * freq_val / wp + 0.5);
-  freq_val = (rev_v) ? (cr1 - sp1) : (wp1 + sp1 - cr1);
-  y  = (int)((double)dfpnt2 + (double)dnpnt2 * freq_val / wp1 + 0.5);
+  getFreq(HORIZ, cr, sp, wp, &f1, &x);
+  getFreq(VERT, cr1, sp1, wp1, &f2, &y);
   x1 = (int)((double)x     + (double)dnpnt  * delta  / wp + 0.5);
   y1 = (int)((double)y     + (double)dnpnt2 * delta1 / wp1 + 0.5);
 /*
@@ -2569,17 +2693,21 @@ void dconi_newCrosshair(int x, int y)
 {
     double c1, c2, f1, f2;
     
-      if (rev_h)
-         c2  =   (x - dfpnt ) * wp  / dnpnt  + sp;
-      else
+      if ( ! rev_h)
          c2  = - (x - dfpnt ) * wp  / dnpnt  + wp  + sp;
-      if (rev_v)
-         c1=   (y - dfpnt2) * wp1 / dnpnt2 + sp1;
+      else if ( revAxis_h )
+         c2  = (x - dfpnt - dnpnt ) * wp  / dnpnt  + sp;
       else
-         c1= - (y - dfpnt2) * wp1 / dnpnt2 + wp1 + sp1;
+         c2 = (x - dfpnt) * wp  / dnpnt  + sp;
+      if ( ! rev_v)
+         c1 = - (y - dfpnt2) * wp1 / dnpnt2 + wp1 + sp1;
+      else if ( revAxis_v )
+         c1  = (y - dfpnt2 - dnpnt2 ) * wp1  / dnpnt2  + sp1;
+      else
+         c1 =   (y - dfpnt2) * wp1 / dnpnt2 + sp1;
 
-    f2 = (rev_h) ? (c2 - sp) : (wp + sp - c2);
-    f1 = (rev_h) ? (c1 - sp1) : (wp1 + sp1 - c1);
+    getFreq(HORIZ, c2, sp, wp, &f2, NULL);
+    getFreq(VERT, c1, sp1, wp1, &f1, NULL);
     if(f1 < 0.5 || f2 < 0.5 || f2 > wp || f1 > wp1) {
 	m_noCrosshair();
 	return;
@@ -2614,8 +2742,8 @@ void dconi_sendCrosshair(double c1, double c2, double f1, double f2)
    else vps = (int)d;
    if(vps < 2) return;
 
-    freq2 = (rev_h) ? (c2 - sp) : (wp + sp - c2);
-    freq1 = (rev_h) ? (c1 - sp1) : (wp1 + sp1 - c1);
+    getFreq(HORIZ, c2, sp, wp, &freq2, NULL);
+    getFreq(VERT, c1, sp1, wp1, &freq1, NULL);
     if(freq2 < 0.5 && freq1 < 0.5) return; 
     if(freq2 > wp && freq1 > wp1) return;
 
@@ -2648,7 +2776,8 @@ void dconi_newCrosshair4freq(int num, double c1, double c2,
 {
 /* if cursor is from a 1d spectrum, only c1 is passed */
 
-      int x, y, x1, y1, m;
+      int x, y, m;
+      double x1, y1;
       double d;
       double freq1 = 0.0;
       double freq2 = 0.0;
@@ -2681,80 +2810,38 @@ void dconi_newCrosshair4freq(int num, double c1, double c2,
    	c2 = ppm2Hz(VERT, c2);
    	c1 = ppm2Hz(HORIZ, c1);
       }
-           x1 = (rev_h) ? (c1 - sp) : (wp + sp - c1);
-
-           if(x1 < 0.5 || x1 > wp) {
-	     //dconi_noCrosshair();
-	     //return;
-           } else 
-
-  	   x  = (int)((double)dfpnt  + (double)dnpnt  * x1 / wp + 0.5);
+           getFreq(HORIZ, c1, sp, wp, &x1, &x);
 	   freq1 = f1;
 
-           y1 = (rev_h) ? (c2 - sp1) : (wp1 + sp1 - c2);
-
-           if(y1 < 0.5 || y1 > wp1) {
-	     //dconi_noCrosshair();
-	     //return;
-           } else  
-
-  	   y  = (int)((double)dfpnt2  + (double)dnpnt2  * y1 / wp1 + 0.5);
+           getFreq(VERT, c2, sp1, wp1, &y1, &y);
 	   freq2 = f2;
 
    } else if(m == 1 && strlen(axis1) == 0) {
       if(strstr(trace,"2") != NULL) {
    	c1 = ppm2Hz(HORIZ, c2);
    	f1 = f2;
-           x1 = (rev_h) ? (c1 - sp) : (wp + sp - c1);
-
-           if(x1 < 0.5 || x1 > wp) {
-	     //dconi_noCrosshair();
-	     //return;
-           } else  
-
-  	   x  = (int)((double)dfpnt  + (double)dnpnt  * x1 / wp + 0.5);
+           getFreq(HORIZ, c1, sp, wp, &x1, &x);
  	   freq1 = f1;
       } else {
    	c2 = ppm2Hz(VERT, c2);
-           y1 = (rev_h) ? (c2 - sp1) : (wp1 + sp1 - c2);
-
-           if(y1 < 0.5 || y1 > wp1) {
-	     //dconi_noCrosshair();
-	     //return;
-           } else  
-
-  	   y  = (int)((double)dfpnt2  + (double)dnpnt2  * y1 / wp1 + 0.5);
+           getFreq(VERT, c2, sp1, wp1, &y1, &y);
            freq2 = f2;
       }
    } else if(m == 1 && strlen(axis2) == 0) {
       if(strstr(trace,"2") != NULL) {
    	c2 = ppm2Hz(VERT, c1);
    	f2 = f1;
-           y1 = (rev_h) ? (c2 - sp1) : (wp1 + sp1 - c2);
-
-           if(y1 < 0.5 || y1 > wp1) {
-	     //dconi_noCrosshair();
-	     //return;
-           } else  
-
-  	   y  = (int)((double)dfpnt2  + (double)dnpnt2  * y1 / wp1 + 0.5);
+           getFreq(VERT, c2, sp1, wp1, &y1, &y);
            freq2 = f2;
       } else {
    	c1 = ppm2Hz(HORIZ, c1);
-           x1 = (rev_h) ? (c1 - sp) : (wp + sp - c1);
-
-           if(x1 < 0.5 || x1 > wp) {
-	     //dconi_noCrosshair();
-	     //return;
-           } else  
-
-  	   x  = (int)((double)dfpnt  + (double)dnpnt  * x1 / wp + 0.5);
+           getFreq(HORIZ, c1, sp, wp, &x1, &x);
  	   freq1 = f1;
       }
    } else { 
 	return;
    }
-	update_crosshair(x, y, convert4ppm(HORIZ, freq1), convert4ppm(VERT, freq2));
+   update_crosshair(x, y, convert4ppm(HORIZ, freq1), convert4ppm(VERT, freq2));
 }
 
 void dconi_noCrosshair() {
@@ -2769,23 +2856,32 @@ void dconi_setInsetCursor(int x0, int y0, int x1, int y1)
  	idelta  = x1 - x0;
         idelta1 = y0 - y1;
 
-      if (rev_h) {
-         cr  =   (x0 - dfpnt ) * wp  / dnpnt  + sp;
-	 delta = + (x1 - dfpnt ) * wp  / dnpnt  + sp;
-      } else {
+      if ( ! rev_h) {
          cr  = - (x0 - dfpnt ) * wp  / dnpnt  + wp  + sp;
 	 delta = - (x1 - dfpnt ) * wp  / dnpnt  + wp + sp;
-      }
-      if (rev_v) {
-         cr1 =   (y1 - dfpnt2) * wp1 / dnpnt2 + sp1;
-	 delta1 = + (y0 - dfpnt2 ) * wp1  / dnpnt2  + sp1;
+         delta = cr - delta;
+      } else if ( revAxis_h ) {
+         cr  = (x0 - dfpnt - dnpnt ) * wp  / dnpnt  + sp;
+	 delta = (x1 - dfpnt - dnpnt ) * wp  / dnpnt  + sp;
+         delta = delta - cr;
       } else {
+         cr  =   (x0 - dfpnt ) * wp  / dnpnt  + sp;
+	 delta = + (x1 - dfpnt ) * wp  / dnpnt  + sp;
+         delta = cr - delta;
+      }
+      if ( ! rev_v) {
          cr1 = - (y1 - dfpnt2) * wp1 / dnpnt2 + wp1 + sp1;
 	 delta1 = - (y0 - dfpnt2) * wp1  / dnpnt2  + wp1 + sp1;
+         delta1 = cr1 - delta1;
+      } else if ( revAxis_v ) {
+         cr1  = (y1 - dfpnt2 - dnpnt2 ) * wp1  / dnpnt2  + sp1;
+	 delta1 = (y0 - dfpnt2 - dnpnt2 ) * wp1  / dnpnt2  + sp1;
+         delta1 = delta1 -cr1;
+      } else {
+         cr1 =   (y1 - dfpnt2) * wp1 / dnpnt2 + sp1;
+	 delta1 = + (y0 - dfpnt2 ) * wp1  / dnpnt2  + sp1;
+         delta1 = cr1 - delta1;
       }
-
-      delta = cr - delta;
-      delta1 = cr1 - delta1;
 
       return;
 }
@@ -2802,40 +2898,52 @@ void dconi_getNextCursor(double *c2, double *c1, double *d2, double *d1)
    if (P_getstring(CURRENT, "trace", trace, 1, 4)) strcpy(trace, "f1");
    if(strstr(trace, "2") != NULL) {
 	*d2 = wp;
-        if( get_axis_freq(HORIZ) )
-          *c2 = sp + wp;
-        else
+        if( ! freq_h )
           *c2 = sp;
-	*d1 = wp1;
-        if( get_axis_freq(VERT) )
-          *c1 = sp1 + wp1;
+        else if ( revAxis_h )
+          *c2 = sp - wp;
         else
+          *c2 = sp + wp;
+	*d1 = wp1;
+        if( ! freq_v )
           *c1 = sp1;
+        else if ( revAxis_v )
+          *c1 = sp1 - wp1;
+        else
+          *c1 = sp1 + wp1;
    } else {
 	*d1 = wp;
-        if( get_axis_freq(HORIZ) )
-          *c1 = sp + wp;
-        else
+        if( ! freq_h )
           *c1 = sp;
-	*d2 = wp1;
-        if( get_axis_freq(VERT) )
-          *c2 = sp1 + wp1;
+        else if ( revAxis_h )
+          *c1 = sp - wp;
         else
+          *c1 = sp + wp;
+	*d2 = wp1;
+        if( ! freq_v )
           *c2 = sp1;
+        else if ( revAxis_v )
+          *c2 = sp1 - wp1;
+        else
+          *c2 = sp1 + wp1;
    }
 }
 
 void dconi_setNextCursor(double c2, double c1, double d2, double d1)
 {
    if(d2==0 && d1==0) {
-     if ( get_axis_freq(HORIZ) )
-       cr  = sp + delta;
-     else
+     if ( ! freq_h )
        cr = sp;
-     if ( get_axis_freq(VERT) )
-       cr1 = sp1 + delta1;
+     else if ( revAxis_h )
+       cr  = sp - delta;
      else
+       cr  = sp + delta;
+     if ( ! freq_v )
        cr1 = sp1;
+     else if ( revAxis_v )
+       cr1 = sp1 - delta1;
+     else
+       cr1 = sp1 + delta1;
      delta  = fabs(wp);
      delta1 = fabs(wp1);
      return;
@@ -2861,9 +2969,9 @@ void dconi_zoom(int mode)
 
     if(!showCursor()) {
       dconi_mode=CURSOR_MODE;
+
       dconi_cursor();
     } 
-
 }
 
 /************************************/
@@ -2881,15 +2989,19 @@ fprintf(stderr,"m_spwp %d %d %d\n", but, x, y);
 */
    y = mnumypnts - y -1;
 
-   if (rev_h) {
-         f2  =  (x - dfpnt ) * wp  / dnpnt;
-   } else {
+   if ( ! rev_h) {
          f2  =  - (x - dfpnt ) * wp  / dnpnt;
-   }
-   if (rev_v) {
-	 f1 =  (y - dfpnt2 ) * wp1  / dnpnt2;
+   } else if ( revAxis_h ) {
+         f2  = (x - dfpnt - dnpnt ) * wp  / dnpnt;
    } else {
+         f2  =  (x - dfpnt ) * wp  / dnpnt;
+   }
+   if ( ! rev_v) {
 	 f1 =  - (y - dfpnt2) * wp1  / dnpnt2;
+   } else if ( revAxis_h ) {
+         f1  = (y - dfpnt2 - dnpnt2 ) * wp1  / dnpnt2;
+   } else {
+	 f1 =  (y - dfpnt2 ) * wp1  / dnpnt2;
    }
 
    if(but == 4) {
@@ -3232,14 +3344,18 @@ void dconi_zoomCenterPeak(int x, int y, int but)
     double freq1, freq2;
     double s2, s1, w2, w1, d;
 
-      if (rev_h)
-         freq2  =   (x - dfpnt ) * wp  / dnpnt + sp;
-      else
+      if ( ! rev_h)
          freq2  = - (x - dfpnt ) * wp  / dnpnt  + sp + wp;
-      if (rev_v)
-         freq1=   (y - dfpnt2) * wp1 / dnpnt2 + sp1;
+      else if ( revAxis_h )
+         freq2  = (x - dfpnt - dnpnt ) * wp  / dnpnt  + sp;
       else
+         freq2  =   (x - dfpnt ) * wp  / dnpnt + sp;
+      if ( ! rev_v)
          freq1= - (y - dfpnt2) * wp1 / dnpnt2 + sp1 + wp1;
+      else if ( revAxis_v )
+         freq1  = (y - dfpnt2 - dnpnt2 ) * wp1  / dnpnt2  + sp1;
+      else
+         freq1=   (y - dfpnt2) * wp1 / dnpnt2 + sp1;
 
     w2 = wp;
     w1 = wp1;
@@ -3277,7 +3393,13 @@ void dconi_zoomCenterPeak(int x, int y, int but)
         delta = w2;
     	cr1 = sp1;
     	delta1 = wp1;
-        if ( get_axis_freq(VERT) ) cr1 += delta1;
+        if ( freq_v )
+        {
+           if ( revAxis_v )
+              cr1 -= delta1;
+           else
+              cr1 += delta1;
+        }
       }
       if(w1 != wp1) {
 	wp1 = w1; 
@@ -3285,7 +3407,13 @@ void dconi_zoomCenterPeak(int x, int y, int but)
         delta1 = w1;
     	cr = sp;
     	delta = wp;
-        if ( get_axis_freq(HORIZ) ) cr += delta;
+        if ( freq_h )
+        {
+           if ( revAxis_h )
+              cr -= delta;
+           else
+              cr += delta;
+        }
       }
     }
 
@@ -3298,14 +3426,18 @@ void dconi_centerPeak(int x, int y, int but)
     double s2, s1, d2, d1;
     char trace[5];
 
-      if (rev_h)
-         freq2  =   (x - dfpnt ) * wp  / dnpnt + sp;
+      if ( ! rev_h)
+         freq2  = - (x - dfpnt ) * wp  / dnpnt  + wp  + sp;
+      else if ( revAxis_h )
+         freq2  = (x - dfpnt - dnpnt ) * wp  / dnpnt  + sp;
       else
-         freq2  = - (x - dfpnt ) * wp  / dnpnt  + sp + wp;
-      if (rev_v)
-         freq1=   (y - dfpnt2) * wp1 / dnpnt2 + sp1;
+         freq2 = (x - dfpnt) * wp  / dnpnt  + sp;
+      if ( ! rev_v)
+         freq1 = - (y - dfpnt2) * wp1 / dnpnt2 + wp1 + sp1;
+      else if ( revAxis_v )
+         freq1  = (y - dfpnt2 - dnpnt2 ) * wp1  / dnpnt2  + sp1;
       else
-         freq1= - (y - dfpnt2) * wp1 / dnpnt2 + sp1 + wp1;
+         freq1 =   (y - dfpnt2) * wp1 / dnpnt2 + sp1;
 
       s2 = freq2 - wp/2;
       d2 = freq2 + wp/2;
@@ -3361,16 +3493,37 @@ void dconi_nextZoomin(double *c2, double *c1, double *d2, double *d1)
 
      if(P_getreal(GLOBAL, "zoomSlope", &slope, 1)) slope = 0.2;
 
-     if ( get_axis_freq(HORIZ) ) *c2 += *d2;
-     if ( get_axis_freq(VERT) ) *c1 += *d1;
-
      d = slope*(*d2);
+     if( freq_h)
+     {
+        if ( revAxis_h)
+        {
+           *c2 -= *d2;
+           *c2 += 0.5*d;
+        }
+        else
+        {
+           *c2 += *d2;
+           *c2 -= 0.5*d;
+        }
+     }
      *d2 -= d;
-     *c2 -= 0.5*d;
 
      d = slope*(*d1);
+     if( freq_v)
+     {
+        if ( revAxis_v)
+        {
+           *c1 -= *d1;
+           *c1 += 0.5*d;
+        }
+        else
+        {
+           *c1 += *d1;
+           *c1 -= 0.5*d;
+        }
+     }
      *d1 -= d;
-     *c1 -= 0.5*d;
 }
 
 void dconi_nextZoom(double *c2, double *c1, double *d2, double *d1)
@@ -3384,16 +3537,37 @@ void dconi_nextZoom(double *c2, double *c1, double *d2, double *d1)
 
      if(P_getreal(GLOBAL, "zoomSlope", &slope, 1)) slope = 0.2;
 
-     if ( get_axis_freq(HORIZ) ) *c2 += *d2;
-     if ( get_axis_freq(VERT) ) *c1 += *d1;
-
      d = slope*(*d2);
+     if( freq_h)
+     {
+        if ( revAxis_h)
+        {
+           *c2 -= *d2;
+           *c2 += 0.5*d;
+        }
+        else
+        {
+           *c2 += *d2;
+           *c2 -= 0.5*d;
+        }
+     }
      *d2 -= d;
-     *c2 -= 0.5*d;
 
      d = slope*(*d1);
+     if( freq_v)
+     {
+        if ( revAxis_v)
+        {
+           *c1 -= *d1;
+           *c1 += 0.5*d;
+        }
+        else
+        {
+           *c1 += *d1;
+           *c1 -= 0.5*d;
+        }
+     }
      *d1 -= d;
-     *c1 -= 0.5*d;
 }
 
 void dconi_prevZoom(double *c2, double *c1, double *d2, double *d1)
@@ -3406,17 +3580,36 @@ void dconi_prevZoom(double *c2, double *c1, double *d2, double *d1)
     *d1 = wp1;
 
      if(P_getreal(GLOBAL, "zoomSlope", &slope, 1)) slope = 0.2;
-
-     if ( get_axis_freq(HORIZ) ) *c2 += *d2;
-     if ( get_axis_freq(VERT) ) *c1 += *d1;
-
      d = slope*(*d2);
+     if( freq_h)
+     {
+        if ( revAxis_h)
+        {
+           *c2 -= *d2;
+           *c2 -= 0.5*d;
+        }
+        else
+        {
+           *c2 += *d2;
+           *c2 += 0.5*d;
+        }
+     }
      *d2 += d;
-     *c2 += 0.5*d;
 
-     d = slope*(*d1);
+     if( freq_v)
+     {
+        if ( revAxis_v)
+        {
+           *c1 -= *d1;
+           *c1 -= 0.5*d;
+        }
+        else
+        {
+           *c1 += *d1;
+           *c1 += 0.5*d;
+        }
+     }
      *d1 += d;
-     *c1 += 0.5*d;
 }
 
 // f1 for sw1, f2 for sw2, f3 for sw.
@@ -3603,15 +3796,19 @@ fprintf(stderr, "STACKED2 %f %f %f %f\n", *s2, *s1, xshift, yshift);
 
 int dconi_currentZoom(double *c2, double *d2, double *c1, double *d1) {
    double cx,dx,cy,dy;
-   if ( get_axis_freq(HORIZ) )
-        cx  = sp + delta;
-   else
+   if ( ! freq_h )
         cx = sp;
-   dx  = fabs(wp);
-   if ( get_axis_freq(VERT) )
-        cy  = sp1 + delta1;
+   else if ( revAxis_h )
+        cx  = sp - delta;
    else
+        cx  = sp + delta;
+   dx  = fabs(wp);
+   if ( ! freq_v )
         cy = sp1;
+   else if ( revAxis_v )
+        cy  = sp1 - delta1;
+   else
+        cy  = sp1 + delta1;
    dy  = fabs(wp1);
   
    if(revflag) {

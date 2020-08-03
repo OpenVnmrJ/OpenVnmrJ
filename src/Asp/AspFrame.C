@@ -26,6 +26,7 @@ int saveProcpar(char* path);
 int P_read(int, char*);
 void set_top_frame_on_top(int onTop);
 int currentindex();
+int getAxisOnly();
 }
 
 spAspFrame_t nullAspFrame = spAspFrame_t(NULL);
@@ -1228,7 +1229,13 @@ void AspFrame::updateMenu() {
    else {
 	char str[20];
         Wgetgraphicsdisplay(str, 20);
-	if(strstr(str,"dconi") == str) execString("menu('dconi')\n");
+	if(strstr(str,"dconi") == str)
+        {
+           if (getAxisOnly() )
+              execString("menu('dconi_ao')\n");
+           else
+              execString("menu('dconi')\n");
+        }
 	else if(strstr(str,"dss") == str) execString("menu('display_1D')\n");
 	else if(strstr(str,"ds") == str) execString("menu('ds_1')\n");
 	else if(strstr(str,"dfs") == str) execString("menu('fiddisp_1D')\n");

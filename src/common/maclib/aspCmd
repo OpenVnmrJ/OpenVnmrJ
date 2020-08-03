@@ -130,12 +130,12 @@ if($1='editAnno' and aspSel[1]=6) then
   $path=userdir+'/templates/vnmrj/interface'
   exists($path,'file'):$e
   if(not $e) then
-        shell('mkdir -p '+$path)
+        mkdir('-p',$path)
   endif
   $path=userdir+'/templates/vnmrj/interface/AnnoProperties.xml'
   exists($path,'file'):$e
   if($e) then
-    delete($path)
+    delete($path,''):$dum
   endif
 
   $name=''
@@ -149,8 +149,8 @@ if($1='editAnno' and aspSel[1]=6) then
     $name='Arrow'
   elseif(aspProperty[1]='BOX') then
     $name='Box'
-  elseif(aspProperty[1]='OVAL') then // the same property file as line
-    $name='Line' 
+  elseif(aspProperty[1]='OVAL') then
+    $name='Oval' 
   elseif(aspProperty[1]='XBAR' or aspProperty[1]='YBAR') then
     $name='Bar' 
   elseif(aspProperty[1]='POLYGON') then
@@ -164,7 +164,7 @@ if($1='editAnno' and aspSel[1]=6) then
   endif
   exists($file,'file'):$e
   if($e) then 
-    shell('cp -f '+$file+' '+$path)
+    cp($file,$path)
     exists($path,'file'):$e
     if($e) then
       vnmrjcmd('popup','mode:modeless','file:AnnoProperties.xml','rebuild:yes','location:expViewArea','title:Property Editor')
@@ -207,7 +207,7 @@ if($1='ll2d') then
   $path=curexp+'/datdir/ll2dpeaks.txt'
   exists($path,'file'):$e
   if($e) then
-	delete($path)
+	delete($path,''):dum
   endif
   ll2d('peak','volume')
   ll2d('writetext',$path)
@@ -235,7 +235,7 @@ if($1='loadll2d') then
    if($#>2) then
      $file=$3
    endif
-   shell('rm -f '+$file)
+   delete($file,''):$dum
    write('file',$file,'#ll2d file %s',$path)
 
    lookup('mfile',$path,'Amplitude','F1','read','filekey'):$line,$k,$f

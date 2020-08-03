@@ -52,24 +52,11 @@ void AspBox::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
      roiW=(int)pCoord[1].x-roiX;
      roiH=(int)pCoord[1].y-roiY;
      if(created_type == ANNO_OVAL)
-        //AspUtil::drawOval(roiX,roiY,roiW,roiH,roiColor);
-	draw_oval(roiX,roiY,roiX+roiW,roiY+roiH,0,roiColor);
+	draw_oval(roiX,roiY,roiX+roiW,roiY+roiH,0,roiColor,fillRoi);
      else if(roundBox)
-	draw_round_rect(roiX,roiY,roiX+roiW,roiY+roiH,0,roiColor);
-     else if(fillRoi) {  
-	Gpoint_t poly[4];
-	poly[0].x=(int)pCoord[0].x;
-	poly[0].y=(int)pCoord[0].y;
-	poly[1].x=(int)pCoord[1].x;
-	poly[1].y=(int)pCoord[0].y;
-	poly[2].x=(int)pCoord[1].x;
-	poly[2].y=(int)pCoord[1].y;
-	poly[3].x=(int)pCoord[0].x;
-	poly[3].y=(int)pCoord[1].y;
-	if(fillRoi) GraphicsWin::fillPolygon(poly, 4, roiColor);
-     } else {  
-        AspUtil::drawBox(roiX,roiY,roiW,roiH,roiColor);
-     }
+	draw_round_rect(roiX,roiY,roiX+roiW,roiY+roiH,0,roiColor,fillRoi);
+     else
+	draw_rect(roiX,roiY,roiX+roiW,roiY+roiH,0,roiColor,fillRoi);
      if(selected == HANDLE_SELECTED) {
          AspUtil::drawHandle(selectedHandle,roiX,roiY,roiW,roiH,ACTIVE_COLOR,thick);
      } else if(selected == ROI_SELECTED) {

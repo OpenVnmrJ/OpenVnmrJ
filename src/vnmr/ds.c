@@ -125,17 +125,17 @@ extern int ds_timer_no;
 #ifdef  DEBUG
 extern int debug1;
 #define DPRINT0(str) \
-	if (debug1) Wscrprintf(str)
+	if (debug1) fprintf(stderr,str)
 #define DPRINT1(str, arg1) \
-	if (debug1) Wscrprintf(str,arg1)
+	if (debug1) fprintf(stderr,str,arg1)
 #define DPRINT2(str, arg1, arg2) \
-	if (debug1) Wscrprintf(str,arg1,arg2)
+	if (debug1) fprintf(stderr,str,arg1,arg2)
 #define DPRINT3(str, arg1, arg2, arg3) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3)
 #define DPRINT4(str, arg1, arg2, arg3, arg4) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3,arg4)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3,arg4)
 #define DPRINT5(str, arg1, arg2, arg3, arg4, arg5) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3,arg4,arg5)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3,arg4,arg5)
 #else
 #define DPRINT0(str) 
 #define DPRINT1(str, arg2) 
@@ -193,6 +193,7 @@ static int     select1D = TRUE;
 static int     select2D = FALSE;
 static int     old_mnumxpnts, old_mnumypnts;
 static int     interfero;
+static int     revAxis;
 static int     thMin;
 static int     doClear = 1;
 static int     dispCursor = 1;
@@ -567,11 +568,13 @@ static void m_newcursor(int butnum, int x, int y, int moveflag)
         UpdateVal(HORIZ,DELTA_NAME,delta,SHOW);
       }
     }
-    if (butnum==1)	/* cursor button */
+    if (butnum==1)	/* cursor button */ 
     {
       update_xcursor(0,x);
       if (interfero || dscaleRevFlag)
-         cr = + (x - dfpnt ) * wp  / dnpnt  + sp;
+         cr = (x - dfpnt) * wp  / dnpnt  + sp;
+      else if (revAxis)
+         cr = (x - dfpnt - dnpnt) * wp  / dnpnt  + sp;
       else
          cr = - (x - dfpnt ) * wp  / dnpnt  + wp  + sp;
       UpdateVal(HORIZ,CR_NAME,cr,SHOW);
@@ -610,6 +613,8 @@ static void b_cursor()
     addi_buttons();
   if (interfero || dscaleRevFlag)
      x  = dfpnt  + dnpnt  * (cr  - sp) / wp;
+  else if (revAxis)
+     x  = dfpnt  + dnpnt -  dnpnt  * (sp  - cr) / wp;
   else
      x  = dfpnt  + dnpnt  * (wp  - cr  + sp ) / wp;
   x1 = x + dnpnt  * delta  / wp;
@@ -1330,6 +1335,8 @@ static void m_spwp(int butnum, int x, int y, int mask)
 			if (spon) {
 				if (interfero)
 					freq = sp + (x - dfpnt) * wp / dnpnt;
+				else if (revAxis)
+					freq = sp + (x - dfpnt - dnpnt) * wp / dnpnt;
 				else
 					freq = sp + wp - (x - dfpnt) * wp / dnpnt;
 				sp -= freq - frqset;
@@ -1339,6 +1346,8 @@ static void m_spwp(int butnum, int x, int y, int mask)
 					dnpnt);
 			if (interfero)
 				frqset = sp + (x - dfpnt) * wp / dnpnt;
+			else if (revAxis)
+				frqset = sp + (x - dfpnt - dnpnt) * wp / dnpnt;
 			else
 				frqset = sp + wp - (x - dfpnt) * wp / dnpnt;
 			if (!spon)
@@ -1346,7 +1355,10 @@ static void m_spwp(int butnum, int x, int y, int mask)
 			spon = TRUE;
 			wpon = FALSE;
 		}
-		set_sp_wp(&sp, &wp, sw, fn / 2, rflrfp);
+                if (revAxis)
+                   set_sp_wp_rev(&sp,&wp,sw,fn/2,rflrfp);
+                else
+		   set_sp_wp(&sp, &wp, sw, fn / 2, rflrfp);
 		if ((wpon) && (wp == wpsav))
 			sp = spsav;
 		if (this_is_addi)
@@ -1362,6 +1374,9 @@ static void m_spwp(int butnum, int x, int y, int mask)
 				if (interfero)
 					update_xcursor(0, dfpnt + (int) ((double) dnpnt * (frqset
 							- sp) / wp));
+			        else if (revAxis)
+					update_xcursor(0, dfpnt + (int) ((double) dnpnt * (sp
+							- frqset) / wp));
 				else
 					update_xcursor(0, dfpnt + (int) ((double) dnpnt * (sp + wp
 							- frqset) / wp));
@@ -1987,18 +2002,32 @@ static void b_expand()
        UpdateVal(HORIZ,CR_NAME,cr,NOSHOW);
        UpdateVal(HORIZ,DELTA_NAME,delta,NOSHOW);
 #endif
-    set_sp_wp(&sp,&wp,sw,fn/2,rflrfp);
+    if (revAxis)
+       set_sp_wp_rev(&sp,&wp,sw,fn/2,rflrfp);
+    else
+       set_sp_wp(&sp,&wp,sw,fn/2,rflrfp);
     ds_mode=CURSOR_MODE; /* force b_cursor() into the BOX_MODE */
   }
   else
   {
     dsstatus("EXPAND");
     /* set sp,wp according to expansion box */
-       sp  = (interfero) ? cr : cr - delta;
-       wp  = delta;
-    set_sp_wp(&sp,&wp,sw,fn/2,rflrfp);
+    if (interfero)
+       sp  = cr;
+    else if (revAxis)
+       sp  = cr + delta;
+    else
+       sp  = cr - delta;
+    wp  = delta;
+    if (revAxis)
+       set_sp_wp_rev(&sp,&wp,sw,fn/2,rflrfp);
+    else
+       set_sp_wp(&sp,&wp,sw,fn/2,rflrfp);
+    if (interfero)
+       cr = sp;
+    else if ( !revAxis)
+       cr = sp + wp;
     delta = wp;
-    cr = (interfero) ? sp : sp + delta;
     ds_mode = BOX_MODE; /* force b_cursor() into the CURSOR_MODE */
 #ifdef VNMRJ
        addNewZoom("ds",cr,delta,0,0);
@@ -2825,6 +2854,13 @@ static int init_ds(int argc, char *argv[], int retc, char *retv[])
   if (ds_checkinput(argc,argv,&specIndex)) return(ERROR);
   if(init2d(GET_REV,GRAPHICS)) return(ERROR);
   interfero = (get_axis_freq(HORIZ) == 0);
+  revAxis = 0;
+  if ( ! interfero )
+  {
+     double scaleval, spval, wpval;
+
+     get_scale_pars( HORIZ, &spval, &wpval, &scaleval, &revAxis );
+  }
   if ((specIndex < 1) || (specIndex > nblocks * specperblock))
   { if (!WgraphicsdisplayValid(argv[0]) && (argc>1) && (isReal(argv[1])))
       Werrprintf("spectrum %d does not exist",specIndex);
@@ -4059,6 +4095,8 @@ int inset(int argc, char *argv[], int retc, char *retv[])
         int x0, y0, x1, y1;
         if (interfero) {
             x0  = dfpnt  + dnpnt  * (cr  - sp) / wp;
+        } else if (revAxis) {
+            x0  = dfpnt  + dnpnt - dnpnt  * (sp  - cr) / wp;
         } else {
             x0  = dfpnt  + dnpnt  * (wp  - cr  + sp ) / wp;
         }
@@ -4107,7 +4145,12 @@ void ds_sendCursor(double c2, double d2, int mode)
    else vps = (int)d;
    if(vps < 2) return;
 
-   d = (interfero) ? (c2 - sp) : (wp + sp - c2);
+   if (interfero)
+      d = c2 - sp;
+   else if (revAxis)
+      d  = sp - c2;
+   else
+      d = wp + sp - c2;
    if(d < 0.5 || d > wp) return;  
 
    getAxis(axis, 7);
@@ -4121,7 +4164,6 @@ void ds_sendCursor(double c2, double d2, int mode)
           if(d < 0.5) continue;
 
           sprintf(cmd, "vnmrjcmd('CR %d trackCursor(\\'cursor\\', %f, %f, %d, \\'%s\\')')\n", i+1, c2, d2, mode, axis);
-//fprintf(stderr,"updateOtherViewport %s\n", cmd);
           execString(cmd);
 
           //writelineToVnmrJ("CR ", cmd);
@@ -4153,14 +4195,27 @@ void ds_newCursor4freq(int num, double c1, double c2,
     c2 = ppm2Hz(HORIZ, c2);
     d2 = ppm2Hz(HORIZ, d2);
 
-    f2 = (interfero) ? (c2  - sp) : (wp  + sp - c2 );
+    if (interfero)
+    {
+      f2 = c2 - sp;
+      x  = dfpnt  + dnpnt  * f2 / wp;
+    }
+    else if (revAxis)
+    {
+      f2 = sp - c2;
+      x  = dfpnt + dnpnt - dnpnt  * f2 / wp;
+    }
+    else
+    {
+      f2 = wp + sp - c2;
+      x  = dfpnt  + dnpnt  * f2 / wp;
+    }
     if(f2 < 0.5 || f2 > wp) return;
 
     ds_mode = mode;
     cr = c2;
     delta = d2;
 
-    x  = dfpnt  + dnpnt  * f2 / wp;
     x1 = x + dnpnt  * delta  / wp;
 
   idelta = save  = x1 - x;
@@ -4200,11 +4255,21 @@ void ds_newCrosshair(int x, int y)
     double c2, freq;
 
       if (interfero)
+      {
          c2  =   (x - dfpnt ) * wp  / dnpnt  + sp;
+         freq = c2 - sp;
+      }
+      else if (revAxis)
+      {
+         c2  =   (x - dfpnt - dnpnt ) * wp  / dnpnt  + sp;
+         freq = sp - c2;
+      }
       else
+      {
          c2  = - (x - dfpnt ) * wp  / dnpnt  + wp  + sp;
+         freq = wp + sp - c2;
+      }
 
-   freq = (interfero) ? (c2 - sp) : (wp + sp - c2);
    if(freq < 0.5 || freq > wp || y < 0.5 || y > mnumypnts) {
   	m_noCrosshair();
 	return;
@@ -4238,7 +4303,12 @@ void ds_sendCrosshair(double c2, double f2)
    else vps = (int)d;
    if(vps < 2) return;
 
-   d = (interfero) ? (c2 - sp) : (wp + sp - c2);
+   if (interfero)
+      d = c2 - sp;
+   else if (revAxis)
+      d  = sp - c2;
+   else
+      d = wp + sp - c2;
    if(d < 0.5 || d > wp) return;  
 
    getAxis(axis, 7);
@@ -4279,13 +4349,26 @@ double f1, double f2, char *tr, char *ax1, char *ax2)
 
     c2 = ppm2Hz(HORIZ, c2);
 
-    x1 = (interfero) ? (c2  - sp) : (wp  + sp - c2 );
+    if (interfero)
+    {
+      x1 = c2 - sp;
+      x  = dfpnt  + dnpnt  * x1 / wp;
+    }
+    else if (revAxis)
+    {
+      x1 = sp - c2;
+      x  = dfpnt + dnpnt - dnpnt  * x1 / wp;
+    }
+    else
+    {
+      x1 = wp + sp - c2;
+      x  = dfpnt  + dnpnt  * x1 / wp;
+    }
     if(x1 < 0.5 || x1 > wp) {
        ds_noCrosshair();
        return;
     }
 
-    x  = dfpnt  + dnpnt  * x1 / wp;
     update_crosshair(x, convert4ppm(HORIZ, f2));
 }
 
@@ -4316,11 +4399,24 @@ void ds_inset(float c, float d)
   delta = d;
     dsstatus("EXPAND");
     /* set sp,wp according to expansion box */
-       sp  = (interfero) ? cr : cr - delta;
-       wp  = delta;
-    set_sp_wp(&sp,&wp,sw,fn/2,rflrfp);
+    if (interfero)
+       sp  = cr;
+    else if (revAxis)
+       sp  = cr + delta;
+    else
+       sp  = cr - delta;
+    wp  = delta;
+    if (revAxis)
+       set_sp_wp_rev(&sp,&wp,sw,fn/2,rflrfp);
+    else
+       set_sp_wp(&sp,&wp,sw,fn/2,rflrfp);
     delta = wp;
-    cr = (interfero) ? sp : sp + delta;
+    if (interfero)
+       cr = sp;
+    else if (revAxis)
+       cr = sp - delta;
+    else
+       cr = sp + delta;
   UpdateVal(HORIZ,SP_NAME,sp,NOSHOW);
   UpdateVal(HORIZ,WP_NAME,wp,NOSHOW);
     UpdateVal(HORIZ,CR_NAME,cr,NOSHOW);
@@ -4350,11 +4446,16 @@ void ds_setCursor(int x0, int x1)
   if (interfero) {
          cr = + (x0 - dfpnt ) * wp  / dnpnt  + sp;
          delta = + (x1 - dfpnt ) * wp  / dnpnt  + sp;
+         delta = cr - delta;
+  } else if (revAxis) {
+         cr = (x0 - dfpnt - dnpnt) * wp  / dnpnt  + sp;
+         delta = (x1 - dfpnt - dnpnt) * wp  / dnpnt  + sp;
+         delta = delta - cr;
   } else {
          cr = - (x0 - dfpnt ) * wp  / dnpnt  + wp + sp;
          delta = - (x1 - dfpnt ) * wp  / dnpnt  + wp  + sp;
+         delta = cr - delta;
   }
-  delta = cr - delta;
 
   return;
 }
@@ -4515,6 +4616,8 @@ void ds_zoomCenterPeak(int x, int y, int but)
     (void) y;
     if (interfero) {
            freq = sp + (x - dfpnt) * wp / dnpnt;
+    } else if (revAxis) {
+           freq = sp + (x - dfpnt - dnpnt) * wp / dnpnt;
     } else {
            freq = sp + wp - (x - dfpnt) * wp / dnpnt;
     }
@@ -4553,6 +4656,8 @@ void ds_centerPeak(int x, int y, int but)
 
     if (interfero) {
            freq = sp + (x - dfpnt) * wp / dnpnt;
+    } else if (revAxis) {
+           freq = sp + (x - dfpnt - dnpnt) * wp / dnpnt;
     } else {
            freq = sp + wp - (x - dfpnt) * wp / dnpnt;
     }
@@ -4570,10 +4675,13 @@ void ds_centerPeak(int x, int y, int but)
 
     execString("ds('again')\n");
 
-    if ( get_axis_freq(HORIZ) )
-        cr  = sp + delta;
-    else
+    if (interfero) {
         cr = sp;
+    } else if (revAxis) {
+        cr  = sp - delta;
+    } else {
+        cr  = sp + delta;
+    }
     delta  = fabs(wp);
 
     ds_sendSpwp(sp, wp, 1);
@@ -4587,10 +4695,21 @@ void ds_nextZoomin(double *c2, double *c1, double *d2, double *d1)
 
    if(P_getreal(GLOBAL, "zoomSlope", &slope, 1)) slope = 0.2;
 
-     if(!interfero) *c2 += *d2;
      d = slope*(*d2);
+     if( !interfero)
+     {
+        if ( revAxis)
+        {
+           *c2 -= *d2;
+           *c2 += 0.5*d;
+        }
+        else
+        {
+           *c2 += *d2;
+           *c2 -= 0.5*d;
+        }
+     }
      *d2 -= d;
-     *c2 -= 0.5*d;
 
      if(c1!=NULL) *c1 = 0;
      if(d1!=NULL) *d1 = 0;
@@ -4604,10 +4723,21 @@ void ds_prevZoomin(double *c2, double *c1, double *d2, double *d1)
 
    if(P_getreal(GLOBAL, "zoomSlope", &slope, 1)) slope = 0.2;
 
-     if(!interfero) *c2 += *d2;
      d = slope*(*d2);
+     if( !interfero)
+     {
+        if ( revAxis)
+        {
+           *c2 -= *d2;
+           *c2 -= 0.5*d;
+        }
+        else
+        {
+           *c2 += *d2;
+           *c2 += 0.5*d;
+        }
+     }
      *d2 += d;
-     *c2 += 0.5*d;
 
      if(c1!=NULL) *c1 = 0;
      if(d1!=NULL) *d1 = 0;

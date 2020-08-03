@@ -23,6 +23,7 @@ extern void get_sw_par(int direction, double *val);
 extern void get_reference(int direction, double *rfl_val, double *rfp_val);
 extern void get_rflrfp(int direction, double *val);
 extern int get_axis_freq(int direction);
+extern int get_axis_rev(int direction);
 extern void get_mark2d_info(int *first_ch, int *last_ch, int *first_direction);
 extern void DispField1(int pos, int color, char *label);
 extern void DispField2(int pos, int color, double val, int dez);

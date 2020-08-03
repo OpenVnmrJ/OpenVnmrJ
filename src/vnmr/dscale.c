@@ -50,17 +50,17 @@
 #ifdef  DEBUG
 extern int debug1;
 #define DPRINT(str) \
-	if (debug1) Wscrprintf(str)
+	if (debug1) fprintf(stderr,str)
 #define DPRINT1(str, arg1) \
-	if (debug1) Wscrprintf(str,arg1)
+	if (debug1) fprintf(stderr,str,arg1)
 #define DPRINT2(str, arg1, arg2) \
-	if (debug1) Wscrprintf(str,arg1,arg2)
+	if (debug1) fprintf(stderr,str,arg1,arg2)
 #define DPRINT3(str, arg1, arg2, arg3) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3)
 #define DPRINT4(str, arg1, arg2, arg3, arg4) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3,arg4)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3,arg4)
 #define DPRINT5(str, arg1, arg2, arg3, arg4, arg5) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3,arg4,arg5)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3,arg4,arg5)
 #else 
 #define DPRINT(str) 
 #define DPRINT1(str, arg2) 
@@ -1107,7 +1107,9 @@ void scale2d(int drawbox, int yoffset, int drawscale, int dcolor)
 
           get_scale_pars(HORIZ,&start,&len,&axis_scl,&reversed);
           get_intercept(HORIZ,&axis_intercept);
-          if (reversed)
+          if ( (reversed) && (axis_intercept > 0.0))
+             start += axis_intercept;
+          else if (reversed)
              start += len;
 
    /*  Next block is a trick that deals with a negative scale factor.  The
@@ -1294,7 +1296,6 @@ void scale2d(int drawbox, int yoffset, int drawscale, int dcolor)
 	      }
             }
         }
-      DPRINT("start vertical axis\n");
       if (drawbox)
          get_scale_axis(VERT,&axisval);
       DPRINT1("vertical axis = %c\n",axisval);
@@ -1302,6 +1303,7 @@ void scale2d(int drawbox, int yoffset, int drawscale, int dcolor)
         {
 
     /* draw the vertical axis  */
+      DPRINT("start vertical axis\n");
 
           if(drawbox) {
             get_scale_pars(VERT,&start,&len,&axis_scl,&reversed);
@@ -1319,7 +1321,9 @@ void scale2d(int drawbox, int yoffset, int drawscale, int dcolor)
 
           DPRINT4("get_scale_pars  start= %g  len= %g  axis_scl= %g  rev= %d\n",
                    start,len,axis_scl,reversed);
-          if (reversed)
+          if ( (reversed) && (axis_intercept > 0.0))
+             start += axis_intercept;
+          else if (reversed)
              start += len;
 
     /*  See the comment in the equivalent place in

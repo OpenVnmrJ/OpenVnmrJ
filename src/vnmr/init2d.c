@@ -86,15 +86,15 @@ extern int frame_set_pnt();
 #ifdef  DEBUG
 extern int debug1;
 #define DPRINT(str) \
-	if (debug1) Wscrprintf(str)
+	if (debug1) fprintf(stderr,str)
 #define DPRINT1(str, arg1) \
-	if (debug1) Wscrprintf(str,arg1)
+	if (debug1) fprintf(stderr,str,arg1)
 #define DPRINT2(str, arg1, arg2) \
-	if (debug1) Wscrprintf(str,arg1,arg2)
+	if (debug1) fprintf(stderr,str,arg1,arg2)
 #define DPRINT3(str, arg1, arg2, arg3) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3)
 #define DPRINT4(str, arg1, arg2, arg3, arg4) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3,arg4)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3,arg4)
 #else 
 #define DPRINT(str) 
 #define DPRINT1(str, arg2) 
@@ -288,8 +288,23 @@ void set_sp_wp(double *spval, double *wpval, double swval, int pts, double ref)
   hzpp = swval/(double) pts;
   checkreal(wpval,(double) MIN_NPNT * hzpp,swval - hzpp );
   *wpval = (double) ((int) (*wpval/hzpp + 0.01)) * hzpp;
+            
   checkreal(spval,hzpp - ref,swval - *wpval - ref);
   *spval = (double) ((int) ((*spval + ref)/hzpp + 0.01)) * hzpp - ref;
+}
+
+/************************************/
+void set_sp_wp_rev(double *spval, double *wpval, double swval, int pts, double ref)
+/************************************/
+{
+  register double hzpp;
+
+  hzpp = swval/(double) (pts-1);
+  checkreal(wpval,(double) MIN_NPNT * hzpp,swval);
+  *wpval = (double) ((int) (*wpval/hzpp + 0.01)) * hzpp;
+            
+  checkreal(spval,-swval - ref + *wpval, - ref);
+//  *spval = (double) ((int) ((*spval)/hzpp + 0.01)) * hzpp;
 }
 
 /*---------------------------------------
@@ -688,6 +703,31 @@ int init2d_getfidparms(int dis_setup)
   return(COMPLETE); 
 }
 
+void setVertAxis()
+{
+     double axis_scl;
+     int    reversed;
+
+     get_ref_pars(VERT,&sw1,&rflrfp1,&fn1);
+     get_scale_pars(VERT,&sp1,&wp1,&axis_scl,&reversed);
+     if (get_axis_freq(VERT))
+     {
+        if (reversed)
+        {
+           set_sp_wp_rev(&sp1, &wp1, sw1, fn1/2, rflrfp1);
+        }
+        else
+        {
+           set_sp_wp(&sp1, &wp1, sw1, fn1/2, rflrfp1);
+        }
+     }
+     else
+     {
+        set_sf_wf(&sp1, &wp1, sw1, fn1/2);
+     }
+     UpdateVal(VERT,WP_NAME,wp1,NOSHOW);
+     UpdateVal(VERT,SP_NAME,sp1,NOSHOW);
+}
 
 /*---------------------------------------
 |					|
@@ -924,7 +964,12 @@ static int getspecparms(int dis_setup, int frqdimname)
 
      get_scale_pars(HORIZ,&sp,&wp,&axis_scl,&reversed);
      if (get_axis_freq(HORIZ))
-       set_sp_wp(&sp, &wp, sw, fn/2, rflrfp);
+     {
+       if (reversed)
+          set_sp_wp_rev(&sp, &wp, sw, fn/2, rflrfp);
+       else
+          set_sp_wp(&sp, &wp, sw, fn/2, rflrfp);
+     }
      else
        set_sf_wf(&sp, &wp, sw, fn/2);
      UpdateVal(HORIZ,WP_NAME,wp,NOSHOW);
@@ -934,22 +979,10 @@ static int getspecparms(int dis_setup, int frqdimname)
   if (d2flag)
   {
      get_phase_pars(VERT,&rp1,&lp1);
-     get_ref_pars(VERT,&sw1,&rflrfp1,&fn1);
+     setVertAxis();
      if(dim1==FN1_DIM && (sw1<=0 || sw1>maxval)) {
 	Winfoprintf("Error sw1 out of bounds %f: 0 to %f",sw1,maxval);
 	return(ERROR);
-  }
-     {
-        double axis_scl;
-        int    reversed;
-
-        get_scale_pars(VERT,&sp1,&wp1,&axis_scl,&reversed);
-        if (get_axis_freq(VERT))
-           set_sp_wp(&sp1, &wp1, sw1, fn1/2, rflrfp1);
-        else
-           set_sf_wf(&sp1, &wp1, sw1, fn1/2);
-        UpdateVal(VERT,WP_NAME,wp1,NOSHOW);
-        UpdateVal(VERT,SP_NAME,sp1,NOSHOW);
      }
      x0 = 1.0;
      if ( get_axis_freq(HORIZ) && get_axis_freq(VERT) )
@@ -1085,11 +1118,36 @@ int exp_factors( int spec)
 
   if (get_axis_freq(HORIZ))
   {
-     fpnt = (int)((sw-sp-rflrfp-wp)/hzpp + 0.01);
+     int rev;
+
+     rev = get_axis_rev(HORIZ);
+     if (rev)
+     {
+        double axis_intercept;
+
+        get_intercept(HORIZ,&axis_intercept);
+        if ( axis_intercept > 0.0)
+           fpnt = (int)((sw-wp+sp+rflrfp)/hzpp + 0.01);
+        else
+           fpnt = (int)((-sp-rflrfp)/hzpp + 0.01);
+     }
+     else
+        fpnt = (int)((sw-sp-rflrfp-wp)/hzpp + 0.01);
   }
   else
   {
      fpnt = (int)(sp/hzpp + 0.01);
+  }
+  if (fpnt < 0)
+    fpnt = 0;
+  if (fpnt+npnt > fn/2)
+  {
+    npnt = fn/2 - fpnt;
+    if (npnt < 5)
+    {
+       npnt=5;
+       fpnt = fn/2 - 5;
+    }
   }
 
   DPRINT3("npnt=%d, fpnt=%d, hzpp=%g\n",npnt,fpnt,hzpp);
@@ -1102,9 +1160,36 @@ int exp_factors( int spec)
      if(npnt1<1) npnt1 = 1;
 
      if (get_axis_freq(VERT))
-        fpnt1 = (int)((sw1-sp1-rflrfp1-wp1)/hzpp1 + 0.01);
+     {
+        int rev;
+
+        rev = get_axis_rev(VERT);
+        if (rev)
+        {
+           double axis_intercept;
+
+           get_intercept(VERT,&axis_intercept);
+           if ( axis_intercept > 0.0)
+              fpnt1 = (int)((sw1-wp1+sp1+rflrfp1)/hzpp1 + 0.01);
+           else
+              fpnt1 = (int)((-sp1-rflrfp1)/hzpp1 + 0.01);
+        }
+        else
+           fpnt1 = (int)((sw1-sp1-rflrfp1-wp1)/hzpp1 + 0.01);
+     }
      else
         fpnt1 = (int)(sp1/hzpp1 + 0.01);
+     if (fpnt1 < 0)
+       fpnt1 = 0;
+     if (fpnt1+npnt1 > fn1/2)
+     {
+       npnt1 = fn1/2 - fpnt1;
+       if (npnt1 < 5)
+       {
+          npnt1=5;
+          fpnt1 = fn1/2 - 5;
+       }
+     }
 
      DPRINT3("npnt1=%d, fpnt1=%d, hzpp1=%g\n",npnt1,fpnt1,hzpp1);
   }

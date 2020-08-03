@@ -99,6 +99,8 @@ public interface VGaphDef
     static final int RGB_ALPHA = 87;
     static final int VBG_WIN_GEOM = 88;
     static final int RAISE_TOP_FRAME = 89;
+    static final int FONTSIZE2 = 90;
+    static final int JRECT = 91;
 
     static final int JFRAME_OPEN = 1;
     static final int JFRAME_CLOSE = 2;

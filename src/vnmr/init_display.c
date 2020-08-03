@@ -85,17 +85,17 @@ extern int getUserUnit(char *unit, char *label, double *slope, double *intercept
 #ifdef  DEBUG
 extern int debug1;
 #define DPRINT0(str) \
-	if (debug1) Wscrprintf(str)
+	if (debug1) fprintf(stderr,str)
 #define DPRINT1(str, arg1) \
-	if (debug1) Wscrprintf(str,arg1)
+	if (debug1) fprintf(stderr,str,arg1)
 #define DPRINT2(str, arg1, arg2) \
-	if (debug1) Wscrprintf(str,arg1,arg2)
+	if (debug1) fprintf(stderr,str,arg1,arg2)
 #define DPRINT3(str, arg1, arg2, arg3) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3)
 #define DPRINT4(str, arg1, arg2, arg3, arg4) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3,arg4)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3,arg4)
 #define DPRINT5(str, arg1, arg2, arg3, arg4, arg5) \
-	if (debug1) Wscrprintf(str,arg1,arg2,arg3,arg4,arg5)
+	if (debug1) fprintf(stderr,str,arg1,arg2,arg3,arg4,arg5)
 #else 
 #define DPRINT0(str) 
 #define DPRINT1(str, arg2) 
@@ -642,6 +642,37 @@ set_frq(dim_ *dimen)
                    strcpy(dimen->axis_label,"usec");
                 }
 		break;
+     case 'S':  {
+                   char tmp[64];
+                   char label[16];
+                   double left;
+                   double right;
+
+                   sprintf(label,"%s_left",dimen->fn_name);
+                   if (P_getreal(CURRENT,label,&left,1))
+                      left=0.0;
+                   sprintf(label,"%s_right",dimen->fn_name);
+                   if (P_getreal(CURRENT,label,&right,1))
+                      right=1.0;
+                   sprintf(label,"%s_label",dimen->fn_name);
+                   strcpy(tmp,"");
+                   P_getstring(CURRENT,label,tmp,1,15);
+                   strcpy(dimen->axis_label,tmp);
+                   if (left > right)
+                   {
+                      dimen->sw_val = left - right;
+                      dimen->axis_rev = 0;
+                      dimen->axis_freq = 1;
+                   }
+                   else
+                   {
+                      dimen->sw_val = right - left;
+                      dimen->axis_rev = 1;
+		      inter = dimen->sw_val;
+		      dimen->axis_freq = 1;
+                   }
+                }
+		break;
      case '0':  break;   /* Assume axis_label is already set */
 
      default:   if (dimen->axis_freq)
@@ -856,7 +887,16 @@ void get_reference(int direction, double *rfl_val, double *rfp_val)
       dim = dim_x;
    else
       dim = dim_y;
-   if (dim->axis_freq)
+   if (dim->axis_val[0] == 'S')
+   {
+      char label[16];
+
+      sprintf(label,"%s_right",dim->fn_name);
+      if (P_getreal(CURRENT,label,rfp_val,1))
+         *rfp_val = 0.0;
+      *rfl_val = 0.0;
+   }
+   else if (dim->axis_freq)
    {
       if (P_getreal(CURRENT,dim->rfl_name,rfl_val,1))
          *rfl_val = 0.0;
@@ -881,6 +921,11 @@ void get_rflrfp(int direction, double *val)
 int get_axis_freq(int direction)
 {
    return((direction == HORIZ) ? dim_x->axis_freq : dim_y->axis_freq);
+}
+
+int get_axis_rev(int direction)
+{
+   return((direction == HORIZ) ? dim_x->axis_rev : dim_y->axis_rev);
 }
 
 void get_mark2d_info(int *first_ch, int *last_ch, int *first_direction)
@@ -1155,14 +1200,16 @@ void InitVal(int pos, int direction, int n_index, int n_color, int n_style,
          if (p_index == CR_NAME)
          {
             val = fields[pos].ptr->cr_val;
-            intercept = fields[pos].ptr->frq_intercept;
+            if ( ! fields[pos].ptr->axis_rev )
+               intercept = fields[pos].ptr->frq_intercept;
          }
          else if (p_index == DELTA_NAME)
             val = fields[pos].ptr->delta_val;
          else if (p_index == SP_NAME)
          {
             val = fields[pos].ptr->sp_val;
-            intercept = fields[pos].ptr->frq_intercept;
+            if ( ! fields[pos].ptr->axis_rev )
+               intercept = fields[pos].ptr->frq_intercept;
          }
          else if (p_index == WP_NAME)
             val = fields[pos].ptr->wp_val;
@@ -1191,14 +1238,16 @@ void UpdateVal(int direction, int n_index, double val, int displ)
    if (n_index == CR_NAME)
    {
       dim->cr_val = val;
-      intercept = dim->frq_intercept;
+      if ( ! dim->axis_rev )
+         intercept = dim->frq_intercept;
    }
    else if (n_index == DELTA_NAME)
       dim->delta_val = val;
    else if (n_index == SP_NAME)
    {
       dim->sp_val = val;
-      intercept = dim->frq_intercept;
+      if ( ! dim->axis_rev )
+         intercept = dim->frq_intercept;
    }
    else if (n_index == WP_NAME)
       dim->wp_val = val;
@@ -1221,13 +1270,18 @@ void get_label(int direction, int style, char *label)
       dim = dim_y;
    if (style != NOUNIT)
    {
-      getunits(dim,label,style);
-      if (style != UNIT1)
+      if ( dim->axis_val[0] == 'S')
+         strcpy(label,dim->axis_label);
+      else
       {
-         char tmp[15];
+         getunits(dim,label,style);
+         if (style != UNIT1)
+         {
+            char tmp[15];
 
-         strcpy(tmp,label);
-         sprintf(label,(style == UNIT4) ? "%s%s" : "%s %s",dim->dimen_name,tmp);
+            strcpy(tmp,label);
+            sprintf(label,(style == UNIT4) ? "%s%s" : "%s %s",dim->dimen_name,tmp);
+         }
       }
    }
 }
@@ -1529,8 +1583,15 @@ void getReffrq(int direction, double *val) {
       dim = dim_y;
    if (dim->axis_freq)
    {
-      if (P_getreal(CURRENT,dim->ref_name,val,1))
+      if (dim->axis_val[0] == 'S')
+      {
          *val = 1.0;
+      }
+      else
+      {
+         if (P_getreal(CURRENT,dim->ref_name,val,1))
+            *val = 1.0;
+      }
    }
    else
    {

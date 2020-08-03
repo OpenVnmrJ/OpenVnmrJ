@@ -1306,6 +1306,26 @@ public class VnmrPlot extends JComponent implements Printable, VGaphDef
     }
 
 
+    private void draw_rect(int x1,int y1,int x2,int y2,int thick,int c) {
+        int lw = lineLw;
+        int w = x2 - x1;
+        int h = y2 - y1;
+        if (w < 2 || h < 2)
+           return;
+
+        if (thick > 0)
+           setLineWidth(thick);
+        g2d.setColor(getColor(c));
+        if (thick < 1)
+           g2d.fillRect(x1, y1, w, h);
+        else
+           g2d.drawRect(x1, y1, w, h);
+
+        if (thick > 0)
+           setLineWidth(lw);
+        g2d.setColor(graphColor);
+    }
+
     private void draw_roundRect(int x1,int y1,int x2,int y2,int thick,int c) {
         int lw = lineLw;
         int w = x2 - x1;
@@ -1319,7 +1339,10 @@ public class VnmrPlot extends JComponent implements Printable, VGaphDef
         if (arcW > 20)
             arcW = 20;
         g2d.setColor(getColor(c));
-        g2d.drawRoundRect(x1, y1, w, h, arcW, arcW);
+        if (thick < 1)
+           g2d.fillRoundRect(x1, y1, w, h, arcW, arcW);
+        else
+           g2d.drawRoundRect(x1, y1, w, h, arcW, arcW);
 
         if (thick > 0)
            setLineWidth(lw);
@@ -1336,7 +1359,10 @@ public class VnmrPlot extends JComponent implements Printable, VGaphDef
         if (thick > 0)
            setLineWidth(thick);
         g2d.setColor(getColor(c));
-        g2d.drawOval(x1, y1, w, h);
+        if (thick < 1)
+           g2d.fillOval(x1, y1, w, h);
+        else
+           g2d.drawOval(x1, y1, w, h);
 
         if (thick > 0)
            setLineWidth(lw);
@@ -1684,6 +1710,9 @@ public class VnmrPlot extends JComponent implements Printable, VGaphDef
                     break;
             case JOVAL: // 86
                     draw_oval(pvs[0], pvs[1], pvs[2], pvs[3], pvs[4], pvs[5]);
+                    break;
+            case JRECT: // 91
+                    draw_rect(pvs[0], pvs[1], pvs[2], pvs[3], pvs[4], pvs[5]);
                     break;
             case RGB_ALPHA: // 87
                     setRgbAlpha(pvs[0]);

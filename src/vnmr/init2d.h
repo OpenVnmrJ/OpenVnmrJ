@@ -146,6 +146,8 @@ extern int getnd();
 extern int getplaneno();
 extern void checkreal(double *r, double min, double max);
 extern void set_sp_wp(double *spval, double *wpval, double swval, int pts, double ref);
+extern void set_sp_wp_rev(double *spval, double *wpval, double swval, int pts, double ref);
+extern void setVertAxis();
 extern int checkphase(short status);
 extern int checkphase_datafile();
 extern int phasepars();
