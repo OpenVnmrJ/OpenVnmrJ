@@ -41,7 +41,6 @@ USER HOST = NOPASSWD: \\
    VBIN/jtestuser,\\
    VBIN/vcmdr,\\
    VBIN/vcmdm,\\
-   ABIN/startStopProcs,\\
    /usr/bin/getent,\\
    /usr/bin/passwd,\\
    /usr/sbin/useradd,\\
@@ -62,6 +61,7 @@ USER HOST = NOPASSWD: \\
    SBIN/scanlog
 
 %GROUP HOST = NOPASSWD: \\
+   ABIN/startStopProcs,\\
    VBIN/probe_mount,\\
    VBIN/probe_unmount
 

@@ -676,7 +676,7 @@ then
     printf  "su_acqproc=yes\n" >> $patch_save_dir/p_uninstall
     echo ""
     echo "Console communication software has been updated."
-    echo "Restart the communication software (su acqproc)"
+    echo "Restart the communication software with acqcomm"
     echo "for the patch to take effect"
     echo ""
 fi

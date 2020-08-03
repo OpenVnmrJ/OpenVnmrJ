@@ -910,7 +910,7 @@ if [[ ${doingMI} -eq 0 ]] ; then
 fi
 
 export vnmrsystem
-${vnmrsystem}/bin/makesuacqproc silent
+#  ${vnmrsystem}/bin/makesuacqproc silent
 
 echo ""
 echo "NMR Console software installation complete"
@@ -925,4 +925,7 @@ then
 else
    ${vnmrsystem}/acqbin/startStopProcs
 fi
+echo ""
+${vnmrsystem}/bin/acqcomm help
+echo ""
 

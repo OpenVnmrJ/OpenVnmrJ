@@ -255,7 +255,7 @@ elif [ x$su_acqproc = "xyes" ]
 then 
     echo ""
     echo "Console communication software has been updated."
-    echo "Restart the communication software (su acqproc)"
+    echo "Restart the communication software with acqcomm"
     echo "for the patch to take effect"
     echo ""
 fi

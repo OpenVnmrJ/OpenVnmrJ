@@ -14,7 +14,7 @@
       Before running this script.
 
            Besure the Acquisition processes are stopped
-           i.e. su acqproc
+           i.e. acqcomm stop
 
            Close all remote logins to any controllers
    
@@ -1265,7 +1265,7 @@ if __name__ == "__main__":
     procs = check4Procs()
     if ( procs == True ):
        logger.info(" ")
-       logger.info("The Acqusition Processes are running, \r\nPlease stop them (e.g. su acqproc) then rerun this script")
+       logger.info("The Acqusition Processes are running, \r\nPlease stop them (e.g. acqcomm stop) then rerun this script")
        logger.info(" ")
        os._exit(0)
 
