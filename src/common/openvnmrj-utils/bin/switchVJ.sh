@@ -73,9 +73,8 @@ then
         PID=$(pgrep Expproc)
         if [[ ! -z ${PID} ]]
         then
-            echo "Stopping Acquisition communications."
             PROCS=1
-            /vnmr/bin/execkillacqproc >/dev/null 2>&1
+            /vnmr/bin/acqcomm stop
         fi
 
         # Stop the locator database daemon
@@ -102,8 +101,7 @@ then
     # Restart the procs if they were running before
     if [[ ${PROCS} -eq 1 ]]
     then
-        echo "Starting Acquisition communications."
-        /vnmr/bin/execkillacqproc >/dev/null 2>&1
+        /vnmr/bin/acqcomm start
     fi
 fi
 

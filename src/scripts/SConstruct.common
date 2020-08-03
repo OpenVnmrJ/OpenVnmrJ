@@ -5,18 +5,6 @@ import sys
 # MAC -> darwin, Linux -> linux2
 platform = sys.platform
 
-
-#
-# define function to convert SUA paths to Windows
-
-def Sua2WinPath(suaPath):
-   if ( '/dev/fs/' in suaPath ):
-     dLetter = suaPath[8:9]
-     # print(dLetter)
-     return dLetter + ':' + suaPath[9:]
-   else:
-      return suaPath
-
 print('SConstruct.common')
 #get current working directory
 cwd = os.getcwd()
@@ -31,6 +19,7 @@ obsoleteList = 	['isjpsgup',
                'vnmr']
 
 acqList    = 	['bootr',
+                'acqcomm',
                 'cryoclient',
                 'cryomon',
                 'execkillacqproc',
@@ -91,7 +80,6 @@ fileList    = 	['adddevices',
                 'ovjUpdate',
                 'ovjUser',
                 'ovjWallPaper',
-                'patchinstall_ver1',
                 'patchinstall',
                 'patchmake',
                 'patchuninstall',
@@ -158,8 +146,6 @@ scriptFiles = [ 'vwScript',
              'vwScriptPPC',
              'vwAutoScript' ]
 
-InterixScriptFiles = [ 'makeuser_interix' ]
-
 vnmrBinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'vnmr','bin')
 if not os.path.exists(vnmrBinPath) :
     os.makedirs(vnmrBinPath)
@@ -190,7 +176,7 @@ if ('darwin' in platform):
    Execute(Copy(dest,i))
    Execute(Chmod(dest,0o755))
 
-if ( ('darwin' not in platform) and ('interix' not in platform) ):
+if ('darwin' not in platform):
    for i in acqList:
       dest = os.path.join(vnmrBinPath,i)
       Execute(Copy(dest,i+'.sh'))
@@ -251,72 +237,3 @@ if ( ('darwin' not in platform) and ('interix' not in platform) ):
       dest = os.path.join(acq2Path,i)
       Execute(Copy(dest,i+'.sh'))
       Execute(Chmod(dest,0o755))
-
-if ('interix' in platform):
-   # copy isADmin for Intgerix systems
-   dest = os.path.join(vnmrBinPath,'isAdmin')
-   src = os.path.join(cwd,'isAdmin.sh')
-   Execute(Copy(dest,src))
-   Execute(Chmod(dest,0o755))
-   dest = os.path.join(vnmrBinPath,'makeuser')
-   src = os.path.join(cwd,'makeuser_interix.sh')
-   Execute(Copy(dest,src))
-   Execute(Chmod(dest,0o755))
-   #
-   # option to the batch to exec application
-   #
-   #  -icon [filename]   The icon file of your application 
-   #   -invisible   Create an invisible application 
-   #   -temp   Use the temporary directory on execution 
-   #   -nodelete   Do not delete the temporary files 
-   #   -encrypt [Password]   Encrypt the program with a password 
-   #   -admin   Add an administrador manifest to the program 
-   #   -overwrite   Overwrite existing files 
-   #   -decompiler [String]   Add a decompiler to the program 
-   #   -include [filename]   Include additional files to the program 
-   #   -fileversion [String]   File version number 
-   #   -productversion [String]   Product version number 
-   #   -company [String]   Company name 
-   #   -productname [String]   Product name 
-   #   -internalname [String]   Internal name 
-   #   -description [String]   Product description 
-   #   -copyright [String]   Copyright 
-   
-   bat2exe=os.path.join(cwd,os.pardir,os.pardir,'3rdParty','winBatch2Exe','Bat_To_Exe_Converter.exe')
-   company=' -company "Agilent LSG-RPD"'
-   product=' -productname "VnmrJ"'
-   iconpath= os.path.join(cwd,os.pardir,'iconlib','vnmrbg_iconlib')
-   batpath=Sua2WinPath(os.path.join(cwd,'vnmrj.bat'))
-   exepath=Sua2WinPath(os.path.join(cwd,'VnmrJb.exe'))
-   icon=Sua2WinPath(os.path.join(iconpath,'vnmrj_classic.ico'))
-
-   rmcmd='rm ' + 'VnmrJ*.exe'
-   cmdaction=bat2exe + ' -overwrite  -bat ' + batpath + ' -save ' + exepath + ' -icon ' + icon  + company + product
-   #Execute(Action(cmdaction))   doesn't work, windows app gives error so use the os.system call directly
-   print(rmcmd)
-   print(cmdaction)
-   os.system(rmcmd) 
-   os.system(cmdaction)
-   dest = os.path.join(vnmrBinPath,'VnmrJb.exe')
-   Execute(Copy(dest, os.path.join(cwd,'VnmrJb.exe')))
-   Execute(Chmod(dest,0o755))
-   dest = os.path.join(vnmrBinPath,'vnmrj.bat')
-   Execute(Copy(dest, os.path.join(cwd,'vnmrj.bat')))
-   Execute(Chmod(dest,0o755))
-
-   dest = os.path.join(vnmrBinPath,'convert')
-   Execute(Copy(dest,'convert.sh'))
-   Execute(Chmod(dest,0o755))
-
-   batpath=Sua2WinPath(os.path.join(cwd,'vnmrjadmin.bat'))
-   exepath=Sua2WinPath(os.path.join(cwd,'VnmrJ_Adminb.exe'))
-   icon=Sua2WinPath(os.path.join(iconpath,'vnmrjadmin.ico'))
-   cmdaction=bat2exe + ' -overwrite  -bat ' + batpath + ' -save ' + exepath + ' -icon ' + icon  + company + product
-   print(cmdaction)
-   os.system(cmdaction)
-   dest = os.path.join(vnmrBinPath,'VnmrJ_Adminb.exe')
-   Execute(Copy(dest, os.path.join(cwd,'VnmrJ_Adminb.exe')))
-   Execute(Chmod(dest,0o755))
-   dest = os.path.join(vnmrBinPath,'vnmrjadmin.bat')
-   Execute(Copy(dest, os.path.join(cwd,'vnmrjadmin.bat')))
-   Execute(Chmod(dest,0o755))

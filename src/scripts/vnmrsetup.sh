@@ -387,7 +387,7 @@ rm -f /etc/profile.d/openwin.csh
 
 form_dest_dir
 #dest_dir="$default_dir/vnmr"
-nmr_user="vnmr1"
+nmr_user=$(logname)
 user_dir="$default_dir"
 nmr_group="nmr"
 
@@ -556,6 +556,7 @@ if [ -e /tmp/.ovj_installed ]; then
                   echo "Configuring $name with the standard configuration (stdConf)"
                   echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
                   sudo -i -u $name /vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog 2> /dev/null
+                  echo ""
                else
                   su - $nmr_user -c "/vnmr/bin/create_pgsql_user $name 2>> $insLog"
                   echo "Adding $name to OpenVnmrJ configuration files"
@@ -563,6 +564,7 @@ if [ -e /tmp/.ovj_installed ]; then
                   echo "Configuring $name with the standard configuration (stdConf)"
                   echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
                   su - $name -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog" 2> /dev/null
+                  echo ""
                fi
             fi
          done

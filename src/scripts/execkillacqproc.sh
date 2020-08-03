@@ -16,4 +16,11 @@
 #                    be terminated when the user that starts them logs out.
 #
 
+echo "The \"su acqproc\" method of starting and stopping the acquisition"
+echo "communication system is being deprecated."
+echo "Use the acqcomm script instead"
+echo ""
+/vnmr/bin/acqcomm help
+echo ""
+
 sudo /vnmr/acqbin/startStopProcs
