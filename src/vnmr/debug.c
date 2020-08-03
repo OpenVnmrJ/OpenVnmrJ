@@ -109,7 +109,7 @@ int debuger(int argc, char *argv[], int retc, char *retv[])
 	      case 'C':	M0flag = Mflag = M1flag = M2flag = M3flag = MflagVJcmd = 0;
 			Wscrprintf("Command and macro tracing turned off\n");
 			break;
-	      case 't':
+	      case 's':
 	         {
 	        	 int t=0;
 	    	     if(argv[i][1])
@@ -117,7 +117,7 @@ int debuger(int argc, char *argv[], int retc, char *retv[])
 	    	     shelldebug(t);
 	         }
 	      	  break;
-	      case 'T':
+	      case 'S':
 	    	  shelldebug(0);
 	          break;
 #ifndef DEBUG

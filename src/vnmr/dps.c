@@ -3440,6 +3440,7 @@ run_dps(int origin)
            Wgmode(); /* goto tek graphics and set screen 2 active */
 	   set_turnoff_routine(turnoff_dps);
    	   Wsetgraphicsdisplay("dps");
+           execString("menu('main')\n");
 #ifndef VNMRJ
 	   if (!clearDraw)
 	      save_org_image();
@@ -3674,6 +3675,7 @@ dps(int argc, char *argv[], int retc, char *retv[])
         batch_draw();
         open_dps_menu();
    	Wsetgraphicsdisplay("dps");
+        execString("menu('main')\n");
         RETURN;
     }
     if (!check_args(argc, argv, retc, retv))

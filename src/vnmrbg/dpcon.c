@@ -403,13 +403,17 @@ int x,y;
 }
 
 /**********************/
-static int i_dpcon(plotflag)
+static int i_dpcon(int plotflag, int axisOnly)
 /**********************/
 /* initialize dpcon program */
-int plotflag;
 {
 
   if (init2d(1,plotflag)) ABORT;
+  if (!d2flag && axisOnly)
+  {
+     setVertAxis();
+     d2flag = 1;
+  }
   if (!d2flag)
     { Werrprintf("no 2D data in data file");
       ABORT;
@@ -885,6 +889,7 @@ int argc; char *argv[]; int retc; char *retv[];
 { int argnumber;
   int phase_disp;
   int doaxis;
+  int axisOnly;
   int redisp;
   /* decode arguments */
 
@@ -893,6 +898,7 @@ int argc; char *argv[]; int retc; char *retv[];
   colors = 0; numcont = 4; contmult = 2.0;	/* defaults */
   colorflag = 1;
   doaxis = 1;
+  axisOnly = 0;
   redisp = 0;
   argnumber = 1;
 
@@ -907,8 +913,10 @@ int argc; char *argv[]; int retc; char *retv[];
         doaxis = 0;
       else if (strcmp(argv[1],"redisplay")==0)
         redisp = 1;
+      else if (strcmp(argv[1],"axisonly")==0)
+        axisOnly = 1;
       else
-        { Werrprintf ("expecting first argument pos or neg or noaxis");
+        { Werrprintf ("expecting first argument pos or neg or noaxis or axisonly");
           ABORT;
         }
       argnumber++;
@@ -950,7 +958,7 @@ int argc; char *argv[]; int retc; char *retv[];
      { if (argv[0][1]=='d') colorflag = 0;
      }
   if (argv[0][0]=='p') 
-    { if (i_dpcon(2)) ABORT;	/* plot on plotter */
+    { if (i_dpcon(2,axisOnly)) ABORT;	/* plot on plotter */
     }
   else
     {
@@ -958,13 +966,14 @@ int argc; char *argv[]; int retc; char *retv[];
       if (redisp)
         erase_dcon_box();
       else
-      { if (i_dpcon(1)) {
+      { if (i_dpcon(1,axisOnly)) {
              if (!plot)  grf_batch(0);
              ABORT;	/* display on screen */
         }
         if (argv[0][5]!='n') Wclear_graphics();
         Wshow_graphics();
-        dcon_displayparms();
+        if ( ! axisOnly)
+           dcon_displayparms();
       }
     }
   /* now display the scale */
@@ -975,6 +984,8 @@ int argc; char *argv[]; int retc; char *retv[];
                        /* third argument is non-zero because this is a draw */
                        /*  operation, not an erase                          */
                        /* fourth argument is the color                      */
+  if ( ! axisOnly )
+  {
   phase_disp = (get_phase_mode(HORIZ) && get_phase_mode(VERT));
   if (WisSunColor() && !plot && !redisp)
     { if (phase_disp)
@@ -983,6 +994,7 @@ int argc; char *argv[]; int retc; char *retv[];
         setcolormap(FIRST_AV_CLR,NUM_AV_CLRS,0,0);
     }
   contourplot(phase_disp);
+  }
   if (!plot)  grf_batch(0);
   if (redisp) RETURN;
   releaseAllWithId("dpcon");
@@ -993,7 +1005,8 @@ int argc; char *argv[]; int retc; char *retv[];
     // Wsetgraphicsdisplay("dpcon");
     // Wsetgraphicsdisplay("dconi");
     Wsetgraphicsdisplay(argv[0]);
-    disp_specIndex(currentindex());
+    if ( ! axisOnly )
+      disp_specIndex(currentindex());
   }
   RETURN;
 }
