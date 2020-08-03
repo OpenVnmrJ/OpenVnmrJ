@@ -54,8 +54,9 @@ struct _Rval { union _choice  v;
 	     };
 typedef struct _Rval Rval;
 
-struct _Tval { short size;
+struct _Tval {
 	       short basicType;
+               int size;
 	     };
 typedef struct _Tval Tval;
 
@@ -72,9 +73,9 @@ struct _vInfo   { short		active;    /* 1-active  0-not active */
 		  short		Dgroup;    /* Display group */
 		  short		group;	   /* group */
 		  short		basicType; 
-		  short		size;      /*  size of array */
 		  short		subtype;   
 		  short		Esize;     /*  size of enumeration array */
+		  int		size;      /*  size of array */
 		  int		prot;      /*  protection  bits */
 		  double	minVal;
 		  double 	maxVal;
