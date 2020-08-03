@@ -311,6 +311,10 @@ int substr(int argc, char *argv[], int retc, char *retv[])
           replace = 2;
           mode = 3;
        }
+       else if ( !strcmp(argv[2],"find") && !strcmp(argv[4],"csv"))
+       {
+          mode = 3;
+       }
        else
        {
           replace = 1;
@@ -842,23 +846,76 @@ int substr(int argc, char *argv[], int retc, char *retv[])
             int      found;
             int      numchar = 0;
             int      wlen;
+            int      csv = 0;
 
             if ((argc > 5) && (replace == 2))
             {   strncpy(delimiter,argv[5],MAXSTR-1);
                 if (strlen(argv[5]) > (MAXSTR-1))
                   Werrprintf("substr: delimiter too long, truncating to %d characters",MAXSTR-1);
             }
-            length2 = strlen(delimiter);
-            if (strlen(argv[3]) < 1)
+            if ((argc == 5) && ! strcmp(argv[4],"csv") )
+               csv = 1;
+            if ( (strlen(argv[3]) < 1) && ! csv)
             {   Werrprintf("substr: bad search word");
                 clearRets(retc,retv);
                 ABORT;
             }
-            length = strlen(argv[1]);
             wlen = strlen(argv[3]);
+            first = found = 0;
+            length = strlen(argv[1]);
             i = 0;
             count = 0;
-            first = found = 0;
+            if (csv)
+            {
+               length2 = 0;
+               first=i;
+               numchar = 0;
+               while ( (i < length) && ( (c = argv[1][i]) != '\0') && !found )
+               {
+                    if  (argv[1][i] == '"')
+                    {
+                       i++;
+                       numchar++;
+                       while ( ((c = argv[1][i]) != '\0') && (argv[1][i] != '"') )
+                       {
+                          i++;
+                          numchar++;
+                       }
+                       if (argv[1][i] == '"')
+                       {
+                          i++;
+                          numchar++;
+                       }
+                    }
+                    if (argv[1][i] == ',')
+                    {
+                       count++;
+                       found =  ((wlen == numchar) &&
+                            !strncmp(&argv[1][first],argv[3],numchar));
+                       if ( found )
+                       {
+                          break;
+                       }
+                       numchar=0;
+                       first = i+1;
+                    }
+                    else
+                    {
+                       numchar++;
+                    }
+                    i++;
+               }
+               if ( ! found )
+               {
+                  found =  ((wlen == numchar) &&
+                            !strncmp(&argv[1][first],argv[3],numchar));
+                  if (found)
+                     count++;
+               }
+            }
+            else
+            {
+            length2 = strlen(delimiter);
             while (! found  && (i < length))
             {
 
@@ -878,6 +935,7 @@ int substr(int argc, char *argv[], int retc, char *retv[])
             while (((c = argv[1][i]) != '\0') &&
                     (is_whitespace(c,length2,delimiter)))
               i++;   /* skip white space */
+            }
             if (!found)
             {
                if (retc >= 1)
@@ -903,6 +961,47 @@ int substr(int argc, char *argv[], int retc, char *retv[])
 		   retv[2] = intString( numchar );
                 if (retc >= 4)
                 {
+                   if (csv)
+                   {
+                      if (count == 1)
+                      {
+                         if ( ! length)
+		            retv[3] = newString( argv[1] );
+                         else
+		            retv[3] = newString( & argv[1][numchar+1] );
+                      }
+                      else
+                      {
+                         char *tmpstr;
+
+                         tmpstr = (char *)allocateWithId(length,"substr");
+                         i=0;
+                         while (i < first)
+                         {
+                            tmpstr[i] = argv[1][i];
+                            i++;
+                         }
+
+                         if ( (i+numchar) == length) // last word
+                         {
+                            if (i)
+                               i--;  // remove last comma
+                         }
+                         else
+                         {
+                            while (argv[1][i+numchar+1] != '\0')
+                            {
+                               tmpstr[i] = argv[1][i+numchar+1];
+                               i++;
+                            }
+                         }
+                         tmpstr[i] = '\0';
+		         retv[3] = newString( tmpstr );
+                         release(tmpstr);
+                      }
+                   }
+                   else
+                   {
                    /* return what is left after removing the requested word */
                    /* If first word, remove preceding and trailing white space */
                    /* If not the first word, remove preceding white space only */
@@ -937,6 +1036,7 @@ int substr(int argc, char *argv[], int retc, char *retv[])
                       strcat(tmpstr,(ptr+i) );
 		      retv[3] = newString( tmpstr );
                       release(tmpstr);
+                   }
                    }
                 }
             }
