@@ -641,7 +641,8 @@ extern int traceMode;
 #define RGB_ALPHA   87
 #define VBG_WIN_GEOM 88
 #define RAISE_TOP_FRAME  89
-#define FONTSIZE      90
+#define FONTSIZE    90
+#define JRECT       91
 
 #define JFRAME_OPEN     1
 #define JFRAME_CLOSE    2
@@ -14573,7 +14574,7 @@ draw_arrow(int x1, int y1, int x2, int y2, int thick, int color)
 
  // the origin point (0, 0) is at top-left corner
 void
-draw_round_rect(int x1, int y1, int x2, int y2, int thick, int color)
+draw_rect(int x1, int y1, int x2, int y2, int thick, int color, int fillRoi)
 {
    int n;
    int x0, y0;
@@ -14583,6 +14584,44 @@ draw_round_rect(int x1, int y1, int x2, int y2, int thick, int color)
            return;
        if (color >= 0)
            ps_color(color, 0);
+       if (fillRoi)
+          thick = 1;
+       n = ps_linewidth(thick);
+       if (x2 < x1) {
+           x0 = x1;
+           x1 = x2;
+           x2 = x0;
+       }
+       y1 = mnumypnts - y1; 
+       y2 = mnumypnts - y2; 
+       if (y2 < y1) {
+           y0 = y1;
+           y1 = y2;
+           y2 = y0;
+       }
+       ps_rect(x1, y1, x2 - x1, y2 - y1);
+       ps_linewidth(n);
+       return;
+   }
+   if (fillRoi)
+      thick = -1;
+   j6p_func(JRECT, x1, y1, x2, y2, thick, color);
+}
+
+ // the origin point (0, 0) is at top-left corner
+void
+draw_round_rect(int x1, int y1, int x2, int y2, int thick, int color, int fillRoi)
+{
+   int n;
+   int x0, y0;
+
+   if (plot != 0 && (iplotFd == NULL)) {
+       if (raster < 3)
+           return;
+       if (color >= 0)
+           ps_color(color, 0);
+       if (fillRoi)
+          thick = 1;
        n = ps_linewidth(thick);
        if (x2 < x1) {
            x0 = x1;
@@ -14600,12 +14639,14 @@ draw_round_rect(int x1, int y1, int x2, int y2, int thick, int color)
        ps_linewidth(n);
        return;
    }
+   if (fillRoi)
+      thick = -1;
    j6p_func(JROUNDRECT, x1, y1, x2, y2, thick, color);
 }
 
  // the origin point (0, 0) is at top-left corner
 void
-draw_oval(int x1, int y1, int x2, int y2, int thick, int color)
+draw_oval(int x1, int y1, int x2, int y2, int thick, int color, int fillRoi)
 {
    int n;
    int x0, y0;
@@ -14615,6 +14656,8 @@ draw_oval(int x1, int y1, int x2, int y2, int thick, int color)
            return;
        if (color >= 0)
            ps_color(color, 0);
+       if (fillRoi)
+          thick = 1;
        n = ps_linewidth(thick);
        if (x2 < x1) {
            x0 = x1;
@@ -14632,6 +14675,8 @@ draw_oval(int x1, int y1, int x2, int y2, int thick, int color)
        ps_linewidth(n);
        return;
    }
+   if (fillRoi)
+      thick = -1;
    j6p_func(JOVAL, x1, y1, x2, y2, thick, color);
 }
 
@@ -14642,13 +14687,18 @@ draw_oval(int x1, int y1, int x2, int y2, int thick, int color)
 void
 set_anno_font(const char *fontName, const char *fontStyle, const char *fontColor, int fontSize)
 {
+    int color;
     if (plot != 0 && (iplotFd == NULL)) {
        if (raster < 3)
            return;
        
        return;
     }
-    sprintf(tmpStr, "%s, %s, %s, %d", fontName, fontStyle, fontColor, fontSize);
+    if (colorindex((char *)fontColor, &color))
+       sprintf(tmpStr, "%s, %s, %d, %d", fontName, fontStyle, color, fontSize);
+    else
+       sprintf(tmpStr, "%s, %s, %s, %d", fontName, fontStyle, fontColor, fontSize);
+
     aip_dstring(1, ANNFONT, 0, 0, 0, 0, tmpStr);
 }
 
@@ -14731,16 +14781,16 @@ void set_ybar_style(int n) {
       h = mnumypnts * 0.6;
       d = w / 8;
 
-      draw_round_rect(x, y, x + w, y + h, 6, 5);
+      draw_round_rect(x, y, x + w, y + h, 6, 5,0);
       set_rgb_alpha(60);
       x += d; y += d; w -= d * 2; h -= d * 2;
-      draw_round_rect(x, y, x + w, y + h, 6, 5);
+      draw_round_rect(x, y, x + w, y + h, 6, 5,0);
       set_rgb_alpha(40);
       x += d; y += d; w -= d * 2; h -= d * 2;
-      draw_round_rect(x, y, x + w, y + h, 6, 5);
+      draw_round_rect(x, y, x + w, y + h, 6, 5,0);
       x += d; y += d; w -= d * 2; h -= d * 2;
       set_anno_color("green");
-      draw_round_rect(x, y, x + w, y + h, 1, -1);
+      draw_round_rect(x, y, x + w, y + h, 1, -1,0);
 
       x = mnumxpnts * 0.5;
       y = mnumypnts * 0.1;
@@ -14749,13 +14799,13 @@ void set_ybar_style(int n) {
       d = w / 4;
 
       set_rgb_alpha(100);
-      draw_oval(x, y, x + w, y + h, 6, 9);
+      draw_oval(x, y, x + w, y + h, 6, 9,0);
       set_rgb_alpha(60);
       x += d; y += d; w -= 20; h -= d;
-      draw_oval(x, y, x + w, y + h, 6, 9);
+      draw_oval(x, y, x + w, y + h, 6, 9,0);
       set_rgb_alpha(30);
       x += d; y += d; w -= 20; h -= d;
-      draw_oval(x, y, x + w, y + h, 6, 9);
+      draw_oval(x, y, x + w, y + h, 6, 9,0);
       set_rgb_alpha(100);
       return;
    }
@@ -14793,10 +14843,10 @@ void set_ybar_style(int n) {
    if (n == 7) {
        aip_drawString("string 14", 200, 400, 0, 18);
        aip_drawVString("vstring 12", 200, 400, 12);
-       draw_oval(200, 0, 400, 400, 4, 12);
-       draw_oval(400, 400, 800, 600, 4, 18);
-      draw_round_rect(700, 300,  900, 0, 8, 5);
-      draw_round_rect(920, 300,  1200, 100, 12, 6);
+       draw_oval(200, 0, 400, 400, 4, 12,0);
+       draw_oval(400, 400, 800, 600, 4, 18,0);
+      draw_round_rect(700, 300,  900, 0, 8, 5,0);
+      draw_round_rect(920, 300,  1200, 100, 12, 6,0);
        aip_drawLine(200, 500, 800, 500, 5);
  aip_drawRect(1000, 0, 300, 200, 5);
       draw_arrow(1000, 0, 1200, 400, 2, 6);
@@ -14806,8 +14856,8 @@ void set_ybar_style(int n) {
       return;
    }
    if (n == 8) {
-      draw_oval(200, 200, 600, 400, 4, 12);
-      draw_oval(200, 400, 400, 800, 4, 32);
+      draw_oval(200, 200, 600, 400, 4, 12,0);
+      draw_oval(200, 400, 400, 800, 4, 32,0);
       // draw_round_rect(100, 400, 800, 1200, 8, 14);
    }
 }

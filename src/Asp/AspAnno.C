@@ -182,7 +182,9 @@ AspAnno::AspAnno(char words[MAXWORDNUM][MAXSTR], int nw) {
 	else roundBox=false;
 	count++; 
    }
-   if(nw>count && (created_type == ANNO_BOX || created_type == ANNO_POLYGON)) { // Box and polygon 
+   if(nw>count && ((created_type == ANNO_BOX) ||
+                   (created_type == ANNO_POLYGON) ||
+                   (created_type == ANNO_OVAL)  )) { // Box, polygon  and Oval
 	if(atoi(words[count]) > 0) fillRoi=true;
 	else fillRoi=false;
 	count++; 
@@ -238,7 +240,7 @@ string AspAnno::toString() {
 	labelLoc.x, labelLoc.y,disFlag,mmbind,rotate,
         lineThickness, lineColor.c_str(),fontSize,fontColor.c_str(),
 	fontName.c_str(),fontStyle.c_str(),transparency,(int)roundBox,(int)fillRoi);
-   else if(created_type == ANNO_POLYGON)
+   else if ((created_type == ANNO_POLYGON) || (created_type == ANNO_OVAL))
      sprintf(str,"%d %s %s |%s| %.3g %.3g %d %d %d %d %s %d %s %s %s %.2f %d",
         index+1,getName(created_type).c_str(),coordStr.c_str(),label.c_str(), 
 	labelLoc.x, labelLoc.y,disFlag,mmbind,rotate,

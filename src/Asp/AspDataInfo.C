@@ -80,7 +80,7 @@ void AspDataInfo::updateDataInfo() {
 	else rank=1;
 
 	hasData = false;
-	if(rank > 1) {
+	if( (rank > 1) || (strstr(str,"dconi") == str) ) {
 	   if(!select_init(1,1,0,1,1,1,0,0)) {
 		hasData = true;
 		if(strstr(str,"dconi") == str) {
@@ -227,19 +227,26 @@ void AspDataInfo::initAxis(int dim, aspAxisInfo_t *axis) {
 	// revflag true for FID x-axis and vertical axis of 1D display 
 	get_scale_pars(dim, &(axis->start), &(axis->width), &(axis->scale), &(axis->rev));
 
-	// convert sp,wp to cr,delta. 
-	// rev=0 for freq axis, rev=1 for fid or intensity
-        if(axis->rev) { // width is negative, since cursor2=cursor1-delta 
-	   axis->maxwidth = -axis->maxwidth;
-	   axis->width = -axis->width;
-	} else { // reverse start point
-	   axis->start += axis->width;
-	   axis->minfirst = -axis->minfirst; // this is the first point on the right.
-        }
-
 // note, axis->scale from get_scale_pars depends on axis unit.
 // since roi is defined in ppm, axis->scale should be reffrq
 	getReffrq(dim, &(axis->scale));
+
+	// convert sp,wp to cr,delta. 
+	// rev=0 for freq axis, rev=1 for fid or intensity
+        if(! axis->rev) {   // standard spectrum
+	   axis->start += axis->width;
+	   axis->minfirst = -axis->minfirst; // this is the first point on the right.
+        } else if (get_axis_freq(dim) ) {  // reversed axis spectrum
+	   axis->minfirst = -axis->minfirst; // this is the first point on the right.
+	   // axis->maxwidth = -axis->maxwidth;
+	   axis->start -= axis->width;
+	   axis->width = -axis->width;
+           axis->scale = 1.0;  // No ppm scaling
+	} else {  // fid
+	   axis->maxwidth = -axis->maxwidth;
+	   axis->width = -axis->width;
+        }
+
 
 	// scale is reffrq (ppm to Hz)
 	if(axis->scale == 0) axis->scale=1.0;

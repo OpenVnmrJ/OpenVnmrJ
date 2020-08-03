@@ -1441,6 +1441,27 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
         mygc.setColor(graphColor);
     }
 
+    private void draw_rect(int x1,int y1,int x2,int y2,int thick,int c) {
+        int lw = lineLw;
+
+        if (thick > 0)
+            setLineWidth(thick);
+
+        int w = x2 - x1;
+        int h = y2 - y1;
+        if (w < 1 || h < 1)
+           return;
+        mygc.setColor(getColor(c));
+        if (thick < 0)
+           mygc.fillRect(x1, y1, w, h);
+        else
+           mygc.drawRect(x1, y1, w, h);
+
+        if (thick > 0)
+            setLineWidth(lw);
+        mygc.setColor(graphColor);
+    }
+
     private void draw_roundRect(int x1,int y1,int x2,int y2,int thick,int c) {
         int lw = lineLw;
 
@@ -1455,7 +1476,10 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
         if (arcW > 20)
             arcW = 20;
         mygc.setColor(getColor(c));
-        mygc.drawRoundRect(x1, y1, w, h, arcW, arcW);
+        if (thick < 0)
+           mygc.fillRoundRect(x1, y1, w, h, arcW, arcW);
+        else
+           mygc.drawRoundRect(x1, y1, w, h, arcW, arcW);
 
         if (thick > 0)
             setLineWidth(lw);
@@ -1473,7 +1497,10 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
         if (w < 1 || h < 1)
            return;
         mygc.setColor(getColor(c));
-        mygc.drawOval(x1, y1, w, h);
+        if (thick < 0)
+           mygc.fillOval(x1, y1, w, h);
+        else
+           mygc.drawOval(x1, y1, w, h);
 
         if (thick > 0)
             setLineWidth(lw);
@@ -3350,6 +3377,9 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
             return (true);
         case JARROW:
             draw_arrow(pv[0], pv[1], pv[2], pv[3], pv[4], pv[5]);
+            return (true);
+        case JRECT:
+            draw_rect(pv[0], pv[1], pv[2], pv[3], pv[4], pv[5]);
             return (true);
         case JROUNDRECT:
             draw_roundRect(pv[0], pv[1], pv[2], pv[3], pv[4], pv[5]);
@@ -5652,8 +5682,8 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
         Color fcolor = fontColor;
         if (c >= 0)
            fontColor = getTransparentColor(DisplayOptions.getColor(c));
-        else
-           fontColor = DisplayOptions.getColor(-c);
+//        else
+//           fontColor = DisplayOptions.getColor(c);
         drawString(str, x, y);
         fontColor = fcolor;
     }
@@ -6111,8 +6141,13 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
         myFont = new Font(name, type, size);
         mygc.setFont(myFont);
 
+
         if (!colorStr.equalsIgnoreCase("null"))
-            fontColor = getTransparentColor(DisplayOptions.getColor(colorStr));
+        {
+            setAnnColor(colorStr);
+            fontColor = getTransparentColor(fontColor);
+//            fontColor = getTransparentColor(DisplayOptions.getColor(colorStr));
+        }
         bFreeFontColor = true;
     }
 
@@ -6121,7 +6156,13 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
             return;
         colorId = -3;
         icolorId = -3;
-        graphColor = DisplayOptions.getColor(data.trim());
+        try {
+           int id = Integer.parseInt(data);
+           graphColor = getColor(id);
+        } catch (NumberFormatException er) {
+           graphColor = DisplayOptions.getColor(data.trim());
+        }
+//        graphColor = DisplayOptions.getColor(data.trim());
         if (rgbAlpha < 250) {
             int r = graphColor.getRed();
             int g = graphColor.getGreen();
