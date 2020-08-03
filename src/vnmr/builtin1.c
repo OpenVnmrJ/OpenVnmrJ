@@ -2215,6 +2215,7 @@ int setenumeral(int argc, char *argv[], int retc, char *retv[])
     symbol **root;
     varInfo *v;
     int      i,num;
+    int addFlag = 0;
 
    (void) retc;
    (void) retv;
@@ -2223,18 +2224,28 @@ int setenumeral(int argc, char *argv[], int retc, char *retv[])
       for (i=0; i<argc ;i++)
         TPRINT3("%s: argv[%d] = \"%s\"\n",argv[0],i,argv[i]);
 #endif 
-    if ((argc < 3) || (!isReal(argv[2])))
+    if (argc < 3)
     {
-      Werrprintf("Usage -- %s(name,N,enum1,enum2,...,enumN[,tree])",argv[0]);
+      Werrprintf("Usage -- %s(name,N,enum1,...,enumN[,tree]) or %s(name,'add',enum[,tree])",
+                  argv[0], argv[0]);
       ABORT;
     }
-    num = (int) stringReal(argv[2]);
-    if ((num+3 != argc) && (num+4 != argc))
+    if ( ! strcmp(argv[2],"add"))
     {
-      Werrprintf("Usage -- %s(name,N,enum1,enum2,...,enumN[,tree])",argv[0]);
-      ABORT;
+       num = 1;
+       tree = (5 == argc) ? argv[argc-1] : "current";
+       addFlag = 1;
     }
-    tree = (num+4 == argc) ? argv[argc-1] : "current";
+    else
+    {
+       num = (int) stringReal(argv[2]);
+       if ((num+3 != argc) && (num+4 != argc))
+       {
+         Werrprintf("Usage -- %s(name,N,enum1,enum2,...,enumN[,tree])",argv[0]);
+         ABORT;
+       }
+       tree = (num+4 == argc) ? argv[argc-1] : "current";
+    }
     if ((root = getTreeRoot(tree)) == NULL)
     {	Werrprintf("%s:  \"%s\"  bad tree name",argv[0],tree);
 	ABORT;
@@ -2256,12 +2267,29 @@ int setenumeral(int argc, char *argv[], int retc, char *retv[])
                  Werrprintf("flag enumerals must be single characters");
                  ABORT;
               }
-	if (v->ET.size)
-          disposeStringRvals(v->E); /* clear all enumeration values */
-	v->ET.size = 0;
-	v->E = NULL;
-        for (i = 1; i <= num; i++)
-      	  assignEString(argv[i+2],v,(i == 1) ? 0 : i);
+        if ( ! addFlag)
+        {
+	   if (v->ET.size)
+             disposeStringRvals(v->E); /* clear all enumeration values */
+	   v->ET.size = 0;
+	   v->E = NULL;
+           for (i = 1; i <= num; i++)
+      	     assignEString(argv[i+2],v,(i == 1) ? 0 : i);
+        }
+        else
+        {
+           Rval *r;
+           int found = 0;
+           r = v->E;
+           while (r && !found)
+           {
+              if ( ! strcmp(r->v.s,argv[3]))
+                 found = 1;
+              r = r->next;
+           }
+           if ( ! found)
+              assignEString(argv[3],v, v->ET.size + 1);
+        }
 	appendvarlist(argv[1]);
 	RETURN;
     }
@@ -4232,6 +4260,22 @@ int encipher(int argc, char *argv[], int retc, char *retv[])
    char *toFile;
    int ret __attribute__((unused));
 
+   if ((argc == 3) && ! strcmp(argv[1],"macstatus") )
+   {
+      txtfile = fopen( argv[2], "r" );
+      if (txtfile == NULL)
+      {
+         Werrprintf( "%s: can't open %s", argv[0], argv[2] );
+         ABORT;
+      }
+      ch = getc(txtfile);
+      fclose(txtfile);
+      if (retc)
+         retv[0] = intString(ch <= 127);
+      else
+         Winfoprintf( "File is %s", (ch <= 127) ? "text" : "mac" );
+      RETURN;
+   }
    if ((argc >= 4) && ! strcmp(argv[1],"mac") )
    {
       FILE *outtxtfile = NULL;
