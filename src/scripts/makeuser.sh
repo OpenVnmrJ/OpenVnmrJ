@@ -494,6 +494,9 @@ else  #current user is root
                 /usr/sbin/useradd -d"$dir_name/$name_add" -s/bin/bash -u$num -g$nmrgnum "$name_add"
                 /usr/bin/passwd -f -u "$name_add"
 	        chmod 755 "$dir_name/$name_add"
+                echo ""
+                echo "User $name_add has no initial password"
+                echo ""
             else
                 # --home-create == -m, --home == -d, --shell == -s, --gid == -g
                 # must give the account a temp password 'abcd1234' to get the account active 
@@ -519,6 +522,9 @@ else  #current user is root
                 # option to force to user to change password on login
                 # sudo /usr/bin/passwd --expire "$name_add" 2>/dev/null
                 sudo /vnmr/bin/setupbashenv "$dir_name/$name_add"
+                echo ""
+                echo "User $name_add has an initial password of abcd1234"
+                echo ""
             fi
         else
             /bin/cp /etc/passwd /etc/passwd.bk
