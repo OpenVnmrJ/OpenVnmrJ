@@ -1715,7 +1715,7 @@ static int rtxfromdisk(symbol **root, FILE *stream, int key1IsRt, int key2IsClea
     int         i;
     int         intptr;
     int         num;
-    int         ret;
+    int ret __attribute__((unused));
     varInfo    *v;
     int         dort;
     varInfo     nv;
@@ -2032,19 +2032,7 @@ int storeOnDisk(char *name, varInfo *v, FILE *stream)
     int   ival;
 
     dummy = 100;
-    /*  write out good stuff */
-    /*  Note:  VMS C doesn't support the %hd format on output; only on input  */
-#ifdef UNIX
     ival = fprintf(stream,"%s %hd %hd %.12g %.12g %.12g %hd %hd %d %hd %x\n",
-	    name,v->subtype,v->T.basicType,v->maxVal,v->minVal,
-	    v->step,v->Ggroup,v->Dgroup,v->prot,v->active,dummy);
-    if (ival < 0)
-      return( -19 );
-    ival = fprintf(stream,"%hd ",v->T.size); /* store size */
-    if (ival < 0)
-      return( -19 );
-#else 
-    ival = fprintf(stream,"%s %d %d %g %g %g %d %d %d %d %x\n",
 	    name,v->subtype,v->T.basicType,v->maxVal,v->minVal,
 	    v->step,v->Ggroup,v->Dgroup,v->prot,v->active,dummy);
     if (ival < 0)
@@ -2052,7 +2040,6 @@ int storeOnDisk(char *name, varInfo *v, FILE *stream)
     ival = fprintf(stream,"%d ",v->T.size); /* store size */
     if (ival < 0)
       return( -19 );
-#endif 
     if (v->T.basicType == T_STRING)  /* store string values */
     {	
         register char *sptr;
@@ -2085,15 +2072,9 @@ int storeOnDisk(char *name, varInfo *v, FILE *stream)
 
 /*  Write out enumeral values (list of allowed values) */
 
-#ifdef UNIX
-    	ival = fprintf(stream,"%hd ",v->ET.size); /* store size */
+    	ival = fprintf(stream,"%d ",v->ET.size); /* store size */
 	if (ival < 0)
 	  return( -19 );
-#else 
-    	ival = fprintf(stream,"%d ",v->ET.size);
-	if (ival < 0)
-	  return( -19 );
-#endif 
      	i = 1; 
      	r = v->E;
 	while (r && i < v->ET.size+1) {
@@ -2121,15 +2102,9 @@ int storeOnDisk(char *name, varInfo *v, FILE *stream)
 	if (ival < 0)
 	  return( -19 );
 	/*  copy over enumeral values */
-#ifdef UNIX
-    	ival = fprintf(stream,"%hd ",v->ET.size); /* store size */
+    	ival = fprintf(stream,"%d ",v->ET.size); /* store size */
 	if (ival < 0)
 	  return( -19 );
-#else 
-    	ival = fprintf(stream,"%d ",v->ET.size);
-	if (ival < 0)
-	  return( -19 );
-#endif 
      	i = 1; 
      	r = v->E;
 	while (r && i < v->ET.size+1)
@@ -2165,7 +2140,7 @@ int readfromdisk(symbol **root, FILE *stream)
     int         i;
     int         intptr;
     int         num;
-    int         ret;
+    int ret __attribute__((unused));
     varInfo    *v;
 
     ret = -1;
@@ -2405,7 +2380,7 @@ int readGroupfromdisk(symbol **root, FILE *stream, int groupIndex)
     int         i;
     int         intptr;
     int         num;
-    int         ret;
+    int ret __attribute__((unused));
     varInfo    *v;
     varInfo    tmp;
 
@@ -2685,7 +2660,7 @@ static char *readNamesFromDisk(FILE *stream)
     int         i;
     int         intptr;
     int         num;
-    int         ret;
+    int ret __attribute__((unused));
 
     ret = -1;
     localnames = NULL;
@@ -2773,7 +2748,7 @@ int readNewVarsfromdisk(symbol **root, FILE *stream)
     int         i;
     int         intptr;
     int         num;
-    int         ret;
+    int ret __attribute__((unused));
     int         active;
     varInfo    *v;
     varInfo     dummy;
@@ -2939,7 +2914,7 @@ int readGroupNewVarsfromdisk(symbol **root, FILE *stream, int groupIndex)
     int         i;
     int         intptr;
     int         num;
-    int         ret;
+    int ret __attribute__((unused));
     int         active;
     varInfo    *v;
     varInfo     tmp;
@@ -3108,7 +3083,7 @@ int readGroupvaluesfromdisk(symbol **root, FILE *stream, int groupIndex)
     int         intptr;
     int         setvalue;
     int         num;
-    int         ret;
+    int ret __attribute__((unused));
     varInfo    *v;
     varInfo    tmp;
 
@@ -3225,7 +3200,7 @@ int readvaluesfromdisk(symbol **root, FILE *stream)
     int         intptr;
     int         setvalue;
     int         num;
-    int         ret;
+    int ret __attribute__((unused));
     short       newBasic;
     varInfo    *v;
 

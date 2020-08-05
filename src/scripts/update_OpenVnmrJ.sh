@@ -64,6 +64,12 @@ then
   rm -rf $newdir/fidlib
   tar cf - fidlib | (cd $newdir && tar xpf -)
 fi
+
+if [ ! -d $ovj/imaging ]
+then
+  exit 0
+fi
+
 if [ -d $prev/imaging/data ] && [ ! -d $ovj/imaging/data ]
 then
   echo "Collecting imaging data"

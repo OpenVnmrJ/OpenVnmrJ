@@ -556,6 +556,7 @@ if [ -e /tmp/.ovj_installed ]; then
                   echo "Configuring $name with the standard configuration (stdConf)"
                   echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
                   sudo -i -u $name /vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog 2> /dev/null
+		  echo "User $name has an initial password of abcd1234"
                   echo ""
                else
                   su - $nmr_user -c "/vnmr/bin/create_pgsql_user $name 2>> $insLog"
@@ -564,6 +565,7 @@ if [ -e /tmp/.ovj_installed ]; then
                   echo "Configuring $name with the standard configuration (stdConf)"
                   echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
                   su - $name -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog" 2> /dev/null
+		  echo "User $name has no initial password"
                   echo ""
                fi
             fi
