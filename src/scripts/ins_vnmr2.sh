@@ -2295,7 +2295,13 @@ then
        chown -R ${nmr_adm}:${nmr_group} $dest_dir/pgsql/persistence
        chmod 666 $dest_dir/pgsql/persistence/LocatorOff
     fi
-    su ${nmr_adm} -fc "/vnmr/bin/update_OpenVnmrJ /vnmr $old_link fromInstall"
+    if [ x$lflvr != "xdebian" ]
+    then
+      su ${nmr_adm} -fc "/vnmr/bin/update_OpenVnmrJ /vnmr $old_link fromInstall"
+    else
+      sudo -u ${nmr_adm} /vnmr/bin/update_OpenVnmrJ /vnmr $old_link fromInstall
+    fi
+
 fi
 if [ x$did_vnmr = "xy" ]
 then
