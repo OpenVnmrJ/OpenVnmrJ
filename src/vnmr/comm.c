@@ -143,6 +143,7 @@ int SendAsyncInova(CommPort to_addr, CommPort from_addr, char *msg)
 	int	fgsd;   /* socket discriptor */
 	int	result;
 	int	iter;
+	int ret __attribute__((unused));
 #ifndef LINUX
 	int	one = 1;
 #endif
@@ -208,10 +209,10 @@ int SendAsyncInova(CommPort to_addr, CommPort from_addr, char *msg)
 	/* TPRINT3("SendAsyncInova(): write(%d,0x%lx,%d) \n",fgsd,&msgsize,sizeof(msgsize)); */
 
 	/* send message length */
-        write(fgsd,(char*) &msgsize,sizeof(msgsize));
+        ret = write(fgsd,(char*) &msgsize,sizeof(msgsize));
        
 	/* send message */
-	write(fgsd,msg,msgsize);
+	ret = write(fgsd,msg,msgsize);
 	/* TPRINT1("Message Sent: %s\n",msg); */
 
 	close(fgsd);
@@ -223,6 +224,7 @@ int SendAsyncInova(CommPort to_addr, CommPort from_addr, char *msg)
 int SendAsyncInovaVnmr(CommPort to_addr, CommPort from_addr, char *msg)
 {
 	int	fgsd;   /* socket discriptor */
+	int ret __attribute__((unused));
 #ifndef LINUX
 	int	one = 1;
 #endif
@@ -268,7 +270,7 @@ int SendAsyncInovaVnmr(CommPort to_addr, CommPort from_addr, char *msg)
 	TPRINT2("SendAsyncInovaVnmr(): msgsize: %d, msge: '%s'\n",msgsize,msg);
 
 	/* send message */
-	write(fgsd,msg,msgsize);
+	ret = write(fgsd,msg,msgsize);
 
 	close(fgsd);
 	return(RET_OK);
@@ -365,6 +367,7 @@ int SendAsync2(CommPort to_addr, char *msge)
     int fgsd;   /* socket discriptor */
     int result;
     int i;
+    int ret __attribute__((unused));
 #ifndef LINUX
     int one = 1;
 #endif
@@ -410,7 +413,7 @@ int SendAsync2(CommPort to_addr, char *msge)
         return(RET_ERROR);
     }
     TPRINT0("SendAsync2(): Connection Established \n");
-    write(fgsd,msge,(strlen(msge)+1));
+    ret = write(fgsd,msge,(strlen(msge)+1));
     TPRINT1("Message Sent: %s\n",msge);
 
     close(fgsd);
@@ -732,6 +735,7 @@ int set_comm_port(CommPort ptr)
 
 void init_comm_port(char *hostval)
 {
+   int ret __attribute__((unused));
    CommPort ptr = &comm_addr[VNMR_COMM_ID];
 
    TPRINT0("init vnmr port \n");
@@ -739,7 +743,7 @@ void init_comm_port(char *hostval)
    ptr->pid = getpid();
    ptr->msg_uid = getuid();
 
-   seteuid( ptr->msg_uid );
+   ret = seteuid( ptr->msg_uid );
    set_comm_port(ptr);
 
    TPRINT3("vnmr pid=%d host=%s port=%d\n",ptr->pid,ptr->host,ptr->port);
@@ -767,13 +771,15 @@ void set_effective_user()
 void set_real_user()
 {
 #ifdef NESSIE
+   int ret __attribute__((unused));
    CommPort ptr = &comm_addr[VNMR_COMM_ID];
-   seteuid( ptr->msg_uid );
+   ret = seteuid( ptr->msg_uid );
 #endif
 }
 
 void init_comm_addr()
 {
+   int ret __attribute__((unused));
    CommPort ptr = &comm_addr[VNMR_COMM_ID];
 
    TPRINT0("init vnmr address \n");
@@ -781,7 +787,7 @@ void init_comm_addr()
    ptr->port = -1;
    ptr->msg_uid = getuid();
 
-   seteuid( ptr->msg_uid );
+   ret = seteuid( ptr->msg_uid );
    strcpy(ptr->host,"");
    set_acq_id("-1");
 }

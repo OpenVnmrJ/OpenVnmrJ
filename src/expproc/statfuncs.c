@@ -905,6 +905,7 @@ void unlockit(const char *lockPath, const char *idPath)
 {
    char lockid[MAXPATH];
    time_t locktime;
+   int    ret __attribute__((unused));
 
    if ( ! access(lockPath,R_OK | W_OK) )
    {
@@ -912,7 +913,7 @@ void unlockit(const char *lockPath, const char *idPath)
       fd = fopen(lockPath, "r");
       if (fd != NULL)
       {
-         fscanf(fd,"%s %ld\n", lockid, &locktime);
+         ret = fscanf(fd,"%s %ld\n", lockid, &locktime);
          fclose(fd);
          unlink(lockid);
       }
@@ -995,7 +996,8 @@ int lockit(const char *lockPath, const char *idPath, time_t timeout)
          DPRINT1("open %s for expire time\n", lockPath);
             if (fd != NULL)
             {
-               fscanf(fd,"%s %ld\n", lockid, &locktime);
+               int ret __attribute__((unused));
+               ret = fscanf(fd,"%s %ld\n", lockid, &locktime);
                fclose(fd);
                expire = locktime;
          DPRINT1("got expire time %ld\n", expire);

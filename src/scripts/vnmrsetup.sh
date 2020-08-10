@@ -550,13 +550,13 @@ if [ -e /tmp/.ovj_installed ]; then
                /vnmr/bin/makeuser $name /home $nmr_group y >> $insLog
                echo "Adding $name as Locator account"
                if [ x$distroType = "xdebian" ]; then
-                  sudo -i -u $nmr_user /vnmr/bin/create_pgsql_user $name &>> $insLog
+                  sudo -i -u $nmr_user /vnmr/bin/create_pgsql_user $name >> $insLog 2> /dev/null
                   echo "Adding $name to OpenVnmrJ configuration files"
                   sudo -i -u $nmr_user /vnmr/bin/ovjUser $name
                   echo "Configuring $name with the standard configuration (stdConf)"
                   echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
                   sudo -i -u $name /vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog 2> /dev/null
-		  echo "User $name has an initial password of abcd1234"
+                  echo "User $name has an initial password of abcd1234"
                   echo ""
                else
                   su - $nmr_user -c "/vnmr/bin/create_pgsql_user $name 2>> $insLog"
@@ -565,7 +565,7 @@ if [ -e /tmp/.ovj_installed ]; then
                   echo "Configuring $name with the standard configuration (stdConf)"
                   echo "Configuring $name with the standard configuration (stdConf)" >> $insLog
                   su - $name -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog" 2> /dev/null
-		  echo "User $name has no initial password"
+                  echo "User $name has no initial password"
                   echo ""
                fi
             fi
@@ -638,9 +638,9 @@ if [ -e /tmp/.ovj_installed ]; then
       echo "Would you like to configure it now? (y/n) "
       read ans
       if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
+         echo "Configuring system."
          /vnmr/bin/setacq
          echo " "
-         echo "The system is configured as a spectrometer."
       else
          echo "The system may be configured as a spectrometer."
          echo "  1. Log in as the OpenVnmrJ adminstrator account, $nmr_user."

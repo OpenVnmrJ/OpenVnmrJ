@@ -41,7 +41,9 @@ int sendasync(char *addr, char *message)
     int port;
     int fgsd;   /* socket discriptor */
     int i;
+#ifndef LINUX
     int on = 1;
+#endif
     int result;
     struct sockaddr_in RecvAddr;
 
@@ -68,12 +70,12 @@ int sendasync(char *addr, char *message)
          fprintf(stderr,"sendasync(): socket create for async trans %d\n",fgsd);
 #ifndef LINUX
         setsockopt(fgsd,SOL_SOCKET,SO_USELOOPBACK,&on,sizeof(on));
+	on = 1;
 #endif
         /*setsockopt(fgsd,SOL_SOCKET,(~SO_LINGER),&on,sizeof(on));*/
 
         /* ---- make socket async and set owner to acqproc PID --- */
  
-	on = 1;
 	/*if (ioctl( fgsd, FIOASYNC, &on ) == -1)
         {
             perror("fcntl error");
@@ -119,7 +121,7 @@ int sendasync(char *addr, char *message)
     }
     if (bgflag)
       fprintf(stderr,"Sendacq(): Connection Established \n");
-    write(fgsd,message,strlen(message));
+    result = write(fgsd,message,strlen(message));
  
     close(fgsd);
     return(OK);

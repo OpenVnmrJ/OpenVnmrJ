@@ -154,7 +154,10 @@ static int
 setupSocket( Socket *pSocket )
 /* Socket *pSocket; */
 {
-	int	ival, one, pid;
+	int	ival, pid;
+#if  !defined( LINUX  )
+	int	one;
+#endif
 	int	optlen, rcvbuff, sendbuff;
 
 	if (pSocket == NULL) {
@@ -186,9 +189,8 @@ setupSocket( Socket *pSocket )
 #endif
 #endif  /* VNMRS_WIN32 */
 
+#if  !defined( LINUX  )
         one = 1;
-#if  !defined( LINUX  )  && !defined( __INTERIX)
-	/* though you can set this in Interix is seem to cause problems so don't do it */
         ival = setsockopt( pSocket->sd, SOL_SOCKET, SO_USELOOPBACK,
                 (char *) &one, sizeof( one ) );
         if (ival < 0)  {
@@ -896,7 +898,10 @@ setSocketAsync( Socket *pSocket )
 int
 setSocketNonAsync( Socket *pSocket )
 {
-	int	ival, zero;
+	int	ival;
+#if !  defined(LINUX)
+	int	zero;
+#endif
 
 	if (pSocket == NULL) {
 		errno = EFAULT;
@@ -907,8 +912,7 @@ setSocketNonAsync( Socket *pSocket )
 		return( -1 );
 	}
 
-	zero = 0;
-#if  defined(LINUX) || defined(__INTERIX)
+#if  defined(LINUX)
         fcntl(pSocket->sd, F_SETOWN, (int) getpid());
         ival = fcntl(pSocket->sd, F_GETFL);
 #ifdef MACOS
@@ -918,6 +922,7 @@ setSocketNonAsync( Socket *pSocket )
 #endif
         fcntl(pSocket->sd, F_SETFL, ival);
 #else
+	zero = 0;
 	ival = ioctl( pSocket->sd, FIOASYNC, &zero );
 #endif
 	if (ival < 0)  {

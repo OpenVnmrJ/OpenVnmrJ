@@ -88,7 +88,7 @@ void bill_done(SHR_EXP_INFO  ExpInfo)
 {
     const char root_end[]="</accounting>\n";
     char   tmpStr[80],*tmpPtr;
-    char   inputPath[MAXPATHL];
+    char   inputPath[MAXPATHL*2];
     int    bufSize=4095;
     char   buf[bufSize+1];
     int    i,n;

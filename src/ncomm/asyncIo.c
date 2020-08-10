@@ -156,6 +156,7 @@ sigio_irpt( int signal )
 			if (currentEntry->entryType == DIRECT)
 			  (*currentEntry->callback)( currentEntry->clientData );
 			else {
+				long lfd;
 #ifdef LINUX
 #ifdef CYGWIN
                                 int zero = 0;
@@ -170,7 +171,8 @@ sigio_irpt( int signal )
                                 int zero = 0;
 				ival = ioctl( fd, FIOASYNC, &zero );
 #endif
-				processNonInterrupt( SIGIO, (void *) fd );
+				lfd = fd;
+				processNonInterrupt( SIGIO, (void *) lfd );
 			}
 #ifdef DEBUG_ASYNC
 			currentEntry->count++;

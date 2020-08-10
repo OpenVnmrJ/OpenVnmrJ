@@ -612,8 +612,8 @@ if [ ! -x /usr/bin/dpkg ]; then
   fi
   echo " "
 else
-  distrover=$(lsb_release -rs)
-  distmajor=${distrover:0:2}
+  . /etc/lsb-release
+  distmajor=${DISTRIB_RELEASE:0:2}
   if [ $distmajor -lt 14 ] ; then
     echo "Only Ubuntu 14 or newer is supported"
     echo " "
@@ -663,7 +663,11 @@ else
       gedit dos2unix zip cups gnuplot gnome-terminal enscript rpcbind &>> $logfile
   echo "Installing version specific packages (2 of 2)"
   echo "Installing version specific packages (2 of 2)" >> $logfile
-  if [ $distmajor -gt 16 ] ; then
+  if [ $distmajor -gt 18 ] ; then
+   # these are needed to build
+    apt-get install -y gdm3 gnome-session openjdk-8-jre \
+      lib32stdc++-8-dev libc6-dev libglu1-mesa-dev libgsl-dev &>> $logfile
+  elif [ $distmajor -gt 16 ] ; then
    # these are needed to build
     apt-get install -y gdm3 gnome-session openjdk-8-jre \
       lib32stdc++-7-dev libc6-dev-i386 libglu1-mesa-dev libgsl-dev &>> $logfile

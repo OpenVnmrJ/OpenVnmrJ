@@ -230,7 +230,7 @@ int CSinit(const char *sampling, const char *dir) {
 //   -3   number of columns in file does not match expected number of dimensions
 // ===============================================================================
 int CSreadSched(const char *dir) {
-	char path[MAXPATH];
+	char path[MAXPATH+16];
 	char line[MAXPATH];
 	FILE *fd;
 	int val[CSMAXDIM];
@@ -823,7 +823,7 @@ void CSprintSched() {
 // - save current schedule in a file
 // ===============================================================================
 void CSwriteSched(const char *dir) {
-	char path[MAXPATH];
+	char path[MAXPATH+16];
 	FILE *fd;
 
 	if (cs.name[0] == '/')

@@ -574,7 +574,9 @@ int openChannel( int channel, int access, int options )
 int connectChannel( int channel )
 /* int channel - channel to connect */
 {
-	int	 cb_message, ival, remote_read_addr, remote_write_addr;
+	int	 cb_message, ival;
+	int	 remote_write_addr = 0;
+	int	 remote_read_addr = 0;
 	Channel	*pThisChan;
 
 	if (channel < 0 || channel >= NUM_CHANS) {
@@ -834,6 +836,7 @@ int registerChannelAsync( int channel, void (*callback)() )
 /* void (*callback)() - routine to be called when data is ready on the channel */
 {
 	int channelFd, ival;
+	long lchannel;
 
 	if (channel < 0 || channel >= NUM_CHANS) {
 		errno = EINVAL;
@@ -849,7 +852,8 @@ int registerChannelAsync( int channel, void (*callback)() )
 	}
 
 	channelFd = chanTable[ channel ].pClientReadS->sd;
-	ival = setFdAsync( channelFd, (void *) channel, callback );
+	lchannel = channel;
+	ival = setFdAsync( channelFd, (void *) lchannel, callback );
 	setSocketAsync( chanTable[ channel ].pClientReadS );
 
 	return( ival );

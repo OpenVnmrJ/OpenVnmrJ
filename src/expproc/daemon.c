@@ -54,6 +54,8 @@ void makeItaDaemon(int ignoreSigChld)
    struct sigaction    intserv;
    sigset_t            qmask;
    void sig_child();
+   FILE   *ret __attribute__((unused));
+   int    ret2 __attribute__((unused));
 
    strtfd = 0;	/* fd to start when closing file descriptors */
 
@@ -132,9 +134,9 @@ void makeItaDaemon(int ignoreSigChld)
       For Debugging redirect stdin, stdout, & stderr descriptors to
       the console. Otherwise close them.
    */
-   freopen("/dev/null","r",stdin);
-   freopen("/dev/console","a",stdout);
-   freopen("/dev/console","a",stderr);
+   ret = freopen("/dev/null","r",stdin);
+   ret = freopen("/dev/console","a",stdout);
+   ret = freopen("/dev/console","a",stderr);
    strtfd = 3;
 #endif
 
@@ -144,7 +146,7 @@ void makeItaDaemon(int ignoreSigChld)
 
    errno = 0;	/* clear error from any above close() calls */
    /* Move current directory to root, avoid mounted FileSystems */
-   chdir("/");
+   ret2 = chdir("/");
 
    /* Clear the file mode creation mask */
    umask(000);
