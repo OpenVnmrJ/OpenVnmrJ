@@ -139,8 +139,8 @@ int mapInExp(ExpEntryInfo *expid)
     if (expid->ShrExpInfo->shrmem->byteLen < sizeof(SHR_EXP_STRUCT))
     {
        errLogRet(LOGOPT,debugInfo,
-        "mapInExp: File: '%s'  is not the size of the shared Exp Info Struct: %llu vs %lu(correct size) bytes\n",
-     	    expid->ExpId, expid->ShrExpInfo->shrmem->byteLen, sizeof(SHR_EXP_STRUCT));
+        "mapInExp: File: '%s'  is not the size of the shared Exp Info Struct: %zu(correct size) bytes\n",
+     	    expid->ExpId, sizeof(SHR_EXP_STRUCT));
         /* hey, this file is not a shared Exp Info file */
        shrmRelease(expid->ShrExpInfo);         /* release shared Memory */
        unlink(expid->ExpId);        /* remove filename that shared Mem created */

@@ -281,9 +281,9 @@ char           *cur_line;
 char           *tempnam();
 char            s_token[5120];
 char            argArray[2048];
-char            argStr[2048];
+char            argStr[2048*2];
 char            timeStr[1024];
-char            cmd_name[CMDLEN];
+char            cmd_name[CMDLEN*3];
 char            cmd_spare[CMDLEN];
 char            include_path[MAXPATH * 2];
 char            input[2048];
@@ -365,11 +365,11 @@ print_usage()
 int
 main(int argc, char *argv[])
 {
-   char            tmp_file1[MAXPATH], tmp_file2[MAXPATH];
-   char            time_file1[MAXPATH], time_file2[MAXPATH];
+   char            tmp_file1[MAXPATH], tmp_file2[MAXPATH+32];
+   char            time_file1[MAXPATH], time_file2[MAXPATH+32];
    char            tmp_source[MAXPATH];
    char            sourcei[MAXPATH];
-   char            baseName[MAXPATH];
+   char            baseName[128];
    char		   *tptr, *sptr, *rptr;
    int		   tlen, k, fd;
    int ret __attribute__((unused));

@@ -444,7 +444,7 @@ int expQsearch(char *userName,char* expnum,int *priority,char *expidstr)
         char *expN, *user;
 
 	DPRINT2(3,"Id: '%s', Info: '%s'\n",Qentries[qindx].ExpIdStr,Qentries[qindx].ExpInfoStr);
-	strncpy(infostr,Qentries[qindx].ExpInfoStr,EXPID_LEN);
+	strncpy(infostr,Qentries[qindx].ExpInfoStr,EXPID_LEN-1);
         expN = strtok(infostr," ");
         if (expN == NULL)
 	{
@@ -895,8 +895,8 @@ int activeExpQadd(int priority, char* expidstr, char* expinfostr)
   }
   shrmTake(activeQ.shrMem);
   Qentries[queue->numInQ].Priority = priority;
-  strncpy(Qentries[queue->numInQ].ExpIdStr,expidstr,EXPID_LEN);
-  strncpy(Qentries[queue->numInQ].ExpInfoStr,expinfostr,EXPID_LEN);
+  strncpy(Qentries[queue->numInQ].ExpIdStr,expidstr,EXPID_LEN-1);
+  strncpy(Qentries[queue->numInQ].ExpInfoStr,expinfostr,EXPID_LEN-1);
   queue->numInQ++;
   shrmGive(activeQ.shrMem);
 

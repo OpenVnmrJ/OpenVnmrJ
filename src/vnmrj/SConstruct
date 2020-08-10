@@ -25,6 +25,22 @@ if not os.path.exists(ovjtools):
 platform = sys.platform
 print(sys.platform)
 
+# get version
+#
+# On Ubuntu 20, the jar action fails
+# I think it is a problem in scons version 3.
+vers = 18
+if os.path.exists('/etc/lsb-release'):
+   with open('/etc/lsb-release') as fd:
+      for line in fd:
+         if (line.startswith('DISTRIB_RELEASE')):
+            name,vers = line.split("=")
+            vers,decimal = vers.split(".")   
+
+version= int(vers)
+
+
+
 #
 # define function to convert SUA paths to Windows
 
@@ -180,6 +196,12 @@ copyFilesHere(ThirdPartyJarPath, ThirdPartyList)
 
 
 # actions to perform at interpretation time
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
 for i in jarFileList:
    Execute('cd ' + classesPath + ' && ' + jarBin + ' -xf ' + i)
 for i in jarHelpFileList:
@@ -256,6 +278,11 @@ javaBuildVJMol = vjmolEnv.Java(source = os.path.join(cwd, 'vjmol_src'),
                                target = vjmolPath)
 
 findAction = 'find ' + os.path.join(cwd,'classes') + ' \( -name "*.java" -o -name "*.out" \) -exec rm -f {} \;'
+findAction2 = findAction
+
+# Do jar action here on Ubuntu 20
+if ( version > 19 ):
+  findAction2 = findAction+'; cd '+cwd+' && '+ jarBin+' cfm vnmrj.jar Manifest -C classes . ; cp '+ os.path.join(cwd, vnmrjTarget)+' '+installPath
 
 # print(findAction)
 vjmolEnv.AddPostAction(javaBuildVJMol,
@@ -286,7 +313,7 @@ f.close()
 
 # print(findAction)
 jEnv.AddPostAction(javaBuildObject,
-                   Action(findAction))
+                   Action(findAction2))
 
 if ( 'interix' in platform):
   cdCmd = 'cd ' + cwd + ' ; '
@@ -300,18 +327,15 @@ if ( 'interix' in platform):
               ) 
 
 else:
-  jarBuildObject = jEnv.Jar(JAR      = jarBin,
+# This jar action fails on Ubuntu 20
+  if ( version <= 19 ):
+    jarBuildObject = jEnv.Jar(JAR      = jarBin,
                             target   = vnmrjTarget,
                             source   = [classesPath,
                                         manifestFile],
                             JARCHDIR = classesPath)
 
-# define with absolute path where built files will be copied
-installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
 binPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
-# make sure the path(s) exist
-if not os.path.exists(installPath):
-   os.makedirs(installPath)
 
 moviePath = os.path.join(ovjtools, 'JMF-2.1.1e', 'src','simplemovie.jar')
 Execute(Copy(os.path.join(installPath,'simplemovie.jar'), moviePath))
@@ -320,7 +344,8 @@ Execute(Copy(os.path.join(installPath,'simplemovie.jar'), moviePath))
 #                   Action(os.path.join(cwd,'removeJava.sh')))
 
 # actions to be performed after targets are built
-jEnv.AddPostAction(jarBuildObject,
+if ( version <= 19 ):
+  jEnv.AddPostAction(jarBuildObject,
                       Action(Copy(installPath, os.path.join(cwd, vnmrjTarget))))
 
 # finally copy vjmol.jar

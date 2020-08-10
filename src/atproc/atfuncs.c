@@ -113,10 +113,11 @@ static int runVnmr(int uid, int gid, int umask4Vnmr, char *host, char *userdir)
     char cmdstring[128];
     char vnmrmode[20];
     char expnum[16];
-    char userpath[256];
-    char hostname[256];
+    char userpath[1024+32];
+    char hostname[1024+32];
     char Vnmrpath[256];
-    int ret;
+    FILE   *ret2 __attribute__((unused));
+    int    ret __attribute__((unused));
     pid_t childpid;
 
     /* Be Absolutely sure there is a Vnmr out there to RUN */
@@ -154,10 +155,10 @@ static int runVnmr(int uid, int gid, int umask4Vnmr, char *host, char *userdir)
 
        /* change the user and group ID of the child so that VNMR
           will run with those ID's */
-       seteuid(getuid());
-       freopen("/dev/null","r",stdin);
-       freopen("/dev/console","a",stdout);
-       freopen("/dev/console","a",stderr);
+       ret = seteuid(getuid());
+       ret2 = freopen("/dev/null","r",stdin);
+       ret2 = freopen("/dev/console","a",stdout);
+       ret2 = freopen("/dev/console","a",stderr);
        if ( setgid(gid) )
        {
           DPRINT(1,"BGprocess:  cannot set group ID\n");

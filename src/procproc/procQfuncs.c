@@ -700,7 +700,7 @@ int activeQadd(char* expidstr, int proctype, long elemId, long ct, int FgBg, int
    Qentries[queue->numInQ].errorCode = ecode;
    Qentries[queue->numInQ].FgBgFlag = FgBg;
    Qentries[queue->numInQ].ProcPid = procpid;
-   strncpy(Qentries[queue->numInQ].ExpIdStr,expidstr,EXPID_LEN);
+   strncpy(Qentries[queue->numInQ].ExpIdStr,expidstr,EXPID_LEN-1);
    queue->numInQ++;
   shrmGive(activeQ.shrMem);
 

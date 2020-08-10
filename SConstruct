@@ -252,9 +252,9 @@ if ( 'darwin' not in platform):
       cmd = 'cp '+wkLink+'/wkhtmltopdf '+binPath+';chmod 755 '+binPath+'/wkhtmltopdf'
 #     print("cmd: ",cmd)
       os.system(cmd)
-      cmd = 'cp '+wkLink+'/wkhtmltopdf-i386 '+binPath+';chmod 755 '+binPath+'/wkhtmltopdf-i386'
+#     cmd = 'cp '+wkLink+'/wkhtmltopdf-i386 '+binPath+';chmod 755 '+binPath+'/wkhtmltopdf-i386'
 #     print("cmd: ",cmd)
-      os.system(cmd)
+#     os.system(cmd)
 
 # end of if platform group
 

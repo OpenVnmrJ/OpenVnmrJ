@@ -178,12 +178,12 @@ void unblockAllEvents()
 
 int processNonInterrupt( int typeOfEntry, void *data )
 {
-	int		ival;
+	int ret __attribute__((unused));
 	EVENT_Q_ENTRY	queueEntry;
 
 	queueEntry.type = typeOfEntry;
 	queueEntry.data = data;
-	ival = addEventQueueEntry( thisHandle->asyncEventQ, &queueEntry );
+	ret = addEventQueueEntry( thisHandle->asyncEventQ, &queueEntry );
 
 	return( 0 );
 }
@@ -231,7 +231,8 @@ ourHandler( int signal )
 static int
 registerNewMask( LIST_OBJ listOfSignals, sigset_t *newMask )
 {
-	int			iter, ival;
+	int			iter;
+	int ret __attribute__((unused));
 	EVENT_ITEM		currentItem;
 	struct sigaction	thisAction;
 
@@ -240,9 +241,9 @@ registerNewMask( LIST_OBJ listOfSignals, sigset_t *newMask )
 		if (currentItem == NULL)
 		  break;
 
-		ival = sigaction( currentItem->eventType, NULL, &thisAction );
+		ret = sigaction( currentItem->eventType, NULL, &thisAction );
 		thisAction.sa_mask = *newMask;
-		ival = sigaction( currentItem->eventType, &thisAction, NULL );
+		ret = sigaction( currentItem->eventType, &thisAction, NULL );
 	}
 
 	return( 0 );
@@ -462,7 +463,7 @@ void asyncMainLoop()
 	sigprocmask( SIG_SETMASK, NULL, &oldMask );
 
 	for (;;) {
-		int	ival;
+	        int ret __attribute__((unused));
 
 		sigprocmask( SIG_BLOCK, &(thisHandle->blockMask), NULL );
 		while (removeEventQueueEntry( thisHandle->asyncEventQ, &an_entry ) == 0) {
@@ -471,7 +472,7 @@ void asyncMainLoop()
 			sigprocmask( SIG_BLOCK, &(thisHandle->blockMask), NULL );
 		}
 
-		ival = sigsuspend( &oldMask );
+		ret = sigsuspend( &oldMask );
 	}
 }
 

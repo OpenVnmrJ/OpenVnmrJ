@@ -249,7 +249,7 @@ int talk2Acq(char *hostname, char *username, int cmd,
 {
 #ifdef NESSIE
 	int	 mlen;
-	char	 msg[256];
+	char	 msg[256*4];
 	int	 ival;
 	CommPort acq_addr  = &comm_addr[ACQ_COMM_ID];
         CommPort tmp_from =  &comm_addr[LOCAL_COMM_ID];

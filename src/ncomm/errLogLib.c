@@ -264,7 +264,6 @@ void diagPrint(char* fileNline, char *fmt, ...)
    int len;
    FILE *console;
    time_t  timet;
-   time_t  timet2;
    struct tm tmtime;
    char timestamp[40];
 
@@ -290,7 +289,7 @@ void diagPrint(char* fileNline, char *fmt, ...)
       {
          /* -------- ANSI way of getting time of day */
          /* size = sizeof(timestamp); */
-         timet2 = time(&timet);
+         timet = time(NULL);
          localtime_r(&timet,&tmtime);
          strftime(timestamp,sizeof(timestamp),"%H:%M:%S",&tmtime);
          /* ------------------------------------ */
@@ -302,7 +301,7 @@ void diagPrint(char* fileNline, char *fmt, ...)
    }
    else
    {
-      syslog(LOG_ERR, DiagMsgStr);
+      syslog(LOG_ERR, "%s", DiagMsgStr);
    }
 
    return;
@@ -343,7 +342,7 @@ void errLogRet(int logopt, char *fileNline, char *fmt, ...)
 
    initOutputDevice();
    if (logopt == LOGIT || strlen( &outputDevice[ 0 ] ) < 1)
-      syslog(LOG_ERR, ErrMsgStr);
+      syslog(LOG_ERR, "%s", ErrMsgStr);
    else
    {
       console = fopen( &outputDevice[ 0 ], "a+" );
@@ -391,7 +390,7 @@ void errLogQuit(int logopt, char *fileNline, char *fmt, ...)
 
    initOutputDevice();
    if (logopt == LOGIT || strlen( &outputDevice[ 0 ] ) < 1)
-      syslog(LOG_ERR, ErrMsgStr);
+      syslog(LOG_ERR, "%s", ErrMsgStr);
    else
    {
       console = fopen( &outputDevice[ 0 ], "a+" );
@@ -442,7 +441,7 @@ void errLogSysRet(int logopt, char *fileNline, char *fmt, ...)
 
    initOutputDevice();
    if (logopt == LOGIT || strlen( &outputDevice[ 0 ] ) < 1)
-      syslog(LOG_ERR, ErrMsgStr);
+      syslog(LOG_ERR, "%s", ErrMsgStr);
    else
    {
       console = fopen( &outputDevice[ 0 ], "a+" );
@@ -494,7 +493,7 @@ void errLogSysQuit(int logopt, char *fileNline, char *fmt, ...)
 
    initOutputDevice();
    if (logopt == LOGIT || strlen( &outputDevice[ 0 ] ) < 1)
-      syslog(LOG_ERR, ErrMsgStr);
+      syslog(LOG_ERR, "%s", ErrMsgStr);
    else
    {
       console = fopen( &outputDevice[ 0 ], "a+" );
@@ -545,7 +544,7 @@ void errLogSysDump(int logopt, char *fileNline, char *fmt, ...)
 
    initOutputDevice();
    if (logopt == LOGIT || strlen( &outputDevice[ 0 ] ) < 1)
-      syslog(LOG_ERR, ErrMsgStr);
+      syslog(LOG_ERR, "%s", ErrMsgStr);
    else
    {
       console = fopen( &outputDevice[ 0 ], "a+" );

@@ -39,7 +39,7 @@ int P_loadVar(int tree, char *name,  vInfo *v, int *fd);
 
 int P_receive(int *fd)
 {   char    name[128];
-    int     nread;
+    int     nread __attribute__((unused));
     int     nsize;
     int     op;
     vInfo   v;
@@ -94,7 +94,7 @@ int P_loadVar(int tree, char *name,  vInfo *v, int *fd)
     double          dvalue;
     int             i; 
     int             length;
-    int             nread;
+    int             nread __attribute__((unused));
     symbol        **root;
     varInfo        *newv;
     

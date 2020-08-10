@@ -393,7 +393,7 @@ int appdirFind(const char *filename, const char *lib, char *fullpath,
    int  findIndex = 0;
    char delimiters[] = ";";
    char *ptr;
-   char searchPath[MAXPATH];
+   char searchPath[MAXPATH*2];
    char currentPath[MAXPATH];
 
    if (appdirPaths == NULL)
@@ -436,7 +436,7 @@ int appdirAccess(const char *lib, char *fullpath)
    int  findIndex = 0;
    char delimiters[] = ";";
    char *ptr;
-   char searchPath[MAXPATH];
+   char searchPath[MAXPATH*2];
    char currentPath[MAXPATH];
 
    if (appdirPaths == NULL)

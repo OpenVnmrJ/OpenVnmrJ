@@ -212,13 +212,13 @@ void semDbmAdd(int id)
 */
 int semClean()
 {
-   int i;
    int semfd,tmpfd;
    char *tmptoken;
    char tmpfile[32];
    char semstr[SEM_RECORD_SIZE];
    int pid,semid;
    int stat;
+   int ret __attribute__((unused));
    mode_t old_umask;
    struct semid_ds realbuf;
    union semun {
@@ -246,7 +246,6 @@ int semClean()
    }
 
    umask( old_umask );
-   i = 0;
    /* read in sem dbm find all active processes using semaphore */
    semctl_arg.buf = &realbuf;
    while (read(semfd,semstr,sizeof(semstr)) > 0)
@@ -259,13 +258,13 @@ int semClean()
       {
          memset(semstr,0,SEM_RECORD_SIZE);
          sprintf(semstr,"%d %d\n",pid,semid);
-         write(tmpfd,semstr,sizeof(semstr)); /* list of active pids */
+         ret = write(tmpfd,semstr,sizeof(semstr)); /* list of active pids */
       }
    }
    /* printf("semClean: Number of active semids: %d\n",i); */
 
    lseek(semfd,0,SEEK_SET);   /* back to the beginning */
-   ftruncate(semfd, 0);		/* truncate file back to zero */
+   ret = ftruncate(semfd, 0);		/* truncate file back to zero */
    lseek(semfd,0,SEEK_SET);   /* back to the beginning */
    lseek(tmpfd,0,SEEK_SET);   /* back to the beginning */
 
@@ -273,7 +272,7 @@ int semClean()
    while (read(tmpfd,semstr,sizeof(semstr)) > 0)
    {
         /* printf("write: '%s'\n",semstr); */
-	write(semfd,semstr,sizeof(semstr));
+	ret = write(semfd,semstr,sizeof(semstr));
    }
    close(semfd);
    close(tmpfd);

@@ -21,7 +21,7 @@
 
 typedef struct _comm_info {
     char vnmrsysdir[256];
-    char path[256];
+    char path[256*2];
     char host[256];
     int  pid;
     int  port;

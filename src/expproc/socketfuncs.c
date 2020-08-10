@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/socket.h>
@@ -17,6 +18,15 @@
 
 #include "sockets.h"
 #include "errLogLib.h"
+
+extern void unBlockSignals(sigset_t *savemask);
+extern int  blockSignals(sigset_t *savemask);
+extern int registerSocketAsync( Socket *pSocket, void (*callback)() );
+extern int registerSocketNonAsync( Socket *pSocket );
+extern int registerSocketDirectAsync( Socket *pSocket, void (*callback)() );
+extern int bindSocketAnyAddr( Socket *pSocket );
+extern int acceptSocket_r( Socket *pSocket, Socket *pAcceptSocket );
+extern int parser(char* str);
 
 #define  NOT_OPEN		-1	/* taken from sockets.c */
 #define  MAX_SIMUL_CONNECTIONS	10
@@ -42,7 +52,7 @@ void delacqinfo2()
 
 void wrtacqinfo2()
 {
-	char	LocalAcqHost[256], buf[ 256 ], filepath[256];
+	char	LocalAcqHost[256], buf[ 256*2 ], filepath[256];
 	int	bytes, fd;
 
 	gethostname( LocalAcqHost, sizeof( LocalAcqHost ) );

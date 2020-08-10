@@ -43,8 +43,7 @@ void Werrprintf(char *format, ...)
 
    va_start(vargs, format);
    vsprintf(str,format,vargs);
-   fprintf(stderr,str);
-   fprintf(stderr,"\n");
+   fprintf(stderr,"%s\n",str);
    va_end(vargs);
 }
 

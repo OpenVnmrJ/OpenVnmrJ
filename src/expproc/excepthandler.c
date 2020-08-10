@@ -19,7 +19,7 @@ extern void ShutDownProc();
 
 #define MASTER 2
 #define DONT_TRUNCATE 0
-static char wall[256];
+static char wall[256*2];
 static char wallpath[256] = "";
 
 /*-------------------------------------------------------------------

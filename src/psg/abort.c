@@ -458,7 +458,7 @@ void vnmrmsg(const char *paramstring)
 +------------------------------------------------------------------*/
 void vnmremsg(const char *paramstring)
 {
-   int stat;
+   int stat __attribute__((unused));
    char	message[MAXSTR];
    char addr[MAXSTR];
 
