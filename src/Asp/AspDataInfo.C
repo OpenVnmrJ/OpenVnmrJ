@@ -22,6 +22,7 @@ extern "C" {
 #include "data.h"
 #include "init2d.h"
 #include "init_display.h"
+extern int getAxisOnly();
 }
 
 spAspDataInfo_t nullAspData = spAspDataInfo_t(NULL);
@@ -81,7 +82,7 @@ void AspDataInfo::updateDataInfo() {
 
 	hasData = false;
 	if( (rank > 1) || (strstr(str,"dconi") == str) ) {
-	   if(!select_init(1,1,0,1,1,1,0,0)) {
+	   if(!select_init(1,1,0,!getAxisOnly(),1,1,0,0)) {
 		hasData = true;
 		if(strstr(str,"dconi") == str) {
 		   initAxis(HORIZ, &haxis);	

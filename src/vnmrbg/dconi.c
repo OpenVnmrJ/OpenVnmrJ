@@ -1651,7 +1651,7 @@ int init_dconi(int plotflag)
 {
   double start,len,axis_scl;
 
-  if (init2d(1,plotflag)) return 1;
+  if (select_init(1,plotflag, 0, 0, 1, 1, 0, 0)) return 1;
   discalib = (float)(mnumypnts-ymin) / wc2max;
   yoffset = dfpnt2 + dnpnt2 + mnumypnts / 50;
   xoffset = mnumxpnts - dfpnt + 8*xcharpixels;
@@ -1859,6 +1859,7 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
     else  {
       if ((strcmp(argv[1],"dcon") != 0) &&
           (strcmp(argv[1],"dpcon") != 0) &&
+          (strcmp(argv[1],"dpconn") != 0) &&
           (strcmp(argv[1],"ds2d") != 0) &&
           (strcmp(argv[1],"again") != 0) &&
           (strcmp(argv[1],"redisplay") != 0) &&
@@ -1919,6 +1920,7 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
 
   if (update)
     { if ((strcmp(argv[1],"dcon")==0) || (strcmp(argv[1],"dpcon")==0) ||
+          (strcmp(argv[1],"dpconn")==0) ||
           (strcmp(argv[1],"ds2d")==0) || (strcmp(argv[1],"again")==0) ||
           (strcmp(argv[1],"redisplay")==0) || (strcmp(argv[1],"dconi") == 0))
          update = 0;
@@ -1966,6 +1968,10 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
             }
           else if ((argc>=2) && (strcmp(argv[1],"dpcon")==0))
             { strcpy(dconi_runstring,"dpcon");
+              leveldisplay_active = 0;
+            }
+          else if ((argc>=2) && (strcmp(argv[1],"dpconn")==0))
+            { strcpy(dconi_runstring,"dpconn");
               leveldisplay_active = 0;
             }
           else if ((argc>=2) && (strcmp(argv[1],"ds2d")==0))

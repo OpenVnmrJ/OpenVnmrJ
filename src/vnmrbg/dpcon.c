@@ -408,7 +408,14 @@ static int i_dpcon(int plotflag, int axisOnly)
 /* initialize dpcon program */
 {
 
-  if (init2d(1,plotflag)) ABORT;
+  if (axisOnly)
+  {
+     if (select_init(1,plotflag, 0, 0, 1, 1, 0, 0)) ABORT;
+  }
+  else
+  {
+     if (init2d(1,plotflag)) ABORT;
+  }
   if (!d2flag && axisOnly)
   {
      setVertAxis();
