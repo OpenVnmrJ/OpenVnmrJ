@@ -1784,6 +1784,15 @@ int unixtime(int argc, char *argv[], int retc, char *retv[])
         {
            struct tm timeptr;
 
+           timeptr.tm_sec = 0;
+           timeptr.tm_min = 0;
+           timeptr.tm_hour = 0;
+           timeptr.tm_mday = 0;
+           timeptr.tm_mon = 0;
+           timeptr.tm_year = 0;
+           timeptr.tm_wday = 0;
+           timeptr.tm_yday = 0;
+           timeptr.tm_isdst = 0;
            strptime(argv[2], argv[1], &timeptr);
            timeptr.tm_isdst = -1;
            if (retc)
