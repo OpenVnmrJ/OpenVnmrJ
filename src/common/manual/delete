@@ -16,14 +16,32 @@ rm		-       implementation of the UNIX rm command
   the rm command will not abort.
   If only a single file name is given, it does not contain wildcards, it
   exists,  and only zero or one of the options '-f', '-rf', '-fr', or
-  '-R' are given, the rm command uses fast built-in functions. Otherwise,
-  the actual /bin/rm Linux command is called, which is slower than the
+  '-R' are given, the rm command uses fast built-in functions.
+
+  If the first argument is 'regex' or 'regextest', then rm expects the next
+  argument to be a directory name, without wildcards, and the third
+  and last argument to be a "regular expression" to describe which
+  files or directories should be removed. Since "regular expressions" may
+  be unfamiliar, the 'regextest' argument is available to just list the
+  files and directories that would be removed without actually
+  removing them. This is primarily a tool to be used during macro development.
+
+  If the conditions on the arguents listed above are not met, then the
+  actual /bin/rm Linux command is called, which is slower than the
   built-in functions. 
 
   Usage  -  rm('filename')
             rm('-rf','directory1')
             rm('-R','directory1')
 	    rm('filename1','filename2')  // calls slower external /bin/rm
+            rm('regex','directory1','^'+operator)  // files that begin with an operator's name
+            rm('regex','directory1','\\.fid$)       // files or directories end with .fid
+
+  In the last example,  the dot (.) must be "escaped" with the backslash or the
+  "regular expression" rules would match it with any character. Also note that two
+  backslashes must be used since the magical interpreter also treats the backslash
+  as an escape character.
+
 
   The delete command is a safer command than rm.  It will not allow
   "wildcard" characters nor the -r option.  It will, however, delete

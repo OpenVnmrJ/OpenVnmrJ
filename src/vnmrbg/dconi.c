@@ -1201,7 +1201,7 @@ static int dconi_expand()
     { dconi_full();
       if (expandMacro[0] != '\0')
         execString(expandMacro);
-  	aspFrame("dconi",0,0,0,0,0);
+      aspFrame("dconi",0,0,0,0,0);
       return 0;
     }
 #ifdef VNMRJ
