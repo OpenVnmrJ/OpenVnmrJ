@@ -1201,7 +1201,7 @@ static int dconi_expand()
     { dconi_full();
       if (expandMacro[0] != '\0')
         execString(expandMacro);
-  	aspFrame("dconi",0,0,0,0,0);
+      aspFrame("dconi",0,0,0,0,0);
       return 0;
     }
 #ifdef VNMRJ
@@ -1721,6 +1721,8 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
   Wgetgraphicsdisplay(cmd, 20);
   Wshow_graphics();
   if (init_dconi(1)) {return 1;}
+  if ( (argc >= 2) && !strcmp(argv[1],"dconi") )
+     d2flag = 1;
   if (argc == 3)
   {
      if (strcmp(argv[1],"expandMacro") == 0)
