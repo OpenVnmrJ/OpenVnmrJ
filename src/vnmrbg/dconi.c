@@ -1670,6 +1670,8 @@ int init_dconi(int plotflag)
      revAxis_v = rev_v;
   }
   dconi_sendSpecInfo(1);
+  if ( start_from_ft2d )
+     d2flag = 1;
   start_from_ft2d = 0;
   Wsetgraphicsdisplay("dconi");
   aspFrame("clearAspSpec",0,0,0,0,0);
@@ -1721,8 +1723,7 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
   Wgetgraphicsdisplay(cmd, 20);
   Wshow_graphics();
   if (init_dconi(1)) {return 1;}
-  if ( (argc >= 2) && !strcmp(argv[1],"dconi") )
-     d2flag = 1;
+
   if (argc == 3)
   {
      if (strcmp(argv[1],"expandMacro") == 0)
