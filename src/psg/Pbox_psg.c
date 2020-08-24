@@ -426,7 +426,7 @@ shape getGsh(char *shname)			/* read .GRD shaped gradient */
   FILE     *inpf = NULL;
   int      j, k, nn;
   char     ch, str[MAXSTR];
-  char     shapename[MAXSTR];
+  char     shapename[MAXSTR+16];
   double   am, ln, mxl = 32768.0;
 
   gshape.np = 0, gshape.ok = 0;
@@ -565,7 +565,7 @@ shape getRsh(char *shname)    /* retrieve parameters from .RF file header */
   FILE     *inpf;
   int      j, ok=1;
   char     ch, str[MAXSTR];
-  char     shapename[MAXSTR];
+  char     shapename[MAXSTR+16];
 
   rshape.ok = 0;
   rshape.pw = 0.0; rshape.pwr = 0.0; rshape.pwrf = 0.0; rshape.dres = 0.0;
@@ -616,7 +616,7 @@ shape getDsh(char *shname)	/* retrieve parameters from .DEC file header */
   FILE     *inpf;
   int      j, ok=1;
   char     ch, str[MAXSTR];
-  char     shapename[MAXSTR];
+  char     shapename[MAXSTR+16];
 
   dshape.ok = 0;
   dshape.pw = 0.0, dshape.pwr = 0.0, dshape.pwrf = 0.0, dshape.dres = 0.0, 
