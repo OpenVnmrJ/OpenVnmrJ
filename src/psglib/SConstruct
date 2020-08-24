@@ -13,20 +13,29 @@ cwd = os.getcwd()
 # library dependancies
 ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
 #SConscript(os.path.join(ncommPath, 'SConstruct'))
-cmd='cd ../ncomm;scons'
+if os.path.exists('/usr/bin/scons'):
+   cmd='cd ../ncomm;scons'
+else:
+   cmd='cd ../ncomm;scons-3'
 os.system(cmd)
 
 # dependancies
 binPath = os.path.join(cwd, os.pardir, 'bin')
 #SConscript(os.path.join(binPath, 'SConstruct'))
-cmd='cd ../bin;scons -f SConstruct.dps_ps_gen'
+if os.path.exists('/usr/bin/scons'):
+   cmd='cd ../bin;scons -f SConstruct.dps_ps_gen'
+else:
+   cmd='cd ../bin;scons-3 -f SConstruct.dps_ps_gen'
 os.system(cmd)
 
 psgPath = os.path.join(cwd, os.pardir, 'psg')
 
 nvpsgPath = os.path.join(cwd, os.pardir, 'nvpsg')
 #SConscript(os.path.join(nvpsgPath, 'SConstruct'))
-cmd='cd ../nvpsg;scons'
+if os.path.exists('/usr/bin/scons'):
+   cmd='cd ../nvpsg;scons'
+else:
+   cmd='cd ../nvpsg;scons-3'
 os.system(cmd)
 
 vnmrPath   = os.path.join(cwd, os.pardir, 'vnmr')
@@ -75,7 +84,7 @@ if (platform=="darwin"):
     seqLibEnv.Replace(CPPFLAGS = '-Wall -Wno-format-security -Wno-return-type')
     seqLibEnv.Replace(LINKFLAGS = '-Os -Wl,-rpath,/vnmr/lib')
                                       
-nvseqLibEnv = Environment(CPPFLAGS   = '-O -m32 -Wall -Wno-unused-variable -Wno-switch -Wno-format-security',
+nvseqLibEnv = Environment(CPPFLAGS   = '-O -m32 -Wno-unused-variable -Wno-switch -Wno-format-security',
                           CPPDEFINES = ['LINUX', 'NESSIE', 'NVPSG', 'codeint=int', 'codelong=int'],
                           LINKFLAGS  = '-O -m32 -Wl,-rpath,/vnmr/lib',
                           LINK       = 'g++',
@@ -202,7 +211,10 @@ SConscript('lcseqlib/SConstruct.vnmrs',exports = 'nvseqLibEnv psgPath nvpsgPath 
 #seqlib build
 if ( ('darwin' not in platform) and ('interix' not in platform) ):
 #    SConscript(os.path.join(psgPath, 'SConstruct'))
-    cmd='cd ../psg;scons'
+    if os.path.exists('/usr/bin/scons'):
+       cmd='cd ../psg;scons'
+    else:
+       cmd='cd ../psg;scons-3'
     os.system(cmd)
 
     iseqlibPath =  os.path.join(cwd,'iseqlib')

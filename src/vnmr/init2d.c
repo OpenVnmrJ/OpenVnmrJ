@@ -373,7 +373,7 @@ int check2d(int get_rev)
 		ni0name[6];
   int		r;
   double	rni;
-  int           dim0,dim1;
+  int           dim0;
 
 
 /******************************************************
@@ -385,7 +385,7 @@ int check2d(int get_rev)
 
   /* Defaults for 1D data */
   ndflag = ONE_D;
-  dim1 = dim0 = S_NP;
+  dim0 = S_NP;
   dimension_name = S_NP;
   d2flag = FALSE;
   ni = 1;

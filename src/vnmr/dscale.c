@@ -912,9 +912,9 @@ static int tictype(register double freq, register double step)
 void erase_dcon_box()
 /**************/
 {
-	int ddfpnt2;
+//	int ddfpnt2;
 
-	ddfpnt2 = dfpnt2;
+//	ddfpnt2 = dfpnt2;
 #ifdef VNMRJ
         set_graph_clear_flag(TRUE);
 #endif
@@ -1692,12 +1692,14 @@ int new_dscale(int erase, int draw)
   }
   if (draw)
   {
+/*
     int df_on = FALSE;
 
     if (WgraphicsdisplayValid("df") || WgraphicsdisplayValid("dfs"))
     {
       df_on = TRUE;
     }
+ */
     dispcalib = (float) (mnumypnts-ymin) / (float) wc2max;
     scale_vp = (int) ((vp0-scale_vp_off) * dispcalib);
     set_dscale(dfpnt,dnpnt,dfpnt2,scale_vp,scale_color,scale_vp_off);

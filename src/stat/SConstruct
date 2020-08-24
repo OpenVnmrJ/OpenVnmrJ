@@ -47,6 +47,14 @@ statEnv = Environment(CCFLAGS    = '-O -m32',
                       LINKFLAGS  = '-O2 -m32 -Wl,-rpath,/vnmr/lib ',
                       CPPPATH    = [cwd])
 
+if os.path.exists('/usr/include/tirpc'):
+   statEnv.Append(  CPPPATH=[ '/usr/include/tirpc']  )
+   LibList = [ 'm', 'acqcomm', 'tirpc' ]
+   LibList2 = [ 'tirpc' ]
+else:
+   LibList = [ 'm', 'acqcomm' ]
+   LibList2 = []
+
 buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, xracqPath, xracqHdrList)
 buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, acqProcPath, acqProcHdrList)
 buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, vnmrPath, vnmrFileList)
@@ -58,14 +66,14 @@ infostat = statEnv.Program(target  = infostatTarget,
                                       vnmrFileList],
                            LIBPATH = [cwd,
                                       ncommPath],
-                           LIBS    = ['m', 'acqcomm'])
+                           LIBS    = [ LibList ])
 
 showstat = statEnv.Program(target  = showstatTarget,
                            source  = [showStatFileList,
                                       infoServerFileList],
                            LIBPATH = [cwd,
                                       ncommPath],
-                           LIBS    = [])
+                           LIBS    = [ LibList2 ])
 
 # define with absolute path where built files will be copied
 vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
