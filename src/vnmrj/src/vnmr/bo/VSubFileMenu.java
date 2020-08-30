@@ -88,21 +88,23 @@ public class VSubFileMenu extends VSubMenu
                 Messages.writeStackTrace(e);
             }
         }
-/*
-        updateChild = true;
-        int m = getMenuComponentCount();
-        for (int k = 0; k < m; k++) {
-            Component comp = getMenuComponent(k);
-            if (comp instanceof VMenuitemIF) {
-                VMenuitemIF xobj = (VMenuitemIF) comp;
-                xobj.initItem();
-            }
-            else if (comp instanceof ExpListenerIF) {
-                ExpListenerIF obj = (ExpListenerIF) comp;
-                obj.updateValue();
-            }
-        }
- */
+	String att=getAttribute(EXPANDED);
+	if (att != null && att.equals("yes"))
+	{
+           updateChild = true;
+           int m = getMenuComponentCount();
+           for (int k = 0; k < m; k++) {
+               Component comp = getMenuComponent(k);
+               if (comp instanceof VMenuitemIF) {
+                   VMenuitemIF xobj = (VMenuitemIF) comp;
+                   xobj.initItem();
+               }
+               else if (comp instanceof ExpListenerIF) {
+                   ExpListenerIF obj = (ExpListenerIF) comp;
+                   obj.updateValue();
+               }
+           }
+	}
     }
 }
 
