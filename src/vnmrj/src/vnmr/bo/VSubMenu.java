@@ -39,6 +39,7 @@ public class VSubMenu extends JMenu
     public String hotkey = null;
     public String iconName = null;
     public String tipStr = null;
+    public String expanded = null;
     public Color  fgColor = Color.black;
     public Color  bgColor, orgBg;
     public Color  inColor = null;
@@ -333,6 +334,8 @@ public class VSubMenu extends JMenu
             return null;
         case TOOLTIP:
             return tipStr;
+        case EXPANDED:
+            return expanded;
          default:
             return null;
         }
@@ -433,6 +436,9 @@ public class VSubMenu extends JMenu
                setToolTipText(Util.getLabel(c));
             else
                setToolTipText(null);
+            break;
+        case EXPANDED:
+            expanded = c;
             break;
         case PANEL_NAME:
             objName = c;
