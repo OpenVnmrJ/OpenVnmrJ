@@ -259,16 +259,16 @@ void sendChildNewLineNoClear()
 |
 |	We have got an escape sequence from a child, deal with it!  A child
 |	sends a message by prefixing it with exactly THREE escapes (\033) and
-|	terminates it with a newline (\n).  Usually the first 6 characters
-|	are the pid (in %6u format) of the sender.  For example...
+|	terminates it with a newline (\n).  Usually the first 7 characters
+|	are the pid (in %7u format) of the sender.  For example...
 |
-|		printf("\033\033\033%6uTActive\n",HostPid);
+|		printf("\033\033\033%7uTActive\n",HostPid);
 |
 |	A good way to make this fairly clean is to make a message sender
 |	function...
 |
 |		sendStatus(m)		char *m;
-|		{  printf("\033\033\033%6uT%s\n",HostPid,m);
+|		{  printf("\033\033\033%7uT%s\n",HostPid,m);
 |		}
 |
 |	Which is called passing in a char * pointing to the null terminated
@@ -561,9 +561,9 @@ void gotEscSeq(char *msg)
                    pid;
    struct acqmsgentry *curptr;
 
-   sscanf(msg + 3, "%6u", &pid);
-   type = msg[9];
-   tex = &(msg[10]);
+   sscanf(msg + 3, "%7u", &pid);
+   type = msg[10];
+   tex = &(msg[11]);
    DPRINT3("M: Message from pid %u, type %c, \"%s\"\n", pid, type, printable(tex));
    switch (type)
    {
