@@ -974,7 +974,8 @@ public class WUserUtil
         String strOperator;
         String strlist;
         strlist = (String)hmOperators.get("#");
-        sbOperators.append(strlist).append("\n");
+        if ( strlist != null )
+           sbOperators.append(strlist).append("\n");
         while (iter.hasNext())
         {
             strOperator = (String)iter.next();

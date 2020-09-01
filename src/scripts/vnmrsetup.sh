@@ -517,13 +517,9 @@ fi
 
 if [ -e /tmp/.ovj_installed ]; then
    nmr_user=$(/vnmr/bin/fileowner /vnmr/vnmrrev)
-   # temporary fix
-   fixName="/vnmr/adm/users/operators/operatorlist"
-   if [[ -f $fixName ]]; then
-      grep -v ^null$ $fixName > ${fixName}.tmp
-      mv -f ${fixName}.tmp $fixName
-      chown $nmr_user:$nmr_group $fixName
-   fi
+   opFile="/vnmr/adm/users/operators/operatorlist"
+   chown $nmr_user:$nmr_group $opFile
+   chmod 644 $opFile
    echo "Configuring $nmr_user with the standard configuration (stdConf)"
    echo "Configuring $nmr_user with the standard configuration (stdConf)" >> $insLog
    if [ x$distroType = "xdebian" ]; then
