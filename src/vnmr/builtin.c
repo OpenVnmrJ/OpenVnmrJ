@@ -696,6 +696,15 @@ int substr(int argc, char *argv[], int retc, char *retv[])
            {
              if (retc == 1)
              {
+                if (argc > 3)
+                {
+                   char *ptr;
+                   if ( ( (ptr = strstr(tmp,argv[3])) != NULL ) &&
+                        ( strlen(ptr) == strlen(argv[3]) ) )
+                   {                
+                      *ptr = '\0';
+                   }
+                }
                 retv[0] = newString(tmp);
              }
              else if ( (strcmp(tmp,"..") == 0) || (strcmp(tmp,".") == 0) )
@@ -1700,7 +1709,7 @@ int groupcopy(int argc, char *argv[], int retc, char *retv[])
                 {   if ( 0 <= ( group = goodGroup(argv[3])))
                     {
 #ifdef VNMRJ
-			char to_tree[MAXPATH];
+			char to_tree[MAXPATH+8];
 
 			strncpy(to_tree,argv[2],MAXPATH);
 			vnmr_tolower(to_tree);
@@ -2422,7 +2431,7 @@ int unlinkFilesWithSuffix( char *dirpath, char *suffix )
  
    if ( (dirp = opendir(dirpath)) )
    {
-      char newname[MAXPATH];
+      char newname[MAXPATH*2];
       int len;
 
       for (dp = readdir(dirp); dp != NULL; dp = readdir(dirp))
