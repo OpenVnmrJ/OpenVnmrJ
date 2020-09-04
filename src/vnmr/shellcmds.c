@@ -115,6 +115,7 @@ extern void  setInputRaw();
 extern void  system_call(char *s);
 extern void  trLine(char inLine[], char subLine[], char newChar[], char outLine[] );
 extern int   Rmdir(char *dirname, int rmParent);
+extern int   Rmfiles(char *dirname, char *fileRegex, int testOnly);
 static int   getcmd(char *cmd);
 static void  Shellret(FILE *stream, int retc, char *retv[]);
 int More(FILE *stream, int screenLength);
@@ -1247,6 +1248,16 @@ int Rm(int argc, char *argv[], int retc, char *retv[])
           }
        }
     }
+    else if ( (argc == 4) && (  !strcasecmp(argv[1],"regex") || !strcasecmp(argv[1],"regextest")  ) )
+    {
+       // in ths case, argv[2] is directory and argv[3] is filename with wildcard
+       if ( ! access(argv[2],X_OK))
+       {
+          int testOnly = (!strcasecmp(argv[1],"regextest"));
+          if ( ! Rmfiles(argv[2], argv[3], testOnly) )
+             RETURN;
+       }
+    }
     strcpy(cmdstr,"/bin/rm");
     for (i=1; i<argc; i++)
     {
@@ -2275,6 +2286,7 @@ int sortCmd(int argc, char *argv[], int retc, char *retv[])
    long ipos;
    int numLines = 0;
    int i,j;
+   char *ret __attribute__((unused));
    
 
    if (argc < 3)
@@ -2379,7 +2391,7 @@ int sortCmd(int argc, char *argv[], int retc, char *retv[])
       if ( !nFlag )
       {
          fseek(inFile, *(posPtr+i), SEEK_SET);
-         fgets(inLine1, sizeof(inLine1), inFile);
+         ret = fgets(inLine1, sizeof(inLine1), inFile);
          len = strlen(inLine1);          /* get buf length */
          if (len && inLine1[len-1] == '\n')      /* check last char is '\n' */
             inLine1[--len] = '\0'; 
@@ -2397,7 +2409,7 @@ int sortCmd(int argc, char *argv[], int retc, char *retv[])
             if ( !nFlag )
             {
                fseek(inFile, *(posPtr+j), SEEK_SET);
-               fgets(inLine2, sizeof(inLine2), inFile);
+               ret = fgets(inLine2, sizeof(inLine2), inFile);
                len = strlen(inLine2);          /* get buf length */
                if (len && inLine2[len-1] == '\n')      /* check last char is '\n' */
                   inLine2[--len] = '\0'; 
@@ -2457,7 +2469,7 @@ int sortCmd(int argc, char *argv[], int retc, char *retv[])
          if (*(posPtr+j) == -1)
             continue;
          fseek(inFile, *(posPtr+j), SEEK_SET);
-         fgets(inLine1, sizeof(inLine1), inFile);
+         ret = fgets(inLine1, sizeof(inLine1), inFile);
          fprintf(outFile,"%s",inLine1);
       }
    }
@@ -2468,7 +2480,7 @@ int sortCmd(int argc, char *argv[], int retc, char *retv[])
          if (*(posPtr+j) == -1)
             continue;
          fseek(inFile, *(posPtr+j), SEEK_SET);
-         fgets(inLine1, sizeof(inLine1), inFile);
+         ret = fgets(inLine1, sizeof(inLine1), inFile);
          fprintf(outFile,"%s",inLine1);
       }
    }

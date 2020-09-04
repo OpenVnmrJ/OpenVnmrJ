@@ -183,7 +183,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   if [ $version -lt 8 ]; then
     commonList="$commonList rsh rsh-server"
   else
-    commonList="$commonList csh libnsl compat-openssl10"
+    commonList="$commonList csh libnsl compat-openssl10 compat-libgfortran-48"
   fi
 
 # Must list 32-bit packages, since these are no longer

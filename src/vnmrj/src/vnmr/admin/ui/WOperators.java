@@ -66,7 +66,7 @@ public class WOperators extends ModalDialog implements ActionListener
         vnmr.util.Util.getLabel("_admin_Profile_Name")
         };
     public static final String PREFERENCES = "SYSTEM/USRS/operators/preferences";
-    public static final String ICON = "loginIcon.png";
+    public static final String ICON = "loginIcon.gif";
 
     public WOperators(String strProp)
     {

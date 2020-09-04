@@ -3444,7 +3444,7 @@ int sendTripleEscToMaster(char code, char *string_to_send )
 	);
 */
 	sprintf( &tempstr[ 0 ],
-	    "\033\033\033%6u%c%s\n", JgetPid, code, string_to_send
+	    "\033\033\033%7u%c%s\n", JgetPid, code, string_to_send
 	);
 	fflush( stdout );
 

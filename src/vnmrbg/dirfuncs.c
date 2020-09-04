@@ -253,6 +253,79 @@ int Rmdir(char *dirname, int rmParent)
    return(0);
 }
 
+// The calling routine should make sure the directory dirname
+// exists before calling this function
+int Rmfiles(char *dirname, char *fileCmp, int testOnly)
+{
+   regex_t regex;
+   regmatch_t matches;
+   int reti;
+   int dirMatched=0;
+   char *argv2[2];
+   argv2[0] = dirname;
+   argv2[1] = NULL;
+
+   errno = 0;
+   FTS *tree = fts_open(argv2, FTS_NOCHDIR|FTS_PHYSICAL, NULL);
+   if (!tree)
+      return(-1);
+   reti = regcomp(&regex, fileCmp, REG_EXTENDED|REG_NOSUB);
+   if (reti)
+   {
+      char buf[MAXPATH];
+      regerror(reti, &regex , buf, sizeof(buf) );
+      fts_close(tree);
+      Werrprintf("regular expression '%s' has error '%s'",fileCmp,buf);
+      return(-1);
+   }
+
+   FTSENT *node;
+   while ((node = fts_read(tree)))
+   {
+      if ( dirMatched || regexec(&regex, node->fts_name, 0, &matches, 0) == 0)
+      {
+         // If a directory matches, remove everything in the directory
+         if (node->fts_info == FTS_D)
+         {
+            dirMatched = 1;
+         }
+         else if ((node->fts_info == FTS_F) ||
+                  (node->fts_info == FTS_SL) ||
+                  (node->fts_info == FTS_SLNONE) )
+         {
+            if (testOnly)
+               Winfoprintf("rm would unlink %s",node->fts_path);
+            else
+               unlink(node->fts_path);
+         }
+         else if ((node->fts_info == FTS_DP) &&
+                  regexec(&regex, node->fts_name, 0, &matches, 0) == 0)
+         {
+            // This is the top-level directory that matched
+            dirMatched = 0;
+            if (testOnly)
+               Winfoprintf("rm would remove directory %s",node->fts_path);
+            else
+               rmdir(node->fts_path);
+         }
+         else if (node->fts_info == FTS_DP)
+         {
+            // This is a subdirectory of the top-level directory that matched
+            if (testOnly)
+               Winfoprintf("rm would remove directory %s",node->fts_path);
+            else
+               rmdir(node->fts_path);
+         }
+      }
+   }
+   regfree(&regex);
+   if (fts_close(tree))
+      return(-3);
+   if (errno)
+      return(-2);
+   return(0);
+}
+
 // The calling routine should make sure the directories
 // exists before calling this function
 int Cpdir(char *fromdir, char *todir)
