@@ -116,6 +116,7 @@
 extern int bufferscale;		/* scaling factor for internal Vnmr buffers */
 extern int interuption;
 extern int start_from_ft;
+extern int start_from_ft2d;
 extern void rotate2 (float *spdata, int nelems, double lpval, double rpval);
 extern void set_vnmrj_ft_params(int procdim, int argc, char *argv[]);
 
@@ -164,10 +165,11 @@ ddif (int argc, char *argv[], int retc, char *retv[])
   /*Declarations */
 /*{{{*/
   int ini, ipnt, nextpeak = 0, currpeak, prevpeak;
-  register int i, k, l, ij;
+  register int i, l, ij;
   float *inp;
   double prevnompt, arg1, arg2, arg3, arg4, erff1, erff2, erff3, erff4,
-    currdiff, diffpt, halfptdiff, root2, peakamp, peakmax;
+    currdiff, halfptdiff, root2, peakamp, peakmax;
+//  double diffpt;
   dpointers inblock;
   int m, mm, n;
   double factor3, dbl_fn1,	/* DI dbl_ni, */
@@ -410,7 +412,6 @@ ddif (int argc, char *argv[], int retc, char *retv[])
 		  nextpeak = fn0 - 2;
 		}
 
-	      k = 0;
 
 /* Now find left and right edges of peak:  either at a threshold of 0.5%
  * of the maximum value, or wherever there is a minimum, or if the peak
@@ -530,7 +531,7 @@ ddif (int argc, char *argv[], int retc, char *retv[])
 	  /* CHANGE 13xii09 */
 	  /* halfptdiff is half the change in diffusion coefficient per point */
 	  halfptdiff = wd / ((double) fidhead.np);
-	  diffpt = 2.0 * wd / ((double) fidhead.np);
+	  // diffpt = 2.0 * wd / ((double) fidhead.np);
 	  for (m = 0; m < numpeaks; m++)
 	    /*For each NMR peak calculate its width and height in the diffusion dimension */
 	    {
@@ -735,6 +736,7 @@ ddif (int argc, char *argv[], int retc, char *retv[])
 
 /* MCHR GAM 10vi08 */
   start_from_ft = TRUE;
+  start_from_ft2d = TRUE;
   releasevarlist ();
   appendvarlist ("cr");
   Wsetgraphicsdisplay ("ds");
