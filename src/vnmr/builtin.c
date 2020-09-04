@@ -698,12 +698,11 @@ int substr(int argc, char *argv[], int retc, char *retv[])
              {
                 if (argc > 3)
                 {
-                   char *ptr;
-                   if ( ( (ptr = strstr(tmp,argv[3])) != NULL ) &&
-                        ( strlen(ptr) == strlen(argv[3]) ) )
-                   {                
-                      *ptr = '\0';
-                   }
+                   size_t alen, tlen;
+                   alen = strlen(argv[3]);
+                   tlen = strlen(tmp);
+                   if ( (tlen > alen) && !strcmp((tmp+tlen-alen),argv[3]) )
+                      *(tmp+tlen-alen) = '\0';
                 }
                 retv[0] = newString(tmp);
              }
