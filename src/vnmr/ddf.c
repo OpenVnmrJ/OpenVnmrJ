@@ -834,7 +834,18 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
        if (retc)
        {
           retv[0] = realString(average);
-          if (retc>=2) retv[1] = realString(stddev);
+          if (retc>=2)
+          {
+             retv[1] = realString(stddev);
+             if (retc>=3)
+             {
+                double msd;
+                msd = fabs(sumx2 - sumx*sumx/N)/N;
+                retv[2] = realString(msd);
+                if (retc>=4)
+                   retv[3] = realString(sqrt(msd));
+             }
+          }
        }
        else
           Winfoprintf("average: %g  std. dev.: %g",average,stddev);
