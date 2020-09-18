@@ -2195,6 +2195,7 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
               break;
           case WindowEvent.WINDOW_DEICONIFIED:
               setFrameListener(false);
+              repaint();
               break;
         }
     }
