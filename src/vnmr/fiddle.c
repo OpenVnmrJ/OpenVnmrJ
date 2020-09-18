@@ -224,7 +224,8 @@ void makeideal();
 **************************************/
 int fiddle(int argc, char *argv[], int retc, char *retv[])
 {
-	int    pwr,cblock,res,dc_correct=TRUE;
+//	int    pwr,cblock,res,dc_correct=TRUE;
+	int    pwr,cblock,res;
 	register int i,ntval;
 	dpointers  inblock;
 	float   a,b,c,d,denom;
@@ -234,7 +235,7 @@ int fiddle(int argc, char *argv[], int retc, char *retv[])
 	if (i_fiddle(argc,argv))
 		ABORT;
 
-	dc_correct=dccorr;
+//	dc_correct=dccorr;
 	pwr = fnpower(fn0);
 	max=0.0;
 	cfcount=0;
@@ -1366,7 +1367,7 @@ void setupwritefile()
 	/* ntraces and nbheaders should be 1 */
 	writehead.ntraces=1;
 	writehead.nbheaders=1;
-	writehead.status=writehead.status|S_32; /* see ebytes ! */
+	writehead.status= S_DATA | S_32 | S_COMPLEX; /* see ebytes ! */
 	/* make up blockheader */
 	writebhead.scale=(short)1;
 	writebhead.status=(short)21; /* complex 32bit int fid data */
@@ -1403,7 +1404,7 @@ void setupwritecf()
 	/* ntraces and nbheaders should be 1 */
 	cfhead.ntraces=1;
 	cfhead.nbheaders=1;
-	cfhead.status=cfhead.status|S_32; /* see ebytes ! */
+	cfhead.status= S_DATA | S_32 | S_COMPLEX; /* see ebytes ! */
 	/* make up blockheader */
 	cfbhead.scale=(short)1;
 	cfbhead.status=(short)21; /* complex 32bit int fid data */
@@ -1757,7 +1758,7 @@ int getfidblockheadforcf()
 void readincf()
 {
 	register int i;
-	int bytes;
+	int bytes __attribute__((unused));
 	bytes=fread(intbuf,sizeof(dblockhead),1,readcffile);
 /*	Should really test for compatibility here, and report errors	*/
 	bytes=fread((char *)(intbuf),4,np0w,readcffile);
@@ -1771,7 +1772,7 @@ void readincf()
 
 int setupreadcf()
 {  
-	int bytes;
+	int bytes __attribute__((unused));
 		strcat(readcfname,"/fid"); /* set name to /fid! */
 		if ((readcffile=fopen(readcfname,"r"))==NULL)
 		{

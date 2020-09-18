@@ -752,7 +752,7 @@ int save_data(char *exppath, float *spec1, double mult1, float *spec2,
 static void updateBlocks(int blocks, int status, int trace)
 {
      int i;
-     int ival;
+     int ival __attribute__((unused));
      dpointers fid_block;
      for (i=0; i< blocks; i++)
      {
@@ -789,7 +789,7 @@ static int keepFids(char *exppath, int lastFid, char *msg)
    if (datahead.ebytes == 4)
    {
       int i;
-      int ival;
+      int ival __attribute__((unused));
       dpointers fid_block;
       int np;
       
@@ -842,6 +842,7 @@ static int keepFids(char *exppath, int lastFid, char *msg)
             rmult /= (float)(fid_block.head->ctcount);
             fid_block.head->ctcount = 1;
             fid_block.head->scale = 0;
+            fid_block.head->status = datahead.status;
             np = datahead.np;
             ptr = (float *)fid_block.data;
             iptr = (int *)fid_block.data;
