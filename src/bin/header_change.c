@@ -16,7 +16,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <netinet/in.h>
+#include <string.h>
+#include <arpa/inet.h>
 
 /**[2] GENEREL DECLERATIONS *******************************/
 
@@ -46,12 +47,20 @@ struct {
 	float tlt;         /* tilt drift correction */
        } datablockhead;
 
+// From data.h
+
+#define S_QONE          0x800   /* 1 = Q-One data               */ 
+#define S_MAKEFID       0x1000  /* 1 = data from makefid        */
+#define S_JEOL          0x2000  /* 1 = JEOL data                */ 
+#define S_BRU           0x4000  /* 1 = Bruker data              */ 
+#define P_VENDOR_ID     0x7800  /* preserves vendor ID status   */
 
 /*** PROGRAM BEGIN *************************************/
 int main(int argc, char *argv[])
 {
 /*** VARIABLE DECLARATION **************************************/
-     FILE *in_file,*out_file;
+     FILE *in_file;
+     FILE *out_file = NULL;
      int i,j,no_points;
      short data_short;
      int  data_int ;
@@ -60,6 +69,7 @@ int main(int argc, char *argv[])
      int nblks;
      int ctval;
      int no_bytes;
+     int versID = 0;
 
 /*** CONTROL OF INPUT PARAMETERS ******************************/
      if (argc<2)
@@ -79,16 +89,20 @@ int main(int argc, char *argv[])
          printf("\nNew CT was not passed!\n");
          exit (3);
          }
+
+      versID = ( ! strcmp("versid",argv[2]) );
          
 /*** OPENING THE FILES AND READING THE HEADER ****************/
 
-      if ((in_file=fopen(argv[1],"rb"))==NULL)
+      if ((in_file=fopen(argv[1],"r+"))==NULL)
          {
          printf("\nCan not open input file");
          exit (3);
          }
       rewind(in_file);  
         
+     if ( ! versID)
+     {
       if ((out_file=fopen(argv[2],"wb"))==NULL)
          {
          printf("\nCan not open output file");
@@ -96,6 +110,7 @@ int main(int argc, char *argv[])
          }
          
       rewind(out_file);
+     }
       
          
 /*** WRITE A HEADER OF AN OUTPUT FILE *****************/
@@ -105,6 +120,34 @@ int main(int argc, char *argv[])
          exit (3);
          }
          
+      if ( versID)
+      {
+         short vers_id;
+         vers_id = ntohs(datafilehead.vers_id);
+         vers_id &= ~P_VENDOR_ID;
+         if (argv[3][0] == 'B')
+            vers_id |= S_BRU;
+         if (argv[3][0] == 'J')
+            vers_id |= S_JEOL;
+         if (argv[3][0] == 'Q')
+            vers_id |= S_QONE;
+         if (strstr(argv[3],"M") != NULL)
+            vers_id |= S_MAKEFID;
+        
+         datafilehead.vers_id = htons(vers_id);
+         rewind(in_file);  
+         if (fwrite(&datafilehead,sizeof(datafilehead),1,in_file) != 1)
+         {
+            fprintf (stderr, "Error in writting output data (datafilehead)\n");
+            exit (3);
+         }
+         if (fclose(in_file) != 0) 
+         {
+            printf ("Error closing input file"); 
+            exit (3);      
+         }
+         exit(EXIT_SUCCESS);
+      }
      if (fwrite(&datafilehead,sizeof(datafilehead),1,out_file) != 1)
         {
         fprintf (stderr, "Error in writting output data (datafilehead)\n");

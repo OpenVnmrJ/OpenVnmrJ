@@ -1598,7 +1598,7 @@ int          rep;
 {
   FILE     *src;  
   char      fname[MAXSTR];
-  int       j;
+  int       j __attribute__((unused));
   COMPLX   *dfid;
 
   sprintf(fname, "%s", dir); 
@@ -1629,7 +1629,8 @@ int          rep;
 {
   FILE     *src;  
   char      fname[MAXSTR];
-  int       i, j;
+  int       i;
+  int       j __attribute__((unused));
   COMPLX  **dfid;
   BLOCKHEADER *bhd1, *bhd2;
 
@@ -1761,7 +1762,8 @@ int          rep;
 {
   FILE     *src;  
   char      fname[MAXSTR];
-  int       i, j;
+  int       i;
+  int       j __attribute__((unused));
   COMPLX  **dfid;
   FILEHEADER   fhd;
   BLOCKHEADER  bhd1, bhd2;
@@ -1803,7 +1805,7 @@ int          rep;
 {
   FILE     *src;  
   char      fname[MAXSTR];
-  int       j;
+  int       j __attribute__((unused));
   COMPLX   *dfid;
 
   sprintf(fname, "%s", dir);  
@@ -1960,9 +1962,10 @@ int           nx;
 short         rep;
 BLOCKHEADER **xbhd[xfhd.nbheaders][nx];
 {
-  int          i, k, ii;
+//  int          i, k, ii;
+  int          i, k;
 
-  ii = xfhd.ntraces*xfhd.np;  
+//  ii = xfhd.ntraces*xfhd.np;  
 
   for(k=0; k<nx; k++)
   {
@@ -1986,7 +1989,8 @@ int         rep;
 {
   FILE   *trg;
   char    fname[MAXSTR];
-  int     i, j;
+  int     i;
+  int     j __attribute__((unused));
   
   sprintf(fname, "%s", dir); 
   trg = open_fid(fname, "w");
@@ -2025,11 +2029,13 @@ short         rep;
     {
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid1[i])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid1[i])) break;
+      xbhd->iblock++;
 
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid2[i])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid2[i])) break;
+      xbhd->iblock++;
     } 
   }
   else if(iph == 12)   /* array='phase,phase2' */
@@ -2038,19 +2044,23 @@ short         rep;
     {
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid1[2*i])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid1[2*i])) break;
+      xbhd->iblock++;
 
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid2[2*i])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid2[2*i])) break;
+      xbhd->iblock++;
 
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid1[2*i+1])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid1[2*i+1])) break;
+      xbhd->iblock++;
 
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid2[2*i+1])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid2[2*i+1])) break;
+      xbhd->iblock++;
     }
   }
   else if(iph == 21)  /* array = 'phase2,phase' */
@@ -2059,19 +2069,23 @@ short         rep;
     {
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid1[2*i])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid1[2*i])) break;
+      xbhd->iblock++;
 
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid1[2*i+1])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid1[2*i+1])) break;
+      xbhd->iblock++;
       
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid2[2*i])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid2[2*i])) break;
+      xbhd->iblock++;
       
       if(!put_bheader(src, xbhd, 0)) break; 
       if(xfhd.nbheaders>1) put_bheader(src, xbhd, rep);  
-      if(!put_fid(src, xfhd, xfid2[2*i+1])) break; xbhd->iblock++;
+      if(!put_fid(src, xfhd, xfid2[2*i+1])) break;
+      xbhd->iblock++;
     } 
   }
   
@@ -4055,7 +4069,8 @@ int  add_phase3d(dir)
 char *dir;
 {  
   FILE	  *fnm, *ftmp;
-  int     i, j, ph;
+  int     i, j;
+  int     ph __attribute__((unused));
   char    str[512], str2[512];
   
   strcat(strcpy(str, dir), "/procpar");
