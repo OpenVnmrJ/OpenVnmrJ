@@ -41,7 +41,8 @@ public class LoadNmr extends JFrame {
     int numField = 30;
     int curTabIndexOffset = 0;
     int curTabIndex = 0;
-    int selectTabIndex = 0;
+    int selectTabIndex = -1;
+    int totalTabs = 0;
     boolean setAcq = false;
     boolean setupDB = true;
     boolean loadVNMR = true;
@@ -93,7 +94,7 @@ public class LoadNmr extends JFrame {
 			      "mercplus", "mercvx",  "mercury", "vnmrsdd2", "mr400dd2",
                               "g2000",    "uplus",   "unity",
 			     };
-    String progressTitleConsole[] = {	"ProPulse", "VNMRS", "400-MR", "VNMRSDD@", "400-MRDD2",
+    String progressTitleConsole[] = {	"ProPulse", "VNMRS", "400-MR", "VNMRSDD2", "400-MRDD2",
 					"INOVA", "MERCURYplus/Vx"};
 
 
@@ -152,7 +153,7 @@ public class LoadNmr extends JFrame {
         tabbedPane.setBackground(Color.gray);
         tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 
-	if (dotnvExists==1) {
+//	if (dotnvExists==1) {
             String origVersion = checkPreviousVnmrVersion();
             curTabIndexOffset = 0;
             // showSol=true;   // to show Solaris and 400MR
@@ -201,6 +202,18 @@ public class LoadNmr extends JFrame {
                              }
                              index += 1;
                          }
+                         totalTabs = index;
+                         if (totalTabs == 1)
+                            selectTabIndex = 0;
+                         if (selectTabIndex == -1)
+                         {
+                            int h = 10 + icons[index-1].getIconHeight() / 2;
+		            String tooltip = "Select Instrument tab";
+                            JLabel chooseLabel = new JLabel("    Select an instrument type from the tabs above");
+                            tabbedPane.addTab("<html><body marginheight=" + h + ">",
+                               null, chooseLabel,tooltip);
+                            curTabIndex = index;
+                         }
                      } catch(IOException e2) {}
 
                      try {
@@ -214,6 +227,7 @@ public class LoadNmr extends JFrame {
                           "Load VNMRS software");
                   tabbedPane.addTab(null, mr4Icon, createEntryPanel( (int) 1 ),
                           "Load 400-MR software");
+                  totalTabs = 2;
                }
             }
            
@@ -222,17 +236,17 @@ public class LoadNmr extends JFrame {
           /*      tabbedPane.addTab(null, mr4Icon, createEntryPanel( (int) 0 ),
           /*                "Load 400-MR software");
            */
-        } else {
-            curTabIndexOffset = 2;
-            selectTabIndex = 2;
-            curTabIndex = curTabIndexOffset;
-            tabbedPane.addTab(null, inoIcon, createEntryPanel( (int) 2 ),
-                          "Load Inova software");
-            tabbedPane.addTab(null, mplIcon, createEntryPanel( (int) 3 ),
-                          "Load MERCURYplus software");
+//        } else {
+//            curTabIndexOffset = 2;
+//            selectTabIndex = 2;
+//            curTabIndex = curTabIndexOffset;
+//            tabbedPane.addTab(null, inoIcon, createEntryPanel( (int) 2 ),
+//                          "Load Inova software");
+//            tabbedPane.addTab(null, mplIcon, createEntryPanel( (int) 3 ),
+//                          "Load MERCURYplus software");
         //    tabbedPane.addTab(null, mvxIcon, createEntryPanel( (int) 4 ),
 	//		"Load Mercury VX software");
-        }
+//        }
         //tabbedPane.addTab("  Mercury  ", null, createEntryPanel( (int) 2 ),
 	//			"Load Mercury software");
         //tabbedPane.addTab(" GEMINI 2000 ", null, createEntryPanel( (int) 3 ),
@@ -250,9 +264,19 @@ public class LoadNmr extends JFrame {
 	addWindowListener();
         //nicTokStrg = getNIC();
         //nicCnt = nicTokStrg.countTokens();
-        curTabIndex = selectTabIndex;
-        setSumLabel(" " + grandSum[curTabIndex] + "  KB");
-        tabbedPane.setSelectedIndex(selectTabIndex);
+        if (selectTabIndex >= 0)
+        {
+           curTabIndex = selectTabIndex;
+           setSumLabel(" " + grandSum[curTabIndex] + "  KB");
+           tabbedPane.setSelectedIndex(selectTabIndex);
+           setTitle( "Load OpenVnmrJ Software for " + progressTitleConsole[curTabIndex]);
+        }
+        else
+        {
+           tabbedPane.setSelectedIndex(curTabIndex);
+           bt[0].setEnabled(false); //Install button
+           setSumLabel(" ");
+        }
 
         setLocation( 200, 10 );
 	pack();
@@ -283,6 +307,15 @@ public class LoadNmr extends JFrame {
         public void stateChanged(ChangeEvent e) {
             JTabbedPane source = (JTabbedPane)e.getSource();
             curTabIndex = source.getSelectedIndex() + curTabIndexOffset;
+
+            if (curTabIndex >= totalTabs)
+               return;
+            if (selectTabIndex == -1)
+            {
+                source.removeTabAt(totalTabs);
+                selectTabIndex = 0;
+            }
+            setTitle( "Load OpenVnmrJ Software for " + progressTitleConsole[curTabIndex]);
             setIconImage(icons[curTabIndex].getImage());
 /*
 	    if (curTabIndex == 0) setIconImage(vnsIcon.getImage());
@@ -293,6 +326,7 @@ public class LoadNmr extends JFrame {
 
             setSumLabel(" " + grandSum[curTabIndex] + "  KB");
             Enumeration eVecGen = vecGen[curTabIndex].elements();
+            bt[0].setEnabled(true); //Install button
             boolean foundVnmr = false;
             while(eVecGen.hasMoreElements()) {
                 if (eVecGen.nextElement().equals("VNMR")) {
@@ -813,7 +847,7 @@ public class LoadNmr extends JFrame {
                catch (IOException e) { System.out.println(e); }
 
 
-               System.exit(0);
+               System.exit(-1);
 
            } else if (actionStr.equals("Help")) {
 
