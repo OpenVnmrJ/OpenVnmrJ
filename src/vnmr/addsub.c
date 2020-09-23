@@ -1433,7 +1433,7 @@ static int addspec(int argc, char *argv[], int retc, char *retv[],
   {
      if (range)
      {
-        zerofill(newptr, fn);
+        zerofill(newptr,datahead.np );
         spectrum += rangePt1;
         cur_imag += rangePt1;
         pts = rangePt2 - rangePt1;
@@ -1446,8 +1446,8 @@ static int addspec(int argc, char *argv[], int retc, char *retv[],
         else if (shift > 0)
         {
             rangePt1 += shift;
-            if (rangePt1 + pts > fn/2)
-               rangePt1 = fn/2 - pts;  
+            if (rangePt1 + pts > datahead.np/2)
+               rangePt1 = datahead.np/2 - pts;  
         }
         newptr += 2*rangePt1;
 
@@ -1648,12 +1648,14 @@ static int checkinput(int argc, char *argv[], int newexp)
     else if (strcmp(*argv,"range") == 0)
     {
        range = 1;
-       if ( (argc > 1) && isReal(*++argv))
+       if ( (argc > 1) && isReal(*(argv+1)))
        {
-          rangeHighField = *argv;
+          argv++;
           argc--;
-          if ( (argc > 1) && isReal(*++argv))
+          rangeHighField = *argv;
+          if ( (argc > 1) && isReal(*(argv+1)))
           {
+             argv++;
              argc--;
              rangeLowField = *argv;
           }
