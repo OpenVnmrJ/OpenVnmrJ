@@ -647,7 +647,6 @@ if [ -e /tmp/.ovj_installed ]; then
       echo "This system has been installed as a data station only."
    fi
    finalInstructions
-   rm -f /tmp/.ovj_installed
 fi
 
 if [ -f $insLog ]
@@ -658,11 +657,14 @@ then
    echo "Log written to: /vnmr/adm/log/vnmr$date"
 fi
 
-echo ""
-echo "Installation of OpenVnmrJ is now complete"
-echo "The package OpenVnmrJ*.zip and the dvdimage directory"
-echo "may now be removed"
-echo ""
+if [ -e /tmp/.ovj_installed ]; then
+   echo ""
+   echo "Installation of OpenVnmrJ is now complete"
+   echo "The package OpenVnmrJ*.zip and the dvdimage directory"
+   echo "may now be removed"
+   echo ""
+fi
+rm -f /tmp/.ovj_installed
 
 if [[ -z $oldVnmr ]]; then
    echo " "
