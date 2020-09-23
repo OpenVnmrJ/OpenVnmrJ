@@ -923,6 +923,11 @@ then
    echo "You must reboot Linux for these changes to take effect"
    echo "As root type 'reboot' to reboot Linux"
 else
+   if [[ ${doingMI} -eq 1 ]] ; then
+      if [[ -x /usr/sbin/bootpd ]] ; then
+         (/usr/sbin/bootpd -s > /dev/console &)
+      fi
+   fi
    ${vnmrsystem}/acqbin/startStopProcs
 fi
 echo ""
