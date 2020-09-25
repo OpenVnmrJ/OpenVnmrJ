@@ -42,12 +42,12 @@ then
    source /vnmr/user_templates/.vnmrenvsh
 fi
 
-if (test ! -f "$vnmrsystem"/lib/libparam.a)
+if (test ! -f "$vnmrsystem"/lib/libparam.so)
 then
    echo " "
    echo " "
-   echo "No Varian PSG library was found in system directory."
-   echo "Specifically, $vnmrsystem/lib/libparam.a does not exist."
+   echo "No PSG library was found in system directory."
+   echo "Specifically, $vnmrsystem/lib/libparam.so does not exist."
    echo "This is an irrecoverable error."
    echo " "
    exit 1

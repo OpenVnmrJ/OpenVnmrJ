@@ -16,9 +16,9 @@
 #                                                         #
 ###########################################################
 #                                                         #
-#   libpsglib.a    -    user modifiable PSG library       #
+#   libpsglib.so    -    user modifiable PSG library      #
 #                                                         #
-#   libparam.a     -    Varian supplied PSG library       #
+#   libparam.so     -    supplied PSG library             #
 #                                                         #
 ###########################################################
 # Main MAIN main
@@ -28,20 +28,14 @@
 # Check for user PSG directory.  If one does not exist, create
 # and initialize it.
 
-if test `vnmr_uname` = "IRIX"
-then
-    echo "setuserpsg aborted for IRIX."
-    exit 1
-fi
-
 echo " "
 echo " "
-if (test ! -f "$vnmrsystem"/lib/libparam.a)
+if (test ! -f "$vnmrsystem"/lib/libparam.so)
 then
    echo " "
    echo " "
-   echo "No Varian PSG library was found in system directory."
-   echo "Specifically, $vnmrsystem/lib/libparam.a does not exist."
+   echo "No PSG library was found in system directory."
+   echo "Specifically, $vnmrsystem/lib/libparam.so does not exist."
    echo "This is an irrecoverable error."
    echo " "
    exit 1
@@ -53,18 +47,18 @@ then
 
    cd "$vnmruser"/psg
 
-   if test -f "$vnmrsystem"/lib/libpsglib.a
+   if test -f "$vnmrsystem"/lib/libpsglib.so
    then
-         cp -p "$vnmrsystem"/lib/libpsglib.a libpsglib.a
+         cp -p "$vnmrsystem"/lib/libpsglib.so libpsglib.so
          echo "Copying User PSG library from system directory..."
    fi
 else
    cd "$vnmruser"/psg
 fi
 
-if test -f libpsglib.a
+if test -f libpsglib.so
 then
-   chmod 755 libpsglib.a
+   chmod 755 libpsglib.so
 fi
 
 exit 0
