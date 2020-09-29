@@ -1,9 +1,6 @@
 "macro cryo_noisetest"
-"cryo_noisetest "
 
-" a series of experiments to automate the testing of ChilliProbe decoupling noise  "
-"2 aug 02  rc  Version 2.1"
-"Everything now done in a single current experiment"
+"a series of experiments to automate testing of ChilliProbe decoupling noise"
 "abort acquisition to stop"
 
 
@@ -29,6 +26,7 @@ IF ($#=0) THEN
 	write('reset',$timefile)
 	write('file',$timefile,'%s %3.0f',$burnflg,$burntime)
 	cryo_noisetest('TESTC1','START')
+        return
 ENDIF
 	
 "NOBURN option added to allow testing noise return with system idle between tests"
@@ -39,6 +37,7 @@ IF ($1='NOBURN') THEN
 	write('reset',$timefile)
 	write('file',$timefile,'%s %3.0f',$burnflg,$burntime)
 	cryo_noisetest('TESTC1','START')
+        return
 ENDIF
 	
 if ($#=2) then
@@ -56,7 +55,8 @@ IF ($1 = 'TESTC1') THEN
 		write('reset',$outfile)
 		write('reset',$outfile2)
 		wexp='cryo_noisetest(\'TESTC1\')'
-		au purge
+		au
+                return
 	endif
 	if (dpwr=-12) then 
 		write('file',$outfile,'Carbon Decoupling')
@@ -80,6 +80,7 @@ IF ($1 = 'TESTC1') THEN
 		dpwr=dpwr+2 dm='nny'
 		wexp='cryo_noisetest(\'TESTC1\')'
 		au
+                return
 	else 
 		cryo_noisetest('TESTC2','START')
 	endif
@@ -97,7 +98,8 @@ IF ($1 = 'TESTC2') THEN
 		lookup('file',$vsfactor)
 		lookup('read',1):vs
 		wexp='cryo_noisetest(\'TESTC2\')'
-		au purge
+		au
+                return
 	endif
 	if (dpwr=-12) then 
 		write('file',$outfile,'at= %2.4f dmm= %s  ',at,dmm)
@@ -114,6 +116,7 @@ IF ($1 = 'TESTC2') THEN
 		dpwr=dpwr+2 dm='nny'
 		wexp='cryo_noisetest(\'TESTC2\')'
 		au
+                return
 	else
 		if (numrfch>2) then
 		cryo_noisetest('TESTN1','START')
@@ -133,12 +136,14 @@ IF ($1 = 'TESTN1') THEN
 		lookup('file',$vsfactor)
 		lookup('read',1):vs
 		wexp='cryo_noisetest(\'TESTN1\')'
-		au purge
+		au
+                return
 	endif
 	if (dpwr2=-12) then 
 		write('file',$outfile,'Nitrogen Decoupling')
 		write('file',$outfile,'at= %2.4f dmm2= %s ',at,dmm2)
 		write('file',$outfile,'dpwr2     noise ')
+		write('file',$outfile2,'Nitrogen Decoupling')
 		write('file',$outfile2,'at= %2.4f dmm2= %s ',at,dmm2)
 		write('file',$outfile2,'dpwr     noise ')
 	endif
@@ -150,8 +155,8 @@ IF ($1 = 'TESTN1') THEN
 	if (dpwr2 < 48) then
 		dpwr2=dpwr2+2 dm2='nny'
 		wexp='cryo_noisetest(\'TESTN1\')'
-
 		au
+                return
 	else
 		cryo_noisetest('TESTN2','START')
 	endif
@@ -167,7 +172,8 @@ IF ($1 = 'TESTN2') THEN
 		lookup('file',$vsfactor)
 		lookup('read',1):vs
 		wexp='cryo_noisetest(\'TESTN2\')'
-		au purge
+		au
+                return
 	endif
 	if (dpwr2=-12) then 
 		write('file',$outfile,'at= %2.4f dmm2 %s ',at,dmm2)
@@ -183,7 +189,8 @@ IF ($1 = 'TESTN2') THEN
 	if (dpwr2 < 48) then
 		dpwr2=dpwr2+2 dm2='nny'
 		wexp='cryo_noisetest(\'TESTN2\')'
-		au	
+		au
+                return
 	else
 		cryo_noisetest('DONE')
 	endif
@@ -194,13 +201,13 @@ ENDIF
 
 IF ($1 = 'DONE') THEN
 	$date=''
-	shell('date +%d-%b-%Y-%T'):$date
+        systemtime('%d-%b-%Y-%T'):$date
 
 	exists(userdir+'/data','file'):$t
 	if ($t=0) then mkdir(userdir+'/data') endif
 	exists(userdir+'/data/testlib','file'):$tl
 	if ($tl=0) then mkdir(userdir+'/data/testlib') endif
-	shell('basename '+probe):$probe
+	substr(probe,'basename'):$probe
 	$archive=userdir+'/data/testlib/'+$probe+'FID'+$date
 	$archive2=userdir+'/data/testlib/'+$probe+'SPEC'+$date
 
@@ -211,10 +218,10 @@ IF ($1 = 'DONE') THEN
 
 	f full
 	cryo_cnd    "This will display the result"
-	shell('sleep 5')
+	sleep(5)
 	cryo_cnd('plot')
 	cryo_cndspec
-	shell('sleep 5')
+	sleep(5)
 	cryo_cndspec('plot')	
 	cryo_noisetest('BURN')
 ENDIF
@@ -243,8 +250,6 @@ IF ($1 = 'BURN') THEN
 		d1=2 satmode='nnn' satdly=0 satpwr=-16 mult=0
 	endif
 	time($dotime)
-	au purge dps
+	au
+        return
 ENDIF
-
-"end"
-
