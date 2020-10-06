@@ -797,13 +797,12 @@ static int getregions(int resets)
     {
       if ( (r=P_getreal(CURRENT,"lifrq",&freq,index)) )
       { P_err(r,"lifrq",":");   return ERROR; }
-      if (freq - rflrfp < edge )
-        if (index % 2 == 0)
-        {
+      if (index % 2 == 0)
+      {
           if ( (r=P_getreal(CURRENT,"liamp",&amp,index)) )
           { P_err(r,"liamp",":");   return ERROR; }
           norm += amp;
-        }
+      }
     }
     vs1 = (norm == 0.0) ? 1.0 : insval  / norm;
   }
