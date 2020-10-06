@@ -1674,7 +1674,7 @@ XtInputId *id;
 		if (chdir(directory_name) == -1) {
 		    frame_message("Error:  Unable to change directory.", PARAM_DIRECTORY_NAME);
 		}
-		getwd(directory_name);
+                getcwd(directory_name, 256);
 		set_panel_value(PARAM_DIRECTORY_NAME,directory_name);
             }
 	    /****
