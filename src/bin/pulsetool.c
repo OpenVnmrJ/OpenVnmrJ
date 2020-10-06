@@ -385,11 +385,7 @@ char *argv[];
     create_frame(BASE_FRAME,NULL,"Pulsetool",20,40,1200,900);
     setup_icon();
     start_pulsechild(argc, argv);
-#ifdef SOLARIS
     getcwd(directory_name, sizeof( directory_name ));
-#else
-    getwd(directory_name);
-#endif
     init_small_canvases();
     init_main_button_panel();
     init_large_canvas();
@@ -397,11 +393,7 @@ char *argv[];
     init_simulate_window();
     init_create_window();
     plot_par = (ppar_struct *)malloc(sizeof(ppar_struct));
-#ifdef SOLARIS
     getcwd(plot_par->print_dir, sizeof( plot_par->print_dir ));
-#else
-    getwd(plot_par->print_dir);
-#endif
     parse_pulsetool_cmd_line(argc, argv);
     window_start_loop(BASE_FRAME);
 
@@ -910,7 +902,8 @@ int   steps;
 {
     int     i,k;
     double  amplitude, phase, time_count;
-    FILE    *infile_ptr, *fopen();
+    FILE    *infile_ptr;
+    int decfile;
 
     nsteps = steps;
     power_factor = 0.0;
@@ -932,6 +925,7 @@ int   steps;
     * and integral on the fly.
     ****/
     else {
+        decfile = (strstr(pattern_name,".DEC") != NULL);
         infile_ptr = fopen(pattern_name, "r");
         if (infile_ptr == NULL ) {
 	    strcat(pattern_name, ".RF");
@@ -961,13 +955,25 @@ int   steps;
 	    * Otherwise, attempt to read pulse data from the line.
 	    ****/
             else {
+                 int ret;
 		/****
 		* If successful, put the data from this line in the pattern
 		* array, update the values of power_factor and integral,
 		* increment nsteps.
 		****/
-                if (sscanf(comments_array[comment_counter].str, "%lf %lf %lf",
-                  &phase, &amplitude, &time_count) == 3) {
+                if (!decfile)
+                 ret = sscanf(comments_array[comment_counter].str, "%lf %lf %lf",
+                  &phase, &amplitude, &time_count);
+                else
+                 ret = sscanf(comments_array[comment_counter].str, "%lf %lf %lf",
+                  &time_count, &phase, &amplitude);
+               
+                if (decfile && (ret == 2))
+                {
+                   ret = 3;
+                   amplitude = 1023.0;
+                }
+                if (ret == 3)
                     for (i=0; i<time_count; i++) {
                         pattern[0][nsteps] = amplitude;
                         pattern[1][nsteps] = phase;
@@ -976,7 +982,6 @@ int   steps;
 	                integral[1] += amplitude*cos(pi/180.0*phase);
                         ++nsteps;
                     }
-                }
 		/****
 		* Otherwise, check to see if the entire line is blank.  If
 		* not, we have a problem with the format of the data.  If this
@@ -1001,7 +1006,10 @@ int   steps;
 	    * If the maximum number of steps is reached, stop.
 	    ****/
             if (nsteps > max_steps) {
-                frame_message("Read error:  Maximum number of steps exceeded.",
+                char str[1024];
+                sprintf(str,"Read error:  Maximum number of steps (%d) exceeded (%d).",
+                              max_steps, nsteps);
+                frame_message(str,
                     PARAM_FILE_NAME);
                 fclose(infile_ptr);
 		start_graphics(LG_WIN);
