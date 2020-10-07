@@ -519,6 +519,7 @@ $sn=1.0  $sn2=1.0
 $hpt = 0.5 * sw / (fn/2)  "half of a point"
 $npt = 0.0625 * sw + $hpt
 dsn(-rfl+rfp+$npt, -rfl+rfp+$hpt):$sn
+
 "write('alpha','hpt %g, npt %g, s/n %g',$hpt,$npt,$sn)"
 $npt = sw - 0.5 * sw / (fn/2)
 $hpt = sw - 0.0625 * sw + $hpt
@@ -553,6 +554,11 @@ endif
 "$gzwintmp = 100*$lw/sw"
 $gzwintmp = 100*($f1-$f2)/sw
 if $gzwintmp<0 then $gzwintmp = -$gzwintmp endif  "not necessary, sign is correct"
+
+// If echo is used, often spikes on left and right of profile exist - try to cut them off
+if p1>0 then
+  $gzwintmp=$gzwintmp*0.85 cr=cr-(delta*0.075) delta=delta*0.85 
+endif
 
 //If shaped pulse is used then correct using lsfrq, not by changing tof
 exists('shaped','parameter'):$shapedex
@@ -596,6 +602,11 @@ if ($# < 2.5) then
   endif
   cr=$f1
   delta=$f1-$f2
+  // If echo is used, often spikes on left and right of profile exist - try to cut them off (display part)
+  if p1>0 then
+    cr=cr-(delta*0.075) delta=delta*0.85 
+  endif
+
   select($select)
   ds
   ds('toggle')
