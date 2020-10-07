@@ -7,17 +7,18 @@ $gamma=267522128
 if (tn='F19') then $gamma=251814800 endif
 if (tn='lk')  or (tn='H2') then $gamma=41066279 endif
 
-if (steflg='y') then
+if (steflg='n') then
 	$d5=d4+at+tau[1]+2*gstab+pw/2e6+0.00001
 else
-	$d5=d4+at
+	$d5=d4+at/2
 endif
 
-$ginc=200k*3.14159/($gamma*$d5*fov)
+val=200k
+$ginc=val*3.14159/($gamma*$d5*fov)
 cos(gcalang*3.14159/180):$cos
 tan(gcalang*3.14159/180):$tan
 
-$x1max=($1-1)/2*$ginc/(gcalx)-(ni2-1)/2*$ginc*$tan/gcalx
+$x1max=($1-1)/2*$ginc/(gcalx)-($1-1)/2*$ginc*$tan/gcalx
 $y1max=($1-1)/2*$ginc/(gcaly*$cos)
 //write('line3','Maximum X1 amp is %f',$x1max)
 //write('line3','Maximum Y1 amp is %f',$y1max)
@@ -28,14 +29,24 @@ abs($x1):$x1
 abs($y1):$y1
 
 if (($x1+$x1max > $range) or ($y1+$y1max > $range)) then
-   write('line3','Shims taken out of range with %sx%s matrix, reducing no. XY increments',$1,$1)
    if $1=12 then
+   	write('line3','Shims taken out of range with %sx%s matrix, reducing no. XY increments to 8',$1,$1)
 	gxyzmatrix(8) 
 	return
    elseif $1=8 then
+   	write('line3','Shims taken out of range with %sx%s matrix, reducing no. XY increments to 6',$1,$1)
 	gxyzmatrix(6) 
 	return
+   elseif $1=4 then  // already at smallest matrix
+  	if $x1+$x1max > $y1+$y1max then
+		val=($range-$x1)*gcalx*($gamma*$d5*fov)/($1-1)*2/3.14159
+  	else
+		val=($range-$y1)*gcaly*$cos*($gamma*$d5*fov)/($1-1)*2/3.14159
+  	endif
+	val=val-20
+   	write('line3','Shims taken out of range with %sx%s matrix (already smallest), reducing val from 200k to %3.0f',$1,$1,val)
    else
+   	write('line3','Shims taken out of range with %sx%s matrix, reducing no. XY increments to 4',$1,$1)
 	gxyzmatrix(4) 
 	return
    endif
