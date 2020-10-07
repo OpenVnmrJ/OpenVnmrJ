@@ -18,6 +18,7 @@ if ($# < 1) then
 	write('error','Usage - gxyzautocalib requires an argument')
 	abort
 endif
+
 if $1='full' then
 	if (seqfil <> 'gmapxyz') then
 		write('error','Not a 3D shimming experiment!')
@@ -377,7 +378,11 @@ if ($1 = 'H1pw90cal2') then
 	//if $sampleisdoped='doped' then d1=2 else d1=8 endif
 	if d1=25 then d1=8 else d1=2 endif
 	//array('pw',38,38,0.4)
-	array('pw',48,34,0.4)
+	if tpwr>62 then
+		array('pw',60,44,0.4)  // tpwr=max: low power on H1, pw90 might be long
+	else
+		array('pw',48,34,0.4)
+	endif
 	//array('pw',46,28,0.5)
 	calcdim
 	if ($#>1.5) then 
@@ -413,7 +418,8 @@ if ($1 = 'H1pw90cal3') then
 		select($i)
 		peak:$ht,$freq
 	until ($ht > 0) or ($i>=celem)
-	if $i>arraydim then "Maximum not found"
+
+	if $i>=arraydim then "Maximum not found"
 		write('line3','1H pw90 calibration failed\\Check probe tuning on channel 1 and/or amplifier output')
 		abort
 	endif
@@ -441,13 +447,13 @@ if ($1 = 'H1pw90cal3') then
 	exists('gxyzpw90','parameter'):$ex
 	if ($ex<0.5) then
 		create('gxyzpw90','real')
-		gxyzpw90=$pw90
 	endif
+	gxyzpw90=$pw90
 	exists('gxyztpwr','parameter'):$ex
 	if ($ex<0.5) then
 		create('gxyztpwr','integer')
-		gxyztpwr=$tpwr
 	endif
+	gxyztpwr=$tpwr
 		
 
 	//If using a single pulse then assume high spin density -> use a 4.5 deg. flip angle
@@ -561,7 +567,7 @@ if ($1='gzwinproc') then
 	cr=$f1
 	delta=$f1-$f2
 	split rl
-	lsfrq=lsfrq+(sw/2-rfl)
+	lsfrq=2*lsfrq+(sw/2-rfl)
 	ds(1)
 	gzwin = $gzwintmp
 	write('line3','gzwin set to %3.1f, lsfrq set to %3.1f, done!',gzwin,lsfrq)
@@ -678,6 +684,7 @@ if ($1='tau2acq') then
         	//else ni=4 ni2=4
         	//endif endif endif
 		gxyzmatrix(4)
+
 		wnt='wft(`acq`,1,celem) dsshall gxyztext(`fmapping`)'
 		werr=''
         	if ($# > 1.5) then
@@ -955,7 +962,7 @@ if ($1 = 'gzwinspec') then
 	split rl
 	cr=cr+delta
 	delta=$delta
-	lsfrq=2*lsfrq+(sw/2-rfl)
+	lsfrq=lsfrq+(sw/2-rfl)
 	wft
 	cr=cr+(lsfrq-$oldlsfrq)
 	ds
@@ -999,7 +1006,6 @@ if ($1 = 'tofacq') then
 	werr=''
 
         if ($psActive=1) then
-	   $psActive?
            psCmd('set','stage','tofproc')
         else
 	   if ($#>1.5) then 
@@ -1471,15 +1477,20 @@ if ($1='xycalib1') then
 	gcalx=2*3.14159*$wx*100000.0/($gamma*tubeid)
 	gcaly=2*3.14159*$wy*100000.0/($gamma*tubeid)
 
-	write('line3','gcalx = %f; gcaly = %f',gcalx,gcaly)
+	write('line3','gcalx = %1.7f; gcaly = %1.7f',gcalx,gcaly)
+	write('line3','gcalang = %3.2f degrees from orthogonality',gcalang)
 
 	"The following has been added because the xy calibration can sometimes fail during the full autocalibration due to a problem with calibxy"
 	"8v06"
-	if (gcalx < 4e-6) or (gcaly < 4e-6) then
+
+	if shimset=10 then $gcalmin=1e-6 else $gcalmin=4e-6 endif  // may be less for matrix shims
+
+	if (gcalx < $gcalmin) or (gcaly < $gcalmin) then
 	   if (r1<2) then
 	      write('error','gcalx/y outside the expected range, retrying calibration')
 	      svf(userdir+'/3Dshimlib/calibs/xycalib_fail','force')
 	      r1=r1+1
+		lb=1/at
  	      gxyz_au
 	      return
 	   else
