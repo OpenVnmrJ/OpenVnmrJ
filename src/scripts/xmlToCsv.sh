@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -44,12 +44,14 @@
 #   -type login -paramlist type start end operator owner
 #   -startdate "Jan 01 2014" -enddate "Feb 1 2014"
 
-set shtoolcmd="/bin/sh"
-set shtooloption="-c"
-set javacmd="$vnmrsystem/jre/bin/java"
-set vjclasspath="$vnmrsystem/java/vnmrj.jar"
+shtoolcmd="/bin/bash"
+shtooloption="-c"
+javabin="$vnmrsystem/jre/bin/java"
+if [ ! -f $javabin ]
+then
+   javabin="java"
+fi
 
-$javacmd -mx600m -classpath $vjclasspath  -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption"  vnmr.ui.XmlToCsvUtil $argv:q
+vjclasspath="$vnmrsystem/java/vnmrj.jar"
 
-# Note: the "$argv:q" causes args with spaces (like dates) to be passed as intact
-# arguments provided they are surrounded by double quotes.
+$javabin -mx600m -classpath $vjclasspath  -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption"  vnmr.ui.XmlToCsvUtil "$@"

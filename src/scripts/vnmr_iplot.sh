@@ -1,5 +1,4 @@
-#! /bin/sh
-: '@(#)vnmr_iplot.sh 22.1 03/24/08 1991-2006 '
+#! /bin/bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -21,14 +20,9 @@ then
    exit 1
 fi
 
-#if (test x$vnmrsystem = "x")
 if [ x$vnmrsystem = "x" ]
 then
-   if [ x$ostype = "xInterix" ]; then
-      . /vnmr/user_templates/.vnmrenvbash
-   else
-      source /vnmr/user_templates/.vnmrenvsh
-   fi
+   source /vnmr/user_templates/.vnmrenvsh
 fi
 
 vjclasspath=$vnmrsystem/java/vnmrj.jar
@@ -43,37 +37,17 @@ fi
 
 iplotData=$1
 itype="exp"
-ostype=`uname -s`
 sysdir=$vnmrsystem
 userdir=$vnmruser
 shtoolcmd="/bin/sh"
 shtooloption="-c"
 javabin="$vnmrsystem/jre/bin/java"
-
-if [ x$ostype = "xInterix" ]
+if [ ! -f $javabin ]
 then
-   vjclasspath=`/bin/unixpath2win "$vjclasspath"`
-   sysdir=`/bin/unixpath2win "$sysdir"`
-   userdir=`/bin/unixpath2win "$userdir"`
-   shtoolcmd="$SFUDIR\common\ksh.bat"
-   shtooloption="-lc"
-   javabin="/vnmr/jre/bin/java.exe"
+   javabin="java"
 fi
 
-
-if [ x$ostype = "xInterix" ]
-then
-     $vjshell "$javabin"  \
-       -classpath $vjclasspath \
-       -Dsysdir=$sysdir -Duserdir=$userdir \
-       -Duser=$USER -Dpersona=$itype \
-       -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" \
-       -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" \
-       -DiplotDatafile=$iplotData \
-       -Djava.library.path="C:/SFU/vnmr/lib" \
-       vnmr.ui.VnmrPlot 
-else
-     $vjshell $vnmrsystem/jre/bin/java \
+$vjshell $javabin \
         -classpath $vjclasspath \
         -Dsysdir=$sysdir -Duserdir=$userdir \
         -Duser=$USER -Dpersona=$itype \
@@ -82,5 +56,4 @@ else
         -DiplotDatafile=$iplotData \
         -Djava.library.path="/vnmr/lib" \
         vnmr.ui.VnmrPlot &
-fi
 

@@ -1,4 +1,4 @@
-: '@(#)vnmr_jplot.sh 22.1 03/24/08 1991-1994 '
+#! /bin/bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -9,6 +9,11 @@
 # For more information, see the LICENSE file.
 # 
 #
-: /bin/sh
 
-"$vnmrsystem"/jre/bin/java  -Dsysdir="$vnmrsystem" -Duserdir="$vnmruser" -Duser=$USER -cp "$vnmrsystem"/java/jplot.jar PlotConfig $* &
+javabin="$vnmrsystem/jre/bin/java"
+if [ ! -f $javabin ]
+then
+   javabin="java"
+fi
+
+"$javabin" -Dsysdir="$vnmrsystem" -Duserdir="$vnmruser" -Duser=$USER -cp "$vnmrsystem"/java/jplot.jar PlotConfig $* &

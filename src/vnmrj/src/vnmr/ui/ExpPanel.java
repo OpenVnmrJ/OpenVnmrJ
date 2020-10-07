@@ -3456,6 +3456,9 @@ public class ExpPanel extends JPanel
 			args += " -Duserdir=\""+UtilB.unixPathToWindows(userDir)+"\"";
 			args += " -Duser=" + user;
 			String java = FileUtil.SYS_VNMR+"/jre/bin/java";
+                        UNFile file = new UNFile(java);
+                        if ( ! file.exists() )
+				java = "java";
 			String jplot = UtilB.unixPathToWindows(sysDir+ "/java/jplot.jar PlotConfig");
 			if (UtilB.iswindows())
 				java += ".exe";
@@ -5841,8 +5844,12 @@ public class ExpPanel extends JPanel
 
         if (!Util.iswindows())
         {
-            String[] cmd2 = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, FileUtil.SYS_VNMR + 
-                                "/jre/bin/java -Duser.dir=" + strUserdir +  " -jar " + strPath};
+	    String java = FileUtil.SYS_VNMR+"/jre/bin/java";
+            UNFile file = new UNFile(java);
+            if ( ! file.exists() )
+	        java = "java";
+            String[] cmd2 = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION,
+                              java + " -Duser.dir=" + strUserdir +  " -jar " + strPath};
             WUtil.runScriptInThread(cmd2);
         }
         else
