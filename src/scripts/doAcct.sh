@@ -80,13 +80,19 @@ then
    usage
 fi
 
+javabin="$vnmrsystem/jre/bin/java"
+if [ ! -f $javabin ]
+then
+   javabin="java"
+fi
+
 if [[ ${doCut} -eq 1 ]] ;
 then
-   $vnmrsystem/jre/bin/java -jar $vnmrsystem/java/account.jar -saveDir "${saveDir}" -cut
-   $vnmrsystem/jre/bin/java -jar $vnmrsystem/java/account.jar -saveDir "${saveDir}" \
+   $javabin -jar $vnmrsystem/java/account.jar -saveDir "${saveDir}" -cut
+   $javabin -jar $vnmrsystem/java/account.jar -saveDir "${saveDir}" \
             -in "${saveDir}"/acctLog.xml -summary -summaryCsv -acctCsv
 else
-   $vnmrsystem/jre/bin/java -jar $vnmrsystem/java/account.jar -saveDir "${saveDir}" \
+   $javabin -jar $vnmrsystem/java/account.jar -saveDir "${saveDir}" \
             -startDate "${startDate}" -endDate "${endDate}" -summary -summaryCsv -acctCsv
 fi
 
