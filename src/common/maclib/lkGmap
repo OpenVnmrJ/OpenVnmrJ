@@ -4,10 +4,16 @@
 "********************************************************"
 // works only for gradient lk map
 
+$gradtype=gradtype
+exists('tmpgradtype','parameter'):$e
+if ($e) then is_postvj22b:$e endif
+if ($e) then $gradtype=tmpgradtype endif
 $d3optlk=0,0.25
 if (h1freq<450) then $d3optlk=0,0.18 endif
 $style='db'
 getparam('style','Probe'):$style
+getparam('gradient','Probe'):$probegradient
+if $probegradient='n' then $gradtype='nnh' endif
 
 if ($# < 1) then $1=0 endif
 IF ($1 = 0) THEN
@@ -47,9 +53,15 @@ IF ($1 = 0) THEN
     file='exp'
     $dum=''
     beepoff
-    gmapsys('setH2'):$dum
-    if $style='db' then nt=4 else nt=1 endif
-    d1=2 pw=300 tpwr=38
+
+    if $gradtype='nnh' then
+      gmapsys('setHSforH2'):$dum
+      nt=2 d1=5 pw=300 tpwr=38
+    else
+      gmapsys('setH2'):$dum
+      if $style='db' then nt=4 else nt=1 endif
+      d1=2 pw=300 tpwr=38
+    endif
     getparam('tpwr','lk'):tpwr
     getparam('pw90','lk'):pw
     if (tpwr=0) then tpwr=38 endif
@@ -69,16 +81,19 @@ IF ($1 = 0) THEN
     	wstart='wshim=\'n\' wstart=\'\''
 	$str='Adjusting offset'
     endif
-    $size=16
-    getparam('rfsize','Probe'):$size
-    $size=$size/10
-    if ($size=0) then $size=1.6 endif
-    getgamma(tn):$gamma
-    $gammabar=$gamma/(2*3.1416*10000)
-"Find GperCM that will give a profile with half the sw"
-    $gpercm=(sw/($gammabar*$size))/2
-    format($gpercm,0,1):$gpercm
-    fixgrd($gpercm):gzlvl
+
+    if $gradtype<>'nnh' then
+      $size=16
+      getparam('rfsize','Probe'):$size
+      $size=$size/10
+      if ($size=0) then $size=1.6 endif
+      getgamma(tn):$gamma
+      $gammabar=$gamma/(2*3.1416*10000)
+  "Find GperCM that will give a profile with half the sw"
+      $gpercm=(sw/($gammabar*$size))/2
+      format($gpercm,0,1):$gpercm
+      fixgrd($gpercm):gzlvl
+    endif
 
     if (spintype<>'tach') then spin=0 endif
 
@@ -144,6 +159,7 @@ IF ($1 = 2) THEN
 	    abort
 	endif
     else
+      if $gradtype<>'nnh' then
  	if ($width=0) then $width = sw endif
     	gzlvl=gzlvl*sw*0.4/$width
  	r1=r1+1
@@ -151,6 +167,7 @@ IF ($1 = 2) THEN
 	xmhaha_calib('addNode','lkGmap(2)')
  	banner('Optimizing gradient level')
  	return
+      endif
     endif
 
     $date=''
