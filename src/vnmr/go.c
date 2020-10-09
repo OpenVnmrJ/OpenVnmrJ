@@ -1015,7 +1015,7 @@ int acq(int argc, char *argv[], int retc, char *retv[])
 	}
 	if (ret != 0)
 	{
-	   Wscrprintf("BUG:  cannot access 'celem' in go, error = %d\n", ret);
+	   Werrprintf("BUG:  cannot access 'celem' in go, error = %d", ret);
            goto abortAcq;
 	}
    
@@ -1502,7 +1502,7 @@ static int sacq(int acqi_fid, char *psgpath, int retc, char *retv[])
              P_setstring( CURRENT,"vpmode", "y", 0 );
              if (P_getstring(CURRENT,"actionid",tmp2,1,MAXSTR) == 0)
              {
-                char tmp3[MAXSTR];
+                char tmp3[MAXSTR*3];
                 P_creatvar(CURRENT,"VPaddr",ST_STRING);
                 P_setgroup(CURRENT,"VPaddr",G_ACQUISITION);
                 sprintf(tmp3,"%s; %s",tmp,tmp2);
@@ -1530,8 +1530,7 @@ static int sacq(int acqi_fid, char *psgpath, int retc, char *retv[])
 
     }
     else {
-       Werrprintf( "%s: pulse sequence failed to start", callname);
-       Wscrprintf( "Check your swap space and the shared libraries that your pulse sequence uses\n" );
+       Werrprintf( "%s: pulse sequence failed to start. Check shared libraries.", callname);
        if (!acqi_fid)
          release_console();
        psg_busted = 1;
@@ -1739,7 +1738,7 @@ static int jacq(int acqi_fid, int spinCadCheck,
     {
        disp_acq("");
        Werrprintf( "%s: pulse sequence failed at 1", callname);
-       Wscrprintf( "Check your pulse sequence\n" );
+       Werrprintf( "Check your pulse sequence" );
        if (!acqi_fid)
          release_console();
        psg_busted = 1;
@@ -1831,7 +1830,7 @@ static int jacq(int acqi_fid, int spinCadCheck,
     {
        disp_acq("");
        Werrprintf( "%s: pulse sequence failed at 2", callname);
-       Wscrprintf( "Check your pulse sequence\n" );
+       Werrprintf( "Check your pulse sequence" );
        if (!acqi_fid)
          release_console();
        psg_busted = 1;

@@ -7,11 +7,9 @@
  * For more information, see the LICENSE file.
  */
 
-#include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
-
-extern void psg_abort(int error);
+#include "abort.h"
 
 /*-------------------------------------------------------------------
 |
@@ -21,10 +19,7 @@ extern void psg_abort(int error);
 static
 void terminated()
 {
-    fprintf(stdout,
-      "PSG was User Terminated..  \n");
-    fflush(stdout);
-    psg_abort(1);
+    abort_message("PSG was User Terminated..");
 }
 /*--------------------------------------------------------------------------------
 |
@@ -34,118 +29,63 @@ void terminated()
 static
 void Segment()
 {
-    fprintf(stdout,
-      "'PSG: Segmentation Violation, Core Dumped.'\n");
-    fprintf(stdout,
-      "'Check for: Non NULL terminated Attribute-List Functions, or\n");
-    fprintf(stdout,
-      "            Pointers or Array indices past allocated memory.'\n");
-    fflush(stdout);
+    text_error("PSG: Segmentation Violation, Core Dumped.");
     kill(getpid(),SIGIOT);
 }
 static
 void Ill_instr()
 {
-    fprintf(stdout,
-      "'PSG: Illegal Instruction, Core Dumped.'\n");
-    fprintf(stdout,
-      "'Recompile and try again.'\n");
-    fflush(stdout);
+    text_error("PSG: Illegal Instruction, Core Dumped. Try recompiling sequence");
     kill(getpid(),SIGIOT);
 }
 static
 void FPexcept()
 {
-    fprintf(stdout,
-      "'PSG: Arithmetic Exception, Core Dumped.' \n");
-    fprintf(stdout,
-      "'Did You divide by ZERO ?'\n");
-    fflush(stdout);
+    text_error("PSG: Arithmetic Exception, Core Dumped. May be division by 0");
     kill(getpid(),SIGIOT);
 }
 static
 void BusErr()
 {
-    fprintf(stdout,
-      "'PSG: Bus Error, Core Dumped.' \n");
-    fflush(stdout);
+    text_error("PSG: Bus Error, Core Dumped.");
     kill(getpid(),SIGIOT);
 }
 
 static
 void CpuLim()
 { 
-    fprintf(stdout, 
-    "'PSG: Exceeded CPU Time Limit, Core Dumped.' \n"); 
-    fflush(stdout);
+    text_error("PSG: Exceeded CPU Time Limit, Core Dumped."); 
     kill(getpid(),SIGIOT);
 }
 static
 void FsLim()
 {  
-    fprintf(stdout, 
-    "'PSG: Exceeded File Size Limit, Core Dumped.' \n");
-    fflush(stdout);
+    text_error("PSG: Exceeded File Size Limit, Core Dumped.");
     kill(getpid(),SIGIOT);
 } 
 static
 void SigQuit()
 {
-    fprintf(stdout,
-    "'PSG: Quit Signal, Core Dumped.' \n");
-    fflush(stdout);
+    text_error("PSG: Quit Signal, Core Dumped.");
     kill(getpid(),SIGIOT);
 }
 static
 void Trap()
 { 
-    fprintf(stdout, 
-    "'PSG: Trace Trap, Core Dumped.' \n");
-    fflush(stdout);
+    text_error("PSG: Trace Trap, Core Dumped.");
     kill(getpid(),SIGIOT);
 }
-/*--------------- Commented Out ------------------------
-static
-void IOTtrap()
-{  
-    fprintf(stdout, 
-    "'PSG: IOT Trap, Core Dumped.' \n"); 
-}
-+----------------------------------------------------*/
 void PIPEtrap()
 {   
     /* Ignore pipe error */
 }
 
-#ifdef SOLARIS
-static
-void EMTtrap()
-{   
-    fprintf(stdout,  
-    "'PSG: EMT Trap, Core Dumped.' \n");  
-    fflush(stdout);
-    kill(getpid(),SIGIOT);
-}
-#endif
-
 static
 void SYStrap()
 {    
-    fprintf(stdout,  
-    "'PSG: Bad Argument to a System Call, Core Dumped.' \n");   
-    fflush(stdout);
+    text_error("PSG: Bad Argument to a System Call, Core Dumped.");   
     kill(getpid(),SIGIOT);
 }
-/*--------------- Commented Out ------------------------
-static
-void ResLost()
-{    
-    fprintf(stdout,  
-    "'PSG: Resource Lost Exception, Core Dumped.' \n");   
-    fflush(stdout);
-    kill(getpid(),SIGIOT);
-}
-+----------------------------------------------------*/
 
 /*-------------------------------------------------------------------------
 |
@@ -230,17 +170,6 @@ void setupsignalhandler()
     segquit.sa_flags = 0;
     sigaction(SIGTRAP,&segquit,0L);
 
-    /* not needed for SUN 3s */
-    /* --- set up IOT trap exception handler --- */
-    /*
-    sigemptyset( &qmask );
-    sigaddset( &qmask, SIGIOT );
-    segquit.sa_mask = qmask;
-    segquit.sa_handler = IOTtrap;
-    segquit.sa_flags = 0;
-    sigaction(SIGIOT,&segquit,0L);
-    */
-
     /* --- set up PIPE trap exception handler --- */
     sigemptyset( &qmask );
     sigaddset( &qmask, SIGPIPE );
@@ -248,15 +177,6 @@ void setupsignalhandler()
     segquit.sa_handler = PIPEtrap;
     segquit.sa_flags = 0;
     sigaction(SIGPIPE,&segquit,0L);
-#ifdef SOLARIS
-    /* --- set up EMT trap exception handler --- */
-    sigemptyset( &qmask );
-    sigaddset( &qmask, SIGEMT );
-    segquit.sa_mask = qmask;
-    segquit.sa_handler = EMTtrap;
-    segquit.sa_flags = 0;
-    sigaction(SIGEMT,&segquit,0L);
-#endif
 
     /* --- set up bad argument to system call exception handler --- */
     sigemptyset( &qmask );
@@ -265,12 +185,4 @@ void setupsignalhandler()
     segquit.sa_handler = SYStrap;
     segquit.sa_flags = 0;
     sigaction(SIGSYS,&segquit,0L);
-
-    /* --- set up bad argument to system call exception handler --- */
-    /*sigemptyset( &qmask );
-    sigaddset( &qmask, SIGLOST );
-    segquit.sa_mask = qmask;
-    segquit.sa_handler = ResLost;
-    segquit.sa_flags = 0;
-    sigaction(SIGLOST,&segquit,0L);*/
 }
