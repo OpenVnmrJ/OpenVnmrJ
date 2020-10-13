@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-set +xv
+# set -x
 
 if [ $# -lt 1 ]
 then 
@@ -28,7 +28,7 @@ get_dest_dir()
     $GREP -i -E 'alpha|beta|devel'  ${base_dir}/vnmrj 2> /dev/null
     #if [ $? -eq 0 ]
     #then
-       date=`grep 201 ${base_dir}/vnmrrev`
+       date=`grep 202 ${base_dir}/vnmrrev`
        month=`echo $date |  awk 'BEGIN { FS = " " } { print $1 }'`
        day=`echo $date |  awk 'BEGIN { FS = " " } { print $2 }'`
        year=`echo $date |  awk 'BEGIN { FS = " " } { print $3 }'`
@@ -72,7 +72,7 @@ get_dest_dir()
 
        dday=`basename $day ,`
 
-       dest_dir="${dest_dir}/vnmrj_${major}${minor}_${year}-${dmonth}-${dday}
+       dest_dir="${dest_dir}/openvnmrj_${major}${minor}_${year}-${dmonth}-${dday}
 "
 
     #else
@@ -90,8 +90,6 @@ runvjadmin()
 	nmr_user="$USER"
 	cd $vjdir; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=metal -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption"  -Dbatchupdates=no -Dpersona=adm -Dsavepanels=10 -DSQAllowNesting=false VJAdminTest
     else
-        touch $user_dir/$nmr_user/.vnmrsilent
-        chmod 666 $user_dir/$nmr_user/.vnmrsilent
 	vnmruser_dir=$user_dir/$nmr_user/vnmrsys
 	su - $nmr_user -c "cd $vjdir; setenv DISPLAY $DISPLAY; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=metal -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dbatchupdates=no -Dpersona=adm -Dsavepanels=10 -DSQAllowNesting=false VJAdminTest" << +++
 
@@ -110,8 +108,6 @@ runvj()
         rm -f $vnmruser/lock_1.primary
 	cd $vjdir; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=motif -Dvjunit="$vjunitdir/vjunit.xml" -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dbatchupdates=no -Dpersona=adm1 -Dsavepanels=10 -DSQAllowNesting=false VnmrJTest
     else
-        touch $user_dir/$nmr_user/.vnmrsilent
-        chmod 666 $user_dir/$nmr_user/.vnmrsilent
 	vnmruser_dir=$user_dir/$nmr_user/vnmrsys
 	su - $nmr_user -c "cd $vjdir; setenv DISPLAY $DISPLAY; /vnmr/jre/bin/java -cp $classpath:lib/vnmrj.jar -Dsysdir=/vnmr -Duserdir=$vnmruser_dir -Duser=$nmr_user -Dfont='Dialog plain 14' -Dlookandfeel=motif -DqueueArea=yes -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dvjunit="$vjunitdir/vjunit.xml" -Dbatchupdates=no -Dpersona=adm1 -Dsavepanels=10 -DSQAllowNesting=false VnmrJTest" << +++
 
@@ -135,8 +131,6 @@ runtrustedvjadmin()
        echo "asRoot is 2\n"
     else
        echo "runtrustedvjadmin yes branch user_dir: $user_dir nmr_user: $nmr_user\n"
-        touch $user_dir/$nmr_user/.vnmrsilent
-        chmod 666 $user_dir/$nmr_user/.vnmrsilent
 	vnmruser_dir=$user_dir/$nmr_user/vnmrsys
        echo "vnmruser_dir is $vnmruser_dir\n"
        echo "call su to $nmr_user vjdir is $vjdir"
@@ -150,7 +144,7 @@ runtrustedvjadmin()
 
 cmd=$1
 base_dir=$2
-nmr_user="vnmr1"
+nmr_user=$(logname)
 user_dir="/export/home"
 dest_dir="/export/home"
 nmr_group="nmr"
@@ -230,25 +224,49 @@ then
     vnmr_dir=`pwd`
     inst=`tail -n 1 vnmrrev`
     install_type=0
-    if [ x$inst = "xvnmrsdd2" ]
+    install_label=""
+    if [ x$inst = "xpropulse" ]
     then
        install_type=0
-    else if [ x$inst = "xmr400dd2" ]
+       install_label="ProPulse"
+    elif [ x$inst = "xvnmrsdd2" ]
     then
        install_type=1
-    else if [ x$inst = "xvnmrs" ]
+       install_label="VNMRS DD2 System"
+    elif [ x$inst = "xmr400dd2" ]
     then
        install_type=2
-    else if [ x$inst = "xmr400" ]
+       install_label="400-MR DD2"
+    elif [ x$inst = "xvnmrs" ]
     then
        install_type=3
-    fi fi fi fi
+       install_label="VNMRS"
+    elif [ x$inst = "xmr400" ]
+    then
+       install_type=4
+       install_label="400-MR"
+    elif [ x$inst = "xb12" ]
+    then
+       install_type=0
+       install_label="Bridge 12"
+    elif [ x$inst = "xinova" ]
+    then
+       install_type=0
+       install_label="Inova System"
+    elif [ x$inst = "xmercplus" ]
+    then
+       install_type=0
+       install_label="Mercury Plus System"
+    fi
     cd $current_dir
+    vnmrNoPostAction="TRUE"
+    export vnmrNoPostAction
+
     # allow default behavior
-    install_type=""
+    # install_type=""
 
     # install VnmrJ
-    /vnmr/jre/bin/java -Dinstalltype=$install_type -cp $classpath:$base_dir/code/VnmrAdmin.jar LoadNmrTest $base_dir $dest_dir $nmr_user $user_dir $nmr_group $os_type $password
+    /vnmr/jre/bin/java -Dinstalltype=$install_type -DinstallLabel="$install_label" -cp $classpath:$base_dir/code/VnmrAdmin.jar LoadNmrTest $base_dir $dest_dir $nmr_user $user_dir $nmr_group $os_type $password
 #    if [ -d /common/sysvnmrj ]
 #    then
 #     	cp /common/sysvnmrj/vnmrj.jar lib/vnmrj.jar
@@ -259,9 +277,11 @@ then
     cp /vnmr/java/vnmrj.jar lib/vnmrj.jar
 
     # Run setacq
-    echo "Running setacq\n"
-    ./runsetacq   
-    echo "setacq Done\n"
+    if [[ -f /vnmr/acqbin/B12proc ]]; then
+       echo "Running setacq\n"
+       ./runsetacq   
+       echo "setacq Done\n"
+    fi
  
     # Run VnmrJ Admin
     echo "Running vnmrj adm\n"
@@ -276,7 +296,7 @@ then
     echo "vnmrj Done\n"
 
     # Kill the procs or this script does not exit
-    su acqproc
+    # su acqproc
 
     if [ x$doP11 = "xyes" ] 
     then

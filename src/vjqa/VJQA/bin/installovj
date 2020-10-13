@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Installs the latest VnmrJ cd
+# Usage: vjinstall [password:all] or vjinstall [password:Diffusion,STARS...]
+
+set -x
+userId=`/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }'`
+if [ $userId != "uid=0(root)" ]
+then
+    echo "User must be root to install VnmrJ"
+    exit 0
+fi
+
+password=''
+
+log="../logs/logVJinstall"`date '+_%m-%d-%y'`
+dir=$(dirname "$(readlink -f $0)")
+cd $dir
+
+xhost +
+vnmrNoPostAction="TRUE"
+export vnmrNoPostAction
+
+
+dvd=$(dirname $dir)
+dvd=$(dirname $dvd)
+dvd=$(dirname $dvd)
+dvd=$(dirname $dvd)
+if [[ -d $dvd"/ovjbuild/dvdimageOVJ" ]]; then
+   dvd=$dvd"/ovjbuild/dvdimageOVJ"
+elif [[ -d $dvd"/ovjbuild/dvdimageOVJMI" ]]; then
+   dvd=$dvd"/ovjbuild/dvdimageOVJMI"
+elif [[ -d $dvd"/ovjbuild/dvdimageB12" ]]; then
+   dvd=$dvd"/ovjbuild/dvdimageB12"
+else
+   echo "No dvdimage found at ${dvd}/ovjbuild"
+   exit 0
+fi
+
+# LoadNmrDir calls 'netbeans installvj' to install the latest cd
+/vnmr/jre/bin/java -Dvnmrcd=$dvd -Dinstalltype=" inova" -cp lib/vjunit.jar LoadNmrDir $password &> $log

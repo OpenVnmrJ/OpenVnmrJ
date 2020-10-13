@@ -1,13 +1,10 @@
 "macro testShellCmds"
 
+vvCopyAppdir('appdir.seqgen','yes')
+
 exists($0,'maclib'):$e,$reports
 substr($reports,'dirname'):$reports
 substr($reports,'dirname'):$reports
-
-shell('mv '+userdir+'/persistence/appdir_vnmr1 '+userdir+'/persistence/appdir_vnmr1.orig')
-shell('cp '+$reports+'/testinfo/appdir_vnmr1.seqgen '+userdir+'/persistence/appdir_vnmr1')
-appdir('reset')
-
 $reports=$reports+'/reports/shellcmds'
 
 getdirs('maclib'):$dirs
@@ -116,9 +113,7 @@ if ($fail) then
   write('line3','%d shell commands',$fail):$msg
   vvLog('Fail',$msg)
   vvLog:$path
-  shell('cat '+$faillog+' >> '+$path+';cat'):$e
+  append($faillog,$path)
   write('reset',$faillog)
 endif
-shell('rm '+userdir+'/persistence/appdir_vnmr1')
-shell('mv '+userdir+'/persistence/appdir_vnmr1.orig '+userdir+'/persistence/appdir_vnmr1')
-appdir('reset')
+vvCopyAppdir('yes')

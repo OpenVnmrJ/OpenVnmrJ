@@ -64,7 +64,12 @@ public class LoadNmrTest extends TestCase {
         {
             public void run()
             {
-                JFrameOperator main = new JFrameOperator("Load VnmrJ Software");
+                String installLabel = System.getProperty("installLabel");
+                String frameLabel = "Load OpenVnmrJ Software";
+                if (installLabel != null)
+                   frameLabel = frameLabel+ " for "+installLabel;
+			 
+                JFrameOperator main = new JFrameOperator(frameLabel);
                 if (m_strPassword != null && !m_strPassword.equals("") &&
                     m_strPassword.startsWith("password"))
                 {
@@ -105,7 +110,7 @@ public class LoadNmrTest extends TestCase {
                 // Wait for installation to complete
                 try
                 {
-                    loadnmrThread.sleep(30*MIN);
+                    loadnmrThread.sleep(MIN);
                 }
                 catch (Exception e)
                 {
