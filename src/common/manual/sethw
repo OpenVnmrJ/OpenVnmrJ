@@ -2,14 +2,10 @@
 *******************************************************************
 sethw     -   Set values for hardware in the acquisition system
 sethwshim -   Special case of sethw for setting shims.
-readhw     -  Read current values of acquisiton hardware
 *******************************************************************
 
-The SETHW command (SET HardWare) allows the VNMR program to set values
+The sethw command (SET HardWare) allows the OpenVnmrJ program to set values
 for selected parameters in the acquisition hardware.
-
-The READHW (READ HardWare) allows the VNMR program to read the current
-values of these parameters in the acquisition hardware.
 
 Parameters which can be accessed include the parameters of the lock
 system and the shim DACs.  They are:
@@ -31,9 +27,9 @@ ASM systems (robot arm, sample tray) with the 'loc' parameter:
 
 Remember this is different from the meaning of the 'loc' parameter in VNMR;
 the latter refers to the location of the next sample to be placed in the
-magnet!  This parameter is not available from readhw.
+magnet!
 
-The SETHW command accepts parameter name - value in pairs as arguments.
+The sethw command accepts parameter name - value in pairs as arguments.
 You must specify at least one parameter name - value.  An example:
 
 	sethw('z1c',30,'z2c',-50)
@@ -82,47 +78,27 @@ Retrieving Sample 81
 Loading Sample	  82
 Interactive	  90
 Tuning		  100
-The sethw('status',value) command can be used to set the console status, which is
-displayed in the console status monitor. The value can be a string 'idle' or 'shim',
-which sets the status to numbers 10 and 70, respectively.  Any other string will set
-the status to number 16. The value passed can also be an integer, which will set the
-above status values. For example, the sethw('status','shim') and sethw('status',70)
+
+The sethw('status',value) command can be used to set the console status,
+which is displayed in the console status monitor. The value can be a
+string 'idle' or 'shim', which sets the status to numbers 10 and 70,
+respectively.  Any other string will set the status to number 16. The value
+passed can also be an integer, which will set the above status values.
+For example, the sethw('status','shim') and sethw('status',70)
 are equivalent.
 
-
-
-Normally the SETHW command sends the new values to the acquisition
+Normally the sethw command sends the new values to the acquisition
 console, verify these new values and then updates the corresponding VNMR
-parameters.  Use the 'nowait' keyword to cause SETHW to just send the new
+parameters.  Use the 'nowait' keyword to cause sethw to just send the new
 values to the console, without verifying them or changing VNMR parameters.
 The 'wait' keyword is accepted to confirm the default mode of operation.
 
 The 'wait' or 'nowait' keyword must either be the first or the last
 argument.
 
-The READHW command obtains the current settings for each parameter
-passed to it as arguments.  An example:
-
-	readhw('z1c','z2c','z1','z2')
-
-This command obtains the values for the coarse and fine Z1 and Z2 shim
-coils.
-
-The settings can be stored in VNMR variables if the variables are part
-of the return value list.  An example:
-
-	readhw('z1c','z2c','z1','z2'):r1,r2,r3,r4
-
-This command will store the current setting for the coarse Z1 shim in
-'r1', the coarse Z2 shim in 'r2', the fine Z1 shim in 'r3' and the fine
-Z2 shim in 'r4'.
-
-If no return variable is supplied, the setting will be displayed in the
-status window of VNMR.
-
-The sethwshim command is a special case of sethw. It takes two arguments, the shim name
-and shim value, as in sethwshim('z1',1000)
-This command is equivalent to sethw('nowait','z1',1000), with sethw messages suppressed,
-except in the case where there may be additional limits on the range of values certain
-shims may be set to. The return value of sethwshim will be the actual value sent to the
-shim hardware.
+The sethwshim command is a special case of sethw. It takes two arguments,
+the shim name and shim value, as in sethwshim('z1',1000)
+This command is equivalent to sethw('nowait','z1',1000), with sethw
+messages suppressed, except in the case where there may be additional
+limits on the range of values certain shims may be set to. The return
+value of sethwshim will be the actual value sent to the shim hardware.

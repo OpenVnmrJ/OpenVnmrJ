@@ -1,13 +1,9 @@
 
 *******************************************************************
-sethw -   Set values for hardware in the acquisition system
 readhw -  Read current values of acquisition hardware
 *******************************************************************
 
-The SETHW command (SET HardWare) allows the VNMR program to set values
-for selected parameters in the acquisition hardware.
-
-The READHW (READ HardWare) allows the VNMR program to read the current
+The readhw (READ HardWare) allows the OpenVnmrJ program to read the current
 values of these parameters in the acquisition hardware.
 
 Parameters which can be accessed include the parameters of the lock
@@ -18,6 +14,26 @@ system and the shim DACs and sample location.  They are:
         x1, y1, xz, yz, xy, x2y2, x3, y3	"non-axial shims"
         z5, xz2, yz2, zx2y2, zxy	"special shims for Oxford magnets"
         loc                             "sample changer location"
+
+The readhw command obtains the current settings for each parameter
+passed to it as arguments.  An example:
+
+	readhw('z1c','z2c','z1','z2')
+
+This command obtains the values for the coarse and fine Z1 and Z2 shim
+coils.
+
+The settings can be stored in variables if the variables are part
+of the return value list.  An example:
+
+	readhw('z1c','z2c','z1','z2'):r1,r2,r3,r4
+
+This command will store the current setting for the coarse Z1 shim in
+'r1', the coarse Z2 shim in 'r2', the fine Z1 shim in 'r3' and the fine
+Z2 shim in 'r4'.
+
+If no return variable is supplied, the setting will be displayed in the
+status window of VNMR.
 
 readhw accepts the keyword 'status' to read the system status
 (e.g., Idle, Active, etc). The status is returned as an integer.
@@ -112,42 +128,3 @@ but there are no acquisitions queued to run when it finishes, it will return
 zero. This does not count the number of experiments queued to an automation
 run. It counts queued acquisitions submitted by running go / ga / au in
 different workspaces.
-
-The SETHW command accepts parameter name - value in pairs as arguments.
-You must specify at least one parameter name - value.  An example:
-
-	sethw('z1c',30,'z2c',-50)
-
-A maximum of ten parameters can be set using this command.
-
-Normally the SETHW command sends the new values to the acquisition console
-and then verify these new values.  It then updates the corresponding VNMR
-parameters.  Use the `nowait' keyword to cause SETHW to just send the new
-values to the console, without verifying them or changing VNMR parameters.
-The `wait' keyword is accepted to confirm the default mode of operation.
-
-The `wait' or `nowait' keyword must either be the first or the last
-argument.
-
-The READHW command obtains the current settings for each parameter
-passed to it as arguments.  An example:
-
-	readhw('z1c','z2c','z1','z2')
-
-This command obtains the values for the coarse and fine Z1 and Z2 shim
-coils.
-
-The settings can be stored in VNMR variables if the variables are part
-of the return value list.  An example:
-
-	readhw('z1c','z2c','z1','z2'):r1,r2,r3,r4
-
-This command will store the current setting for the coarse Z1 shim in
-`r1', the coarse Z2 shim in `r2', the fine Z1 shim in `r3' and the fine
-Z2 shim in `r4'.
-
-If no return variable is supplied, the setting will be displayed in the
-status window of VNMR.
-
-The commands READHW and SETHW cannot be used when an acquisition is in
-progress or when ACQI is connected to the acquisition system.
