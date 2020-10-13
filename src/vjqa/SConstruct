@@ -1,17 +1,34 @@
-#!
-
+from __future__ import print_function
 import os
 import sys
 
 #get current working directory
 cwd = os.getcwd()
+
+path = os.path.join(cwd, os.pardir, 'vnmrj','vnmrj.jar')
+if not os.path.exists(path):
+    print("Must compile vnmrj before building QA tool")
+    sys.exit(1)
+
 ovjtools = os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print("OVJ_TOOLS env not found. Trying default location.")
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
+    print("OVJ_TOOLS env not found.")
+    print("For bash and variants, use export OVJ_TOOLS=<path>")
+    print("For csh and variants,  use setenv OVJ_TOOLS <path>")
+    sys.exit(1)
+
 javaBinDir = os.path.join(ovjtools, 'java', 'bin')
 
 # get the envirionment
 env = Environment(ENV = {'JAVA_HOME' : javaBinDir,
                          'PATH' : javaBinDir + ':' + os.environ['PATH']})
 
+Execute('cp ../vnmrj/vnmrj.jar vjunit/lib/.')
 env.Execute('cd vjunit && make -f makevjunit')
 env.Execute('cd VJQA/src && make -f makexmlcheck')
 
@@ -24,6 +41,6 @@ Execute('cp -r VJQA ovj_qa/OVJQA')
 Execute('rm -rf ovj_qa/OVJQA/src')
 Execute('rm -f ovj_qa/OVJQA/bin/lib/vjunit.jar')
 Execute('cp vjunit/vjunit.jar ovj_qa/OVJQA/bin/lib/')
-Execute('rm -f ovj_qa/OVJQA/java/*')
+Execute('mkdir ovj_qa/OVJQA/java')
 Execute('cp VJQA/src/XmlTest.jar VJQA/src/*.class ovj_qa/OVJQA/java/')
 Execute('cp -r vjtest ovj_qa/ovjtest')

@@ -59,12 +59,11 @@ public class VnmrJTest extends TestCase implements MessageListenerIF {
             public void run()
             {
                 fillHashMap();
-                main = new JFrameOperator("VnmrJ");
+                main = new JFrameOperator("OpenVnmrJ");
                 try
                 {
                     threadVJ.sleep(2000);
        
-                        JTextComponentOperator lblInit = new JTextComponentOperator(main, "Agilent software");
                         Util.sendToVnmr("owner?");
                         JTextComponentOperator lbl = new JTextComponentOperator(main, "owner =");
                         Util.sendToVnmr("instrument?");

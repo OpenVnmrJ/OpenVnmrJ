@@ -19,7 +19,7 @@ public class VJAdminTest extends TestCase {
     
     protected Thread threadUpdate;
     
-    public static final int MIN = 60000;
+    public static final int SEC10 = 10000;
     
     public VJAdminTest(java.lang.String testName) {
         super(testName);
@@ -49,7 +49,7 @@ public class VJAdminTest extends TestCase {
         {
             public void run()
             {
-                JFrameOperator main = new JFrameOperator("VnmrJ Admin");
+                JFrameOperator main = new JFrameOperator("OpenVnmrJ Admin");
                 JMenuBarOperator menu = new JMenuBarOperator(main);
                 menu.pushMenu("Configure|Users|Update Users", "|");
                 JDialogOperator frame = new JDialogOperator("Update");
@@ -76,7 +76,7 @@ public class VJAdminTest extends TestCase {
                 
                 try
                 {
-                    threadUpdate.sleep(nLength*2*MIN);
+                    threadUpdate.sleep(nLength*SEC10);
                 }
                 catch (Exception e)
                 {

@@ -1,6 +1,10 @@
 "macro vvCopyAppdir"
-if ($# <> 1) then
-  write('line3','%s needs an appdir file name',$0)
+$appdir=userdir+'/persistence/'+'appdir_'+operator
+if ($# = 1) then
+  mv($appdir+'.orig',$appdir):$e
+  if ($1 = 'yes') then
+    appdir('reset')
+  endif
   return
 endif
 
@@ -9,6 +13,9 @@ if (not $e) then
   write('line3','%s: appdir %s not found',$0,$1)
   return
 endif
-$appdir='appdir_'+operator
-shell('cp '+$path+ ' ' + userdir+'/persistence/'+$appdir)
-appdir('reset')
+$qadir=userdir+'/ovj_qa'
+mv($appdir,$appdir+'.orig'):$e
+append($path,'sed','OVJQADIR',$qadir,$appdir)
+if ($2 = 'yes') then
+  appdir('reset')
+endif
