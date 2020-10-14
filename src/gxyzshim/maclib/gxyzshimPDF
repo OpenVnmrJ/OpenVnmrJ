@@ -2,15 +2,17 @@
 
 $arg='make'
 if $#>0 then $arg=$1 endif
+exists('gxyzshimPDF','parameter'):$e
+if not $e then create('gxyzshimPDF','string') endif
 exists(gxyzshimPDF,'file'):$epdf
 $base='/vnmr/tmp/gxyzshimPS_tmp'
 exists($base,'directory'):$edir
-if not $edir then shell('mkdir '+$base+'; chmod g+w '+$base) endif
+if not $edir then mkdir($base) chmod('g+w',$base) endif
 
 if $arg='make' then
 	pwd:$cwd
 	cd($base)
-	if $epdf then shell('rm -f '+gxyzshimPDF) endif
+	if $epdf then delete(gxyzshimPDF,''):$e endif
 
         $n='' format(gxyzshimPSn,'lower'):$n		"include shim log file here"
 	getplottertype(printer,'papersize'):$papersize
@@ -18,7 +20,7 @@ if $arg='make' then
 	if ($papertype='letter') then $papertype='Letter' else format($papertype,'upper'):$papertype endif
 	shell('enscript -M '+$papertype+' -o '+gxyzshimPS+$n+'.ps '+userdir+'/3Dshimlib/calibs/shimlog.txt')
 	gxyzshimPSn=gxyzshimPSn+1
-shell('sleep 1')
+sleep(1)
 write('line3','gxyzshimPSn=%s',gxyzshimPSn)
 	$max=gxyzshimPSn-1
 	$i=1 $in='' $cmd='cat '
@@ -44,7 +46,7 @@ elseif $arg='cleanup' then
 	exists(gxyzshimPS+'1.ps','file'):$eps
 	exists(gxyzshimPS+'1.txt','file'):$etxt
 	if $eps or $etxt then shell('rm -f '+gxyzshimPS+'*') endif
-	if $epdf then shell('rm -f '+gxyzshimPDF) endif
+	if $epdf then delete(gxyzshimPDF,''):$e endif
 
 elseif $arg='check' then
   $pltype=0
