@@ -80,8 +80,8 @@ int plot_flag = FALSE;
 #define FT_RE              6
 #define FT_IM              7
 #define INOVA_MAX_PULSE_STEPS    8192
-#define MAX_PULSE_STEPS    (8192*32)
-#define MAX_FFT_STEPS      (8192*32)
+#define MAX_PULSE_STEPS    (8192*32*8)
+#define MAX_FFT_STEPS      (8192*32*8)
 #define MAX_AMP            1023.0
 #define GO                 0 
 #define STEP               1 
@@ -251,6 +251,7 @@ int			lg_width, lg_height,
 			pl_width, pl_height;
 
 char			*font_name;
+int  *databuf;
 
 win_val			get_panel_value();
 static void init_small_canvases();
@@ -358,6 +359,7 @@ char *argv[];
        max_steps = MAX_PULSE_STEPS;
     else
        max_steps = INOVA_MAX_PULSE_STEPS;
+    databuf = (int *) malloc(MAX_PULSE_STEPS*2*sizeof(int));
     init_window(argc,argv);
     pi = acos(-1.0);
     screen_dims(&w,&h);
@@ -2799,11 +2801,11 @@ static void plot_large_canvas(int num)
     
     char     label1[64], label2[64], label3[64],
              label4[64], label5[64], label6[64];
-    int data[2*MAX_PULSE_STEPS];
+    int *data;
 
     if (!nsteps)
         return;
-
+    data = databuf;
     min_val = min_max[lg_state][0]/vscale - vref;
     max_val = min_max[lg_state][1]/vscale - vref;
 
@@ -3059,12 +3061,12 @@ static void plot_small_canvas(int num)
 {
     int      i, margin=3, x_old, x_new, y_new, y_old[6], counter;
     double   width, height;
-    int data[2*MAX_PULSE_STEPS];
+    int *data;
 
     if (!nsteps) {
         return;
     }
-
+    data = databuf;
     normal_mode(num+SM_WIN_1);
     width = (double)(sm_width - 2*margin);
     height = (double)(sm_height - 2*margin);
