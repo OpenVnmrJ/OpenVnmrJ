@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <regex.h>
 #include <sys/stat.h>
@@ -1816,18 +1817,67 @@ int unixtime(int argc, char *argv[], int retc, char *retv[])
    RETURN;
 }
 
+static char *getLine(char *inLine, size_t len, char *fromStrPtr)
+{
+   char *ptr;
+
+   if ( *fromStrPtr == '\0')
+      return(NULL);
+   ptr = fromStrPtr;
+   while ( ( *ptr != '\0' ) && (len > 1) )
+   {
+      *inLine++ = *ptr;
+      if ( *ptr == '\n' )
+      {
+         ptr++;
+         break;
+      }
+      ptr++;
+      len--;
+   }
+   *inLine = '\0';
+   return(ptr);
+}
+
+static int countWords(const char* str)
+{
+   if (str == NULL)
+      return(0);
+
+   int inSpaces = 1;
+   int numWords = 0;
+
+   while (*str != '\0')
+   {
+      if (isspace(*str))
+      {
+         inSpaces = 1;
+      }
+      else if (inSpaces)
+      {
+         numWords++;
+         inSpaces = 0;
+      }
+      ++str;
+   }
+   return(numWords);
+}
+
 #define APPENDLINE 2048
 int appendCmd(int argc, char *argv[], int retc, char *retv[])
 {
-   FILE *inFile;
+   FILE *inFile = NULL;
    FILE *outFile = NULL;
    int lineCount = 0;
+   int wordCount = -1;
    int tailTotal = 0;
    int tailArg = 0;
    int tailStage = -1;
    int tailSkip = 0;
    int headOK = 1;
    int lineOK;
+   int fromStr;
+   char *fromStrPtr = NULL;
    char inLine[APPENDLINE];
 
    if (argc < 3)
@@ -1835,7 +1885,8 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       Werrprintf("%s: at least two arguments must be provided",argv[0]);
       ABORT;
    }
-   if ( ! strcmp(argv[1],argv[argc-1]) )
+   fromStr = (  ! strcmp(argv[0],"appendstr"));
+   if ( !fromStr &&  ! strcmp(argv[1],argv[argc-1]) )
    {
       Werrprintf("%s: cannot append to the same file as the source file",argv[0]);
       ABORT;
@@ -1868,7 +1919,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
          ABORT;
       }
    }
-   if ( strcmp(argv[argc-1],"|wc") && strcmp(argv[argc-1],"| wc"))
+   if ( !strcmp(argv[argc-1],"|wc c") || ! strcmp(argv[argc-1],"| wc c"))
+      wordCount = 0;
+   if ( strcmp(argv[argc-1],"|wc") && strcmp(argv[argc-1],"| wc") &&
+        (wordCount == -1) )
    {
       outFile = fopen(argv[argc-1],"a");
       if (outFile == NULL)
@@ -1882,34 +1936,55 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
          ABORT;
       }
    }
-   inFile = fopen(argv[1],"r");
-   if (inFile == NULL)
+   if ( ! fromStr)
    {
-      if (outFile)
-         fclose(outFile);
-      if (retc)
+      inFile = fopen(argv[1],"r");
+      if (inFile == NULL)
       {
-         retv[ 0 ] = intString(0);
-         RETURN;
+         if (outFile)
+            fclose(outFile);
+         if (retc)
+         {
+            retv[ 0 ] = intString(0);
+            RETURN;
+         }
+         Werrprintf("%s: Input file %s not found",argv[0],argv[1]);
+         ABORT;
       }
-      Werrprintf("%s: Input file %s not found",argv[0],argv[1]);
-      ABORT;
+   }
+   else
+   {
+      fromStrPtr = argv[1];
    }
 
    while ( headOK )
    {
       size_t len;
+      int ret;
 
-      if (fgets(inLine, sizeof(inLine), inFile) == NULL)
+      if (fromStr)
+         ret = ( (fromStrPtr = getLine(inLine, sizeof(inLine), fromStrPtr)) == NULL);
+      else
+         ret = (fgets(inLine, sizeof(inLine), inFile) == NULL);
+      if (ret)
       {
          if (tailStage)
             break;
          if (tailStage == 0)
          {
             tailStage = 1;
-            rewind(inFile);
-            if (fgets(inLine, sizeof(inLine), inFile) == NULL)
-               break;
+            if (fromStr)
+            {
+               fromStrPtr = argv[1];
+               if  ( (fromStrPtr = getLine(inLine, sizeof(inLine), fromStrPtr)) == NULL)
+                  break;
+            }
+            else
+            {
+               rewind(inFile);
+               if (fgets(inLine, sizeof(inLine), inFile) == NULL)
+                  break;
+            }
             tailSkip = tailTotal - tailArg;
             lineCount = 0;
             tailTotal = 0;
@@ -2204,6 +2279,8 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       if (lineOK)
       {
          lineCount++;
+         if (wordCount >= 0)
+            wordCount += countWords(inLine);
          if (outFile && tailStage)
             fprintf(outFile,"%s\n",inLine);
          else if (tailStage && (lineCount <= retc) )
@@ -2219,9 +2296,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       lineCount = 1;
       fclose(outFile);
    }
-   fclose(inFile);
+   if (inFile)
+      fclose(inFile);
    if (retc)
-      retv[ 0 ] = intString(lineCount);
+      retv[ 0 ] = (wordCount >= 0) ? intString(wordCount) : intString(lineCount);
    RETURN;
 }
 
