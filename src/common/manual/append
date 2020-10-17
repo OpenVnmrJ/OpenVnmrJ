@@ -1,16 +1,23 @@
 
 *******************************************************************************
 append(fromFile,<filters>,toFile)  - append the contents of fromFile to toFile.
+appendstr(fromString,<filters>,toFile)  - append the string fromString to toFile.
 *******************************************************************************
 
 The append command will append the contents of "fromFile" to "toFile".
 The fromFile and toFile cannot be the same file. If toFile does not exist,
-it will be created.
+it will be created. This is like the Linux command
+  cat fromFile >> toFile
 
-There can be optional tests to determine if a given line from fromFile will be
-appended. These filters take the form of a keyword test and a test phase.
-In the case of 'sed', 'sed g', and 'tr', two arguments are required.
-The following filters are available
+The appendstr command will append the string "fromString" to "toFile".
+The '\n' character in a string will be treated as a new line.
+If toFile does not exist, it will be created. This is like the Linux command
+  echo "fromString" >> toFile
+
+There can be optional tests to determine if a given line from fromFile or fromString
+will be appended. These filters take the form of a keyword test and a test phase.
+In the case of 'sed', 'sed g', and 'tr', two arguments are required. All options apply
+for both append and appendstr.  The following filters are available
 
 'grep',<search phrase>       - if a given line contains the <search phrase>, it
                              will be appended to toFile
@@ -66,6 +73,9 @@ way of getting line counts. If additional return variables are given,  then one
 can return to the calling macro the lines that would have been appended. For example,
 append(<fromFile>,'grep','something','grep -v'.'something else','|wc'):$num,$line1,$line2,...
 
+If toFile is '|wc c', it is exactly like using '|wc' except that the number of words,
+rather than the number of lines, is returned.
+
 Following are some examples of shell calls and the
 equivalent append calls. If lines are appended to toFile, then append will return
 either a 1 or 0 for success or failure, respectively.
@@ -86,9 +96,21 @@ shell('cat <fromFile> | grep "test a" | grep -v "test b" | wc -l'):$num
 can be replaced with
 append(<fromFile>,'grep','test a','grep -v','test b','|wc'):$num
 
+shell('cat <fromFile> | grep "test a" | grep -v "test b" | wc -w'):$num
+can be replaced with
+append(<fromFile>,'grep','test a','grep -v','test b','|wc w'):$num
+
+shell('echo '+$1+' | grep "test a" | grep -v "test b" | wc -w'):$num
+can be replaced with
+appendstr($1,'grep','test a','grep -v','test b','|wc w'):$num,$newString
+
 shell('cat <fromFile> | grep "test a" | head -n 10 | tail -n 3 >>  <toFile>')
 can be replaced with
 append(<fromFile>,'grep','test a','head','10','tail','3',<toFile>):$ok
+
+shell('echo '+$1+' | grep "test a" | head -n 10 | tail -n 3 >>  <toFile>')
+can be replaced with
+appendstr($1,'grep','test a','head','10','tail','3',<toFile>):$ok
 
 If a file contained lines with two numbers on each line, the following would swap
 the order of the two numbers on each line.
