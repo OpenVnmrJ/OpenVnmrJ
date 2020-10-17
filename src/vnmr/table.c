@@ -593,6 +593,7 @@ static cmd_t vnmr_table[] = {
 	{"aphold"     , aph,		NO_REEXEC, 10},
 	{"appdir"     , appdir,		NO_REEXEC, 0},
 	{"append"     , appendCmd,	NO_REEXEC, 0},
+	{"appendstr"  , appendCmd,	NO_REEXEC, 0},
 	{"asin"       , ln,		NO_REEXEC, 10},
 	{"atan"       , ln,		NO_REEXEC, 10},
 	{"atan2"      , ln,		NO_REEXEC, 10},
