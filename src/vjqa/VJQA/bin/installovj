@@ -8,7 +8,7 @@ userId=`/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }'`
 if [ $userId != "uid=0(root)" ]
 then
     echo "User must be root to install VnmrJ"
-    exit 0
+#    exit 0
 fi
 
 password=''
@@ -22,20 +22,25 @@ vnmrNoPostAction="TRUE"
 export vnmrNoPostAction
 
 
-dvd=$(dirname $dir)
-dvd=$(dirname $dvd)
-dvd=$(dirname $dvd)
-dvd=$(dirname $dvd)
-if [[ -d $dvd"/ovjbuild/dvdimageOVJ" ]]; then
-   dvd=$dvd"/ovjbuild/dvdimageOVJ"
-elif [[ -d $dvd"/ovjbuild/dvdimageOVJMI" ]]; then
-   dvd=$dvd"/ovjbuild/dvdimageOVJMI"
-elif [[ -d $dvd"/ovjbuild/dvdimageB12" ]]; then
-   dvd=$dvd"/ovjbuild/dvdimageB12"
+if [[ $# = 1 ]]; then
+   dvd=$1
 else
-   echo "No dvdimage found at ${dvd}/ovjbuild"
+   dvd=$(dirname $dir)
+   dvd=$(dirname $dvd)
+   dvd=$(dirname $dvd)
+   dvd=$(dirname $dvd)
+   dvd=${dvd}"/ovjbuild"
+fi
+if [[ -d $dvd"/dvdimageOVJ" ]]; then
+   dvd=$dvd"/dvdimageOVJ"
+elif [[ -d $dvd"/dvdimageOVJMI" ]]; then
+   dvd=$dvd"/dvdimageOVJMI"
+elif [[ -d $dvd"/dvdimageB12" ]]; then
+   dvd=$dvd"/dvdimageB12"
+else
+   echo "No dvdimage found at ${dvd}"
    exit 0
 fi
 
 # LoadNmrDir calls 'netbeans installvj' to install the latest cd
-/vnmr/jre/bin/java -Dvnmrcd=$dvd -Dinstalltype=" inova" -cp lib/vjunit.jar LoadNmrDir $password &> $log
+# /vnmr/jre/bin/java -Dvnmrcd=$dvd -Dinstalltype=" inova" -cp lib/vjunit.jar LoadNmrDir $password &> $log
