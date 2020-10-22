@@ -1962,6 +1962,8 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       size_t len;
       int ret;
 
+      lineOK = 1;
+      inLine[0] = '\0';
       if (fromStr)
          ret = ( (fromStrPtr = getLine(inLine, sizeof(inLine), fromStrPtr)) == NULL);
       else
@@ -1993,7 +1995,6 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       len = strlen(inLine);          /* get buf length */
       if (len && inLine[len-1] == '\n')      /* check last char is '\n' */
          inLine[--len] = '\0'; 
-      lineOK = 1;
       if (argc > 3)
       {
          int index;
@@ -2287,9 +2288,21 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
          {
             retv[lineCount] = newString(inLine);
          }
+         lineOK = 0;
       }
    }
 
+   // Handle case where only a null string is given
+   if (lineOK && !lineCount)
+   {
+      lineCount++;
+      if (outFile && tailStage && fromStr)
+            fprintf(outFile,"%s\n",inLine);
+      else if (tailStage && (lineCount <= retc) )
+      {
+         retv[lineCount] = newString(inLine);
+      }
+   }
    if (outFile != NULL)
    {
       /* when appending to a file, not just counting lines, just indicate success */
