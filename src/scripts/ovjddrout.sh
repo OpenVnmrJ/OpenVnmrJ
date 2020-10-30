@@ -427,6 +427,10 @@ do
       tar --exclude=.gitignore -cf - ${dir} | (cd $dest_dir_code/tmp; tar $taroption -)
 
       cd $dest_dir_code/tmp
+      if [[ $dir = "maclib" ]]; then
+         mv -f maclib/mtune_ddr maclib/mtune
+         mv -f maclib/_sw_ddr maclib/_sw
+      fi
       setperms ./ 755 644 755
       # tar --exclude=.gitignore -cjf $dest_dir_code/$Tarfiles/${dir}.tar *
       tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/${dir}.tar" "*"

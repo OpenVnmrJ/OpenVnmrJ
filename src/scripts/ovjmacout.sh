@@ -62,6 +62,8 @@ chmod +x $resdir/p*
 cd "$vnmrdir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
 cd "$ddrconsoledir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
 rm -rf $vjdir/Bayes3
+mv -f $vjdir/maclib/mtune_ddr $vjdir/maclib/mtune
+mv -f $vjdir/maclib/_sw_ddr $vjdir/maclib/_sw
 
 optionslist=`ls $standardsdir`
 for file in $optionslist

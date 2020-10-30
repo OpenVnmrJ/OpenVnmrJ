@@ -2101,18 +2101,6 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       chmod 700 "$dest_dir"/bin/probe_unmount
    fi
 
-# Special macros for new system.
-
-   if [ -f "$src_code_dir"/.nv ]
-   then
-     cd "$dest_dir"/maclib
-     mv _sw _sw_orig
-     ln -s _sw_ddr _sw
-     mv mtune mtune_orig
-     ln -s mtune_ddr mtune
-     chown ${nmr_adm}:${nmr_group} mtune _sw
-   fi
-
 fi
 
 # alter the kudzu configuration file in /etc/init.d to place kudzu into "safe mode" i.e. do ONT probe the
