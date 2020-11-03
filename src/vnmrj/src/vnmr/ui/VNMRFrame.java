@@ -55,8 +55,6 @@ public class VNMRFrame extends JFrame implements AppInstaller {
     static boolean exitingFlag=false;
     static boolean nativeGraphics = true;
     static Process    updateDBProc;
-    static String host=null;    // TODO: not used?
-    static String localhost=null; // TODO: not used?
     static MetalTheme theme = null;
     private static boolean useDatabase = true;
     private static boolean bAdmin = false;
@@ -240,16 +238,6 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             // and its DB.  The files will be on the spectrometer and not
             // the remote machine.  When we go to a full fledged networked
             // DB, we will need to have this update active for that.
-
-            host = System.getProperty("dbhost");
-            // Get the local host name
-            try{
-                InetAddress inetAddress = InetAddress.getLocalHost();
-                localhost = inetAddress.getHostName();
-            }
-            catch(Exception e) {
-                Messages.writeStackTrace(e);
-            }
 
             vnmrFrame = new VNMRFrame();
             LinuxFocusBug.workAroundFocusBugInWindow(vnmrFrame);

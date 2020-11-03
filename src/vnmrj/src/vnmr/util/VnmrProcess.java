@@ -15,22 +15,20 @@ import vnmr.admin.ui.*;
 
 public class VnmrProcess implements Runnable {
    private SocketIF  socketIf;
-   private String    hostName;
    private String    info;
    private int       socketPort;
    private int       id;
    private Process   chkit;
 
-   public VnmrProcess(SocketIF pobj, String host, int port, int id, String info) {
+   public VnmrProcess(SocketIF pobj, int port, int id, String info) {
 	this.socketIf = pobj;
-	this.hostName = host;
 	this.socketPort = port;
 	this.id = id;
 	this.info = info;
    }
 
-   public VnmrProcess(SocketIF pobj, String host, int port, int id) {
-	this(pobj, host, port, id, null);
+   public VnmrProcess(SocketIF pobj, int port, int id) {
+	this(pobj, port, id, null);
    }
 
    public void killProcess() {

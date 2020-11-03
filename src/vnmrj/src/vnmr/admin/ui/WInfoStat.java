@@ -64,36 +64,23 @@ public class WInfoStat implements SocketIF
     {
         if (winId == 0 && statusProcess == null)
         {
-            File f = new File(System.getProperty("sysdir")+"/bin/Infostat");
+            File f = new File(System.getProperty("sysdir")+"/acqbin/acqpresent");
             if (!f.exists())
             {
                   return;
             }
-            String host = System.getProperty("console");
-            if (host == null)
+            f = new File(System.getProperty("sysdir")+"/bin/Infostat");
+            if (!f.exists())
             {
-                //host = localHostName;
-                // Get the host name
-                try
-                {
-                    InetAddress inetAddress = InetAddress.getLocalHost();
-                    host = inetAddress.getHostName();
-                }
-                catch(Exception e)
-                {
-                    Messages.postWarning("Error getting HostName");
-                    host = new String("");
-                }
+                  return;
             }
-            if (host.equals("none") || host.equals("null"))
-                return;
             stSocket = new StatusSocket(this, winId);
             stSocketThread = new Thread(stSocket);
             statusPort = stSocket.getPort();
             stSocketThread.setName("SocketThread");
             stSocketThread.start();
 
-            statusProcess = new StatusProcess(this, host, statusPort);
+            statusProcess = new StatusProcess(this, statusPort);
             statusThread = new Thread(statusProcess);
             statusThread.setName("Run Infostat");
             statusThread.start();

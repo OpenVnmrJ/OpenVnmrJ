@@ -21,7 +21,6 @@ import java.net.*;
  *   public static VResourceBundle getResourceBundle(String baseName);
  *   public static String getValue(String baseName, String key);
  *   public static void reset(); 
- *   public static boolean updateUserPropertyfile();
  *
  * property file(s) of given baseName should exist, or getResourceBundle
  * returns null, and getValue returns key.
@@ -69,81 +68,4 @@ public class VPropertyBundles {
 	m_propertyBundles.clear();
     }
 
-    public static boolean updateUserPropertyfile() {
-// this is not used anywhere. don't remember why wrote it. 
-
-	String host = Util.getHostName();
-
-	if(host.length()>0) host = "_" + host;
-
-	String filepath = "PROPERTIES/userResources" + host + ".properties";
-	String propertyfile = FileUtil.savePath(filepath);
-        if(propertyfile == null) return false;
-
-	String sysProf = FileUtil.openPath("SYSTEM/SYSPROF");
-	if(sysProf == null) return false;
-
-	File file=new File(sysProf);
-	File[] children = file.listFiles();
-	if(children == null) return false;
-
-	FileWriter fw;
-        PrintWriter os;
-	try
-        {
-          fw = new FileWriter(propertyfile, false);
-          os = new PrintWriter(fw);
-
-          for(int i = 0; i < children.length; i++) {
-            String child = children[i].getPath();
-            String path = FileUtil.openPath(child);
-            if(path == null) continue;
-
-            BufferedReader in;
-            String inLine;
-
-            try {
-                in = new BufferedReader(new FileReader(path));
-            	while ((inLine = in.readLine()) != null) {
-                    if (inLine.length() > 1 && !inLine.startsWith("#")) {
-                        inLine.trim();
-
-                        StringTokenizer tok = new StringTokenizer(inLine, " \t\n", false);
-                    	if (tok.countTokens() > 1) {
-                            String key = tok.nextToken();
-                            if(key.equals("name")) {
-                                String value = "";
-                                while(tok.hasMoreElements()){
-                                    value+=tok.nextToken(" \t");
-                                    if(tok.hasMoreElements())
-                                        value+=" ";
-                                }
-                                if(path.endsWith(".del")) value += "*";
-                                os.println(children[i].getName() +"="+ value);
-                                break;
-                            }
-                        }
-                    }
-
-                }
-                in.close();
-            } catch(IOException e) {
-                Messages.writeStackTrace(e);
-                Messages.postDebug(e.toString());
-                return false;
-            }
-        }
-
-        fw.flush();
-        fw.close();
-    }
-    catch(IOException e)
-    {
-        Messages.writeStackTrace(e);
-        Messages.postDebug(e.toString());
-	    return false;
-    }
-
-	return true;
-    }
 }
