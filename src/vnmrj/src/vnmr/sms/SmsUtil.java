@@ -1215,115 +1215,6 @@ public final class SmsUtil implements SmsDef
        }
    }
 
-   public static void old_updatePlateInfo() {
-       if (bDebug)
-           System.out.println("SMS: update sample status.");
-       if (autoDir == null || curPlate == null) {
-          if (bDebug && curPlate == null)
-             System.out.println("SMS: plate is null.");
-          return;
-       }
-       if (dbManager == null)
-          dbManager = ShufDBManager.getdbManager();
-       if (dbManager == null) {
-          if (bDebug)
-             System.out.println("SMS: dbManager is null.");
-          return;
-       }
-       rackId = curPlate.getRackId();
-       String rackStr = Integer.toString(rackId);
-       String locStr, zoneStr;
-       int loc;
-       String host = Util.getHostName();
-       SmsSample sample;
-       String cmd;
-       // cmd = "SELECT loc_,vzone_,operator_,studyid_,samplename,protocols,studystatus,solvent,notebook,time_saved from study WHERE vrack_=\'"+rackStr+"\' AND (autodir=\'"+autoDir+"\' ) AND (hostname=\'"+host+"\' )";
-       if (curPlate instanceof GrkPlate)
-          cmd = "SELECT loc_,vzone_,operator_,studyid_,samplename,page,studystatus,solvent,notebook,time_saved,long_time_saved,barcode from study WHERE vrack_=\'"+rackStr+"\' AND (autodir=\'"+autoDir+"\') AND (hostname=\'"+host+"\')";
-       else
-          cmd = "SELECT loc_,vzone_,operator_,studyid_,samplename,page,studystatus,solvent,notebook,time_saved,long_time_saved,barcode from study WHERE (autodir=\'"+autoDir+"\') AND (hostname=\'"+host+"\')";
-       dbResult = null;
-       if (bTest || bDebug)
-           System.out.println(" SQL: "+cmd);
-       try {
-          dbResult = dbManager.executeQuery(cmd);
-       }
-       catch (Exception e) {
-           if (bDebug)
-               System.out.println(" SQL: failed.");
-           return;
-       }
-       if (dbResult == null) {
-           if (bDebug)
-               System.out.println(" SQL: result is null.");
-           return;
-       }
-       curPlate.clearAllSample();
-       try {
-          while(dbResult.next()) {
-             locStr = dbResult.getString(1); 
-             zoneStr = dbResult.getString(2); 
-             if (bTest || bDebug)
-               System.out.println("loc= '" + locStr + "' zone= '" + zoneStr+"' ");
-             if (locStr == null)
-                continue;
-             zoneId = 0;
-             loc = 0;
-             try {
-                loc = Integer.parseInt(locStr); 
-                if (zoneStr != null)
-                   zoneId = Integer.parseInt(zoneStr); 
-             }
-             catch (NumberFormatException nfe) {
-                loc = 0;
-             }
-             sample = curPlate.getSample(zoneId, loc); 
-             if (sample == null)
-                continue;
-             cleanSampleInfo();
-             user = dbResult.getString(3);
-             studyId = dbResult.getString(4);
-             sampleName = dbResult.getString(5);
-             page = dbResult.getString(6);
-             statusStr = dbResult.getString(7);
-             curStatus = getStatus(statusStr);
-           /**
-             if (!curUser.equals(user))
-                curStatus = curStatus - OTHER;
-           **/
-             solvent = dbResult.getString(8);
-             notebook = dbResult.getString(9);
-             sampleDate = dbResult.getString(10);
-             timeOfSample = (long) dbResult.getInt(11);
-             barCode = dbResult.getString(12);
-             if (bTest || bDebug)
-                System.out.println("   status= "+statusStr+"  date= "+sampleDate+"  time= "+timeOfSample);
-             fillSampleInfo(sample);
-          }
-          // dbResult.close();
-       }
-       catch (Exception e) {
-          cmd = "DB Error on select loc_ from study";
-          if (bTest)
-              System.err.println(" "+cmd);
-          Messages.writeStackTrace(e, cmd);
-          // return;
-       }
-       try {
-          dbResult.close();
-       }
-       catch (Exception ee) {
-          cmd = "DB Error on closing DbResult ";
-          if (bTest)
-              System.err.println(" "+cmd);
-          Messages.writeStackTrace(ee, cmd);
-       }
-       if (bTest)
-	  fillDummySample();
-       tray.getParent().repaint();
-       infoPanel.showSampleInfo();
-   }
-
    public static void setSelectPattern(GrkPlate p) {
        int pattern = p.searchPattern;
        int start = p.searchStart;
@@ -1443,10 +1334,6 @@ public final class SmsUtil implements SmsDef
            autoDir = s;
            return;
        }
-/*
-       String host = Util.getHostName();
-       autoDir = host+":"+s;
-*/
        if (bTest) {
            autoDir = s;
            updatePlateInfo();

@@ -15,13 +15,11 @@ import vnmr.admin.ui.*;
 
 public class StatusProcess implements Runnable {
    private SocketIF  socketIf;
-   private String    hostName;
    private int       socketPort;
    private Process   chkit;
 
-   public StatusProcess(SocketIF pobj, String host, int port) {
+   public StatusProcess(SocketIF pobj, int port) {
 	this.socketIf = pobj;
-	this.hostName = host;
 	this.socketPort = port;
    }
 
@@ -44,11 +42,7 @@ public class StatusProcess implements Runnable {
 
    public void run() {
        try {
-           String cmd = "Infostat "+hostName+" -port "+socketPort;
-           if (Util.iswindows())
-               cmd = WGlobal.SHTOOLCMD + " " + WGlobal.SHTOOLOPTION +
-                                " \"" + FileUtil.SYS_VNMR + "/bin/Infostat " +
-                                hostName + " -port " + socketPort + "\"";
+           String cmd = "Infostat -port "+socketPort;
            Runtime rt = Runtime.getRuntime();
            // exec and get back a Process class
            chkit = rt.exec(cmd);

@@ -9743,10 +9743,6 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
                     //                        return;
                     //                    }
 
-                    // InetAddress inetAddress = InetAddress.getLocalHost();
-                    // String localHost = inetAddress.getHostName();
-                    // String hostFullpath = localHost + ":" + fullpath;
-
                     // Create a ShufflerItem
                     // Since the code is accustom to dealing with ShufflerItem's
                     // being D&D, I will just use that type and fill it in.

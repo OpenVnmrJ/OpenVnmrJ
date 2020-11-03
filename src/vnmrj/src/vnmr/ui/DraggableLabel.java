@@ -118,17 +118,11 @@ public class DraggableLabel extends JLabel implements   DragSourceListener,
 
     public ShufflerItem getShufflerItem()
     {
-        String host = null;
-        try {
-            host = InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException uhe) {
-        }
-        
         // If no fileName, don't try to get a shufflerItem
         if(fileName == null)
             return null;
         
-        // The host and fileName we have are for the local mount.  We need
+        // The fileName we have is for the local mount.  We need
         // the dhost and dpath for the ShufflerItem
         Vector mp = MountPaths.getPathAndHost(fileName);
         String dhost = (String) mp.get(Shuf.HOST);

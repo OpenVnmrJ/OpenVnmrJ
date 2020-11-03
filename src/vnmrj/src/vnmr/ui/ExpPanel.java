@@ -261,17 +261,6 @@ public class ExpPanel extends JPanel
         }
         if (useBusyBar)
             useBusyIcon = false;
-        // Get the host name
-        try {
-            InetAddress inetAddress = InetAddress.getLocalHost();
-            localHostName = inetAddress.getHostName();
-        }
-        catch(Exception e) {
-            Messages.postWarning("Error getting HostName");
-            localHostName = new String("");
-        }
-
-        // setLayout(new canvasLayout());
 
         bNative = Util.isNativeGraphics();
 
@@ -6955,7 +6944,7 @@ public class ExpPanel extends JPanel
                 g = "0x0+0+0";
             xinfo = "-jxid "+xid+" -jxgeom "+s+" -jxregion "+g;
         }
-        vnmrProcess = new VnmrProcess(this, localHostName, socketPort, winId+1,
+        vnmrProcess = new VnmrProcess(this, socketPort, winId+1,
             xinfo);
         vnmrThread = new Thread(vnmrProcess);
         vnmrThread.setName("Run Vnmr");
@@ -6977,43 +6966,23 @@ public class ExpPanel extends JPanel
         readyToRun = true;
         mayRunVnmr();
         if (winId == 0 && statusProcess == null) {
-            StringBuffer tempSb;
-            String fstr;
-            tempSb = new StringBuffer().append(System.getProperty("sysdir"));
-            tempSb.append(File.separator).append("bin").append(File.separator);
-            if (Util.iswindows()) {
-                tempSb.append("winInfostat.exe");
-            } else {
-                tempSb.append("Infostat");
+            File f;
+            f = new File(System.getProperty("sysdir")+"/acqbin/acqpresent");
+            if (!f.exists())
+            {
+                  return;
             }
-            fstr = tempSb.toString();
-            File f = new File(fstr);
+            f = new File(System.getProperty("sysdir")+"/bin/Infostat");
             if (!f.exists()) {
                   return;
             }
-            String host = System.getProperty("console");
-            if (host == null)
-                host = localHostName;
-            if (host.equals("none") || host.equals("null"))
-                return;
             stSocket = new StatusSocket(this, winId);
             stSocketThread = new Thread(stSocket);
             statusPort = stSocket.getPort();
             stSocketThread.setName("SocketThread");
             stSocketThread.start();
 
-           // int trys=0;
-           // int maxtrys=20;
-           // while (outPort == null && trys < maxtrys)
-           // {
-             // try { Thread.sleep(200); trys++;} catch(InterruptedException ie) { };
-           // }
-           
-           // if (trys > 0 ) System.out.println("waited "+(trys*0.2)+" secs"); 
-           // System.out.println("waited "+(trys*0.2)+" secs"); 
-           
-
-            statusProcess = new StatusProcess(this, host, statusPort);
+            statusProcess = new StatusProcess(this, statusPort);
             statusThread = new Thread(statusProcess);
             statusThread.setName("Run Infostat");
             statusThread.start();
@@ -9945,7 +9914,6 @@ public class ExpPanel extends JPanel
     private int titleHeight = 20;
     private int queryQsize;
     private String vnmrHostName;
-    private String localHostName;
     private String syncParam;
     private String expDir;
     private ParamIF paramIf;
