@@ -555,6 +555,10 @@ case x$dir in
        tar --exclude=.gitignore -cf - * | (cd $dest_dir_code; tar $taroption -)
        cp $gitdir/src/scripts/ins_vnmr2.sh $dest_dir_code/ins_vnmr
        chmod 755 $dest_dir_code/ins_vnmr
+       cp $gitdir/src/scripts/upgrade.nmr.sh $dest_dir/upgrade.nmr
+       chmod 755 $dest_dir/upgrade.nmr
+       cp $gitdir/Notes.txt $gitdir/Install.md $dest_dir/.
+       chmod 644 $dest_dir/Notes.txt $dest_dir/Install.md
        cp $gitdir/src/scripts/vjpostinstallaction.sh $dest_dir_code/vjpostinstallaction
        chmod 755 $dest_dir_code/vjpostinstallaction
        cp $gitdir/src/common/user_templates/.??* $dest_dir_code/.
