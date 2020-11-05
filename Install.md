@@ -1,17 +1,20 @@
 
-OpenVnmrJ Version 2 Installation
+OpenVnmrJ Version 2 Installation or Upgrade
 
+For upgrade information, see the end of this document.
 
-OpenVnmrJ Version 2 has been installed on RedHat/CentOS systems running versions
-6.8, 6.9, and 6.10, and versions 7.5, 7.6, 7.7, 8.1, and 8.2. It has also been installed
-on Ubuntu Version 14, 16, 18, and 20 systems. The MacOS version of OpenVnmrJ has
-been installed on versions Yosemite (10.10) to Catalina (10.15). Installation
-on RHEL/CentOS systems can be used to run a spectrometer. Installation on
-Ubuntu systems may function as a spectrometer, but this has not been verified.
-The MacOS version is for data-processing only.
+OpenVnmrJ Version 2 has been installed on RedHat/CentOS systems running
+versions 6.8, 6.9, and 6.10, and versions 7.5, 7.6, 7.7, 8.1, and 8.2.
+It has also been installed on Ubuntu Version 14, 16, 18, and 20 systems.
+The MacOS version of OpenVnmrJ has been installed on versions Yosemite (10.10)
+to Catalina (10.15). Installation on RHEL/CentOS systems can be used to
+run a spectrometer. Installation on Ubuntu systems may function as a
+spectrometer, but this has not been verified.  The MacOS version is for
+data-processing only.
 
-To install on CentOS 6.x systems, we recommend using the CentOS KickStart DVD
-available from Agilent ( see SpinSights https://spinsights.chem.agilent.com/docs/DOC-12723 )
+To install on CentOS 6.x systems, we recommend using the CentOS KickStart
+DVD available from Agilent, available from
+https://drive.google.com/drive/folders/10-pQ-HquslWJfWBkoOj7cM0yHST5RFbU 
 
 For CentOS 7.x and 8.x systems, one can start by installing a standard
 OS using the CentOS-7-x86_64-DVD-*.iso or CentOS-8-x86_64-DVD-*.iso images
@@ -20,9 +23,10 @@ available from https://www.centos.org/download/
 For Ubuntu systems, one can start by downloading one of the images available
 from https://ubuntu.com/download/desktop
 
-If earlier versions of OS, for example, CentOS_6.9, Centos_7.6, or Ubuntu_16, were chosen,
-then the system, if connected to network, will prompt for OS updates at a later stage.
-It is up to the user and/or user's organization policies to opt for OS updates or not.
+If earlier versions of OS, for example, CentOS_6.9, Centos_7.6, or
+Ubuntu_16, were chosen, then the system, if connected to network, will
+prompt for OS updates at a later stage.  It is up to the user and/or
+user's organization policies to opt for OS updates or not.
 
 A typical CentOS 7.x or 8.x installation may involve selecting, in the
 "SOFTWARE SELECTION" options, the GNOME Desktop as the base environment
@@ -110,23 +114,25 @@ both files to /tmp and then do
    ./ovjUseRepo
    ./load.nmr
 
-Installations on Ubuntu systems are similar to those for CentOS. One difference
-is that the user account created during the installation of Ubuntu will be
-given "admin" privileges. That is, by using sudo, that account can do anything
-the root account on CentOS can do. Some may prefer that the vnmr1 account does not
-have those privileges. One could then create an initial account, such as ovjroot.
-During the installation of OpenVnmrJ, the vnmr1 account will be created with
-no admin privileges. It will be given the initial password of abcd1234.
+Installations on Ubuntu systems are similar to those for CentOS.
+One difference is that the user account created during the installation
+of Ubuntu will be given "admin" privileges. That is, by using sudo,
+that account can do anything the root account on CentOS can do.
+Some may prefer that the vnmr1 account does not have those privileges.
+One could then create an initial account, such as ovjroot.  During the
+installation of OpenVnmrJ, the vnmr1 account will be created with no
+admin privileges. It will be given the initial password of abcd1234.
 
 After the OpenVnmrJ installation is complete, log out and log in before using
 the administrator (vnmr1) account.
 
-Newer CentOS and Ubuntu systems use the Gnome 3 display manager. The "Standard"
-display manager no longer has desktop icons. Rather, it has an Activities button
-at the upper left corner. Clicking that button will display a "Type to search..."
-entry field. If you enter vnmrj, the OpenVnmrJ launch icon will appear. This can
-be dragged to the favorites toolbar. If the OpenVnmrJ launch icon does not appear,
-re-run makeuser on that account. You may also need to log out and log in again.
+Newer CentOS and Ubuntu systems use the Gnome 3 display manager.
+The "Standard" display manager no longer has desktop icons. Rather, it has
+an Activities button at the upper left corner. Clicking that button will
+display a "Type to search..." entry field. If you enter vnmrj, the
+OpenVnmrJ launch icon will appear. This can be dragged to the favorites
+toolbar. If the OpenVnmrJ launch icon does not appear, re-run makeuser on
+that account. You may also need to log out and log in again.
 
 Gnome 3 also supports the "Classic" display manager, where desktop icons
 are displayed. One can select the display manager from the CentOS login screen.
@@ -162,3 +168,16 @@ Then move the jdk-13.0.2.jdk directory with the command
   sudo mv jdk-13.0.2.jdk /Library/Java/JavaVirtualMachines
 
 
+Upgrading an existing OpenVnmrJ installation.
+=============================================
+
+With releases of OpenVnmrJ newer than OpenVnmrJ 2.1A, an upgrade.nmr script
+is also available in the dvdimage directory. Running ./load.nmr will
+install the new release as described above. If one instead runs
+  ./upgrade.nmr
+then OpenVnmrJ will be upgraded in place. That is, a new directory to hold
+the release will not be created. The current system and user configuration
+files will be maintained, along with any gradient shimming, probe, or
+other calibration files. All other files that have changed or been added
+since the previous version will be installed. There is no graphical
+interface when the upgrade is performed.
