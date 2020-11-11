@@ -95,6 +95,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
 {
   int i,e,blocknumber,trace,getmax=0;
   int li,firstelement=0,lastelement;
+  int doPeek = 0;
   dfilehead dhd;
   dpointers block;
   dblockhead    *tmpbhead;
@@ -171,6 +172,8 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
        }
      else firstelement = 0;
   }
+  if ((argc == 4) && !getmax && (retc >= 1) )
+      doPeek = 1;
 
   if (argv[0][3]=='p') f=D_PHASFILE;
   else if (argv[0][3]=='f') { f=D_USERFILE; D_close(D_USERFILE); }
@@ -233,7 +236,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
      default:           strcpy(dataname, "DATA");  break;
   }
   
-  if (!getmax)
+  if (!getmax && !doPeek)
   {
      Wscrprintf("\n%s FILE HEADER:\n", dataname);
      Wscrprintf("  status  = %8x,  nbheaders       = %8x\n", dhd.status,
@@ -299,7 +302,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   }
 
   i = 0;
-  if (!getmax)
+  if (!getmax && !doPeek)
   {
      while (i < (dhd.nbheaders & NBMASK))
      {
@@ -325,7 +328,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   if (lastelement > dhd.np)
      lastelement = dhd.np;
 
-  if (!getmax)
+  if (!getmax && !doPeek)
   {
      for (li = firstelement; li<lastelement; li++)
        { if ((6*((li-firstelement)/6)) == (li-firstelement))
@@ -339,7 +342,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
        }
      Wscrprintf("\n");
   }
-  else /* get maximum data point */
+  else if (getmax) /* get maximum data point */
   {
      float tmpval, max=0.0;
      int shift;
@@ -371,6 +374,26 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
         Wscrprintf("%s FILE maximum absolute value = %g\n",dataname,max);
         if ( block.head->scale || (block.head->ctcount > 1) )
            Wscrprintf("%s FILE maximum scaled absolute value = %g\n",dataname,max*tmpval);
+     }
+  }
+  else /* peek data point */
+  {
+     double val;
+     int index;
+     int args = 0;
+      
+     index = firstelement + dhd.np * trace; 
+     while (args < retc) 
+     {
+        if (dhd.ebytes==2)
+           val = (double) ((short *)block.data)[index];
+        else if ((block.head->status & S_FLOAT) == 0)
+           val = (double) ((int *)block.data)[index];
+        else
+           val = (double) ((float *)block.data)[index];
+        retv[args] = realString( val );
+        index++;
+        args++;
      }
   }
 
@@ -702,7 +725,7 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
     double sumxy = 0.0;
     double sumy2 = 0.0;
     int index;
-    int ret;
+    int ret __attribute__((unused));
     char line[512];
     int moreToDo = 1;
 
@@ -900,7 +923,7 @@ int ernst(int argc, char *argv[], int retc, char *retv[])
     double arg1 = 0.0;
     double t1   = 0.0;
     double acqtim,delay;
-    int pres;
+    int pres __attribute__((unused));
 
     (void) retc;  /* suppress warning message */
     (void) retv;  /* suppress warning message */
@@ -1331,7 +1354,6 @@ int quadtt(int argc, char *argv[], int retc, char *retv[])
                    rpointspercyc,
                    ramp,
                    iamp,
-                   amplitude,
                    unbalance,
                    firstfrac,
                    lastfrac,
@@ -1528,7 +1550,7 @@ int quadtt(int argc, char *argv[], int retc, char *retv[])
    /* Wscrprintf("length=%g, phi = %g\n",length,phi); */
    /* Make correction for offsets in the channels. */
    phi += 57.2958 * 2.0 * roffset * ioffset / ramp / iamp;
-   amplitude = ramp;
+   // amplitude = ramp;
    unbalance = 100.0 * (iamp / ramp - 1.0);
    Wclear_text();
    Wscrprintf("Points per Cycle                 = %7.2f\n", rpointspercyc);
@@ -1908,7 +1930,7 @@ static int calc_indexed_fid(char *cmd_name, char *fn_addr, void *mem_buffer,
                 }
 //fprintf(stderr,"fidIndex: %d doAdd= %d\n",fidIndex, doAdd);
                 if (fid_fhead->nblocks < fidIndex+1) {
-                   int ival;
+                   int ival __attribute__((unused));
                    fid_fhead->nblocks = fidIndex+1;
                    ival = D_updatehead( D_USERFILE, fid_fhead );
                    doAdd = 0;
@@ -2181,6 +2203,8 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
 /*  Only update the file header if required.  */
 
       old_nblocks = fid_fhead.nblocks;
+      if (forceUpdate)
+          old_nblocks=0;
       if (fid_fhead.nblocks < element_number+1) {
          update_fhead = 1;
          fid_fhead.nblocks = element_number+1;
@@ -2194,7 +2218,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
       if (update_fhead && ( D_fidversion() == 0) )
       {
          int i;
-         int ival;
+         int ival __attribute__((unused));
          dpointers fid_block;
          for (i=0; i< old_nblocks; i++)
          {
@@ -2236,7 +2260,9 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
          }
       }
       else
+      {
          make_std_bhead( &this_bh, fid_fhead.status, (short) element_number+1 );
+      }
 
 /*  Now write the computed element out.  */
 
@@ -2666,7 +2692,8 @@ static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
 int writefid(int argc, char *argv[], int retc, char *retv[])
 {
         char            *cmd_name, *fn_addr;
-        int              cur_fid_format, element_number, ival, tmpval;
+        int              cur_fid_format, element_number, ival;
+        int              tmpval __attribute__((unused));
         dfilehead        fid_fhead;
         dpointers        fid_block;
 
@@ -2954,8 +2981,10 @@ int fidarea(int argc, char *argv[], int retc, char *retv[])
     dcreal = dcimag = 0;
     if (!P_getstring(CURRENT, "dcrmv", dcrmv, 1, sizeof(dcrmv))) {
         if (dcrmv[0] == 'y')
+        {
             dcreal = block.head->lvl;
             dcimag = block.head->tlt;
+        }
     }
 
     area = 0;

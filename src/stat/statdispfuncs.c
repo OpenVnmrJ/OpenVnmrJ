@@ -667,7 +667,7 @@ int updatestatscrn(AcqStatBlock *statblock)
     int i;
     struct tm *tmtime;
     char  *chrptr;
-    char  datetim[27];
+    char  datetim[30];
     /*struct timeval clock;
     struct timezone tzone;
      */
