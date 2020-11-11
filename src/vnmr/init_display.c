@@ -1079,7 +1079,7 @@ void
 DispField2(int pos, int color, double val, int dez)
 {
    double tmp;
-   char  ln[12],format[8];
+   char  ln[16],format[8];
 
    if(P_getreal(GLOBAL, "mfShowFields", &tmp, 1)) tmp = 1.0; 
 #ifdef VNMRJ
