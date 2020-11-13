@@ -120,6 +120,7 @@ void eccCorr(float *outp, ftparInfo ftpar);
 void set_vnmrj_ft_params(int procdim, int argc, char *argv[])
 {
     char     ptmp[MAXPATH];
+    double   tProcdim;
 
     if (P_setgroup(CURRENT,"ref", G_PROCESSING))
     {
@@ -146,14 +147,19 @@ void set_vnmrj_ft_params(int procdim, int argc, char *argv[])
        if (!Bnmr)
           appendvarlist("time_plotted");
     }
-    if (P_setreal(CURRENT,"procdim",((double)procdim),1))
+    if (P_getreal(CURRENT, "procdim", &tProcdim, 1))
+        tProcdim = -2.0;
+    if ( (int) (tProcdim+0.01) != procdim )
     {
-      P_creatvar(CURRENT,"procdim",ST_INTEGER);
-      P_setreal(CURRENT,"procdim",((double)procdim),1);
+       if (P_setreal(CURRENT,"procdim",((double)procdim),1))
+       {
+         P_creatvar(CURRENT,"procdim",ST_INTEGER);
+         P_setreal(CURRENT,"procdim",((double)procdim),1);
+       }
+       P_setgroup(CURRENT,"procdim", G_PROCESSING);
+       if (!Bnmr )
+          appendvarlist("procdim");
     }
-    P_setgroup(CURRENT,"procdim", G_PROCESSING);
-    if (!Bnmr)
-       appendvarlist("procdim");
     if (argc)
     {
        strcpy(ptmp,argv[0]);
@@ -255,12 +261,12 @@ static double calcAutoPhase(ftparInfo *ftpar, float *data)
 }
 
 /*-----------------------------------------------
-|						|
-|		    fidproc()			|
-|						|
+|					                	        |
+|		    fidproc()	                		|
+|						                        |
 |  This function is the same as ft() except it  |
 |  skips the wt, ft steps and writes the FID    |
-|						|
+|						                        |
 +----------------------------------------------*/
 int fidproc(int argc, char *argv[], int retc, char *retv[])
 {
@@ -278,7 +284,6 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
 		arg_no,
 		npx,
 		npadj,
-                do_ds,
 		ftflag,
 		noreal,
 		element_no,
@@ -290,8 +295,6 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
 		step,
 		i,
 		tmpi,
-		zflevel,
-		zfnumber,
 		dsfn0,
 		dsnpx,
 		dsnpadj,
@@ -317,7 +320,9 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
   ftparInfo	ftpar;
   wtPar		wtp;
   vInfo		info;
+#ifdef FIDPROC
   int fidshim = FALSE;
+#endif
   int fidShift = 0;
   double        phase0 = 0.0;
   char          newfidpath[MAXPATH];
@@ -342,7 +347,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
   ftpar.nblocks = 1;
   last = MAXINT;
 
-  do_ds = noreal = ftflag = TRUE;
+  noreal = ftflag = TRUE;
   nfft = acqflag = inverseWT = FALSE;
   ftpar.t2dc = -1;
   ftpar.zeroflag = FALSE;
@@ -389,10 +394,6 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
      {
         ftpar.t2dc = TRUE;
      }
-     else if (strcmp(argv[arg_no], "nods") == 0)
-     {
-        do_ds = FALSE;
-     }
      else if (strcmp(argv[arg_no], "noft") == 0)
      {
         ftflag = FALSE;
@@ -411,7 +412,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
      }
      else if (strcmp(argv[arg_no], "fidshim") == 0)
      {
-         fidshim = TRUE;
+         // fidshim = TRUE;
      }
      else if (strcmp(argv[arg_no], "inversewt") == 0)
      {
@@ -542,7 +543,6 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
   }
   ftflag = nfft = FALSE;
   ftpar.dspar.dsflag = FALSE;
-  do_ds = FALSE;
   if ( (fnActive = P_getactive(CURRENT, "fn")) )
   {
      double rval;
@@ -751,17 +751,6 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
      else
        dsnpadj = maxlpnp;
      npadj = maxlpnp;
-  }
-
-  if (ftpar.dspar.dsflag)
-  {
-    zflevel = getzflevel(dsnpadj, dsfn0);
-    zfnumber = getzfnumber(dsnpadj, dsfn0);
-  }
-  else
-  {
-    zflevel = getzflevel(npadj, ftpar.fn0);
-    zfnumber = getzfnumber(npadj, ftpar.fn0);
   }
 
   if (ftpar.dspar.dsflag)
@@ -1243,9 +1232,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
            }
            else if (ftpar.ftarg.numShift == -1)
            {
-              int npx;
               fidShift = ftpar.ftarg.initShift + (fidCnt-1) * ftpar.ftarg.incrShift;
-              npx = ftpar.np0 - ftpar.lsfid0;
               if (fidShift > npadj/2)
                  fidShift =  npadj/2;
               if (ftpar.ftarg.infoFD)
@@ -1587,7 +1574,7 @@ int ft(int argc, char *argv[], int retc, char *retv[])
 		arg_no,
 		npx,
 		npadj,
-                do_ds,
+        do_ds,
 		ftflag,
 		noreal,
 		element_no,
@@ -2473,9 +2460,7 @@ int ft(int argc, char *argv[], int retc, char *retv[])
            }
            else if (ftpar.ftarg.numShift == -1)
            {
-              int npx;
               fidShift = ftpar.ftarg.initShift + (fidCnt-1) * ftpar.ftarg.incrShift;
-              npx = ftpar.np0 - ftpar.lsfid0;
               if (fidShift > npadj/2)
                  fidShift =  npadj/2;
               if (ftpar.ftarg.infoFD)
@@ -3091,7 +3076,6 @@ int calcECC(int argc, char *argv[], int retc, char *retv[])
    dfilehead	fidhead;
    dblockhead	blockhead;
    int np0;
-   int ebytes;
    int data_int;
    short data_short;
    double phi_w;
@@ -3139,7 +3123,6 @@ int calcECC(int argc, char *argv[], int retc, char *retv[])
    }
    np0 = ntohl(fidhead.np) / 2;
    phi_w = (double) np0;
-   ebytes = ntohl(fidhead.ebytes);
    status = htons(fidhead.status);
    if (fwrite(&phi_w,sizeof(double),1,outfile) != 1)
    {

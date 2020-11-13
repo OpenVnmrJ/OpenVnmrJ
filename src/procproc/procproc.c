@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/param.h>
 #include <sys/types.h>
@@ -132,6 +133,10 @@ int main(int argc, char *argv[])
   sigaddset( &blockmask, SIGUSR2 );
  
    DebugLevel = 0;
+   if ( ! access("/vnmr/acqbin/Proclog",F_OK) )
+   {
+      DebugLevel = 1;
+   }
 
    umask(000); /* clear file creation mode mask,so that open has control */
 
@@ -207,7 +212,7 @@ void processMsge(void *notin)
 	   /* if we got a message then go ahead and parse it */
 	   if (rtn > 0)
 	   {
-	      DPRINT2(1,"received %d bytes, MsgInbuf len %d bytes\n",rtn,strlen(MsgInbuf));
+	      DPRINT2(1,"received %d bytes, MsgInbuf len %zd bytes\n",rtn,strlen(MsgInbuf));
 	      parser(MsgInbuf);
 	      MsgInbuf[0] = '\0';
 	   }
