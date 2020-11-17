@@ -395,14 +395,16 @@ int getfid(int curfid, float *outp, ftparInfo *ftpar, dfilehead *fidhead, int *l
             inpfloat += ftpar->np0;
             tmp = outp + ftpar->np0 - ftpar->lsfid0;
             npx = ftpar->np0;
-            if ((inblock.head->ctcount > 1) || (inblock.head->scale) )
+            if (( (inblock.head->ctcount > 1) && ftpar->ctScaling) ||
+                  (inblock.head->scale) )
             {
                shift = 1 << abs(inblock.head->scale);
                if (inblock.head->scale < 0)
                   rmult = 1.0/(float)(shift);
                else
                   rmult = (float) shift;
-               rmult /= (float)(inblock.head->ctcount);
+               if (ftpar->ctScaling)
+                  rmult /= (float)(inblock.head->ctcount);
                for (i = 0; i < npx; i++)
                   *(--tmp) = *(--inpfloat) * rmult;
             }
@@ -421,14 +423,16 @@ int getfid(int curfid, float *outp, ftparInfo *ftpar, dfilehead *fidhead, int *l
             inpfloat += ftpar->lsfid0;
             tmp = outp;
             npx = ftpar->np0 - ftpar->lsfid0;
-            if ((inblock.head->ctcount > 1) || (inblock.head->scale) )
+            if (( (inblock.head->ctcount > 1) && ftpar->ctScaling) ||
+                  (inblock.head->scale) )
             {
                shift = 1 << abs(inblock.head->scale);
                if (inblock.head->scale < 0)
                   rmult = 1.0/(float)(shift);
                else
                   rmult = (float) shift;
-               rmult /= (float)(inblock.head->ctcount);
+               if (ftpar->ctScaling)
+                  rmult /= (float)(inblock.head->ctcount);
                for (i = 0; i < npx; i++)
                   *tmp++ = *inpfloat++ * rmult;
             }
@@ -468,7 +472,8 @@ int getfid(int curfid, float *outp, ftparInfo *ftpar, dfilehead *fidhead, int *l
             rmult = 1.0/(float)(shift);
          else
             rmult = (float) shift;
-         rmult /= (float)(inblock.head->ctcount);
+         if (ftpar->ctScaling)
+            rmult /= (float)(inblock.head->ctcount);
          if (inblock.head->status == (S_DATA|S_32|S_COMPLEX))
          {
             cnvrts32(rmult, inp32, outp, ftpar->np0, ftpar->lsfid0);

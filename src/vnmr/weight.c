@@ -44,12 +44,7 @@
 #include "sky.h"
 #include "wjunk.h"
 
-#ifdef UNIX
 #include <fcntl.h>
-#else 
-#include  file
-#include  "unix_io.h"		/* Use our version of open, read, etc.  */
-#endif 
 
 #define COMPLETE	0
 #define ERROR		1
@@ -273,6 +268,9 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
   else
   {
      res = P_getstring(CURRENT, "wtfile", wtfname, 1, MAXPATHL-1);
+     // Ignore special keyword to turn off CT scaling of the FID
+     if ( (res == 0) && ! strcmp(wtfname,"noCtScaling"))
+         strcpy(wtfname,"");
   }
 
   wtfileflag = ((res == 0) && (strcmp(wtfname, "") != 0));
@@ -311,22 +309,13 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
   if (wtfileflag)
   {
      strcpy(parfilename, curexpdir);
-#ifdef UNIX
      strcat(parfilename, "/");
-#endif 
      strcat(parfilename, wtfname);
      strcat(parfilename, ".wtp");
 
      strcpy(wtfilename, userdir);
-#ifdef UNIX
      strcat(wtfilename, "/wtlib/");
-#else 
-     vms_fname_cat(wtfilename, "[.wtlib]");
-#endif 
      strcat(wtfilename, wtfname);
-#ifndef UNIX				/*  Presumably VMS  */
-     strcat(wtfilename, ".exe" );
-#endif 
 
      fileres = fopen(wtfilename, "r");
 
@@ -339,9 +328,7 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
      if (fileres == 0)
      {
         strcpy(wtfilename, curexpdir);
-#ifdef UNIX
         strcat(wtfilename, "/");
-#endif 
         strcat(wtfilename, wtfname);
  
         fileres = fopen(wtfilename, "r");
@@ -374,46 +361,15 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
 
         if (!rdwtflag)
         {
-#ifdef UNIX
+           int ret __attribute__((unused));
 
 /*  The UNIX command includes the complete path.  */
 
-	    sprintf( &run_usrwt[ 0 ],
+	       sprintf( &run_usrwt[ 0 ],
 		"%s %s %s %s %14d %7d %d",
 		 wtfilename, curexpdir, wtfname, parfilename,
 		 (int) (wtpar->sw*1000.0), n, rftflag);
 
-#else 
-
-/*         
- *  For VMS, necessary to define a DCL symbol
- *  to reference the user's program.
- */
-            {
-                char    wt_sym_value[ MAXPATHL ];
-                int     symbol_descr[ 2 ], value_descr[ 2 ], one;
- 
-                wt_sym_value[ 0 ] = '$';                          
-                wt_sym_value[ 1 ] = '\0';
-                strcat( &wt_sym_value[ 0 ], wtfilename );
-                symbol_descr[ 0 ] = strlen( wtfname );
-                symbol_descr[ 1 ] = (int) wtfname;
-                value_descr[ 0 ]  = strlen( &wt_sym_value[ 0 ] );
-                value_descr[ 1 ] =  (int) &wt_sym_value[ 0 ];
-                one = 1;        /* because LIB$GETSYMBOL wants a reference */
-
-                LIB$SET_SYMBOL( &symbol_descr[ 0 ], &value_descr[ 0 ], &one );
-
-/*
- *  The VMS command only has the command name and arguments,
- *  and not the complete path.
- */
-		sprintf( &run_usrwt[ 0 ],
-		    "%s %s %s %s %14d %7d %d",
-		     wtfname, curexpdir, wtfname, parfilename,
-		    (int) (wtpar->sw*1000.0), n, rftflag);
-            }
-#endif 
 
 /**********************************************************
 *  Now execute the user's program to produce the desired  *
@@ -421,7 +377,7 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
 *  written out to disk by the user's program.             *
 **********************************************************/
  
-	    system( &run_usrwt[ 0 ] );
+	       ret = system( &run_usrwt[ 0 ] );
         }  
 
 /********************************************************                   
@@ -430,9 +386,7 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
 ********************************************************/
  
         strcpy(wtfilename, curexpdir);
-#ifdef UNIX
         strcat(wtfilename, "/");
-#endif 
         strcat(wtfilename, wtfname);
         strcat(wtfilename, ".wtf");
 
