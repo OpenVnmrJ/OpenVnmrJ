@@ -343,7 +343,7 @@ doUpgrade () {
 
 # Update checksums if it is an SE system
 fixSE () {
-    cmd = "/vnmr/p11/sbin/makeP11checksums"
+    cmd="/vnmr/p11/sbin/makeP11checksums"
     if [ -f $cmd ]
     then
         nmr_adm=$(ls -l $vnmrsystem/vnmrrev | awk '{print $3}')
