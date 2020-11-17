@@ -173,6 +173,7 @@ struct _ftparInfo
    int		t1_offset;
    int		t2_offset;
    int		wtflag;
+   int		ctScaling;
    int		zeroflag;
    int		D_cmplx;
    int		D_dimen;

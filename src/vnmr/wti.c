@@ -73,6 +73,7 @@ extern int fnpower(int fni);
 extern int  dim1count();
 extern int setprocstatus(int ft_dimname, int full2d);
 extern int  i_fid(dfilehead *fidhead, ftparInfo *ftpar);
+extern void setCtScaling(ftparInfo *ftpar);
 extern int getfid(int curfid, float *outp, ftparInfo *ftpar, dfilehead *fidhead,
                 int *lastfid);
 extern void ls_ph_fid(char *lsfname, int *lsfval, char *phfname, double *phfval,
@@ -464,6 +465,7 @@ static int wti_showrawfid()
          ftpar.zeroflag = FALSE;
          ftpar.t2dc = FALSE;
          ftpar.dpflag = (fidhead.status & S_32);
+         setCtScaling( &ftpar);
          ddrType = fidhead.status & S_DDR;
          
          if ( getfid(specIndex-1, rawfid, &ftpar, &fidhead, &lastfid) )

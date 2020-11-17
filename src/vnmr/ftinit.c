@@ -1838,13 +1838,14 @@ static int getFidProcInfo(dfilehead *fidhead, ftparInfo *ftpar)
                {
                   if (fread(&tmp,sizeof(double),1,infile) == 1)
                   {
+                     int ret __attribute__((unused));
                      strcpy(ftpar->ftarg.eccFile,filename);
                      ftpar->ftarg.eccPnts = np0 = (int) tmp;
                      ftpar->ftarg.ecc = (double *) allocateWithId(np0* sizeof(double), "ft2d");
                      ptr = ftpar->ftarg.ecc;
                      for (i=0; i<np0; i++)
                      {
-                         fread(&tmp,sizeof(double),1,infile);
+                         ret = fread(&tmp,sizeof(double),1,infile);
                          *ptr++ = tmp;
                      }
                   }
@@ -2478,6 +2479,19 @@ static int set_offsets(int argus[], ftparInfo *ftpar)
    return(COMPLETE);
 }
 
+void setCtScaling(ftparInfo *ftpar)
+{
+   char         filepath[MAXPATHL];
+/***********************************************
+*   provision for turning of CT scaling of FID *
+***********************************************/
+   ftpar->ctScaling = 1;
+   if (!P_getstring(CURRENT, "wtfile", filepath, 1, MAXPATHL-1))
+   {
+     if ( ! strcmp(filepath,"noCtScaling") )
+        ftpar->ctScaling = 0;
+   }
+}
 
 /*---------------------------------------
 |                                       |
@@ -2607,6 +2621,7 @@ int i_fid(dfilehead *fidhead, ftparInfo *ftpar)
          return(ERROR);
       }
    }
+   setCtScaling(ftpar);
  
    return(COMPLETE);
 }
