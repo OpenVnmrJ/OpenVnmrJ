@@ -117,6 +117,7 @@ extern void  system_call(char *s);
 extern void  trLine(char inLine[], char subLine[], char newChar[], char outLine[] );
 extern int   Rmdir(char *dirname, int rmParent);
 extern int   Rmfiles(char *dirname, char *fileRegex, int testOnly);
+extern int   isDirectory(char *filename);
 static int   getcmd(char *cmd);
 static void  Shellret(FILE *stream, int retc, char *retv[]);
 int More(FILE *stream, int screenLength);
@@ -1875,7 +1876,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    int tailStage = -1;
    int tailSkip = 0;
    int headOK = 1;
-   int lineOK;
+   int lineOK = 0;
    int fromStr;
    char *fromStrPtr = NULL;
    char inLine[APPENDLINE];
@@ -1938,6 +1939,11 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    }
    if ( ! fromStr)
    {
+      if ( isDirectory(argv[1]) )
+      {
+         Werrprintf("%s: Input file %s is a directory",argv[0],argv[1]);
+         ABORT;
+      }
       inFile = fopen(argv[1],"r");
       if (inFile == NULL)
       {
@@ -1962,12 +1968,18 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       size_t len;
       int ret;
 
-      lineOK = 1;
       inLine[0] = '\0';
       if (fromStr)
+      {
          ret = ( (fromStrPtr = getLine(inLine, sizeof(inLine), fromStrPtr)) == NULL);
+         // When appending a null string, make sure carriage return is appended
+         lineOK = 1;
+      }
       else
+      {
          ret = (fgets(inLine, sizeof(inLine), inFile) == NULL);
+         lineOK = 0;
+      }
       if (ret)
       {
          if (tailStage)
@@ -1995,6 +2007,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       len = strlen(inLine);          /* get buf length */
       if (len && inLine[len-1] == '\n')      /* check last char is '\n' */
          inLine[--len] = '\0'; 
+      lineOK = 1;
       if (argc > 3)
       {
          int index;
