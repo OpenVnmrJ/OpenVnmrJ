@@ -63,7 +63,8 @@ extern int      Tflag;
 #define TPRINT3(str, arg1, arg2, arg3) 
 #define TPRINT4(str, arg1, arg2, arg3, arg4) 
 #endif 
-#define EMMM	2.8346
+#define EMMM	2.8346    // 72 (points/inch) / 25.4 (mm/inch) => points/mm
+#define SCALEPOINTS 45.0  // empirical conversion 
 extern int interuption;
 extern int active;                      /* Required for Tektronix */
 
@@ -232,6 +233,8 @@ int	curpencolor;
 int	revchar=0;
 int	xcharp1,ycharp1;
 int     hires_ps = 0;
+char    default_font[64] = "Courier-Bold";
+char    default_font2[64] = "Courier";
 
 #ifdef VNMR
 int loadPlotInfo(char *pltype);
@@ -589,6 +592,8 @@ static void adjustWcWc2()
     int k, lines;
     char   *p, s[256];
     FILE  *fin, *fout;
+    int ret __attribute__((unused));
+
 
     if (Lraster < 1 || Lraster > 4)
         return;
@@ -644,11 +649,15 @@ static void adjustWcWc2()
    P_setreal(CURRENT,"wc", newWc, 1);
    P_setreal(CURRENT,"wc2", newWc2, 1);
    if (fout != NULL) {
+       char newpath[MAXPATH];
+
        fprintf(fout, "%g %g %g %g\n", oldWcmax, oldWc2max, oldWc, oldWc2);
        fprintf(fout, "%g %g %g %g\n", newWcmax, newWc2max, newWc, newWc2);
        fclose(fout);
-       sprintf(TmpOsPlotterName,"mv %s/%s%d %s/%s%d",userdir,TMPWCLOG,VnmrJViewId, userdir, WCLOG, VnmrJViewId);
-       system(TmpOsPlotterName);
+       // sprintf(TmpOsPlotterName,"mv %s/%s%d %s/%s%d",userdir,TMPWCLOG,VnmrJViewId, userdir, WCLOG, VnmrJViewId);
+       sprintf(TmpOsPlotterName,"%s/%s%d",userdir,TMPWCLOG,VnmrJViewId);
+       sprintf(newpath,"%s/%s%d", userdir, WCLOG, VnmrJViewId);
+       ret = rename(TmpOsPlotterName, newpath);
    }
 #endif
 }
@@ -903,6 +912,7 @@ static void change_pcl_raster()
 static void ps_to_pcl(char *filename)
 {
      int n;
+     int ret __attribute__((unused));
 
      if (raster < 3 || raster > 4)  // not PS
          return;
@@ -918,7 +928,7 @@ static void ps_to_pcl(char *filename)
          sprintf(TmpOsPlotterName, "vnmr_gs -dSAFER -dBATCH -dNOPAUSE  -sDEVICE=cljet5c -sOutputFile=%s -q %s", TmpAttr, plotpath );
      else
          sprintf(TmpOsPlotterName, "vnmr_gs -dSAFER -dBATCH -dNOPAUSE  -sDEVICE=ljet4 -sOutputFile=%s -q %s", TmpAttr, plotpath );
-     system(TmpOsPlotterName);
+     ret = system(TmpOsPlotterName);
      n = 0;
      while (n < 5) {
          if (access(TmpAttr, F_OK) == 0)
@@ -928,7 +938,7 @@ static void ps_to_pcl(char *filename)
      }
      if (access(TmpAttr, F_OK) != 0) {
          sprintf(TmpOsPlotterName, "convert %s pcl:%s", plotpath, TmpAttr);
-         system(TmpOsPlotterName);
+         ret = system(TmpOsPlotterName);
      }
      unlink(plotpath);
      strcpy(plotpath, TmpAttr);
@@ -1907,7 +1917,7 @@ void ps_default_font_color()
     psFontSize = 0.1;
     psRed = 2.0;
     if (init_tog && plotfile != NULL) {
-        ps_font("Courier-Bold");
+        ps_font(default_font);
         fprintf(plotfile,"0.0 0.0 0.0 C\n");
     }
     //  ps_font("Helvetica-Bold");
@@ -1966,15 +1976,12 @@ static int setPS_RasterPage()
      double tmp;
      double  fw, fh;
      int    xoffset,yoffset;
-     int    xoffset1,yoffset1;
      int    vplot_mode;
      int    newType;
      
      vplot_mode = is_vplot_session(0);
      xoffset = (int)Lxoffset;
      yoffset = (int)Lyoffset;
-     xoffset1 = (int)Lxoffset1;
-     yoffset1 = (int)Lyoffset1;
      newType = 0;
      if (LpaperWidth > 20.0 && LpaperHeight > 20.0)
      {
@@ -2236,6 +2243,12 @@ setplotter()
    if ( (e=P_getreal(GLOBAL,"y0" ,&y0v, 1)) )
    {  P_err(e,"global ","y0:"); return 1; 
    }
+   infoFontSize = 0.60;
+   if ( ! P_getreal(GLOBAL,"pscharsize" ,&tmp, 1) )
+   {  
+      if (tmp > 0)
+         infoFontSize = tmp / SCALEPOINTS;
+   }
    if ( (e=P_getstring(GLOBAL,"plotter" ,pltype, 1,60)) ) 
       pltype[0] = '\0';
    //   strcpy(pltype, noneDevice);
@@ -2388,6 +2401,7 @@ setplotter()
    }
    if (plotfile)
    {
+      char font[64];
       plot = 1;
       in_plot_mode = 1;
       switch (raster)
@@ -2399,6 +2413,28 @@ setplotter()
 #endif 
 	case 3: 
 	case 4: active_gdevsw = &(gdevsw_array[C_PSPLOT]);
+                if ( ! P_getstring(GLOBAL,"psfont" ,font, 1, 64) ) 
+                {
+                   if ( strlen(font) )
+                      strcpy(default_font,font);
+                   else
+                      strcpy(default_font,"Courier-Bold");
+                }
+                else
+                {
+                   strcpy(default_font,"Courier-Bold");
+                }
+                if ( ! P_getstring(GLOBAL,"psfont2" ,font, 1, 64) ) 
+                {
+                   if ( strlen(font) )
+                      strcpy(default_font2,font);
+                   else
+                      strcpy(default_font2,"Courier");
+                }
+                else
+                {
+                   strcpy(default_font2,"Courier");
+                }
                 if ( ! P_getreal(GLOBAL,"pshr" ,&tmp, 1) ) 
                 {
                    hires_ps = (int) tmp;
@@ -2448,6 +2484,7 @@ static void dicomPlot(char *filename)
     int port;
     int dpi;
     int saveToFile;
+    int ret __attribute__((unused));
 
     if (filename != NULL && (strlen(filename) > 0))
          saveToFile = 1;
@@ -2472,7 +2509,7 @@ static void dicomPlot(char *filename)
         dpi = 36;
     sprintf(data, "%s/bin/createdicom -infile %s -tag %s/user_templates/plot/dicom.default -dpi %d -outfile %s.dcm",
            systemdir, plotpath, systemdir, dpi, plotpath );
-    system(data);
+    ret = system(data);
     sprintf(data, "%s.dcm", plotpath);
     if (! access(data, R_OK))
     {
@@ -2490,7 +2527,7 @@ static void dicomPlot(char *filename)
               }
               sprintf(data, "%s/bin/dicomlpr -file %s.dcm -port %d -host %s",
                      systemdir, plotpath, port, PlotterHost);
-              system(data);
+              ret = system(data);
          }
     }
     unlink(plotpath);
@@ -2503,6 +2540,7 @@ static void dicomPlot(char *filename)
 static void
 dupHeaderFile(char *src) {
     int  fd;
+    int ret __attribute__((unused));
 
     if (headerAssigned > 1)
         unlink(headerPath);
@@ -2518,8 +2556,9 @@ dupHeaderFile(char *src) {
         return;
     }
     close(fd);
-    sprintf(TmpOsPlotterName,"cp %s %s", src, headerPath);
-    system(TmpOsPlotterName);
+    // sprintf(TmpOsPlotterName,"cp %s %s", src, headerPath);
+    // system(TmpOsPlotterName);
+    ret = copyFile(src, headerPath, 0);
     headerAssigned = 3;
 }
 
@@ -2772,7 +2811,7 @@ void systemPlot(char *filename, int retc, char *retv[])
 void plotpage(int n, char *filename, int retc, char *retv[])
 {
     int x, y, len;
-    int hasImages;
+    int hasImages __attribute__((unused));
     char *p11Id;
 
     if (!plotfile)
@@ -4199,7 +4238,7 @@ void
 ps_info_font() {
    if (!plotfile || !init_tog)
        return;
-    ps_font("Helvetica-Bold");
+    ps_font(default_font);
     ps_charsize(infoFontSize);
 }
 
@@ -4207,7 +4246,7 @@ void
 ps_info_light_font() {
    if (!plotfile || !init_tog)
        return;
-    ps_font("Helvetica");
+    ps_font(default_font2);
     ps_charsize(infoFontSize);
 }
 
