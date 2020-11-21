@@ -16,6 +16,7 @@ void AspAnno::init() {
     selected = 0;
     selectedHandle= 0;
     mmbind = false; // true if ROI binds to mm position 
+    mmbindY = false; // true if ROI binds to vertical mm position 
 
     // ROI position
     created_type=ANNO_NONE;
@@ -166,7 +167,18 @@ AspAnno::AspAnno(char words[MAXWORDNUM][MAXSTR], int nw) {
    if(nw>count) { labelLoc.x=atof(words[count]); count++; }
    if(nw>count) { labelLoc.y=atof(words[count]); count++; }
    if(nw>count) { disFlag=atoi(words[count]); count++; }
-   if(nw>count) { mmbind=atoi(words[count]); count++; }
+   if(nw>count) { int val=atoi(words[count]);
+                  if (val == 1)
+                  {
+                      mmbind = mmbindY = true;
+                  }
+                  else
+                  {
+                      mmbind = false;
+                      mmbindY = (val == 2) ? true : false;
+                  }
+                  count++;
+                }
    if(nw>count) { rotate=atoi(words[count]); count++; }
    // customer line color, thickness, label font
    if(nw>count) { lineThickness=atoi(words[count]); count++; }
@@ -211,6 +223,8 @@ AspAnno::~AspAnno() {
 string AspAnno::toString() {
    string coordStr = "";
    char str[MAXSTR]; 
+   int mmbindVal;
+
    if(created_type == ANNO_BAND || created_type == ANNO_INTEG) {
 	   for(int i=0;i<npts;i++) {
 		sprintf(str,"%.4g ",sCoord[i].x);
@@ -228,34 +242,35 @@ string AspAnno::toString() {
 		coordStr += string(str);
 	   }
    }
+   mmbindVal = (mmbind && mmbindY) ? 1 : (mmbindY) ? 2 : 0;
    if(created_type == ANNO_POINT)
      sprintf(str,"%d %s %s |%s| %.3g %.3g %d %d %d %d %s %d %s %s %s %.2f %f %f",
         index+1,getName(created_type).c_str(),coordStr.c_str(),label.c_str(), 
-	labelLoc.x, labelLoc.y,disFlag,mmbind,rotate,
+	labelLoc.x, labelLoc.y,disFlag,mmbindVal,rotate,
         lineThickness, lineColor.c_str(),fontSize,fontColor.c_str(),
 	fontName.c_str(),fontStyle.c_str(),transparency,amp,vol);
    else if(created_type == ANNO_BOX)
      sprintf(str,"%d %s %s |%s| %.3g %.3g %d %d %d %d %s %d %s %s %s %.2f %d %d",
         index+1,getName(created_type).c_str(),coordStr.c_str(),label.c_str(), 
-	labelLoc.x, labelLoc.y,disFlag,mmbind,rotate,
+	labelLoc.x, labelLoc.y,disFlag,mmbindVal,rotate,
         lineThickness, lineColor.c_str(),fontSize,fontColor.c_str(),
 	fontName.c_str(),fontStyle.c_str(),transparency,(int)roundBox,(int)fillRoi);
    else if ((created_type == ANNO_POLYGON) || (created_type == ANNO_OVAL))
      sprintf(str,"%d %s %s |%s| %.3g %.3g %d %d %d %d %s %d %s %s %s %.2f %d",
         index+1,getName(created_type).c_str(),coordStr.c_str(),label.c_str(), 
-	labelLoc.x, labelLoc.y,disFlag,mmbind,rotate,
+	labelLoc.x, labelLoc.y,disFlag,mmbindVal,rotate,
         lineThickness, lineColor.c_str(),fontSize,fontColor.c_str(),
 	fontName.c_str(),fontStyle.c_str(),transparency,(int)fillRoi);
    else if(created_type == ANNO_ARROW)
      sprintf(str,"%d %s %s |%s| %.3g %.3g %d %d %d %d %s %d %s %s %s %.2f %d",
         index+1,getName(created_type).c_str(),coordStr.c_str(),label.c_str(), 
-	labelLoc.x, labelLoc.y,disFlag,mmbind,rotate,
+	labelLoc.x, labelLoc.y,disFlag,mmbindVal,rotate,
         lineThickness, lineColor.c_str(),fontSize,fontColor.c_str(),
 	fontName.c_str(),fontStyle.c_str(),transparency,arrows);
    else 
      sprintf(str,"%d %s %s |%s| %.3g %.3g %d %d %d %d %s %d %s %s %s %.2f",
         index+1,getName(created_type).c_str(),coordStr.c_str(),label.c_str(), 
-	labelLoc.x, labelLoc.y,disFlag,mmbind,rotate,
+	labelLoc.x, labelLoc.y,disFlag,mmbindVal,rotate,
         lineThickness, lineColor.c_str(),fontSize,fontColor.c_str(),
 	fontName.c_str(),fontStyle.c_str(),transparency);
    return string(str); 
@@ -378,7 +393,7 @@ void AspAnno::modify(spAspCell_t cell, int x, int y, int prevX, int prevY) {
           pCoord[i].x=x;
           pCoord[i].y=y;
           sCoord[i].x=cell->pix2val(HORIZ,x,mmbind);
-          sCoord[i].y=cell->pix2val(VERT,y,mmbind);
+          sCoord[i].y=cell->pix2val(VERT,y,mmbindY);
 	}
 	return;
    }
@@ -398,7 +413,7 @@ void AspAnno::modify(spAspCell_t cell, int x, int y, int prevX, int prevY) {
             pCoord[i].x += cx;
             pCoord[i].y += cy;
             sCoord[i].x=cell->pix2val(HORIZ,pCoord[i].x,mmbind);
-            sCoord[i].y=cell->pix2val(VERT,pCoord[i].y,mmbind);
+            sCoord[i].y=cell->pix2val(VERT,pCoord[i].y,mmbindY);
         }
    } else if(selected == LABEL_SELECTED) {
      labelLoc.x += (x-prevX);
@@ -564,18 +579,21 @@ void AspAnno::setProperty(char *name, char *value, spAspCell_t cell) {
    else if(strcasecmp(name,"arrows") == 0) arrows = atoi(value);
    else if(strcasecmp(name,"amp") == 0) amp = atof(value);
    else if(strcasecmp(name,"vol") == 0) vol = atof(value);
-   else if(cell != nullAspCell && strcasecmp(name,"mm") == 0 && atoi(value) > 0) {
+   else if(cell != nullAspCell && strcasecmp(name,"mm") == 0) {
+       int mmbindVal = atoi(value);
+       if (mmbindVal == 1)
+       {
+           mmbind = mmbindY = true;
+       }
+       else
+       {
+           mmbind = false;
+           mmbindY = (mmbindVal == 2) ? true : false;
+       }
       for(int i=0; i<npts; i++) {
-	sCoord[i].x = cell->pix2val(HORIZ,pCoord[i].x,true);
-	sCoord[i].y = cell->pix2val(VERT,pCoord[i].y,true);
+	     sCoord[i].x = cell->pix2val(HORIZ,pCoord[i].x,mmbind);
+	     sCoord[i].y = cell->pix2val(VERT,pCoord[i].y,mmbindY);
       }
-	mmbind = true;
-   } else if(cell != nullAspCell && strcasecmp(name,"mm") == 0) {
-      for(int i=0; i<npts; i++) {
-	sCoord[i].x = cell->pix2val(HORIZ,pCoord[i].x,false);
-	sCoord[i].y = cell->pix2val(VERT,pCoord[i].y,false);
-      }
-	mmbind = false;
    }
    else if(strcasecmp(name,"showRoi") == 0 && atoi(value) > 0) disFlag |= ANN_SHOW_ROI;
    else if(strcasecmp(name,"showRoi") == 0) disFlag &= ~ANN_SHOW_ROI;
@@ -597,7 +615,7 @@ void AspAnno::setProperty(char *name, char *value, spAspCell_t cell) {
 	int i = atoi(++name) - 1;
 	if(i<npts) {
 	   sCoord[i].y=atof(value);
-           pCoord[i].y=cell->val2pix(VERT,sCoord[i].y,mmbind);
+           pCoord[i].y=cell->val2pix(VERT,sCoord[i].y,mmbindY);
         }
    }
 }
@@ -664,7 +682,8 @@ string AspAnno::getProperty(char *name) {
 	else sprintf(str,"0");
 	return string(str);
    } else if(strcasecmp(name,"mm") == 0) {
-	if(mmbind) sprintf(str,"1");	
+	if(mmbind && mmbindY) sprintf(str,"1");	
+	else if (mmbindY) sprintf(str,"2");
 	else sprintf(str,"0");
 	return string(str);
    } else if(strcasecmp(name,"fill") == 0) {
@@ -747,7 +766,7 @@ void AspAnno::addPoint(spAspCell_t cell, int x, int y) {
 	pCoord[n].x=x;
 	pCoord[n].y=y;
 	sCoord[n].x=cell->pix2val(HORIZ,x,mmbind);
-	sCoord[n].y=cell->pix2val(VERT,y,mmbind);;
+	sCoord[n].y=cell->pix2val(VERT,y,mmbindY);;
 	selected=HANDLE_SELECTED;
 	selectedHandle=npts;
   }
@@ -789,7 +808,7 @@ void AspAnno::insertPoint(spAspCell_t cell, int x, int y) {
 		pCoord[k].x=x;
 		pCoord[k].y=y;
 		sCoord[k].x=cell->pix2val(HORIZ,x,mmbind);
-		sCoord[k].y=cell->pix2val(VERT,y,mmbind);;
+		sCoord[k].y=cell->pix2val(VERT,y,mmbindY);;
 		k++;
 	   }
 	   sCoord[k].x=stmp[i].x;
@@ -858,7 +877,7 @@ void AspAnno::setY(spAspCell_t cell, double y) {
    if(npts<1) return;
    if(npts<2) {
         sCoord[0].y=y;
-        pCoord[0].y=cell->val2pix(VERT,y,mmbind);
+        pCoord[0].y=cell->val2pix(VERT,y,mmbindY);
 	return;
    }
 
@@ -866,7 +885,7 @@ void AspAnno::setY(spAspCell_t cell, double y) {
    cy = y-cy;
    for(int i=0; i<npts; i++) {
       sCoord[i].y += cy;
-      pCoord[i].y=cell->val2pix(VERT,sCoord[i].y,mmbind);
+      pCoord[i].y=cell->val2pix(VERT,sCoord[i].y,mmbindY);
    }
 }
 

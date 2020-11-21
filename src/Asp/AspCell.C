@@ -289,10 +289,9 @@ void AspCell::drawPolyline(float *data, int npts, int step, double vx, double vy
      double v1;
      ptr1->x = ptr2->x = vx; 
      ptr1->y = ptr2->y = v;
-     int i, ind;
+     int i;
      int cnt=1;
      for(i=0; i<np; i++) {
-	ind = i*step;
 	//v = yp - (int) (vScale * (*data));
 	v = yp - (vScale * (*data));
 	data += step;

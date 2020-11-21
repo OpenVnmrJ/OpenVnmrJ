@@ -63,6 +63,7 @@ public:
     string labelFontName; // default label font is "GraphText"
 
     bool mmbind; // bind to mm position 
+    bool mmbindY; // bind to vertical mm position 
 
     Dpoint_t labelLoc; // relative position of label in ppm if dind=true
     int labelX, labelY, labelW,labelH; 
