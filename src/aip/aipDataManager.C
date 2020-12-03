@@ -65,9 +65,11 @@ using namespace aip;
 
 std::set<string> DataManager::selectedSet;
 
+#ifdef TEST
 /***********  TEST  **************/
 extern bool memTest();
 /***********  END TEST  **************/
+#endif
 
 
 DataManager *DataManager::dataManager = NULL;
@@ -95,8 +97,8 @@ aipInsertData(dataStruct_t *data)
     DataManager *dm = DataManager::get();
     dm->insert(dataInfo);
     if (isDebugBit(DEBUGBIT_7)) {
-        fprintf(stderr,"Inserted: key=%s, data_addr=0x%x, data[32640]=%g, %s\n",
-                key.c_str(), data->data, data->data[32640], data->type);
+        fprintf(stderr,"Inserted: key=%s, data[32640]=%g, %s\n",
+                key.c_str(), data->data[32640], data->type);
     }
 }
 
@@ -123,7 +125,7 @@ void
 DataManager::numberData()
 {
     DataMap::iterator pd;
-    int i, n;
+    int i;
     for (i = 1, pd = dataMap->begin(); pd != dataMap->end(); ++pd, ++i) {
         pd->second->setDataNumber(i);
     }
@@ -142,6 +144,7 @@ DataManager::getDataByNumber(int imgNumber)
     return (spDataInfo_t)NULL;
 }
 
+#ifdef TEST
 /***********  TEST  **************/
 bool
 DataManager::dataCheck()
@@ -161,6 +164,7 @@ DataManager::dataCheck()
     return true;
 }
 /***********  END TEST  **************/
+#endif
  
 double
 DataManager::getAspectRatio()
@@ -332,7 +336,7 @@ DataManager::deleteDataInDir(const char *path)
     struct stat fstat;
 
     if(stat(path, &fstat) != 0) {
-	sprintf(str, "%s: \"%.1024s\"", strerror(errno), path);
+	sprintf(str, "%s: \"%.512s\"", strerror(errno), path);
 	ib_errmsg(str);
 	return;
     }
@@ -359,7 +363,7 @@ DataManager::deleteDataInDir(const char *path)
     // Open the directory
     dirp = opendir(path);
     if(dirp == NULL) {
-	sprintf(str, "%s: \"%.1024s\"", strerror(errno), path);
+	sprintf(str, "%s: \"%.512s\"", strerror(errno), path);
 	ib_errmsg(str);
 	return;
     }
@@ -436,11 +440,9 @@ string DataManager::javaFile(const char *path,
 		int *nx, int *ny, int *ns,
 		float *sx, float *sy, float *sz, 
 		float **jdata) {
-	char *str;
 	float *tdata=NULL;
 	char fname[1024];
 	char msg[1024];
-	bool ok;
 	if (interrupt()) {
 		return "";
 	}
@@ -521,7 +523,6 @@ string DataManager::loadFile(const char *name, bool mcopy) {
 	char path[1024];
 	char auxpath[1024];
 	char msg[1024];
-	bool ok;
 	int rank=0;
 	if (interrupt()) {
 		return "";
@@ -647,8 +648,6 @@ string DataManager::loadFile(const char *name, bool mcopy) {
  */
 string DataManager::loadFile(const char *inpath, DDLSymbolTable *st,
 		DDLSymbolTable *st2, char *orientStr) {
-	double mynum;
-	char *mypar;
 	string key = "";
 
 	if (inpath == NULL) {
@@ -840,7 +839,9 @@ DataManager::aipSaveHeaders(int argc, char *argv[], int retc, char *retv[])
 int
 DataManager::saveAllHeaders()
 {
-    GframeManager *gfm = GframeManager::get();
+    GframeManager *gfm __attribute__((unused));
+
+    gfm = GframeManager::get();
 
     set<string> keys;
     keys = getKeys(DATA_SELECTED_FRAMES);
@@ -906,7 +907,7 @@ DataManager::makeImgList(const char *path, std::set<string>& list)
     const char *found;
 
     if(stat(path, &fstat) != 0) {
-	sprintf(str, "%s: \"%.1024s\"", strerror(errno), path);
+	sprintf(str, "%s: \"%.512s\"", strerror(errno), path);
 	ib_errmsg(str);
 	return;
     }
@@ -920,7 +921,7 @@ DataManager::makeImgList(const char *path, std::set<string>& list)
     // Open the directory
     dirp = opendir(path);
     if(dirp == NULL) {
-	sprintf(str, "%s: \"%.1024s\"", strerror(errno), path);
+	sprintf(str, "%s: \"%.512s\"", strerror(errno), path);
 	ib_errmsg(str);
 	return;
     }
@@ -1731,7 +1732,7 @@ DataManager::makeShortNames()
                && (idx = pname->find('/', idx)) != string::npos)
         {
             // Strip trailing ".dat" from any component, if present
-            if (idx > junklen && pname->substr(idx - junklen, junklen) == junk) {
+            if ((int) idx > junklen && pname->substr(idx - junklen, junklen) == junk) {
                 pname->erase(idx - junklen, junklen);
                 idx -= junklen;
             }
@@ -1741,7 +1742,7 @@ DataManager::makeShortNames()
             int j;
             for (i = idx - 1; i >= 0 && isdigit(pname->at(i)); --i);
             ++i;
-            for (j = i; j < idx - 1 && pname->at(j) == '0'; ++j);
+            for (j = i; j < (int) (idx - 1) && pname->at(j) == '0'; ++j);
             if (j > i) {
                 pname->erase(i, j - i);
                 idx -= j - i;
@@ -1813,7 +1814,7 @@ DataManager::aipGetHeaderParam(int argc, char *argv[], int retc, char *retv[])
     
     string type = "";
     string value = "";
-    int p = str.find(" ", 0);
+    unsigned int p = str.find(" ", 0);
     if(p != string::npos) {
       type = str.substr(0,p);
       value = str.substr(p+1,str.length()-1); 
@@ -1829,7 +1830,6 @@ DataManager::getHeaderParam(string key, string name, int idx)
     char  *sval;
     int  ival;
     double  dval;
-    int  i;
     char str[MAXSTR];
 
     if(getHeaderStr(key, name, idx, &sval)) {
@@ -2169,6 +2169,7 @@ DataManager::aipLoadImgList(int argc, char *argv[], int retc, char *retv[])
 
     fclose(fp);
     unlink(argv[1]);
+	return proc_complete;
 }
 
 int
@@ -2215,8 +2216,7 @@ DataManager::aip2Dto3Dwork(char *outfile) {
     string filestring, tmpname;
     char error[200], cmd[200];
     const char *parent_c;
-    int size, fast, med, rank;
-    int i,j;
+    int fast, med, rank;
     string::size_type idx;
     string strpath, oldParent, newParent;
     char path[200], name[100];
@@ -2364,13 +2364,14 @@ DataManager::aip2Dto3Dwork(char *outfile) {
             char buf[512];
             int n, fin, fout;
      	    char procparNew[200];
+            int ret __attribute__((unused));
             sprintf(procparNew, "%s/procpar", newParent.c_str());
          	
             // Just manually create and copy the contents
             fin = open(procparPath, 0);
             fout = creat(procparNew, 0644);
      	    while((n=read(fin, buf, 512)) > 0) {
-     	    	write(fout, buf, n);
+     	    	ret = write(fout, buf, n);
      	    }
             close(fin);
             close(fout);
@@ -2401,7 +2402,7 @@ DataManager::aip2Dto3Dwork(char *outfile) {
             med = info->getMedium();
 			rank = info->getRank();
 			// Get size of each slice
-			size = fast * med;
+			// size = fast * med;
 			if (rank == 2)
 				fwrite(ds->data, fast * med, sizeof(float), file);
 
@@ -2451,7 +2452,7 @@ void DataManager::create3Dheader(const char *filepath, const char *filename) {
     spDataInfo_t info;
     DDLSymbolTable *st;
     dataStruct_t *ds;
-    const char *fullpath, *firstpath;
+    const char *firstpath;
     string strpath, strfirst;
     char error[500];
     int i;
@@ -2461,10 +2462,9 @@ void DataManager::create3Dheader(const char *filepath, const char *filename) {
     int rank, slices;
     string::size_type idx;
     double location_first, location_last, span, loc3d, orig, roi3d;
-    double dtempa, dtempb;
     float frot[9];
     double rot[9];
-    float aphi, apsi, atheta, stheta;
+    float aphi, apsi, atheta;
 	float cospsi, cosphi, costheta;
 	float sinpsi, sinphi, sintheta;
 	double or0, or1, or2, or3, or4, or5, or6, or7, or8;
@@ -2516,7 +2516,7 @@ void DataManager::create3Dheader(const char *filepath, const char *filename) {
     st = (DDLSymbolTable *)info->st->CloneList(false);
 
     ds = info->dataStruct;
-    fullpath = info->getFilepath();
+    // fullpath = info->getFilepath();
     fast = info->getFast();
     med  = info->getMedium();
     rank = info->getRank();

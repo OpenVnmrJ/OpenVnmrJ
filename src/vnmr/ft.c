@@ -110,6 +110,7 @@ extern void currentDate(char* cstr, int len );
 extern void rotate_fid(float *fidptr, double ph0, double ph1, int np, int datatype);
 extern void driftcorrect_fid(float *outp, int np, int lsfid, int datamult);
 extern int saveProcpar(char *path);
+extern int aspFrame(char *keyword, int frameID, int x, int y, int w, int h);
 
 
 typedef struct wtparams wtPar;
@@ -2729,6 +2730,8 @@ int ft(int argc, char *argv[], int retc, char *retv[])
      }
   }
 
+  if (!Bnmr)
+     aspFrame("clear",0,0,0,0,0); // clear asp display
   if (!Bnmr && do_ds)
   {
      releasevarlist();

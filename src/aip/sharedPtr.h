@@ -6,13 +6,22 @@
  *
  * For more information, see the LICENSE file.
  */
+
+#ifndef SHAREDPTR_H
+#define SHAREDPTR_H
+
+#ifdef boost
+
+#include <memory>
+
+#else
+
 /*-*- Mode: C++ -*-*/
 /*
  * This file abstracted from the Boost smart_ptr.hpp header file
  * described in the comments below.
  * --Chris Price 9 May 2001
  */
-
 /*
  * BEWARE! passing a shared pointer as an argument to fprintf(), or the like.
  *     This results in the ref count getting bumped up and never decremented.
@@ -67,8 +76,6 @@
 //  27 Apr 99  leak when new throws fixes (Dave Abrahams)
 //  21 Oct 98  initial Version (Greg Colvin/Beman Dawes)
 
-#ifndef SHAREDPTR_H
-#define SHAREDPTR_H
 
 #include <stdio.h>  // for stsderr definition  11/04/09  GMB
 
@@ -366,4 +373,5 @@ template<typename T>
 
 #endif  // ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
 
+#endif  // boost
 #endif  // SHAREDPTR_H

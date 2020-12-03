@@ -444,7 +444,7 @@ void getStack(iplan_stack* stack, int planType);
 int calcBoxIntersection(iplan_view *view, float3 *box, float2 *points);
 planParams *getCurrPlanParams(int planType);
 
-extern void  clearVar(char *name);
+extern void  clearVar(const char *name);
 extern int appdirFind(const char *filename, const char *lib, char *fullpath, const char *suffix,
                int perm);
 

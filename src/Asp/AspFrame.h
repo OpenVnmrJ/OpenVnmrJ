@@ -85,8 +85,10 @@ public:
     spAspTrace_t getDefaultTrace();
     int getCursorMode();
 
+#ifdef TEST
     void registerAspDisplayListener(DFUNC_t func);
     void unregisterAspDisplayListener(DFUNC_t func);
+#endif
     void callAspDisplayListeners();
 
     void updateDataMap();
