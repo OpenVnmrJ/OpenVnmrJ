@@ -556,7 +556,7 @@ static int compareVar(char *n, varInfo *v, symbol **root)
 |	This function clears all the values of a parameter without deleting it.
 |
 +-----------------------------------------------------------------------------*/
-void clearVar(char *name)
+void clearVar(const char *name)
 {
     varInfo *vinfo;
 

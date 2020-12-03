@@ -1115,7 +1115,7 @@ static int mk_dir_args(mode_t *mode, int *psub, int *ict, int argc, char *argv[]
   RETURN;
 }
 
-int do_mkdir(char *dir, int psub, mode_t mode)
+int do_mkdir(const char *dir, int psub, mode_t mode)
 {
    int	ival=0;
    if (psub == 1)

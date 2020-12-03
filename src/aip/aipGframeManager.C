@@ -48,6 +48,7 @@ bool GframeManager::overlaid = false;
 //spGframe_t    GframeManager::blownUpFrame; // Initialized by toggleFullScreen
 
 
+#ifdef TEST
 /***********  TEST  **************/
 extern bool memTest();
 bool memTest() {
@@ -65,6 +66,7 @@ bool memTest() {
     return rtn;
 }
 /***********  END TEST  **************/
+#endif
 
 /* PRIVATE CONSTRUCTOR */
 GframeManager::GframeManager() {
@@ -2289,7 +2291,7 @@ int GframeManager::getFrameToStart(int x, int y) {
 // delete existing colormaps in given directory
 void GframeManager::deleteCmaps(char *path) {
    char *ptr;
-   char file[MAXSTR];
+   char file[MAXSTR+16];
    struct dirent **namelist;
    struct stat fstat;
 

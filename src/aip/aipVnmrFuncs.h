@@ -71,7 +71,7 @@ extern "C" {
     int P_setprot(int tree, const char *name, int value);
     int P_setactive(int tree, const char *name, int activeFlag);
     int P_getactive(int tree, const char *name);
-    void clearVar(char *name);
+    void clearVar(const char *name);
     char *realString(double x);
     char *newString(const char *str);
     int getWin_draw();

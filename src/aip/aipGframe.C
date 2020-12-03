@@ -877,13 +877,12 @@ void Gframe::drawFrameLabel() {
     int ascent;
     int descent;
     int cwd;
-    int cht;
 
     if (transparency_level > 80)
        return;
     // Get width and height of a character (cwd, cht)
     GraphicsWin::getTextExtents("0", 14, &ascent, &descent, &cwd);
-    cht = ascent + descent;
+    // cht = ascent + descent;
     int numLeft = maxX();
     int nMax = DataManager::get()->getNumberOfImages();
     int n;
@@ -1152,7 +1151,7 @@ void Gframe::draw() {
 }
 
 bool Gframe::updateScaleFactors() {
-    int i, j, k;
+    int i, j;
 
     ViewInfoList::iterator pView = viewList->begin();
     if (pView == viewList->end()) {
@@ -1644,7 +1643,6 @@ void Gframe::quickZoom(int x, int y, double factor) {
     // convert data center to magnet frame for aipZoomBind to use
     // do this before setZoom because it will change pixToMagnet.
     double mx,my,mz;
-    double px,py,pz;
     view->pixToMagnet((double)x,(double)y,0.0,mx,my,mz);
         
     setZoom(xdata, ydata, newPixPerCm);
@@ -1843,7 +1841,7 @@ void Gframe::setPan(int x, int y, bool moving) {
     // convert data center to magnet frame for aipZoomBind to use
     // do this before setZoom bacause it will change dataToPix and piToMagnet.
     double mx,my,mz;
-    double px,py,pz;
+    double px,py;
     view->dataToPix(dataCenterX, dataCenterY,px,py);
     view->pixToMagnet(px,py,0.0,mx,my,mz);
 
@@ -1927,7 +1925,7 @@ void Gframe::segmentSelectedRois(bool minFlag, double minData, bool maxFlag,
             //check Roi size. return if bigger than data size.
             spCoordVector_t dat = r->getpntData();
             int rsize;
-            for (int i=0; i<dat->coords.size(); i++) {
+            for (int i=0; i<(int) dat->coords.size(); i++) {
                 rsize = (int)(dat->coords[i].x*dat->coords[i].y);
                 if (rsize > size)
                     return;
@@ -2422,7 +2420,7 @@ string Gframe::getViewName(int ind) {
    return string(str);
 }
 
-void Gframe::setColormap(char *name) {
+void Gframe::setColormap(const char *name) {
    spViewInfo_t view = getViewByIndex(layerID);
    if(view == nullView) return;
 
@@ -2458,7 +2456,7 @@ void Gframe::removeOverlayImg() {
 }
 
 // path can be the key
-void Gframe::loadOverlayImg(char *path, char *cmapName, int colormapId) {
+void Gframe::loadOverlayImg(const char *path, const char *cmapName, int colormapId) {
    string key = string(path);
    if(strstr(path, " ") == NULL) { 
      key += " 0";
@@ -2491,14 +2489,14 @@ void Gframe::loadOverlayImg(char *path, char *cmapName, int colormapId) {
    grabMouse();  // to update graphics toolbar
 }
 
-void Gframe::loadOverlayImg(char *path, char *cmapName) {
+void Gframe::loadOverlayImg(const char *path, const char *cmapName) {
    loadOverlayImg(path, cmapName, 0);
 }
 
 // fill layer list
 void Gframe::sendImageInfo() {
 
-    set_aip_image_info(0,0,0,0,"",0); // always clear current info display
+    set_aip_image_info(0,0,0,0,(char *)"",0); // always clear current info display
 
     if(!viewList->empty()) {
 
@@ -2588,7 +2586,7 @@ void Gframe::setPositionInfo(int x, int y) {
         i++;
         name = di->getShortName();
         int p = name.find_last_of(" ");
-        if(p != string::npos) {
+        if(p != (int) string::npos) {
            name=name.substr(p);
         }
         sprintf(info,"%s %d %d %.0f", name.c_str(),dx,dy,mag);

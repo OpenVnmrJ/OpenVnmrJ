@@ -27,6 +27,7 @@ int P_read(int, char*);
 void set_top_frame_on_top(int onTop);
 int currentindex();
 int getAxisOnly();
+int do_mkdir(const char *dir, int psub, mode_t mode);
 }
 
 spAspFrame_t nullAspFrame = spAspFrame_t(NULL);
@@ -531,6 +532,7 @@ void AspFrame::showRois(bool b) {
     displayTop();
 }
 
+#ifdef TEST
 void AspFrame::registerAspDisplayListener(DFUNC_t func) 
 {
     AspDisplayListenerList::iterator begin = displayListenerList.begin();
@@ -547,6 +549,7 @@ void AspFrame::unregisterAspDisplayListener(DFUNC_t func)
         displayListenerList.remove(func);
     }
 }
+#endif
 
 void AspFrame::callAspDisplayListeners() 
 {
@@ -732,9 +735,11 @@ int AspFrame::saveSession(char *path, bool full) {
       // make sure dir exists
       struct stat dstat;
       if (stat(dir.c_str(), &dstat) != 0) {
-         char str[MAXSTR2];
-         (void)sprintf(str, "mkdir -p %s \n", dir.c_str());
-         (void)system(str);
+         if (do_mkdir(dir.c_str(), 1, 0777))
+         {
+	        Winfoprintf("Failed to make directory %s.",dir.c_str());
+	        return 0;
+         }
       }
 
    } else if(fstat.st_mode & S_IFDIR) { // is a directory

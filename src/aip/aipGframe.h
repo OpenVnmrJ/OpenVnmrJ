@@ -152,11 +152,11 @@ public:
     bool hasSpec();
     void resetSpecFrame();
     void zoomSpecFrame(int x,int y,double factor);
-    void setColormap(char *name);
+    void setColormap(const char *name);
     void setTransparency(int value);
     void removeOverlayImg();
-    void loadOverlayImg(char *path, char *cmapName);
-    void loadOverlayImg(char *path, char *cmapName, int colormapId);
+    void loadOverlayImg(const char *path, const char *cmapName);
+    void loadOverlayImg(const char *path, const char *cmapName, int colormapId);
     void selectViewLayer(int imgId, int order, int mapId);
     bool parallelPlane(spViewInfo_t view, spViewInfo_t baseView);
     bool coPlane(spViewInfo_t view, spViewInfo_t baseView);
