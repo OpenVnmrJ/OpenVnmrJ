@@ -17,6 +17,9 @@ There are releases for:
 - Ubuntu: Versions 14, 16, 18, and 20.
 - MacOS: Versions 10.10 (Yosemite) to 10.15 (Catalina).
 
+<a href="https://doi.org/10.5281/zenodo.4304999"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.4304999.svg" alt="DOI"></a>
+
+
 ## Read more
 
 For more information on the OpenVnmrJ project, visit [openvnmrj.org](http://openvnmrj.org).
