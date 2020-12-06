@@ -1,4 +1,7 @@
 ## Updated January 21, 2020.
+This software may be cited as:
+
+Dan Iverson. (2020, January 23). OpenVnmrJ (Version 2.1). Zenodo. http://doi.org/10.5281/zenodo.4304999
 
 ## Release Notes
 See the [Notes.txt](../../blob/master/Notes.txt) file for the release notes.
