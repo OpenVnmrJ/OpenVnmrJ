@@ -227,7 +227,7 @@ static int reset_exp0(int oldexpnum )
   char estring[MAXPATH] = "0";
 #endif 
   char exppath[MAXPATH];
-  int lval;
+  int lval __attribute__((unused));
 
   if (oldexpnum == -1)
   {
@@ -286,7 +286,7 @@ int jexp(int argc, char *argv[], int retc, char *retv[])
   char curexpnumber[MAXPATH];
   char path[MAXPATH];
   char exppath[MAXPATH];
-  char curmode;
+  // char curmode;
   extern void finddatainfo();
 #ifdef VNMRJ
   extern void jcurwin_setexp();
@@ -404,10 +404,10 @@ int jexp(int argc, char *argv[], int retc, char *retv[])
 /* Try to lock the experiment.  Abort if not successful, leaving the
    process in the current experiment. */
 
-  if (vnMode[ 0 ] == 'a' && vnMode[ 1 ] == 'u')
-    curmode = vnMode[ 1 ];
-  else
-    curmode = vnMode[ 0 ];
+  // if (vnMode[ 0 ] == 'a' && vnMode[ 1 ] == 'u')
+  //   curmode = vnMode[ 1 ];
+  // else
+  //   curmode = vnMode[ 0 ];
   if ( (lval = lockExperiment( atoi(estring), mode_of_vnmr )) )
   {
     Werrprintf( "experiment %s locked", estring );
@@ -1545,7 +1545,6 @@ int svf(int argc, char *argv[], int retc, char *retv[])
   int  diskIsFull;
   int  ival;
   char *name;
-  int svf_update;
   int svf_nofid;		/* saving FID, but do not copy FID.  See below */
   int nolog, no_arch, i;
   int doDB;
@@ -1653,7 +1652,6 @@ int svf(int argc, char *argv[], int retc, char *retv[])
     make_vmstree(filepath,filepath,MAXPATHL-20);	/*  Make into VMS directory  */
 #endif 
   disp_status("SVF/SVP ");
-  svf_update = 0;
   svf_nofid = 0;
 
   if (mkdir(filepath,permission))
@@ -1685,7 +1683,6 @@ int svf(int argc, char *argv[], int retc, char *retv[])
 	 */
 
 	    if (fid_is_link( filepath ) == 0) {
-                svf_update = 1;
                 Rmdir(filepath,1);
                 if (mkdir(filepath,permission)) {
                        Werrprintf("cannot overwrite existing file: %s",filepath);
@@ -3706,19 +3703,40 @@ int exists(int argc, char *argv[], int retc, char *retv[])
       if (err==-1) err=errno;
       if (err==0)
         { if (retc==0)
+          {
             Winfoprintf("file %s does exist",name);
+          }
           else
+          {
             retv[0] = realString((double)1);
+            if (retc > 1)
+            {
+	           if (isSymLink( name ) == 0)
+                  retv[1] = realString((double)2);
+               else if (isDirectory(name))
+                  retv[1] = realString((double)4);
+               else if (isHardLink(name) == 0)
+                  retv[1] = realString((double)3);
+               else
+                  retv[1] = realString((double)1);
+            }
+          }
         }
       else
         { if (retc==0)
+          {
             if (perm == F_OK)
                Winfoprintf("file %s does not exist",name);
             else
                Winfoprintf("file %s does not exist or does not have permission %s",
                             name,argv[3]);
+          }
           else
+          {
             retv[0] = realString((double)0);
+            if (retc > 1)
+               retv[1] = realString((double)0);
+          }
         }
     }
   else if (strcmp(argv[2],"psglib")==0)
@@ -3775,7 +3793,23 @@ int exists(int argc, char *argv[], int retc, char *retv[])
             Winfoprintf("%s is not a directory",argv[1]);
       }
       else
+      {
          retv[0] = realString((double)is_a_dir);
+         if (retc > 1)
+         {
+             if (is_a_dir)
+             {
+	           if (isSymLink( argv[1] ) == 0)
+                  retv[1] = realString((double)2);
+               else
+                  retv[1] = realString((double)1);
+             }
+             else
+             {
+                 retv[1] = realString((double)0);
+             }
+         }
+      }
   }
   else if (strcmp( argv[ 2 ], "ascii" ) == 0)
   {
