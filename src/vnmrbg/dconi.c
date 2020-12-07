@@ -2030,9 +2030,13 @@ int dconi(int argc, char *argv[], int retc, char *retv[])
           strcat(dconi_runstring,"\n");
           if (!d2flag && !axisonly)
             {
-              Wsetgraphicsdisplay(cmd);
-              Werrprintf("no 2D data in data file");
-              ABORT;
+              if (select_init(1,1, 0, 1, 1, 1, 0, 0)) ABORT;
+              if (!d2flag)
+              {
+                 Wsetgraphicsdisplay(cmd);
+                 Werrprintf("no 2D data in data file");
+                 ABORT;
+              }
             }
           if (!d2flag && axisonly)
             setVertAxis();
