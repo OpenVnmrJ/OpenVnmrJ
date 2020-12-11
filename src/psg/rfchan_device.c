@@ -27,6 +27,7 @@
 #include "acqparms.h"
 #include "aptable.h"
 #include "macros.h"
+#include "abort.h"
 
 extern int      bgflag;
 
@@ -50,6 +51,15 @@ extern int      bgflag;
 #endif
 
 extern char    *ObjError(), *ObjCmd();
+extern int okinhwloop();
+extern int SetAttnAttr(Object attnobj, ...);
+extern int attr_valtype(int attribute);
+extern void HSgate(int ch, int state);
+extern void settable90(int device, char arg[]);
+extern void notinhwloop(char *name);
+extern int ClearTable();
+extern int Device();
+extern int putcode();
 extern int	ap_interface;
 extern int 	SkipHSlineTest;
 
@@ -88,9 +98,13 @@ static void setattn(Object obj, Msg_Set_Param *param, int use_table,
                     Msg_Set_Result *result, char *objname, int *ap_ovrride);
 static void setlkdecphase90(int device, int value);
 
-static Freq_Object *FrqObj_ptr = 0L;
 static int      hibandbitmask = 0;	/* dev_channel bit is set if in
-					 * highband */
+					                 * highband */
+static void set_sisunity_rfband(int setwhat, int value, c68int dev_channel);
+static void select_sisunity_rfband(RFChan_Object *this);
+static void set_xmtrx2bit(Object obj, RFChan_Object *this);
+static void set_mixerbit(Object obj, RFChan_Object *this);
+static void set_ampbandrelay(Object obj, RFChan_Object *this, double basefreq);
 
 /*-------------------------------------------------------------
 | RFChan_Device()/4 - Message Handler for RFChan_devices.
@@ -148,7 +162,6 @@ static int init_attr(Msg_New_Result *result)
 static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *result)
 {
    int             error = 0;
-   char            msge[256];
 
    extern double   calcoffsetsyn();
    extern double   calcfixedoffset();
@@ -297,9 +310,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 error = Send(this->FreqObj, MSG_SET_FREQ_ATTR_pr, param, result);
 	 if (error < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	 }
 
 	 set_ampbandrelay(this->HLBrelayObj, this,param->DBvalue);
@@ -317,9 +329,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 error = Send(this->FreqObj, MSG_SET_FREQ_ATTR_pr, param, result);
 	 if (error < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	 }
 
 	 /* select the high or low band of the transmitter for SIS Unity*/
@@ -356,9 +367,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 error = Send(this->FreqObj, MSG_SET_FREQ_ATTR_pr, param, result);
 	 if (error < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	 }
 	 break;
 
@@ -371,9 +381,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 error = Send(this->FreqObj, MSG_SET_FREQ_ATTR_pr, param, result);
 	 if (error < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", this->FreqObj->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->FreqObj->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	 }
 
 	 /* If SIS unity system this will set rfband acodes */
@@ -389,9 +398,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 error = Send(this->FreqObj, MSG_SET_FREQ_ATTR_pr, param, result);
 	 if (error < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", this->FreqObj->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->FreqObj->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	 }
 	 /* If SIS unity system this will set rfband acodes */
 	 set_sisunity_rfband(SET_GTAB,param->value,this->dev_channel);
@@ -414,7 +422,7 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	       fprintf(stdout,
 	       "%s:  '%s' statement ignored due to system configuration.\n",
 		       this->objname, ObjCmd(param->setwhat));
-	    return;
+	    return(error);
 	 }
 	 break;
 
@@ -435,7 +443,7 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	       fprintf(stdout,
 	       "%s:  '%s' statement ignored due to system configuration.\n",
 		       this->objname, ObjCmd(param->setwhat));
-	    return;
+	    return(error);
 	 }
 	 break;
 
@@ -456,7 +464,7 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	       fprintf(stdout,
 	       "%s:  '%s' statement ignored due to system configuration.\n",
 		       this->objname, ObjCmd(param->setwhat));
-	    return;
+	    return(error);
 	 }
 	 break;
 
@@ -481,15 +489,11 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	       fprintf(stdout,
 	       "%s:  '%s' statement ignored due to system configuration.\n",
 		       this->objname, ObjCmd(param->setwhat));
-	    return;
+	    return(error);
 	 }
 	 break;
       case SET_GATE_PHASE:
-         {  int tmp;
-	    double	    mhz_switch;
-            Msg_Set_Param   chparam;
-            Msg_Set_Result  chresult;
-
+         {
 	 putcode(APBOUT);
 	 putcode(1);
 	 putcode(APSELECT | 0xb00 | ( 0x92 + (this->dev_channel - 1) * 16)  );
@@ -544,9 +548,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 
 	 if (!this->newxmtr)
 	 {
-	    sprintf(msge, "%s: requires direct synthesis RF on %s\n",
+	    abort_message("%s: requires direct synthesis RF on %s\n",
 		    ObjCmd(param->setwhat), this->objname);
-	    abort_message(msge);
 	 }
 	 notinhwloop("stepsize");
          if (ap_interface < 4)
@@ -587,20 +590,6 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 putcode(SETPHATTR);	/* new acode */
 	 putcode(this->dev_channel);
 
-/*
-/*  Remove output board differences
-/*
-/*         if (fifolpsize < 512 )	/*old output boards use old style 16bit phases*/
-/*         {
-/*	    putcode(this->phasetbl[0]);
-/*	    putcode(this->phasetbl[1]);
-/*	    putcode(this->phasetbl[2]);
-/*	    putcode(this->phasetbl[3]);
-/*	    putcode(this->phasebits);
-/*         }
-/*         else		/* new style 32bit phases */
-/*
- */
          {
 	    putcode( (((this->phasetbl[0]) >> 16) & 0xffff) );
 	    putcode( ((this->phasetbl[0]) & 0xffff) );
@@ -649,9 +638,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 /* Check RF consistency. */
 	 if (!this->newxmtr)
 	 {
-	    sprintf(msge, "%s: requires direct synthesis RF on %s\n",
+	    abort_message("%s: requires direct synthesis RF on %s\n",
 		    ObjCmd(param->setwhat), this->objname);
-	    abort_message(msge);
 	 }
 
          if (this->newxmtr == TRUE)  /* not for lock/decoup brd this->newxmtr == TRUE+1 */
@@ -669,9 +657,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 /* Check RF consistency. */
 	 if (!this->newxmtr)
 	 {
-	    sprintf(msge, "%s: requires direct synthesis RF on %s\n",
+	    abort_message("%s: requires direct synthesis RF on %s\n",
 		    ObjCmd(param->setwhat), this->objname);
-	    abort_message(msge);
 	 }
 
 	 setphase(this->dev_channel, param->value, ABSVAL, NO_TABLE_USE,
@@ -752,9 +739,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	  error = Send(this->HSObj, MSG_GET_AP_ATTR_pr, &decparam, &decresult);
 	  if (error < 0)
 	  {
-	    sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	  }
           apadr = decresult.reqvalue;
 
@@ -763,9 +749,8 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	  error = Send(this->HSObj, MSG_GET_AP_ATTR_pr, &decparam, &decresult);
 	  if (error < 0)
 	  {
-	    sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	  }
           apreg = decresult.reqvalue;
 	   if (param->value)
@@ -845,7 +830,6 @@ static int set_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 static int get_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *result)
 {
    int             error = 0;
-   char            msge[128];
    Msg_Set_Param   forAttn;	/* Used to get current attenuator value */
    Msg_Set_Result  xresult;	/* Used to get maximum attenuator value */
 
@@ -928,9 +912,8 @@ static int get_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 error = Send(this->FreqObj, MSG_GET_FREQ_ATTR_pr, param, result);
 	 if (error < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	 }
 	 break;
 
@@ -943,18 +926,16 @@ static int get_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 	 error = Send(this->AttnObj, MSG_GET_ATTN_ATTR_pr, &forAttn, result);
 	 if (error < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	 }
 	 forAttn.setwhat = GET_MAXVAL;
    	 xresult.reqvalue = 0;
 	 error = Send(this->AttnObj, MSG_GET_ATTN_ATTR_pr, &forAttn, &xresult);
 	 if (error < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	    abort_message(msge);
 	 }
 	 if ((xresult.reqvalue == SIS_UNITY_ATTN_MAX) ||
 		(xresult.reqvalue == 255) )
@@ -971,9 +952,8 @@ static int get_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
                           &forAttn, result);
 	    if (error < 0)
 	    {
-	       sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
+	       abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
 		    ObjCmd(param->setwhat));
-	       abort_message(msge);
 	    }
          }
          else
@@ -992,10 +972,9 @@ static int get_attr(RFChan_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 |                       Author: Greg Brissey  8/18/88
 +---------------------------------------------------------------------*/
 /*VARARGS2*/
-SetRFChanAttr(Object obj, ...)
+int SetRFChanAttr(Object obj, ...)
 {
    va_list         vargs;
-   char            msge[128];
    int             error = 0;
    int             error2 = 0;
    Msg_Set_Param   param;
@@ -1027,9 +1006,8 @@ SetRFChanAttr(Object obj, ...)
 	 error2 = Send(obj, MSG_SET_DEV_ATTR_pr, &param, &result);
 	 if (error2 < 0)
 	 {
-	    sprintf(msge, "%s : %s  '%s'\n", obj->objname, ObjError(error),
+	    abort_message("%s : %s  '%s'\n", obj->objname, ObjError(error),
 		    ObjCmd(param.setwhat));
-	    abort_message(msge);
 	 }
       }
    }
@@ -1043,7 +1021,6 @@ SetRFChanAttr(Object obj, ...)
 static void setattn(Object obj, Msg_Set_Param *param, int use_table,
                     Msg_Set_Result *result, char *objname, int *ap_ovrride)
 {
-   char            msge[128];
    int             error;
 
    okinhwloop();
@@ -1081,9 +1058,8 @@ static void setattn(Object obj, Msg_Set_Param *param, int use_table,
    error = Send(obj, MSG_SET_ATTN_ATTR_pr, param, result);
    if (error < 0)
    {
-      sprintf(msge, "%s : %s  '%s'\n", objname, ObjError(error),
+      abort_message("%s : %s  '%s'\n", objname, ObjError(error),
 	      ObjCmd(param->setwhat));
-      abort_message(msge);
    }
    return;
 }
@@ -1149,6 +1125,7 @@ int             value;
 int             rtflag;
 int             use_table;
 int            *ap_ovrride;
+int             mode;
 {
 int	flags;
    okinhwloop();		/* legal in hardware loop */
@@ -1201,13 +1178,8 @@ int	flags;
 /*-----------------------------------------------------
 | set transmitter to Amplifier Band Relay
 +-----------------------------------------------------*/
-set_ampbandrelay(obj, this, basefreq)
-Object          obj;
-RFChan_Object  *this;
-double basefreq;
-
+static void set_ampbandrelay(Object obj, RFChan_Object *this, double basefreq)
 {
-   char msge[128];
    int error = 0;
    Msg_Set_Param   chparam;
    Msg_Set_Result  chresult;
@@ -1223,9 +1195,8 @@ double basefreq;
       error = Send(obj, MSG_SET_APBIT_MASK_pr, &chparam, &chresult);
       if (error < 0)
       {
-	 sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
-		 ObjCmd(chparam.setwhat));
-	 abort_message(msge);
+	     abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
+		               ObjCmd(chparam.setwhat));
       }
       /* set global channel high band bit mask */
       if (chparam.setwhat == SET_FALSE)
@@ -1238,11 +1209,8 @@ double basefreq;
 /*-----------------------------------------------------
 | set transmitter mixer relay 
 +-----------------------------------------------------*/
-set_mixerbit(obj, this)
-Object          obj;
-RFChan_Object  *this;
+static void set_mixerbit(Object obj, RFChan_Object *this)
 {
-char		msge[128];
 int		error = 0;
 Msg_Set_Param	chparam;
 Msg_Set_Result	chresult;
@@ -1251,9 +1219,9 @@ Msg_Set_Result	chresult;
    {  chparam.setwhat = GET_SPEC_FREQ;
       error = Send(this->FreqObj, MSG_GET_FREQ_ATTR_pr, &chparam, &chresult);
       if (error < 0)
-      {  sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
-		 ObjCmd(chparam.setwhat));
-	 abort_message(msge);
+      {
+	     abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
+		               ObjCmd(chparam.setwhat));
       }
 
       /* base on the rf band of the frequency set xmtr board doubling line. */
@@ -1262,21 +1230,16 @@ Msg_Set_Result	chresult;
       error = Send(obj, MSG_SET_AP_ATTR_pr, &chparam, &chresult);
       if (error < 0)
       {
-	 sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
-		 ObjCmd(chparam.setwhat));
-	 abort_message(msge);
+	     abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
+		               ObjCmd(chparam.setwhat));
       }
    }
 }
 /*-----------------------------------------------------
 | set transmitter to Amplifier Band Relay
 +-----------------------------------------------------*/
-set_xmtrx2bit(obj, this)
-Object          obj;
-RFChan_Object  *this;
-
+static void set_xmtrx2bit(Object obj, RFChan_Object *this)
 {
-   char msge[128];
    int error = 0;
    Msg_Set_Param   chparam;
    Msg_Set_Result  chresult;
@@ -1287,9 +1250,8 @@ RFChan_Object  *this;
       error = Send(this->FreqObj, MSG_GET_FREQ_ATTR_pr, &chparam, &chresult);
       if (error < 0)
       {
-	 sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
-		 ObjCmd(chparam.setwhat));
-	 abort_message(msge);
+	     abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
+		               ObjCmd(chparam.setwhat));
       }
 
       /* base on the rf band of the frequency set xmtr board doubling line. */
@@ -1300,9 +1262,8 @@ RFChan_Object  *this;
       error = Send(obj, MSG_SET_APBIT_MASK_pr, &chparam, &chresult);
       if (error < 0)
       {
-	 sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
-		 ObjCmd(chparam.setwhat));
-	 abort_message(msge);
+	     abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
+		                ObjCmd(chparam.setwhat));
       }
    }
 }
@@ -1318,10 +1279,8 @@ RFChan_Object  *this;
 |                    rf band selection is in the msb.
 |                  - Increments frq_codes by ??;
 +------------------------------------------------------------------------*/
-select_sisunity_rfband(this)
-RFChan_Object  *this;
+static void select_sisunity_rfband(RFChan_Object *this)
 {
-   char msge[128];
    int error = 0;
    int band_select;
    Msg_Set_Param   chparam;
@@ -1335,9 +1294,8 @@ RFChan_Object  *this;
       error = Send(this->FreqObj, MSG_GET_FREQ_ATTR_pr, &chparam, &chresult);
       if (error < 0)
       {
-	 sprintf(msge, "%s : %s  '%s'\n", this->objname, ObjError(error),
-		 ObjCmd(chparam.setwhat));
-	 abort_message(msge);
+	      abort_message("%s : %s  '%s'\n", this->objname, ObjError(error),
+		                ObjCmd(chparam.setwhat));
       }
       band_select = (chresult.reqvalue == RF_HIGH_BAND) ? 
 			 1 : 0;
@@ -1359,10 +1317,7 @@ RFChan_Object  *this;
 |                    rf band selection is in the msb.
 |                  - Increments frq_codes by ??;
 +------------------------------------------------------------------------*/
-set_sisunity_rfband(setwhat,value,dev_channel)
-int	setwhat;
-int	value;
-c68int  dev_channel;   /* Channel device is associated with (Obs,Dec,etc.) */
+static void set_sisunity_rfband(int setwhat, int value, c68int dev_channel)
 {
    if ((cattn[dev_channel] == SIS_UNITY_ATTN_MAX) && 
 	((rftype[dev_channel-1] == 'c') || (rftype[dev_channel-1] == 'C')) )

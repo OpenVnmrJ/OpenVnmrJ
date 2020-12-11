@@ -15,6 +15,8 @@
 #include "macros.h"
 #include "apdelay.h"
 #include "group.h"
+#include "pvars.h"
+#include "abort.h"
 
 #define CURRENT	1
 
@@ -24,6 +26,10 @@ extern int	ap_ovrride;
 extern char     dseq[MAXSTR];
 extern void	prg_dec_off();
 extern int	pgd_is_running();
+extern char *ObjError(int wcode);
+extern int SetAPBit(Object obj, ...);
+extern void HSgate(int ch, int state);
+extern void initdecmodfreq(double freq, int chan, int mode);
 
 #define MODA_TRUE  SET_TRUE
 #define MODA_FALSE SET_FALSE
@@ -60,6 +66,7 @@ static double	save_scale[MAX_RFCHAN_NUM + 1] =
 static void set_dmm_mode(int channel, int on, char mod_mode, int sync, double local_dmf, double *delaytime);
 static void setdecmodulation(int status_a, int status_b);
 static void set_channel_modulation(int mode, int channel);
+void gatedmmode(int statindex, int channel, double *delaytime);
 
 
 /*------------------------------------------------------------------
@@ -80,9 +87,7 @@ static void set_channel_modulation(int mode, int channel);
 |	        mechanical relay in 300 & 400s.
 |   Note: On newer RF backplanes 1/26/90, dd
 +-----------------------------------------------------------------*/
-gatedecoupler(statindex,delaytime)
-int             statindex;	/* status index (i.e.,index into dm,dmm) */
-double		delaytime;
+void gatedecoupler(int statindex, double delaytime)
 {
    int		chan;
    int          index;
@@ -110,7 +115,7 @@ double		delaytime;
    {
       if (bgflag)
       {
-         fprintf(stderr, "gatedecoupler(): initial HSlines: 0x%lx \n", HSlines);
+         fprintf(stderr, "gatedecoupler(): initial HSlines: 0x%x \n", HSlines);
          fprintf(stderr, "gatedecoupler(): Transmitter RFchan%d\n", chan);
       }
 
@@ -166,7 +171,7 @@ double		delaytime;
 
 /* to set the post exp decoupler state: leaves decoupler on only for dm='a' */
 
-setPostExpDecState(statindex,delaytime)
+void setPostExpDecState(statindex,delaytime)
 int             statindex;      /* status index (i.e.,index into dm,dmm) */
 double          delaytime;
 {
@@ -196,7 +201,7 @@ double          delaytime;
    {
       if (bgflag)
       {
-         fprintf(stderr, "setPostExpDecState(): initial HSlines: 0x%lx \n", HSlines);
+         fprintf(stderr, "setPostExpDecState(): initial HSlines: 0x%x \n", HSlines);
          fprintf(stderr, "setPostExpDecState(): Transmitter RFchan%d\n", chan);
       }
 
@@ -254,17 +259,14 @@ double          delaytime;
 |	Check if 'dmm' has a field for statindex, else default
 |	to last index, then call set_dmm_mode' to select modualtion
 +-----------------------------------------------------------------*/
-gatedmmode(statindex, channel,delaytime)
-int             statindex;	/* status index (i.e.,index into dmm) */
-int             channel;
-double		*delaytime;
+void gatedmmode(int statindex, int channel, double *delaytime)
 {
    int	sync;
    int	on;
 
 
    if (bgflag)
-      fprintf(stderr, "gatedmmode(): initial HSlines: 0x%lx \n", HSlines);
+      fprintf(stderr, "gatedmmode(): initial HSlines: 0x%x \n", HSlines);
 
 /* --- gate decoupler modulation mode according to field(statindex) --- */
 /* 1st Decoupler Channel:  if 'w','c', 's', or 'n' not found, then
@@ -283,31 +285,27 @@ double		*delaytime;
 			 sync, (*(ModInfo[channel].MI_dmf)), delaytime );
 
    if (bgflag)
-      fprintf(stderr, "gatedmmode(): final HSlines: 0x%lx \n", HSlines);
+      fprintf(stderr, "gatedmmode(): final HSlines: 0x%x \n", HSlines);
 }
 
 /*------------------------------------------------------------------
 |	setstatus()/4
 |	allows the user to program modulation modes independent
 |	of dm and dmm and status().
+|   int	channel 	 the channel to reprogram
+|   int	on	 	     xmtr on (TRUE/FALSE)
+|   char mod_mode	 modulation type
+|   int	sync		 flag, only used if apinterface=4 (hydra)
+|   double	set_dmf	 set this dmf value
 +-----------------------------------------------------------------*/
-setstatus(channel,on,mod_mode,sync,set_dmf)
-int	channel;	/* the channel to reprogram */
-int	on;		/* xmtr on (TRUE/FALSE) */
-char	mod_mode;	/* modulation type */
-int	sync;		/* flag, only used if apinterface=4 (hydra) */
-double	set_dmf;	/* set this dmf value */
+void setstatus(int channel, int on, char mod_mode, int sync, double set_dmf)
 {
-   char	msge[80];
    double delaytime = 0.0;
 
-
-
    if ( (channel<1) || (channel>NUMch) )
-   {  sprintf(msge,
-		"setstatus(): system not configured for channel %d",channel);
-      text_error(msge);
-      psg_abort(1);
+   {
+      abort_message("setstatus(): system not configured for channel %d",
+                    channel);
    }
    if (ap_interface!=4 && sync && mod_mode!='p' && mod_mode!='P')
    {  text_error("This system supports synchrounous modulation only with PPM");
@@ -373,7 +371,6 @@ double	set_dmf;	/* set this dmf value */
 /*               will be subtracted from this time.		*/
 static void set_dmm_mode(int channel, int on, char mod_mode, int sync, double local_dmf, double *delaytime)
 {
-   char	msge[80];
    int  decstat;
    int	dmmode;
    int	h_dmm;
@@ -491,17 +488,16 @@ static void set_dmm_mode(int channel, int on, char mod_mode, int sync, double lo
 		moda    = ILLEGAL;
 		modb    = ILLEGAL;
 		h_dmm   = ILLEGAL;
+                decstat = C_MODE;
 		break;
    }
 
    if ( (dmmode==ILLEGAL && ap_interface<3) ||
         (  moda==ILLEGAL && modb==ILLEGAL && ap_interface==3) ||
         ( h_dmm==ILLEGAL && ap_interface==4) )
-   {  sprintf(msge,
-		"Unsupported modulation mode %c on channel %d\n",
+   {
+      abort_message("Unsupported modulation mode %c on channel %d\n",
 		mod_mode,channel);
-      text_error(msge);
-      psg_abort(1);
    }
    /* initialize dmm HSlines but not AP_bus lines */
    if (ap_interface < 3)
@@ -573,7 +569,6 @@ static void set_dmm_mode(int channel, int on, char mod_mode, int sync, double lo
 +------------------------------------------------------------------*/
 static void setdecmodulation(int status_a, int status_b)
 {
-   char            msge[128];
    int             error,
 		   param_cnt;
    Msg_Set_Param   param;
@@ -594,8 +589,7 @@ static void setdecmodulation(int status_a, int status_b)
      error = Send(RF_Opts, MSG_SET_APBIT_MASK_pr, &param, &result);
      if (error < 0)
      {
-        sprintf(msge, "%s : %s\n", RF_Opts->objname, ObjError(error));
-        text_error(msge);
+        text_error("%s : %s\n", RF_Opts->objname, ObjError(error));
      }
 
      param.value = MODB;
@@ -613,13 +607,6 @@ static void setdecmodulation(int status_a, int status_b)
 +------------------------------------------------------------------*/
 static void set_channel_modulation(int mode, int channel)
 {
-   char		   msge[80];
-   int		   error;
-   int		   i;
-   int		   hs_select;
-   int		   chan_min_1;
-   Msg_Set_Param   param;
-   Msg_Set_Result  result;
    if (bgflag)
    {
       fprintf(stderr, "set_channel_modulation():  mode = %d  channel = %d\n",

@@ -14,10 +14,15 @@
 #include "acqparms.h"
 #include "aptable.h"
 #include "macros.h"
+#include "ssha.h"
+#include "abort.h"
 
 extern int	bgflag,			/* debug flag */
 		ap_ovrride;		/* ap delay override flag */
 extern int      safety_check();         /* safety checking for max atten value */
+extern char *ObjError(int wcode);
+extern int putcode();
+
 
 /*-----------------------------------------------------------------
 | 
@@ -56,9 +61,7 @@ extern int      safety_check();         /* safety checking for max atten value *
 |			     SetAttnAttr().
 |   6/25/90     Greg B.    1. Changed to use Channel Objects 
 +---------------------------------------------------------------*/
-power(value,device)
-int value;
-int device;
+void power(int value, int device)
 {
 	if ( (device > 0) && (device <= NUMch) )
 	{
@@ -66,11 +69,8 @@ int device;
 	}
 	else
 	{
-	   char msge[128];
-           sprintf(msge,"power: device #%d is not within bounds 1 - %d\n",
+           abort_message("power: device #%d is not within bounds 1 - %d\n",
 			device,NUMch);
-	   text_error(msge);
-      	   psg_abort(1);
 	}
 }
 
@@ -82,9 +82,7 @@ int device;
 |			rfdevice is TODEV, DODEV, or DO2DEV
 |
 +----------------------------------------------------------------*/
-rlpower(value, device)
-int	device;
-double	value;
+void rlpower(double value, int device)
 {
    int	attnval;
 
@@ -103,12 +101,8 @@ double	value;
    }
    else
    {
-      char msge[128];
-
-      sprintf(msge, "rlpower: device #%d is not within bounds 1 - %d\n",
+      abort_message("rlpower: device #%d is not within bounds 1 - %d\n",
 		 device, NUMch);
-      text_error(msge);
-      psg_abort(1);
    }
 }
 
@@ -148,9 +142,7 @@ double	value;
 |	
 |				Author Greg Brissey  6/19/90
 +----------------------------------------------------------------*/
-pwrf(value,device)
-int value;
-int device;
+void pwrf(int value, int device)
 {
 	if ( (device > 0) && (device <= NUMch) )
 	{
@@ -158,11 +150,8 @@ int device;
 	}
 	else
 	{
-	   char msge[128];
-           sprintf(msge,"pwrf: device #%d is not within bounds 1 - %d\n",
+           abort_message("pwrf: device #%d is not within bounds 1 - %d\n",
 			device,NUMch);
-	   text_error(msge);
-      	   psg_abort(1);
 	}
 }
 
@@ -174,9 +163,7 @@ int device;
 |			rfdevice is TODEV, DODEV, or DO2DEV
 |
 +----------------------------------------------------------------*/
-rlpwrf(value,device)
-double value;
-int device;
+void rlpwrf(double value, int device)
 {
    int	attnval;
 
@@ -187,11 +174,8 @@ int device;
    }
    else
    {   
-      char msge[128];
-      sprintf(msge,"rlpwrf: device #%d is not within bounds 1 - %d\n",
+      abort_message("rlpwrf: device #%d is not within bounds 1 - %d\n",
                         device,NUMch);
-      text_error(msge);
-      psg_abort(1);
    }
 }
 
@@ -222,10 +206,10 @@ int device;
 |   Modified   Author     Purpose
 |   --------   ------     -------
 |   6/25/90     Greg B.    1. Changed to use Channel Objects 
+|  double stepsiz;	 stepsize of phaseshifter .5-360
+|  int device;		 device trans or decoupler
 +--------------------------------------------------------------*/
-stepsize(stepsiz,device)
-double stepsiz;		/* stepsize of phaseshifter .5-360 */
-int device;		/* device trans or decoupler */
+void stepsize(double stepsiz, int device)
 {
 	if ( (device > 0) && (device <= NUMch) )
 	{
@@ -233,11 +217,8 @@ int device;		/* device trans or decoupler */
 	}
 	else
 	{
-	   char msge[128];
-           sprintf(msge,"stepsize: device #%d is not within bounds 1 - %d\n",
+           abort_message("stepsize: device #%d is not within bounds 1 - %d\n",
 			device,NUMch);
-	   text_error(msge);
-      	   psg_abort(1);
 	}
 }
 
@@ -252,7 +233,7 @@ int device;		/* device trans or decoupler */
 |					Author  Sandy Farmer  6/27/88
 |
 -------------------------------------------------------------------*/
-apovrride()
+void apovrride()
 {
    ap_ovrride = 1;	/* ap delay override flag is set to TRUE */
 }
@@ -293,7 +274,7 @@ apovrride()
 |				Modified Sandy Farmer  6/24/88
 |
 +------------------------------------------------------------------*/
-phaseshift(basephase,mult,device)
+void phaseshift(basephase,mult,device)
 double basephase;
 codeint mult;
 int device;
@@ -312,7 +293,6 @@ int device;
    Msg_Set_Param param;
    Msg_Set_Result result;
    int error;
-   char msge[126];
 
    incr = 4;		/* change freq by four of base freq */
    digit = 5;		/* base freq, 10kHz */
@@ -358,8 +338,7 @@ int device;
     error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
     if (error < 0)
     {
-      sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
     }
 
    digitval = ((int)( result.DBreqvalue / Hzoffset )) % 10;

@@ -25,14 +25,15 @@
 extern int homospoil_bit;
 extern int  bgflag;	/* debug flag */
 extern int  newacq;	/* inova flag */
+extern int putcode();
+extern void HSgate(int ch, int state);
 
 #define ERROR 1
 #define FALSE 0
 #define OK 0
 #define TRUE 1
 
-hsdelay(time)
-double time;
+int hsdelay(double time)
 {
     int index;
 
@@ -98,7 +99,7 @@ double time;
 |                               Bayard Fetler 8/15/96
 +------------------------------------------------------------------------*/
 
-homospoil_on()
+int homospoil_on()
 {
     if (bgflag)  fprintf(stderr, "homospoil_on()\n");
     if (newacq)
@@ -120,7 +121,7 @@ homospoil_on()
 |                               Bayard Fetler 8/15/96
 +------------------------------------------------------------------------*/
 
-homospoil_off()
+int homospoil_off()
 {
     if (bgflag)  fprintf(stderr, "homospoil_off()\n");
     if (newacq)

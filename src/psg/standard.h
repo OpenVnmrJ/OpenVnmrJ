@@ -37,9 +37,8 @@
 #ifdef NVPSG
 #include "GradientBridge.h"
 #else
-extern int      getorientation(char *c1,char *c2,char *c3,char *orientname);
-extern int      grad_advance(double dur);
-extern void     set_rotation_matrix(double ang1, double ang2, double ang3);
+#include "delay.h"
+#include "rcvrfuncs.h"
 #endif
 
 extern int	rcvroff_flag,
@@ -163,6 +162,7 @@ extern void     initparms_sis();
 extern int      S_getarray (const char *parname, double array[], int arraysize);
 extern void     g_setExpTime(double val);
 extern void     setRcvrPhaseStep(double step);
+
 
 #else
 

@@ -14,11 +14,27 @@
 #include "rfconst.h"
 #include "acqparms.h"
 #include "acodes.h"
+#include "pvars.h"
+#include "abort.h"
 
 #define NOT_OBSERVE	-1
 #define NOT_SAME_BAND	-1
 
-extern double getval();
+extern double getval(const char *name);
+extern int SetRFChanAttr(Object obj, ...);
+extern int SetAPAttr(Object attnobj, ...);
+extern int SetAPBit(Object obj, ...);
+extern int whatrftype(int chan);
+extern int getFirstActiveRcvr();
+extern int numOfActiveRcvr();
+extern void formXLwords(double value, int num, int digoffset,
+                 int device, int *words);
+extern void formXL16words(double value, int num, int digoffset,
+                 int device, int *words);
+extern int putcode();
+extern int getlkfreqapword(double lockfreq, int h1freq );
+extern void oneLongToTwoShort(int lval, short *sval );
+
 extern char amptype[MAXSTR];
 extern char systemdir[];
 
@@ -28,6 +44,7 @@ extern int  curfifocount;
 
 /* extern Object RF_Rout,RF_Opts,RF_Opts2; */
 extern int rfchan_getrfband();
+extern int rfchan_getampband();
 extern int ap_interface;
 extern char    *ObjError();
 // extern int getline();
@@ -42,6 +59,13 @@ static int decattn_apwrds[2];
 static int recfilt_apwrds[6];
 static int wlfilt_apwrds[2];
 
+static void set_ampbits();
+void set_ampcw();
+void set_atgbit();
+void setPSELviaMatrix();
+void set_magleg_routing();
+void setrf_routing();
+
 /*-------------------------------------------------------------------
 |
 |	initdecmodfreq()/1 
@@ -54,10 +78,7 @@ static int wlfilt_apwrds[2];
 |   6/22/89    Greg B.	   1. added mode so that ap words can be calc once
 +------------------------------------------------------------------*/
 #define TWO_20	1048576		/* 2^20 */
-initdecmodfreq(freq,chan,mode)
-double freq;
-int    chan;
-int    mode;
+void initdecmodfreq(double freq, int chan, int mode)
 {
    int      i,hbyte,lbyte,ubyte,tbyte,num_apwords,ap_reg;
    double   dmf_flt;
@@ -124,7 +145,7 @@ int    mode;
 |   --------   ------     -------
 |   6/22/89    Greg B.	   1. added mode so that ap words can be calc once
 +------------------------------------------------------------------*/
-rfbandselect(band,mode)
+void rfbandselect(band,mode)
 char band;
 int mode;
 {
@@ -150,10 +171,8 @@ int mode;
         param.setwhat = GET_PREAMP_SELECT;
         error = Send(RF_Opts2, MSG_GET_APBIT_MASK_pr, &param, &obj_result);
         if (error < 0)
-        {  char    msge[128];
-
-           sprintf(msge, "%s : %s\n", RF_Opts2->objname, ObjError(error));
-           text_error(msge);
+        {
+           text_error("%s : %s\n", RF_Opts2->objname, ObjError(error));
         }
         rf = (double) (obj_result.reqvalue);
      }
@@ -177,8 +196,7 @@ int mode;
 |   --------   ------     -------
 |   6/22/89    Greg B.	   1. added mode so that ap words can be calc once
 +------------------------------------------------------------------*/
-pulseampfilter(mode)
-int mode;
+void pulseampfilter(int mode)
 {
    if (bgflag)
        fprintf(stderr,"pulseampfilter(): \n");
@@ -192,8 +210,7 @@ int mode;
    }
 }
 
-static
-report_convert_lockfreq_error()
+static void report_convert_lockfreq_error()
 {
    char type_of_console[ 256 ];
 
@@ -203,13 +220,8 @@ report_convert_lockfreq_error()
       if (strcmp( type_of_console, "inova" ) != 0 &&
           strcmp( type_of_console, "mercury" ) != 0)
       {
-         char error_message[ 256 ];
-
-         sprintf( &error_message[ 0 ],
-                  "This version of PSG not suitable for a %s console\n",
-                  &type_of_console[ 0 ]
-         );
-         text_error( &error_message[ 0 ] );
+         text_error("This version of PSG not suitable for a %s console\n",
+                  &type_of_console[ 0 ]);
       }
    }
    psg_abort(1);
@@ -228,14 +240,12 @@ report_convert_lockfreq_error()
 |   05/1997    Robert L.   2. reworked setlkfrqflt to use SETLOCKFREQ A-code
 +------------------------------------------------------------------*/
 #define	TWO_24	16777216.0	/* 2 to_the_power 24 */
-setlkfrqflt(rate,mode)
+void setlkfrqflt(rate,mode)
 double rate;
 int mode;     /* mode instructs the program to perform computations or output A-codes */
 {
-int	ap_addr,ap_reg,i,itmp,num_apwords;
-double	lockfreq,tmpfreq,synthif,lockref,lkof;
-char	lockfreqtab[MAXSTR];		/* Filename for lockfreqtab */
-char	lksense;
+int	i,num_apwords;
+double	lockfreq,lkof;
    if (bgflag)
        fprintf(stderr,"setlkfrqflt(): rate = %3.0f \n",rate);
    if (mode == INIT_APVAL)
@@ -381,17 +391,13 @@ void decouplerattn(int mode)
    }
    else
    {
-     char errmsge[128];
-     sprintf(errmsge,"DECOUPLERATTN(): Illegal mode argument value: %d .\n",mode);
-     text_error(errmsge);
-     psg_abort(1);
+     abort_message("DECOUPLERATTN(): Illegal mode argument value: %d .\n",mode);
    }
 }
 
 int
 get_filter_max_bandwidth()
 {
-    char msgbuf[100];
     char tbuf[10];
     int fbmax;
 
@@ -410,9 +416,7 @@ get_filter_max_bandwidth()
 	fbmax = 5 * FBMAX;
 	break;
       default:
-	sprintf(msgbuf,"Illegal 'audiofilter' parameter setting: %s", tbuf);
-	text_error(msgbuf);
-	psg_abort(1);
+	abort_message("Illegal 'audiofilter' parameter setting: %s", tbuf);
     }
     return fbmax;
 }
@@ -430,7 +434,7 @@ get_filter_max_bandwidth()
 #define	RCVR_ADDR	0x0b
 #define RVCR_GAIN	0x42
 #define	RCVR_FILTERS	0x40
-dofiltercontrol(mode)
+void dofiltercontrol(mode)
 int mode;
 {
 int	apfilter;
@@ -509,7 +513,7 @@ int	num_apbytes;
 |   --------   ------     -------
 |   6/22/89    Greg B.	   1. added mode so that ap words can be calc once
 +------------------------------------------------------------------*/
-dowlfiltercontrol(mode)
+void dowlfiltercontrol(mode)
 int mode;
 {
     double bw;
@@ -553,17 +557,12 @@ int mode;
 |       assumes the function of the displacer.
 |				Author Greg Brissey  1/24/90
 +------------------------------------------------------------------*/
-set_observech(channel)
-int	channel;
+void set_observech(int channel)
 {
-    char msge[128];
-
     if ((channel < 1) || (channel > NUMch))
     {
-      sprintf(msge,"set_observech: channel #%d does not exist\n",
+      abort_message("set_observech: channel #%d does not exist\n",
 	        channel);
-      text_error(msge);
-      psg_abort(1);
     }
     if (bgflag)
 	fprintf(stderr,"New Obsch: %d, OBSch: %d, DECch: %d, DEC2ch: %d\n",
@@ -582,7 +581,6 @@ int	channel;
            SetAPBit(RF_MLrout, SET_TRUE, MAGLEG_RELAY_2, NULL);
          set_magleg_routing();
          set_atgbit();
-         /* set_ampbitsold(); /* just for comparison testing */
          set_ampbits();
       }
    }
@@ -593,15 +591,13 @@ int	channel;
 |	set RF Relays for new RF channel implimentation 
 |				Author Greg Brissey  1/22/90
 +------------------------------------------------------------------*/
-setrf_routing()
+void setrf_routing()
 {
-    char msge[128];
     char stmpval[20];
     char legrelay;
     int error;
     int obsamphiband;
     int decamphiband,dec2amphiband;
-    extern int rfchan_getampband();
 
     /* amp bandmask for all channels */
     /* ampbandmask = rfchan_getampbandmask(TODEV); */
@@ -640,16 +636,12 @@ setrf_routing()
     }
     else
     {
-           sprintf(msge,"OBSch has invalid value: %d\n",OBSch);
-           text_error(msge);
-           psg_abort(1);
+           abort_message("OBSch has invalid value: %d\n",OBSch);
     }
     /* if any error occurred print error message */
     if (error < 0)
     {
-       sprintf(msge,"%s : %s\n",RF_Rout->objname,ObjError(error));
-       text_error(msge);
-       psg_abort(1);
+       abort_message("%s : %s\n",RF_Rout->objname,ObjError(error));
     }
     /*-------------------------------------------------------------------
     | LO Routing to Mixer/Preamp
@@ -664,9 +656,7 @@ setrf_routing()
     }
     if (error < 0)
     {
-      sprintf(msge,"%s : %s\n",RF_Opts->objname,ObjError(error));
-      text_error(msge);
-      psg_abort(1);
+      abort_message("%s : %s\n",RF_Opts->objname,ObjError(error));
     }
 
     /*-------------------------------------------------------------------
@@ -682,9 +672,7 @@ setrf_routing()
     }
     if (error < 0)
     {
-       sprintf(msge,"%s : %s\n",RF_Opts2->objname,ObjError(error));
-       text_error(msge);
-       psg_abort(1);
+       abort_message("%s : %s\n",RF_Opts2->objname,ObjError(error));
     }
     /*-------------------------------------------------------------------
     | Obs T/R Switch-Magnetic Leg Routing 
@@ -708,11 +696,8 @@ setrf_routing()
     }
     else if ( (legrelay != 'n') && (legrelay != 'N') )
     {
-       sprintf(msge,
-	"setrf_routing(): legrelay='%c' is invalid. (=l,h,n only)\n",
+       abort_message("setrf_routing(): legrelay='%c' is invalid. (=l,h,n only)\n",
 	  legrelay);
-       text_error(msge);
-       psg_abort(1);
     }
 
     if (obsamphiband)
@@ -725,9 +710,7 @@ setrf_routing()
     }
     if (error < 0)
     {
-       sprintf(msge,"%s : %s\n",RF_Opts2->objname,ObjError(error));
-       text_error(msge);
-       psg_abort(1);
+       abort_message("%s : %s\n",RF_Opts2->objname,ObjError(error));
     }
 }
 
@@ -736,8 +719,7 @@ setrf_routing()
 /* is a observe transmitter, decoupler, homo or hetero. It the 	*/
 /* returns the appropriate bit setting for gate mode		*/
 /****************************************************************/
-set_gate_mode(rfchan)
-int	rfchan;
+int set_gate_mode(int rfchan)
 {
    char	tmpchr;
    char	xmtr_gmode[MAX_RFCHAN_NUM + 1];
@@ -784,7 +766,6 @@ int	rfchan;
 int homo_decouple_routing()
 {
 int	gmode;
-char	msge[128];
 char	tmpchr;
 
     gmode = 0xd | (0xd << 4);		/* no homo decoupling */
@@ -821,9 +802,7 @@ char	tmpchr;
     }
     else
     {
-           sprintf(msge,"OBSch has invalid value: %d\n",OBSch);
-           text_error(msge);
-           psg_abort(1);
+         abort_message("OBSch has invalid value: %d\n",OBSch);
     }
     return(gmode);
 }
@@ -835,15 +814,13 @@ char	tmpchr;
 |	7/97 - preamp select removed and put int set_preamp_mask called
 |		in setRF() routine.
 +------------------------------------------------------------------*/
-set_magleg_routing()
+void set_magleg_routing()
 {
    char mrarray[8];
    char stmpval[20];
    char tn[20];
    char highq;
-   int	preamp_mask;
-   int error;
-   extern int rfchan_getampband();
+   int error __attribute__((unused));
 
    /* set MagLeg Lock/Normal Observe to Normal */
    SetAPBit(RF_MLrout, SET_FALSE, MAGLEG_MIXER, NULL);
@@ -980,7 +957,7 @@ ARM: (or the Active Receiver Matrix)
   3     n       n       y       x       0       1
   4     n       n       n       y       1       1
 */
-setPSELviaMatrix()
+void setPSELviaMatrix()
 {
      int fristActive;
 
@@ -1014,11 +991,9 @@ setPSELviaMatrix()
 |	set_preamp_mask()/0 
 |            sets homo decoupling and preamp select.
 +------------------------------------------------------------------*/
-set_preamp_mask()
+void set_preamp_mask()
 {
-   char tn[20];
    int	preamp_mask;
-   extern int rfchan_getampband();
 
    /* Set Channels 1 and 2 for Broadband (special SIS case)	*/
    if (amptype[0] == 'b')
@@ -1050,14 +1025,12 @@ set_preamp_mask()
 |	set Amp bands to Pulse or CW
 |				Author Greg Brissey  1/26/90
 +------------------------------------------------------------------*/
-set_ampcw()
+void set_ampcw()
 {
-    char msge[128];
     int error,error2;
     int obsamphiband;
     int amphiband1,amphiband2,amphiband3;
     int cw_bit,bothonband;
-    extern int rfchan_getampband();
 
     /* Set all decoupler channels to CW, then set Observe channel to Pulse */
     /* Unused Channels are set to Pulse mode */
@@ -1086,15 +1059,11 @@ set_ampcw()
       /* ---------- check for errors ------------- */
       if (error < 0)
       {
-         sprintf(msge,"%s : %s\n",RF_Opts2->objname,ObjError(error));
-         text_error(msge);
-         psg_abort(1);
+         abort_message("%s : %s\n",RF_Opts2->objname,ObjError(error));
       }
       if (error2 < 0)
       {
-         sprintf(msge,"%s : %s\n",RF_Opts->objname,ObjError(error));
-         text_error(msge);
-         psg_abort(1);
+         abort_message("%s : %s\n",RF_Opts->objname,ObjError(error));
       }
     }
 
@@ -1104,9 +1073,7 @@ set_ampcw()
 	 NULL);
     if (error < 0)
     {
-       sprintf(msge,"%s : %s\n",RF_Opts2->objname,ObjError(error));
-       text_error(msge);
-       psg_abort(1);
+       abort_message("%s : %s\n",RF_Opts2->objname,ObjError(error));
     }
 
     amphiband1 = rfchan_getampband(TODEV);
@@ -1123,9 +1090,7 @@ set_ampcw()
 				/* set band to pulse mode */
       if (error < 0)
       {
-         sprintf(msge,"%s : %s\n",RF_Opts2->objname,ObjError(error));
-         text_error(msge);
-         psg_abort(1);
+         abort_message("%s : %s\n",RF_Opts2->objname,ObjError(error));
       }
     }
 
@@ -1137,22 +1102,17 @@ set_ampcw()
 				/* set the other band to Pulse mode too! */
         if (error < 0)
         {
-           sprintf(msge,"%s : %s\n",RF_Opts2->objname,ObjError(error));
-           text_error(msge);
-           psg_abort(1);
+           abort_message("%s : %s\n",RF_Opts2->objname,ObjError(error));
         }
     }
 }
 
 /*---------------------------------------------------
 +---------------------------------------------------*/
-set_atgbit(/* obj,rfchan */ )
-/* RFChan_Object  *obj; */
-/* int		rfchan; */
+void set_atgbit()
 {
 int	band;
 int	bit;
-extern int rfchan_getampband();
 
    band = rfchan_getampband(RFCHAN1);
    {  if (band || (amptype[RFCHAN1-1] == 'b'))
@@ -1184,8 +1144,7 @@ extern int rfchan_getampband();
 |	    1 - Being Used but Not Observe Channel	(dn,dn2,dn3,etc..)
 |	    2 - Being Used and Observe Channel		(tn)
 +---------------------------------------------------*/
-rfchan_used(channel)
-int channel;
+int rfchan_used(int channel)
 {
    char *nucname;
    char  dnname[6], tmpstr[15];
@@ -1282,32 +1241,20 @@ int channel;
 #define FALSE	0
 #define NOT_SET_YET -1
 
-set_ampbits()
+static void set_ampbits()
 {
-char    errstr[128];
 char	tmpstr[10];
-int	amphiband1;
-int	amphiband2;
-int	amphiband3;
-int	amphiband4;
 char	ampmode[10];
 int     amp1mode;
 int     amp2mode;
-int     amp3mode;
-int     amp4mode;
 int     ampoverride = 0;
 int     solmode;
-int	getchan3, getchan4;
-int	mask;
 int     chan;
 int 	amphiband[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 int	ampsmode[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 int	solispulse[2] = { NOT_SET_YET, NOT_SET_YET };  /* 1 is low-0/high-1 band Solids amp been set to pulse */
 int	ampmask[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-int     ampeffectivetype[6];   /* translate amptype to an effective type e.g., aaln -> aall */
-			       /* only used in hb/lb test since aall means two lowband amps */
-				/* where aaln means 4th shares 3rd channel lowband amp */
-int     Amp34Type;
+int     Amp34Type = BROADBAND;
 int     MaskAmp[5] = { 0, MASK_AMP1, MASK_AMP2, MASK_AMP3, MASK_AMP4 };
 int     HiBandMask[5] = { 0, MASK_AMP1, MASK_AMP1, MASK_AMP3, MASK_AMP3 };
 int     LowBandMask[5] = { 0, MASK_AMP2, MASK_AMP2, MASK_AMP4, MASK_AMP4 };
@@ -1428,10 +1375,8 @@ extern char *getnucname();
          if ( ((amptype[chan-1] == 'l') && amphiband[chan]) ||
 	      ((amptype[chan-1] == 'h') && (!amphiband[chan])) )
          {
-	    sprintf(errstr,"'%s' is out of range for amplifier %d %s band",
+            abort_message("'%s' is out of range for amplifier %d %s band",
 		getfreqname(chan), ((chan<3)?1:2), ((amptype[chan-1] == 'l')?"low":"high"));
-            text_error(errstr);
-            psg_abort(1);
          }
 
 	 /* Is 4th chan sharing low, but set to hi */
@@ -1440,10 +1385,8 @@ extern char *getnucname();
 	     ((Amp34Type == LOW_NONE) && (amphiband[RFCHAN4] == TRUE)) ||  
              ((Amp34Type == HIGH_NONE) && (amphiband[RFCHAN4] == FALSE))  ) )
          {
-	    sprintf(errstr,"'%s' is out of range for amplifier %d shared %s band",
+            abort_message("'%s' is out of range for amplifier %d shared %s band",
 		getfreqname(chan), ((chan<3)?1:2), ((Amp34Type == LOW_NONE)?"low":"high"));
-            text_error(errstr);
-            psg_abort(1);
          }
 
 
@@ -1611,7 +1554,7 @@ extern char *getnucname();
 
    /* Only two channels then no need to go farther */
    if (NUMch < 3)
-     return(0);
+     return;
    
    if (NUMch < 4)	/* deal with simple case right here */
    {
@@ -1772,7 +1715,7 @@ extern char *getnucname();
               amphiband[RFCHAN4] = rfchan_getampband(RFCHAN4);
 
 
-        /* if (!amphiband3 && !amphiband4)		/* both are low band */
+        /* if (!amphiband3 && !amphiband4)		both are low band */
         if ((amphiband[RFCHAN3] == FALSE) && (amphiband[RFCHAN4] == FALSE)) /* both are low band */
         {  SetRFChanAttr(RF_Channel[RFCHAN3],
 		SET_HSSEL_TRUE,	HS_SEL6,	/* chan 3 must use ATG4 */
@@ -1796,7 +1739,7 @@ extern char *getnucname();
                    */
 
         }
-      /* else if (amphiband3 && amphiband4)	/* both are high band */
+      /* else if (amphiband3 && amphiband4)	 both are high band */
         else if ( (amphiband[RFCHAN3] == TRUE) && 
 		  (amphiband[RFCHAN4]== TRUE)) /* both are high band */
         {  SetRFChanAttr(RF_Channel[RFCHAN3],

@@ -9,6 +9,16 @@
 
 #ifndef DPS
 
+/*  if oopc.h not included then  define Object type */
+#ifndef OBJECTDEFINED
+#define OBJECTDEFINED
+
+/* Object Handle Structure */
+typedef int (*Functionp)();
+typedef struct {Functionp dispatch; char *objname; } *Object;
+
+#endif
+
 #define PULSE_WIDTH		1
 #define PULSE_PRE_ROFF		2
 #define PULSE_POST_ROFF		3
@@ -87,19 +97,6 @@
 
 /*------  End SISCO defines	--------------------------------*/
 
-/*--------------------------------------------------------------
-|  To allow lint to check the for proper parameter type & number
-|  passed to macros, each macro is define twice. 
-|  For lint the macro is defined as its self but in all capital
-|  letters. These are then defined in the lintfile.c
-|  The incantation is then:
-|   cc -DLINT -P -I. s2pul.c
-|   lint -DLINT -a -c -h -u -z -v -n -I. s2pul.i llib-lpsg.ln
-|
-|					Greg Brissey.
-+-------------------------------------------------------------*/
-
-#ifndef LINT
 /*---------------------------------------------------------------*/
 #define initval(value,index)					\
 			G_initval((double)(value),index)
@@ -675,7 +672,7 @@
 
 #define simshaped_pulse(n1, n2, w1, w2, ph1, ph2, r1, r2)	\
 	newtrans ? gensim3shaped_pulse(n1, n2, "", w1, w2, 0.0, ph1, ph2, \
-			zero, r1, r2,0.0, 0.0, OBSch, DECch, NULL)	\
+			zero, r1, r2,0.0, 0.0, OBSch, DECch, DEC2ch)	\
 			 : S_simshapedpulse(n1, n2,(double)(w1),	\
 				(double)(w2), ph1, ph2,	\
 				(double)(r1),(double)(r2))
@@ -1060,7 +1057,6 @@
 /*- End SISCO defines 						-*/
 /*---------------------------------------------------------------*/
 
-#ifndef DPS
 extern void incr(int a);
 extern void decr(int a);
 extern void assign(int a, int b);
@@ -1078,6 +1074,7 @@ extern void G_initval(double value, int index);
 extern void settable(int tablename, int numelements, int tablearray[]);
 extern void getelem(int tablename, int indxptr, int dstptr);
 extern void getTabSkip(int tablename, int indxptr, int dstptr);
+extern codeint tablertv(codeint tablename);
 
 extern void starthardloop(codeint count);
 extern void endhardloop();
@@ -1091,570 +1088,68 @@ extern int  loadtable(char *infilename);
 extern void tablesop(int operationtype, int tablename, int scalarval, int modval);
 extern void tabletop(int operationtype, int table1name, int table2name, int modval);
 
-extern void	setprgmode(),
-		prg_dec_off();
-extern void     zgradpulse(double gval, double gdelay);
+extern void S_statusdelay(int index, double delaytime);
+extern void setstatus(int channel, int on, char mod_mode,
+                      int sync, double set_dmf);
+extern void setreceiver();
+extern void rcvroff();
+extern void rcvron();
+extern void	setprgmode(int mode, int rfdevice);
+extern void	prg_dec_off(int stopmode, int rfdevice);
+extern int prg_dec_on(char *name, double pw_90, double deg_res, int rfdevice);
+extern void zgradpulse(double gval, double gdelay);
 extern double gen_shapelistpw(char *, double, int);
 extern double gen_poffset(double, double, int);
 extern double getTimeMarker(void);
 extern double nuc_gamma(void);
 extern void parallelstart(const char *chanType);
 extern double parallelend();
-#endif
-
-/*---------------------------------------------------------------*/
-/*---------------------------------------------------------------*/
-#else
-/*     LINT defines, So that Lint can find miss match parameters */
-/*---------------------------------------------------------------*/
-
-
-#define initval(value,index)					\
-			INITVAL((double)(value),index)
-
-#define decpulse(decpulse,phaseptr)				\
-			DECPULSE(decpulse,phaseptr)
-
-#define decrgpulse(pulsewidth, phaseptr, rx1, rx2)		\
-			DECRGPULSE(pulsewidth, phaseptr, rx1, rx2)
-
-#define dec2rgpulse(pulsewidth, phaseptr, rx1, rx2)		\
-		DEC2RGPULSE(pulsewidth, phaseptr, rx1, rx2)
-
-#define idecpulse(decpulse,phaseptr,string)			\
-			IDECPULSE(decpulse,phaseptr,string)
-
-#define idecrgpulse(pulsewidth, phaseptr, rx1, rx2,string)	\
-			IDECRGPULSE(pulsewidth, phaseptr, rx1, rx2,string)
-
-#define idec2rgpulse(pulsewidth, phaseptr, rx1, rx2,string)	\
-		IDEC2RGPULSE(pulsewidth, phaseptr, rx1, rx2,string)
-
-#define delay(time)						\
-			DELAY(time)
-
-#define idelay(time,string)					\
-			IDELAY(time,string)
-
-#define iobspulse(string)					\
-			IOBSPULSE(string)
-
-#define ioffset( value, device, string )			\
-			IOFFSET( value, device, string )
-
-#define ipulse(pulsewidth,phaseptr,string)			\
-			IPULSE(pulsewidth,phaseptr,string)
-
-#define obsoffset(reqpower)                                  \
-                        offset((double)(reqpower),OBSch)
-
-#define decoffset(reqpower)                                  \
-                        offset((double)(reqpower),DECch)
-
-#define dec2offset(reqpower)                                  \
-                        offset((double)(reqpower),DEC2ch)
-
-#define dec3offset(reqpower)                                  \
-                        offset((double)(reqpower),DEC3ch)
-
-#define obsstepsize(stepval)                                  \
-                        STEPSIZE((double)(stepval),OBSch)
-
-#define decstepsize(stepval)                                 \
-                        STEPSIZE((double)(stepval),DECch)
-
-#define dec2stepsize(stepval)                                 \
-                        STEPSIZE((double)(stepval),DEC2ch)
-
-#define dec3stepsize(stepval)                                 \
-                        STEPSIZE((double)(stepval),DEC3ch)
-
-#define obspower(reqpower)                                  \
-                        RLPOWER((double)(reqpower),OBSch)
-
-#define decpower(reqpower)                                 \
-                        RLPOWER((double)(reqpower),DECch)
-
-#define dec2power(reqpower)                                 \
-                        RLPOWER((double)(reqpower),DEC2ch)
-
-#define dec3power(reqpower)                                 \
-                        RLPOWER((double)(reqpower),DEC3ch)
-
-#define obspwrf(reqpower)					\
-                        PWRF((double)(reqpower),OBSch)
-
-#define decpwrf(reqpower)					\
-                        PWRF((double)(reqpower),DECch)
-
-#define dec2pwrf(reqpower)					\
-                        PWRF((double)(reqpower),DEC2ch)
-
-#define dec3pwrf(reqpower)					\
-                        PWRF((double)(reqpower),DEC3ch)
-
-#define ipwrf(value,device,string)				\
-			IPWRF(value,device,string)
-
-#define ipwrm(value,device,string)				\
-			IPWRM(value,device,string)
-
-#define irgpulse(pulsewidth, phaseptr, rx1, rx2,string)		\
-			IRGPULSE(pulsewidth, phaseptr, rx1, rx2,string)
-
-#define obspulse()						\
-			OBSPULSE()
-
-#define pulse(pulsewidth,phaseptr)				\
-			PULSE(pulsewidth,phaseptr)
-
-#define pwrm(rtparam,device)					\
-			PWRM(rtparam,device)
-
-#define rgpulse(pulsewidth, phaseptr, rx1, rx2)			\
-			RGPULSE(pulsewidth, phaseptr, rx1, rx2)
-
-#define rlpwrm(value,device)					\
-			RLPWRM(value,device)
-
-#define rotorperiod(rtparam)					\
-			ROTORPERIOD(rtparam)
-
-#define rotorsync(rtparam)					\
-			ROTORSYNC(rtparam)
-
-#define setautoincrement(tname)					\
-			SETAUTOINCREMENT(tname)
-
-#define setdivnfactor(tname, divn_factor)			\
-			SETDIVNFACTOR(tname, divn_factor)
-
-#define tsadd(t1name, sval, mval)                               \
-                        TSADD(t1name, sval, mval)
-
-#define tsdiv(tname, sval, mval)                                \
-                        TSDIV(tname, sval, mval)
-                               
-#define tsmult(tname, sval, mval)                               \
-                        TSMULT(tname, sval, mval)
- 
-#define tssub(tname, sval, mval)                                \
-                        TSSUB(tname, sval, mval)
- 
-#define ttadd(t1name, t2name, mval)                             \
-                        TTADD(t1name, t2name, mval)
-
-#define ttdiv(t1name, t2name, mval)                             \
-                        TTDIV(t1name, t2name, mval)
- 
-#define ttmult(t1name, t2name, mval)                            \
-                        TTMULT(t1name, t2name, mval)
- 
-#define ttsub(t1name, t2name, mval)				\
-			TTSUB(t1name, t2name, mval)
-
-#define xgate(rtparam)						\
-			XGATE((double)(rtparam))
-
-#define genqdphase(phaseptr, device)				\
-		GENQDPHASE(phaseptr, device)
-
-#define txphase(phaseptr)					\
-		TXPHASE(phaseptr)
-
-#define decphase(phaseptr)					\
-		DECPHASE(phaseptr)
-
-#define dec2phase(phaseptr)					\
-		DEC2PHASE(phaseptr)
-
-#define dec3phase(phaseptr)					\
-		DEC3PHASE(phaseptr)
-
-#define genpulse(pulsewidth, phaseptr, device)			\
-		GENPULSE(pulsewidth, phaseptr, device)
-
-#define genrgpulse(pulsewidth, phaseptr, rx1, rx2, device)	\
-		GENRGPULSE(pulsewidth, phaseptr, rx1, rx2, device)
-
-#define xmtrphase(phaseptr)					\
-		XMTRPHASE(phaseptr)
-
-#define dcplrphase(phaseptr)					\
-		DCPLRPHASE(phaseptr)
-
-#define dcplr2phase(phaseptr)					\
-		DCPLR2PHASE(phaseptr)
-
-#define dcplr3phase(phaseptr)					\
-		DCPLR3PHASE(phaseptr)
-
-#define gensaphase(phaseptr, device)				\
-		GENSAPHASE(phaseptr, device)
-
-#define simpulse(pw1, pw2, phs1, phs2, rx1, rx2)		\
-		SIMPULSE(pw1, pw2, phs1, phs2, rx1, rx2)
-
-#define sim3pulse(pw1, pw2, pw3, phs1, phs2, phs3, rx1, rx2)	\
-		SIM3PULSE(pw1, pw2, pw3, phs1, phs2, phs3,	\
-				rx1, rx2)
-
-#define rfon(device)						\
-		RFON(device)
-
-#define rfoff(device)						\
-		RFOFF(device)
-
-#define xmtron()						\
-		XMTRON()
-
-#define decon()						\
-		DECON()
-
-#define dec2on()						\
-		DEC2ON()
-
-#define dec3on()						\
-		DEC3ON()
-
-#define xmtroff()						\
-		XMTROFF()
-
-#define decoff()						\
-		DECOFF()
-
-#define dec2off()						\
-		DEC2OFF()
-
-#define dec3off()						\
-		DEC3OFF()
-
-#define shaped_pulse(name, width, phase, rx1, rx2)		\
-		SHAPED_PULSE(name, width, phase, rx1, rx2)
-
-#define decshaped_pulse(name, width, phase, rx1, rx2)		\
-		DECSHAPED_PULSE(name, width, phase, rx1, rx2)
-
-#define dec2shaped_pulse(name, width, phase, rx1, rx2)		\
-		DEC2SHAPED_PULSE(name, width, phase, rx1, rx2)
-
-#define dec3shaped_pulse(name, width, phase, rx1, rx2)		\
-		DEC3SHAPED_PULSE(name, width, phase, rx1, rx2)
-
-#define simshaped_pulse(n1, n2, w1, w2, ph1, ph2, r1, r2)	\
-		SIMSHAPED_PULSE(n1, n2, w1, w2, ph1, ph2, r1, r2)
-
-#define sim3shaped_pulse(n1, n2, n3, w1, w2, w3, ph1, ph2, ph3, r1, r2)	\
-		SIM3SHAPED_PULSE(n1, n2, n3, w1, w2, w3, ph1, ph2, ph3,	\
-					r1, r2)
-
-#define shapedvpulse(name, width, rtamp, phase, rx1, rx2)		\
-		SHAPEDVPULSE(name, width, rtamp, phase, rx1, rx2)			\
-
-#define apshaped_pulse(name, width, phase, tbl1, tbl2, rx1, rx2) \
-		APSHAPED_PULSE(name, width, phase, tbl1, tbl2, rx1, rx2)
-
-#define apshaped_decpulse(name, width, phase, tbl1, tbl2, rx1, rx2) \
-		APSHAPED_DECPULSE(name, width, phase, tbl1, tbl2, rx1, rx2)
-
-#define apshaped_dec2pulse(name, width, phase, tbl1, tbl2, rx1, rx2) \
-		APSHAPED_DEC2PULSE(name, width, phase, tbl1, tbl2, rx1, rx2)
-
-#define spinlock(   name, pp_90, pp_res, phase, nloops)		\
-		SPINLOCK(name, pp_90, pp_res, phase, nloops)
-
-#define decspinlock(name, pp_90, pp_res, phase, nloops)		\
-		DECSPINLOCK(name, pp_90, pp_res, phase, nloops)
-
-#define dec2spinlock(name, pp_90, pp_res, phase, nloops)	\
-		DEC2SPINLOCK(name, pp_90, pp_res, phase, nloops)
-
-#define dec3spinlock(name, pp_90, pp_res, phase, nloops)	\
-		DEC3SPINLOCK(name, pp_90, pp_res, phase, nloops)
-
-#define obsprgon(name, pp_90, pp_res)			\
-		OBSPRGON(name, pp_90, pp_res)
-
-#define decprgon(name, pp_90, pp_res)			\
-		DECPRGON(name, pp_90, pp_res)
-
-#define dec2prgon(name, pp_90, pp_res)			\
-		DEC2PRGON(name, pp_90, pp_res)
-
-#define dec3prgon(name, pp_90, pp_res)			\
-		DEC3PRGON(name, pp_90, pp_res)
-
-#define obsprgoff()						\
-		OBSPRGOFF()
-
-#define decprgoff()						\
-		DECPRGOFF()
-
-#define dec2prgoff()						\
-		DEC2PRGOFF()
-
-#define dec3prgoff()						\
-		DEC3PRGOFF()
-
-#define initdelay(incrtime,index) 				\
-		INITDELAY(incrtime,index)
-
-#define incdelay(multparam,index) \
-		INCDELAY(multparam,index)
-
-#define vdelay(base,rtcnt) \
-		VDELAY(base,rtcnt)
-
-#define statusdelay(index,delaytime) \
-	STATUSDELAY((int)(index), (double)(delaytime)) 
-
-#define setuserap(value,reg)						\
-	SETUSERAP((int)(value),(int)(reg))
-
-#define vsetuserap(rtparam,reg)					\
-	VSETUSERAP(rtparam,(int)(reg))
-
-#define readuserap(rtparam)					\
-	READUSERAP(rtparam,3)
-
-/*---------------------------------------------------------------*/
-/*- SISCO Lint defines (gradients)				-*/
-/*---------------------------------------------------------------*/
-
-
-#define gradient(gid,gamp)					\
-		RGRADIENT(gid, (double)(gamp))
-
-#define vgradient(gid,gamp0,gampi,vmult)				\
-		VGRADIENT(gid, IRND(gamp0), IRND(gampi), vmult)
-
-#define incgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)	\
-		INCGRADIENT(gid, IRND(gamp0),		\
-				IRND(gamp1), IRND(gamp2), IRND(gamp3),	\
-				mult1, mult2, mult3)
-
-#define shapedpulse(pulsefile,pulsewidth,phaseptr,rx1,rx2)	\
-		SHAPED_PULSE(pulsefile,(double)(pulsewidth), \
-				phaseptr,(double)(rx1),(double)(rx2))
-
-#define decshapedpulse(pulsefile,pulsewidth,phaseptr,rx1,rx2)		\
-		DECSHAPED_PULSE(pulsefile,(double)(pulsewidth), \
-				phaseptr,(double)(rx1),(double)(rx2))
-
-
-#define simshapedpulse(fno,fnd,transpw,decpw,transphase,decphase,rx1,rx2) \
-		SIMSHAPED_PULSE(fno,fnd,(double)(transpw),	\
-				(double)(decpw),transphase,decphase,	\
-				(double)(rx1),(double)(rx2))
-
-#define shapedincgradient(axis,pattern,width,a0,a1,a2,a3,x1,x2,x3,loops,wait) \
-		SHAPED_INC_GRADIENT(axis, pattern, (double)(width), \
-			(double)(a0), (double)(a1), (double)(a2), (double)(a3), \
-			x1, x2, x3, IRND(loops), IRND(wait))
-
-#define shapedgradient(pulsefile,pulsewidth,gamp0,which,loops,wait_4_me) \
-		SHAPEDGRADIENT(pulsefile,(double)(pulsewidth),		\
-				(double)(gamp0),which,(int)(loops+0.5),	\
-				(int)(wait_4_me+0.5))
-
-#define shaped2Dgradient(pulsefile,pulsewidth,gamp0,which,loops,wait_4_me,tag) \
-		SHAPED_2D_GRADIENT(pulsefile,(double)(pulsewidth),	\
-				(double)(gamp0),which,(int)(loops+0.5),	\
-				(int)(wait_4_me+0.5),(int)(tag+0.5))
-
-#define shapedvgradient(pfile,pwidth,gamp0,gampi,vmult,which,vloops,wait,tag) \
-		SHAPED_V_GRADIENT(pfile,(double)(pwidth),(double)(gamp0), \
-				(double)(gampi),vmult,which,vloops,	\
-				(int)(wait+0.5),(int)(tag+0.5))
-
-#define oblique_gradient(level1,level2,level3,ang1,ang2,ang3)          \
-		OBLIQUE_GRADIENT((double)(level1),(double)(level2),  \
-	                        (double)(level3),(double)(ang1),       \
-			        (double)(ang2),(double)(ang3))
-
-#define oblique_imaging_shapedgradient(pat,width,lvl1,lvl2,lvl3,ang1,ang2,ang3,loops,wait)  \
-              OBLIQUE_SHAPEDGRADIENT(pat,(double)(width), \
-		                (double)(lvl1),(double)(lvl2),(double)(lvl3), \
-				(double)(ang1),(double)(ang2),(double)(ang3), \
-				(int)(loops+0.5),(int)(wait+0.5))
-
-#define oblique_shapedgradient(pat1,pat2,pat3,width,lvl1,lvl2,lvl3,ang1,ang2,ang3,loops,wait)  \
-              OBLIQUE_SHAPED3GRADIENT(pat1,pat2,pat3,(double)(width), \
-		                (double)(lvl1),(double)(lvl2),(double)(lvl3), \
-				(double)(ang1),(double)(ang2),(double)(ang3), \
-				(int)(loops+0.5),(int)(wait+0.5))
-
-#define phase_encode_gradient(stat1,stat2,stat3,step2,vmult2,lim2,ang1,ang2,ang3)  \
-                PHASE_ENCODE_GRADIENT((double)(stat1),(double)(stat2),      \
-				(double)(stat3),(double)(step2),              \
-				(codeint)vmult2,(double)(lim2),(double)(ang1), \
-				(double)(ang2),(double)(ang3))
-
-#define phase_encode_shapedgradient(pat,width,stat1,stat2,stat3,step2,vmult2,lim2,ang1,ang2,ang3,vloops,wait,tag)   \
-                PHASE_ENCODE_SHAPEDGRADIENT(pat,(double)(width),        \
-				(double)(stat1),(double)(stat2),          \
-				(double)(stat3),(double)(step2),          \
-				vmult2,(double)(lim2),(double)(ang1),     \
-				(double)(ang2),(double)(ang3),vloops,     \
-				(int)(wait+0.5),(int)(tag+0.5))
-
-#define phase_encode3_gradient(stat1,stat2,stat3,step1,step2,step3,vmult1,vmult2,vmult3,lim1,lim2,lim3,ang1,ang2,ang3) \
-                PHASE_ENCODE3_GRADIENT((double)(stat1),(double)(stat2), \
-				(double)(stat3),(double)(step1),          \
-				(double)(step2),(double)(step3),vmult1,   \
-				vmult2,vmult3,(double)(lim1),(double)(lim2), \
-				(double)(lim3),(double)(ang1),(double)(ang2), \
-				(double)(ang3))
-
-#define phase_encode3_shapedgradient(pat,width,stat1,stat2,stat3,step1,step2,step3,vmult1,vmult2,vmult3,lim1,lim2,lim3,ang1,ang2,ang3,loops,wait) \
-                PHASE_ENCODE3_SHAPEDGRADIENT(pat,(double)(width), \
-				(double)(stat1),(double)(stat2), \
-				(double)(stat3),(double)(step1),          \
-				(double)(step2),(double)(step3),vmult1,   \
-				vmult2,vmult3,(double)(lim1),(double)(lim2), \
-				(double)(lim3),(double)(ang1),(double)(ang2), \
-				(double)(ang3), IRND(loops), IRND(wait))
-
-#define position_offset(pos,grad,resfrq,device)                 \
-                POSITION_OFFSET((double)(pos),(double)(grad), \
-				(double)(resfrq),(int)(device))
-
-#define position_offset_list(posarray,grad,nslices,resfrq,device,listno,apv1) \
-                POSITION_OFFSET_LIST(posarray,(double)(grad),      \
-				(double)(nslices),(double)(resfrq),  \
-				(int)(device),(int)(listno),apv1)
-
-#define oblique_gradpulse(level1,level2,level3,ang1,ang2,ang3,gradtime)  \
-	OBLIQUE_GRADPULSE((double)(level1),(double)(level2),  \
-	                (double)(level3),(double)(ang1),(double)(ang2),  \
-			(double)(ang3),(double)(gradtime))
-
-#define vagradient(gradlvl,theta,phi)				\
-    	OBLIQUE_GRADIENT(0.0,0.0,(double)(gradlvl),		\
-			(double)(phi),0.0,(double)(theta))
-
-#define vagradpulse(gradlvl,gradtime,theta,phi)		\
-    	OBLIQUE_GRADPULSE(0.0,0.0,(double)(gradlvl),		\
-			(double)(phi),0.0,(double)(theta),	\
-			(double)(gradtime))
-
-#define vashapedgradient(pat,gradlvl,gradtime,theta,phi,loops,wait)	\
-	OBLIQUE_SHAPEDGRADIENT(pat,(double)(gradtime),0.0, \
-			0.0,(double)(gradlvl),(double)(phi), \
-			0.0,(double)(theta),(int)(loops+0.5),(int)(wait+0.5))
-
-#define vashapedgradpulse(pat,gradlvl,gradtime,theta,phi)		\
-	OBLIQUE_SHAPEDGRADIENT(pat,(double)(gradtime),0.0, \
-			0.0,(double)(gradlvl),(double)(phi), \
-			0.0,(double)(theta),(int)(0),WAIT)
-
-#define magradpulse(gradlvl,gradtime)		\
-    	OBLIQUE_GRADPULSE((double)(gradlvl),(double)(gradlvl),  \
-		(double)(gradlvl),90.0,0.0,90.0,	\
-			(double)(gradtime))
-
-#define mashapedgradpulse(pat,gradlvl,gradtime)		\
-	OBLIQUE_SHAPEDGRADIENT(pat,(double)(gradtime),(double)(gradlvl), \
-			(double)(gradlvl),(double)(gradlvl),90.0, \
-			0.0,90.0,(int)(0),WAIT)
-
-/*---------------------------------------------------------------*/
-/*- SISCO Lint defines (Misc)					-*/
-/*---------------------------------------------------------------*/
-#define observepower(reqpower)                                  \
-                        RLPOWER((double)(reqpower),OBSch)
-
-#define decouplepower(reqpower)                                 \
-                        RLPOWER((double)(reqpower),DECch)
-
-#define getarray(paramname,arrayname)                           \
-			GETARRAY(paramname,arrayname,sizeof(arrayname))
-
-#define create_offset_list(list,nvals,device,list_no)			\
-			CREATE_OFFSET_LIST(list,(int)(nvals+0.5), 	\
-				(int)(device+0.5), IRND(list_no))
-#define create_freq_list(list,nvals,device,list_no)			\
-			CREATE_FREQ_LIST(list,(int)(nvals+0.5), 	\
-				(int)(device+0.5), IRND(list_no))
-#define create_delay_list(list,nvals,list_no)				\
-			CREATE_DELAY_LIST(list,(int)(nvals+0.5), 	\
-				IRND(list_no))
-#define voffset(table,vindex)					\
-			 VGET_ELEM((int)(table+0.5),vindex)
-#define vfreq(table,vindex)					\
-			 VGET_ELEM((int)(table+0.5),vindex)
-#define vdelay_list(table,vindex)					\
-			VGET_ELEM((int)(table+0.5),vindex)
-#define init_vscan(rtvar,npts)					\
-			INIT_VSCAN(rtvar, (double)(npts))
-
-/*---------------------------------------------------------------*/
-/*- SISCO Lint defines (Imaging Sequence Developement)		-*/
-/*---------------------------------------------------------------*/
-#define  poffset(POS,GRAD)  POSITION_OFFSET(POS,GRAD,resto,OBSch)
-
-#define  poffset_list(POSARRAY,GRAD,NS,APV1) \
-    POSITION_OFFSET_LIST(POSARRAY,GRAD,NS,resto,OBSch,0,APV1)
-
-#define obl_gradient(LEVEL1,LEVEL2,LEVEL3) \
-    OBLIQUE_GRADIENT(LEVEL1,LEVEL2,LEVEL3,psi,phi,theta)
-
-#define obl_imaging_shapedgradient(PAT,WIDTH,LVL1,LVL2,LVL3,LOOPS,WAIT) \
-    OBLIQUE_SHAPED1GRADIENT(PAT,WIDTH,LVL1,LVL2,LVL3,psi,phi,theta, \
-							LOOPS,WAIT)
-
-#define obl_shapedgradient(PAT1,PAT2,PAT3,WIDTH,LVL1,LVL2,LVL3,LOOPS,WAIT) \
-    OBLIQUE_SHAPED3GRADIENT(PAT1,PAT2,PAT3,WIDTH,LVL1,LVL2,LVL3,psi,phi,theta, \
-							LOOPS,WAIT)
-
-#define pe_gradient(STAT1,STAT2,STAT3,STEP2,VMULT2) \
-    PHASE_ENCODE_GRADIENT(STAT1,STAT2,STAT3,STEP2,VMULT2,nv/2,psi,phi,theta)
-
-#define pe2_gradient(STAT1,STAT2,STAT3,STEP2,STEP3,VMULT2,VMULT3)   \
-    PHASE_ENCODE3_GRADIENT(STAT1, STAT2, STAT3, 0.0, STEP2, STEP3,  \
-        zero, VMULT2, VMULT3, 0.0, nv/2, nv2/2, psi, phi, theta)
-
-#define pe3_gradient(STAT1,STAT2,STAT3,STEP1,STEP2,STEP3,VMULT1,VMULT2,VMULT3) \
-    PHASE_ENCODE3_GRADIENT(STAT1, STAT2, STAT3, STEP1, STEP2, STEP3, \
-        VMULT1, VMULT2, VMULT3, nv/2, nv2/2, nv3/2, psi, phi, theta)
-
-#define pe_shapedgradient(PAT,WIDTH,STAT1,STAT2,STAT3,STEP2,VMULT2,WAIT,TAG) \
-    PHASE_ENCODE_SHAPEDGRADIENT(PAT,WIDTH,STAT1,STAT2,STAT3,STEP2,VMULT2, \
-        nv/2,psi,phi,theta,one,WAIT,TAG)
-
-#define pe_oblshapedgradient(PAT1,PAT2,PAT3,WIDTH,LVL1,LVL2,LVL3,STEP2,VMULT2,WAIT,TAG) \
-    pe_oblique_shapedgradient(PAT1,PAT2,PAT3,WIDTH,LVL1,LVL2,LVL3,STEP2, \
-			VMULT2,nv/2,psi,phi,theta,WAIT,TAG)
-
-#define pe2_oblshapedgradient(PAT1,PAT2,PAT3,WIDTH,STAT1,STAT2,STAT3,STEP2,STEP3,VMULT2,VMULT3)   \
-    pe3_oblique_shaped3gradient(PAT1,PAT2,PAT3, WIDTH, STAT1, STAT2, STAT3, 0.0, \
-			STEP2, STEP3, zero, VMULT2, VMULT3,  \
-        		0.0, nv/2, nv2/2, psi, phi, theta, 1.0, WAIT)
-
-#define pe3_oblshapedgradient(PAT1,PAT2,PAT3,WIDTH,STAT1,STAT2,STAT3,STEP1,STEP2,STEP3,VMULT1,VMULT2,VMULT3) \
-    pe3_oblique_shaped3gradient(PAT1,PAT2,PAT3, WIDTH ,STAT1, STAT2, STAT3, \
-			STEP1, STEP2, STEP3, VMULT1, VMULT2, VMULT3, \
-        		nv/2, nv2/2, nv3/2, psi, phi, theta, 1.0, WAIT)
-
-#define pe2_shapedgradient(PAT,WIDTH,STAT1,STAT2,STAT3,STEP2,STEP3,VMULT2,VMULT3)   \
-    PHASE_ENCODE3_SHAPEDGRADIENT(PAT, WIDTH, STAT1, STAT2, STAT3, 0.0, \
-			STEP2, STEP3, zero, VMULT2, VMULT3,  \
-        		0.0, nv/2, nv2/2, psi, phi, theta, 1.0, WAIT)
-
-#define pe3_shapedgradient(PAT,WIDTH,STAT1,STAT2,STAT3,STEP1,STEP2,STEP3,VMULT1,VMULT2,VMULT3) \
-    PHASE_ENCODE3_SHAPEDGRADIENT(PAT, WIDTH ,STAT1, STAT2, STAT3, \
-			STEP1, STEP2, STEP3, VMULT1, VMULT2, VMULT3, \
-        		nv/2, nv2/2, nv3/2, psi, phi, theta, 1.0, WAIT)
-
-#define init_rfpattern(pattern_name,pulse_struct,steps)  \
-        INIT_RFPATTERN(pattern_name, pulse_struct, IRND(steps))
-
-#define init_gradpattern(pattern_name,pulse_struct,steps)  \
-        INIT_GPATTERN(pattern_name, pulse_struct, IRND(steps))
-
-/*---------------------------------------------------------------*/
-/*- End SISCO defines 						-*/
-/*---------------------------------------------------------------*/
-#endif
+extern int      getorientation(char *c1,char *c2,char *c3,char *orientname);
+extern int      grad_advance(double dur);
+extern void     set_rotation_matrix(double ang1, double ang2, double ang3);
+extern void lk_sample();
+extern void lk_hold();
+extern void lk_hslines();
+extern void lk_autotrig();
+extern void lk_sampling_off();
+extern void rlpower(double value, int device);
+extern void power(int value, int device);
+
+extern void genshaped_pulse(char *name, double width, codeint phase,
+                     double rx1, double rx2, double g1,
+                     double g2, int rfdevice);
+extern void S_shapedpulse(char *pulsefile, double pulsewidth, codeint phaseptr,
+                   double rx1, double rx2);
+extern void S_decshapedpulse(char *pulsefile, double pulsewidth,
+                   codeint phaseptr, double rx1, double rx2);
+extern void S_simshapedpulse(char *fno, char *fnd, double transpw, double decpw,
+                 codeint transphase, codeint decupphase,
+                 double rx1, double rx2);
+extern void S_shapedgradient(char *name, double width, double amp,
+                      char which, int loops, int wait_4_me);
+extern void gensim3shaped_pulse(char *name1, char *name2, char *name3,
+                    double width1, double width2, double width3,
+                    codeint phase1, codeint phase2, codeint phase3,
+                    double rx1, double rx2, double g1, double g2,
+                    int rfdevice1, int rfdevice2, int rfdevice3);
+extern void S_oblique_gradpulse(double level1, double level2, double level3,
+                double ang1, double ang2, double ang3, double gdelay);
+extern int pulse_phase_type(int val);
+extern int phase_var_type(int val);
+extern void stepsize(double stepsiz, int device);
+extern void rlpwrf(double value, int device);
+extern int SetRFChanAttr(Object obj, ...);
+extern int prg_dec_on(char *name, double pw_90, double deg_res, int rfdevice);
+extern void rgradient(char axis, double value);
+extern void status(int index);
+extern void G_Delay(int firstkey, ...);
+extern void G_Pulse(int firstkey, ...);
+extern int G_Offset( int firstkey, ... );
+extern int hsdelay(double time);
+extern void genspinlock(char *name, double pw_90, double deg_res, codeint phsval, int ncycles, int rfdevice);
+extern void G_Simpulse(int firstkey, ...);
+extern void acquire(double datapts, double dwell);
+extern void sp1on();
+extern void sp1off();
 
 #endif

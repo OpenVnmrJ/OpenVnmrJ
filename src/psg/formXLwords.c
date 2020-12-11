@@ -22,17 +22,11 @@ extern int curfifocount;
 |        PTS160 does not have a 100MHz decade therefore the 
 |	  10MHz decade is programmed in HEX not BCD
 |
-|				Author Greg Brissey  5/13/86
-|   Modified   Author     Purpose
-|   --------   ------     -------
-|   6/22/89    Greg B.	   1. pointer where calc apbus words are placed.
+| int num;		number of XL word needed for device
+| int digoffset;		register offset on XL interface for device
+| int device;		address of device on XL interface
 +------------------------------------------------------------------------*/
-formXLwords(value,num,digoffset,device,words)
-double value;
-int num;		/* number of XL word needed for device */
-int digoffset;		/* register offset on XL interface for device */
-int device;		/* address of device on XL interface */
-int *words;
+void formXLwords(double value, int num, int digoffset, int device, int *words)
 {
     int ival;
     int digit;
@@ -69,12 +63,7 @@ int *words;
 |   --------   ------     -------
 |   6/22/89    Greg B.	   1. pointer where calc apbus words are placed.
 +------------------------------------------------------------------------*/
-formXL16words(value,num,digoffset,device,words)
-double value;
-int num;		/* number of XL word needed for device */
-int digoffset;		/* register offset on XL interface for device */
-int device;		/* address of device on XL interface */
-int *words;
+void formXL16words(double value, int num, int digoffset, int device, int *words)
 {
     int ival;
     int digit;
@@ -106,12 +95,7 @@ int *words;
 |
 |				Author Greg Brissey  7/12/89
 +------------------------------------------------------------------------*/
-formPTSwords(value,num,digoffset,ptstype,words)
-double value;
-int num;		/* number of XL word needed for device */
-int digoffset;		/* register offset on XL interface for device */
-int ptstype;		/* PTS type 160,200,250,400,500, etc */
-int *words;
+void formPTSwords(double value, int num, int digoffset, int ptstype, int *words)
 {
     int ival;
     int digit;

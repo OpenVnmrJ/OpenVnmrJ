@@ -25,12 +25,17 @@
 extern double   getval();
 extern double   setoffsetsyn();
 extern double   rfchan_getfreqstep();
+extern void write_to_acqi(char *label, double value, double units,
+                   int min, int max, int type, int scale,
+                   codeint counter, int device);
+extern int okinhwloop();
+extern void insertIPAcode();
 extern int	acqiflag;
 extern int      ap_ovrride;	/* ap delay overide flag */
 extern int	newacq;
 extern char *ObjError(int wcode);
 
-int offsetter();
+int offsetter(double offset_freq, int device);
 int G_Offset( int firstkey, ... );
 
 struct offset_struct {
@@ -253,6 +258,11 @@ G_Offset( int firstkey, ... )
 	}
 
 	counter = offsetter( offset_s.freq, offset_s.device );
+    if (counter < 0)
+    {
+        return(-1);
+    }
+
 	if (strcmp( offset_s.label, "" ) != 0 && acqiflag ) {
 		write_to_acqi( offset_s.label,
 			       offset_s.freq,
@@ -284,12 +294,9 @@ G_Offset( int firstkey, ... )
 |    12/11/90  Robert L.  3. renamed offsetter; offset now interface
 |			     for G_Offset routine
 +------------------------------------------------------------*/
-int offsetter(offset_freq, device)
-double          offset_freq;
-int             device;
+int offsetter(double offset_freq, int device)
 {
    int             error;
-   char            msge[128];
    Msg_Set_Param   param;
    Msg_Set_Result  result;
    extern void	   setHSLdelay();
@@ -298,19 +305,17 @@ int             device;
 
    if ((device < 1) || (device > NUMch))
    {
-      sprintf(msge, "offsetter: device #%d is not within bounds 1 - %d\n",
+      abort_message("offsetter: device #%d is not within bounds 1 - %d\n",
 	      device, MAX_RFCHAN_NUM);
-      abort_message(msge);
    }
    if (RF_Channel[device] == NULL)
    {
       if (ix < 2)
       {
-	 sprintf(msge, "offsetter: Warning RF Channel device #%d is not present.\n",
+	     text_error("offsetter: Warning RF Channel device #%d is not present.\n",
 		 device);
-	 text_error(msge);
       }
-      return;
+      return(-1);
    }
 
    okinhwloop();
@@ -340,8 +345,7 @@ int             device;
    error = Send(RF_Channel[device], MSG_GET_RFCHAN_ATTR_pr, &param, &result);
    if (error < 0)
    {
-      sprintf(msge, "%s : %s\n", RF_Channel[device]->objname, ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n", RF_Channel[device]->objname, ObjError(error));
    }
 
    /* direct syn xmtr type ? */
@@ -360,27 +364,21 @@ int             device;
 |	Init frequency of spare freq register
 |
 +------------------------------------------------------------*/
-init_spare_offset(offset_freq, device)
-double          offset_freq;
-int             device;
+void init_spare_offset(double offset_freq, int device)
 {
-   char            msge[128];
    extern void	   setHSLdelay();
 
    if ((device < 1) || (device > NUMch))
    {
-      sprintf(msge, "init_spare_offset: device #%d is not within 1 - %d\n",
+      abort_message("init_spare_offset: device #%d is not within 1 - %d\n",
 	      device, MAX_RFCHAN_NUM);
-      abort_message(msge);
    }
    if (RF_Channel[device] == NULL)
    {
       if (ix < 2)
       {
-	 sprintf(msge,
-	  "init_spare_offset: Warning RF Channel device #%d is not present.\n",
+	     text_error("init_spare_offset: Warning RF Channel device #%d is not present.\n",
 		 device);
-	 text_error(msge);
       }
       return;
    }
@@ -411,27 +409,21 @@ int             device;
 |	Init frequency of spare freq register
 |
 +------------------------------------------------------------*/
-init_spare_freq(freq, device)
-double          freq;
-int             device;
+void init_spare_freq(double freq, int device)
 {
-   char            msge[128];
    extern void	   setHSLdelay();
 
    if ((device < 1) || (device > NUMch))
    {
-      sprintf(msge, "init_spare_offset: device #%d is not within 1 - %d\n",
+      abort_message("init_spare_freq: device #%d is not within 1 - %d\n",
 	      device, MAX_RFCHAN_NUM);
-      abort_message(msge);
    }
    if (RF_Channel[device] == NULL)
    {
       if (ix < 2)
       {
-	 sprintf(msge,
-	  "init_spare_offset: Warning RF Channel device #%d is not present.\n",
+	     text_error("init_spare_freq: Warning RF Channel device #%d is not present.\n",
 		 device);
-	 text_error(msge);
       }
       return;
    }
@@ -462,26 +454,21 @@ int             device;
 |	Set frequency in spare freq register.
 |
 +------------------------------------------------------------*/
-set_spare_freq(device)
-int             device;
+void set_spare_freq(int device)
 {
-   char            msge[128];
    extern void	   setHSLdelay();
 
    if ((device < 1) || (device > NUMch))
    {
-      sprintf(msge, "init_spare_offset: device #%d is not within 1 - %d\n",
+      abort_message("init_spare_offset: device #%d is not within 1 - %d\n",
 	      device, MAX_RFCHAN_NUM);
-      abort_message(msge);
    }
    if (RF_Channel[device] == NULL)
    {
       if (ix < 2)
       {
-	 sprintf(msge,
-	  "set_spare_offset: Warning RF Channel device #%d is not present.\n",
+	     text_error("set_spare_offset: Warning RF Channel device #%d is not present.\n",
 		 device);
-	 text_error(msge);
       }
       return;
    }
@@ -513,26 +500,21 @@ int             device;
 |		frequency or offset sent down was to this device.
 |
 +------------------------------------------------------------*/
-set_std_freq(device)
-int             device;
+void set_std_freq(int device)
 {
-   char            msge[128];
    extern void	   setHSLdelay();
 
    if ((device < 1) || (device > NUMch))
    {
-      sprintf(msge, "init_spare_offset: device #%d is not within 1 - %d\n",
+      abort_message("init_spare_offset: device #%d is not within 1 - %d\n",
 	      device, MAX_RFCHAN_NUM);
-      abort_message(msge);
    }
    if (RF_Channel[device] == NULL)
    {
       if (ix < 2)
       {
-	 sprintf(msge,
-	  "set_spare_offset: Warning RF Channel device #%d is not present.\n",
+	     text_error("set_spare_offset: Warning RF Channel device #%d is not present.\n",
 		 device);
-	 text_error(msge);
       }
       return;
    }
