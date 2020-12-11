@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include "oopc.h"
@@ -15,11 +16,16 @@
 #include "acqparms.h"
 #include "macros.h"
 #include "rfconst.h"
+#include "abort.h"
 
+extern void write_to_acqi(char *label, double value, double units,
+                   int min, int max, int type, int scale,
+                   codeint counter, int device);
 extern int HSlines;
 extern int curfifocount;
 extern int acqiflag;
 extern int bgflag;
+extern char *ObjError(int wcode);
 
 extern FILE *sliderfile;
 
@@ -40,6 +46,11 @@ struct freqstruct
    char           *label;
 };
 
+void sweep_setup(int device, double center, double width,
+                 double frqsteps, char *string);
+void stepfreq(int device);
+void write_to_acqi_swp(double center, double width, double np, double mode);
+
 /*-------------------------------------------------------------------
 |
 |	G_Sweep(variable arg_list)/n
@@ -49,14 +60,13 @@ struct freqstruct
 |				Author Greg Brissey 2/28/91
 +------------------------------------------------------------------*/
 /*VARARGS1*/
-int 
-G_Sweep(int firstkey, ...)
+void G_Sweep(int firstkey, ...)
 {
    struct freqstruct freqs;
    va_list         ptr_to_args;
    int             counter;
    int             keyword;
-   int             initswp;
+   int             initswp = 0;
 
 /* fill in the defaults */
    freqs.centerfreq = sfrq;
@@ -167,7 +177,6 @@ G_Sweep(int firstkey, ...)
         Msg_Set_Param param;
         Msg_Set_Result result;
         int error;
-        char msge[256];
 	double swidthval, maxswidth;
 
         /* Get RF sweep width */
@@ -175,9 +184,8 @@ G_Sweep(int firstkey, ...)
         error = Send(RF_Channel[freqs.device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
         if (error < 0)
         {
-          sprintf(msge,"%s : %s\n",
-		RF_Channel[freqs.device]->objname,ObjError(error));
-          text_error(msge);
+          text_error("%s : %s\n",
+		     RF_Channel[freqs.device]->objname,ObjError(error));
         }
 	swidthval = result.DBreqvalue;
 
@@ -186,9 +194,8 @@ G_Sweep(int firstkey, ...)
         error = Send(RF_Channel[freqs.device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
         if (error < 0)
         {
-          sprintf(msge,"%s : %s\n",
-		RF_Channel[freqs.device]->objname,ObjError(error));
-          text_error(msge);
+          text_error("%s : %s\n",
+		     RF_Channel[freqs.device]->objname,ObjError(error));
         }
 	maxswidth = result.DBreqvalue;
         printf("max sweep width = %lf, req. swpwidth = %lf\n",
@@ -217,12 +224,9 @@ G_Sweep(int firstkey, ...)
 |
 |				Author Greg Brissey 4/3/91
 +------------------------------------------------------------------*/
-write_to_acqi_swp(center, width, np, mode)
-double center,width,np,mode;
+void write_to_acqi_swp(double center, double width, double np, double mode)
 {
-FILE	*fopen();
 char    filename[80];
-char   *getenv();
 
    if (ix != 1) return;
    
@@ -241,7 +245,7 @@ char   *getenv();
 |
 |				Author Greg Brissey 7/3/91
 +------------------------------------------------------------------*/
-sweepstart(center,width,rtvar1,rtvar2)
+void sweepstart(center,width,rtvar1,rtvar2)
 double center,width;
 int rtvar1,rtvar2;
 {
@@ -256,8 +260,7 @@ int rtvar1,rtvar2;
 |
 |				Author Greg Brissey 7/3/91
 +------------------------------------------------------------------*/
-sweepend(rtvar2)
-int rtvar2;
+void sweepend(int rtvar2)
 {
    acquire(2.0,1.0e-6);
    stepfreq(TODEV);
@@ -270,10 +273,8 @@ int rtvar2;
 |
 |				Author Greg Brissey 7/3/91
 +------------------------------------------------------------------*/
-sweep_setup(device,center,width,frqsteps,string)
-int device;
-double center,width,frqsteps;
-char *string;
+void sweep_setup(int device, double center, double width,
+                 double frqsteps, char *string)
 {
    if ( (device > 0) && (device <= NUMch) ) 
    {
@@ -287,10 +288,8 @@ char *string;
    }
    else
    {
-      char msge[128];
-      sprintf(msge,"sweep_setup: device #%d is not within bounds 1 - %d\n",
+      abort_message("sweep_setup: device #%d is not within bounds 1 - %d\n",
                   device, NUMch);
-      abort_message(msge);
    }
 }
 
@@ -300,8 +299,7 @@ char *string;
 |
 |				Author Greg Brissey 7/3/91
 +------------------------------------------------------------------*/
-stepfreq(device)
-int device;
+void stepfreq(int device)
 {
    if ( (device > 0) && (device <= NUMch) )
    {
@@ -317,9 +315,7 @@ int device;
    }
    else
    {
-      char msge[128];
-      sprintf(msge,"stepfreq: device #%d is not within bounds 1 - %d\n",
+      abort_message("stepfreq: device #%d is not within bounds 1 - %d\n",
                      device, NUMch);
-      abort_message(msge);
    }
 }

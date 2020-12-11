@@ -41,10 +41,13 @@ typedef struct {
 		char *reqptr;
 	       } Msg_Set_Result;
 
+#ifndef OBJECTDEFINED
+#define OBJECTDEFINED
 typedef int (*Functionp)();
 
 /* Object Handle Structure */
 typedef struct {Functionp dispatch; char *objname; } *Object;
+#endif
 
 /* Structure for handing back a Handle to a Newly Created Object */
 typedef struct {Object object;} Msg_New_Result;

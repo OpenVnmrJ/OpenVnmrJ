@@ -11,6 +11,7 @@
 #include "rfconst.h"
 #include "acqparms.h"
 #define  MAXSTATUSES	255	/* Maximum size of flag arrays */
+extern void gatedecoupler(int statindex, double delaytime);
 
 /*-------------------------------------------------------------------
 |
@@ -23,8 +24,7 @@
 |	If the index is out of range then it is set to the first char
 |				Author Greg Brissey  6/17/86
 +------------------------------------------------------------------*/
-status(index)
-int    index;		/* status index */
+void status(int index)
 {
 
     if (index < 0 || index > MAXSTATUSES)
@@ -46,9 +46,7 @@ int    index;		/* status index */
 |	the end of the status element a delay is performed for any
 |	remaining time.
 +------------------------------------------------------------------*/
-S_statusdelay(index,delaytime)
-int    index;		/* status index */
-double delaytime;
+void S_statusdelay(int index, double delaytime)
 {
 
     if (index < 0 || index > MAXSTATUSES)

@@ -7,8 +7,10 @@
  * For more information, see the LICENSE file.
  */
 
+#include	<string.h>
 #include	"acodes.h"
 #include	"acqparms.h"
+extern void   getstr(const char *variable, char buf[]);
 
 #define	SMPL	0
 #define	HOLD	1
@@ -16,8 +18,11 @@
 #define FALSE	0
 
 #ifndef NVPSG
+#include	"abort.h"
+extern int putcode();
+extern void HSgate(int ch, int state);
 extern int	ap_interface;
-lk_sample()
+void lk_sample()
 {
    if (ap_interface!=4)
    { 
@@ -30,7 +35,7 @@ lk_sample()
    putcode(SMPL);
 }
 
-lk_hold()
+void lk_hold()
 {
    static int errorsent = 0;
    if (ap_interface!=4)
@@ -47,7 +52,7 @@ lk_hold()
    putcode(HOLD);
 }
 
-lk_hslines()
+void lk_hslines()
 {
    HSgate(0x2000000,TRUE);	/* Set LK RCVR line to 1 = OFF */
    putcode(APBOUT);
@@ -56,7 +61,7 @@ lk_hslines()
    putcode(0xbb3a);		/* follow chan 6 HS lines for XMTR and RCVR */
 }
 
-lk_autotrig()
+void lk_autotrig()
 {
    HSgate(0x2000000,FALSE);	/* Reset LK RCVR line to 0, as always */
    putcode(APBOUT);
@@ -65,7 +70,7 @@ lk_autotrig()
    putcode(0xbb0a);		/* do 2 kHz auto mode for XMTR and RCVR */
 }
 
-lk_sampling_off()		/* turn off lock sampling */
+void lk_sampling_off()		/* turn off lock sampling */
 {
    putcode(APBOUT);
    putcode(1);
@@ -74,7 +79,7 @@ lk_sampling_off()		/* turn off lock sampling */
 }
 #endif
 
-init_lkrelay()
+void init_lkrelay()
 {
     char tmpstr[MAXSTR];
     getstr("tn", tmpstr);

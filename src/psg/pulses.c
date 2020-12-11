@@ -48,9 +48,11 @@ extern int putcode();
 extern void notinhwloop(char *name);
 extern void rgradient(char axis, double value);
 extern int isBlankOn(int device);
+extern void APsetreceiver();
 
 void write_to_acqi(char *label, double value, double units,
-                   int min, int max, int type, int scale, codeint counter, int device);
+                   int min, int max, int type, int scale,
+                   codeint counter, int device);
 
 FILE	*sliderfile = 0;
 
@@ -74,13 +76,11 @@ struct pulsestruct
 
 static int pulser(struct pulsestruct *pulses, int do_0_pulse);
 
-int pulse_phase_type(val)
-int val;
+int pulse_phase_type(int val)
 {
    return((0 <= val && val <= t60) ? PULSE_PHASE : PULSE_PHASE_TABLE);
 }
-int phase_var_type(val)
-int val;
+int phase_var_type(int val)
 {
    return((0 <= val && val <= t60) ? SET_RTPHASE90 : SET_PHASE90);
 }
@@ -243,7 +243,6 @@ double          pulsewidth = pulses->pw,
 double 		mindelay;
 int             device = pulses->device;
    int		   count;
-   char           msge[128];
    extern int      rfchan_getphsbits();
    extern char*    rfchan_getdevname();
    count = 0;
@@ -255,27 +254,22 @@ int             device = pulses->device;
 
     if ((device < 1) || (device > NUMch))
     {
-      sprintf(msge,"pulser: device #%d is not within bounds 1 - %d\n",
+      abort_message("pulser: device #%d is not within bounds 1 - %d\n",
         device,NUMch);
-      text_error(msge);
-      psg_abort(1);
     }
 
     if ( RF_Channel[device] == NULL )
     {
-      sprintf(msge,"pulser: Warning RF Channel device #%d is not present.\n",
+      abort_message("pulser: Warning RF Channel device #%d is not present.\n",
         device);
-      text_error(msge);
-      psg_abort(1);
     }
 
    if (pulsewidth < 0.0)
    {
       if (ix == 1)
       {
-         sprintf(msge, "Warning for %s:  improper pulse value set to zero.\n",
+         text_error("Warning for %s:  improper pulse value set to zero.\n",
 		  RF_Channel[device]->objname);
-         text_error(msge);
          text_error("A negative pulse width cannot be executed.\n");
       }
    }
@@ -283,9 +277,8 @@ int             device = pulses->device;
    {
       if (ix == 1)
       {
-         sprintf(msge, "Warning for %s:  improper pulse value set to zero.\n",
+         text_error("Warning for %s:  improper pulse value set to zero.\n",
 		   RF_Channel[device]->objname);
-         text_error(msge);
          text_error(
 	      "A non-zero pulse width less than 0.2 us cannot be executed!\n");
       }
@@ -375,7 +368,6 @@ double	pw1,		/* pulse length for first RF channel		*/
 	rx1,		/* pre-pulse delay				*/
 	rx2;		/* post-pulse delay				*/
 {
-   char		msge[128];
    int		devshort,
 		devlong;
    double	centertime,  /* delay time that will center other pulse */
@@ -392,26 +384,19 @@ double	pw1,		/* pulse length for first RF channel		*/
    if ( (device1 < 1) || (device1 > NUMch) ||
         (device2 < 1) || (device2 > NUMch))
    {
-      sprintf(msge,
-		"sim2pulse: device # %d or %d is not within bounds 1 - %d\n",
+      abort_message("sim2pulse: device # %d or %d is not within bounds 1 - %d\n",
 			device1, device2, NUMch);
-      text_error(msge);
-      psg_abort(1);
    }
    else if (device1 == device2)
    {
-      text_error("sim2pulse:  RF devices must be different\n");
-      psg_abort(1);
+      abort_message("sim2pulse:  RF devices must be different\n");
    }
        
     
    if ( (RF_Channel[device1] == NULL) || (RF_Channel[device2] == NULL) )
    {
-      sprintf(msge,
-		"sim2pulse:  RF Channel device # %d or %d is not present.\n",
+      abort_message("sim2pulse:  RF Channel device # %d or %d is not present.\n",
 			device1, device2);
-      text_error(msge);
-      psg_abort(1);
    }
 
    if ( (pw1 < 0.0) || (pw2 < 0.0) )
@@ -556,7 +541,6 @@ double	pw1,		/* pulse length for first RF channel		*/
 	rx1,		/* pre-pulse delay				*/
 	rx2;		/* post-pulse delay				*/
 {
-   char		msge[128];
    int		devshort,
 		devmed,
 		devlong;
@@ -577,11 +561,8 @@ double	pw1,		/* pulse length for first RF channel		*/
         (device2 < 1) || (device2 > NUMch) ||
         (device3 < 1) || (device3 > NUMch))
    {
-      sprintf(msge,
-	"gensim3pulse(): device # %d, %d, or %d is not within bounds 1 - %d\n",
+      abort_message("gensim3pulse(): device # %d, %d, or %d is not within bounds 1 - %d\n",
         		device1, device2, device3, NUMch);
-      text_error(msge);
-      psg_abort(1);
    }
    else if ( (device1 == device2) || (device1 == device3) ||
 		(device2 == device3) )
@@ -594,11 +575,8 @@ double	pw1,		/* pulse length for first RF channel		*/
         (RF_Channel[device2] == NULL) ||
         (RF_Channel[device3] == NULL) )
    {
-      sprintf(msge,
-	   "sim3pulse:  RF Channel device # %d, %d, or %d is not present.\n",
+      abort_message("sim3pulse:  RF Channel device # %d, %d, or %d is not present.\n",
 		device1, device2, device3);
-      text_error(msge);
-      psg_abort(1);
    }
 
 
@@ -782,7 +760,8 @@ double	pw1,		/* pulse length for first RF channel		*/
 | Mod. 4/16/91 to include device or rf channel  Greg B.
 +------------------------------------------------------------------*/
 void write_to_acqi(char *label, double value, double units,
-                   int min, int max, int type, int scale, codeint counter, int device)
+                   int min, int max, int type, int scale,
+                   codeint counter, int device)
 {
 char    filename[80];
 char	tmplabel[8];
@@ -817,7 +796,6 @@ void
 G_Simpulse(int firstkey, ...)
 {
 va_list	ptr_to_args;
-char	msg[80];
 codeint	phase[MAX_RFCHAN_NUM+1];
 double	pw[MAX_RFCHAN_NUM+1],
 	d_tmp,
@@ -950,10 +928,9 @@ int	device[MAX_RFCHAN_NUM+1],
       }
    for (i=0; i<npulse; i++)
    {  if ( (device[i] <= 0) || (device[i] > NUMch) )
-      {  sprintf(msg,"G_Simpulse(): device #%d not with in bounds of 1 - %d",
+      {
+        abort_message("G_Simpulse(): device #%d not with in bounds of 1 - %d",
 		device[i],NUMch);
-	 text_error(msg);
-	 psg_abort(1);
       }
       for (j=0; j<npulse; j++)
       {  if (i!=j)
@@ -963,10 +940,9 @@ int	device[MAX_RFCHAN_NUM+1],
 	    }
       }
       if (RF_Channel[device[i]] == NULL) 
-      {  sprintf(msg,
-	   "G_Simpulse():  RF Channel device #%d is not present.\n",device[i]);
-         text_error(msg);
-         psg_abort(1);
+      {
+         abort_message("G_Simpulse():  RF Channel device #%d is not present.\n",
+                       device[i]);
       }
    }
    okinhwloop();

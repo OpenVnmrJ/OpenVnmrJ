@@ -31,6 +31,8 @@
 #include "apdelay.h"
 #include "aptable.h"
 #include "vfilesys.h"
+#include "pvars.h"
+#include "abort.h"
 
 extern int rcvroff_flag;	/* global receiver off flag */
 extern int rcvr_hs_bit;		/* old = 0x8000, new = 0x1 */
@@ -48,7 +50,11 @@ extern int	dc270_hs_bit;
 extern int	dc2_270_hs_bit;
 extern int	newacq;
 
+extern int isBlankOn(int device);
 extern void	setHSLdelay();
+extern void HSgate(int ch, int state);
+extern int putcode();
+extern int putFile(const char *fname);
 
 #define N_HSLS_PER_CHANNEL	5
 #define WFG_HSL_OFFSET		2
@@ -278,8 +284,9 @@ struct gwh
 };
 
 static int d_in_RF = 0;
-static read_in_pattern();
-static ib_safe();
+static int read_in_pattern(struct r_data *rdata, long *lpntr, int *ticker,
+                           int tp, double scl);
+static void ib_safe();
 static struct p_list   *resolve_pattern();
 static struct p_list   *pat_list_search();
 static struct p_list   *pat_file_search();
@@ -300,6 +307,22 @@ static FILE *global_fw = NULL;
 static double dpf;
 
 int getlineFIO(FILE *fd,char *targ,int mxline,int *p2eflag);
+void point_wg(int which_wg, int where_on_wg);
+void dump_data();  /* template data */
+void file_read(FILE *fd, struct r_list *Vx);
+void file_conv(struct r_list *indat, struct p_list *phead);
+void INCwrite_wg(int APaddr, int loops, int a[], codeint x[]);
+void Vwrite_wg(int which_wg, int instr_tag, codeint vloops,
+               int a_const, int incr, codeint vmult);
+void command_wg(int which_wg, int cmd_wg);
+void write_wg(int which_wg, int where_on_wg, int what);
+void pointgo_wg(int which_wg, int where_on_wg);
+int wgtb(double tb, int itick, int n);
+void put_chain();
+static int get_chain();
+int no_grad_wg(char gid);
+int get_wg_apbase(char which);
+int chgdeg2bX(double rphase);
 
 /**********************************************
 *  New definitions and declarations to allow  *
@@ -328,7 +351,7 @@ static int              waveboard[MAX_RFCHAN_NUM+1],
    set path names and initialize 
    data structures
 *************************************************************/
-init_wg_list()
+void init_wg_list()
 {
     int i;
 
@@ -436,19 +459,14 @@ int dev;
    return(val);
 }
 
-static set_wfgen(dev, on_off, scl)
-int dev;
-int on_off;
-double scl;
+static void set_wfgen(int dev, int on_off, double scl)
 {
    wfgen[waveboard[dev]].on_off_state  = on_off;
    wfgen[waveboard[dev]].factor  = scl;
    HSgate(wfgen[waveboard[dev]].hs_line, on_off);
 }
 
-waveon(dev,scale_val)
-int dev;
-double *scale_val;
+int waveon(int dev, double *scale_val)
 {
    *scale_val = 1.0;
    if ( (dev < 1) || (dev > NUMch) )
@@ -462,14 +480,13 @@ double *scale_val;
       return(0);
 }
 
-getWfgAPaddr(rfdevice)
-int	rfdevice;
+int getWfgAPaddr(int rfdevice)
 {
    return( is_y(rfwg[rfdevice-1]) ? wfgen[waveboard[rfdevice]].ap_baseaddr
 		: 0 );
 }
 
-init_ecc()
+void init_ecc()
 {
    FILE *x_f1;
    char filename[MAXSTR];               /* eddy current filename */
@@ -506,7 +523,7 @@ init_ecc()
       wg_close cleans up the global file 
       should do sanity checks
 **************************************************************/
-wg_close()
+void wg_close()
 {   
   dump_data();
   put_chain();
@@ -540,8 +557,7 @@ double amp;
    {
       if ((R1 = read_pat_file(nn,tp)) == NULL)
       {
-         text_error("pattern %s was not found");
-         psg_abort(1); 
+         abort_message("pattern %s was not found", nn);
       }
    }
    if ((T1 = pat_list_search(hy,R1,amp)) != NULL) 
@@ -674,7 +690,6 @@ double amp;
 { 
     /* we add to the linked list if successful */
     struct p_list *phead;
-    char msg[256];
 
     phead = (struct p_list *) malloc(sizeof(struct p_list));
     phead->rindex = rhead->index;
@@ -698,9 +713,7 @@ double amp;
     hertz->cur_tmpl -= phead->telm;
     if (hertz->cur_tmpl < 0)
     {
-       sprintf(msg,"WFG: pattern %s overruns memory .. ABORT",rhead->tname);
-       text_error(msg);
-       psg_abort(1);
+       abort_message("WFG: pattern %s overruns memory .. ABORT",rhead->tname);
     }
     phead->wg_st_addr = hertz->cur_tmpl;
     if ((hertz->cur_tmpl - hertz->cur_ib) < 20 )
@@ -720,14 +733,12 @@ static int oldmask;
 	read in and numbers of elements and ticks are 
 	tallied, a side chain linked list is formed.
 *************************************************************/
-file_conv(indat,phead)
-struct r_list *indat;
-struct p_list *phead;
+void file_conv(struct r_list *indat, struct p_list *phead)
 {
     struct r_data *raw_data;
-    int tick_cnt, elem_cnt,cnt,stat;
+    int tick_cnt, cnt;
     long *lpntr;
-    double scl;
+    double scl = 0.0;
     char snarf[MAXSTR];
     int add_words;
 
@@ -735,7 +746,6 @@ struct p_list *phead;
     secondword = 0;
     moreticks  = 0;
     tick_cnt = 0;
-    elem_cnt = 0;
     if (P_getstring(CURRENT,"snarf",snarf,1,255))
     {
      snarf[0] = '\0';
@@ -828,9 +838,7 @@ int tp,index;
    return(value);
 }
 
-file_read(fd,Vx)
-FILE *fd;
-struct r_list *Vx;
+void file_read(FILE *fd, struct r_list *Vx)
 {
     extern double setdefault();
     char parse_me[MAXSTR];
@@ -940,7 +948,7 @@ char *nn;
 int id;
 {
     FILE *fd;
-    char pulsepath[MAXSTR],tag[8],tbf[256];
+    char pulsepath[MAXSTR],tag[8];
     /*
       add type descriptor and 
       form path name to local pulse shape library 
@@ -974,16 +982,12 @@ int id;
    a file is read in and parsed
 *************************************************************/
 
-static read_in_pattern(rdata,lpntr,ticker,tp,scl)
-struct r_data *rdata;
-long *lpntr;
-int *ticker;
-int tp;
-double scl;
+static int read_in_pattern(struct r_data *rdata, long *lpntr, int *ticker,
+                           int tp, double scl)
 {  
    float scl_amp;
    /* these are FLOATS */
-   int if1,if2,if3,if4,if5;
+   int if1,if2,if3,if4;
    int stat,idataf;
    int wordtwo;
 
@@ -1070,7 +1074,7 @@ double scl;
    return(wordtwo);
 }
 
-chgdeg2bX(rphase)
+int chgdeg2bX(double rphase)
 /************************************************************************
 * chgdeg2bX does 0.25 degree resolution 
 * it is probably only valid for U+/Inova
@@ -1078,9 +1082,8 @@ chgdeg2bX(rphase)
 * using quartermask_bit = 0x7ff or 0x7fe...
 * It returns an integer value.
 *************************************************************************/
-double	rphase;
 {
- register int iphase;
+ int iphase;
  if (ap_interface > 3)			/* rotational sense is opposite */
 					/* for UNITYplus                */
     iphase = ((int) ((rphase + 0.125)*100.0)) % 36000;
@@ -1096,7 +1099,7 @@ double	rphase;
  return(iphase);
 }
 
-chgdeg2b(rphase)
+int chgdeg2b(double rphase)
 /************************************************************************
 * chgdeg2b will change the input from degrees to bits.  It needs to
 * make the change in accordance with the way the ram is set up.  The
@@ -1104,9 +1107,8 @@ chgdeg2b(rphase)
 * up to 89.5 deg which means 179 bits out of 255.
 * It returns an integer value.
  *************************************************************************/
-double  rphase;
 {
- register int iphase;
+ int iphase;
  if (ap_interface > 3)                  /* rotational sense is opposite */
 	   /* for UNITYplus                */
     iphase = ((int) ((rphase + 0.25)*10.0)) % 3600;
@@ -1161,7 +1163,7 @@ int *p2eflag;
    put_chain stores the templates 
    loaded 
 *************************************************************/
-put_chain()
+void put_chain()
 {
 #ifdef PROTO
    FILE *fw;
@@ -1194,13 +1196,13 @@ put_chain()
 #endif
 }
 
-get_chain()
+static int get_chain()
 {
+   return(1);
+#ifdef PROTO
    FILE *fr;
    struct p_list *uu,**vv;
    int i,j;
-   return(1);
-#ifdef PROTO
    fr = fopen(filep3,"r");
    if (fr == NULL) 
      return(1);
@@ -1284,7 +1286,7 @@ long *arr;
     return(1);
 }
 
-dump_data()   /* template data */
+void dump_data()   /* template data */
 {
    struct p_list *uu;
    struct gwh glblh;
@@ -1298,7 +1300,7 @@ dump_data()   /* template data */
    if (global_fw == NULL) 
    {
      if (checkflag)
-       return(1);
+       return;
      text_error("pattern data write failed\n");
      psg_abort(1);
    }
@@ -1392,10 +1394,10 @@ int  what;
    command_wg(h1->ap_base,(cmd | 0x20)); /* Assume for rf */
    return(h1->cur_ib);
 }
-/**********************************************************************************
+/***************************************************************
 		user interface and instruction block control
-/* the linked list structure here contains only internal data */
-/* rf phase cycles right 
+   the linked list structure here contains only internal data
+   rf phase cycles right 
    elements are sized and stored correctly
    2D gradients in work for amplitude
    2D dynamic gradients nyi
@@ -1412,21 +1414,12 @@ int  what;
 |               genshaped_pulse()/8             |
 |                                               |
 +----------------------------------------------*/
-genshaped_pulse(name, width, phase, rx1, rx2, g1,
-                        g2, rfdevice)
-char    *name;
-codeint phase;
-int     rfdevice;
-double  width,
-        rx1,
-        rx2,
-        g1,
-        g2;
+void genshaped_pulse(char *name, double width, codeint phase,
+                     double rx1, double rx2, double g1,
+                     double g2, int rfdevice)
 {          
-   char			msge[128],
-			wfg_label;
+   char			wfg_label;
    int                  temp;
-   double		pulsetime;
    handle               h1;
    struct ib_list       *sldr;
    extern void		setHSLdelay();
@@ -1442,10 +1435,8 @@ double  width,
  
    if ( (rfdevice < 1) || (rfdevice > NUMch) )
    {
-      sprintf(msge,"shaped_pulse: invalid RF channel %d",
+      abort_message("shaped_pulse: invalid RF channel %d",
 		rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
 
    if (!is_y(rfwg[rfdevice-1]))
@@ -1462,7 +1453,7 @@ double  width,
       case DODEV:	wfg_label = 'd'; break;
       case DO2DEV:	wfg_label = 'e'; break;
       case DO3DEV:	wfg_label = 'f'; break;
-      default:		break;
+      default:		wfg_label = 'o'; break;
    }
  
    h1 = get_handle(wfg_label);
@@ -1512,10 +1503,6 @@ double  width,
 ***************************/
  
    SetRFChanAttr(RF_Channel[rfdevice], SET_RTPHASE90, phase, NULL);
-/*   if ( ap_interface < 3 ) */
-/*      HSgate(RFP270 | DC270 , FALSE); /* DC2_270 would reset MODA&MODB */
-/*   else */
-/*      HSgate(rfp270_hs_bit | dc270_hs_bit | dc2_270_hs_bit, FALSE); */
 
    if (ap_interface < 4)
    {
@@ -1591,7 +1578,7 @@ double  width,
 |               genshaped_rtamppulse()/8        |
 |                                               |
 +----------------------------------------------*/
-genshaped_rtamppulse(name, width, tpwrfrt, phase, rx1, rx2, g1,
+void genshaped_rtamppulse(name, width, tpwrfrt, phase, rx1, rx2, g1,
                         g2, rfdevice)
 char    *name;
 codeint phase;
@@ -1603,10 +1590,8 @@ double  width,
         g1,
         g2;
 {          
-   char			msge[128],
-			wfg_label;
+   char			wfg_label;
    int                  temp;
-   double		pulsetime;
    handle               h1;
    struct ib_list       *sldr;
    extern void		setHSLdelay();
@@ -1622,10 +1607,8 @@ double  width,
  
    if ( (rfdevice < 1) || (rfdevice > NUMch) )
    {
-      sprintf(msge,"shaped_pulse: invalid RF channel %d",
+      abort_message("shaped_pulse: invalid RF channel %d",
 		rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
 
    if (!is_y(rfwg[rfdevice-1]))
@@ -1642,7 +1625,7 @@ double  width,
       case DODEV:	wfg_label = 'd'; break;
       case DO2DEV:	wfg_label = 'e'; break;
       case DO3DEV:	wfg_label = 'f'; break;
-      default:		break;
+      default:		wfg_label = 'o'; break;
    }
  
    h1 = get_handle(wfg_label);
@@ -1697,10 +1680,6 @@ double  width,
    ***************************/
  
    SetRFChanAttr(RF_Channel[rfdevice], SET_RTPHASE90, phase, NULL);
-/*   if ( ap_interface < 3 ) */
-/*      HSgate(RFP270 | DC270 , FALSE); /* DC2_270 would reset MODA&MODB */
-/*   else */
-/*      HSgate(rfp270_hs_bit | dc270_hs_bit | dc2_270_hs_bit, FALSE); */
 
    if (ap_interface < 4)
    {
@@ -1793,8 +1772,7 @@ double  width1,
         g1,
         g2;
 {          
-   char 		msge[128],
-			wfg_label[2];
+   char 		wfg_label[2];
    int                  i,
                         tmp_rfdevice,
                         temp1,
@@ -1827,11 +1805,8 @@ double  width1,
         && (rfdevice1 != rfdevice2) );
    if (!ok)
    {
-      sprintf(msge,
-	"gensim2shaped_pulse(): invalid combination of RF channels %d, %d\n",
+      abort_message("gensim2shaped_pulse(): invalid combination of RF channels %d, %d\n",
 		rfdevice1, rfdevice2);
-      text_error(msge);
-      psg_abort(1);
    }
 
    if ( (RF_Channel[rfdevice1] == NULL) ||
@@ -1861,11 +1836,8 @@ double  width1,
 
    if ((!is_y(rfwg[rfdevice1-1])) || (!is_y(rfwg[rfdevice2-1])))
    {
-      sprintf(msge,
-      "gensim2shaped_pulse(): no waveform generator on channels %d and/or %d\n",
+      abort_message("gensim2shaped_pulse(): no waveform generator on channels %d and/or %d\n",
 		rfdevice1, rfdevice2);
-      text_error(msge);
-      psg_abort(1);
    }
 
 /***********************************
@@ -2054,11 +2026,6 @@ double  width1,
    SetRFChanAttr(RF_Channel[rfdevice1], SET_RTPHASE90, phase1, NULL);
    SetRFChanAttr(RF_Channel[rfdevice2], SET_RTPHASE90, phase2, NULL);
 
-/*   if ( ap_interface < 3 ) */
-/*      HSgate(RFP270 | DC270 , FALSE); /* DC2_270 would reset MODA&MODB */
-/*   else */
-/*      HSgate(rfp270_hs_bit | dc270_hs_bit | dc2_270_hs_bit, FALSE); */
-
    if (ap_interface < 4)
    {
       sisdecblank(OFF);
@@ -2143,37 +2110,21 @@ double  width1,
 |            gensim3shaped_pulse()/16           |
 |                                               |
 +----------------------------------------------*/
-gensim3shaped_pulse(name1, name2, name3, width1, width2,
-                 width3, phase1, phase2, phase3, rx1,
-		 rx2, g1, g2, rfdevice1, rfdevice2,
-		 rfdevice3)
-char    *name1,
-        *name2,
-        *name3;
-codeint phase1,
-        phase2,
-        phase3;
-int     rfdevice1,
-        rfdevice2,
-        rfdevice3;
-double  width1,
-        width2,
-        width3,
-        rx1,
-        rx2,
-	g1,
-        g2;
+void gensim3shaped_pulse(char *name1, char *name2, char *name3,
+                    double width1, double width2, double width3,
+                    codeint phase1, codeint phase2, codeint phase3,
+                    double rx1, double rx2, double g1, double g2,
+                    int rfdevice1, int rfdevice2, int rfdevice3)
 {          
-   char         	msge[128],
-			wfg_label[3];
+   char         	wfg_label[3];
    int          	i,
 			tmp_rfdevice,
                 	devshort, enddevshort,
                 	devmed, enddevmed,
                 	devlong, enddevlong,
 			devtmp,
-			temp1,
-			temp2,
+			temp1 = 0,
+			temp2 = 0,
 			temp3,
 			nsoftpul,
                 	execshort, endexecshort,
@@ -2293,19 +2244,13 @@ double  width1,
    {
       if ( (rfdevice1 < 1) || (rfdevice1 > NUMch))
       {
-         sprintf(msge,
-	   "gensim3shaped_pulse():  RF device %d not within bounds 1 - %d\n",
+	 abort_message("gensim3shaped_pulse():  RF device %d not within bounds 1 - %d\n",
 			rfdevice1,NUMch);
-         text_error(msge);
-         psg_abort(1);
       }
       if ( (RF_Channel[rfdevice1] == NULL) )
       {
-         sprintf(msge,
-		"gensim3shaped_pulse(): RF Channel device %d not present\n",
+         abort_message("gensim3shaped_pulse(): RF Channel device %d not present\n",
 			rfdevice1);
-         text_error(msge);
-         psg_abort(1);
       }
       if (strlen(name1))
       {
@@ -2337,19 +2282,13 @@ double  width1,
    {
       if ( (rfdevice2 < 1) || (rfdevice2 > NUMch))
       {
-         sprintf(msge,
-	   "gensim3shaped_pulse():  RF device %d not within bounds 1 - %d\n",
+         abort_message("gensim3shaped_pulse():  RF device %d not within bounds 1 - %d\n",
 			rfdevice2,NUMch);
-         text_error(msge);
-         psg_abort(1);
       }
       if ( (RF_Channel[rfdevice2] == NULL) )
       {
-         sprintf(msge,
-		"gensim3shaped_pulse(): RF Channel device %d not present\n",
+         abort_message("gensim3shaped_pulse(): RF Channel device %d not present\n",
 			rfdevice2);
-         text_error(msge);
-         psg_abort(1);
       }
       if (strlen(name2))
       {
@@ -2382,19 +2321,13 @@ double  width1,
    { 
       if ( (rfdevice3 < 1) || (rfdevice3 > NUMch))
       {
-         sprintf(msge,
-	   "gensim3shaped_pulse():  RF device %d not within bounds 1 - %d\n",
+         abort_message("gensim3shaped_pulse():  RF device %d not within bounds 1 - %d\n",
 			rfdevice3,NUMch);
-         text_error(msge);
-         psg_abort(1);
       }
       if ( (RF_Channel[rfdevice3] == NULL) )
       {
-         sprintf(msge,
-		"gensim3shaped_pulse(): RF Channel device %d not present\n",
+         abort_message("gensim3shaped_pulse(): RF Channel device %d not present\n",
 			rfdevice3);
-         text_error(msge);
-         psg_abort(1);
       }
       if (strlen(name3))
       {
@@ -2722,11 +2655,6 @@ double  width1,
    if (exec_p3 != NO_PULSE)
       SetRFChanAttr(RF_Channel[rfdevice3], SET_RTPHASE90, phase3, 0);
 
-/*   if ( ap_interface < 3 ) */
-/*      HSgate(RFP270 | DC270 , FALSE); /* DC2_270 would reset MODA&MODB */
-/*   else */
-/*      HSgate(rfp270_hs_bit | dc270_hs_bit | dc2_270_hs_bit, FALSE); */
-
    if (ap_interface < 4)
    {
       HSgate(rcvr_hs_bit, TRUE);
@@ -2864,7 +2792,6 @@ double	pw90_1,
 	dres_2;
 {
    char                 wfg_label,
-   			msge[128],
 			name[MAXSTR];
    int                  i,
 			rfdev,
@@ -2876,7 +2803,7 @@ double	pw90_1,
    handle               h1,
 			h2,
 			*htemp;
-   struct ib_list       *sldr1,
+   struct ib_list       *sldr1 = NULL,
 			*sldr2,
 			*sldrtemp;
    extern double	get_wfg_scale();
@@ -2915,25 +2842,19 @@ double	pw90_1,
    
       if ( (rfdev < 1) || (rfdev > NUMch) )
       {
-         sprintf(msge,"gen2spinlock(): invalid RF channel %d\n", rfdev);
-         text_error(msge);
-         psg_abort(1);
+         abort_message("gen2spinlock(): invalid RF channel %d\n", rfdev);
       }
 
       if (!is_y(rfwg[rfdev-1]))
       {
-         sprintf(msge,"gen2spinlock(): no waveform generator on channel %d\n",
+         abort_message("gen2spinlock(): no waveform generator on channel %d\n",
 		   rfdev);
-         text_error(msge);
-         psg_abort(1);
       }
 
       if (pgdrunning[rfdev])
       {
-         sprintf(msge,"gen2spinlock():  WFG already in use on channel %d\n",
+         abort_message("gen2spinlock():  WFG already in use on channel %d\n",
 		   rfdev);
-         text_error(msge);
-         psg_abort(1);
       }
 
       switch (rfdev)
@@ -3008,8 +2929,6 @@ double	pw90_1,
    	point_wg(temp, sldr2->apstaddr);
    	command_wg(temp, 0x27);
 	G_Delay(DELAY_TIME, INOVA_MINWGSETUP-INOVA_MINWGCMPLT, 0); /* wfg overhead time */
-   	/* pointloop_wg(temp, sldr2->apstaddr); */
-	/* G_Delay(DELAY_TIME, INOVA_MINWGSETUP, 0); /* wfg overhead time */
    }
    else
    {
@@ -3095,15 +3014,8 @@ double	pw90_1,
 |   rfdevice    -  RF device                    |
 |						|
 +----------------------------------------------*/
-genspinlock(name, pw_90, deg_res, phsval, ncycles, rfdevice)
-char    *name;
-int     rfdevice,
-	ncycles;
-codeint phsval;
-double  pw_90,
-	deg_res;
+void genspinlock(char *name, double pw_90, double deg_res, codeint phsval, int ncycles, int rfdevice)
 {
-   char		msge[128];
    int		nticks; /* number of 50ns ticks per spinlock pattern */
    double	sltime; /* exact time of the spin lock in the WFG    */
    void		prg_dec_off();
@@ -3111,10 +3023,8 @@ double  pw_90,
 
    if ( (rfdevice < 1) || (rfdevice > NUMch) )
    {
-      sprintf(msge, "genspinlock():  RF channel %d is invalid",
+      abort_message("genspinlock():  RF channel %d is invalid",
 		rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
 
    if (ncycles < 1)
@@ -3139,18 +3049,13 @@ double  pw_90,
 
    if (nticks < 0)
    {
-      sprintf(msge, "genspinlock():  WFG already in use on channel %d\n",
+      abort_message("genspinlock():  WFG already in use on channel %d\n",
 		rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
    else if (nticks == 0)
    {
-      sprintf(msge,
-	    "genspinlock():  cannot initiate WFG spin lock on channel %d\n",
+      abort_message("genspinlock():  cannot initiate WFG spin lock on channel %d\n",
 		rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
 
    sltime = nticks * ncycles * 5.0e-8;
@@ -3204,17 +3109,11 @@ double  pw_90,
 |   rfdevice	-  RF device			|
 |						|
 +----------------------------------------------*/
-int prg_dec_on(name, pw_90, deg_res, rfdevice)
-char    *name;
-int     rfdevice;
-double  pw_90,
-        deg_res;
+int prg_dec_on(char *name, double pw_90, double deg_res, int rfdevice)
 {
-   char                 wfg_label,
-   			msge[128];
+   char                 wfg_label;
    int                  temp,
-                        precfield,
-			nticks;
+                        precfield;
    handle               h1;
    struct ib_list       *sldr;
    extern void		setHSLdelay();
@@ -3224,18 +3123,13 @@ double  pw_90,
 
    if ( (rfdevice < 1) || (rfdevice > NUMch) )
    {
-      sprintf(msge,
-	"prg_dec_on():  RF channel %d is invalid\n", rfdevice);
-      text_error(msge);
-      psg_abort(1);
+      abort_message("prg_dec_on():  RF channel %d is invalid\n", rfdevice);
    }
 
    if (!is_y(rfwg[rfdevice-1]))
    {
-      sprintf(msge,
-	    "prg_dec_on():  no waveform generator on channel %d\n",
+      text_error("prg_dec_on():  no waveform generator on channel %d\n",
 		rfdevice);
-      text_error(msge);
       text_error("WFG programmable decoupling or spinlocking not allowed");
       psg_abort(1);
    }
@@ -3289,8 +3183,6 @@ double  pw_90,
    	point_wg(temp, sldr->apstaddr);
    	command_wg(temp, 0x27);
 	G_Delay(DELAY_TIME, INOVA_MINWGSETUP-INOVA_MINWGCMPLT, 0); /* wfg overhead time */
-   	/*pointloop_wg(temp, sldr->apstaddr); */
-	/*G_Delay(DELAY_TIME, INOVA_MINWGSETUP, 0); /* wfg overhead time */
    }
    else
    {
@@ -3308,12 +3200,9 @@ double  pw_90,
 |                setprgmode()/2                 |
 |                                               |
 +----------------------------------------------*/
-void setprgmode(mode, rfdevice)
-int     mode,
-        rfdevice;
+void setprgmode(int mode, int rfdevice)
 {
-   char         wfg_label,
-                msge[128];
+   char         wfg_label;
    int          temp;
    handle       h1;
    extern void	setHSLdelay();
@@ -3321,18 +3210,14 @@ int     mode,
 
    if ( (rfdevice < 1) || (rfdevice > NUMch) )
    {
-      sprintf(msge, "setprgmode(): invalid RF channel %d\n",
+      abort_message("setprgmode(): invalid RF channel %d\n",
                 rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
 
    if (!is_y(rfwg[rfdevice-1]))
    {
-      sprintf(msge, "setprgmode(): no waveform generator on channel %d\n",
+      abort_message("setprgmode(): no waveform generator on channel %d\n",
                 rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
  
    if (!pgdrunning[rfdevice])
@@ -3370,21 +3255,16 @@ int     mode,
 |   rfdevice	-   RF device			|
 |						|
 +----------------------------------------------*/
-void prg_dec_off(stopmode, rfdevice)
-int     rfdevice,
-        stopmode;
+void prg_dec_off(int stopmode, int rfdevice)
 {
-   char         wfg_label,
-   		msge[128];
+   char         wfg_label;
    int          temp;
    handle       h1;
  
  
    if ( (rfdevice < 1) || (rfdevice > NUMch) )
    {
-      sprintf(msge,"prg_dec_off(): RF channel %d is invalid\n", rfdevice);
-      text_error(msge);
-      psg_abort(1);
+      abort_message("prg_dec_off(): RF channel %d is invalid\n", rfdevice);
    }
 
    if ( (!is_y(rfwg[rfdevice-1])) || (!pgdrunning[rfdevice]) )
@@ -3454,17 +3334,39 @@ void reset_pgdflag()
 |	      pgd_is_running()/1		|
 |						|
 +----------------------------------------------*/
-int pgd_is_running(channel)
+int pgd_is_running(int channel)
 {
 
       return (pgdrunning[channel]);
 }
 
-static limitamp(gid, amp)
-char gid;
-double *amp;
+static void limitampInt(char gid, int *amp)
 {
-   int index,val;
+   int index;
+   switch (gid) 
+   {
+     case 'x': case 'X': 
+       index = 0; break;
+     case 'y': case 'Y': 
+       index = 1; break;
+     case 'z': case 'Z': 
+       index = 2; break;
+     default: 
+       index = 2; break;
+   }
+   if (is_u(gradtype[index]))
+   {
+      *amp /= 2;
+      if (*amp > 16384)
+         *amp = 16384;
+      else if (*amp < -16384)
+         *amp = -16384;
+   }
+}
+
+static void limitamp(char gid, double *amp)
+{
+   int index;
    switch (gid) 
    {
      case 'x': case 'X': 
@@ -3486,10 +3388,8 @@ double *amp;
    }
 }
 
-S_shapedgradient(name,width,amp,which,loops,wait_4_me)
-char *name,which;
-double width,amp;
-int wait_4_me,loops;
+void S_shapedgradient(char *name, double width, double amp,
+                      char which, int loops, int wait_4_me)
 {  
    struct ib_list *sldr;
    handle h1;
@@ -3544,7 +3444,7 @@ int wait_4_me,loops,tag;
 {  
    struct ib_list *sldr;
    handle h1;
-   int temp, mask;
+   int temp;
    if (width <  MINWGTIME) 
      return;
    if ((which == 'n') || (which == 'N'))
@@ -3598,7 +3498,7 @@ int wait_4_me,loops,tag;
 {  
    struct ib_list *sldr;
    handle h1;
-   int temp, mask;
+   int temp;
    if (width <  MINWGTIME) 
      return;
    if ((which == 'n') || (which == 'N'))
@@ -3621,8 +3521,8 @@ int wait_4_me,loops,tag;
      psg_abort(1);
 
    /* limit dac values for selected amplifiers (l200) */ 
-   limitamp(which, &vconst);
-   limitamp(which, &vx);
+   limitampInt(which, &vconst);
+   limitampInt(which, &vx);
 
    /* 
       overwrite to place the correct amp
@@ -3661,9 +3561,7 @@ int wait_4_me,tag;
 {  
    struct ib_list *sldr;
    handle h1;
-   double actual_width;
-   int temp, mask;
-   char mess[128];
+   int temp;
 
    validate_imaging_config("Shapedvgradient");
 
@@ -3697,10 +3595,8 @@ int wait_4_me,tag;
    if (((amp_vmult < zero) || (amp_vmult > v14)) && ((amp_vmult < t1) || 
 	(amp_vmult > t60))) 
    {
-       sprintf(mess,"prepWFGforPE: amp_vmult illegal dynamic %d \n",
+       abort_message("prepWFGforPE: amp_vmult illegal dynamic %d \n",
 			       amp_vmult);
-       text_error(mess);
-       psg_abort(1); 
    }
    if ((amp_vmult >= t1) && (amp_vmult <= t60))
 	amp_vmult = tablertv(amp_vmult);
@@ -3708,9 +3604,7 @@ int wait_4_me,tag;
    if (((vloops < zero) || (vloops > v14)) && ((vloops < t1) || 
 	(vloops > t60))) 
    {
-       sprintf(mess,"prepWFGforPE: vloops illegal dynamic %d \n",vloops);
-       text_error(mess);
-       psg_abort(1); 
+       abort_message("prepWFGforPE: vloops illegal dynamic %d \n",vloops);
    }
    if ((vloops >= t1) && (vloops <= t60))
 	vloops = tablertv(vloops);
@@ -3735,7 +3629,7 @@ int wait_4_me,tag;
 /* the first has point & Vwrite, the second has pointgo		*/
 /****************************************************************/
 /* double */
-doshapedPEgradient(name,width,amp_const,amp_incr,amp_vmult,which,vloops,
+void doshapedPEgradient(name,width,amp_const,amp_incr,amp_vmult,which,vloops,
 		wait_4_me,tag)
 /* Allows amplitude and loops to be realtime variables */
 char *name,which;
@@ -3745,14 +3639,12 @@ int wait_4_me,tag;
 {  
    struct ib_list *sldr;
    handle h1;
-   double actual_width;
-   int temp, mask;
-   char mess[128];
+   int temp;
 
    validate_imaging_config("Shapedvgradient");
 
    if (width <  MINWGTIME) 
-     return(0.0);
+     return;
    if ((which == 'n') || (which == 'N'))
      return;
    if (no_grad_wg(which))
@@ -3780,10 +3672,8 @@ int wait_4_me,tag;
    if (((amp_vmult < zero) || (amp_vmult > v14)) && ((amp_vmult < t1) || 
 	(amp_vmult > t60))) 
    {
-       sprintf(mess,"doshapedPEgradient: amp_vmult illegal dynamic %d \n",
+       abort_message("doshapedPEgradient: amp_vmult illegal dynamic %d \n",
 			       amp_vmult);
-       text_error(mess);
-       psg_abort(1); 
    }
    if ((amp_vmult >= t1) && (amp_vmult <= t60))
 	amp_vmult = tablertv(amp_vmult);
@@ -3791,9 +3681,7 @@ int wait_4_me,tag;
    if (((vloops < zero) || (vloops > v14)) && ((vloops < t1) || 
 	(vloops > t60))) 
    {
-       sprintf(mess,"doshapedPEgradient: vloops illegal dynamic %d \n",vloops);
-       text_error(mess);
-       psg_abort(1); 
+       abort_message("doshapedPEgradient: vloops illegal dynamic %d \n",vloops);
    }
    if ((vloops >= t1) && (vloops <= t60))
 	vloops = tablertv(vloops);
@@ -3836,9 +3724,7 @@ int wait_4_me,tag;
 {  
    struct ib_list *sldr;
    handle h1;
-   double actual_width;
-   int temp, mask;
-   char mess[128];
+   int temp;
 
    validate_imaging_config("Shapedvgradient");
 
@@ -3872,10 +3758,8 @@ int wait_4_me,tag;
    if (((amp_vmult < zero) || (amp_vmult > v14)) && ((amp_vmult < t1) || 
 	(amp_vmult > t60))) 
    {
-       sprintf(mess,"shapedvgradient: amp_vmult illegal dynamic %d \n",
+       abort_message("shapedvgradient: amp_vmult illegal dynamic %d \n",
 			       amp_vmult);
-       text_error(mess);
-       psg_abort(1); 
    }
    if ((amp_vmult >= t1) && (amp_vmult <= t60))
 	amp_vmult = tablertv(amp_vmult);
@@ -3883,9 +3767,7 @@ int wait_4_me,tag;
    if (((vloops < zero) || (vloops > v14)) && ((vloops < t1) || 
 	(vloops > t60))) 
    {
-       sprintf(mess,"shapedvgradient: vloops illegal dynamic %d \n",vloops);
-       text_error(mess);
-       psg_abort(1); 
+       abort_message("shapedvgradient: vloops illegal dynamic %d \n",vloops);
    }
    if ((vloops >= t1) && (vloops <= t60))
 	vloops = tablertv(vloops);
@@ -3938,10 +3820,8 @@ int loops;
 int wait;
 {
    int a[4];
-   double actual_width;
    handle h1;
    int i;
-   char mess[128];
    struct ib_list *sldr;
    int temp;
    codeint x[4];
@@ -3992,17 +3872,15 @@ int wait;
 	    && x[i] != zero
 	    && x[i] != ct)
 	{
-	    sprintf(mess,"shapedincgradient: x[%d] illegal RT variable: %d\n",
+	    abort_message("shapedincgradient: x[%d] illegal RT variable: %d\n",
 		    i, x[i]);
-	    text_error(mess);
-	    psg_abort(1); 
 	}
     }
 
     /* limit dac values for selected amplifiers (l200) */
     for (i=0; i<=3; i++)
     {
-	limitamp(which, &a[i]);
+	limitampInt(which, &a[i]);
     }
    
    /* 
@@ -4040,10 +3918,8 @@ int loops;
 int wait;
 {
    int a[4];
-   double actual_width;
    handle h1;
    int i;
-   char mess[128];
    struct ib_list *sldr;
    int temp;
    codeint x[4];
@@ -4094,17 +3970,15 @@ int wait;
 	    && x[i] != zero
 	    && x[i] != ct)
 	{
-	    sprintf(mess,"shapedincgradient: x[%d] illegal RT variable: %d\n",
+	    abort_message("shapedincgradient: x[%d] illegal RT variable: %d\n",
 		    i, x[i]);
-	    text_error(mess);
-	    psg_abort(1); 
 	}
     }
 
     /* limit dac values for selected amplifiers (l200) */
     for (i=0; i<=3; i++)
     {
-	limitamp(which, &a[i]);
+	limitampInt(which, &a[i]);
     }
    
    /* 
@@ -4144,10 +4018,8 @@ int loops;
 int wait;
 {
    int a[4];
-   double actual_width;
    handle h1;
    int i;
-   char mess[128];
    struct ib_list *sldr;
    int temp;
    codeint x[4];
@@ -4198,17 +4070,15 @@ int wait;
 	    && x[i] != zero
 	    && x[i] != ct)
 	{
-	    sprintf(mess,"shapedincgradient: x[%d] illegal RT variable: %d\n",
+	    abort_message("shapedincgradient: x[%d] illegal RT variable: %d\n",
 		    i, x[i]);
-	    text_error(mess);
-	    psg_abort(1); 
 	}
     }
 
     /* limit dac values for selected amplifiers (l200) */
     for (i=0; i<=3; i++)
     {
-	limitamp(which, &a[i]);
+	limitampInt(which, &a[i]);
     }
    
    /* 
@@ -4235,8 +4105,7 @@ int wait;
 }
 
 
-int no_grad_wg(gid)
-char gid;
+int no_grad_wg(char gid)
 {
    int index,val;
    switch (gid) 
@@ -4252,6 +4121,29 @@ char gid;
    }
    val = is_r(gradtype[index]) || is_w(gradtype[index]) || is_q(gradtype[index]) || is_u(gradtype[index]);
    return(!val);
+}
+
+int match_ib(sl,nm,wdth,tamp,lloops,key)
+struct ib_list *sl;
+double wdth, tamp;
+int lloops,key;
+char *nm;
+{  
+   int temp;
+   temp = (strncmp(sl->tname,nm,MAXSTR) == 0);
+   temp = temp && (fabs(sl->amp - tamp) < 1.e-3);
+   temp = temp && (fabs(sl->width - wdth) < MINWGRES);
+   temp = temp && (sl->iloop == lloops);
+   temp = temp && (sl->bstat == key);
+/* 
+     fprintf(stderr,"-----match ib -------\n");
+     fprintf(stderr,"%s   %s\n",sl->tname,nm); 
+     fprintf(stderr,"%f   %f\n",sl->amp,tamp); 
+     fprintf(stderr,"%f   %f\n",sl->width,wdth); 
+     fprintf(stderr,"%d   %d\n",sl->iloop,lloops); 
+     fprintf(stderr,"%d   %d\n",sl->bstat,key); 
+*/
+   return(temp);
 }
 
 /********************************************************
@@ -4276,29 +4168,6 @@ handle hx;
    while ((slider != NULL) && !match_ib(slider,nm,wdth,tamp,lloops,key))
      slider = slider->ibnext;
    return(slider);
-}
-
-match_ib(sl,nm,wdth,tamp,lloops,key)
-struct ib_list *sl;
-double wdth, tamp;
-int lloops,key;
-char *nm;
-{  
-   int temp;
-   temp = (strncmp(sl->tname,nm,MAXSTR) == 0);
-   temp = temp && (fabs(sl->amp - tamp) < 1.e-3);
-   temp = temp && (fabs(sl->width - wdth) < MINWGRES);
-   temp = temp && (sl->iloop == lloops);
-   temp = temp && (sl->bstat == key);
-/* 
-     fprintf(stderr,"-----match ib -------\n");
-     fprintf(stderr,"%s   %s\n",sl->tname,nm); 
-     fprintf(stderr,"%f   %f\n",sl->amp,tamp); 
-     fprintf(stderr,"%f   %f\n",sl->width,wdth); 
-     fprintf(stderr,"%d   %d\n",sl->iloop,lloops); 
-     fprintf(stderr,"%d   %d\n",sl->bstat,key); 
-*/
-   return(temp);
 }
 
 /* 
@@ -4439,7 +4308,6 @@ int ll,key;
    /* get pattern info */
    struct p_list *test;
    struct ib_list *temp;
-   char msg[256];
    test = resolve_pattern(hx,nm,WGRADIENT,a);
    if (test == NULL) psg_abort(1);
    gib[0] = pat_strt(test->wg_st_addr);
@@ -4451,8 +4319,7 @@ int ll,key;
    /* check the tick count to see if hardware can keep up */
    if (ticker <  MINGRADTIME)
    {
-     sprintf(msg,"WFG:increments of %s may be too short for gradient hardware!",nm);
-     text_error(msg);
+     text_error("WFG:increments of %s may be too short for gradient hardware!",nm);
    }
    /* attach to ib list and emit */
    temp = (struct ib_list *) malloc(sizeof(struct ib_list));
@@ -4481,8 +4348,7 @@ int *elem_cnt,*tick_cnt, *ctl_flag;
    struct r_list *rhead;
    struct r_data *raw_data;
    Gpattern   *gradpat_struct,*gptr;
-   double max_val;
-   int last_index,cnt;
+   int cnt;
    if ((int)strlen(nm) < 1)  /* pattern name bad abort */
    {
 	/* If null assign default values */
@@ -4507,14 +4373,14 @@ int *elem_cnt,*tick_cnt, *ctl_flag;
    fclose(fd); 
    if (rhead == NULL)
    {
-         text_error("pattern %s was not found");
+         text_error("pattern %s was not found",nm);
          psg_abort(1); 
    }
     *tick_cnt = 0;
     *ctl_flag = 0;
     raw_data = rhead->rdata;
     cnt = *elem_cnt = rhead->nvals;
-    max_val = rhead->max_val = 0.0;
+    rhead->max_val = 0.0;
     gradpat_struct = (Gpattern *) malloc((rhead->nvals+1) * sizeof(Gpattern));
     gptr = gradpat_struct;
     while (cnt--)
@@ -4544,7 +4410,7 @@ int *elem_cnt,*tick_cnt, *ctl_flag;
    ib_safe checks to see if ib has overwritten
    a template it aborts...
 *********************************************/
-static ib_safe(hx)
+static void ib_safe(hx)
 handle hx;
 {
    if ((hx->cur_ib + 5) > hx->cur_tmpl)
@@ -4559,12 +4425,9 @@ handle hx;
    the following routines do inline commands
    and other common functions 
 *****************************************/
-int wgtb(tb,itick,n)
-double tb;
-int itick,n;
+int wgtb(double tb, int itick, int n)
 {
    int j;
-   char tbmsg[200];
    double frac,tx,ty;
    /********************************************************/
    /* tb is in seconds - calculate in n multiples of 50 ns */
@@ -4583,15 +4446,12 @@ int itick,n;
    if (frac < 0.0) frac *= -1.0;
    if (frac > 0.02) 
    {
-     sprintf(tbmsg,"waveform timing error of %5.2f percent for shape of duration %g usec.",frac*100.0,tb*1e6);
-     text_error(tbmsg);
+     text_error("waveform timing error of %5.2f percent for shape of duration %g usec.",frac*100.0,tb*1e6);
    }
    if (j < 4) 
    {
-     sprintf( tbmsg, "waveform minimum delay for shape of duration %g usec. is %d ns",
+     abort_message("waveform minimum delay for shape of duration %g usec. is %d ns",
 		tb*1e6,(int) (MINWGTIME * 1e+9 + 0.5) );
-     text_error(tbmsg);
-     psg_abort(1);
    }
    return(j-1);
 }
@@ -4603,9 +4463,7 @@ int itick,n;
     works
 *****************************************/
 
-point_wg(which_wg,where_on_wg)
-int which_wg,
-    where_on_wg;
+void point_wg(int which_wg, int where_on_wg)
 {
     putcode(WG3);
     putcode((codeint) which_wg);
@@ -4613,9 +4471,7 @@ int which_wg,
     curfifocount += 3; 			/* three ap buss words */
 }
 
-pointgo_wg(which_wg,where_on_wg)
-int which_wg,
-    where_on_wg;
+void pointgo_wg(int which_wg, int where_on_wg)
 {
     putcode(WG3);
     putcode((codeint) which_wg | 0x4);
@@ -4623,9 +4479,7 @@ int which_wg,
     curfifocount += 3; 			/* three ap buss words */
 }
 
-pointloop_wg(which_wg,where_on_wg)
-int which_wg,
-    where_on_wg;
+void pointloop_wg(int which_wg, int where_on_wg)
 {
     putcode(WG3);
     putcode((codeint) which_wg | 0x6);
@@ -4645,9 +4499,7 @@ int which_wg,
     0x20 command to rf	(optional)
 */    
 	     
-command_wg(which_wg,cmd_wg)
-int which_wg,
-    cmd_wg;
+void command_wg(int which_wg, int cmd_wg)
 {
     putcode(WGCMD);
     putcode((codeint) which_wg);
@@ -4655,10 +4507,7 @@ int which_wg,
     curfifocount += 2; 			/* two ap buss words */
 }
 
-write_wg(which_wg,where_on_wg,what)
-int which_wg,
-    where_on_wg,
-    what;
+void write_wg(int which_wg, int where_on_wg, int what)
 {
     putcode(WGILOAD);
     putcode((codeint) which_wg);
@@ -4669,11 +4518,8 @@ int which_wg,
     curfifocount += 8; 			/* eight ap buss words */
 }
 
-Vwrite_wg(which_wg,instr_tag,vloops,a_const,incr,vmult)
-int which_wg;
-int instr_tag;
-int a_const,incr;
-codeint vmult,vloops;
+void Vwrite_wg(int which_wg, int instr_tag, codeint vloops,
+               int a_const, int incr, codeint vmult)
 {
     putcode(WGV3);
     putcode((codeint) which_wg);
@@ -4685,11 +4531,7 @@ codeint vmult,vloops;
     curfifocount += 5; 			/* five ap buss words */
 }
 
-INCwrite_wg(APaddr, loops, a, x)
-int APaddr;
-int loops;
-int a[4];
-codeint x[4];
+void INCwrite_wg(int APaddr, int loops, int a[], codeint x[])
 {
     putcode(WGI3);
     putcode((codeint) APaddr);
@@ -4707,8 +4549,7 @@ codeint x[4];
 
 /*  for standardization keys to trees and bases are chars */
 
-int get_wg_apbase(which)
-char which;
+int get_wg_apbase(char which)
 {  
    int yy;
    switch (which)
@@ -4744,7 +4585,7 @@ char which;
 |		 linked to this RF device	|
 |						|
 +----------------------------------------------*/
-int wfg_remap(dev_brd1, dev_brd2, dev_brd3)
+void wfg_remap(dev_brd1, dev_brd2, dev_brd3)
 int     dev_brd1,
         dev_brd2,
         dev_brd3;

@@ -29,7 +29,8 @@ typedef unsigned long  codeulong;/* 4 bytes */
 #define ACQPARMS
 
 /*  if oopc.h not included then  define Object type */
-#ifndef OOPC
+#ifndef OBJECTDEFINED
+#define OBJECTDEFINED
 
 /* Object Handle Structure */
 typedef int (*Functionp)();

@@ -26,7 +26,7 @@ extern int  newacq;
 |	 turn on var 1 bit on the high speed lines.
 |				Author Greg Brissey 7/10/86
 +-----------------------------------------------------------------*/
-var1on()
+void var1on()
 {
     okinhwloop();
     if (ap_interface < 4 )
@@ -38,7 +38,7 @@ var1on()
 |	 turn off var 1 bit on the high speed lines.
 |				Author Greg Brissey 7/10/86
 +-----------------------------------------------------------------*/
-var1off()
+void var1off()
 {
     okinhwloop();
     if (ap_interface < 4 )
@@ -50,7 +50,7 @@ var1off()
 |	 turn on var 2 bit on the high speed lines.
 |				Author Greg Brissey 7/10/86
 +-----------------------------------------------------------------*/
-var2on()
+void var2on()
 {
     okinhwloop();
     if (ap_interface < 4 )
@@ -62,7 +62,7 @@ var2on()
 |	 turn off var 2 bit on the high speed lines.
 |				Author Greg Brissey 7/10/86
 +-----------------------------------------------------------------*/
-var2off()
+void var2off()
 {
     okinhwloop();
     if (ap_interface < 4 )
@@ -75,7 +75,7 @@ var2off()
 |	 turn on spare 1 bit on the high speed lines.
 |				Author Greg Brissey 7/10/86
 +-----------------------------------------------------------------*/
-sp1on()
+void sp1on()
 {
     okinhwloop();
     if (ap_interface < 4)
@@ -100,7 +100,7 @@ sp1on()
 |	 turn off spare 1 bit on the high speed lines.
 |				Author Greg Brissey 7/10/86
 +-----------------------------------------------------------------*/
-sp1off()
+void sp1off()
 {
     okinhwloop();
     if (ap_interface < 4)
@@ -125,7 +125,7 @@ sp1off()
 |	 turn on spare 2 bit on the high speed lines.
 |				Author Greg Brissey 7/10/86
 +-----------------------------------------------------------------*/
-sp2on()
+void sp2on()
 {
     okinhwloop();
     if (ap_interface < 4)
@@ -150,7 +150,7 @@ sp2on()
 |	 turn off spare 2 bit on the high speed lines.
 |				Author Greg Brissey 7/10/86
 +-----------------------------------------------------------------*/
-sp2off()
+void sp2off()
 {
     okinhwloop();
     if (ap_interface < 4)
@@ -174,8 +174,7 @@ sp2off()
 |	sp_on()/1
 |	 turn on spare 3-5 bit on the high speed lines.
 +-----------------------------------------------------------------*/
-sp_on(bitn)
-int bitn;
+void sp_on(int bitn)
 {
     unsigned long sparelines;
     if (newacq)
@@ -202,8 +201,7 @@ int bitn;
 |	sp_off()/1
 |	 turn off spare 3-5 bit on the high speed lines.
 +-----------------------------------------------------------------*/
-sp_off(bitn)
-int bitn;
+void sp_off(int bitn)
 {
     unsigned long sparelines;
     if (newacq)

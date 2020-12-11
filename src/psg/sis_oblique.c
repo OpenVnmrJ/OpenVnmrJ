@@ -2515,10 +2515,8 @@ char *routinename;
 /* S_oblique_gradpulse						*/
 /* 					 			*/
 /*--------------------------------------------------------------*/
-S_oblique_gradpulse(level1,level2,level3,ang1,ang2,ang3,gdelay)
-double level1,level2,level3;
-double ang1,ang2,ang3;
-double gdelay;
+void S_oblique_gradpulse(double level1, double level2, double level3,
+                double ang1, double ang2, double ang3, double gdelay)
 {
    char graddisableflag[2];
 

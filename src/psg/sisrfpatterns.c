@@ -348,7 +348,8 @@ int dummyarg;	/* MUST BE 1! will be arraydim when arrayed patterns work */
 	return(OK);
 }
 
-S_shapedpulse(pulsefile,pulsewidth,phaseptr,rx1,rx2) 
+void S_shapedpulse(char *pulsefile, double pulsewidth, codeint phaseptr,
+                   double rx1, double rx2) 
 /************************************************************************
 * Arguments: 
 *	pulsefile	: filname of shaped pulse in shplib 
@@ -362,12 +363,6 @@ S_shapedpulse(pulsefile,pulsewidth,phaseptr,rx1,rx2)
 *       of by setting the pointer before each pulse (14.2us), and  
 *       adding 1us of delay. 
 *************************************************************************/
-
-char	*pulsefile;
-double	pulsewidth;
-codeint	phaseptr;
-double	rx1;
-double	rx2;
 {
  double twidth;
  codeint patptr;
@@ -428,7 +423,8 @@ double	rx2;
  return;
 }	/* end shapedpulse */
 
-S_decshapedpulse(pulsefile,pulsewidth,phaseptr,rx1,rx2) 
+void S_decshapedpulse(char *pulsefile, double pulsewidth, codeint phaseptr,
+                   double rx1, double rx2) 
 /************************************************************************
 * Arguments: "
 *	pulsefile	: filname of shaped pulse in shplib 
@@ -444,12 +440,6 @@ S_decshapedpulse(pulsefile,pulsewidth,phaseptr,rx1,rx2)
 * NOTE: The decshapedpulse does not provide any receiver gating.
 *	This has been changed 4/24/91 to provide receiver gating. M. Howitt
 *************************************************************************/
-
-char	*pulsefile;
-double	pulsewidth;
-codeint	phaseptr;
-double	rx1;
-double	rx2;
 {
  double twidth;
  codeint patptr;
@@ -495,7 +485,9 @@ double	rx2;
 }	/* end shapedpulse */
 
 
-S_simshapedpulse(fno,fnd,transpw,decpw,transphase,decupphase,rx1,rx2)
+void S_simshapedpulse(char *fno, char *fnd, double transpw, double decpw,
+                 codeint transphase, codeint decupphase,
+                 double rx1, double rx2)
 /************************************************************************
 * Arguments: 
 *	fno,fnd		: filname of shaped pulse in shplib 
@@ -517,10 +509,6 @@ S_simshapedpulse(fno,fnd,transpw,decpw,transphase,decupphase,rx1,rx2)
 * this must be accounted for so the pulse will completely finish 
 * and not leave any steps unaccounted. 
 *************************************************************************/
-char	*fno, *fnd;
-double	transpw, decpw;
-codeint	transphase, decupphase;
-double	rx1, rx2;
 {
  double centertime;
  double	twidth,two,twd;
