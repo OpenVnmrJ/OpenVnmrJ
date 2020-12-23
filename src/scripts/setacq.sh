@@ -175,6 +175,9 @@ getTFTPBootDir() {
               grep tftpboot > /dev/null;echo $?) -ne 0 ]] ; then
          tftpdir="/tftpboot"
       fi
+   elif [[ -f /usr/lib/systemd/system/tftp.service ]] ; then
+      tftpdir=$(grep  tftpboot /usr/lib/systemd/system/tftp.service |
+                awk '{print $3 }')
    else
       tftpdir="/tftpboot"
    fi
@@ -316,9 +319,11 @@ enableTftp() {
          pkill -HUP xinetd
       fi
    elif [[ $1 -eq 0 ]] ; then
-      echo "tftp package is not available. Exit"
-      echo " "
-      exit 0
+      if [[ ! -f /usr/lib/systemd/system/tftp.service ]]; then
+         echo "tftp package is not available. Exit"
+         echo " "
+         exit 0
+      fi
    fi
 }
 
