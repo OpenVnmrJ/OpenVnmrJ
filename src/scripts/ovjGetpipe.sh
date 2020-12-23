@@ -63,12 +63,6 @@ EOF
 }
 
 noPing=0
-for arg in "$@"
-do
-  if [[ "x$arg" = "xnoPing" ]]; then
-     noPing=1
-  fi
-done
 
 # process flag args
 while [ $# -gt 0 ]; do
@@ -81,6 +75,7 @@ while [ $# -gt 0 ]; do
         -nv|--no-verbose)       OVJ_VECHO=":" ;;
         -t|--test)              OVJ_PIPETEST="$2"; shift    ;;
         -v|--verbose)           OVJ_VECHO="echo" ;;
+        noPing)                 noPing=1; shift ;;
         -vv|--debug)            set -x ;;
         *)
             # unknown option
@@ -176,41 +171,26 @@ downloadLinux() {
 }
 
 downloadFiles() {
-   local URL="www.ibbr.umd.edu"
-   local pingRecv=0
    $OVJ_VECHO "Download NMRPipe files to $1"
    if [ -d "$1" ]; then
       cd "$1"
       touch "aDuMmYfIlE" >& /dev/null
       if [ -a  "aDuMmYfIlE" ]; then
          rm -f "aDuMmYfIlE"
-         pingRecv=`ping -c 1 -q -W 1 $URL | grep received | awk '{ print $4 }'`
          
-         if [[ ${pingRecv} -eq 1 ]] || [[ $noPing -eq 1 ]] ; then
-            $OVJ_VECHO "Test for internet access to $URL passed"
-            if [ "x${OVJ_LOG}" != "x" ] ; then
-               if [ ${OVJ_LOG:0:1} = '/' ]; then
-                  $OVJ_VECHO "Log file is ${OVJ_LOG}"
-               else
-                  $OVJ_VECHO "Log file is /vnmr/nmrpipe/${OVJ_LOG}"
-               fi
-            fi
-            if [ x$(uname -s) = "xDarwin" ]; then
-               downloadMac
-            elif [ x$(uname -s) = "xLinux" ]; then
-               downloadLinux
+         if [ "x${OVJ_LOG}" != "x" ] ; then
+            if [ ${OVJ_LOG:0:1} = '/' ]; then
+               $OVJ_VECHO "Log file is ${OVJ_LOG}"
             else
-               echo "Can only download NMRPipe files with Linux or MacOS systems"
-               return 1
+               $OVJ_VECHO "Log file is /vnmr/nmrpipe/${OVJ_LOG}"
             fi
+         fi
+         if [ x$(uname -s) = "xDarwin" ]; then
+            downloadMac
+         elif [ x$(uname -s) = "xLinux" ]; then
+            downloadLinux
          else
-            echo "Internet access to $URL failed"
-            echo "This is tested by doing \"ping $URL\". The ping"
-            echo "command may also fail due to a firewall blocking it."
-            echo "If you are sure the system is connected to the internet"
-            echo "and want to bypass this \"ping\" test, use"
-            echo "$SCRIPT noPing"
-            echo ""
+            echo "Can only download NMRPipe files with Linux or MacOS systems"
             return 1
          fi
       else
@@ -221,6 +201,7 @@ downloadFiles() {
       echo "Directory $1 does not exist"
       return 1
    fi
+   return 0
 }
 
 cleanup() {
@@ -238,14 +219,44 @@ cleanup() {
       rm -rf nmrbin.linux nmrbin.linux9 nmrbin.mac nmrbin.mac11 nmrbin.mac11_64
    fi
 }
+
+checkNetwork() {
+#   The below seems to have disabled ping. Use google instead
+#   local URL="www.ibbr.umd.edu"
+    local URL="google.com"
+    local pingRecv=0
+    pingRecv=`ping -c 1 -q -W 1 $URL | grep received | awk '{ print $4 }'`
+         
+    if [[ ${pingRecv} -eq 1 ]] || [[ $noPing -eq 1 ]] ; then
+        $OVJ_VECHO "Test for internet access passed"
+        return 0
+    else
+        echo "Internet access failed"
+        echo "This is tested by doing \"ping $URL\". The ping"
+        echo "command may also fail due to a firewall blocking it."
+        echo "If you are sure the system is connected to the internet"
+        echo "and want to bypass this \"ping\" test, use"
+        echo "$SCRIPT noPing"
+        echo ""
+        return 1
+    fi
+}
+
 #
 # Main program starts here
 #
 
+if [ "x${OVJ_INSTALL}" = "x" ] ; then
+    checkNetwork
+    if [[ $? -ne 0 ]]; then
+        exit 1
+    fi
+fi
 if [ "x${OVJ_DOWNLOAD}" != "x" ] ; then
     downloadFiles ${OVJ_DOWNLOAD}
     exit 1
 fi
+
 cd /vnmr/
 rm -rf nmrpipetmp 
 mkdir nmrpipetmp
@@ -272,6 +283,22 @@ if [ "x${OVJ_INSTALL}" != "x" ] ; then
    cp ${OVJ_INSTALL}/plugin.smile.tZ .
 else
    downloadFiles "/vnmr/nmrpipe"
+fi
+if [[ $? -ne 0 ]]; then
+    cd ..
+    $OVJ_VECHO " "
+    if [ "x${OVJ_INSTALL}" != "x" ] ; then
+       $OVJ_VECHO "Copying NMRPipe files from ${OVJ_INSTALL} failed"
+    else
+       $OVJ_VECHO "NMRPipe download failed"
+    fi
+    $OVJ_VECHO " "
+    rmdir nmrpipe
+    if [[ -d nmrpipe_${date} ]]; then
+        mv nmrpipe_${date} nmrpipe
+        $OVJ_VECHO "Restoring previous version of NMRPipe"
+    fi
+    exit 1
 fi
 $OVJ_VECHO "NMRPipe installation started"
 chmod a+r  *.tZ

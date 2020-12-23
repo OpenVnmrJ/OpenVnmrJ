@@ -62,12 +62,6 @@ EOF
 }
 
 noPing=0
-for arg in "$@"
-do
-  if [[ "x$arg" = "xnoPing" ]]; then
-     noPing=1
-  fi
-done
 
 # process flag args
 while [ $# -gt 0 ]; do
@@ -79,6 +73,7 @@ while [ $# -gt 0 ]; do
         -l|--log)               OVJ_LOG="$2"; shift     ;;
         -nv|--no-verbose)       OVJ_VECHO=":" ;;
         -v|--verbose)           OVJ_VECHO="echo" ;;
+        noPing)                 noPing=1; shift ;;
         -vv|--debug)            set -x ;;
         *)
             # unknown option
@@ -116,39 +111,25 @@ downloadLinux() {
 }
 
 downloadFiles() {
-   local URL="www.dropbox.com"
    $OVJ_VECHO "Download VnmrJ manuals files to $1"
    if [ -d "$1" ]; then
       cd "$1"
       touch "aDuMmYfIlE" >& /dev/null
       if [ -a  "aDuMmYfIlE" ]; then
          rm -f "aDuMmYfIlE"
-         ping -c 1 -q -W 1 $URL > /dev/null 2>&1
-         if [[ $? -eq 0 ]] || [[ $noPing -eq 1 ]] ; then
-            $OVJ_VECHO "Test for internet access to $URL passed"
-            if [ "x${OVJ_LOG}" != "x" ] ; then
-               if [ ${OVJ_LOG:0:1} = '/' ]; then
-                  $OVJ_VECHO "Log file is ${OVJ_LOG}"
-               else
-                  $OVJ_VECHO "Log file is /vnmr/help/${OVJ_LOG}"
-               fi
-            fi
-            if [ x$(uname -s) = "xDarwin" ]; then
-               downloadMac
-            elif [ x$(uname -s) = "xLinux" ]; then
-               downloadLinux
+         if [ "x${OVJ_LOG}" != "x" ] ; then
+            if [ ${OVJ_LOG:0:1} = '/' ]; then
+               $OVJ_VECHO "Log file is ${OVJ_LOG}"
             else
-               echo "Can only download VnmrJ manuals with Linux or MacOS systems"
-               return 1
+               $OVJ_VECHO "Log file is /vnmr/help/${OVJ_LOG}"
             fi
+         fi
+         if [ x$(uname -s) = "xDarwin" ]; then
+            downloadMac
+         elif [ x$(uname -s) = "xLinux" ]; then
+            downloadLinux
          else
-            echo "Internet access to $URL failed"
-            echo "This is tested by doing \"ping $URL\". The ping"
-            echo "command may also fail due to a firewall blocking it."
-            echo "If you are sure the system is connected to the internet"
-            echo "and want to bypass this \"ping\" test, use"
-            echo "$SCRIPT noPing"
-            echo ""
+            echo "Can only download VnmrJ manuals with Linux or MacOS systems"
             return 1
          fi
       else
@@ -162,10 +143,34 @@ downloadFiles() {
    return 0
 }
 
+checkNetwork() {
+   local URL="www.dropbox.com"
+   ping -c 1 -q -W 1 $URL > /dev/null 2>&1
+   if [[ $? -eq 0 ]] || [[ $noPing -eq 1 ]] ; then
+      $OVJ_VECHO "Test for internet access to $URL passed"
+      return 0
+   else
+      echo "Internet access to $URL failed"
+      echo "This is tested by doing \"ping $URL\". The ping"
+      echo "command may also fail due to a firewall blocking it."
+      echo "If you are sure the system is connected to the internet"
+      echo "and want to bypass this \"ping\" test, use"
+      echo "$SCRIPT noPing"
+      echo ""
+      return 1
+   fi
+}
+
 #
 # Main program starts here
 #
 
+if [ "x${OVJ_INSTALL}" = "x" ] ; then
+    checkNetwork
+    if [[ $? -ne 0 ]]; then
+        exit 1
+    fi
+fi
 if [ "x${OVJ_DOWNLOAD}" != "x" ] ; then
     downloadFiles ${OVJ_DOWNLOAD}
     exit 0
@@ -195,9 +200,22 @@ if [ "x${OVJ_INSTALL}" != "x" ] ; then
    cp ${OVJ_INSTALL}/${filename}* .
 else
    downloadFiles "/vnmr/help"
-   if [[ $? -ne 0 ]]; then
-      exit 1
+fi
+if [[ $? -ne 0 ]]; then
+   cd ..
+   $OVJ_VECHO " "
+   if [ "x${OVJ_INSTALL}" != "x" ] ; then
+      $OVJ_VECHO "Copying manuals files from ${OVJ_INSTALL} failed"
+   else
+      $OVJ_VECHO "Manuals download failed"
    fi
+   $OVJ_VECHO " "
+   rmdir help
+   if [[ -d help_${date} ]]; then
+      mv help_${date} "help"
+      $OVJ_VECHO "Restoring previous version of manuals"
+   fi
+   exit 1
 fi
 unzip -q ${filename}*
 rm -f ${filename}*
