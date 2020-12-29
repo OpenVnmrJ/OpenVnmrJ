@@ -7516,24 +7516,8 @@ public class FillDBManager {
             }
         }
 
-        UNFile dir = new UNFile(FileUtil.sysdir() + "/pgsql");
-        if(!dir.canWrite()) {
-           locatoroff = true;
-           return locatoroff;
-        }
-        String filepath = getLocatorOffFile();
-        // Temporarily try the users file in case they had set this in
-        // a previous version.
-        
-        if(filepath==null) {
-            filepath = FileUtil.openPath("USER/PERSISTENCE/LocatorOff");
-            if(filepath==null)
-            {
-                locatoroff = false;
-                return locatoroff;
-            }
-        }
-        UNFile file = new UNFile(filepath);
+        UNFile file = new UNFile(FileUtil.sysdir() +
+                                "/pgsql/persistence/LocatorOff");
         if (file == null)
         {
            locatoroff = false;
