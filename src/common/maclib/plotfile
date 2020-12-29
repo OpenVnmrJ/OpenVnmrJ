@@ -5,16 +5,6 @@
 
 if $#=0 then $arg='auto' else $arg=$1 endif
 
-shell('which ps2pdfwr'):$ps2pdf
-if $ps2pdf='' then
-  write('error','No PDF converter found - please install Ghostscript first!')
-  return
-endif
-$pldir=userdir+'/plot'
-exists($pldir,'directory'):$exd
-if not $exd then 
-   shell('mkdir '+$pldir) 
-endif
 resetplotter('setup')
 
 exists('plotfile','parameter'):$exf
@@ -32,11 +22,11 @@ if not $expo then
    printout='printer'
 endif
 
+if $arg='setup' then return endif
+
 $tmpps='/vnmr/tmp/tmpplot.ps'
 exists($tmpps,'file'):$eold
-if $eold then shell('rm -f '+$tmpps) endif
-
-if $arg='setup' then return endif
+if $eold then delete($tmpps,''):$eold endif
 
 if plotfile=''       then write('error','Please define a filename first!') return endif
 if plotfileformat='' then write('error','Please choose a format first!') return endif
@@ -49,49 +39,84 @@ if $ep then
   endif
 endif
 
-Svfname:$next_saved_fid length($next_saved_fid):$ln
-substr($next_saved_fid,$ln-4,1):$numstr
-substr($next_saved_fid,1,$ln-5):$current_fid
-$num=1      format($numstr,'lower'):$num $num=$num-1
-$numstr2='' format($num,'lower'):$numstr2
-$current_fid=$current_fid+$numstr2+'.fid'
-  
-exists($current_fid,'directory'):$ef
-exists(file,'directory'):$efile
-
-if file='exp' and $ef then
-  $plotfile=$current_fid+'/'+plotfile                 // Plot to FID_directory.fid/myplot.xxx
-elseif file<>'exp' and $efile then
-  $plotfile=file+'/'+plotfile
+$ch=''
+substr(plotfile,1,1):$ch
+if ($ch = '/') then
+  $plotfile=plotfile
 else
-  $plotfile=$pldir+'/'+plotfile           // Else plot to userdir/plots/myplot.xxx
+  Svfname:$next_saved_fid length($next_saved_fid):$ln
+  substr($next_saved_fid,$ln-4,1):$numstr
+  substr($next_saved_fid,1,$ln-5):$current_fid
+  $num=1      format($numstr,'lower'):$num $num=$num-1
+  $numstr2='' format($num,'lower'):$numstr2
+  $current_fid=$current_fid+$numstr2+'.fid'
+  
+  exists($current_fid,'directory'):$ef
+  if ($ef) then
+    exists($current_fid,'file','rw'):$ef
+  endif
+  if (file = '') then
+    $efile=0
+  else
+    exists(file,'directory'):$efile
+    if ($efile) then
+      exists(file,'file','rw'):$efile
+    endif
+  endif
+
+  if file='exp' and $ef then
+    $plotfile=$current_fid+'/'+plotfile  // Plot to FID_directory.fid/myplot.xxx
+  elseif file<>'exp' and $efile then
+    $plotfile=file+'/'+plotfile
+  else
+    $pldir=userdir+'/plot'
+    exists($pldir,'directory'):$exd
+    if not $exd then 
+      mkdir($pldir) 
+    endif
+    $plotfile=$pldir+'/'+plotfile       // Else plot to userdir/plots/myplot.xxx
+  endif
 endif
 
-$ret=1
-checkplotter:$new,$ret
-if $ret=0 then
-  return
-else 
-  if plotter<>$new then plotter=$new endif
+if (plotter<>'') then
+  $ret=1
+  checkplotter:$new,$ret
+  if $ret=0 then
+    return
+  else 
+    if plotter<>$new then plotter=$new endif
+  endif
 endif
 
-if $arg='manual' then page else plot endif
+if $arg='manual' then page($tmpps):$dum else plot endif
 
 exists($tmpps,'file'):$eold
-if not $eold then write('error','Error while printing - '+$tmpps+' does not exist!') return endif
+if not $eold then
+  write('error','Error while printing - '+$tmpps+' does not exist!')
+  return
+endif
 
 if plotfileformat='pdf' then
+  $ps2pdf=''
+  shell('which ps2pdfwr'):$ps2pdf
+  if $ps2pdf='' then
+    write('error','No PDF converter found - please install Ghostscript first!')
+    return
+  endif
   shell($ps2pdf+' '+$tmpps+' '+$plotfile+'.pdf')
+  delete($tmpps,''):$eold
 elseif plotfileformat='ps' then
-  shell('cp '+$tmpps+' '+$plotfile+'.ps')
+  mv($tmpps,$plotfile+'.ps')
 elseif plotfileformat='jpg' then
   shell('convert -rotate 90 -density 300 -quality 95 '+$tmpps+' '+$plotfile+'.jpg')
+  delete($tmpps,''):$eold
 elseif plotfileformat='png' then
   shell('convert -rotate 90 -density 300 -quality 95 '+$tmpps+' '+$plotfile+'.png')
+  delete($tmpps,''):$eold
 elseif plotfileformat='pcl' then
-  shell('cp '+$tmpps+' '+$plotfile+'.pcl')
+  mv($tmpps,$plotfile+'.pcl')
 elseif plotfileformat='hpgl' then
-  shell('cp '+$tmpps+' '+$plotfile+'.hpgl')
+  mv($tmpps,$plotfile+'.hpgl')
 else
   write('error','Please choose a format first!')
 endif
