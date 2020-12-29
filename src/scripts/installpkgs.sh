@@ -657,7 +657,7 @@ else
 # apt-get -qq -y dist-upgrade
 # Prevent packages from presenting an interactive popup
   export DEBIAN_FRONTEND=noninteractive
-  apt-get install -y csh make expect bc git scons g++ gfortran \
+  apt-get install -y tcsh make expect bc git scons g++ gfortran \
       openssh-server mutt sharutils sendmail-cf gnome-power-manager \
       kdiff3 libcanberra-gtk-module ghostscript imagemagick vim xterm \
       gedit dos2unix zip cups gnuplot gnome-terminal enscript rpcbind &>> $logfile

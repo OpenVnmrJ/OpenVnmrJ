@@ -29,7 +29,7 @@ if (!($?NMRBASE)) then
    source /vnmr/nmrpipe/dynamo/com/dynInit.com
 endif
 
-if ($# == 1) then
+if ($#argv == 1) then
    $1
 else
    $1 $argv[2-]
