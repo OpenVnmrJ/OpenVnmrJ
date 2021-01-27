@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+# Copyright (C) 2015  University of Oregon
+# 
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+# 
+# For more information, see the LICENSE file.
+# 
+#
+
+# set -x
+
+SCRIPT=$(basename "$0")
+vnmrsystem="/vnmr"
+
+npids=$(ps -e  | grep Expproc | awk '{ printf("%d ",$1) }')
+if [[ x"$npids" != "x" ]] ; then 
+   echo ""
+   echo "You must exit Acquisition communication programs before running $SCRIPT"
+   echo "Run 'acqcomm stop' and then restart $SCRIPT"
+   echo ""
+   exit 0
+fi
+
+if hash python3 2> /dev/null; then
+    python3 $vnmrsystem/adm/acq/$SCRIPT.py "$*"
+else
+    python $vnmrsystem/adm/acq/$SCRIPT.py "$*"
+fi
