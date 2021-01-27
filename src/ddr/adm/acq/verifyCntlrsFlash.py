@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+from __future__ import print_function
 """
 
    This script Verifies the VNMRS Digital Controllers Flash Contents 
@@ -51,19 +50,6 @@ import traceback
 import datetime
 import collections
 
-# for http download of pexpect
-import httplib,cStringIO, tarfile
-# import pexpect
-
-#if pexpect not present
-# cd /tmp
-# wget http://pexpect.sourceforge.net/pexpect-2.3.tar.gz
-# tar xzf pexpect-2.3.tar.gz
-# cd pexpect-2.3
-# su
-# python ./setup.py install
-
-
 import logging
 from optparse import OptionParser
 
@@ -79,10 +65,10 @@ import time, threading
 # ====================================================================================
 #
 
-print __name__
+#print(__name__)
 MODULE = sys.modules[__name__]
 
-print MODULE
+#print(MODULE)
 
 COLORS = "BLUE GREEN CYAN RED MAGENTA YELLOW WHITE BLACK".split()
 # List of terminal controls, you can add more to the list.
@@ -148,7 +134,7 @@ try:
     setup()
 except Exception as e:
     # There is a failure; set all attributes to default
-    print 'Warning: %s' % e
+    print('Warning: %s' % e)
     default()
 
 
@@ -293,7 +279,7 @@ class ProgressThread(threading.Thread):
 def first_substring(strings, substring):
     try:
        result = (i for i, string in enumerate(strings) if substring in string).next()
-    except Exception, e:    # catch StopIteration when it doesn't find the substring, return -1
+    except Exception as e:    # catch StopIteration when it doesn't find the substring, return -1
         result = -1
     return result
 
@@ -450,7 +436,7 @@ class rshCmd:
     def __del__(self):
         try: 
            self.outputlinelist = self.sendCmd('logout',1)
-        except Exception, e:
+        except Exception as e:
            pass
 
     def sendCmd(self,cmd,cmdtimeout=10):
@@ -684,7 +670,7 @@ class rshCmd:
               result = True
            else:
               result = False
-        except Exception, e:
+        except Exception as e:
            result = False;
 
         return result
@@ -775,29 +761,6 @@ def pingIP(ip):
         # print returnCodeTotal
         return (returnCodeTotal == 0)
 
-def check4Procs():
-        """ check4Procs: Check for the Acquisition Process running on the Host"""
-        #   root     17133     1  0 10:31 pts/15   00:00:00 ./Expproc
-        #   root     17142 17133  0 10:31 pts/15   00:00:00 Recvproc
-        #   root     17152 17133  0 10:31 pts/15   00:00:00 Sendproc
-        #   root     17164 17133  0 10:31 pts/15   00:00:00 Procproc
-        #   root     17165 17133  0 10:31 pts/15   00:00:00 Infoproc
-        ProcsFound=False
-        process = subprocess.Popen('ps -ef', shell=True, stdout=subprocess.PIPE)
-        process.wait()
-        output = process.stdout.read()
-        #print output
-        if 'Expproc' in output:
-          ProcsFound=True
-          logger.debug("Expproc Found")
-        if 'Recvproc' in output:
-          ProcsFound=True
-          logger.debug("Recvproc Found")
-        if 'Sendproc' in output:
-          ProcsFound=True
-          logger.debug("Sendproc Found")
-        return ProcsFound
-    
 def getEthersList():
     """getEthersList - Obtain the Controllers Names from the /etc/ethers files"""
     hostlist = []
@@ -814,7 +777,7 @@ def getEthersList():
            # skip blank or commented '#' lines
            if ((line[0] != "#") and (line != "\n")):
               #
-              # grab the MAc filepath from line
+              # grab the MAC filepath from line
               #
               (mac, cntlrname) = line.split(' ',1)
               mac = mac.strip()
@@ -907,7 +870,7 @@ def main():
        try:
           # attempt to rlogin into the controller
           cntlrRsh = rshCmd(cntlr)
-       except rshCmdError, e:
+       except rshCmdError as e:
           # print 'rshCmd exception occurred, value:', e.value
           logger.info("rsh to Controller %s failed,  Check for an open rsh session to controller." % (cntlr))
           logger.critical(e.value)
@@ -1085,52 +1048,6 @@ def main():
        for key in rftypedic:
           logger.info("%27s: %s" % (key, ', '.join(rftypedic[key])))
 
-#------------------------------------------------------------------------------------------
-#------------------------------------------------------------------------------------------
-#------------------------------------------------------------------------------------------
-def downldInstallPexpect():
-    ''' 
-         This routine downloads (via http) the Pexpect module tar gz file from Source Forge WEB site
-         Then untars it into /tmp , then installthe module
-    '''
-    status=False
-    try:
-       conn = httplib.HTTPConnection('pexpect.sourceforge.net')
-       conn.request('GET','/pexpect-2.3.tar.gz')
-       print "    Attempting download of the Pexpect Module tar gz file from SourceForge"
-       resp = conn.getresponse()
-       # print resp.status   # found = 200, not found = 404
-       if resp.status == 200:
-           print "    Download Complete"
-           data = resp.read()
-           f = cStringIO.StringIO(data)
-           print "    Extracting pexpect-2.3.tar.gz into /tmp/"
-           tar = tarfile.TarFile.gzopen("dummy", fileobj=f)
-           # tar.list()
-           # tar.extractall('/tmp/')   # only present Python 2.5 , RHEL 5.X  older Python
-           for name in tar.getnames():     # pre-extractall method way
-               tar.extract(name,'/tmp/')
-           print "    Ready to Install Pexpect Module into System"
-           print "    Enter the root password"
-           process = subprocess.Popen('su -c "cd /tmp/pexpect-2.3; python ./setup.py install"', shell=True, stdout=subprocess.PIPE)
-           process.wait()
-           output = process.stdout.read()
-           print output
-           status=True
-       else:
-           print "    Failed to download File"
-
-    except Exception, e:
-       print "    Exception on GET: %s" % str(e)
-       print "    Failed to Download Pexpect module"
-
-    try:
-       conn.close()
-    except Exception, e:
-      pass
-
-    return status
-
 
 #------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------
@@ -1146,27 +1063,7 @@ def traverse(o, tree_types=(list, tuple)):
     else:
         yield o
 
-#
-#  Earlier RHEL 5.x systems  may not have the pexpect module installed
-#  Thus we try here , if not give the user the chance to install it.
-try:
-  import pexpect
-except Exception, e:
-   print '\r\n  Error: %s\r\n' % str(e)
-   print '\r\n    This script has discovered the Python Pexpect module it needs, is not installed on this system.'
-   print '    With permission this script will download the module and install it on this system.'
-   print '    Systems without WEB access may use the installPexect.py script availble from Agilent RPD support'
-   print '    Installation does require the root password be given'
-   answer = raw_input('\r\n         Proceed with download and installation? (y/n): ')
-   # print answer
-   if ( answer in [ 'y', 'yes', 'Y', 'Yes','YES' ] ):
-      print '\r\n    Rerun this after installation has completed.\r\n'
-      downldInstallPexpect()
-      print ' '
-      os._exit(0)
-   else:
-      print '\r\n    Terminated\r\n'
-      os._exit(0)
+import pexpect
 
 
 #
@@ -1199,7 +1096,7 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
 
-    # print args
+    # print(args)
 
     # arglist is going to be a lists of lists
     arglist = []
@@ -1211,7 +1108,7 @@ if __name__ == "__main__":
     targets = []
     for cntlr in traverse(arglist):
        targets.append(cntlr)
-    #print targets
+    #print(targets)
 
     #print options    # acces via the options.optionname
     #print args       # accces as an array index, args[0] - 1st arg not name of script
@@ -1262,17 +1159,10 @@ if __name__ == "__main__":
        logger.info('Debug Log file: "%s"' % ('verifyCntlrsFlash_Debug-' + datetimestr + '.log'))
        logger.info(" ")
 
-    procs = check4Procs()
-    if ( procs == True ):
-       logger.info(" ")
-       logger.info("The Acqusition Processes are running, \r\nPlease stop them (e.g. acqcomm stop) then rerun this script")
-       logger.info(" ")
-       os._exit(0)
-
     try:
         main()
-    except Exception, e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         traceback.print_exc()
         os._exit(1)
 
