@@ -20,7 +20,7 @@ if ($op = 'init') or ($op = 'auto') then
       delete($tmpfile)
     endif
     fsave($tmpfile,'systemglobal')
-    shell('chmod 666 '+ $tmpfile)
+    chmod(666,$tmpfile)
     if ($update) then
        exists(systemdir+'/conpar.prev','file','rw'):$e
        if ($e > 0.5) then
@@ -33,7 +33,7 @@ if ($op = 'init') or ($op = 'auto') then
        endif
     endif
 
-    shell('vnmr_uname'):$osname
+    uname:$osname
     $file='/vnmr/tmp/smsport'
     write('reset',$file)
     write('file',$file,'None n')
@@ -111,7 +111,7 @@ if ($op = 'ok') or ($op = 'auto') then
     setvalue('homdec','y','systemglobal')
     setvalue('spinopt','y','systemglobal')
     setvalue('rfwg','nn','systemglobal')
-    shell('uname -n'):$host
+    host:$host
     setvalue('instrument',$host,'systemglobal')
     setvalue('Console','mercury','systemglobal')
     setvalue('vtflowrange',0, 1,'systemglobal')
@@ -128,8 +128,8 @@ if ($op = 'ok') or ($op = 'auto') then
     endif
     $h1=''
     format(h1freq,1,0):$h1
-    shell('ln -s '+systemdir+'/par'+$h1+'/tests '+systemdir+'/tests')
-    shell('ln -s '+systemdir+'/par'+$h1+'/stdpar '+systemdir+'/stdpar')
+    cp(systemdir+'/par'+$h1+'/tests',systemdir+'/tests','relsymlink'):$e
+    cp(systemdir+'/par'+$h1+'/stdpar',systemdir+'/stdpar','relsymlink'):$e
     isvnmrj:$j
     if ($j > 0.5) then
       $j = 1

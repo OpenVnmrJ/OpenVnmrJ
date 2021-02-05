@@ -1,26 +1,44 @@
 
 *******************************************************************************
-copy	- makes a copy of a file
-cp 	-
+copy('fromfile','tofile'<,'link'|'symlink'|'relsymlink'>) - makes a copy of
+                                                            fromfile
+cp('fromfile','tofile'<,'link'|'symlink'|'relsymlink'>) - makes a copy of
+                                                          fromfile
 *******************************************************************************
 
   These commands make a copy of a file.  The cp and copy commands are identical.
   All arguments are passed.  If a return argument is used, it will be set to
   1 or 0, for success or failure, respectively.  If an illegal file name is
   used, the command will abort. It will not set the return value.
-  An optional third argument can be link or symlink. If this is used, the copy
-  will be a hard link or symbolic link to the first file.
+  An optional third argument can be link, symlink or relsymlink. If this is
+  used, the copy will be a hard link, a symbolic link, or a symbolic
+  link relative to the link location.
+  The 'link' option is equivalent to the Linux command
+     ln fromfile tofile
+  The 'symlink' option is equivalent to the Linux command
+     ln -s fromfile tofile
+  The 'relsymlink' option is equivalent to the Linux command
+     ln -sr fromfile tofile
+  If the 'symlink' option is used, the "fromfile" does not need to exist.
+  If the 'link' or 'relsymlink' option is used, the "fromfile" must exist.
+
 
   If the first argument is '-r', copy will do a recursive copy of a directory.
   If the first argument is '-p', copy will preserve the "mode" bits of the file.
+  These options do not work with the 'link', 'syslink', or 'relsymlink'
+  keywords.
 
   Usage --  cp('fromfile','tofile')
             cp('fromfile','tofile','link')
             cp('fromfile','tofile','symlink')
+            cp('fromfile','tofile','relsymlink')
   Examples;
 
       cp('fromfile','tofile')
       cp('-r','fromdir','todir')         This will do a recursive copy
       copy('fromfile','tofile'):$res     will set $res to 1 (success) or 0 (failure)
       copy('fromfile','tofile','link'):$res     will set $res to 1 (success) or 0 (failure)
-      copy('fromfile','tofile','symlink'):$res     will set $res to 1 (success) or 0 (failure)
+      copy('/vnmr/conpar','/vnmr/filea','symlink') will create /vnmr/filea
+                                             that points to /vnmr/conpar
+      copy('/vnmr/conpar','/vnmr/filea','relsymlink') will create /vnmr/filea
+                                             that points to conpar

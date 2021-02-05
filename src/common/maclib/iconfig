@@ -20,7 +20,7 @@ if ($op = 'init') or ($op = 'auto') then
       delete($tmpfile)
     endif
     fsave($tmpfile,'systemglobal')
-    shell('chmod 666 '+ $tmpfile)
+    chmod(666,$tmpfile)
     if ($update) then
        exists(systemdir+'/conpar.prev','file','rw'):$e
        if ($e > 0.5) then
@@ -60,9 +60,9 @@ if ($op = 'init') or ($op = 'auto') then
       endif
     endwhile
     delete('/vnmr/tmp/gtmp')
-    shell('chmod 666 '+ $file)
+    chmod(666,$file)
 
-    shell('vnmr_uname'):$osname
+    uname:$osname
     $file='/vnmr/tmp/smsport'
     write('reset',$file)
     write('file',$file,'None n')
@@ -79,7 +79,7 @@ if ($op = 'init') or ($op = 'auto') then
     write('file',$file,'Ethernet e')
 
     if ($op <> 'auto') then
-      shell('uname -n'):$host
+      host:$host
       vnmrjcmd('popup', 'mode:modal', 'file:iconfig.xml', 'rebuild:yes', 'location:topMenuBar', 'help:/vnmr/jhelp/dialog/iconfig.html', 'pnewupdate:true', 'cancel:iconfig(`cancel`)', 'title:'+$host+ ' Configuration')
     endif
 endif
@@ -242,7 +242,7 @@ if ($op = 'ok') or ($op = 'auto') then
     endif
     setvalue('parstep',1.0, 19,'systemglobal')
 
-    shell('uname -n'):$host
+    host:$host
     setvalue('instrument',$host,'systemglobal')
 
     fsave(systemdir+'/conpar','systemglobal')
@@ -256,8 +256,8 @@ if ($op = 'ok') or ($op = 'auto') then
     endif
     $h1=''
     format(h1freq,1,0):$h1
-    shell('ln -s '+systemdir+'/par'+$h1+'/tests '+systemdir+'/tests')
-    shell('ln -s '+systemdir+'/par'+$h1+'/stdpar '+systemdir+'/stdpar')
+    cp(systemdir+'/par'+$h1+'/tests',systemdir+'/tests','relsymlink'):$e
+    cp(systemdir+'/par'+$h1+'/stdpar',systemdir+'/stdpar','relsymlink'):$e
     rm('/vnmr/tmp/sysgcoil'):$e
     rm('/vnmr/tmp/smsport'):$e
     _rftype
