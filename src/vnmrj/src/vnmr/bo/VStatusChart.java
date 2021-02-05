@@ -378,6 +378,10 @@ public class VStatusChart extends JPanel
                 return Util.getLabel("sNOTREG","Not Regulated");
             case NOTPRESENT:
                 return Util.getLabel("sNOTPRESENT","Not present");
+            case ON:
+                return Util.getLabel("sON","On");
+            case EXT:
+                return Util.getLabel("sEXT","EXT");
             }
         }
 

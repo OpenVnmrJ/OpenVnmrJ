@@ -18,6 +18,8 @@ public interface VStatusIF
     public final static int OFF = 2;
     public final static int REGULATED = 3;
     public final static int NOTREG = 4;
+    public final static int ON = 5;
+    public final static int EXT = 6;
 
     public final static int INACTIVE = 0;
     public final static int READY = 1;
@@ -26,7 +28,7 @@ public interface VStatusIF
     public final static int INTERACTIVE = 4;
     public final static int ACQUIRING = 5;
     
-    public final static String[] states ={"NotPresent","Off","Regulated","NotReg"};
+    public final static String[] states ={"NotPresent","Off","Regulated","NotReg","On","EXT"};
     public final static String[] status_key = {"lock",  "vt",     "spin", "rfmon"};
     public final static String[] status_val = {"lklvl", "vtval",  "spinval", "rfmonval"};
     public final static String[] status_set = {"",      "vtset",  "spinset", ""};
