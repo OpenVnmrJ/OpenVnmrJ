@@ -1355,8 +1355,9 @@ int P_getstring(int tree, const char *name, char *buf, int index, int maxbuf)
 		    i += 1;
 		}
 		if (r)	
-		{   strncpy(buf,r->v.s,maxbuf);   
-		    buf[maxbuf-1] = '\0';
+		{   
+            buf[0] = '\0';
+            strncat(buf,r->v.s,maxbuf-1);   
 		    return(0);
 		}
 		else

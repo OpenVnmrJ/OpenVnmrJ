@@ -501,7 +501,7 @@ void p11_writeCmdHistory(char* buf)
         strncat(mi, strptr, i-7);
         i = atoi(mi);
 
-	P_getstring(GLOBAL, "mstring", currentCmd, i, MAXSTR - 1);
+	P_getstring(GLOBAL, "mstring", currentCmd, i, sizeof(string) - 1);
 	strcat(currentCmd, "\n");
 	p11_saveDisCmd();
 
@@ -510,7 +510,7 @@ void p11_writeCmdHistory(char* buf)
     } else {
 
     	strcpy(currentCmd, "");
-    	strncat(currentCmd, str, MAXSTR);
+    	strncat(currentCmd, str, sizeof(string)-1);
     }
 
     if(!part11System && !P_getreal(GLOBAL, "cmdHis", &d, 1) && d < 0.5) return;
@@ -1816,6 +1816,7 @@ int safecp_file_verify(char* safecpPath, char* file_a, char* file_b )
 {
     int      ival, l1, l2, l3;
     char     cp_cmd[BUFSIZE];
+    int ret __attribute__((unused));
 
     l1 = strlen(safecpPath);
     if (l1 < 1) return( -1 );
@@ -1828,7 +1829,7 @@ int safecp_file_verify(char* safecpPath, char* file_a, char* file_b )
     if(ival > BUFSIZE) return(-1);
     sprintf(cp_cmd, "%s %s %s", safecpPath, file_a, file_b );
 
-    system( cp_cmd );
+    ret = system( cp_cmd );
 
     if(strstr(file_b,".REC") == NULL) return 0;
 
@@ -1886,7 +1887,8 @@ void writeLineForLoc(string path, char* type)
             strcpy(tmppath,"");
         strcat(tmppath,"/");
         strcat(tmppath,currentPart11Path);
-        strncpy(currentPart11Path,tmppath,MAXPATH);
+        currentPart11Path[0] = '\0';
+        strncat(currentPart11Path,tmppath,sizeof(string)-1);
         i = strlen(currentPart11Path);
         if (currentPart11Path[i] != '\0')
             currentPart11Path[i] = '\0';
@@ -2122,8 +2124,9 @@ static int save_acqfil(char* orig, char* dest)
         makeChecksums(dest,"checksum");
 
         if(strstr(safecpPath,"/p11/bin/safecp") == NULL) {
+            int ret __attribute__((unused));
             sprintf(str, "chmod -R g+w %s", dest);
-            system(str);
+            ret = system(str);
         }
     }
     RETURN;
@@ -2368,8 +2371,9 @@ static void save_datdir(char* orig, char* dest)
     
         makeChecksums(dest, "checksum");
         if(strstr(safecpPath,"/p11/bin/safecp") == NULL) {
+            int ret __attribute__((unused));
             sprintf(str, "chmod -R g+w %s", dest);
-            system(str);
+            ret = system(str);
         }
 
     }
@@ -2468,13 +2472,13 @@ int getLastData(int argc, char *argv[], int retc, char *retv[])
 /**************************/
 {
     string path, name;
-    int i;
+    int ret __attribute__((unused));
 
     if (argc > 1) {
 
 	strcpy(path, argv[1]);
 
-	i = getLastVersion(path, name);
+	ret = getLastVersion(path, name);
 
         if (retc > 0) retv[0]= newString(name);
 
@@ -3183,6 +3187,7 @@ int chchsums(int argc, char *argv[], int retc, char *retv[])
     string cmd, line, cmdLine;
     FILE *tmpfp;
     string tmpfile;
+    int ret __attribute__((unused));
     
     strcpy(cmd, "/vnmr/p11/bin/writeAaudit ");
 
@@ -3225,7 +3230,7 @@ int chchsums(int argc, char *argv[], int retc, char *retv[])
 	sprintf(line, "%s %s %s %s %s, %d %s", cmdTime, 
 		"aaudit", UserName, "check records", path, bad, "corrupted");
 	sprintf(cmdLine, "%s -l \"%s\"", cmd, line);
-	system(cmdLine);
+	ret = system(cmdLine);
 
    	Winfoprintf("part11: check records completed in %s, %d %s\n", path, bad, "corrupted");
     } else {
@@ -3248,12 +3253,14 @@ int chchsums(int argc, char *argv[], int retc, char *retv[])
              fflush(tmpfp);
         sprintf(cmdLine, "%s -f %s", cmd, tmpfile);
         if(debug) fprintf(stderr, "%s -f %s", cmd, tmpfile);
-        system(cmdLine);
+        ret = system(cmdLine);
 
         if(tmpfp)
+        {
     	    fclose(tmpfp);
+        }
 
-	unlink(tmpfile);
+	    ret = unlink(tmpfile);
     }
 
     if (retc > 0)
@@ -3274,6 +3281,7 @@ int cpFilesInFile(int argc, char *argv[], int retc, char *retv[])
     string line, cmdLine;
     FILE *tmpfp;
     string tmpfile;
+    int ret __attribute__((unused));
 
     (void) retc;
     (void) retv;
@@ -3307,7 +3315,7 @@ int cpFilesInFile(int argc, char *argv[], int retc, char *retv[])
                             "aaudit", UserName, "copied records", words[1], dest);
                     if(tmpfp != NULL) fprintf(tmpfp, "%s\n", line);
                     sprintf(cmd, "cp -rf %s %s", words[1], dest);
-                    system(cmd);
+                    ret = system(cmd);
                     Winfoprintf("part11: copy file %s to %s\n", words[1], dest);
                 }
             }
@@ -3317,7 +3325,7 @@ int cpFilesInFile(int argc, char *argv[], int retc, char *retv[])
     	strcpy(cmd,"/vnmr/p11/bin/writeAaudit -f ");
 	if(debug) fprintf(stderr, "%s%s", cmd, tmpfile);
 	sprintf(cmdLine, "%s%s", cmd, tmpfile);
-        system(cmdLine);
+        ret = system(cmdLine);
     } 
     if(fp)
         fclose(fp);
@@ -3522,6 +3530,7 @@ static int copy_file_verify2(char *file_a, char *file_b )
 {
     char    *cp_cmd;
     int      ival;
+    int ret __attribute__((unused));
 
 #ifdef UNIX
     cp_cmd = make_twoparam_command( "cp -rf", file_a, file_b );
@@ -3530,7 +3539,7 @@ static int copy_file_verify2(char *file_a, char *file_b )
 #endif 
     if (cp_cmd == NULL)
         return( -1 );
-    system( cp_cmd );
+    ret = system( cp_cmd );
     release( cp_cmd );
 
     ival = verify_copy( file_a, file_b );
@@ -4466,10 +4475,12 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
     char recsuffix[MAXSTR];
     char cmd[MAXSTR],dataOwner[MAXSTR];
 
-    int r,i;
+    int r;
+    int ret __attribute__((unused));
     extern void resetdatafiles();
     extern void setfilepaths();
-    int fiderr = 1, dataerr = 1;
+    int fiderr = 1;
+    int dataerr __attribute__((unused)) = 1;
     string datname;
 
     (void) nolog;
@@ -4541,7 +4552,7 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
 
     strcpy( path, &curexpdir[0] );
     strcat( path, "/acqfil/acqpar" );
-    i = unlink( &path[ 0 ] );             /* assume it works and ignore result */
+    ret = unlink( &path[ 0 ] );             /* assume it works and ignore result */
 
     /* get individual param if rtv */
 
@@ -5066,11 +5077,8 @@ static void getStrValues(char* buf, string* words, int* n, char* delimiter)
 /* break a string "buf" into "words" separated by delimiter */
 /* return both words and number of words n. */
 
-    int size;
     char *strptr, *tokptr;
     char  str[BUFSIZE];
-
-    size = *n;
 
     /* remove newline if exists */
     if(buf[strlen(buf)-1] == '\n') {
@@ -5327,6 +5335,7 @@ int deleteREC(int argc, char *argv[], int retc, char *retv[])
     string exppath, path, curfid_linkpath, tmpfile, procparPath;
     string buf, str, root, name;
     char *ptmp;
+    int ret __attribute__((unused));
 
     (void) retc;
     (void) retv;
@@ -5449,7 +5458,7 @@ int deleteREC(int argc, char *argv[], int retc, char *retv[])
 /* append tmp file to p11 trash */
 
            sprintf(str, "%s%s %s %s\n", systemdir, "/p11/bin/writeTrash -f", tmpfile, UserName);
-           system(str);
+           ret = system(str);
 
            unlink(tmpfile);
 	} else {
