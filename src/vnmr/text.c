@@ -483,6 +483,7 @@ static void save_commands(int num, CMD_NODE *snode)
                 i++;
             }
             tmpStr[i]='\n';
+            tmpStr[i+1]='\0';
             strcpy(cnode->cmd, tmpStr);
         }
     }
@@ -1939,7 +1940,6 @@ int tnmr_draw(int argc, char *argv[], int retc, char *retv[])
 /*******************************/
 {
    /*  flag for graphics or plotter */
-   float x_end, y_end;
    float xpivot,ypivot,xlen,ylen,theta,ylen2,dx1,dy1,dx2,dy2,dx3,dy3;
    float xarray[10];
    int argnum  = 1;
@@ -2010,9 +2010,6 @@ int tnmr_draw(int argc, char *argv[], int retc, char *retv[])
          ABORT;
       }
 
-
-      x_end=-2.0;
-      y_end=-2.0;
 
       if (init2d_getchartparms(0))
       {
@@ -2197,6 +2194,7 @@ int readpars(int argc, char *argv[], int retc, char *retv[])
     char  path[MAXSTR], str[MAXSTR];
     char  buf[1024];
     char *strptr;
+    char *ret __attribute__((unused));
 
     argc--;
     argv++;
@@ -2222,7 +2220,7 @@ int readpars(int argc, char *argv[], int retc, char *retv[])
 
         for(i=0; i<argc; i++) {
 	    if(strcmp(strptr, argv[i]) == 0) {
-		fgets(buf,sizeof(buf),fp);
+		ret = fgets(buf,sizeof(buf),fp);
 		buf[strlen(buf)-1] = '\0';
 		strptr = strstr(buf," ");
 		strptr++;

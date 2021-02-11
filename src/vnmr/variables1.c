@@ -473,7 +473,7 @@ varInfo *rfindVar(const char *n, symbol **pp)
 |
 +-----------------------------------------------------------------------------*/
 
-varInfo *findVar(char *n)
+varInfo *findVar(const char *n)
 {  symbol **pp;
    varInfo *v;
 
