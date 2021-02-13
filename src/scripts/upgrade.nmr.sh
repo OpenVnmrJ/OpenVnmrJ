@@ -278,7 +278,9 @@ doUpgrade () {
                 continue
             fi
             if [[ -L $upgrade_temp_dir/$content ]]; then
-                continue
+                if [[ -e $vnmrsystem/$content ]]; then
+                    continue
+                fi
             fi
             echo $ignoreFiles | grep -q $content >& /dev/null
             if [[ $? -eq 0 ]]; then
