@@ -1,3 +1,5 @@
+
+from __future__ import print_function
 import os
 import signal
 import threading
@@ -46,9 +48,9 @@ class Checker(object):
                     time.sleep(t)
                     continue
                 yield line
-            print "shutting down %s follower"% str(f.fileno())
+            print("shutting down %s follower"% str(f.fileno()))
         except GeneratorExit:
-            print "terminating %s follower"% str(f.fileno())
+            print("terminating %s follower"% str(f.fileno()))
 
 class Heartbeat(Checker):
     def __init__(self, secs):
@@ -273,7 +275,7 @@ class CryoDirect:
         self.stop_monitor()
         signame = tuple((v) for v, k in signal.__dict__.iteritems() if k == signum)[0]
         logging.info('signal %d (%s) caught, stopping direct cryomon communications'% (signum,signame,))
-        print 'signal %d (%s) caught, stopping direct cryomon communications'% (signum,signame,)
+        print('signal %d (%s) caught, stopping direct cryomon communications'% (signum,signame,))
 
     @staticmethod
     def monitor_timeout_handler(signum, frame):
@@ -394,7 +396,7 @@ def listenToCryoMonMonitor(p):
     status = p.follow()
     i = 0
     for s in status:
-        print str(s)
+        print(str(s))
         i = i + 1
         if i > 3:
             p.shutdown.set()
@@ -408,7 +410,7 @@ def runCryoMonMonitorTst():
 def listenToCryoMon(p):
     lines = p.follow()
     for line in lines:
-        print line,
+        print(line,)
 
 def runCryoStatTst(d=None):
     s = threading.Event()
@@ -419,7 +421,7 @@ def runCryoStatTst(d=None):
     t1 = threading.Thread(target=listenToCryoMon,args=(p,))
     t1.start()
     # add soemthing to cryomonData.txt (manually for now) and watch output
-    print "modify cryomonData.txt manually, i.e. with echo msg >> cryomonData.txt"
+    print("modify cryomonData.txt manually, i.e. with echo msg >> cryomonData.txt")
     p.shutdown.set()
     t1.join()
 
@@ -428,7 +430,7 @@ def listenAcqMsg(name,checker):
     checker.listen(event)
     while not checker.shutdown.isSet():
         event.wait()
-        print "listener %s was notified" % name
+        print("listener %s was notified" % name)
         event.clear()
 
 def runAcqMsgTst():
@@ -443,7 +445,7 @@ def runAcqMsgTst():
     cnt = 0
     for value in values:
         cnt += 1
-        print "%d: acqmsg = %s\n" % (cnt, value)
+        print("%d: acqmsg = %s\n" % (cnt, value))
         a.notify()
         if cnt == 2:
             t1a.start()
@@ -456,7 +458,7 @@ def runExpStatTst():
     cnt = 0
     for value in values:
         cnt += 1
-        print "%d: expstat changes = %s\n" % (cnt, value)
+        print("%d: expstat changes = %s\n" % (cnt, value))
         e.notify()
         if cnt == 2:
             t1e.start()
@@ -466,7 +468,7 @@ def runHeartbeatTst(secs=1):
     i = 0
     last = time.time()
     for t in h.follow(): 
-        print t, t-last
+        print(t, t-last)
         i += 1
         if i > 3:
             h.shutdown.set()

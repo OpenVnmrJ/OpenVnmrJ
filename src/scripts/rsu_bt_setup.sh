@@ -392,19 +392,29 @@ setup_install_log()
 
 stop_nmrwebd()
 {
-  pgrep -f nmrwebd > /dev/null && \
-    msg_ "NMR web services are already running - stopping nmrwebd" && \
-    pkill -f nmrwebd && msg ".. OK"
+  if [[ -e /vnmr/web/run/nmrwebd.pid ]]; then
+    msg_ "NMR web services are already running - stopping nmrwebd"
+    if [[ ! -z $(type -t systemctl) ]] ; then
+       systemctl stop --quiet vnmrweb.service
+    else
+       /vnmr/web/scripts/ovjWeb stop
+    fi
+    msg ".. OK"
+  fi
 }
 
 start_nmrwebd()
 {
   msg_ "starting NMR web service"
-  /bin/sh /vnmr/acqbin/rc.vnmr start nmrwebd
+  if [[ ! -z $(type -t systemctl) ]] ; then
+     systemctl start --quiet vnmrweb.service
+  else
+     /vnmr/web/scripts/ovjWeb start
+  fi
   sleep 2
   if [[ -e /vnmr/web/run/nmrwebd.pid ]]; then
     nmrwebd_pid=`cat /vnmr/web/run/nmrwebd.pid`
-    nmrwebd_started=`ps -p ${nmrwebd_pid} | grep nmrwebd | wc -l`
+    nmrwebd_started=`ps -p ${nmrwebd_pid} | wc -l`
   else
     nmrwebd_started=0
   fi

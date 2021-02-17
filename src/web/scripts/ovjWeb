@@ -1,0 +1,67 @@
+#!/bin/bash
+# 
+#
+# Copyright (C) 2015  University of Oregon
+# 
+# You may distribute under the terms of either the GNU General Public
+# License or the Apache License, as specified in the LICENSE file.
+# 
+# For more information, see the LICENSE file.
+# 
+#
+#
+#  ovjWeb - Start and stop the web server
+#
+
+# set -x
+
+nmrwebd_root=/vnmr/web
+nmrwebd_home=${nmrwebd_root}/scripts
+nmrwebd_exe=nmrwebd.py
+
+start_nmrwebd () {
+    nmrwebd_path=${nmrwebd_home}/${nmrwebd_exe}
+    if [[ -x $nmrwebd_path ]]; then
+       if [[ -z $(type -t python3) ]] ; then
+          (cd $nmrwebd_home && python ./$nmrwebd_exe >/dev/console &)
+       else
+          (cd $nmrwebd_home && python3 ./$nmrwebd_exe >/dev/console &)
+       fi
+    fi
+}
+
+stop_nmrwebd () {
+   nmrwebd_pidfile=${nmrwebd_root}/run/${nmrwebd_exe}.pid
+   if [[ -e $nmrwebd_pidfile ]]; then
+       pid=$(cat $nmrwebd_pidfile)
+       kill -TERM $pid >/dev/null
+       rm -f $nmrwebd_pidfile
+   fi
+}
+
+# MAIN main Main
+
+case $# in
+    0)
+      nmrwebd_pidfile=${nmrwebd_root}/run/${nmrwebd_exe}.pid
+      if [[ -e $nmrwebd_pidfile ]]; then
+       stop_nmrwebd
+      else
+       start_nmrwebd
+      fi
+    ;;
+
+    *)
+    case $1 in
+        'start')
+            start_nmrwebd
+        ;;
+
+        'stop')
+            stop_nmrwebd
+        ;;
+
+    esac
+    ;;
+esac
+
