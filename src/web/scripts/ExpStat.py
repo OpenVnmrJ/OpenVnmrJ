@@ -1,3 +1,5 @@
+
+from __future__ import print_function
 import mmap
 import os
 #import struct
@@ -316,7 +318,7 @@ def tstExpStat():
     # make sure the base case works for non-matching
     modified = False
     for i in l1cpy:
-        print "checking %s" % (i[1])
+        print("checking %s" % (i[1]))
         if hasattr(i[1],'__iter__') and len(i[1]) > 1:
             i[1][-1] = 'no way is it going to have this value'
             modified = True
