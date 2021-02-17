@@ -31,6 +31,7 @@ char *getTimeStr(time_t time, char *timestr,int maxsize);
 char *getTimeDif(time_t time, char *timestr);
 void initConsoleStatus();
 
+#define EXP_STATUS_NAME "/vnmr/acqqueue/ExpStatus"
 
 /*************************************************************
 *  Some programs to work with Time Stamps
@@ -89,11 +90,11 @@ int initExpStatus(int clean)   /* zero out Exp Status */
   {
      struct stat buf;
      /* If the file already exists and is the right size, don't zero it out */
-     if ( ! stat(SHR_EXP_STATUS_PATH, &buf) && (buf.st_size == sizeof(EXP_STATUS_STRUCT)) )
+     if ( ! stat(EXP_STATUS_NAME, &buf) && (buf.st_size == sizeof(EXP_STATUS_STRUCT)) )
         clean = 0;
   }
 
-  ExpStatusObj = shrmCreate(SHR_EXP_STATUS_PATH,SHR_EXP_STATUS_KEY, 
+  ExpStatusObj = shrmCreate(EXP_STATUS_NAME,SHR_EXP_STATUS_KEY, 
 			      sizeof(EXP_STATUS_STRUCT));
   if (ExpStatusObj == NULL)
   {

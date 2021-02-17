@@ -27,11 +27,14 @@ typedef unsigned long long int uint64_t;
 
 #define SHR_EXPQ_PATH        "/tmp/ExpQs"
 #define SHR_ACTIVE_EXPQ_PATH "/tmp/ExpActiveQ"
-#define SHR_EXP_STATUS_PATH  "/tmp/ExpStatus"
 #define SHR_SEM_USAGE_PATH   "/tmp/IPC_V_SEM_DBM"
 #define SHR_MSG_Q_DBM_PATH   "/tmp/msgQKeyDbm"
 #define SHR_PROCQ_PATH       "/tmp/ProcQs"
 #define SHR_ACTIVEQ_PATH     "/tmp/ActiveQ"
+/*
+   SHR_EXP_STATUS_PATH was  "/tmp/ExpStatus" moved to /vnmr/acqqueue/ExpStatus
+   permissions on /tmp caused problems
+ */
 
 #define SHR_EXPQ_KEY         ((int) 101)
 #define SHR_ACTIVE_EXPQ_KEY  ((int) 201)
