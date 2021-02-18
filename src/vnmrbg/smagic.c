@@ -155,7 +155,6 @@ extern int autoDelExp;
 extern int nextexp_d(int *expi, char *expn);
 extern int cexpCmd(int argc, char *argv[], int retc, char *retv[]);
 
-extern varInfo *findVar(char *name);
 /* static void clearVar(); */
 extern void  showMacros();
 extern void  pushTree();
@@ -505,6 +504,7 @@ int get_vnmrj_socket()
 /* initialize server socket to receive vnmrj commands */
 int init_vnmrj_comm(char *hostname, int port_num)
 {
+   int ret __attribute__((unused));
    int buff = DEFAULT_SOCKET_BUFFER_SIZE;
    CommPort ptr = &vnmrj_comm_addr;
    int on = 1;
@@ -513,7 +513,7 @@ int init_vnmrj_comm(char *hostname, int port_num)
    strcpy(ptr->host,hostname);
    ptr->pid = getpid();
    ptr->msg_uid = getuid();
-   seteuid( ptr->msg_uid );
+   ret = seteuid( ptr->msg_uid );
    ptr->port = port_num;
 
  /*===================================================================*/
@@ -1132,8 +1132,9 @@ int vnmr(int argc, char *argv[])
            strcat(logPath,"/tmp/acqlog");
            if (access( logPath, W_OK ) == 0)
            {
-              freopen(logPath, "a", stderr);
-              freopen(logPath, "a", stdout);
+              FILE *ret __attribute__((unused));
+              ret = freopen(logPath, "a", stderr);
+              ret = freopen(logPath, "a", stdout);
            }
            checkAcqStart(initCommand);
         }
@@ -1330,10 +1331,7 @@ void macro_main_loop(char *file)
 
 static int setUpEnv(char *modeptr)
 {
-    int  mode_err;
-
     Bnmr = 0;
-    mode_err = 0;
 
     /* setup vnMode */
 
@@ -1471,6 +1469,7 @@ void resetMasterSockets() /* reset master sockets */
 static void
 exec_message()
 {
+   int ret __attribute__((unused));
    int len;
    char *xstr;
    extern void jNextPrev();
@@ -1494,8 +1493,8 @@ exec_message()
 	    }
             if (strncmp(acqProcBuf,"M@event", 7)==0) {
 	    	xstr = &acqProcBuf[8];
-            	write(forgroundFdW,xstr,strlen(xstr));
-            	write(forgroundFdW,"\n", 1);
+            ret = write(forgroundFdW,xstr,strlen(xstr));
+            ret = write(forgroundFdW,"\n", 1);
    	    	acqProcBufPtr = 0;
 	    	return;
 	    }
@@ -1534,7 +1533,7 @@ exec_message()
 	       acqProcBuf[len] = '\n';
 	       acqProcBuf[len+1] = '\0';
 	    }
-            write(forgroundFdW,acqProcBuf,strlen(acqProcBuf));
+        ret = write(forgroundFdW,acqProcBuf,strlen(acqProcBuf));
 /*		sendChildNewLine(); */
 /*             sendChildNewLineNoClear(); */
 	    jInput = 0;
@@ -1549,7 +1548,7 @@ exec_message()
          else
          {
 /*	    jStuffCommand(acqProcBuf); */
-            write(forgroundFdW,acqProcBuf,strlen(acqProcBuf));
+            ret = write(forgroundFdW,acqProcBuf,strlen(acqProcBuf));
             sendChildNewLineNoClear();
          }
       }
@@ -1647,6 +1646,7 @@ jfunc2macro(char *jcmd,		/* jFunc(9,... call to translate */
 static void
 Jexec_message()
 {
+   int ret __attribute__((unused));
    int len;
    int res;
    char *xstr;
@@ -1698,7 +1698,7 @@ Jexec_message()
             	     insertAcqMsgEntry(jCmdBuf);
 		}
 		else {
-            	     write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
+            	     ret = write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
             	     sendChildNewLineNoClear();
 		}
 		return;
@@ -1711,7 +1711,7 @@ Jexec_message()
             	     insertAcqMsgEntry(xstr);
 		}
 		else {
-            	     write(forgroundFdW,xstr,strlen(xstr));
+            	     ret = write(forgroundFdW,xstr,strlen(xstr));
             	     sendChildNewLineNoClear();
 		}
 		return;
@@ -1723,7 +1723,7 @@ Jexec_message()
             	     insertAcqMsgEntry(xstr);
 		}
 		else {
-            	     write(forgroundFdW,xstr,strlen(xstr));
+            	     ret = write(forgroundFdW,xstr,strlen(xstr));
             	     sendChildNewLineNoClear();
 		}
 		return;
@@ -1735,7 +1735,7 @@ Jexec_message()
             	     insertAcqMsgEntry(xstr);
 		}
 		else {
-            	     write(forgroundFdW,xstr,strlen(xstr));
+            	     ret = write(forgroundFdW,xstr,strlen(xstr));
             	     sendChildNewLineNoClear();
 		}
 		return;
@@ -1753,7 +1753,7 @@ Jexec_message()
 		jCmdBuf[len] = '\n';
 		jCmdBuf[len+1] = '\0';
 	    	xstr = &jCmdBuf[8];
-            	write(forgroundFdW,xstr,strlen(xstr));
+            	ret = write(forgroundFdW,xstr,strlen(xstr));
             	// sendChildNewLineNoClear();
    	    	jCmdBufPtr = 0;
 	    	return;
@@ -1764,7 +1764,7 @@ Jexec_message()
                     res = kill(forgroundPid, SIGINTX1);
                 else {
 		    sprintf(jCmdBuf, "jFunc(%d, 0)", XSHOW);
-            	    write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
+            	    ret = write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
             	    sendChildNewLineNoClear();
                 }
                 return;
@@ -1775,7 +1775,7 @@ Jexec_message()
                     res = kill(forgroundPid, SIGINTX2);
                 else {
 		    sprintf(jCmdBuf, "jFunc(%d, 1)", XSHOW);
-            	    write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
+            	    ret = write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
             	    sendChildNewLineNoClear();
                 }
                 return;
@@ -1790,7 +1790,7 @@ Jexec_message()
                     res = kill(forgroundPid, SIGINTX3);
                 else {
 		    sprintf(jCmdBuf, "jFunc(%d, 1)", XRESUME);
-            	    write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
+            	    ret = write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
             	    sendChildNewLineNoClear();
                 }
                 return;
@@ -1835,7 +1835,7 @@ Jexec_message()
 	            jCmdBuf[len] = '\n';
 	            jCmdBuf[len+1] = '\0';
 	    	}
-            	write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
+            	ret = write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
 /*		sendChildNewLine(); */
 /*             sendChildNewLineNoClear(); */
 	    	jInput = 0;
@@ -1857,7 +1857,7 @@ Jexec_message()
                 sendChildNewLineNoClear();
 	    }
 	    else {
-                write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
+                ret = write(forgroundFdW,jCmdBuf,strlen(jCmdBuf));
                 sendChildNewLineNoClear();
 	    }
          }
@@ -2180,7 +2180,7 @@ setVjPrintMode(int on)
 
 static int messageSendToVnmrJ( Socket *pSD, const char* message, int messagesize)
 {
-   int bytes;
+   int bytes __attribute__((unused));
 
    if (noUI || inPrintMode) return(0);
    bytes = writeSocket( pSD, message, messagesize );
@@ -2283,7 +2283,7 @@ int graphoff(int argc, char *argv[], int retc, char *retv[]) {
 
 int graphToVnmrJ( char *message, int messagesize )
 {
-    int val;
+    int val __attribute__((unused));
     if (noGraph || noGUI || isMaster) return(0);
     if (message == NULL) return(0);
     if (inPrintMode) 

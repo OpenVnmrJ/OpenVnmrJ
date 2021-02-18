@@ -31,6 +31,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -756,6 +757,94 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        else if ( ! res)
        {
           Werrprintf("cannot symlink file %s\n", argv[1]);
+          ABORT;
+       }
+       RETURN;
+    }
+    if ( (argc == 4) && ! strcmp(argv[3],"relsymlink") )
+    {
+       char tpath[MAXPATH];
+       char argv2[PATH_MAX];
+       char path1[PATH_MAX];
+       char path2[PATH_MAX];
+       char *path1Ptr;
+       char *path2Ptr;
+       char *ptr;
+       int len;
+       int i;
+       int ret;
+          
+       strcpy(tpath,"");
+       path1Ptr = realpath(argv[1], path1);
+       strcpy(argv2,argv[2]);
+       ptr = dirname(argv2);
+       path2Ptr = realpath(ptr, path2);
+       if (( path1Ptr == NULL ) || (path2Ptr == NULL))
+       {
+          if (retc)
+          {
+	     retv[ 0] = realString((double) 0);
+             RETURN;
+          }
+          else
+          {
+             if (path1Ptr == NULL )
+                Werrprintf("cannot relsymlink from %s\n", argv[1]);
+             if (path2Ptr == NULL )
+                Werrprintf("cannot relsymlink to %s\n", argv[2]);
+             ABORT;
+          }
+       }
+       ret = 0;
+       i = 0;
+       while ( *path1Ptr && *path2Ptr )
+       {
+          if (*path1Ptr != *path2Ptr)
+             break;
+          if (*path1Ptr == '/')
+             ret = i + 1;
+          path1Ptr++;
+          path2Ptr++;
+          i++;
+       }
+       if ((!*path1Ptr && !*path2Ptr) ||
+           (!*path1Ptr && *path2Ptr == '/') ||
+           (!*path2Ptr && *path1Ptr == '/'))
+       {
+          ret = i;
+          path1Ptr = &path1[ret];
+          path2Ptr = &path2[ret];
+          if  (!*path2Ptr && *path1Ptr == '/')
+             path1Ptr = &path1[ret+1];
+          if  (!*path1Ptr && *path2Ptr == '/')
+             path2Ptr = &path2[ret+1];
+       }
+       else
+       {
+          path1Ptr = &path1[ret];
+          path2Ptr = &path2[ret];
+       }
+       len = (int) strlen(path2Ptr);
+       for (i=0; i<len; i++)
+       {
+          if (path2Ptr[i] == '/')
+             strcat(tpath,"../");
+       }
+       if (*path2Ptr)
+          strcat(tpath,"../");
+       strcat(tpath,path1Ptr);
+       res = 1;
+       if (symlink(tpath,argv[2]))
+       {
+          res = 0;
+       }
+       if (retc)
+       {
+	  retv[ 0] = realString((double) res);
+       }
+       else if ( ! res)
+       {
+          Werrprintf("cannot relsymlink file %s\n", argv[1]);
           ABORT;
        }
        RETURN;

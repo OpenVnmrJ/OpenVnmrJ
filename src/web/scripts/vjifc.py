@@ -9,6 +9,7 @@
 #
 # - Dictionary entries automatically removed when connection is broken
 #
+from __future__ import print_function
 import threading
 import socket
 import SocketServer
@@ -37,7 +38,7 @@ class Subscription:
     
     def reply(self, data):
         msg = self.encode(data)
-        #print '%s ===> gets %s'% (str(subscriber), str(msg))
+        #print('%s ===> gets %s'% (str(subscriber), str(msg)))
         self._subscriber(msg)
     
 class VnmrJDictionary(dict):
@@ -162,7 +163,7 @@ class VnmrJInterface(Base):
         self.client_address = addr
 
     def reply(self, msg):
-        print 'reply %s'% (str(msg),)
+        print('reply %s'% (str(msg),))
         raise NotImplementedError("reply is abstract")
 
     def format(self, query, keys, values):
@@ -353,7 +354,7 @@ class VnmrJInterface(Base):
                 # read a buffer - for now the whole file, but could specify a buffer size
                 for data in iter(lambda: fileobj.read(),""):
                     s = struct.calcsize('f')
-                    #print 'read %s'% (str(s))
+                    #print('read %s'% (str(s)))
                     n = len(data)/s
                     x = struct.unpack('f'*n,data)    # extract floats into ascii format
                     y = '\n'.join(map(str,x))        # make a list of floats separated by end-of-line
@@ -387,13 +388,13 @@ class SockHandler(SocketServer.BaseRequestHandler, VnmrJInterface):
         while 1:
             msg=self.request.recv(1024)
             if not msg: break
-            #print 'received: "',msg,'"'
+            #print('received: "',msg,'"')
             self.process(msg, self.reply)
 
     # VnmrJ does not keep the socket open, so we have to rely on erroring out
     #def finish(self):
         #self.disconnect(self.client_address)
-        #print self.client_address,'disconnected!'
+        #print(self.client_address,'disconnected!')
 
 class WebSockHandler(tornado.websocket.WebSocketHandler, VnmrJInterface):
     def allow_draft76(self): return True

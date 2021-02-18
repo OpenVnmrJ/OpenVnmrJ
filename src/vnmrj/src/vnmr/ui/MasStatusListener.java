@@ -287,8 +287,7 @@ public class MasStatusListener implements  StatusListenerIF, VObjIF
                 ckMasTarget();
             }
             catch (Exception e) {
-                Messages.postWarning("Problem setting Mas spinset "
-                                     + "with cmd: " + str);
+                // Stay silent
             }
 
         }

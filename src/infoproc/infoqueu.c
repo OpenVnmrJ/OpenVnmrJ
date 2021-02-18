@@ -27,7 +27,7 @@
 #include "hostAcqStructs.h"
 #include "shrstatinfo.h"
 
-#define EXP_STATUS_NAME "/tmp/ExpStatus"
+#define EXP_STATUS_NAME "/vnmr/acqqueue/ExpStatus"
 
 
 #define TESTINTERVAL 600	/* Test Port every 10 Min */

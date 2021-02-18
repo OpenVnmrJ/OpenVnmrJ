@@ -118,6 +118,19 @@ static int findProcIndex(char *name)
     return(-1);
 }
  
+void clearMsgQ()
+{
+   SHR_MEM_ID shrmMsgQInfo;
+   shrmMsgQInfo = shrmCreate(MSGQ_DBM_PATH,MSGQ_DBM_KEY,
+                            (unsigned long) MSQ_Q_DBM_SIZE);
+   if (shrmMsgQInfo == NULL)
+   {
+     errLogRet(ErrLogOp,debugInfo,"clearMsgQ() shrmCreate failed.\n");
+     return;
+   }
+   memset((void *)shrmAddr(shrmMsgQInfo),0,MSQ_Q_DBM_SIZE);
+}
+
 /**************************************************************
 *
 *  createMsgQ - Initialize an Message Q to Receive Messages
@@ -160,7 +173,7 @@ MSG_Q_ID createMsgQ(char *myProcName, int keyindex, int msgSize)
    }
    strcpy(pMsgQ->msgQprocName,myProcName);
   
-   pMsgQ->shrmMsgQInfo = shrmCreate(MSGQ_DBM_PATH,MSGQ_DBM_KEY, (unsigned long) MSQ_Q_DBM_SIZE);
+// pMsgQ->shrmMsgQInfo = shrmCreate(MSGQ_DBM_PATH,MSGQ_DBM_KEY, (unsigned long) MSQ_Q_DBM_SIZE);
 
    index = findProcIndex(myProcName);
 
@@ -304,6 +317,8 @@ int msgesInMsgQ(MSG_Q_ID pMsgQ)
 */
 int deleteMsgQ(MSG_Q_ID pMsgQ)
 {
+   int index;
+   MSG_Q_DBM_ID pMsgInfo;
 
    if ( pMsgQ == NULL)
    {
@@ -313,6 +328,16 @@ int deleteMsgQ(MSG_Q_ID pMsgQ)
 
    if (pMsgQ->msgQprocName != NULL)
    {
+     index = findProcIndex(pMsgQ->msgQprocName);
+     if (index != -1)
+     {
+        pMsgInfo = (MSG_Q_DBM_ID) ( shrmAddr(pMsgQ->shrmMsgQInfo)
+                                    + (MSQ_Q_DBM_ESIZE * index));
+        pMsgInfo->ipcKey = 0;
+        pMsgInfo->maxSize =  0;
+        pMsgInfo->pid = -1;
+        pMsgInfo->AsyncFlag = 0;
+     }
      free(pMsgQ->msgQprocName);
    }
 
@@ -361,11 +386,18 @@ MSG_Q_ID openMsgQ(char *msgQIdStr)
    if (pMsgQ->shrmMsgQInfo == NULL)
    {
      errLogRet(ErrLogOp,debugInfo,"createMsgQ() shrmCreate failed.\n");
-     free(pMsgQ->msgQprocName);
+//   free(pMsgQ->msgQprocName);
      free(pMsgQ);
      return(NULL);
    }
    pMsgInfo = (MSG_Q_DBM_ID) ( shrmAddr(pMsgQ->shrmMsgQInfo) + (MSQ_Q_DBM_ESIZE * index));
+
+   if (pMsgInfo->pid <= 0)
+   {
+      shrmRelease(pMsgQ->shrmMsgQInfo);
+      free(pMsgQ);
+      return(NULL);
+   }
 
    /* contruct from share memory entry for this create msgQ */
    pMsgQ->ipcKey = pMsgInfo->ipcKey;
@@ -427,7 +459,7 @@ int sendMsgQ(MSG_Q_ID pMsgQ, char *message, int len, int priority, int waitflg)
    DPRINT4(2,"sendMsgQ: Name: '%s', pid: %d, maxSize: %d, Asyncflag: %d\n",
 	 procList[index].procName,pMsgQ->pid,pMsgQ->maxSize, pMsgQ->AsyncFlag);
 
-  if (pMsgQ->pid != -1)
+  if (pMsgQ->pid > 0)
   {
      alive = kill(pMsgQ->pid,0); /* are you out there */
   }

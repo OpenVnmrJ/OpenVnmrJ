@@ -104,7 +104,7 @@ typedef struct _varInfo varInfo;
 
 
 extern varInfo *createVar(char *n);
-extern varInfo *findVar(char *n);
+extern varInfo *findVar(const char *n);
 extern int      getTreeIndex(const char *n);
 extern varInfo *P_getVarInfoAddr(int tree, char *name);
 extern int      P_getVarInfo(int tree, const char *name, vInfo *info);

@@ -2873,10 +2873,10 @@ double	pw90_1,
       }
 
       amp_factor = get_wfg_scale(rfdev);
-      if ( (sldrtemp = resolve_ib(*htemp, name, pw90/90.0, amp_factor, SPINLOCK,
+      if ( (sldrtemp = resolve_ib(*htemp, name, pw90, amp_factor, SPINLOCK,
 		precfield)) == NULL )
       {
-         if ( (sldrtemp = create_dec_block(*htemp, name, pw90/90.0, amp_factor,
+         if ( (sldrtemp = create_dec_block(*htemp, name, pw90, amp_factor,
 		SPINLOCK, precfield)) == NULL )
          {
             text_error("gen2spinlock(): ib create failed!\n");
@@ -3165,10 +3165,10 @@ int prg_dec_on(char *name, double pw_90, double deg_res, int rfdevice)
 ******************************************/
  
    amp_factor = get_wfg_scale(rfdevice);
-   if ( (sldr = resolve_ib(h1, name, pw_90/90.0, amp_factor, DECOUPLE, precfield))
+   if ( (sldr = resolve_ib(h1, name, pw_90, amp_factor, DECOUPLE, precfield))
 		== NULL )
    {
-      if ( (sldr = create_dec_block(h1, name, pw_90/90.0, amp_factor, DECOUPLE,
+      if ( (sldr = create_dec_block(h1, name, pw_90, amp_factor, DECOUPLE,
 		precfield)) == NULL )
       {
          text_error("decoupler: ib create failed!\n");
@@ -4272,7 +4272,7 @@ int ll,pf;
 /* pf is in tenth of degrees               */
 /* xx is time for each resolution step     */
 /* --------------------------------------- */
-   xx = w * ((double) pf)/ 10.0;
+   xx = (w/90.0) * ((double) pf)/ 10.0;
    dectb = wgtb(xx,1,WFG_TIME_RESOLUTION);
    dib[4] = pat_time(dectb);
    dib[5] = pat_end;
