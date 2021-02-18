@@ -26,26 +26,15 @@
 xhost + > /dev/null
 
 set_system_stuff() {
-   distroType="na"
    ostype=$(uname -s)
    os_type="rht"
-   sysV="y"
    JRE="jre.linux"
    default_dir="/home"
-   rhelrlvl=" "
    if [ -f /etc/debian_version ]; then
       distroType="debian"
-      distroVersion=0
-   elif [ -f /etc/redhat-release ]; then
+   else
       distroType="rhel"
-      # yield 5.1, 5.3 , 6.1, etc..
-      distroVer=$(cat /etc/redhat-release | sed -r 's/[^0-9]+//' | sed -r 's/[^0-9.]+$//')
-      # yield 5, 6, 7  etc..
-      distroVersion=$(echo $distroVer | cut -f1 -d.)
-   elif [ -f /etc/SuSE-release ]; then
-      distroType="suse"
    fi 
-
 }
 
 test_user() {
@@ -208,6 +197,17 @@ EOF
 #  MAIN Main main
 #-------------------------------------------------
 
+npids=$(pgrep Expproc)
+if [[ ! -z $npids ]]; then
+   echo "Must stop acquisition communications before installing OpenVnmrJ"
+   exit 1
+fi
+npids=$(pgrep Vnmrbg)
+if [[ ! -z $npids ]]; then
+   echo "Must exit OpenVnmrJ or VnmrJ before installing new OpenVnmrJ"
+   exit 1
+fi
+
 # loop though the arguments and check for the install option key word
 # skippkgchk, NOTE this must be the first argument
 # Otherwise the user name, group and destination args will be incorrect
@@ -346,7 +346,17 @@ if [ "x$distroType" = "xrhel" -o "x$distroType" = "xdebian" ]; then
       echo "Package update may take up to 40 minutes to complete..........."
       mkdir -p /tmp/ovj_preinstall
       chmod 777 /tmp/ovj_preinstall
-      $dirpath/code/installpkgs "$@"
+      acqProg=""
+      if [[ -f $dirpath/code/rht/vnmrs.opt ]]; then
+          acqProg="ddr"
+      fi
+      if [[ -f $dirpath/code/rht/inova.opt ]]; then
+          acqProg="mi"
+      fi
+      if [[ -f $dirpath/code/rht/b12.opt ]]; then
+          acqProg="b12"
+      fi
+      $dirpath/code/installpkgs "$@" $acqProg
       if [ $? -ne 0 ]; then
          if [[ $? -ne 2 ]]; then
            cat $dirpath/code/rpmInstruction.txt
@@ -359,6 +369,18 @@ fi
 
 # remove reboot flag for SELinux disabling
 rm -f /tmp/reboot
+
+# loop though the arguments and check for the install option key word
+# noPing, NOTE this must be the first argument
+# Otherwise the user name, group and destination args will be incorrect
+for arg in "$@"
+do
+   if [ "x$arg" = "xnoPing" ]
+   then
+      shift
+   fi
+done
+
 
 # two possible install options plus 3 args
 if [ $# -gt 4 ]   
@@ -626,25 +648,23 @@ if [ -e /tmp/.ovj_installed ]; then
       echo " "
    fi
 
+   echo "Shall this system be configured as a spectrometer."
    if [ -d /vnmr/acq/download ] || [ -d /vnmr/acq/vxBoot ]
    then
-      echo "Shall this system be configured as a spectrometer."
       echo "This involves setting up the network and downloading the"
       echo "acquisition console software"
-      echo "Would you like to configure it now? (y/n) "
-      read ans
-      if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
-         echo "Configuring system."
-         /vnmr/bin/setacq
-         echo " "
-      else
-         echo "The system may be configured as a spectrometer."
-         echo "  1. Log in as the OpenVnmrJ adminstrator account, $nmr_user."
-         echo "  2. Exit all OpenVnmrJ programs."
-         echo "  3. Run /vnmr/bin/setacq"
-      fi
+   fi
+   echo "Would you like to configure it now? (y/n) "
+   read ans
+   if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
+      echo "Configuring system."
+      /vnmr/bin/setacq
+      echo " "
    else
-      echo "This system has been installed as a data station only."
+      echo "The system may be configured as a spectrometer."
+      echo "  1. Log in as the OpenVnmrJ adminstrator account, $nmr_user."
+      echo "  2. Exit all OpenVnmrJ programs."
+      echo "  3. Run /vnmr/bin/setacq"
    fi
    finalInstructions
 fi

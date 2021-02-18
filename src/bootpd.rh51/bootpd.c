@@ -470,7 +470,7 @@ main(argc, argv)
 		if (bind(s, (struct sockaddr *) &bind_addr,
 				 sizeof(bind_addr)) < 0)
 		{
-			report(LOG_ERR, "bind: %s", get_network_errmsg());
+			report(LOG_ERR, "bind: %s", strerror(errno));
 			exit(1);
 		}
 	} /* if standalone (2nd)*/
@@ -921,15 +921,26 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
         if ((homedir==NULL) && (bootfile!=NULL) && ! strncmp(bootfile,"vxWorksPPC",10) )
         {
            homedir = "/var/lib/tftpboot/vxBoot";
-	   if (chk_access(homedir, &bootsize) == 0)
+	       if (chk_access(homedir, &bootsize) == 0)
            {
               n = 0;
            }
            else
            {
               homedir = "/tftpboot/vxBoot";
-	      if (chk_access(homedir, &bootsize) == 0)
+	          if (chk_access(homedir, &bootsize) == 0)
+              {
                  n = 0;
+              }
+              else
+              {
+                  // Ubuntu 20 case
+                 homedir = "/srv/tftp/vxBoot";
+	             if (chk_access(homedir, &bootsize) == 0)
+                 {
+                    n = 0;
+                 }
+              }
            }
         }
 	if (debug>2) report(LOG_INFO, "bootfile check: n=%d",n);

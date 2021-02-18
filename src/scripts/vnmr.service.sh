@@ -5,4 +5,8 @@ ConditionPathExists=/vnmr/acqbin/acqpresent
 [Service]
 Type=simple
 User=root
-ExecStart=/vnmr/acqbin/ovjProcs
+ExecStart=/vnmr/acqbin/ovjProcs start
+ExecStop=/vnmr/acqbin/ovjProcs stop
+
+[Install]
+WantedBy=multi-user.target

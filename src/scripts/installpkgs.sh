@@ -13,10 +13,10 @@
 userId=$(/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }')
 if [ $userId != "uid=0(root)" ]; then
   echo
-  if [ -x /usr/bin/dpkg ]; then
-     echo "Installing OpenVnmrJ for Ubuntu."
+  if [[ "x$(basename $0)" = "xovjGetRepo" ]]; then
+     echo "Downloading Linux packages for OpenVnmrJ."
   else
-     echo "Installing OpenVnmrJ for RHEL / CentOS."
+     echo "Installing Linux packages for OpenVnmrJ."
   fi
   echo "Or type cntrl-C to exit."
   echo
@@ -56,36 +56,67 @@ exclude=turbovnc-*.*.9[0-9]-*
 EOF
 }
 
-if [[ -f /etc/yum.repos.d/openvnmrj.repo ]]; then
-  ovjRepo=1
+if [ -x /usr/bin/dpkg ]; then
+   if [[ -f /etc/apt/sources.ovj ]]; then
+     ovjRepo=1
+   else
+     ovjRepo=0
+   fi
 else
-  ovjRepo=0
+   if [[ -f /etc/yum.repos.d/openvnmrj.repo ]]; then
+     ovjRepo=1
+   else
+     ovjRepo=0
+   fi
 fi
 
 repoGet=0
+repoArg=""
 if [[ "x$(basename $0)" = "xovjGetRepo" ]]; then
-  if [ ! -f /etc/centos-release ]; then
-    if [ ! -f /etc/redhat-release ]; then
-      echo "$0 can only be used for CentOS or RedHat systems"
-      exit 1
-    fi
+  osType=$(uname -s | awk '{ print tolower($0) }')
+  if [[ "${osType:0:5}" != linux ]]; then
+     echo "Cannot use $0 on $osType"
+     exit 1
   fi
   repoGet=1
   if [[ $ovjRepo -eq 1 ]]; then
-    rm -f /etc/yum.repos.d/openvnmrj.repo
+    if [ -x /usr/bin/dpkg ]; then
+       mv /etc/apt/sources.ovj /etc/apt/sources.list
+    else
+       rm -f /etc/yum.repos.d/openvnmrj.repo
+    fi
     ovjRepo=0
   fi
   repoPath=$(dirname $(dirname $(readlink -f $0)))
   repoPath=$(dirname $repoPath)/openvnmrj.repo
-  repoArg="--download_path=$repoPath"
-  repoArg="--downloadonly --downloaddir=$repoPath"
+  if [ -x /usr/bin/dpkg ]; then
+     repoArg="-d -o dir::cache=$repoPath/dnld --reinstall"
+     rm -rf $repoPath
+     mkdir -p $repoPath/dnld
+     chmod -R 777 $repoPath 
+  else
+     repoArg="--download_path=$repoPath"
+     repoArg="--downloadonly --downloaddir=$repoPath"
+  fi
 fi
 
 noPing=0
+ddrAcq=0
+miAcq=0
+b12Acq=0
 for arg in "$@"
 do
   if [[ "x$arg" = "xnoPing" ]]; then
     noPing=1
+  fi
+  if [[ "x$arg" = "xddr" ]]; then
+    ddrAcq=1
+  fi
+  if [[ "x$arg" = "xmi" ]]; then
+    miAcq=1
+  fi
+  if [[ "x$arg" = "xb12" ]]; then
+    b12Acq=1
   fi
 done
 
@@ -117,14 +148,16 @@ fi
 if [ ! -x /usr/bin/dpkg ]; then
   if [ -f /etc/centos-release ]; then
     rel=centos-release
+#   remove all characters up to the first digit
+    version=$(cat /etc/$rel | sed -E 's/[^0-9]+//')
   elif [ -f /etc/redhat-release ]; then
     rel=redhat-release
+#   remove all characters up to the first digit
+    version=$(cat /etc/$rel | sed -E 's/[^0-9]+//')
   else
-    echo "$0 can only be used for CentOS or RedHat systems"
-    exit 1
+#   Assume Linux variant is like CentOS 8
+    version="8.0"
   fi
-# remove all characters up to the first digit
-  version=$(cat /etc/$rel | sed -E 's/[^0-9]+//')
 # remove all characters from end including first dot
   version=${version%%.*}
 
@@ -622,8 +655,13 @@ else
 
   echo "You can monitor progress in a separate terminal window with the command"
   echo "tail -f $logfile"
-  echo "Installing standard packages (1 of 2)"
-  echo "Installing standard packages (1 of 2)" > $logfile
+  if [[ $repoGet -eq 1 ]]; then
+     echo "Downloading standard packages (1 of 2)"
+     echo "Downloading standard packages (1 of 2)" > $logfile
+  else
+     echo "Installing standard packages (1 of 2)"
+     echo "Installing standard packages (1 of 2)" > $logfile
+  fi
 # The unattended-upgrade script often holds a yum lock.
 # This prevents this script from executing
   if [[ -x /bin/systemctl ]]; then
@@ -652,44 +690,159 @@ else
     echo "Please try again in 5-10 minutes, after this tool completes its task."
     exit 1
   fi
-  dpkg --add-architecture i386
+  acqInstall=""
+  if [[ $b12Acq -eq 1 ]]; then
+      acqInstall="libusb-dev"
+  else
+      dpkg --add-architecture i386
+      if [[ $ddrAcq -eq 1 ]]; then
+          acqInstall="rarpd rsh-client rsh-server tftp-hpa tftpd-hpa"
+      fi
+      if [[ $miAcq -eq 1 ]]; then
+          acqInstall="$acqInstall tftp-hpa tftpd-hpa"
+      fi
+  fi
   apt-get -qq update
 # apt-get -qq -y dist-upgrade
+  if [[ $ovjRepo -eq 1 ]]; then
+     repoArg="--allow-unauthenticated"
+  fi
 # Prevent packages from presenting an interactive popup
   export DEBIAN_FRONTEND=noninteractive
-  apt-get install -y tcsh make expect bc git scons g++ gfortran \
+  if [[ $repoGet -eq 1 ]]; then
+     acqInstall="rarpd rsh-client rsh-server tftp-hpa tftpd-hpa"
+     apt-get -y install dpkg-dev &>> $logfile
+     dpkg --add-architecture i386
+  fi
+  apt-get $repoArg -y install tcsh make expect bc git scons g++ gfortran \
       openssh-server mutt sharutils sendmail-cf gnome-power-manager \
       kdiff3 libcanberra-gtk-module ghostscript imagemagick vim xterm \
-      gedit dos2unix zip cups gnuplot gnome-terminal enscript rpcbind &>> $logfile
-  echo "Installing version specific packages (2 of 2)"
-  echo "Installing version specific packages (2 of 2)" >> $logfile
+      gedit dos2unix zip cups gnuplot gnome-terminal enscript rpcbind \
+      $acqInstall &>> $logfile
+  if [[ $repoGet -eq 1 ]]; then
+     echo "Downloading version specific packages (2 of 2)"
+     echo "Downloading version specific packages (2 of 2)" >> $logfile
+  else
+     echo "Installing version specific packages (2 of 2)"
+     echo "Installing version specific packages (2 of 2)" >> $logfile
+  fi
   if [ $distmajor -gt 18 ] ; then
    # these are needed to build
-    apt-get install -y gdm3 gnome-session openjdk-8-jre \
-      lib32stdc++-8-dev libc6-dev libglu1-mesa-dev libgsl-dev &>> $logfile
+    installList='gdm3
+                 gnome-session
+                 openjdk-8-jre
+                 lib32stdc++-8-dev
+                 libc6-dev
+                 libglu1-mesa-dev
+                 libgsl-dev'
+    if [[ $b12Acq -ne 1 ]]; then
+       installList="$installList libcrypt1:i386"
+    fi
+    apt-get $repoArg -y install $installList &>> $logfile
   elif [ $distmajor -gt 16 ] ; then
    # these are needed to build
-    apt-get install -y gdm3 gnome-session openjdk-8-jre \
+    apt-get $repoArg -y install gdm3 gnome-session openjdk-8-jre \
       lib32stdc++-7-dev libc6-dev-i386 libglu1-mesa-dev libgsl-dev &>> $logfile
   elif [ $distmajor -gt 14 ] ; then
    # these are needed to build
-    apt-get install -y postgresql gdm3 gnome-session openjdk-8-jre \
+    apt-get $repoArg -y install postgresql gdm3 gnome-session openjdk-8-jre \
       lib32stdc++-5-dev libc6-dev-i386 libglu1-mesa-dev libgsl-dev &>> $logfile
   else
     # these are needed to build
-    apt-get install -y postgresql openjdk-6-jre lib32stdc++-4.8-dev \
+    apt-get $repoArg -y install postgresql openjdk-6-jre lib32stdc++-4.8-dev \
             libc6-dev-i386 libglu1-mesa-dev libgsl0-dev &>> $logfile
   fi
+  if [[ $ovjRepo -eq 1 ]]; then
+     repoPath=$(head -n 1 /etc/apt/sources.list | awk '{print $5}')
+     repoPath=${repoPath:5}
+     fontList=$(cd $repoPath && ls -1 fonts-* | tr "_" " " | awk '{print $1}' )
+  else
+     fontList=$(apt-cache search -n "^fonts-*" | awk '{print $1}' |
+             grep -v "^fonts-al" |
+             grep -v "^fonts-ancient" |
+             grep -v "^fonts-aoy" |
+             grep -v "^fonts-arab" |
+             grep -v "^fonts-arp" |
+             grep -v "^fonts-aru" |
+	     grep -v "^fonts-ba" | 
+	     grep -v "^fonts-ben" | 
+             grep -v "^fonts-comp" |
+             grep -v "^fonts-cn" |
+	     grep -v "^fonts-cw" | 
+	     grep -v "^fonts-ddc" | 
+	     grep -v "^fonts-deji" | 
+	     grep -v "^fonts-deva" | 
+	     grep -v "^fonts-dz" | 
+	     grep -v "^fonts-ee" | 
+	     grep -v "^fonts-far" | 
+	     grep -v "^fonts-freefar" | 
+             grep -v "^fonts-garg" |
+             grep -v "^fonts-gfs" |
+	     grep -v "^fonts-gu" | 
+             grep -v "^fonts-hanazono" |
+             grep -v "^fonts-horai" |
+             grep -v "^fonts-hos" |
+             grep -v "^fonts-ibm" |
+             grep -v "^fonts-ind" |
+             grep -v "^fonts-ipa" |
+             grep -v "^fonts-k" |
+	     grep -v "^fonts-lara" | 
+	     grep -v "^fonts-ldco" | 
+	     grep -v "^fonts-lexi" | 
+	     grep -v "^fonts-lg-a" | 
+	     grep -v "^fonts-lk" | 
+             grep -v "^fonts-lohit" |
+	     grep -v "^fonts-manch" | 
+	     grep -v "^fonts-mathe" | 
+	     grep -v "^fonts-migmix" | 
+	     grep -v "^fonts-mik" | 
+	     grep -v "^fonts-misa" | 
+	     grep -v "^fonts-mlym" | 
+             grep -v "^fonts-mplus" |
+	     grep -v "^fonts-mo" | 
+             grep -v "^fonts-na" |
+             grep -v "^fonts-noto" |
+	     grep -v "^fonts-olds" | 
+	     grep -v "^fonts-or" | 
+	     grep -v "^fonts-pa" | 
+	     grep -v "^fonts-or" | 
+	     grep -v "^fonts-or" | 
+             grep -v "^fonts-rict" |
+             grep -v "^fonts-rit" |
+             grep -v "^fonts-s" |
+	     grep -v "^fonts-t" | 
+             grep -v "^fonts-uk" |
+	     grep -v "^fonts-um" | 
+             grep -v "^fonts-un" |
+             grep -v "^fonts-vlg" |
+             grep -v "^fonts-wo" |
+             grep -v "^fonts-wqy" |
+             grep -v "^fonts-yo" |
+             grep -v "^fonts-yr" 
+            )
+  fi
+  apt-get $repoArg -y install $fontList &>> $logfile
 # apt-get uninstalls these if an amd64 version is installed for something else >:(
 # so install them last...
-  apt-get install -y libmotif-dev libx11-dev libxt-dev &>> $logfile
+  apt-get $repoArg -y install libmotif-dev libx11-dev libxt-dev &>> $logfile
   unset DEBIAN_FRONTEND
-  echo "dash dash/sh boolean false" | debconf-set-selections &>> $logfile
-  dpkg-reconfigure -u dash &>> $logfile
   if [[ -x /bin/systemctl ]]; then
     systemctl unmask unattended-upgrades > /dev/null 2>&1
   fi
-  echo "Ubuntu package installation complete"
+  if [[ $ovjRepo -eq 1 ]]; then
+     mv /etc/apt/sources.ovj /etc/apt/sources.list
+  fi
+  if [[ $repoGet -eq 1 ]]; then
+     mv $repoPath/dnld/archives/* $repoPath
+     rm -rf $repoPath/dnld $repoPath/partial $repoPath/lock
+     cd $repoPath
+     dpkg-scanpackages . /dev/null | gzip -c9 > Packages.gz
+     echo "Ubuntu package download complete"
+  else
+     echo "dash dash/sh boolean false" | debconf-set-selections &>> $logfile
+     dpkg-reconfigure -u dash &>> $logfile
+     echo "Ubuntu package installation complete"
+  fi
   echo " "
 fi
 exit 0
