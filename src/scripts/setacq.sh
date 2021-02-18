@@ -175,9 +175,12 @@ getTFTPBootDir() {
               grep tftpboot > /dev/null;echo $?) -ne 0 ]] ; then
          tftpdir="/tftpboot"
       fi
-   elif [[ -f /usr/lib/systemd/system/tftp.service ]] ; then
-      tftpdir=$(grep  tftpboot /usr/lib/systemd/system/tftp.service |
+   elif [[ -f $sysdDir/tftp.service ]] ; then
+      tftpdir=$(grep  tftpboot $sysdDir/tftp.service |
                 awk '{print $3 }')
+   elif [[ -f /etc/default/tftpd-hpa ]] ; then
+      . /etc/default/tftpd-hpa
+      tftpdir=$TFTP_DIRECTORY
    else
       tftpdir="/tftpboot"
    fi
@@ -197,34 +200,14 @@ rmTFTPBootFiles() {
 installTftp() {
 # Install tftp if needed
  if [ -f /etc/debian_version ]; then
-   if [ "$(dpkg --get-selections tftp 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
+   if [ "$(dpkg --get-selections tftp-hpa 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
    then
       echo "Installing console communication tool (tftp)..."
-      apt-get -y install tftp &>> ${vnmrsystem}/adm/log/tftp.log
+      apt-get -y install tftp-hpa &>> ${vnmrsystem}/adm/log/tftp.log
    fi
-   if [ "$(dpkg --get-selections tftpd 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
+   if [ "$(dpkg --get-selections tftpd-hpa 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
    then
-      apt-get -y install tftpd &>> ${vnmrsystem}/adm/log/tftp.log
-   fi
-   if [ "$(dpkg --get-selections xinetd 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
-   then
-      apt-get -y install xinetd &>> ${vnmrsystem}/adm/log/tftp.log
-   fi
-   file=/etc/xinetd.d/tftp
-   if [[ ! -f $file ]]; then
-     cat <<EOF >  $file
-service tftp
-{
-protocol        = udp
-port            = 69
-socket_type     = dgram
-wait            = yes
-user            = nobody
-server          = /usr/sbin/in.tftpd
-server_args     = /tftpboot
-disable         = no
-}
-EOF
+      apt-get -y install tftpd-hpa &>> ${vnmrsystem}/adm/log/tftp.log
    fi
  fi
 }
@@ -266,6 +249,7 @@ configureRarp() {
 #
 #  works equally well for RHEL and Ubuntu rarpd
 #
+ if [ ! -f /etc/debian_version ]; then
    rarpd="/etc/init.d/rarpd"
    if [[ -r $rarpd ]] ; then
       grep 'daemon /usr/sbin/rarpd -e' $rarpd 2>&1 > /dev/null
@@ -306,9 +290,11 @@ configureRarp() {
       echo "rarp package is not available. Exit"
       exit 0
    fi
+ fi
 }
 
 enableTftp() {
+ if [ ! -f /etc/debian_version ]; then
    tftpconf="/etc/xinetd.d/tftp"
    if [[ -r $tftpconf ]] ; then
       grep -w disable $tftpconf | grep -w no 2>&1 > /dev/null
@@ -319,12 +305,13 @@ enableTftp() {
          pkill -HUP xinetd
       fi
    elif [[ $1 -eq 0 ]] ; then
-      if [[ ! -f /usr/lib/systemd/system/tftp.service ]]; then
+      if [[ ! -f $sysdDir/tftp.service ]]; then
          echo "tftp package is not available. Exit"
          echo " "
          exit 0
       fi
    fi
+ fi
 }
 
 setupServices() {
@@ -600,18 +587,31 @@ installConsoleMI() {
       mkdir -p $tftpboot/vxBoot
       reboot=1
    fi
-   if [[ ! -h $tftpboot/tftpboot ]] ; then
-      cd $tftpboot
-      ln -s . tftpboot
-   fi
-   if [[ $tftpboot = "/var/lib/tftpboot" ]] ; then
-      if [[ ! -h $tftpboot/var ]] ; then
+   if [[ ! -f /etc/debian_version ]]; then
+      if [[ ! -h $tftpboot/tftpboot ]] ; then
          cd $tftpboot
-         ln -s . var
+         ln -s . tftpboot
       fi
-      if [[ ! -h $tftpboot/lib ]] ; then
+      if [[ $tftpboot = "/var/lib/tftpboot" ]] ; then
+         if [[ ! -h $tftpboot/var ]] ; then
+            cd $tftpboot
+            ln -s . var
+         fi
+         if [[ ! -h $tftpboot/lib ]] ; then
+            cd $tftpboot
+            ln -s . lib
+         fi
+      fi
+   fi
+   #  Ubuntu 20 case
+   if [[ $tftpboot = "/srv/tftp" ]] ; then
+      if [[ ! -h $tftpboot/srv ]] ; then
          cd $tftpboot
-         ln -s . lib
+         ln -s . srv
+      fi
+      if [[ ! -h $tftpboot/tftp ]] ; then
+         cd $tftpboot
+         ln -s . tftp
       fi
    fi
    rm -f $tftpboot/vxBoot/*
@@ -678,6 +678,7 @@ if [[ $userId != "uid=0(root)" ]]; then
 exit 0
 fi
 
+reboot=0
 ${vnmrsystem}/bin/setNIC verify
 if [ $? -ne 0 ] ; then
    echo "Network for the spectrometer is not configured correctly"
@@ -703,6 +704,7 @@ if [ $? -ne 0 ] ; then
          echo " "
       fi
    fi
+   reboot=1
 else
    echo "Network for the spectrometer is configured correctly"
    echo " "
@@ -711,7 +713,6 @@ fi
 #-----------------------------------------------------------------
 # initialize some variables
 #
-reboot=0
 if [[ -e ${vnmrsystem}/adm/log/CONSOLE ]] ; then
    cons=$(cat ${vnmrsystem}/adm/log/CONSOLE)
 else
@@ -735,9 +736,13 @@ if [[ ! -z $npids ]]; then
     ${vnmrsystem}/acqbin/startStopProcs
 fi
 
+sysdDir=""
+if [[ ! -z $(type -t systemctl) ]] ; then
+   sysdDir=$(pkg-config systemd --variable=systemdsystemunitdir)
+fi
 #-----------------------------------------------------------------
 # determine location of the tftpboot directory which the tftpd is configured for
-# usually /tftpboot or /var/lib/tftpboot
+# usually /tftpboot or /var/lib/tftpboot or /srv/tftp
 #-----------------------------------------------------------------
 installTftp
 getTFTPBootDir
@@ -788,6 +793,9 @@ if [[ x${cons} = "xinova" ]] || [[ x${cons} = "xmerc"* ]] ; then
    cp $vnmr_bootptab $etc_bootptab
    sed -i -e "s/08003E236BC4/${macaddr}/" $etc_bootptab
    sed -i -e 's/10.0.0./'${base_IP}'./'   $etc_bootptab
+   if [ "$(echo $tftpdir | grep '/tftpboot' > /dev/null;echo $?)" != "0" ]; then
+      sed -i -e "s:/tftpboot:${tftpdir}:"   $etc_bootptab
+   fi
 
 # This program prevents bootpd from working
    if [[ -f /usr/sbin/dnsmasq ]] ; then
@@ -799,7 +807,8 @@ else
    installRarp
    setupServices
    configureRarp
-   if [[ -x /usr/bin/systemctl ]] ; then
+   if [[ ! -z $sysdDir ]] ; then
+     if [[ -f $sysdDir/rsh.socket ]]; then
       systemctl is-active --quiet rsh.socket
       if [[ $? -ne 0 ]]; then
          systemctl start rsh.socket
@@ -808,19 +817,23 @@ else
       if [[ $? -ne 0 ]]; then
          systemctl enable --quiet rsh.socket
       fi
-      systemctl is-active --quiet rlogin.socket
-      if [[ $? -ne 0 ]]; then
-         systemctl start rlogin.socket
-      fi
+     fi
+
+     if [[ -f $sysdDir/rlogin.socket ]]; then
       systemctl is-enabled --quiet rlogin.socket
       if [[ $? -ne 0 ]]; then
          systemctl enable --quiet rlogin.socket
       fi
+      systemctl is-active --quiet rlogin.socket
+      if [[ $? -ne 0 ]]; then
+         systemctl start rlogin.socket
+      fi
+     fi
    fi
 fi
 
 # On CentOS 7 systems, this is required for Infoproc to be able to register its socket
-if [[ -x /usr/bin/systemctl ]] ; then
+if [[ ! -z $sysdDir ]] ; then
    systemctl is-active --quiet rpcbind.service
    if [[ $? -ne 0 ]]; then
       systemctl add-wants multi-user rpcbind.service 2> /dev/null
@@ -839,27 +852,34 @@ fi
 # Arrange for procs to start at system bootup
 #-----------------------------------------------------------------
 rm -f /etc/init.d/rc.vnmr
-cp -p $vnmrsystem/acqbin/rc.vnmr /etc/init.d
-chmod +x /etc/init.d/rc.vnmr
-touch $vnmrsystem/acqbin/acqpresent
-owner=$(ls -l $vnmrsystem/vnmrrev | awk '{ printf($3) }')
-group=$(ls -l $vnmrsystem/vnmrrev | awk '{ printf($4) }')
-chown $owner:$group $vnmrsystem/acqbin/acqpresent
-chmod 644 $vnmrsystem/acqbin/acqpresent
-if [[ -x /usr/bin/systemctl ]] ; then
-   /sbin/chkconfig --level 5 rc.vnmr on 2> /dev/null
-   rm -f /usr/lib/systemd/system/vnmr.service
-   cp $vnmrsystem/acqbin/vnmr.service /usr/lib/systemd/system/.
-   chmod 644 /usr/lib/systemd/system/vnmr.service
-#   if [ ! hash systemctl ]; then
-#      systemctl enable rc.vnmr
-#   fi
+if [[ ! -z $sysdDir ]] ; then
+   rm -f $sysdDir/vnmr.service $sysdDir/vnmrweb.service $sysdDir/bootpd.service
+   cp $vnmrsystem/acqbin/vnmr.service $sysdDir/.
+   chmod 644 $sysdDir/vnmr.service
+   systemctl enable --quiet vnmr.service
+   if [[ -f $vnmrsystem/acqbin/bootpd.service ]]; then
+       cp $vnmrsystem/acqbin/bootpd.service $sysdDir/.
+       chmod 644 $sysdDir/bootpd.service
+       systemctl enable --quiet bootpd.service
+   fi
+   if [[ -f $vnmrsystem/web/scripts/vnmrweb.service ]]; then
+       cp $vnmrsystem/web/scripts/vnmrweb.service $sysdDir/.
+       chmod 644 $sysdDir/vnmrweb.service
+       systemctl enable --quiet vnmrweb.service
+   fi
 else
+   cp -p $vnmrsystem/acqbin/rc.vnmr /etc/init.d
+   chmod +x /etc/init.d/rc.vnmr
    (cd /etc/rc5.d; if [ ! -h S99rc.vnmr ]; then 
     ln -s ../init.d/rc.vnmr S99rc.vnmr; fi)
    (cd /etc/rc0.d; if [ ! -h K99rc.vnmr ]; then
     ln -s ../init.d/rc.vnmr K99rc.vnmr; fi)
 fi
+touch $vnmrsystem/acqbin/acqpresent
+owner=$(ls -l $vnmrsystem/vnmrrev | awk '{ printf($3) }')
+group=$(ls -l $vnmrsystem/vnmrrev | awk '{ printf($4) }')
+chown $owner:$group $vnmrsystem/acqbin/acqpresent
+chmod 644 $vnmrsystem/acqbin/acqpresent
 
 #-----------------------------------------------------------------
 # Connection to FTS chiller if present
@@ -889,10 +909,10 @@ fi
 #-----------------------------------------------------------------
 rm -f /tmp/ExpQs
 rm -f /tmp/ExpActiveQ
-rm -f /tmp/ExpStatus
 rm -f /tmp/msgQKeyDbm
 rm -f /tmp/ProcQs
 rm -f /tmp/ActiveQ
+rm -f /vnmr/acqqueue/ExpStatus
 
 if [[ ${doingMI} -eq 0 ]] ; then
    installConsole
@@ -924,18 +944,27 @@ echo ""
 #-----------------------------------------------------------------
 if [ $reboot -eq 1 ]
 then
+   echo ""
+   ${vnmrsystem}/bin/acqcomm help
+   echo ""
    echo " "
    echo "You must reboot Linux for these changes to take effect"
-   echo "As root type 'reboot' to reboot Linux"
+   if [ -f /etc/debian_version ]; then
+      echo "Enter 'sudo reboot' to reboot Linux"
+   else
+      echo "As root type 'reboot' to reboot Linux"
+   fi
 else
    if [[ ${doingMI} -eq 1 ]] ; then
-      if [[ -x /usr/sbin/bootpd ]] ; then
+      if [[ -z $sysdDir ]]; then
          (/usr/sbin/bootpd -s > /dev/console &)
+      else
+         systemctl start bootpd.service
       fi
    fi
    ${vnmrsystem}/acqbin/startStopProcs
+   echo ""
+   ${vnmrsystem}/bin/acqcomm help
+   echo ""
 fi
-echo ""
-${vnmrsystem}/bin/acqcomm help
-echo ""
 

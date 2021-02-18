@@ -12,17 +12,14 @@
 
 userId=$(/usr/bin/id | awk 'BEGIN { FS = " " } { print $1 }')
 if [ $userId != "uid=0(root)" ]; then
-  echo
-  echo "To install OpenVnmrJ you will need to be the system's root user."
-  echo "Or type cntrl-C to exit."
-  echo
   s=1
   t=3
   while [[ $s = 1 ]] && [[ ! $t = 0 ]]; do
-     echo "Please enter this system's root user password"
-     if [ x$distroType = "xdebian" ]; then
+     if [ -f /etc/debian_version ]; then
+	echo "If requested, please enter the admin (sudo) password"
         sudo $0 $* ;
      else
+        echo "Please enter this system's root user password"
         su root -c "$0 $*";
      fi
      s=$?
@@ -61,21 +58,30 @@ if [[ ! -d $repoPath ]]; then
   exit 1
 fi
 
-rm -f /etc/yum.repos.d/openvnmrj.repo
-if ! hash createrepo 2> /dev/null; then
-   yum -y install --disablerepo="*" $repoPath/createrepo* $repoPath/drpm* > /dev/null
+if [ -f /etc/debian_version ]; then
+   infile="/etc/apt/sources.list"
+   outfile="/etc/apt/sources.ovj"
+   mv $infile $outfile
+#   grep "^deb" $outfile | awk '$2="file:'$repoPath'"' > $infile
+   echo "deb [ allow-insecure=yes ] file:$repoPath /" > $infile
+   apt-get update 2> /dev/null
+else
+   rm -f /etc/yum.repos.d/openvnmrj.repo
+   if ! hash createrepo 2> /dev/null; then
+      yum -y install --disablerepo="*" $repoPath/createrepo* $repoPath/drpm* > /dev/null
+   fi
+   createrepo $repoPath
+   ovjRepo
+   if hash sysytemctl 2> /dev/null; then
+      systemctl stop packagekit > /dev/null 2>&1
+   fi
+   npids=$(ps -ef  | grep PackageKit | grep -v grep | awk '{ printf("%d ",$2) }')
+   for prog_pid in $npids
+   do
+     kill $prog_pid
+     sleep 2
+   done
+   yum clean all
 fi
-createrepo $repoPath
-ovjRepo
-if hash sysytemctl 2> /dev/null; then
-   systemctl stop packagekit > /dev/null 2>&1
-fi
-npids=$(ps -ef  | grep PackageKit | grep -v grep | awk '{ printf("%d ",$2) }')
-for prog_pid in $npids
-do
-  kill $prog_pid
-  sleep 2
-done
-yum clean all
 exit
 

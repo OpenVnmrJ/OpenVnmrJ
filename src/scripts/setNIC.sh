@@ -141,6 +141,28 @@ ${OVJ_IP}     wormhole
 EOF
 }
 
+addToNetplan() {
+   file=$(ls /etc/netplan/*yaml)
+   grep OpenVnmrJ $file > /dev/null
+   if [[ $? -eq 0 ]]; then
+      sed --in-place '/# OpenVnmrJ Start/,/# OpenVnmrJ End/d' $file
+   fi
+   cat <<EOF >> ${file}
+# OpenVnmrJ Start
+  ethernets:
+    ${OVJ_NIC}:
+      addresses:
+      - $OVJ_IP/24
+      renderer: networkd
+EOF
+   if [[ -f /sys/class/net/${OVJ_NIC}/address ]]; then
+      hwaddr=$(awk '{ print tolower($0) }' < /sys/class/net/${OVJ_NIC}/address)
+      echo "      macaddress: ${hwaddr}" >> ${file}
+   fi
+   echo "# OpenVnmrJ End" >> ${file}
+   netplan apply
+}
+
 addToInterfaces() {
    file=/etc/network/interfaces
    grep OpenVnmrJ $file
@@ -1046,6 +1068,8 @@ if [[ ${OVJ_VERIFY} -eq 0 ]] ; then
       addIfcfgFile
    elif [[ -f /etc/network/interfaces ]];  then
       addToInterfaces
+   elif [[ -d /etc/netplan ]];  then
+      addToNetplan
    fi
    if [[ -e ${vnmrsystem}/adm/log/CONSOLE ]] ; then
       cons=$(cat ${vnmrsystem}/adm/log/CONSOLE)

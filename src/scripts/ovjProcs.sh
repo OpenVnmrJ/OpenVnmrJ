@@ -14,7 +14,7 @@
 #		      start them in background. If they are running, then 
 #		      kill them with kill -2. If this fails, then use
 #		      kill -9. If this fails, list the pid(s) that cannot
-#		      killed. For Expproc, we wait 7 seconds before proceeding
+#		      killed. For Expproc, we wait 5 seconds before proceeding
 #
 
 # set -x
@@ -28,7 +28,7 @@ killaproc()
         fi
         if [ x$2 = "xExpproc" ]
 	then
-	    sleep 7
+	    sleep 5
 	fi
 
   # test to be sure the process died, if still running try kill -9
@@ -56,7 +56,7 @@ killaproc()
 }
 
 
-start_procs() {
+startProcs() {
   (cd $vnmrsystem/acqqueue; rm -f exp*)
   (cd $vnmrsystem/acqbin;				\
    TCL_LIBRARY=/vnmr/tcl/tcllibrary;			\
@@ -70,7 +70,7 @@ start_procs() {
    ./Expproc )
 }
 
-stop_procs() {
+stopProcs() {
   npids=$(pgrep Expproc)
   for acqpid in $npids
   do
@@ -98,9 +98,27 @@ stop_procs() {
 # MAIN main Main
 
 vnmrsystem=/vnmr
-npids=$(pgrep Expproc)
-if [[ -z $npids ]]; then
-      start_procs
-else
-      stop_procs
-fi
+case $# in
+    0)
+    npids=$(pgrep Expproc)
+    if [[ -z $npids ]]; then
+        startProcs
+    else
+        stopProcs
+    fi
+    ;;
+
+    *)
+    case $1 in
+        'start')
+            startProcs
+        ;;
+
+        'stop')
+            stopProcs
+        ;;
+
+    esac
+    ;;
+esac
+

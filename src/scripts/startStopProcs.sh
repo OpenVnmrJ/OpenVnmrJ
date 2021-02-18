@@ -18,28 +18,34 @@
 
 # set -x
 
-start_nmrwebd() {
-  nmrwebd_root=/vnmr/web
-  nmrwebd_home=${nmrwebd_root}/scripts
-  nmrwebd_exe=nmrwebd
-  nmrwebd_path=${nmrwebd_home}/${nmrwebd_exe}
-  nmrwebd_pidfile=${nmrwebd_root}/run/${nmrwebd_exe}.pid
-  if [ -x $nmrwebd_path ]; then
-     (cd $nmrwebd_home && ./$nmrwebd_exe 2> /dev/null &)
-  fi
-}
-
 vnmrsystem=/vnmr
 npids=$(pgrep Expproc)
 if [[ -z $npids ]]; then
    echo "Starting Acquisition communications."
-   if [[ -f /usr/lib/systemd/system/vnmr.service ]]; then
-      systemctl start vnmr.service
+   if [[ ! -z $(type -t systemctl) ]] ; then
+      systemctl start --quiet vnmr.service
    else
-      ${vnmrsystem}/acqbin/ovjProcs &
-      start_nmrwebd
+      ${vnmrsystem}/acqbin/ovjProcs start &
+   fi
+   if [[ -x ${vnmrsystem}/web/scripts/ovjWeb ]]; then
+      if [[ ! -z $(type -t systemctl) ]] ; then
+         systemctl start --quiet vnmrweb.service
+      else
+         ${vnmrsystem}/web/scripts/ovjWeb start &
+      fi
    fi
 else
    echo "Stopping Acquisition communications."
-   ${vnmrsystem}/acqbin/ovjProcs
+   if [[ ! -z $(type -t systemctl) ]] ; then
+      systemctl stop --quiet vnmr.service
+   else
+      ${vnmrsystem}/acqbin/ovjProcs stop
+   fi
+   if [[ -x ${vnmrsystem}/web/scripts/ovjWeb ]]; then
+      if [[ ! -z $(type -t systemctl) ]] ; then
+         systemctl stop --quiet vnmrweb.service
+      else
+         ${vnmrsystem}/web/scripts/ovjWeb stop
+      fi
+   fi
 fi
