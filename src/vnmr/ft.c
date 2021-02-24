@@ -2730,10 +2730,9 @@ int ft(int argc, char *argv[], int retc, char *retv[])
      }
   }
 
-  if (!Bnmr)
-     aspFrame("clear",0,0,0,0,0); // clear asp display
   if (!Bnmr && do_ds)
   {
+     aspFrame("clear",0,0,0,0,0); // clear asp display
      releasevarlist();
      appendvarlist("cr");
      Wsetgraphicsdisplay("ds");		/* activate the ds program */
