@@ -420,6 +420,9 @@ if [ ! -x /usr/bin/dpkg ]; then
     epelList="$epelList scons meld x11vnc"
   else
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
+    if [ ! -z $(type -t subscription-manager) ]; then
+        epelList="$epelList sharutils"
+    fi
   fi
   if [ $version -lt 7 ]; then
 #  Add older motif package
@@ -505,7 +508,7 @@ if [ ! -x /usr/bin/dpkg ]; then
     echo "Downloading required packages (2 of 3)"
     echo "Downloading required packages (2 of 3)" >> $logfile
     yum -y install $repoArg $packageList &>> $logfile
-    if [ $version -eq 8 ]; then
+    if [ $version -eq 8 ] && [ -z $(type -t subscription-manager) ]; then
       yum -y --enablerepo=PowerTools install $repoArg sharutils &>> $logfile
       if [ $version -eq 8 ]; then
         cp -f $repoPath/* $repoPathTmp > /dev/null 2>&1
@@ -541,7 +544,7 @@ if [ ! -x /usr/bin/dpkg ]; then
     if [ "x$yumList" != "x" ]; then
       yum -y install $yumList &>> $logfile
     fi
-    if [ $version -eq 8 ]; then
+    if [ $version -eq 8 ] && [ -z $(type -t subscription-manager) ]; then
       if [ "$(rpm -q sharutils | grep 'not installed' > /dev/null;echo $?)" == "0" ]
       then
         yum -y --enablerepo=PowerTools install sharutils &>> $logfile
@@ -564,7 +567,16 @@ if [ ! -x /usr/bin/dpkg ]; then
   fi
   if [ $epelInstalled -eq 0 ]
   then
-    yum -y install epel-release &>> $logfile
+    if [ -z $(type -t subscription-manager) ]; then
+        yum -y install epel-release &>> $logfile
+    else
+        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm &>> $logfile
+	if [[ $(subscription-manager repos --list-enabled |
+		grep -i codeready > /dev/null; echo $?) != 0 ]]; then
+          ARCH=$(/bin/arch)
+          subscription-manager repos --enable "codeready-builder-for-rhel-8-${ARCH}-rpms" &>> $logfile
+        fi
+    fi
   fi
   if [[ $repoGet -eq 1 ]]; then
     echo "Downloading additional packages (3 of 3)"
