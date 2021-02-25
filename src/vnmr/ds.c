@@ -3017,6 +3017,12 @@ Winfoprintf("##ds %d %d %s",argc,i,argv[i]);
           set_turnoff_routine(turnoff_ds);
       }
   }
+  else
+  {
+      if ( curindex == NULL )
+         if (init_ds(argc,argv,retc,retv))
+             return(ERROR);
+  }
 
   setdisplay();
   if(!isInset() && !screen_changed)
