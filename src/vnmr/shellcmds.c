@@ -390,6 +390,7 @@ int Touch(int argc, char *argv[], int retc, char *retv[]) {
    }
    else
    {
+      futimens(res,NULL);
       close(res);
       res = 1;
    }
