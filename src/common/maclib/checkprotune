@@ -21,6 +21,7 @@ IF ($1 = 'write') THEN
 	    $lasthfmode=$hfmode
 	    if (numrfch>2) then $dn2=dn2 $curdn2=dn2 endif
 	    if (numrfch>3) then $dn3=dn3 $curdn3=dn3 endif
+	    if (numrfch>4) then $dn4=dn4 $curdn4=dn4 endif
 	    exists('/vnmr/acqqueue/'+$2,'file'):$fileex
 	    fread('','usertree')
 	    if ($fileex) then
@@ -32,16 +33,60 @@ IF ($1 = 'write') THEN
                 if (numrfch>3) then
                     if (dn3='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn3'):$dn3 endif
                 endif
+                if (numrfch>4) then
+                    if (dn4='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn4'):$dn4 endif
+                endif
 		if ($hfmode='') then rtv('/vnmr/acqqueue/'+$2,'noabort','hfmode'):$lasthfmode endif
 		fread('/vnmr/acqqueue/'+$2,'usertree')
 	    endif
 	endif
         write('reset','/vnmr/acqqueue/'+$2)
+        exists('/vnmr/acqqueue/nexttunenuc','file'):$oldnuc
         if ($plist<>'') then
-                writeparam('/vnmr/acqqueue/'+$2,$plist,'global')
-                writeparam('/vnmr/acqqueue/'+$2,$plist,'current','add')
+           if ($oldnuc=1) and ($2='lasttunepar') then
+              $newstr=''
+              substr($plist,'find','tn'):$num,$index,$len,$newstr
+              $plist=$newstr
+              substr($plist,'find','dn'):$num,$index,$len,$newstr
+              $plist=$newstr
+              substr($plist,'find','dn2'):$num,$index,$len,$newstr
+              $plist=$newstr
+              substr($plist,'find','dn3'):$num,$index,$len,$newstr
+              $plist=$newstr
+              substr($plist,'find','dn4'):$num,$index,$len,$newstr
+              $plist=$newstr
+            endif
+            writeparam('/vnmr/acqqueue/'+$2,$plist,'global')
+            writeparam('/vnmr/acqqueue/'+$2,$plist,'current','add')
         endif
-	if ($2='lasttunepar') then
+        if ($oldnuc=1) and ($2='lasttunepar') then
+           delete('/vnmr/acqqueue/nexttunenuc',''):$x
+	   if ($tn<>'') then
+		writeparam('/vnmr/acqqueue/'+$2,'tn','usertree','add')
+	   endif
+           if ($dn<>'') then
+                writeparam('/vnmr/acqqueue/'+$2,'dn','usertree','add')
+           endif
+	   if (numrfch>2) then
+	     if ($dn2<>'') then
+                writeparam('/vnmr/acqqueue/'+$2,'dn2','usertree','add')
+	     endif
+	   endif
+           if (numrfch>3) then
+             if ($dn3<>'') then
+                writeparam('/vnmr/acqqueue/'+$2,'dn3','usertree','add')
+             endif
+           endif
+           if (numrfch>4) then
+             if ($dn4<>'') then
+                writeparam('/vnmr/acqqueue/'+$2,'dn4','usertree','add')
+             endif
+           endif
+	   if ($lasthfmode<>'') then
+                writeparam('/vnmr/acqqueue/'+$2,'hfmode','usertree','add')
+	   endif
+	   fread('','usertree')
+	elseif ($2='lasttunepar') then
 	   if (tn='') and ($tn<>'') then
 		writeparam('/vnmr/acqqueue/'+$2,'tn','usertree','add')
 	   endif
@@ -58,12 +103,17 @@ IF ($1 = 'write') THEN
                 writeparam('/vnmr/acqqueue/'+$2,'dn3','usertree','add')
              endif
            endif
+           if (numrfch>4) then
+             if (dn4='') and ($dn4<>'') then
+                writeparam('/vnmr/acqqueue/'+$2,'dn4','usertree','add')
+             endif
+           endif
 	   if $hfmode='' and ($lasthfmode<>'') then
                 writeparam('/vnmr/acqqueue/'+$2,'hfmode','usertree','add')
 	   endif
 	   fread('','usertree')
 	endif
-        shell('chmod a+rw /vnmr/acqqueue/'+$2):$dum
+        chmod('a+rw','/vnmr/acqqueue/'+$2):$dum
         return
 ENDIF
 
@@ -102,13 +152,11 @@ IF ($1 = 'global') THEN
 ENDIF
 
 IF ($1 = 'local') THEN
-        is_postvj22b:$vj22c
-
         $dotune='no'
         $parchanges=''
 
-        shell('touch /vnmr/acqqueue/lasttunepar'):$dum
-        shell('chmod a+rw /vnmr/acqqueue/lasttunepar'):$dum
+        touch('/vnmr/acqqueue/lasttunepar'):$dum
+        chmod('a+rw','/vnmr/acqqueue/lasttunepar'):$dum
 
         $oldtn='' $olddn='' $newtn=tn $newdn=dn
         $olddn2='' $olddn3='' $olddn4=''
@@ -118,23 +166,94 @@ IF ($1 = 'local') THEN
         $oldnuc=$oldtn,$olddn
         $newnuc=$newtn,$newdn
         if (numrfch > 2) then 
-                $newdn2=dn2 
-                rtv('/vnmr/acqqueue/lasttunepar','noabort','dn2'):$olddn2
-                $oldnuc=$oldnuc,$olddn2
-                $newnuc=$newnuc,dn2
-        endif
-        if (numrfch > 3) then
+           $newdn2=dn2 
+           rtv('/vnmr/acqqueue/lasttunepar','noabort','dn2'):$olddn2
+           $oldnuc=$oldnuc,$olddn2
+           $newnuc=$newnuc,dn2
+           if (numrfch > 3) then
                 $newdn3=dn3
                 rtv('/vnmr/acqqueue/lasttunepar','noabort','dn3'):$olddn3
                 $oldnuc=$oldnuc,$olddn3
                 $newnuc=$newnuc,dn3
-        endif
-        if (numrfch > 4) then
+           endif
+           if (numrfch > 4) then
                 $newdn4=dn4
                 rtv('/vnmr/acqqueue/lasttunepar','noabort','dn4'):$olddn4
                 $oldnuc=$oldnuc,$olddn4
                 $newnuc=$newnuc,dn4
+           endif
         endif
+
+        checkprotune('write','curtunepar')
+        $difflist=''
+        shell('diffparams -list /vnmr/acqqueue/lasttunepar /vnmr/acqqueue/curtunepar'):$difflist
+        delete('/vnmr/acqqueue/curtunepar',''):$dum
+        $checkNuc=0
+        $nexttune='/vnmr/acqqueue/nexttunenuc'
+        delete($nexttune,''):$e
+        string2array($difflist):$difflist
+                "$difflist is the difference between last tune and current tune"
+	teststr('$difflist','tn','local'):$is
+	if ($is) and (tn='') then $difflist[$is]='' endif
+	teststr('$difflist','dn','local'):$is
+	if ($is) and (dn='') then $difflist[$is]='' endif
+	if ($is) and (seqfil='s2pul') then
+           strstr(dm,'y'):$ret
+           if ($ret=0) then
+              $difflist[$is]=''
+              $newdn=''
+              $checkNuc=1
+              $newnuc[2]=''
+           endif
+        endif
+	if (numrfch>2) then
+	   teststr('$difflist','dn2','local'):$is
+	   if ($is) and (dn2='') then $difflist[$is]='' endif
+	   if ($is) and (seqfil='s2pul') then
+              strstr(dm2,'y'):$ret
+              if ($ret=0) then
+                 $difflist[$is]=''
+                 $newdn2=''
+                 $checkNuc=1
+                 $newnuc[3]=''
+              endif
+           endif
+	endif
+	if (numrfch>3) then
+	   teststr('$difflist','dn3','local'):$is
+	   if ($is) and (dn3='') then $difflist[$is]='' endif
+	   if ($is) and (seqfil='s2pul') then
+              strstr(dm3,'y'):$ret
+              if ($ret=0) then
+                 $difflist[$is]=''
+                 $newdn3=''
+                 $checkNuc=1
+                 $newnuc[4]=''
+              endif
+           endif
+	endif
+	if (numrfch>4) then
+	   teststr('$difflist','dn4','local'):$is
+	   if ($is) and (dn4='') then $difflist[$is]='' endif
+	   if ($is) and (seqfil='s2pul') then
+              strstr(dm4,'y'):$ret
+              if ($ret=0) then
+                 $difflist[$is]=''
+                 $newdn4=''
+                 $checkNuc=1
+                 $newnuc[5]=''
+              endif
+           endif
+	endif
+		"****Did hfmode change?*******"
+// This is a special case
+	exists('hfmode','parameter'):$parex
+	if $parex then
+	    $oldhfmode='' rtv('/vnmr/acqqueue/lasttunepar','noabort','hfmode'):$oldhfmode
+	    if hfmode<>$oldhfmode then
+		$dotune='yes' $parchanges=$parchanges+' hfmode'
+	    endif
+	endif
         $nucswap=1
         $newnuctot=size('$newnuc')
         $i=1
@@ -142,43 +261,12 @@ IF ($1 = 'local') THEN
             if ($newnuc[$i]<>'') then
                 teststr('$oldnuc',$newnuc[$i],'local'):$isin
                 if ($isin=0) then
-                        $i=$newnuctot
-                        $nucswap=0
+                   $i=$newnuctot
+                   $nucswap=0
                 endif
             endif
-                $i=$i+1
+            $i=$i+1
         until $i > $newnuctot
-
-        checkprotune('write','curtunepar')
-        $difflist=''
-        shell('diffparams -list /vnmr/acqqueue/lasttunepar /vnmr/acqqueue/curtunepar'):$difflist
-        shell('rm -f /vnmr/acqqueue/curtunepar'):$dum
-        string2array($difflist):$difflist
-                "$difflist is the difference between last tune and current tune"
-	teststr('$difflist','tn','local'):$is
-	if ($is) and (tn='') then $difflist[$is]='' endif
-	teststr('$difflist','dn','local'):$is
-	if ($is) and (dn='') then $difflist[$is]='' endif
-	if (numrfch>2) then
-	   teststr('$difflist','dn2','local'):$is
-	   if ($is) and (dn2='') then $difflist[$is]='' endif
-	endif
-	if (numrfch>3) then
-	   teststr('$difflist','dn3','local'):$is
-	   if ($is) and (dn3='') then $difflist[$is]='' endif
-	endif
-		"****Did hfmode change?*******"
-// This is a special case
-	exists('hfmode','parameter'):$parex
-	if $parex then
-//	    if hfmode='' then $parex=0 endif
-//	endif
-//	if $parex then
-	    $oldhfmode='' rtv('/vnmr/acqqueue/lasttunepar','noabort','hfmode'):$oldhfmode
-	    if hfmode<>$oldhfmode then
-		$dotune='yes' $parchanges=$parchanges+' hfmode'
-	    endif
-	endif
 
                 "****Did the solvent change?********"
         strstr(wtune,'v'):$ret
@@ -192,49 +280,21 @@ IF ($1 = 'local') THEN
         if ($ret) and ($nucswap<1) then
            teststr('$difflist','tn','local'):$isthere
            if ($isthere) then $dotune='yes' $parchanges=$parchanges+' tn' endif
-           if ($vj22c>0) then
-                teststr('$difflist','dn','local'):$isthere
-                if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn' endif
-                teststr('$difflist','dn2','local'):$isthere
-                if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn2' endif
-                teststr('$difflist','dn3','local'):$isthere
-                if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn3' endif
-           endif
-        endif
-
-   if ($vj22c<1) then
-                "****Did the dn change?********"
-        strstr(wtune,'2'):$ret
-        if ($ret) and ($nucswap<1) then
            teststr('$difflist','dn','local'):$isthere
            if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn' endif
-        endif
-
-                "****Did the dn2 change?********"
-        strstr(wtune,'3'):$ret
-        if ($ret) and ($nucswap<1) then
            teststr('$difflist','dn2','local'):$isthere
            if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn2' endif
-        endif
-
-                "****Did the dn3 change?********"
-        strstr(wtune,'4'):$ret
-        if ($ret) and ($nucswap < 1) then
            teststr('$difflist','dn3','local'):$isthere
            if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn3' endif
         endif
-   endif
 
                 "****Did the sample change?********"
         strstr(wtune,'s'):$ret
         if ($ret) then
-//        if (auto='y') then
-                teststr('$difflist','loc','local'):$isthere
-                if ($isthere) then $dotune='yes' $parchanges=$parchanges+' loc' endif
-//        else
-                teststr('$difflist','sample','local'):$isthere
-                if ($isthere) then $dotune='yes' $parchanges=$parchanges+' sample' endif
-//        endif
+           teststr('$difflist','loc','local'):$isthere
+           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' loc' endif
+           teststr('$difflist','sample','local'):$isthere
+           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' sample' endif
         endif
 
                 "****Did the experiment change?********"
@@ -263,6 +323,47 @@ IF ($1 = 'local') THEN
            if ($isthere) then $dotune='yes' $parchanges=$parchanges+' operator' endif
         endif
         string2array($parchanges):$parchanges
+        if ($dotune='yes' and $checkNuc=1) then
+           $ok=1
+           if ($newtn<>'') then
+              teststr('$oldnuc',$newtn,'local'):$isin
+              if ($isin=0) then
+                 $ok=0
+              endif
+           endif
+           if ($ok and $newdn<>'') then
+              teststr('$oldnuc',$newdn,'local'):$isin
+              if ($isin=0) then
+                 $ok=0
+              endif
+           endif
+           if ($ok and $newdn2<>'') then
+              teststr('$oldnuc',$newdn2,'local'):$isin
+              if ($isin=0) then
+                 $ok=0
+              endif
+           endif
+           if ($ok and $newdn3<>'') then
+              teststr('$oldnuc',$newdn3,'local'):$isin
+              if ($isin=0) then
+                 $ok=0
+              endif
+           endif
+           if ($ok and $newdn4<>'') then
+              teststr('$oldnuc',$newdn4,'local'):$isin
+              if ($isin=0) then
+                 $ok=0
+              endif
+           endif
+           if ($ok) then
+              write('file',$nexttune,'%s,%s,%s,%s,%s',
+                     $newtn,$newdn,$newdn2,$newdn3,$newdn4)
+           endif
+        endif
+        if ($dotune='no' and $checkNuc=1) then
+           write('file',$nexttune,'%s,%s,%s,%s,%s',
+                  $newtn,$newdn,$newdn2,$newdn3,$newdn4)
+        endif
         return($dotune,$parchanges)
 ENDIF
 
@@ -290,7 +391,7 @@ IF ($1 = 'clearnucs') THEN
 
           // Write out the new values
           fsave($parfile,'usertree')
-          shell('chmod a+rw '+$parfile):$dum
+          chmod('a+rw',$parfile):$dum
         endif
 ENDIF
 
@@ -422,6 +523,6 @@ IF ($1 = 'updatenucs') THEN
           // Save new values in lasttunepar
           //fsave('/vnmr/acqqueue/test','usertree') // TESTING
           fsave($parfile,'usertree')
-          shell('chmod a+rw '+$parfile):$dum
+          chmod('a+rw',$parfile):$dum
         endif
 ENDIF

@@ -9,6 +9,8 @@ else
   $arg = $1
 endif
 $dir='/vnmr/acqqueue'
+
+IF ($arg='check') THEN
         $firstchar='' $fileex=0
         substr(tunemethod,1,1):$firstchar
         if ($firstchar='/') then
@@ -21,24 +23,25 @@ $dir='/vnmr/acqqueue'
            endif
         endif
 
-IF ($arg='check') THEN
 
     $parfile=$dir+'/wtunepars'
     exists('dn2','parameter'):$ed2
     exists('dn3','parameter'):$ed3
+    exists('dn4','parameter'):$ed4
     $parlist='tn dn solvent wtune tunemethod'
     if ($ed2) then $parlist=$parlist+' dn2' endif
     if ($ed3) then $parlist=$parlist+' dn3' endif
+    if ($ed4) then $parlist=$parlist+' dn4' endif
 
-    shell('rm -f '+$parfile):$dum
+    delete($parfile,''):$dum
     writeparam($parfile,$parlist)
-    shell('chmod a+rw '+$parfile):$x
+    chmod('a+rw',$parfile):$x
 
     $file=$dir+'/wtunekey'
-    shell('rm -f '+$file):$dum
+    delete($file,''):$dum
     write('reset',$file)
     write('file',$file,'%s',$metfile)
-    shell('chmod a+rw '+$file):$x
+    chmod('a+rw',$file):$x
     xmhaha_tune('next'):$reply
     return($reply)
 
@@ -57,7 +60,23 @@ ELSEIF ($arg='next') THEN
     rm($file):$x // Delete filekey file
 
     // Get lists of hi/loband nuclei in tn, dn, dn2, ...
-    xmtune('getnucband'):$hiband,$loband
+    $nexttune='/vnmr/acqqueue/nexttunenuc'
+    exists($nexttune,'file'):$x
+    if ($x) then
+       lookup('mfile',$nexttune,'readline'):$nucs
+       $cmd=`xmtune('getnucband'`
+       $i=0
+       while ($i < 5) do
+          $i=$i+1
+          $nuc=''
+          substr($nucs,$i,'delimiter',','):$nuc
+          $cmd=$cmd+`,'`+$nuc+`'`
+       endwhile
+       $cmd=$cmd+'):$hiband,$loband'
+       {$cmd}
+    else
+       xmtune('getnucband'):$hiband,$loband
+    endif
 
     $protunecmd = ''
     while (1) do // Read all lines in method file
@@ -163,7 +182,7 @@ ELSEIF ($arg='quit') or ($arg='done') or ($arg='abort') THEN
   else
 	strstr(file,'.','last'):$ret,$file,$ext
 	if ($ret=0) then $file=file endif
-	shell('rm -rf '+$file+'.fid'):$dum
+	delete($file+'.fid'):$dum
   endif
   protune_au($arg)
 
