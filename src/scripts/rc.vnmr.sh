@@ -4,6 +4,7 @@
 ### BEGIN INIT INFO
 # Required-Start: $network
 # Default-Start: 5
+### END INIT INFO
 # 
 #
 # Copyright (C) 2015  University of Oregon

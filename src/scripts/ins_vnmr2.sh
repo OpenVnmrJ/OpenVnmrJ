@@ -81,7 +81,7 @@ update_user_group() {
              # must give the account a temp password 'abcd1234' to get the account active 
              # since passwd does not have the -f to force activation as does RHEL
              # passwd abcd1234 = $1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1
-             logmsg "sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell $(which bash) --gid $nmr_group --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $nmr_adm"
+             logmsg "sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell $(which bash) --gid $nmr_group --password 'abcd1234' $nmr_adm"
              sudo /usr/sbin/useradd --create-home --home-dir $nmr_home/$nmr_adm --shell $(which bash) --gid $nmr_group --password '$1$LEdmx.Cm$zKS4GXyvUzjNLucQBNgwR1' $nmr_adm
 
              # add vnmr1 to appropriate groups as well the most important, admin or sudo (12.04) so it is permitted to sudo.
@@ -96,8 +96,8 @@ update_user_group() {
              logmsg "sudo chmod 755 $nmr_home/$nmr_adm"
              sudo chmod 755 "$nmr_home/$nmr_adm"
              # we give a temp default password,  use the --expire option to force to user to change password on login
-             logmsg "sudo /usr/bin/passwd --expire $nmr_adm 2>/dev/null"
-             sudo /usr/bin/passwd --expire $nmr_adm >> $logfile 2>&1
+             # logmsg "sudo /usr/bin/passwd --expire $nmr_adm 2>/dev/null"
+             # sudo /usr/bin/passwd --expire $nmr_adm >> $logfile 2>&1
           fi
        fi
 
@@ -1737,43 +1737,12 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       sudo chmod 4755 "$dest_dir"/bin/cptoconpar
    fi
 
-   if [ x$os_version = "xwin" ] 
-   then
-       chmod 755 "$dest_dir"/adm/log
-       chmod 755 "$dest_dir"/bin/vnmrj.exe
-       chmod 755 "$dest_dir"/bin/vnmrj_debug.exe
-       chmod 700 "$dest_dir"/bin/vnmrj_adm.exe
-       chmod 777 "$dest_dir"/unins*.dat       
-       
-       if [ ! -f "$dest_dir"/uninstallvj.bat ]
-       then
-    cp "$src_code_dir"/code/uninstallvj.bat "$dest_dir"
-       fi
-       chmod 755 "$dest_dir"/uninstallvj.bat
-
-       chmod g+w "$dest_dir"/pgsql
-
-       # make softlinks of exe in pgsql/bin
-       pgsqlfiles=`ls /vnmr/pgsql/bin/*.exe`
-       for pgsqlfile in $pgsqlfiles
-       do
-     pgsqlfile2=`echo $pgsqlfile | awk '{FS="."} {print $1}'`
-     ln -s $pgsqlfile $pgsqlfile2
-       done
-
-       chmod a+w "$dest_dir"/pgsql
-   fi
-  
-
    #To have the Postgres postmaster started at system boot up
    if [ x$os_version != "xwin" ] 
    then
      if [ x$lflvr != "xdebian" ]
      then
         cp -p "$dest_dir"/bin/S99pgsql /etc/init.d/pgsql
-     else
-        sudo cp -p "$dest_dir"/bin/S99pgsql /etc/init.d/pgsql
-        sudo chown root:root /etc/init.d/pgsql
      fi
      
      r_levl="rc3.d"
@@ -1816,36 +1785,30 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
         fi
 
      else
-        ( cd /etc/init.d; sudo /usr/sbin/update-rc.d -f pgsql remove > /dev/null 2>&1; sudo /usr/sbin/update-rc.d pgsql defaults > /dev/null 2>&1; )
-        # Ubuntu installs with a version number, making it bit more difficult
-        # must find the correct postgres-version# script
-        postgrescript=$(cd /etc/init.d; ls postgresql* 2> /dev/null)
-        if [ ! -z "$postgrescript" ]; then
-           sudo /etc/init.d/$postgrescript stop
-           ( cd /etc/init.d; postgrscript=$(ls postgresql*) ; sudo /usr/sbin/update-rc.d -f $postgrscript remove > /dev/null 2>&1; )
-        fi
         # Use older version. New version has problem with client server protocol
         if [ $distmajor -gt 16 ] && [ -d "$dest_dir"/pgsql/bin_ver7 ] ; then
            mv "$dest_dir"/pgsql/bin_ver7 "$dest_dir"/pgsql/bin
         fi
+        if [ $distmajor -gt 16 ] ; then
+           systemctl --now mask postgresql > /dev/null 2>&1
+        else
+           # Ubuntu installs with a version number, making it bit more difficult
+           # must find the correct postgres-version# script
+           postgrescript=$(cd /etc/init.d; ls postgresql* 2> /dev/null)
+           if [ ! -z "$postgrescript" ]; then
+              sudo /etc/init.d/$postgrescript stop
+              ( cd /etc/init.d; postgrscript=$(ls postgresql*) ; sudo rm -f $postgrscript; sudo /usr/sbin/update-rc.d -f $postgrscript remove > /dev/null 2>&1; )
+           fi
+        fi
+        #remove previous version
+        rm -f /usr/init.d/pgsql
+        sudo /usr/sbin/update-rc.d -f pgsql remove > /dev/null 2>&1
+        #install new version
+        sudo cp -p "$dest_dir"/bin/S99pgsql /etc/init.d/pgsql
+        sudo chown root:root /etc/init.d/pgsql
+        sudo /usr/sbin/update-rc.d pgsql defaults > /dev/null 2>&1;
      fi
    fi
-
-#   if [ x$os_version = "xsol" ]
-#   then
-#     ln -s /cdrom/cdrom0/.jhelp /vnmr/jhelp
-#   elif [ x$os_version = "xrht" ]
-#   then
-#     if [ -d /media/cdrom ]
-#     then
-#        ln -s /media/cdrom/.jhelp /vnmr/jhelp
-#     elif [  -d /media/cdrecorder ]
-#     then
-#        ln -s /media/cdrecorder/.jhelp /vnmr/jhelp
-#     else
-#        ln -s /mnt/cdrom/.jhelp /vnmr/jhelp
-#     fi
-#   fi
 
    if [ x$os_version = "xrht" ]
    then
@@ -2306,6 +2269,16 @@ then
       sudo -u $nmr_adm $dest_dir/bin/ovjUser ${nmr_adm}
    fi
    "$dest_dir"/bin/dbsetup ${nmr_adm} "$dest_dir"
+   if [ $update_adm = "yes" ]; then
+      echo " "
+      if [ x$lflvr != "xdebian" ]; then
+         echo "Admin account ${nmr_adm} created with no password"
+      else
+         echo "Admin account ${nmr_adm} created with password abcd1234"
+      fi
+      echo " "
+   fi
+   
 fi
 
 #
