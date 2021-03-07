@@ -25,19 +25,24 @@ if not os.path.exists(ovjtools):
 platform = sys.platform
 print(sys.platform)
 
-# get version
 #
 # On Ubuntu 20, the jar action fails
 # I think it is a problem in scons version 3.
-vers = 18
-if os.path.exists('/etc/lsb-release'):
-   with open('/etc/lsb-release') as fd:
-      for line in fd:
-         if (line.startswith('DISTRIB_RELEASE')):
-            name,vers = line.split("=")
-            vers,decimal = vers.split(".")   
+# vers = 18
+# if os.path.exists('/etc/lsb-release'):
+#    with open('/etc/lsb-release') as fd:
+#       for line in fd:
+#          if (line.startswith('DISTRIB_RELEASE')):
+#             name,vers = line.split("=")
+#             vers,decimal = vers.split(".")   
+# 
+# version= int(vers)
+#
+# CentOS 7.8 also fails. Rather than trying to determine
+# if scons 2 or 3 is being used, just always use the scheme
+# for scons 3, which also works for scons 2.
 
-version= int(vers)
+version=20
 
 
 
@@ -60,34 +65,10 @@ vnmrjProGuardTarget = "vnmrj.jar.pro"
 vjmolTarget = 'vjmol.jar'
 
 
-# file base path , usually cwd except for interix
+# file base path
 fbpath= cwd
 
 
-#
-# if interix then replace /dev/fs/C/ with C:/
-#
-if ( 'interix' in platform ):
-   # print(cwd)
-   # print(cwd[0:8])
-   #tcwd = cwd[9:]
-   # print(tcwd)
-   #fbpath = 'C:' + tcwd
-   fbpath = Sua2WinPath(cwd)
-   print(fbpath)
-
-# jsmooth lists
-JSmoothFileList = [os.path.join(fbpath, 'vnmrj.xml.jsmooth'),
-                   os.path.join(fbpath, 'vnmrj_debug.xml.jsmooth'),
-                   os.path.join(fbpath, 'vnmrj_adm.xml.jsmooth')
-                   ]
-JSmoothExecList = ['vnmrj.exe',
-                   'vnmrj_debug.exe',
-                   'vnmrj_adm.exe'
-                   ]
-
-JSmoothPath = os.path.join(cwd, os.pardir, os.pardir,
-                 '3rdParty', 'JSmooth_0.9.9-7')
 
 # jar file lists
 jarHelpFileList = [os.path.join(fbpath, 'jh.jar'),
@@ -123,16 +104,6 @@ ThirdPartyList = ['jmol.jar']
 env = Environment()
 #platform = env['PLATFORM']
 
-#dict = env.Dictionary()
-#keys = dict.keys()
-#keys.sort()
-#for key in keys:
-#   print(key, dict[key])
-#
-#platform = sys.platform
-#print(sys.platform)
-
-
 # Java envs
 # JAVABOOTCLASSPATH []
 # JAVAC javac
@@ -164,14 +135,6 @@ elif (platform=="darwin"):
                 os.path.join('macos','LayoutBuilder.java')))
    Execute(Copy(os.path.join('src','vnmr','ui','ExpPanel.java'),
                 os.path.join('macos','ExpPanel.java')))
-elif ( 'interix6' in platform): # Interix
-   javaBaseDir = os.path.join('/','dev','fs','C','\'Program Files (x86)\'','Java','jdk1.6.0_23')
-   javaBinDir = os.path.join('/','dev','fs','C','"Program Files (x86)"','Java','jdk1.6.0_23','bin')
-   jarBin = os.path.join(javaBinDir, 'jar.exe')
-elif ( 'interix3' in platform): # Interix
-   javaBaseDir = os.path.join('/','dev','fs','C','\'Program Files\'','Java','jdk1.6.0_23')
-   javaBinDir = os.path.join('/','dev','fs','C','"Program Files"','Java','jdk1.6.0_23','bin')
-   jarBin = os.path.join(javaBinDir, 'jar.exe')
 else: 
    print("Unknown Platform: ", platform)
    sys.exit()
@@ -218,7 +181,7 @@ Execute('rm -rf ' + os.path.join(classesPath, 'vnmr') + ' && ' + \
 vjmolPath = os.path.join(cwd, 'vjmol')
 Execute(Mkdir(vjmolPath))
 
-if ((platform!="darwin") and ('interix' not in platform) ):
+if (platform!="darwin"):
    vjmolEnv  = Environment(ENV = {'JAVA_HOME' : javaBinDir,
                                   'CLASSPATH' : os.path.join(cwd, 'jmol.jar'),
                                   'PATH' : javaBinDir + ':' + os.environ['PATH']})
@@ -235,29 +198,6 @@ elif (platform=="darwin"):
    jEnv = Environment(ENV = {'CLASSPATH' : classesPath,
                              'PATH' : javaBinDir + ':' + os.environ['PATH']})
 
-elif ( 'interix' in platform ):
-
-   javaWinBaseDir = Sua2WinPath(javaBaseDir)
-
-   javaBaseDir = os.path.join('/','dev','fs','C','\'Program Files (x86)\'','Java','jdk1.6.0_23')
-   vjmolEnv  = Environment(JAVAC = os.path.join(javaBinDir,'javac.exe'), 
-                           # JAVACLASSPATH = os.path.join( javaWinBaseDir,'jre','lib'), 
-                           ENV = {'JAVA_HOME' : javaBinDir,
-                                  'CLASSPATH' : os.path.join(fbpath, 'jmol.jar'),
-                                  'PATH' : javaBinDir + ':' + os.environ['PATH']})
-
-   # define build environment
-   jEnv = Environment( JAVAC = os.path.join(javaBinDir,'javac.exe'),
-                       JAVACLASSPATH = [ 
-                                         os.path.join(fbpath, 'classes'), 
-                                       ],
-                       ENV = {'SYSTEMROOT' : 'C:\WINDOWS',
-                              'CLASSPATH' : [ 'classes', os.path.join(fbpath, 'classes') ],
-                              'PATH' : javaBinDir + ':' + os.environ['PATH']})
-
-                       #JAVACLASSPATH = [ 'classes', 
-                       #                  '\'' + os.path.join(fbpath, 'classes') + '\'', 
-                       #                  '\'' + os.path.join(javaWinBaseDir,'jre','lib')  + '\'' ],
 
 print(jEnv['ENV'])
 #print(jEnv['JAVAC'])
@@ -270,8 +210,7 @@ print(jEnv['ENV'])
 
 
 # just a double check of which javac is being used for the build
-if ( 'interix' not in platform):
-  jEnv.Execute('which javac')
+jEnv.Execute('which javac')
 
 # actual VJMol.jar build
 javaBuildVJMol = vjmolEnv.Java(source = os.path.join(cwd, 'vjmol_src'),
@@ -287,8 +226,7 @@ if ( version > 19 ):
 # print(findAction)
 vjmolEnv.AddPostAction(javaBuildVJMol,
                        Action(findAction))
-if ( 'interix' not in platform):
-  vjmolBuildObject = vjmolEnv.Jar(JAR      = jarBin,
+vjmolBuildObject = vjmolEnv.Jar(JAR      = jarBin,
                                   source   = vjmolPath,
                                   target   = vjmolTarget,
                                   JARCHDIR = vjmolPath)
@@ -315,20 +253,8 @@ f.close()
 jEnv.AddPostAction(javaBuildObject,
                    Action(findAction2))
 
-if ( 'interix' in platform):
-  cdCmd = 'cd ' + cwd + ' ; '
-  jarCmd = cdCmd + jarBin + ' -cfm vnmrj.jar ' + Sua2WinPath(manifestFile) + ' -C ' + Sua2WinPath(classesPath) + ' .'
-  jarBuildObject = jEnv.Command(target = vnmrjTarget,
-                                source = [ classesPath, manifestFile],
-                                action = jarCmd,
-  )
-  jEnv.Depends( target = vnmrjTarget,
-                dependency = [ classesPath, manifestFile],
-              ) 
-
-else:
 # This jar action fails on Ubuntu 20
-  if ( version <= 19 ):
+if ( version <= 19 ):
     jarBuildObject = jEnv.Jar(JAR      = jarBin,
                             target   = vnmrjTarget,
                             source   = [classesPath,
@@ -349,14 +275,5 @@ if ( version <= 19 ):
                       Action(Copy(installPath, os.path.join(cwd, vnmrjTarget))))
 
 # finally copy vjmol.jar
-if ( 'interix' not in platform):
-  vjmolEnv.AddPostAction(vjmolBuildObject,
+vjmolEnv.AddPostAction(vjmolBuildObject,
                          Action(Copy(installPath, os.path.join(cwd, vjmolTarget))))
-else:
-  for i in JSmoothFileList:
-    jEnv.AddPostAction(jarBuildObject,
-                       Action(os.path.join(JSmoothPath,'jsmoothcmd.exe') + ' "' + i +'"'))
-  for i in JSmoothExecList:
-    jEnv.AddPostAction(jarBuildObject,
-                       Action(Copy(binPath, os.path.join(cwd, i))))
-             

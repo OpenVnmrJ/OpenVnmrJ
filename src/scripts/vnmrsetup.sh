@@ -45,9 +45,11 @@ test_user() {
    if [ $? -ne 0 ]
    then
        rm -f $my_file
-       echo "\nUser \"$1\" does not exist,"
-       echo "use Linux admintool to create user and rerun $0"
-       echo "\naborting this program....."
+       echo " "
+       echo "User \"$1\" does not exist,"
+       echo "use Linux admintool to create user and"
+       echo "rerun $0"
+       echo "aborting this program....."
        echo " "
        exit 1
    else
@@ -103,42 +105,31 @@ form_dest_dir() {
        day=$(echo $date |  awk 'BEGIN { FS = " " } { print $2 }')
        year=$(echo $date |  awk 'BEGIN { FS = " " } { print $3 }')
 
-       if [ x$month = "xJanuary" ]
-       then 
+       if [ x$month = "xJanuary" ]; then 
           dmonth="01"
-       else if [ x$month = "xFebruary" ]
-       then 
+       elif [ x$month = "xFebruary" ]; then 
           dmonth="02"
-       else if [ x$month = "xMarch" ]
-       then 
+       elif [ x$month = "xMarch" ]; then 
           dmonth="03"
-       else if [ x$month = "xApril" ]
-       then 
+       elif [ x$month = "xApril" ]; then 
           dmonth="04"
-       else if [ x$month = "xMay" ]
-       then 
+       elif [ x$month = "xMay" ]; then 
           dmonth="05"
-       else if [ x$month = "xJune" ]
-       then 
+       elif [ x$month = "xJune" ]; then 
           dmonth="06"
-       else if [ x$month = "xJuly" ]
-       then 
+       elif [ x$month = "xJuly" ]; then 
           dmonth="07"
-       else if [ x$month = "xAugust" ]
-       then 
+       elif [ x$month = "xAugust" ]; then 
           dmonth="08"
-       else if [ x$month = "xSeptember" ]
-       then 
+       elif [ x$month = "xSeptember" ]; then 
           dmonth="09"
-       else if [ x$month = "xOctober" ]
-       then 
+       elif [ x$month = "xOctober" ]; then 
           dmonth="10"
-       else if [ x$month = "xNovember" ]
-       then 
+       elif [ x$month = "xNovember" ]; then 
           dmonth="11"
        else
           dmonth="12"
-       fi fi fi fi fi fi fi fi fi fi fi 
+       fi
  
        dday=$(basename $day ,)
 
@@ -409,7 +400,7 @@ rm -f /etc/profile.d/openwin.csh
 
 form_dest_dir
 #dest_dir="$default_dir/vnmr"
-nmr_user=$(logname)
+nmr_user="vnmr1"
 user_dir="$default_dir"
 nmr_group="nmr"
 
@@ -423,10 +414,7 @@ fi
 
 if [ $# -eq 1 -a x$1 != "xvnmr1" ]
 then  
-   if [ x$1 != "xSun" ]
-   then
-      test_user $1
-   fi
+   test_user $1
 else 
    if [ $# -eq 2 ]
    then  
