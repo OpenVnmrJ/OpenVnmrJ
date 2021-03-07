@@ -1,5 +1,11 @@
 #!/bin/bash
 #
+### BEGIN INIT INFO
+# Required-Start: $network
+# Default-Start: 5
+# description: Starts and stops postgreq database
+### END INIT INFO
+#
 # Copyright (C) 2015  University of Oregon
 # 
 # You may distribute under the terms of either the GNU General Public
@@ -14,9 +20,8 @@ if [ ! -d /usr/bin ]; then
    exit 1
 fi
 
-if [ x`uname -s` = "xLinux" ]
+if [ x$(uname -s) = "xLinux" ]
 then
-#    /bin/mount -a
     #determine if we should use su (redhat) or sudo (debian)
     if [ -r /etc/debian_version ]
     then
@@ -24,8 +29,7 @@ then
     else
         lflvr="rhat"
     fi
-fi
-if [ x`uname -s` = "xDarwin" ]
+elif [ x$(uname -s) = "xDarwin" ]
 then
     lflvr="darwin"
 fi
@@ -35,10 +39,10 @@ vnmrsystem=/vnmr
 PGLIB="$vnmrsystem/pgsql/lib"
 PGDATA="$vnmrsystem/pgsql/data"
 PGDATABASE=vnmr
-login_user=`id | sed -e 's/[^(]*[(]\([^)]*\)[)].*/\1/'`
-vnmradm=` ls -l "$vnmrsystem/vnmrrev" | awk '{ print $3 }' `
+login_user=$(id | sed -e 's/[^(]*[(]\([^)]*\)[)].*/\1/')
+vnmradm=$(ls -l "$vnmrsystem/vnmrrev" | awk '{ print $3 }')
 # Remove any whitespace
-vnmradm=`echo $vnmradm`
+vnmradm=$(echo $vnmradm)
 PATH='/etc:/usr/etc:/usr/bin:/bin:"$vnmrsystem/bin":"$vnmrsystem/pgsql/bin"'
 export LOGNAME vnmrsystem vnmruser login_user vnmradm PGLIB PGDATA PGDATABASE PATH
 
@@ -47,34 +51,35 @@ export LOGNAME vnmrsystem vnmruser login_user vnmradm PGLIB PGDATA PGDATABASE PA
 
 if [ x$lflvr = "xdebian" ]
 then
-    # Ubuntu needs a path.  Unfortunately, the path will be different
-    # if a newer version is installed.  Postgres is normally installed
-    # in /usr/lib/postgresql/ in a directory name which is the version number.
-    # Look in /usr/lib/postgresql/ and find the dir with the largest number.
-    dirlist=`ls -1 /usr/lib/postgresql`
+    if [[ ! -f "$vnmrsystem/pgsql/bin/pg_ctl" ]]; then
+        # Ubuntu needs a path.  Unfortunately, the path will be different
+        # if a newer version is installed.  Postgres is normally installed
+        # in /usr/lib/postgresql/ in a directory named with the version number.
+        # Look in /usr/lib/postgresql/ and find the dir with the largest number.
+        dirlist=$(ls -1 /usr/lib/postgresql)
 
-    version="0.0"
-    for dir in $dirlist
-    do
-        if [ $( echo "$version < $dir" | bc ) = 1 ]; then
-            version=$dir
-        fi
-    done
+        version="0.0"
+        for dir in $dirlist
+        do
+            if [ $( echo "$version < $dir" | bc ) = 1 ]; then
+                version=$dir
+            fi
+        done
 
-    pgpath="/usr/lib/postgresql/"$version/bin/
+        pgpath="/usr/lib/postgresql/"$version/bin/
+    fi
 
-fi
-if [ x$lflvr = "xdarwin" ]
+elif [ x$lflvr = "xdarwin" ]
 then
     # Mac needs a fullpath much like Ubuntu above
     # First, see if pg_ctl is found in the PATH
-    whichout=`which pg_ctl`
+    whichout=$(which pg_ctl)
     if [ $? -eq 0 ]
     then
         # "which" found a path, use the directory portion with "/" added
-         pgpath=`dirname $whichout`/
+         pgpath=$(dirname $whichout)/
     else
-        dirlist=`ls -1 /Library/PostgreSQL`
+        dirlist=$(ls -1 /Library/PostgreSQL)
         version="0.0"
         for dir in $dirlist
         do
@@ -84,8 +89,7 @@ then
         done
         pgpath="/Library/PostgreSQL/"$version/bin/
     fi
-fi
-if [ x$lflvr = "xrhat" ]
+elif [ x$lflvr = "xrhat" ]
 then
     # Redhat does not seem to need a path to find the cmds
     pgpath=""
@@ -103,7 +107,7 @@ case "$1" in
         then
            exit 0
         fi
-        echo "Using postgres path: $pgpath"
+        # echo "Using postgres path: $pgpath"
         # Ubuntu needs to have a writable directory "/var/run/postgresql"
         # or it fails to start the server.
         if [ x$lflvr = "xdebian" ]
@@ -119,7 +123,7 @@ case "$1" in
         then
              if [ "x$login_user" != "x$vnmradm" ]
              then
-                 echo "starting postmaster, owner=$vnmradm"
+                 # echo "starting postmaster, owner=$vnmradm"
                  if [ -f "$vnmrsystem/pgsql/data/postmaster.pid" ]
                  then
                     rm -f "$vnmrsystem/pgsql/data/postmaster.pid"
@@ -128,7 +132,7 @@ case "$1" in
                      su "$vnmradm" -c $pgpath"pg_ctl start -l $vnmrsystem/pgsql/pgsql.log -D /vnmr/pgsql/data -o '-k /tmp -N 20 -B 45 -i -c sort_mem=100000'"
                  fi
                  if [ x$lflvr = "xdarwin" ]; then
-                     echo Executing: sudo -u "$vnmradm" -i $pgpath"pg_ctl start -l $vnmrsystem/pgsql/pgsql.log -D $vnmrsystem/pgsql/data"
+                     # echo Executing: sudo -u "$vnmradm" -i $pgpath"pg_ctl start -l $vnmrsystem/pgsql/pgsql.log -D $vnmrsystem/pgsql/data"
                      sudo -u "$vnmradm" -i $pgpath"pg_ctl start -l $vnmrsystem/pgsql/pgsql.log -D $vnmrsystem/pgsql/data"
                      # If this script is allowed to complete and terminate, launchd
                      # will teminate the postgres server.  Keep this script alive.
@@ -140,7 +144,7 @@ case "$1" in
                      sudo -u "$vnmradm" -i ${pgpath}pg_ctl start -l "$vnmrsystem"/pgsql/pgsql.log -o '-k /tmp -N 20 -B 45 -i -c sort_mem=100000'
                  fi
              else
-                 echo must have been login user
+                 # echo must have been login user
                  $pgpath"pg_ctl" start -l "$vnmrsystem/pgsql/pgsql.log"  -o "-k /tmp -N 20 -B 45 -i -c sort_mem=100000"
              fi
         fi
@@ -149,23 +153,19 @@ case "$1" in
 'stop')
         if [ "x$login_user" != "x$vnmradm" ]
         then
-            echo "switching user to database owner=$vnmradm"
+            # echo "switching user to database owner=$vnmradm"
             if [ x$lflvr = "xdebian" ]; then
                sudo -u "$vnmradm" -i $pgpath"pg_ctl" stop -m fast
-            fi
-            if [ x$lflvr = "xrhat" ]; then
+            elif [ x$lflvr = "xrhat" ]; then
                su "$vnmradm" -c "$vnmrsystem/bin/S99pgsql stop"
-            fi
-            if [ x$lflvr = "xdarwin" ]; then
+            elif [ x$lflvr = "xdarwin" ]; then
                sudo -u "$vnmradm" -c "$vnmrsystem/bin/S99pgsql stop"       
             fi
         else
             if [ -f "$vnmrsystem/pgsql/data/postmaster.pid" ]
             then
-                echo "killing postmaster"
+                # echo "killing postmaster"
                 $pgpath"pg_ctl" stop -m fast
-            else
-                echo "postmaster already killed"
             fi
         fi
         ;;
