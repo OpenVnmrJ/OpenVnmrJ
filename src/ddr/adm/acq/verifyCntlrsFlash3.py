@@ -594,6 +594,7 @@ class rshCmd:
 
         # self.t.stop()   # stop progress bar if not already completed
         # self.t.join()   # wait for thread to terminate
+
         logger.debug(outputlinelist)
 
         # confirm successful copy

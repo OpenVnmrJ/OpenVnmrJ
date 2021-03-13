@@ -371,9 +371,9 @@ setupServices() {
       sudo update-inetd --enable shell
 
       ## remove incorrect tftp entry
-      sudo update-inetd  --remove tftp
+      # sudo update-inetd  --remove tftp
       ## add corrected entry for tftp
-      sudo update-inetd --add 'tftp\t\tdgram\tudp\twait\tnobody\t/usr/sbin/tcpd\t/usr/sbin/in.tftpd -s /tftpboot'
+      # sudo update-inetd --add 'tftp\t\tdgram\tudp\twait\tnobody\t/usr/sbin/tcpd\t/usr/sbin/in.tftpd -s /tftpboot'
 
       ## enable time for rdate of console
       ## sudo update-inetd --comment-chars '#' --enable time
@@ -382,6 +382,8 @@ setupServices() {
       # add the time entry into the inetd.conf file
       sudo update-inetd --add  'time\t\tstream\ttcp\tnowait\troot\tinternal'
       # using update-inetd  insures the inetd daemon re-reads the inetd.conf file
+      update-inetd --enable tftpd-hpa
+      systemctl start tftpd-hpa.service
 
       # for Ubuntu we have to modify the /etc/pam.d/rsh file
       # add: auth    required        pam_permit.so
@@ -390,7 +392,7 @@ setupServices() {
       # otherwise the hosts.equiv does not work with VxWorks rsh
       if [ -r /etc/init.d/openbsd-inetd ] ; then
          modEtcPamdRsh
-         sudo /etc/init.d/openbsd-inetd reload
+         sudo /etc/init.d/openbsd-inetd reload > /dev/null
       fi
 
    else  # RHEL CentOS xinetd config
