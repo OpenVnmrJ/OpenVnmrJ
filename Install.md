@@ -1,16 +1,18 @@
 
-OpenVnmrJ Version 2 Installation or Upgrade
+OpenVnmrJ Version 2.1 Installation or Upgrade
 
 For upgrade information, see the end of this document.
 
 OpenVnmrJ Version 2 has been installed on RedHat/CentOS systems running
-versions 6.8, 6.9, and 6.10, and versions 7.5, 7.6, 7.7, 8.1, and 8.2.
+versions 6.8, 6.9, 6.10, 7.5, 7.6, 7.7, 8.1, 8.2, and 8.3.
 It has also been installed on Ubuntu Version 14, 16, 18, and 20 systems.
 The MacOS version of OpenVnmrJ has been installed on versions Yosemite (10.10)
-to Catalina (10.15). Installation on RHEL/CentOS systems can be used to
-run a spectrometer. Installation on Ubuntu systems may function as a
-spectrometer, but this has not been verified.  The MacOS version is for
-data-processing only.
+to Catalina (10.15). Installation on RHEL/CentOS and Ubuntu 20 systems
+can be used to run a spectrometer. (Note, support for Ubuntu 20 as an
+acquisition system will be available in the release after version 2.1.
+If use build a release yourself, as described in the README.md file in
+the ovjTools repository, then the resulting dvdimage will support Ubuntu 20.)
+The MacOS version is for data-processing only.
 
 To install on CentOS 6.x systems, we recommend using the CentOS KickStart
 DVD available from Agilent, available from
@@ -26,7 +28,7 @@ from https://ubuntu.com/download/desktop
 If earlier versions of OS, for example, CentOS_6.9, Centos_7.6, or
 Ubuntu_16, were chosen, then the system, if connected to network, will
 prompt for OS updates at a later stage.  It is up to the user and/or
-user's organization policies to opt for OS updates or not.
+their organization policies to opt for OS updates or not.
 
 A typical CentOS 7.x or 8.x installation may involve selecting, in the
 "SOFTWARE SELECTION" options, the GNOME Desktop as the base environment
@@ -44,7 +46,7 @@ few more configuration items, it is ready for installation of OpenVnmrJ.
 The OpenVnmrJ installer may be downloaded from
   https://github.com/OpenVnmrJ/OpenVnmrJ/releases
 Move the zip file to /tmp and unzip it.  If you are logged in
-as root, do not try to install it from root's home directory (/root). It will
+as root, do not try to install it from the root home directory (/root). It will
 not work. First unzip the file and cd into dvdimageOVJ (or dvdimageOVJMI).
 If you are using CentOS 8, some modifications to the currently released
 OpenVnmrJ 2.1 are required. Download the ver81.zip file from the github
@@ -172,8 +174,11 @@ Upgrading an existing OpenVnmrJ installation.
 =============================================
 
 With releases of OpenVnmrJ newer than OpenVnmrJ 2.1A, an upgrade.nmr script
-is also available in the dvdimage directory. Running ./load.nmr will
-install the new release as described above. If one instead runs
+is also available in the dvdimage directory. If use build a release yourself,
+as described in the README.md file in the ovjTools repository, then it will
+also have the upgrade.nmr script.  Running
+  ./load.nmr
+will install the new release as described above. If one instead runs
   ./upgrade.nmr
 then OpenVnmrJ will be upgraded in place. That is, a new directory to hold
 the release will not be created. The current system and user configuration
