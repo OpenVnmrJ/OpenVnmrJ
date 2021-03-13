@@ -440,7 +440,6 @@ class rshCmd:
            pass
 
     def sendCmd(self,cmd,cmdtimeout=10):
-        # print(str(cmd))
         self.trap.enable() # prevent Cntlr-C from interrupting rsh commands
         self.child.sendline(cmd);
         # self.child.expect('.*> ',timeout=cmdtimeout)
@@ -458,9 +457,6 @@ class rshCmd:
            linelist=[]
 
         self.trap.disable()    # disable the Cntlr-C trap
-        #print('print the linelist')
-        #print(linelist)
-        #print('done with the linelist')
         return linelist
 
     @property
@@ -598,7 +594,7 @@ class rshCmd:
 
         # self.t.stop()   # stop progress bar if not already completed
         # self.t.join()   # wait for thread to terminate
-        #logger.debug(outputlinelist)
+        logger.debug(outputlinelist)
 
         # confirm successful copy
         # found = outputlinelist[2].find('Successful')
@@ -1067,6 +1063,7 @@ def main():
        logger.info("\r\nRebooting Controllers")
        cntlrRsh = rshCmd("master1")
        cntlrRsh.reboot()    # reboot controller ?
+
     if ( len(list(nddstypedic.keys())) > 1):
        logger.info(" ")
        logger.info("W A R N I N G !, Incompatible NDDS Versions detected.")

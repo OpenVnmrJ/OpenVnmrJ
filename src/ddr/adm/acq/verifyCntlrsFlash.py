@@ -470,7 +470,7 @@ class rshCmd:
         """
          Obtain the Unique PPC ID
         """
-        outputlinelist = self.sendCmd('get405ECID');
+        outputlinelist = self.sendCmd('get405ECID')
         logger.debug(outputlinelist)
         index = first_substring(outputlinelist, 'value =')
         # print outputlinelist
@@ -587,13 +587,15 @@ class rshCmd:
 
         #if self.isFileOnCntlr(file) == False:
         #   time2write / 2.0
-        self.t = ProgressThread(time2write)
-        self.t.start() #  Progress Bar in action while we wait on command to finish 
+        if ( options.verboseflag == True ):
+            self.t = ProgressThread(time2write)
+            self.t.start() #  Progress Bar in action while we wait on command to finish 
 
         outputlinelist = self.sendCmd('cp2ffw "' + file + '"',cmdtimeout);
 
-        self.t.stop()   # stop progress bar if not already completed
-        self.t.join()   # wait for thread to terminate
+        if ( options.verboseflag == True ):
+            self.t.stop()   # stop progress bar if not already completed
+            self.t.join()   # wait for thread to terminate
         logger.debug(outputlinelist)
 
         # confirm successful copy
@@ -607,13 +609,16 @@ class rshCmd:
         return status
 
     def reboot(self):
-        outputlinelist = self.sendCmd('reboot', 3);
+        outputlinelist = self.sendCmd('reboot 1', 3);
 
     def dir(self):
         outputlinelist = self.sendCmd('ffdir');
         logger.debug(outputlinelist)
         # parse list into a dictionary key filename, tuple bytes,md5
-        sys.stdout.write("\r\nObtaining Directory Info: ")
+        if ( options.verboseflag == True ):
+           sys.stdout.write("\r\nObtaining Directory Info: ")
+        else:
+           sys.stdout.write("    Obtaining Directory Info: ")
         sys.stdout.flush()
         for lval in outputlinelist[1:-6]:
            # print "lval: " + lval
@@ -825,6 +830,7 @@ def md5DownloadList():
 #
 def main():
     hostname = []
+    reboot=0
     #
     # Obatin the ist of possible VNMRS Digital Controllers in this syste,
     #
@@ -887,11 +893,14 @@ def main():
        #print fpgaInfo
        #os._exit(1)
        
-       logger.info(' ')
-       logger.info('------------------------------------------------------------------ ')
-       logger.info('------------------------------------------------------------------ ')
-       logger.info(' ')
-       logger.info('Digital Controller: %s, Unique ID: %s,    NDDS Ver: %s' %(cntlr,cpuId, nddstype))
+       if ( options.verboseflag == True ):
+          logger.info(' ')
+          logger.info('------------------------------------------------------------------ ')
+          logger.info('------------------------------------------------------------------ ')
+          logger.info(' ')
+          logger.info('Digital Controller: %s, Unique ID: %s,    NDDS Ver: %s' %(cntlr,cpuId, nddstype))
+       else:
+          logger.info('Controller %d of %d (%s)' %(activelist.index(cntlr)+1,len(activelist),cntlr))
 
        icatPresent = False
        if ( 'rf' in cntlr ):
@@ -914,38 +923,41 @@ def main():
        dirlist = cntlrRsh.dir()
        # logger.info('\r\n'.join(dirlist[1:-2]))
 
-       if ( icatPresent ):
-          logger.info(" ")
-          logger.info("     iCAT RF attached to this RF Controller,  iCAT DNA: %s" % icatDNA)
-          logger.info(" ")
-          logger.info(" ")
-          logger.info("      " + isflist[0])
-          for line in isflist[1:-2]:
+       if ( options.verboseflag == True ):
+          if ( icatPresent ):
+             logger.info(" ")
+             logger.info("     iCAT RF attached to this RF Controller,  iCAT DNA: %s" % icatDNA)
+             logger.info(" ")
+             logger.info(" ")
+             logger.info("      " + isflist[0])
+             for line in isflist[1:-2]:
                 ( file, size , md5 ) = line.split('\t',2)
                 logger.info("%25s  %20s    %24s" %(file.strip('\t '),size.strip('\t '),md5.strip('\t ')))
-          logger.info("      " + isflist[-1])
-          logger.info(' ')
-          logger.info(' ')
+             logger.info("      " + isflist[-1])
+             logger.info(' ')
+             logger.info(' ')
   
        #
        # print directory listing
        #
        ( nfiles, fsize, tsize ) = cntlrRsh.getNumberUsedAndFreeSpace()
-       logger.info(" ")
-       logger.info("Controller Directory listing: %11s  %20s,   %20s" % (nfiles, fsize, tsize))
-       logger.info(" ")
-       for file, ( size, ffmd5) in cntlrRsh.dirdic.items():
-         logger.info("%25s  %15s    md5: %24s" %(file,size,ffmd5))
-       logger.info(' ')
-       logger.info(' ')
+       if ( options.verboseflag == True ):
+          logger.info(" ")
+          logger.info("Controller Directory listing: %11s  %20s,   %20s" % (nfiles, fsize, tsize))
+          logger.info(" ")
+          for file, ( size, ffmd5) in cntlrRsh.dirdic.items():
+            logger.info("%25s  %15s    md5: %24s" %(file,size,ffmd5))
+          logger.info(' ')
+          logger.info(' ')
 
        
        notfoundlist = [ ]
        notfoundlist = cntlrRsh.isFileOnHost(md5sums.keys())
        notfoundlist.remove('boot.ini')   # remove the Visionware bootloader ini file, it's always present
-       if ( len(notfoundlist) > 0 ):
-          logger.info("Non-Release files found on Controller: %s" % ', '.join(notfoundlist))
-          logger.info(' ')
+       if ( options.verboseflag == True ):
+          if ( len(notfoundlist) > 0 ):
+             logger.info("Non-Release files found on Controller: %s" % ', '.join(notfoundlist))
+             logger.info(' ')
 
        #
        # compare md5s if mismatch then download files from host to controller's flash
@@ -956,31 +968,44 @@ def main():
            logger.debug('Cntlr: %s, file: %s,  md5: %s' % (cntlr,file,md5))
            result = cntlrRsh.cmpmd5(file,md5)
            if (result == False):
-              files2update.append(file)
+              if ( 'rf' not in cntlr ):
+                  if ( 'icat' not in file ):
+                     files2update.append(file)
+                  else:
+                     if ( options.verboseflag == True ):
+                        logger.info('    skipping file %s' % file)
+              else:
+                 files2update.append(file)
            else:
               filesup2date.append(file)
               #logger.info('File: ' + file + ' is up to date')
 
-       if ( len(filesup2date) > 0):
-          logger.info('Files Not Requiring Updating: ')
-          logger.info(" ")
-          for file  in filesup2date:
-              logger.info("%30s" % (file))
-       else:
-          logger.info('Files Not Requiring Updating:   None')
-          logger.info(" ")
+       if ( options.verboseflag == True ):
+          if ( len(filesup2date) > 0):
+             logger.info('Files Not Requiring Updating: ')
+             logger.info(" ")
+             for file  in filesup2date:
+                 logger.info("%30s" % (file))
+          else:
+             logger.info('Files Not Requiring Updating:   None')
+             logger.info(" ")
       
 
-       if ( len(files2update) > 0):
-          logger.info(" ")
-          logger.info('Files Requiring Updating: ')
-          logger.info(" ")
-          for file  in files2update:
-              logger.info("%30s" % (file))
+          if ( len(files2update) > 0):
+             logger.info(" ")
+             logger.info('Files Requiring Updating: ')
+             logger.info(" ")
+             for file  in files2update:
+                 logger.info("%30s" % (file))
+          else:
+             logger.info(" ")
+             logger.info('Files Requiring Updating:   None')
+             logger.info(" ")
        else:
-          logger.info(" ")
-          logger.info('Files Requiring Updating:   None')
-          logger.info(" ")
+          if ( len(files2update) == 1):
+             logger.info("    %d file requires updating" % len(files2update))
+          else:
+             logger.info("    %d files require updating" % len(files2update))
 
        # only ask to update if there are files to update
        if ( (len(files2update) > 0) and (options.noupdateflag == False) ):
@@ -1012,7 +1037,10 @@ def main():
           for file in files2update:
               filepath = os.path.join(options.dwnldpath,file)
               logger.debug("download host file: " + filepath)
-              logger.info("\r\nUpdate: " + file)
+              if ( options.verboseflag == True ):
+                 logger.info("\r\nUpdate: " + file)
+              else:
+                 logger.info('    Update file %d of %d' %(files2update.index(file)+1,len(files2update)))
               (filesize,md5s) = md5sums[file]
               result = cntlrRsh.copy2cntlr(filepath,filesize)
               if ( result == False ):
@@ -1030,9 +1058,12 @@ def main():
 
 
           if ( failures == False):
-              logger.info("\r\nRebooting Controller: " + cntlr)
-              cntlrRsh.reboot()    # reboot controller ?
-           # Or wait till complete and reboot entire console  reboot 1 to master1
+              reboot=1
+
+    if ( reboot == 1):
+       logger.info("\r\nRebooting Controllers")
+       cntlrRsh = rshCmd("master1")
+       cntlrRsh.reboot()    # reboot controller ?
 
     if ( len(nddstypedic.keys()) > 1):
        logger.info(" ")
@@ -1091,6 +1122,9 @@ if __name__ == "__main__":
     parser.add_option("-n", "--noupdates",
                   action="store_true", dest="noupdateflag", default=False,
                   help="Do not update flash file and do not ask to update files. Useful if you want just a log of the present state of the controllers.")
+    parser.add_option("-v", "--verbose",
+                  action="store_true", dest="verboseflag", default=False,
+                  help="Verbose output as in previous versions")
 
 
 
