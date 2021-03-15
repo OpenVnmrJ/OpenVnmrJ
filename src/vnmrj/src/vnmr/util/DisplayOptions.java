@@ -1056,7 +1056,7 @@ public class DisplayOptions extends ModelessDialog
     	return laf;
     }
     public static void setLAFParam(){
-        String str = "exists('LAF','parameter','global'):$e if $e<0.5 then create('LAF','string','global') endif LAF='"+LAF+"'";
+        String str = "create('LAF','string','global','') LAF='"+LAF+"'";
         //String str = "LAF='"+LAF+"'";
         DisplayOptions d=Util.getDisplayOptions();
         setDebug("setLAF:"+str);

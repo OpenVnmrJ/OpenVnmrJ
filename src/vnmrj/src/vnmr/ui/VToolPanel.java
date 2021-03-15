@@ -823,7 +823,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
 
         if (bCreateExpParam) {
             bCreateExpParam = false;
-            s = "exists('"+expParamName+"','parameter','global'):$e if($e=0) then create('"+expParamName+"','string','global') endif\n";
+            s = "create('"+expParamName+"','string','global','')\n";
             Util.sendToVnmr(s);
         }
 
