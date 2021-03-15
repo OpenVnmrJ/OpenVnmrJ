@@ -67,7 +67,7 @@ public class ContextMenu  {
         // Create the contextmenuarg as a global parameter if it does not
         // already exist.  It has to be global in case the menu cmd using
         // it is being run in a different viewport.
-        Util.sendToVnmr("exists('contextmenuarg','parameter','global'):$e if($e=0) then create('contextmenuarg','string','global') endif");
+        Util.sendToVnmr("create('contextmenuarg','string','global','')");
 
         // Put the arg in vnmr variables contextmenuarg
         Util.sendToVnmr("contextmenuarg=" + arg );
