@@ -1976,7 +1976,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       Werrprintf("%s: at least two arguments must be provided",argv[0]);
       ABORT;
    }
-   fromStr = (  ! strcmp(argv[0],"appendstr"));
+   fromStr = (  ! strcmp(argv[0],"appendstr") || ! strcmp(argv[0],"copystr") );
    if ( !fromStr &&  ! strcmp(argv[1],argv[argc-1]) )
    {
       Werrprintf("%s: cannot append to the same file as the source file",argv[0]);
@@ -2015,7 +2015,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    if ( strcmp(argv[argc-1],"|wc") && strcmp(argv[argc-1],"| wc") &&
         (wordCount == -1) )
    {
-      outFile = fopen(argv[argc-1],"a");
+      if ( !strncmp(argv[0], "app", 3) ) 
+         outFile = fopen(argv[argc-1],"a");
+      else
+         outFile = fopen(argv[argc-1],"w");
       if (outFile == NULL)
       {
          if (retc)
@@ -2308,6 +2311,15 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                     break;
                   }
                }
+               else if ( !strcmp(argv[index],"grep -i") )
+               {
+                  res=strncasecmp(inLine,&argv[index+1][1], len);
+                  if (res)
+                  {
+                    lineOK = 0;
+                    break;
+                  }
+               }
             }
             else
             {
@@ -2375,6 +2387,28 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                      }
                      if (ptr != NULL)
                         lineOK = 0;
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -i") )
+               {
+                  char needle[APPENDLINE];
+                  char haystack[APPENDLINE];
+                  char *tptr, *fptr;
+
+                  fptr=inLine;
+                  tptr=haystack;
+                  while ( *fptr )
+                     *tptr++ = (isupper( *fptr )) ? *fptr++ + 'a' - 'A' : *fptr++;
+                  *tptr = '\0';
+                  fptr=argv[index+1];
+                  tptr=needle;
+                  while ( *fptr )
+                     *tptr++ = (isupper( *fptr )) ? *fptr++ + 'a' - 'A' : *fptr++;
+                  *tptr = '\0';
+                  if ( ! strstr(haystack,needle) )
+                  {
+                     lineOK = 0;
+                     break;
                   }
                }
             }
