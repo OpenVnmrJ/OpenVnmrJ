@@ -2029,6 +2029,11 @@ int getvalue(int argc, char *argv[], int retc, char *retv[])
        }
        else
        {
+          if (retc>1)
+          {
+             retv[1] = intString( 0 );
+             RETURN;
+          }
           Werrprintf("%s: variable \"%s\" doesn't exist",argv[0],argv[1]);
           ABORT;
        }
@@ -2046,6 +2051,11 @@ int getvalue(int argc, char *argv[], int retc, char *retv[])
 
        if (P_getstring(getTreeIndex(tree),argv[1],tmp,index,1023))
        {
+          if (retc>1)
+          {
+             retv[1] = intString( 0 );
+             RETURN;
+          }
       	  Werrprintf("%s: index %d of variable \"%s\" doesn't exist",
                       argv[0],index,argv[1]);
 	  ABORT;
@@ -2056,6 +2066,8 @@ int getvalue(int argc, char *argv[], int retc, char *retv[])
           Winfoprintf("%s[%d] set to %s",argv[1],index,tmp);
        else
           Winfoprintf("%s set to %s",argv[1],tmp);
+       if (retc>1)
+          retv[1] = intString( 1 );
     }
     else
     {
@@ -2063,6 +2075,11 @@ int getvalue(int argc, char *argv[], int retc, char *retv[])
 
        if (P_getreal(getTreeIndex(tree),argv[1],&val,index))
        {
+          if (retc>1)
+          {
+             retv[1] = intString( 0 );
+             RETURN;
+          }
       	  Werrprintf("%s: index %d of variable \"%s\" doesn't exist",
                       argv[0],index,argv[1]);
 	  ABORT;
@@ -2073,6 +2090,8 @@ int getvalue(int argc, char *argv[], int retc, char *retv[])
           Winfoprintf("%s[%d] set to %g",argv[1],index,val);
        else
           Winfoprintf("%s set to %g",argv[1],val);
+       if (retc>1)
+          retv[1] = intString( 1 );
     }
     RETURN;
 }
