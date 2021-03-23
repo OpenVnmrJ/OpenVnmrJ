@@ -975,6 +975,8 @@ int f_read(int argc, char *argv[], int retc, char *retv[])
     int  groupIndex = -1;
     char *tree;
     int   tIndex;
+    int ret;
+    struct stat buf;
 
    (void) retc;
    (void) retv;
@@ -1040,8 +1042,46 @@ int f_read(int argc, char *argv[], int retc, char *retv[])
     {	Werrprintf("fread:  Bad filename");
 	ABORT;
     }
-    if ( (stream = fopen(argv[1],"r")) )
-    {	int ret __attribute__((unused));
+    stream = NULL;
+    ret = stat(argv[1], &buf);
+    // argv points to parameter file
+    if ((ret==0) && !S_ISDIR(buf.st_mode) )
+    {
+       stream = fopen(argv[1],"r");
+    }
+    else
+    {
+       char path[2*MAXPATH];
+       strcpy(path,argv[1]);
+       // argv points to a directory. Check for procpar
+       if (ret == 0)
+       {
+          strcat(path,"/procpar");
+          stream = fopen(path,"r");
+       }
+       // see if .fid or .par directories exist
+       else
+       {
+          strcat(path,".fid");
+          if ( ! access(path, R_OK))
+          {
+             strcat(path,"/procpar");
+             stream = fopen(path,"r");
+          }
+          else
+          {
+             strcpy(path,argv[1]);
+             strcat(path,".par");
+             if ( ! access(path, R_OK))
+             {
+                strcat(path,"/procpar");
+                stream = fopen(path,"r");
+             }
+          }
+       }
+    }
+    if ( stream )
+    {
         char saveOperator[MAXSTR] = "";
 
 
@@ -4176,6 +4216,8 @@ int setNameValuePair(char *paramName, char *name, char *value)
 
 int setvalue4name(int argc, char *argv[], int retc, char *retv[])
 {
+    (void) retc;
+    (void) retv;
     if(argc < 4 || argc > 4)
     {
       Werrprintf("Usage -- %s(paramName,valName,value)",argv[0]);
