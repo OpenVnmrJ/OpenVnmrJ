@@ -23,9 +23,10 @@ if [[ $ostype != "Darwin" ]]; then
    exit 1
 fi
 
-osver=$(sw_vers -productVersion | tr "." " " | awk '{print $2}')
+osVer=$(sw_vers -productVersion | tr "." " " | awk '{print $1}')
+osSubVer=$(sw_vers -productVersion | tr "." " " | awk '{print $2}')
 
-if [[ $osver -lt 15 ]]; then
+if ! [[ $osVer -gt 10 ]] && ! [[ $osSubVer -ge 15 ]]; then
    echo "$0: only required for MacOS Catalina (10.15) systems or newer"
    exit 1
 fi
