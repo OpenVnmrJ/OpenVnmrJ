@@ -1,553 +1,513 @@
 "macro checkprotune"
 IF ($1 = 'init') THEN
-   $protune='no'
-   checkprotune('global'):$protune
-   if ($protune='yes') then
-        checkprotune('write','lasttunepar')
-   endif
-   return
+  $protune='no'
+  checkprotune('global'):$protune
+  if ($protune='yes') then
+    checkprotune('write','lasttunepar')
+  endif
+  return
 ENDIF
 
 IF ($1 = 'write') THEN
-    $plist=''
-    module('list','protunelist'):$plist
-	if ($2='lasttunepar') then
-	    $tn=tn $dn=dn $curtn=tn $curdn=dn
-	    $hfmode=''
-	    exists('hfmode','parameter'):$parex
-	    if $parex then
-		   $hfmode=hfmode
-	    endif
-	    $lasthfmode=$hfmode
-	    if (numrfch>2) then $dn2=dn2 $curdn2=dn2 endif
-	    if (numrfch>3) then $dn3=dn3 $curdn3=dn3 endif
-	    if (numrfch>4) then $dn4=dn4 $curdn4=dn4 endif
-	    exists('/vnmr/acqqueue/'+$2,'file'):$fileex
-	    fread('','usertree')
-	    if ($fileex) then
-		   if (tn='') then rtv('/vnmr/acqqueue/'+$2,'noabort','tn'):$tn endif
-           if (dn='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn'):$dn endif
-           if (numrfch>2) then 
-		       if (dn2='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn2'):$dn2 endif
-		   endif
-           if (numrfch>3) then
-              if (dn3='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn3'):$dn3 endif
-           endif
-           if (numrfch>4) then
-              if (dn4='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn4'):$dn4 endif
-           endif
-		   if ($hfmode='') then rtv('/vnmr/acqqueue/'+$2,'noabort','hfmode'):$lasthfmode endif
-		   fread('/vnmr/acqqueue/'+$2,'usertree')
-	    endif
-	endif
-    write('reset','/vnmr/acqqueue/'+$2)
-    $nexttune='/vnmr/acqqueue/nexttunenuc'
-    exists($nexttune,'file'):$oldnuc
-    if ($oldnuc=1) and ($2='lasttunepar') then
-          lookup('mfile',$nexttune,'readline'):$nucs
-          $tn='' $dn='' $dn2='' $dn3='' $dn4=''
-          substr($nucs,1,'delimiter',','):$tn
-          substr($nucs,2,'delimiter',','):$dn
-          substr($nucs,3,'delimiter',','):$dn2
-          substr($nucs,4,'delimiter',','):$dn3
-          substr($nucs,5,'delimiter',','):$dn4
-          delete($nexttune,''):$x
+  $plist=''
+  module('list','protunelist'):$plist
+  if ($2='lasttunepar') then
+    $tn=tn $dn=dn $curtn=tn $curdn=dn
+    $hfmode=''
+    exists('hfmode','parameter'):$parex
+    if $parex then
+      $hfmode=hfmode
     endif
-    if ($plist<>'') then
-           if ($oldnuc=1) and ($2='lasttunepar') then
-              $newstr=''
-              substr($plist,'find','tn'):$num,$index,$len,$newstr
-              $plist=$newstr
-              substr($plist,'find','dn'):$num,$index,$len,$newstr
-              $plist=$newstr
-              substr($plist,'find','dn2'):$num,$index,$len,$newstr
-              $plist=$newstr
-              substr($plist,'find','dn3'):$num,$index,$len,$newstr
-              $plist=$newstr
-              substr($plist,'find','dn4'):$num,$index,$len,$newstr
-              $plist=$newstr
-            endif
-            writeparam('/vnmr/acqqueue/'+$2,$plist,'global')
-            writeparam('/vnmr/acqqueue/'+$2,$plist,'current','add')
+    $lasthfmode=$hfmode
+    if (numrfch>2) then $dn2=dn2 $curdn2=dn2 endif
+    if (numrfch>3) then $dn3=dn3 $curdn3=dn3 endif
+    if (numrfch>4) then $dn4=dn4 $curdn4=dn4 endif
+    exists('/vnmr/acqqueue/'+$2,'file'):$fileex
+    fread('','usertree')
+    if ($fileex) then
+      if (tn='') then rtv('/vnmr/acqqueue/'+$2,'noabort','tn'):$tn endif
+      if (dn='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn'):$dn endif
+      if (numrfch>2) then 
+        if (dn2='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn2'):$dn2 endif
+      endif
+      if (numrfch>3) then
+        if (dn3='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn3'):$dn3 endif
+      endif
+      if (numrfch>4) then
+        if (dn4='') then rtv('/vnmr/acqqueue/'+$2,'noabort','dn4'):$dn4 endif
+      endif
+      if ($hfmode='') then
+        rtv('/vnmr/acqqueue/'+$2,'noabort','hfmode'):$lasthfmode
+      endif
+      fread('/vnmr/acqqueue/'+$2,'usertree')
     endif
+  endif
+  write('reset','/vnmr/acqqueue/'+$2)
+  $nexttune='/vnmr/acqqueue/nexttunenuc'
+  exists($nexttune,'file'):$oldnuc
+  if ($oldnuc=1) and ($2='lasttunepar') then
+    lookup('mfile',$nexttune,'readline'):$nucs
+    $tn='' $dn='' $dn2='' $dn3='' $dn4=''
+    substr($nucs,1,'delimiter',','):$tn
+    substr($nucs,2,'delimiter',','):$dn
+    substr($nucs,3,'delimiter',','):$dn2
+    substr($nucs,4,'delimiter',','):$dn3
+    substr($nucs,5,'delimiter',','):$dn4
+    delete($nexttune,''):$x
+  endif
+  if ($plist<>'') then
     if ($oldnuc=1) and ($2='lasttunepar') then
-           exists('tn','parameter'):$e
-           if ($e) then
-              paramcopy('tn','tn','current','usertree')
-              setvalue('tn',$tn,1,'usertree')
-              writeparam('/vnmr/acqqueue/'+$2,'tn','usertree','add')
-           endif
-           exists('dn','parameter'):$e
-           if ($e) then
-              paramcopy('dn','dn','current','usertree')
-              setvalue('dn',$dn,1,'usertree')
-              writeparam('/vnmr/acqqueue/'+$2,'dn','usertree','add')
-           endif
-           if (numrfch>2) then
-              exists('dn2','parameter'):$e
-              if ($e) then
-                 paramcopy('dn2','dn2','current','usertree')
-                 setvalue('dn2',$dn2,1,'usertree')
-                 writeparam('/vnmr/acqqueue/'+$2,'dn2','usertree','add')
-              endif
-           endif
-           if (numrfch>3) then
-              exists('dn3','parameter'):$e
-              if ($e) then
-                 paramcopy('dn3','dn3','current','usertree')
-                 setvalue('dn3',$dn3,1,'usertree')
-                 writeparam('/vnmr/acqqueue/'+$2,'dn3','usertree','add')
-              endif
-           endif
-           if (numrfch>4) then
-              exists('dn4','parameter'):$e
-              if ($e) then
-                 paramcopy('dn4','dn4','current','usertree')
-                 setvalue('dn4',$dn4,1,'usertree')
-                 writeparam('/vnmr/acqqueue/'+$2,'dn4','usertree','add')
-              endif
-           endif
-	       if ($lasthfmode<>'') then
-                writeparam('/vnmr/acqqueue/'+$2,'hfmode','usertree','add')
-	       endif
-	       fread('','usertree')
-	elseif ($2='lasttunepar') then
-	   if (tn='') and ($tn<>'') then
-		writeparam('/vnmr/acqqueue/'+$2,'tn','usertree','add')
-	   endif
-       if (dn='') and ($dn<>'') then
-                writeparam('/vnmr/acqqueue/'+$2,'dn','usertree','add')
-       endif
-	   if (numrfch>2) then
-	     if (dn2='') and ($dn2<>'') then
-                writeparam('/vnmr/acqqueue/'+$2,'dn2','usertree','add')
-	     endif
-	   endif
-       if (numrfch>3) then
-             if (dn3='') and ($dn3<>'') then
-                writeparam('/vnmr/acqqueue/'+$2,'dn3','usertree','add')
-             endif
-       endif
-       if (numrfch>4) then
-             if (dn4='') and ($dn4<>'') then
-                writeparam('/vnmr/acqqueue/'+$2,'dn4','usertree','add')
-             endif
-       endif
-	   if $hfmode='' and ($lasthfmode<>'') then
-                writeparam('/vnmr/acqqueue/'+$2,'hfmode','usertree','add')
-	   endif
-	   fread('','usertree')
-	endif
-    chmod('a+rw','/vnmr/acqqueue/'+$2):$dum
-    return
+      $newstr=''
+      substr($plist,'find','tn'):$num,$index,$len,$newstr
+      $plist=$newstr
+      substr($plist,'find','dn'):$num,$index,$len,$newstr
+      $plist=$newstr
+      substr($plist,'find','dn2'):$num,$index,$len,$newstr
+      $plist=$newstr
+      substr($plist,'find','dn3'):$num,$index,$len,$newstr
+      $plist=$newstr
+      substr($plist,'find','dn4'):$num,$index,$len,$newstr
+      $plist=$newstr
+    endif
+    writeparam('/vnmr/acqqueue/'+$2,$plist,'global')
+    writeparam('/vnmr/acqqueue/'+$2,$plist,'current','add')
+  endif
+  if ($oldnuc=1) and ($2='lasttunepar') then
+    exists('tn','parameter'):$e
+    if ($e) then
+      paramcopy('tn','tn','current','usertree')
+      setvalue('tn',$tn,1,'usertree')
+      writeparam('/vnmr/acqqueue/'+$2,'tn','usertree','add')
+    endif
+    exists('dn','parameter'):$e
+    if ($e) then
+      paramcopy('dn','dn','current','usertree')
+      setvalue('dn',$dn,1,'usertree')
+      writeparam('/vnmr/acqqueue/'+$2,'dn','usertree','add')
+    endif
+    if (numrfch>2) then
+      exists('dn2','parameter'):$e
+      if ($e) then
+        paramcopy('dn2','dn2','current','usertree')
+        setvalue('dn2',$dn2,1,'usertree')
+        writeparam('/vnmr/acqqueue/'+$2,'dn2','usertree','add')
+      endif
+    endif
+    if (numrfch>3) then
+      exists('dn3','parameter'):$e
+      if ($e) then
+        paramcopy('dn3','dn3','current','usertree')
+        setvalue('dn3',$dn3,1,'usertree')
+        writeparam('/vnmr/acqqueue/'+$2,'dn3','usertree','add')
+      endif
+    endif
+    if (numrfch>4) then
+      exists('dn4','parameter'):$e
+      if ($e) then
+        paramcopy('dn4','dn4','current','usertree')
+        setvalue('dn4',$dn4,1,'usertree')
+        writeparam('/vnmr/acqqueue/'+$2,'dn4','usertree','add')
+      endif
+    endif
+    if ($lasthfmode<>'') then
+      writeparam('/vnmr/acqqueue/'+$2,'hfmode','usertree','add')
+    endif
+    fread('','usertree')
+  elseif ($2='lasttunepar') then
+    if (tn='') and ($tn<>'') then
+      writeparam('/vnmr/acqqueue/'+$2,'tn','usertree','add')
+    endif
+    if (dn='') and ($dn<>'') then
+      writeparam('/vnmr/acqqueue/'+$2,'dn','usertree','add')
+    endif
+    if (numrfch>2) then
+      if (dn2='') and ($dn2<>'') then
+        writeparam('/vnmr/acqqueue/'+$2,'dn2','usertree','add')
+      endif
+    endif
+    if (numrfch>3) then
+      if (dn3='') and ($dn3<>'') then
+        writeparam('/vnmr/acqqueue/'+$2,'dn3','usertree','add')
+      endif
+    endif
+    if (numrfch>4) then
+      if (dn4='') and ($dn4<>'') then
+        writeparam('/vnmr/acqqueue/'+$2,'dn4','usertree','add')
+      endif
+    endif
+    if $hfmode='' and ($lasthfmode<>'') then
+      writeparam('/vnmr/acqqueue/'+$2,'hfmode','usertree','add')
+    endif
+    fread('','usertree')
+  endif
+  chmod('a+rw','/vnmr/acqqueue/'+$2):$dum
+  return
 ENDIF
 
 IF ($1 = 'global') THEN
+  exists('atune','parameter','systemglobal'):$atuneex
+  if ($atuneex=0) then return('no') endif
+  if (atune='n') then return('no') endif
 
-        exists('atune','parameter','systemglobal'):$atuneex
-        if ($atuneex=0) then return('no') endif
-        if (atune='n') then return('no') endif
+  // This initialization is done by setProbepars
+  //getparam('wtune','Probe'):wtune
+  //getparam('tunemethod','Probe'):tunemethod
 
-        // This initialization is done by setProbepars
-        //getparam('wtune','Probe'):wtune
-        //getparam('tunemethod','Probe'):tunemethod
+  strstr(wtune,'n'):$ret
+  if ($ret) then return('no') endif
+  if tunemethod='' then return('no') endif
 
-        strstr(wtune,'n'):$ret
-        if ($ret) then return('no') endif
-        if tunemethod='' then return('no') endif
-
-        $firstchar='' $fileex=0
-        substr(tunemethod,1,1):$firstchar
-        if ($firstchar='/') then
-                $metfile=tunemethod
-                exists($metfile,'file'):$fileex
-        else
-           $metfile=userdir+'/tune/methods/'+tunemethod
-           exists($metfile,'file'):$fileex
-           if ($fileex=0) then
-                $metfile=systemdir+'/tune/methods/'+tunemethod
-                exists($metfile,'file'):$fileex
-           endif
-        endif
-        if ($fileex=0) then
-                return('no')
-        endif
-        return('yes')
-
+  $firstchar='' $fileex=0
+  substr(tunemethod,1,1):$firstchar
+  if ($firstchar='/') then
+    $metfile=tunemethod
+    exists($metfile,'file'):$fileex
+  else
+    $metfile=userdir+'/tune/methods/'+tunemethod
+    exists($metfile,'file'):$fileex
+    if ($fileex=0) then
+      $metfile=systemdir+'/tune/methods/'+tunemethod
+      exists($metfile,'file'):$fileex
+    endif
+  endif
+  if ($fileex=0) then
+    return('no')
+  endif
+  return('yes')
 ENDIF
 
 IF ($1 = 'local') THEN
-        $dotune='no'
-        $parchanges=''
+  $dotune='no'
+  $parchanges=''
+  touch('/vnmr/acqqueue/lasttunepar'):$dum
+  chmod('a+rw','/vnmr/acqqueue/lasttunepar'):$dum
+  $oldtn='' $olddn='' $newtn=tn $newdn=dn
+  $olddn2='' $olddn3='' $olddn4=''
+  $newdn2='' $newdn3='' $newdn4=''
+  rtv('/vnmr/acqqueue/lasttunepar','noabort','tn'):$oldtn
+  rtv('/vnmr/acqqueue/lasttunepar','noabort','dn'):$olddn
+  $oldnuc=$oldtn,$olddn
+  $newnuc=$newtn,$newdn
+  if (numrfch > 2) then 
+    $newdn2=dn2 
+    rtv('/vnmr/acqqueue/lasttunepar','noabort','dn2'):$olddn2
+    $oldnuc=$oldnuc,$olddn2
+    $newnuc=$newnuc,dn2
+    if (numrfch > 3) then
+      $newdn3=dn3
+      rtv('/vnmr/acqqueue/lasttunepar','noabort','dn3'):$olddn3
+      $oldnuc=$oldnuc,$olddn3
+      $newnuc=$newnuc,dn3
+    endif
+    if (numrfch > 4) then
+      $newdn4=dn4
+      rtv('/vnmr/acqqueue/lasttunepar','noabort','dn4'):$olddn4
+      $oldnuc=$oldnuc,$olddn4
+      $newnuc=$newnuc,dn4
+    endif
+  endif
 
-        touch('/vnmr/acqqueue/lasttunepar'):$dum
-        chmod('a+rw','/vnmr/acqqueue/lasttunepar'):$dum
-
-        $oldtn='' $olddn='' $newtn=tn $newdn=dn
-        $olddn2='' $olddn3='' $olddn4=''
-        $newdn2='' $newdn3='' $newdn4=''
-        rtv('/vnmr/acqqueue/lasttunepar','noabort','tn'):$oldtn
-        rtv('/vnmr/acqqueue/lasttunepar','noabort','dn'):$olddn
-        $oldnuc=$oldtn,$olddn
-        $newnuc=$newtn,$newdn
-        if (numrfch > 2) then 
-           $newdn2=dn2 
-           rtv('/vnmr/acqqueue/lasttunepar','noabort','dn2'):$olddn2
-           $oldnuc=$oldnuc,$olddn2
-           $newnuc=$newnuc,dn2
-           if (numrfch > 3) then
-                $newdn3=dn3
-                rtv('/vnmr/acqqueue/lasttunepar','noabort','dn3'):$olddn3
-                $oldnuc=$oldnuc,$olddn3
-                $newnuc=$newnuc,dn3
-           endif
-           if (numrfch > 4) then
-                $newdn4=dn4
-                rtv('/vnmr/acqqueue/lasttunepar','noabort','dn4'):$olddn4
-                $oldnuc=$oldnuc,$olddn4
-                $newnuc=$newnuc,dn4
-           endif
+  checkprotune('write','curtunepar')
+  $difflist=''
+  shell('diffparams -list /vnmr/acqqueue/lasttunepar /vnmr/acqqueue/curtunepar'):$difflist
+  delete('/vnmr/acqqueue/curtunepar',''):$dum
+  $nexttune='/vnmr/acqqueue/nexttunenuc'
+  delete($nexttune,''):$e
+  string2array($difflist):$difflist
+  "$difflist is the difference between last tune and current tune"
+  teststr('$difflist','tn','local'):$is
+  if ($is) and (tn='') then $difflist[$is]='' endif
+  teststr('$difflist','dn','local'):$is
+  if ($is) and (dn='') then $difflist[$is]='' endif
+  if (seqfil='s2pul') then
+    strstr(dm,'y'):$ret
+    if ($ret=0) then
+      if ($is) then
+        $difflist[$is]=''
+      endif
+      $newdn=''
+      $newnuc[2]=''
+    endif
+  endif
+  if (numrfch>2) then
+    teststr('$difflist','dn2','local'):$is
+    if ($is) and (dn2='') then $difflist[$is]='' endif
+    if (seqfil='s2pul') then
+      strstr(dm2,'y'):$ret
+      if ($ret=0) then
+        if ($is) then
+          $difflist[$is]=''
         endif
-
-        checkprotune('write','curtunepar')
-        $difflist=''
-        shell('diffparams -list /vnmr/acqqueue/lasttunepar /vnmr/acqqueue/curtunepar'):$difflist
-        delete('/vnmr/acqqueue/curtunepar',''):$dum
-        $checkNuc=0
-        $nexttune='/vnmr/acqqueue/nexttunenuc'
-        delete($nexttune,''):$e
-        string2array($difflist):$difflist
-                "$difflist is the difference between last tune and current tune"
-	teststr('$difflist','tn','local'):$is
-	if ($is) and (tn='') then $difflist[$is]='' endif
-	teststr('$difflist','dn','local'):$is
-	if ($is) and (dn='') then $difflist[$is]='' endif
-	if ($is) and (seqfil='s2pul') then
-           strstr(dm,'y'):$ret
-           if ($ret=0) then
-              $difflist[$is]=''
-              $newdn=''
-              $checkNuc=1
-              $newnuc[2]=''
-           endif
+        $newdn2=''
+        $newnuc[3]=''
+      endif
+    endif
+  endif
+  if (numrfch>3) then
+    teststr('$difflist','dn3','local'):$is
+    if ($is) and (dn3='') then $difflist[$is]='' endif
+    if (seqfil='s2pul') then
+      strstr(dm3,'y'):$ret
+      if ($ret=0) then
+        if ($is) then
+          $difflist[$is]=''
         endif
-	if (numrfch>2) then
-	   teststr('$difflist','dn2','local'):$is
-	   if ($is) and (dn2='') then $difflist[$is]='' endif
-	   if ($is) and (seqfil='s2pul') then
-              strstr(dm2,'y'):$ret
-              if ($ret=0) then
-                 $difflist[$is]=''
-                 $newdn2=''
-                 $checkNuc=1
-                 $newnuc[3]=''
-              endif
-           endif
-	endif
-	if (numrfch>3) then
-	   teststr('$difflist','dn3','local'):$is
-	   if ($is) and (dn3='') then $difflist[$is]='' endif
-	   if ($is) and (seqfil='s2pul') then
-              strstr(dm3,'y'):$ret
-              if ($ret=0) then
-                 $difflist[$is]=''
-                 $newdn3=''
-                 $checkNuc=1
-                 $newnuc[4]=''
-              endif
-           endif
-	endif
-	if (numrfch>4) then
-	   teststr('$difflist','dn4','local'):$is
-	   if ($is) and (dn4='') then $difflist[$is]='' endif
-	   if ($is) and (seqfil='s2pul') then
-              strstr(dm4,'y'):$ret
-              if ($ret=0) then
-                 $difflist[$is]=''
-                 $newdn4=''
-                 $checkNuc=1
-                 $newnuc[5]=''
-              endif
-           endif
-	endif
-		"****Did hfmode change?*******"
+        $newdn3=''
+        $newnuc[4]=''
+      endif
+    endif
+  endif
+  if (numrfch>4) then
+    teststr('$difflist','dn4','local'):$is
+    if ($is) and (dn4='') then $difflist[$is]='' endif
+    if (seqfil='s2pul') then
+      strstr(dm4,'y'):$ret
+      if ($ret=0) then
+        if ($is) then
+          $difflist[$is]=''
+        endif
+        $newdn4=''
+        $newnuc[5]=''
+      endif
+    endif
+  endif
+  "****Did hfmode change?*******"
 // This is a special case
-	exists('hfmode','parameter'):$parex
-	if $parex then
-	    $oldhfmode='' rtv('/vnmr/acqqueue/lasttunepar','noabort','hfmode'):$oldhfmode
-	    if hfmode<>$oldhfmode then
-		$dotune='yes' $parchanges=$parchanges+' hfmode'
-	    endif
-	endif
-        $nucswap=1
-        $newnuctot=size('$newnuc')
-        $i=1
-        repeat
-            if ($newnuc[$i]<>'') then
-                teststr('$oldnuc',$newnuc[$i],'local'):$isin
-                if ($isin=0) then
-                   $i=$newnuctot
-                   $nucswap=0
-                endif
-            endif
-            $i=$i+1
-        until $i > $newnuctot
+  exists('hfmode','parameter'):$parex
+  if $parex then
+    $hf='' rtv('/vnmr/acqqueue/lasttunepar','noabort','hfmode'):$hf
+    if hfmode<>$hf then
+      $dotune='yes' $parchanges=$parchanges+' hfmode'
+    endif
+  endif
+  $nucswap=1
+  $newnuctot=size('$newnuc')
+  $i=1
+  repeat
+    if ($newnuc[$i]<>'') then
+      teststr('$oldnuc',$newnuc[$i],'local'):$isin
+      if ($isin=0) then
+        $i=$newnuctot
+        $nucswap=0
+      endif
+    endif
+    $i=$i+1
+  until $i > $newnuctot
 
-                "****Did the solvent change?********"
-        strstr(wtune,'v'):$ret
-        if ($ret) then
-           teststr('$difflist','solvent','local'):$isthere
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' solvent' endif
-        endif
+  "****Did the solvent change?********"
+  strstr(wtune,'v'):$ret
+  if ($ret) then
+    teststr('$difflist','solvent','local'):$isthere
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' solvent' endif
+  endif
 
-                "****Did the nucleus change?********"
-        strstr(wtune,'1'):$ret
-        if ($ret) and ($nucswap<1) then
-           teststr('$difflist','tn','local'):$isthere
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' tn' endif
-           teststr('$difflist','dn','local'):$isthere
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn' endif
-           teststr('$difflist','dn2','local'):$isthere
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn2' endif
-           teststr('$difflist','dn3','local'):$isthere
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn3' endif
-        endif
+  "****Did the nucleus change?********"
+  strstr(wtune,'1'):$ret
+  if ($ret) and ($nucswap<1) then
+    teststr('$difflist','tn','local'):$isthere
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' tn' endif
+    teststr('$difflist','dn','local'):$isthere
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn' endif
+    teststr('$difflist','dn2','local'):$isthere
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn2' endif
+    teststr('$difflist','dn3','local'):$isthere
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' dn3' endif
+  endif
 
-                "****Did the sample change?********"
-        strstr(wtune,'s'):$ret
-        if ($ret) then
-           teststr('$difflist','loc','local'):$isthere
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' loc' endif
-           teststr('$difflist','sample','local'):$isthere
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' sample' endif
-        endif
+  "****Did the sample change?********"
+  strstr(wtune,'s'):$ret
+  if ($ret) then
+    teststr('$difflist','loc','local'):$isthere
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' loc' endif
+    teststr('$difflist','sample','local'):$isthere
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' sample' endif
+  endif
 
-                "****Did the experiment change?********"
-        strstr(wtune,'e'):$ret
-        if ($ret) then $dotune='yes' $parchanges=$parchanges+' experiment' endif
+  "****Did the experiment change?********"
+  strstr(wtune,'e'):$ret
+  if ($ret) then $dotune='yes' $parchanges=$parchanges+' experiment' endif
 
-                "****Did the temp change?********"
-        strstr(wtune,'t'):$ret
-        if ($ret) then
-           teststr('$difflist','temp','local'):$isthere
-           if (vttype < 1) then
-                $isthere=0
-           else
-              vnmrinfo('get','tempExpControl'):$tempon
-              if ($tempon=0) then
-                $isthere=0
-              endif
-           endif
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' temp' endif
-        endif
+  "****Did the temp change?********"
+  strstr(wtune,'t'):$ret
+  if ($ret) then
+    teststr('$difflist','temp','local'):$isthere
+    if (vttype < 1) then
+      $isthere=0
+    else
+      vnmrinfo('get','tempExpControl'):$tempon
+      if ($tempon=0) then
+        $isthere=0
+      endif
+    endif
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' temp' endif
+  endif
 
-                "****Did the operator change?********"
-        strstr(wtune,'o'):$ret
-        if ($ret) then
-           teststr('$difflist','operator','local'):$isthere
-           if ($isthere) then $dotune='yes' $parchanges=$parchanges+' operator' endif
-        endif
-        string2array($parchanges):$parchanges
-        if ($dotune='yes' and $checkNuc=1) then
-           $ok=1
-           if ($newtn<>'') then
-              teststr('$oldnuc',$newtn,'local'):$isin
-              if ($isin=0) then
-                 $ok=0
-              endif
-           endif
-           if ($ok and $newdn<>'') then
-              teststr('$oldnuc',$newdn,'local'):$isin
-              if ($isin=0) then
-                 $ok=0
-              endif
-           endif
-           if ($ok and $newdn2<>'') then
-              teststr('$oldnuc',$newdn2,'local'):$isin
-              if ($isin=0) then
-                 $ok=0
-              endif
-           endif
-           if ($ok and $newdn3<>'') then
-              teststr('$oldnuc',$newdn3,'local'):$isin
-              if ($isin=0) then
-                 $ok=0
-              endif
-           endif
-           if ($ok and $newdn4<>'') then
-              teststr('$oldnuc',$newdn4,'local'):$isin
-              if ($isin=0) then
-                 $ok=0
-              endif
-           endif
-           if ($ok) then
-              write('file',$nexttune,'%s,%s,%s,%s,%s',
-                     $newtn,$newdn,$newdn2,$newdn3,$newdn4)
-           endif
-        endif
-//        if ($dotune='no' and $checkNuc=1) then
-//           write('file',$nexttune,'%s,%s,%s,%s,%s',
-//                  $newtn,$newdn,$newdn2,$newdn3,$newdn4)
-//        endif
-        return($dotune,$parchanges)
+  "****Did the operator change?********"
+  strstr(wtune,'o'):$ret
+  if ($ret) then
+    teststr('$difflist','operator','local'):$isthere
+    if ($isthere) then $dotune='yes' $parchanges=$parchanges+' operator' endif
+  endif
+
+  string2array($parchanges):$parchanges
+  if ($dotune='yes') then
+    if ($newdn='') then
+      write('file',$nexttune,'%s,%s,%s,%s,%s',
+                   $newtn,$newdn,$newdn2,$newdn3,$newdn4)
+    endif
+  endif
+  return($dotune,$parchanges)
 ENDIF
 
 IF ($1 = 'clearnucs') THEN
-        // Update lasttunepar file by setting 'tn', 'dn', etc. to ''
+  // Update lasttunepar file by setting 'tn', 'dn', etc. to ''
 
-        $parfile = '/vnmr/acqqueue/lasttunepar'
-        exists($parfile,'file'):$fileex
-        if ($fileex) then
-          // Get the lasttunepar parameters into usertree
-          fread($parfile,'usertree','reset')
+  $parfile = '/vnmr/acqqueue/lasttunepar'
+  exists($parfile,'file'):$fileex
+  if ($fileex) then
+    // Get the lasttunepar parameters into usertree
+    fread($parfile,'usertree','reset')
 
-          $nucnames = 'tn','dn','dn2','dn3','dn4'
-          $nnames = size('$nucnames')
+    $nucnames = 'tn','dn','dn2','dn3','dn4'
+    $nnames = size('$nucnames')
 
-          // Clear all the "nucname" parameters
-          $j = 0
-          while ($j < $nnames) do
-            $j = $j + 1
-            exists($nucnames[$j],'parameter','usertree'):$ex
-            if ($ex) then
-              setvalue($nucnames[$j], '', 'usertree')
-            endif
-          endwhile
+    // Clear all the "nucname" parameters
+    $j = 0
+    while ($j < $nnames) do
+      $j = $j + 1
+      exists($nucnames[$j],'parameter','usertree'):$ex
+      if ($ex) then
+        setvalue($nucnames[$j], '', 'usertree')
+      endif
+    endwhile
 
-          // Write out the new values
-          fsave($parfile,'usertree')
-          chmod('a+rw',$parfile):$dum
-        endif
+    // Write out the new values
+    fsave($parfile,'usertree')
+    chmod('a+rw',$parfile):$dum
+  endif
 ENDIF
 
 IF ($1 = 'updatenucs') THEN
-        // Update lasttunepar file with nuclei given in command line
+  // Update lasttunepar file with nuclei given in command line
+  $parfile = '/vnmr/acqqueue/lasttunepar'
+  exists($parfile,'file'):$fileex
+  if ($fileex) then
+    // Get the lasttunepar parameters into usertree
+    fread($parfile,'usertree','reset')
+    $nucnames = 'tn','dn','dn2','dn3','dn4'
+    $nnames = size('$nucnames')
 
-        $parfile = '/vnmr/acqqueue/lasttunepar'
-        exists($parfile,'file'):$fileex
-        if ($fileex) then
-          // Get the lasttunepar parameters into usertree
-          fread($parfile,'usertree','reset')
-
-          $nucnames = 'tn','dn','dn2','dn3','dn4'
-          $nnames = size('$nucnames')
-
-          // Get lists of high and low band nucs in lasttunepar
-          $hinucs = ''
-          $lonucs = ''
-          $j = 0
-          while ($j < $nnames) do
-            $j = $j + 1
-            exists($nucnames[$j],'parameter','usertree'):$ex
-            if ($ex) then
-              getvalue($nucnames[$j], 1, 'usertree'):$nuc
-              if ($nuc = 'H1' or $nuc = 'F19') then
-                $hinucs = $hinucs + $nuc + ' '
-              else
-                $lonucs = $lonucs + $nuc + ' '
-              endif
-            endif
-          endwhile
-          //$hinucs?
-          //$lonucs?
-
-          // Clear the list(s) that will become invalid
-          $i = 1
-          while ($i < $#) do
-            $i = $i + 1
-            $nucarg = ${$i}
-            if ($nucarg = 'H1' or $nucarg = 'F19') then
-              $hinucs = ''
-            else
-              $lonucs = ''
-              //$hinucs = ' ' // Tuning loband may detune high band
-            endif
-          endwhile
-
-          // Add the specified nucs to the hi/lo lists
-          $i = 1
-          while ($i < $#) do
-            $i = $i + 1
-            $nucarg = ${$i}
-            if ($nucarg = 'H1' or $nucarg = 'F19') then
-              $hinucs = $hinucs + $nucarg + ' '
-            else
-              $lonucs = $lonucs + $nucarg + ' '
-            endif
-          endwhile
-          //$hinucs?
-          //$lonucs?
-
-          // Save the nucs to usertree parameters
-          $j = 0 // nucname index
-
-          // Save high band nucs
-          $i = 1
-          $nuc = ''
-          substr($hinucs, $i):$nuc
-          while ($nuc <> '') do
-            $j = $j + 1
-            exists($nucnames[$j],'parameter','usertree'):$ex
-            if ($ex) then
-              setvalue($nucnames[$j], $nuc, 'usertree')
-            endif
-            $i = $i + 1
-            $nuc = ''
-            substr($hinucs, $i):$nuc
-          endwhile
-
-          // Save low band nucs
-          $i = 1
-          $nuc = ''
-          substr($lonucs, $i):$nuc
-          while ($nuc <> '') do
-            $j = $j + 1
-            exists($nucnames[$j],'parameter','usertree'):$ex
-            if ($ex) then
-              setvalue($nucnames[$j], $nuc, 'usertree')
-            endif
-            $i = $i + 1
-            $nuc = ''
-            substr($lonucs, $i):$nuc
-          endwhile
-
-          // Clear any unused nuc parameters
-          while ($j < $nnames) do
-            $j = $j + 1
-            exists($nucnames[$j],'parameter','usertree'):$ex
-            if ($ex) then
-              setvalue($nucnames[$j], '', 'usertree')
-            endif
-          endwhile
-
-          // Update other relevant parameters
-          exists('loc','parameter','usertree'):$exloc
-          if ($exloc) then
-            $loc = 0
-            readhw('loc'):$loc,$detect
-            setvalue('loc', $loc, 'usertree')
-          endif
-          exists('temp','parameter','usertree'):$extemp
-          if ($extemp) then
-            readhw('temp'):$temp
-            setvalue('temp', $temp, 'usertree')
-          endif
-          exists('operator','parameter','usertree'):$exoperator
-          if ($exoperator) then
-            setvalue('operator', operator, 'usertree')
-          endif
-          exists('solvent','parameter','usertree'):$exsolvent
-          if ($exsolvent) then
-            setvalue('solvent', '', 'usertree')
-          endif
-          exists('sample','parameter','usertree'):$exsample
-          if ($exsample) then
-            setvalue('sample', '', 'usertree')
-          endif
-
-          // Save new values in lasttunepar
-          //fsave('/vnmr/acqqueue/test','usertree') // TESTING
-          fsave($parfile,'usertree')
-          chmod('a+rw',$parfile):$dum
+    // Get lists of high and low band nucs in lasttunepar
+    $hinucs = ''
+    $lonucs = ''
+    $j = 0
+    while ($j < $nnames) do
+      $j = $j + 1
+      exists($nucnames[$j],'parameter','usertree'):$ex
+      if ($ex) then
+        getvalue($nucnames[$j], 1, 'usertree'):$nuc
+        if ($nuc = 'H1' or $nuc = 'F19') then
+          $hinucs = $hinucs + $nuc + ' '
+        else
+          $lonucs = $lonucs + $nuc + ' '
         endif
+      endif
+    endwhile
+
+    // Clear the list(s) that will become invalid
+    $i = 1
+    while ($i < $#) do
+      $i = $i + 1
+      $nucarg = ${$i}
+      if ($nucarg = 'H1' or $nucarg = 'F19') then
+        $hinucs = ''
+      else
+        $lonucs = ''
+        //$hinucs = ' ' // Tuning loband may detune high band
+      endif
+    endwhile
+
+    // Add the specified nucs to the hi/lo lists
+    $i = 1
+    while ($i < $#) do
+      $i = $i + 1
+      $nucarg = ${$i}
+      if ($nucarg = 'H1' or $nucarg = 'F19') then
+        $hinucs = $hinucs + $nucarg + ' '
+      else
+        $lonucs = $lonucs + $nucarg + ' '
+      endif
+    endwhile
+
+    // Save the nucs to usertree parameters
+    $j = 0 // nucname index
+
+    // Save high band nucs
+    $i = 1
+    $nuc = ''
+    substr($hinucs, $i):$nuc
+    while ($nuc <> '') do
+      $j = $j + 1
+      exists($nucnames[$j],'parameter','usertree'):$ex
+      if ($ex) then
+        setvalue($nucnames[$j], $nuc, 'usertree')
+      endif
+      $i = $i + 1
+      $nuc = ''
+      substr($hinucs, $i):$nuc
+    endwhile
+
+    // Save low band nucs
+    $i = 1
+    $nuc = ''
+    substr($lonucs, $i):$nuc
+    while ($nuc <> '') do
+      $j = $j + 1
+      exists($nucnames[$j],'parameter','usertree'):$ex
+      if ($ex) then
+        setvalue($nucnames[$j], $nuc, 'usertree')
+      endif
+      $i = $i + 1
+      $nuc = ''
+      substr($lonucs, $i):$nuc
+    endwhile
+
+    // Clear any unused nuc parameters
+    while ($j < $nnames) do
+      $j = $j + 1
+      exists($nucnames[$j],'parameter','usertree'):$ex
+      if ($ex) then
+        setvalue($nucnames[$j], '', 'usertree')
+      endif
+    endwhile
+
+    // Update other relevant parameters
+    exists('loc','parameter','usertree'):$exloc
+    if ($exloc) then
+      $loc = 0
+      readhw('loc'):$loc,$detect
+      setvalue('loc', $loc, 'usertree')
+    endif
+    exists('temp','parameter','usertree'):$extemp
+    if ($extemp) then
+      readhw('temp'):$temp
+      setvalue('temp', $temp, 'usertree')
+    endif
+    exists('operator','parameter','usertree'):$exoperator
+    if ($exoperator) then
+      setvalue('operator', operator, 'usertree')
+    endif
+    exists('solvent','parameter','usertree'):$exsolvent
+    if ($exsolvent) then
+      setvalue('solvent', '', 'usertree')
+    endif
+    exists('sample','parameter','usertree'):$exsample
+    if ($exsample) then
+      setvalue('sample', '', 'usertree')
+    endif
+
+    // Save new values in lasttunepar
+    fsave($parfile,'usertree')
+    chmod('a+rw',$parfile):$dum
+  endif
 ENDIF
