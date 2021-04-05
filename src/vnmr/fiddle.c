@@ -169,6 +169,8 @@ static int  startno,finishno,stepno,incno;
 static int  halffg,difffg,udifffg,firstfg,secondfg,nosub,invert;
 static int  
 aphflg,altfg,oflag,flag2d,writefg,makereffg,ldcflag,readcfflg,writecfflg;
+static int writescalefg;
+static float scaleVal;
 static double *spg,*spy,*resets;
 static int  *spx,*intbuf,numresets;
 static float satpos[10],satint[10],satish[10];
@@ -649,6 +651,7 @@ static int i_fiddle(int argc, char *argv[])
 	char	noaph[]			= "noaph";
 	char	readcf[]		= "readcf";
 	char	writecf[]		= "writecf";
+	char	writescale[]   	        = "writescaledfid";
 
 
 	readcfflg=writecfflg=corfunc=noift=noftflag=invert=solvent=FALSE;
@@ -657,6 +660,8 @@ static int i_fiddle(int argc, char *argv[])
 	stopflag=0;
 	halffg=hilbert=makereffg=ldcflag=extrap=aphflg=TRUE;
 	altfg=flag2d=writefg=oflag=quantflag=FALSE;
+        writescalefg=FALSE;
+        scaleVal=1.0;
 
 	intcount=0;
 	print=0;
@@ -812,14 +817,29 @@ static int i_fiddle(int argc, char *argv[])
 				sprintf(satname,"/vnmr/satellites/%s",argv[i]);
 				if (verbose) Wscrprintf("Satellite file name is %s \n",argv[i]);
 			}
-			else if (equal(argv[i],writefid))
+			else if (equal(argv[i],writefid) || equal(argv[i],writescale))
 			{
-				if (verbose) Wscrprintf("Corrected fid will be written to disk \n");
 				writefg=TRUE;
+                                if (equal(argv[i],writescale))
+                                {
+                                   writescalefg=TRUE;
+				   if (verbose)
+                                     Wscrprintf("Scaled corrected fid will be written to disk \n");
+                                }
+                                else
+                                {
+				   if (verbose)
+                                     Wscrprintf("Corrected fid will be written to disk \n");
+                                }
 				i++;
 				if ((argc-1)<i)
 				{
 					Werrprintf("Destination filename not specified\n");
+					return(ERROR);
+				}
+				if ( writescalefg && ((argc-1)<i+1) )
+				{
+					Werrprintf("FID scaling factor not provided\n");
 					return(ERROR);
 				}
 				strcpy(writename,argv[i]);
@@ -845,6 +865,18 @@ static int i_fiddle(int argc, char *argv[])
 					}
 				}
 				Wscrprintf("Writing corrected fid out; destination file: %s\n",writename);
+				if ( writescalefg )
+				{
+                                   i++;
+				   scaleVal = atof(argv[i]);
+                                   if (scaleVal == 0.0)
+				   {
+				      Werrprintf("FID scaling factor not provided\n");
+						return(ERROR);
+				   }
+		                   if (verbose)
+                                      Wscrprintf("FID scaling factor %f\n",scaleVal);
+				}
 			}
 			else if (equal(argv[i],writecf))
 			{
@@ -962,7 +994,10 @@ static int i_fiddle(int argc, char *argv[])
 	if (ct==0)
 	{
 		ct=1;
-		Werrprintf("ct was zero; assumed to be 1\n");
+	    if (verbose)
+		   Werrprintf("ct was zero; assumed to be 1\n");
+	    P_setreal(CURRENT,"ct",1.0,0);
+	    P_setreal(PROCESSED,"ct",1.0,0);
 	}
 	if (verbose)
 		Wscrprintf("sw %lf, cr %lf, delta %lf, rfl %lf, rfp %lf, rp %lf, lp %lf\n",
@@ -1367,10 +1402,10 @@ void setupwritefile()
 	/* ntraces and nbheaders should be 1 */
 	writehead.ntraces=1;
 	writehead.nbheaders=1;
-	writehead.status= S_DATA | S_32 | S_COMPLEX; /* see ebytes ! */
+	writehead.status= S_DATA | S_FLOAT | S_COMPLEX; /* see ebytes ! */
 	/* make up blockheader */
-	writebhead.scale=(short)1;
-	writebhead.status=(short)21; /* complex 32bit int fid data */
+	writebhead.scale=(short)0;
+	writebhead.status=S_DATA | S_FLOAT | S_COMPLEX;
 	writebhead.mode=(short)1; /* mode ? */
 	writebhead.lpval=0.0;
 	writebhead.rpval=0.0;
@@ -1404,10 +1439,10 @@ void setupwritecf()
 	/* ntraces and nbheaders should be 1 */
 	cfhead.ntraces=1;
 	cfhead.nbheaders=1;
-	cfhead.status= S_DATA | S_32 | S_COMPLEX; /* see ebytes ! */
+	cfhead.status= S_DATA | S_FLOAT | S_COMPLEX; /* see ebytes ! */
 	/* make up blockheader */
-	cfbhead.scale=(short)1;
-	cfbhead.status=(short)21; /* complex 32bit int fid data */
+	cfbhead.scale=(short)0;
+	cfbhead.status=S_DATA | S_FLOAT | S_COMPLEX;
 	cfbhead.mode=(short)1; /* mode ? */
 	cfbhead.lpval=0.0;
 	cfbhead.rpval=0.0;
@@ -1426,7 +1461,11 @@ void setupwritecf()
 
 void writeoutresult()
 {
-	register int i;
+   register int i;
+   union u_tag {
+      float fval;
+      int   ival;
+   } uval;
 
 	writebhead.index=(short)count;
 #ifdef LINUX
@@ -1440,7 +1479,18 @@ void writeoutresult()
 	/* no lp correction on fid data! */
 	if (!flag2d) rotate2(inp,np0w/2,0.0,-rp);
 	disp_status("WRITE ");
-	scale=1.0;
+    if (writescalefg)
+    {
+        max=0.0;
+		for (i=0;i<np0w;i++)
+			if (fabs(inp[i])>max) max=fabs(inp[i]);
+		if (verbose) Wscrprintf("Maximum corrected fid signal %f\n",max);
+        scaleVal=scaleVal/max;
+        writescalefg = FALSE;
+    }
+#ifndef LINUX
+    scale=1.0;
+    
 	if (count==0)
 	{
 		for (i=0;i<np0w;i++)
@@ -1452,12 +1502,17 @@ void writeoutresult()
 			Wscrprintf("WARNING: Corrected fid scaled down to fit 32 bits.\n");
 		}
 	}
+#endif
+	if (verbose) Wscrprintf("FID scaling factor %f\n",scaleVal);
 	for (i=0;i<np0w;i++)
+    {
 #ifdef LINUX
-                intbuf[i]=ntohl((int)(scale*inp[i]));
+        uval.fval = inp[i]*scaleVal;
+        intbuf[i]=ntohl(uval.ival);
 #else
 		intbuf[i]=(int)(scale*inp[i]);
 #endif
+    }
 
 	fwrite(intbuf,4,np0w,fidout);
 	count++;
@@ -1491,9 +1546,9 @@ void writeoutcf()
 	}
 	for (i=0;i<np0w;i++)
 #ifdef LINUX
-                intbuf[i]=ntohl((int)(scale*data2[i]));
+           intbuf[i]=ntohl((int)(scale*data2[i]));
 #else
-		intbuf[i]=(int)(scale*data2[i]); 
+	   intbuf[i]=(int)(scale*data2[i]); 
 #endif
 	fwrite(intbuf,4,np0w,writecffile); 
 	cfcount++;
