@@ -323,6 +323,10 @@ public class VStatusButton extends TwoLineButton
             return Util.getLabel("sNOTREG","Not Regulated");
         case NOTPRESENT:
             return Util.getLabel("sNOTPRESENT","Not present");
+        case ON:
+            return Util.getLabel("sON","On");
+        case EXT:
+            return Util.getLabel("sEXT","EXT");
         }
     }
 
@@ -340,12 +344,14 @@ public class VStatusButton extends TwoLineButton
             setValueString(value);
             showset=false;
             break;
+        case EXT:
         case REGULATED:
             setColor(colors[ONID]);
             setValueFont(fonts[ONID]);
             setValueString(value);
             showset=true;
             break;
+        case ON:
         case NOTREG:
             setColor(colors[INTERACTIVEID]);
             setValueFont(fonts[INTERACTIVEID]);
