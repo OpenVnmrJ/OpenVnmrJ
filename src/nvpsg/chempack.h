@@ -31,7 +31,7 @@ void shaped_satpulse(const char *shn, double saturation1, codeint sphse1)
 {
   FILE *inpf;
   double *ofq, reps=0.0, uspw90;
-  char str[MAXSTR], cmd[MAXSTR], shname[MAXSTR];
+  char str[MAXSTR], cmd[MAXSTR*2], shname[MAXSTR];
   extern char userdir[];
   int nlf, i;
 
@@ -61,7 +61,7 @@ void shaped_saturate(const char *shn2, double saturation2, codeint sphse2)
   FILE *inpf;
   shape sh;
   double *ofq, reps=0.0, uspw90;
-  char str[MAXSTR], cmd[MAXSTR], shname[MAXSTR];
+  char str[MAXSTR], cmd[MAXSTR*2], shname[MAXSTR];
   extern char userdir[];
   int nlf, i;
 

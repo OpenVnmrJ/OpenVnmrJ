@@ -435,7 +435,7 @@ static  double  rlloopTime[MAX_RLLOOP+1];
 static  int     rlloopMult[MAX_RLLOOP+1];
 static  char    psgfile[MAXPATH];
 static  char    dpsfile[MAXPATH];
-static  char 	inputs[MAXPATH * 2];
+static  char 	inputs[MAXPATH * 2 + 16];
 static  char    *dps_label = NULL;
 static  char    *cmd_name = NULL;
 static  char    *argArray[64];
@@ -446,8 +446,8 @@ static  char    dmmstr[RFCHAN_NUM][paramLen];
 static  char    dnstr[RFCHAN_NUM][12];
 static  char    gradtype[8];
 static  char    gradshape[4];
-static  char    dpscmd[12];
-static  char    info_data[512];
+static  char    dpscmd[32];
+static  char    info_data[1024];
 
 static  double	expTime;
 static  double	dMax, pMax;
@@ -2450,7 +2450,7 @@ int check_args(int argc, char *argv[], int retc, char *retv[])
                return(1);
         }
         {
-            char msg[MAXPATH];
+            char msg[MAXPATH*2];
 
             sprintf(msg,"dps error: sequence '%s' does not exist", psgfile);
             if (retc == 0)

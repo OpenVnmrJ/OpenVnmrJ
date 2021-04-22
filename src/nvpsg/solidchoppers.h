@@ -33,7 +33,7 @@ SHAPE make_shape(SHAPE s)
 {
    FILE *fp;
    extern char userdir[];
-   char shapepath[3*MAXSTR],str[MAXSTR+16];
+   char shapepath[4*MAXSTR],str[MAXSTR+16];
    int ntick,nstep,nrpuls,naccumpuls,nstub,nindex,chnl,ninit,ntot,npuls;
    double t,dph,ph,phShape,phCurrent,phLast,phOut,ph0Out,phInc,aCurrent,
           aLast,aOut,a0Out,aInc,gCurrent,gLast,gOut,phase;
@@ -276,7 +276,7 @@ SHAPE make_shape1(SHAPE s)
 {
    FILE *fp;
    extern char userdir[];
-   char shapepath[3*MAXSTR],str[MAXSTR+16];
+   char shapepath[4*MAXSTR],str[MAXSTR+16];
    int ntick,nstep,nrpuls,naccumpuls,nstub,nindex,chnl,ninit,ntot,npuls;
    double phInc __attribute__((unused));
    double t,dph,ph,phShape,phCurrent,phLast,phOut,ph0Out,aCurrent,
@@ -646,7 +646,7 @@ MPSEQ MPchopper(MPSEQ seq)
 
    FILE *fp;
    extern char userdir[];
-   char shapepath[3*MAXSTR],str[MAXSTR+16];
+   char shapepath[4*MAXSTR],str[MAXSTR+16];
    int npuls,iph,ntick,nrpuls,naccumpuls,nindex,nstub,nstep,chnl,ninit,ntotal,ntot;
    int i = 0;
    double phase,ph,t,dph,phCurrent,phLast,phOut,ph0Out,phInc,
@@ -929,7 +929,7 @@ CP make_cp(CP cp)
 {
    FILE *fp;
    extern char userdir[];
-   char shapepath[3*MAXSTR],str[MAXSTR+16];
+   char shapepath[4*MAXSTR],str[MAXSTR+16];
    int ntick,nstep,nrpuls,naccumpuls,nstub,nindex,chnl,ninit,ntot;
    double norm,mean,at,t,ph,dph,phCurrent,phLast,phOut,ph0Out,phInc,
           aCurrent,aLast,aOut,a0Out,aInc,gOut,phase;  

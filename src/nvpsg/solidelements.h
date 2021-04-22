@@ -270,7 +270,7 @@ void _dec3doffset(double ldelay, double loffset)
 //    (varType)(chXtra)(abcdeghi)
 //=====================================================================
 
-char varName[MAXSTR];
+char varName[MAXSTR*3];
 
 char* getname0(char *varType, char *varSuffix, char *chXtra)
 {

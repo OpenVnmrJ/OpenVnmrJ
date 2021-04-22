@@ -307,8 +307,10 @@ void addwave(sh, bw, ofs, st, pha, fla)
 char *sh;
 double bw, ofs, st, pha, fla;
 {
-  sprintf(nwaves, "%s\" \"%s %.7f %.2f %.2f %.2f %.2f", 
+  char tmp[MAXSTR*2];
+  sprintf(tmp, "%s\" \"%s %.7f %.2f %.2f %.2f %.2f", 
           nwaves, sh, bw, ofs, st, pha, fla); 
+  strcpy(nwaves,tmp);
   
   return; 
 }
@@ -329,8 +331,10 @@ void addAwave(sh, bw, pws, ofs, st, pha, fla)
 char *sh;
 double bw, pws, ofs, st, pha, fla;
 {
-  sprintf(nwaves, "%s\" \"%s %.2f/%.7f %.2f %.2f %.2f %.2f", 
+  char tmp[MAXSTR*2];
+  sprintf(tmp, "%s\" \"%s %.2f/%.7f %.2f %.2f %.2f %.2f", 
           nwaves, sh, bw, pws, ofs, st, pha, fla); 
+  strcpy(nwaves,tmp);
   
   return; 
 }

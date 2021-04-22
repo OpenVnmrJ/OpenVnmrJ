@@ -282,10 +282,10 @@ static int reset_exp0(int oldexpnum )
 int jexp(int argc, char *argv[], int retc, char *retv[])
 /***************************/
 { int lval,oldexpnum,clear_flag;
-  char estring[MAXPATH];
+  char estring[MAXPATH*2];
   char curexpnumber[MAXPATH];
   char path[MAXPATH];
-  char exppath[MAXPATH];
+  char exppath[MAXPATH*2];
   // char curmode;
   extern void finddatainfo();
 #ifdef VNMRJ
@@ -502,7 +502,7 @@ int cexpCmd(int argc, char *argv[], int retc, char *retv[])
 /******************************/
 {
   char		estring[MAXPATH],
-		msg[MAXPATH],
+		msg[MAXPATH*2],
 		path[MAXPATH],
 		exppath[MAXPATH],
 		epath[MAXPATH];
@@ -890,7 +890,7 @@ int delexp(int argc, char *argv[], int retc, char *retv[])
   char	estring[MAXPATH],
 	exppath[MAXPATH],
 	userexppath[MAXPATH],
-	msg[MAXPATH];
+	msg[MAXPATH*2];
   int lval;
   int doDB = TRUE;
   int autoDel=0;
@@ -1540,7 +1540,7 @@ int svf(int argc, char *argv[], int retc, char *retv[])
 /* svf stores fid */
 /* svp stores parameters */
 { char filepath[MAXPATH],path[MAXPATH];
-  char origpath[MAXPATH],destpath[MAXPATH];
+  char origpath[MAXPATH],destpath[MAXPATH*2];
   int r,fidflag;
   int  diskIsFull;
   int  ival;
@@ -2069,7 +2069,7 @@ void turnOffFixpar()
 int rt(int argc, char *argv[], int retc, char *retv[])
 /*************************/
 {
-  char filepath[MAXPATH],path[MAXPATH],newpath[MAXPATH],filepath0[MAXPATH];
+  char filepath[MAXPATH],path[MAXPATH*2],newpath[MAXPATH],filepath0[MAXPATH];
 
   int r,i;
   int fidflag=0;
@@ -2086,7 +2086,7 @@ int rt(int argc, char *argv[], int retc, char *retv[])
   char *name;
   char *pathptr;
   char time_processed[20];
-  char cmd[MAXSTR];
+  char cmd[MAXSTR*2];
   extern void resetdatafiles();
 
 /*  Verify no acquisition is active or queued for the current experiment.  */
@@ -3164,7 +3164,7 @@ int svs(int argc, char *argv[], int retc, char *retv[])
 /************************/
 {
 	char	answer[ 12 ], input_path[ MAXPATH ], final_path[ MAXPATH ];
-	char	buf[MAXPATH];
+	char	buf[MAXPATH*3+16];
 	char	*fname;
 	int	where_stored;
 
