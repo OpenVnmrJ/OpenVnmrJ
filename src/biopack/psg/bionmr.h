@@ -58,7 +58,7 @@
                         REF_PWR_C, REF_PW90_C,
                         REF_PWR_N, REF_PW90_N;
  static char 		CURR_C13_OFFSET[MAXSTR], 
-                        SNAME[MAXSTR], SNAME_C[MAXSTR],SNAME_N[MAXSTR];
+                        SNAME[MAXSTR*2+16], SNAME_C[MAXSTR*2+16],SNAME_N[MAXSTR*2+16];
 
  double get_c13dof(char *fband)
  {
@@ -140,7 +140,7 @@ shape getRshapeinfo(char *shname)
 
 double c13pulsepw(char *excband, char *nullband, char *c13shape, double c13flip) 
 {
- char		cshape[MAXSTR];
+ char		cshape[MAXSTR/4];
  double		nullshift, destbanddof, 
   		sfrq = getval("sfrq");
 
@@ -182,7 +182,7 @@ double c13pulsepw(char *excband, char *nullband, char *c13shape, double c13flip)
 void c13shapefiles(char *excband, char *nullband, char *c13shape, double c13flip)
 {
  FILE 		*fp;
- char		cshape[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char		cshape[MAXSTR/4], fs[MAXSTR], fname[MAXSTR*3];
  extern char	userdir[];
  double		spw, freqshift, destbanddof, steps,
  		pwC    = getval("pwC"),
@@ -338,7 +338,7 @@ c13shapefiles(excband, nullband, c13shape, c13flip);
 void c13adiab_files(char *excband, double bandwidth, char *c13shape, double pulsewidth)
 {
  FILE 		*fp;
- char		cshape[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char		cshape[MAXSTR/4], fs[MAXSTR], fname[MAXSTR*3];
  extern char	userdir[];
  double		spw, freqshift, destbanddof, steps, bwdth,
  		pwC    = getval("pwC"),
@@ -508,7 +508,7 @@ c13adiab_files(excband, bandwidth, c13shape, pulsewidth);
 void fshapefiles(char *anyshape, double pwbw, double flip, double shift)
 {
  FILE		*fp;
- char 	    fshape[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char 	    fshape[MAXSTR], fs[MAXSTR], fname[MAXSTR*3];
  extern char	userdir[];
 
 
@@ -737,7 +737,7 @@ shape getDshapeinfo(char *shname)
 void c13decfiles(char *decband, char *c13shape, double decbandwidth)
 {
  FILE 		*fp;
- char  		cshape[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char  		cshape[MAXSTR/4], fs[MAXSTR], fname[MAXSTR*3];
  double  	freqshift, dwidth, 
  		pwC    = getval("pwC"),
  		pwClvl = getval("pwClvl");
@@ -862,7 +862,7 @@ void c13decouple(char *decband, char *c13shape, double decbandwidth, double ncyc
 void h1decfiles(char *h1shape, double decbandwidth, double shift)
 {
  FILE 		*fp;
- char  		hshape[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char  		hshape[MAXSTR], fs[MAXSTR], fname[MAXSTR*3];
  double  	freqshift, dwidth;
 
 
@@ -1045,7 +1045,7 @@ void h1waltzoff(char *h1shape, double decbandwidth, double shift)
 void installdecshape(char *decshape)
 {
  FILE 		*fp;
- char  		fs[MAXSTR], fname[MAXSTR];
+ char  		fs[MAXSTR], fname[MAXSTR*3];
 
 /*   MAKE DEC SHAPE FILE NAME    */
  (void) sprintf(SNAME, "%s.DEC", decshape);
@@ -1691,7 +1691,7 @@ else
 void hshapefiles(char *anyshape, double bw, double shift)
 {
  FILE		*fp;
- char 	    fshape[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char 	    fshape[MAXSTR], fs[MAXSTR], fname[MAXSTR*3];
  extern char	userdir[];
  double    freqshift,dwidth;
  
@@ -1789,7 +1789,7 @@ hshapefiles(anyshape, bw, shift);
 void cshapefiles(char *anyshape, double bw, double shift)
 {
  FILE		*fp;
- char 	    fshape[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char 	    fshape[MAXSTR], fs[MAXSTR], fname[MAXSTR*3];
  extern char	userdir[];
  double    freqshift,dwidth;
  
@@ -1896,7 +1896,7 @@ void cshapefiles2(char *anyshape1, char *anyshape2, double bw1, double bw2,
                   double shift1, double shift2)
 {
  FILE		*fp;
- char 	    fshape1[MAXSTR],fshape2[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char 	    fshape1[MAXSTR],fshape2[MAXSTR], fs[MAXSTR], fname[MAXSTR*3];
  extern char	userdir[];
  double    freqshift1,dwidth1,freqshift2,dwidth2;
  
@@ -2076,7 +2076,7 @@ cshapefiles(anyshapeC, bwC, shiftC);
 void nshapefiles(char *anyshape, double bw, double shift)
 {
  FILE		*fp;
- char 	    fshape[MAXSTR], fs[MAXSTR], fname[MAXSTR];
+ char 	    fshape[MAXSTR], fs[MAXSTR], fname[MAXSTR*3];
  extern char	userdir[];
  double    freqshift,dwidth;
  

@@ -426,7 +426,7 @@ int lpreset;
 CP make_cp(CP cp)
 {
    FILE *fp;
-   char shapepath[MAXSTR*3];
+   char shapepath[MAXSTR*4];
    extern char userdir[];
    int nmin = cp.n90;
    int ntick,nrpuls,naccumpuls,chnl;
@@ -1197,7 +1197,7 @@ MPSEQ MPchopper(MPSEQ seq)
 {
    FILE *fp;
    extern char userdir[];
-   char shapepath[MAXSTR*3],str[MAXSTR];
+   char shapepath[MAXSTR*4],str[MAXSTR+16];
    int npuls, iph, ntick,nrpuls,naccumpuls;
    int i = 0;
    double phase = 0.0;
@@ -1369,7 +1369,7 @@ RAMP make_ramp(RAMP r)
    extern void dumpRAMP(RAMP r);
    FILE *fp;
    extern char userdir[];
-   char shapepath[3*MAXSTR],str[MAXSTR+16];
+   char shapepath[4*MAXSTR],str[MAXSTR+16];
    int ntick,nrpuls,naccumpuls;
    int nmin = r.n90;
    double norm,mean;
@@ -1704,7 +1704,7 @@ SHAPE make_shape(SHAPE s)
 {
    FILE *fp;
    extern char userdir[];
-   char shapepath[MAXSTR*3],str[MAXSTR];
+   char shapepath[MAXSTR*4],str[MAXSTR+16];
    int ntick,nrpuls,naccumpuls;
    double t,ph,dph,phShapeCurrent,phShapeLast,aLast,aCurrent,phase,gate;
    STATE state;

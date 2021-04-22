@@ -326,7 +326,7 @@ int isHardLink(char *lptr)
 int make_copy_fidfile(char *prog, char *dir, char *msg)
 {
    int     diskFull, ival;
-   char    fidpath[ MAXPATH ], tmp[ MAXPATH ];
+   char    fidpath[ MAXPATH ], tmp[ MAXPATH*2 ];
    struct stat     unix_fab;
    strcpy(fidpath,dir);
    strcat(fidpath,"/acqfil/fid");
@@ -338,7 +338,7 @@ int make_copy_fidfile(char *prog, char *dir, char *msg)
       sprintf(tmp,"%s: FID file %s does not exist or is not readable",
                   prog, fidpath);
       if (msg == NULL)
-         Werrprintf(msg);
+         Werrprintf(tmp);
       else
          strcpy(msg,tmp);
       return(-1);
@@ -350,7 +350,7 @@ int make_copy_fidfile(char *prog, char *dir, char *msg)
          sprintf(tmp,"%s: FID file %s does not exist or is not readable",
             prog, fidpath);
          if (msg == NULL)
-            Werrprintf(msg);
+            Werrprintf(tmp);
          else
             strcpy(msg,tmp);
          return( -1 );
@@ -360,7 +360,7 @@ int make_copy_fidfile(char *prog, char *dir, char *msg)
          sprintf(tmp,"%s: insufficent disk space to make a copy of the FID file",
             prog);
          if (msg == NULL)
-            Werrprintf(msg);
+            Werrprintf(tmp);
          else
             strcpy(msg,tmp);
          return( -1 );
@@ -373,7 +373,7 @@ int make_copy_fidfile(char *prog, char *dir, char *msg)
       if (ival != 0) {
          sprintf(tmp,"%s: error making a copy of the FID file",prog);
          if (msg == NULL)
-            Werrprintf(msg);
+            Werrprintf(tmp);
          else
             strcpy(msg,tmp);
          return( -1 );
