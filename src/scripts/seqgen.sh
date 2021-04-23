@@ -31,18 +31,18 @@ fi
 # (Prevents problems with one user using UNIX command "su"
 # to become some other user)
 
-if [ ! $USER = $LOGNAME ]; then
+if [[ ! -z $LOGNAME ]] && [[ $USER != $LOGNAME ]]; then
    echo "Username: "$USER"  and Logname: "$LOGNAME"  do not agree."
    echo ""
    exit
 fi
 
-if (test x$vnmrsystem = "x")
+if [[ x$vnmrsystem = "x" ]]
 then
    source /vnmr/user_templates/.vnmrenvsh
 fi
 
-if (test ! -f "$vnmrsystem"/lib/libparam.so)
+if [[ ! -f "$vnmrsystem"/lib/libparam.so ]]
 then
    echo " "
    echo " "
