@@ -1330,7 +1330,13 @@ double calc_aslTime(double asladd,double trepmin,int *treptype)
       /* If there's no abort_message the aslmirtime binary is present */
       /* Set system call to calculate MIR times */
       sprintf(timecmd,"aslmirtime -n %d -d %f -t %d",nmir,mirTime,(int)dvarinfo.size);
-      for (i=0;i<(int)dvarinfo.size;i++) sprintf(timecmd,"%s %f",timecmd,mirt1[i]);
+      for (i=0;i<(int)dvarinfo.size;i++)
+      {
+         char tmp[32];
+
+         sprintf(tmp," %f",mirt1[i]);
+         strcat(timecmd,tmp);
+      }
       /* Execute the system call */
       ret = system(timecmd);
       sprintf(timefile,"/tmp/aslmirtime_%s.txt",getenv("USER"));

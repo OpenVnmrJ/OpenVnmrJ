@@ -3321,8 +3321,7 @@ void checkForFilename (char *name, char *path)
    {
       strcpy(path, USER_DIR);      /* add user directory to path */
       strcat(path, SHAPE_LIB_DIR); /* add shapelib directory to path */
-      strcpy(wavefile, name);      /* assign waveform name */
-      sprintf(wavefile, "%s%li", wavefile, counter); /* add number */
+      sprintf(wavefile, "%s%li", name, counter); /* add number to name */
       strcat(path, wavefile);      /* add path and waveform name */
       strcat(path, ".GRD");        /* add suffix to complete path */
 
@@ -3513,8 +3512,7 @@ int gradShapeWritten (char *basename, char *params, char *filename)
       while(match)
 	        {
       	  counter++;
-	        strcpy(fname, basename);
-      	  sprintf(fname, "%s%li", fname, counter);   /* append number */
+      	  sprintf(fname, "%s%li", basename, counter);   /* append number */
       	  tP=gradWListP;
       	  match=FALSE;
          while((tP)&&(tP!=tempP))
