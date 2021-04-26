@@ -15,7 +15,7 @@ The latest binary releases for OpenVnmrJ are available from [Releases](https://g
 There are releases for:
 - RHEL/CentOS: Versions 6, 7, and 8.
 - Ubuntu: Versions 14, 16, 18, and 20.
-- MacOS: Versions 10.10 (Yosemite) to 10.15 (Catalina).
+- MacOS: Versions 10.10 (Yosemite) to 11.3 (Big Sur).
 
 <a href="https://doi.org/10.5281/zenodo.4304999"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.4304999.svg" alt="DOI"></a>
 
@@ -42,16 +42,12 @@ We welcome pulse sequences, libraries of macros, UX improvments contributed as a
 repository on how to download and install user contributed appdirs and how to contribute your appdir. 
 
 In OpenVnmrJ, type `ovjapps` to list user contributed application directories.
-
-Feel free to use [Slack](https://openvnmrj.slack.com/messages/appdirs/) if you need some help.  
+  
 
 ## Building
 
-Current Travis-CI build status:
-[![Travis-CI Build](https://travis-ci.org/tesch1/OpenVnmrJ.svg?branch=master)](https://travis-ci.org/tesch1/OpenVnmrJ)
+Current Github Action status: [![Build and Test OpenVnmrJ](https://github.com/OpenVnmrJ/OpenVnmrJ/actions/workflows/main.yml/badge.svg)](https://github.com/OpenVnmrJ/OpenVnmrJ/actions/workflows/main.yml)
 
-Current Circle CI build status:
-[![Circle CI Build](https://circleci.com/gh/tesch1/OpenVnmrJ.svg?&style=shield&circle-token=43b262352b794300ba603dafbf6fc054e828e8b3)](https://circleci.com/gh/tesch1/OpenVnmrJ)
 
 If you are interested in building OpenVnmrJ from source, refer to the
 [ovjTools repository](https://github.com/OpenVnmrJ/ovjTools), which
