@@ -1,0 +1,137 @@
+
+name: Build and Test OpenVnmrJ
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Clone ovjTools
+        run: |
+          cd ..
+          git clone --depth 1 https://github.com/OpenVnmrJ/ovjTools.git
+          if [[ ! -d ovjTools ]]; then
+             echo "ovjTools clone failed"
+             exit 1
+          fi
+          cp -r ovjTools/bin .
+          #git clone --depth 1 https://github.com/OpenVnmrJ/OpenVnmrJ.git
+          #if [[ ! -d OpenVnmrJ ]]; then
+          #   echo "OpenVnmrJ clone failed"
+          #   exit 1
+          #fi
+          # Just to speed things up
+          cd OpenVnmrJ
+          rm src/IMAGE/psglib/*
+          git checkout src/IMAGE/psglib/spuls.c
+          rm src/biopack/psglib/*
+          git checkout src/biopack/psglib/T1D.c
+
+      - name: Get toolchain
+        run: |
+          cd ../bin
+          sudo ./toolChain noPing    
+          
+      - name: Build OpenVnmrJ
+        run: |
+          cd ../bin
+          sed -i 's/# doGitClone=no/doGitClone=no/' buildovj
+          # put in a shell so if there if a failure with buildovj
+          # the workflow will not stop
+          cat <<EOF > build.sh
+          #!/bin/bash
+          ./buildovj
+          if [ $? -ne 0 ]; then
+              echo PASS
+          fi
+          EOF
+          
+          chmod +x ./build.sh
+          ./build.sh
+          ./whatsin
+          cp ../logs/makeovjlog ../OpenVnmrJ/buildLog.txt
+          if [[ ! -d ../dvdimageOVJ ]]; then
+             echo "OpenVnmrJ build failed"
+             touch ../buildFail
+          fi
+          
+      - name: Upload build log
+        uses: actions/upload-artifact@v2
+        with:
+          name: buildLog.txt
+          path: buildLog.txt
+       
+      - name: Install OpenVnmrJ
+        run:  |
+          if [[ -f ../buildFail ]]; then
+             exit 1
+          fi
+          dir=$(pwd)/../dvdimageOVJ
+          echo "Installing packages"
+          sudo ${dir}/code/installpkgs noPing ddr
+          echo "Installing OpenVnmrJ"
+          sudo ${dir}/code/ins_vnmr rht vnmrs ${dir}/code /home/openvnmrj runner nmr /home yes no +VNMR+Backprojection+Biosolidspack+DOSY_for_VnmrJ+Imaging_or_Triax+STARS+ +
+          if [[ ! -f /vnmr/bin/Vnmrbg ]]; then
+             echo "OpenVnmrJ install failed"
+             exit 1
+          fi
+                    
+      - name: Test OpenVnmrJ
+        run:  |
+          cd src/vjqa
+          scons
+          if [[ ! -d ovj_qa ]]; then
+             echo "QA build failed"
+             exit 1
+          fi
+          sudo /vnmr/bin/makeuser runner /home nmr y
+          mv ovj_qa ~/vnmrsys/.
+          cd ../..
+          source ~/.vnmrenvsh
+          echo "bootwalkup" > ~/vnmrsys/maclib/login
+          echo "ptsval[2]=ptsval[1]" >> ~/vnmrsys/maclib/login
+          Vnmrbg -mback -n1 "dg appmode? addprobe('test')"
+          # rm -f ~/vnmrsys/maclib/login
+          qa=~/vnmrsys/ovj_qa
+          sed s:OVJQADIR:$qa:g $qa/ovjtest/testinfo/appdir > ~/vnmrsys/persistence/appdir_runner
+          sed -i s/\'no\'/\'yes\'/g $qa/ovjtest/maclib/testHh2d
+          sed -i s/\'no\'/\'yes\'/g $qa/ovjtest/maclib/testParfile
+          sed -i s/\'no\'/\'yes\'/g $qa/ovjtest/maclib/testSeqgen
+          #ls ~/vnmrsys/persistence
+          #cat ~/vnmrsys/persistence/appd*
+          # pwd
+          dir=$HOME/vnmrsys/ovj_qa/OVJQA
+          echo $dir > ~/vnmrsys/exp1/qapath
+          file=${dir}/logs/$(date +logVJinstall_%m-%d-%y)
+          echo "End of VNMRJ Installation Program" > $file
+          echo "vnmrj adm Done" >> $file
+          echo "Please check that the console and host are connected" >> $file
+          echo "Dialog with title $file Configuration has been opened" >> $file
+          echo "with text $file OK action has been produced" >> $file
+          Vnmrbg -mback -n1 vjqa >& testLog.txt
+          cat $qa/ovjtest/reports/report.txt >> testLog.txt
+          cat $qa/ovjtest/reports/report.txt
+          pwd
+          #cp testLog.txt ../ci/.
+          #cat $qa/ovjtest/reports/report.txt
+          #cd ~/vnmrsys/ovj_qa/OVJQA/bin
+          #Xvfb :1 -screen 0 1600x1200x24 &
+          #export DISPLAY=:1.0
+          #xhost local:root > /dev/null
+          #sudo -E xvfb-run ./installovj ${dir}
+          #dir=$(pwd)/dvdimageOVJ
+          #xvfb-run -d -s "-screen 0 2560x1440x24" ./installovj ${dir}
+          #ls
+          #ls ../logs
+          #cat ../logs/log*
+          
+      - name: Upload test log
+        uses: actions/upload-artifact@v2
+        with:
+          name: testLog.txt
+          path: testLog.txt
