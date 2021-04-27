@@ -1075,7 +1075,7 @@ int svprocpar(int fidflag, char *filepath)
 // if fid is linked, make_copy_fidfile will be called to
 // replace the link with a copy, so the original fid won;t be overwriten.
 // If the first argument is > 1, it is treated as the new np value.
-extern int D_downsizefid(int newnp, char *datapath);
+extern int D_downsizefid(int fp, int newnp, char *datapath);
 extern int D_zerofillfid(int newnp, char *datapath);
 extern int D_leftshiftfid(int lsfid, char *datapath, int *newnp);
 extern int D_scalefid(double scaling, char *datapath);
@@ -1087,18 +1087,27 @@ int downsizefid(int argc, char *argv[], int retc, char *retv[])
     char         filepath[MAXPATH], procparpath[MAXPATH];
     double factor, at;
     int curexpFid = 1;
+    double offset = -1.0;
+    int fp;
 
     if(argc>1)
     {
        factor = atof(argv[1]);
        if (argc > 2)
        {
-          curexpFid = 0;
-          strcpy(filepath,argv[2]);
-          if ( access(filepath,R_OK|W_OK) )
+          if ( strcmp(argv[2],"") )
           {
-	     Winfoprintf("downsizefid(%s,%s) data does not exist or has wrong permissions",argv[1],argv[2]); 
-	     ABORT;
+             curexpFid = 0;
+             strcpy(filepath,argv[2]);
+             if ( access(filepath,R_OK|W_OK) )
+             {
+	        Winfoprintf("downsizefid(%s,%s) data does not exist or has wrong permissions",argv[1],argv[2]); 
+	        ABORT;
+             }
+          }
+          if (argc > 3)
+          {
+             offset = atof(argv[3]);
           }
        }
     }
@@ -1149,14 +1158,26 @@ int downsizefid(int argc, char *argv[], int retc, char *retv[])
     {
        if (factor >= oldnp)
        {
-          Werrprintf("downsizefid(np): np must be less then original np");
+          Werrprintf("downsizefid(np): np must be less than original np");
           ABORT;
        }
        newnp = factor;
     }
     newnp -= (newnp % 2); // make sure it is a even number 
+    if (offset  < 0.0)
+      fp=0;
+    else if (offset < 1.0)
+      fp = offset*oldnp;
+    else
+      fp = (int) offset;
+    fp -= (fp % 2); // make sure it is a even number 
+    if (fp + newnp > oldnp)
+    {
+       Werrprintf("downsizefid(np,'',fp): np+fp must be less than original np");
+       ABORT;
+    }
     D_close(D_USERFILE);
-    if(D_downsizefid(newnp,filepath)) { 
+    if(D_downsizefid(fp,newnp,filepath)) { 
 	Werrprintf("cannot downsize fid file %s",filepath);
 	ABORT;
     }
