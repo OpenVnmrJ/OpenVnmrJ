@@ -2815,7 +2815,7 @@ int D_compress()
    return(COMPLETE);
 }
 
-int D_downsizefid(int newnp, char *datapath)
+int D_downsizefid(int fp, int newnp, char *datapath)
 {
    int			i,
 			fd,
@@ -2825,7 +2825,9 @@ int D_downsizefid(int newnp, char *datapath)
 			nbheader,
 			nbheaderbytes,
 			setbytes,
-			setbytesOrig;
+			setbytesOrig,
+                        tBytes,
+                        skipBytes=0;
    register int         cnt;
    dfilehead		datafilehead;
    dpointers		datablock;
@@ -2862,14 +2864,15 @@ int D_downsizefid(int newnp, char *datapath)
    nbheaderbytes = nbheader * sizeof(dblockhead);
    bbytesOrig = datafilehead.bbytes;
 
-   if (newnp >= datafilehead.np)
+   if (fp+newnp > datafilehead.np)
    {
       close(fd);
       return(COMPLETE);
    }
 
+   skipBytes = fp * datafilehead.ebytes;
    datafilehead.np = newnp;
-   datafilehead.tbytes = datafilehead.ebytes*newnp;
+   tBytes = datafilehead.tbytes = datafilehead.ebytes*newnp;
    datafilehead.bbytes = datafilehead.tbytes*datafilehead.ntraces +
 				nbheaderbytes;
    bbytesNew = datafilehead.bbytes;
@@ -2939,11 +2942,29 @@ int D_downsizefid(int newnp, char *datapath)
          return(D_SEEKERR);
       }
 
-      if ( write(fd, (char *)datablock.head, bbytesNew) != bbytesNew )
+      if (skipBytes == 0)
       {
-         close(fd);
-         releaseAllWithId("downsize");
-         return(D_WRITERR);
+         if ( write(fd, (char *)datablock.head, bbytesNew) != bbytesNew )
+         {
+            close(fd);
+            releaseAllWithId("downsize");
+            return(D_WRITERR);
+         }
+      }
+      else
+      {
+         if (write(fd, (char *)datablock.head, nbheaderbytes) != nbheaderbytes)
+         {
+            close(fd);
+            releaseAllWithId("downsize");
+            return(D_WRITERR);
+         }
+         if (write(fd, (char *)datablock.head+nbheaderbytes+skipBytes, tBytes) != tBytes)
+         {
+            close(fd);
+            releaseAllWithId("downsize");
+            return(D_WRITERR);
+         }
       }
 
       if ( (i+1) < nblocks )
