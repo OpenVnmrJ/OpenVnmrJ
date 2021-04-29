@@ -1808,7 +1808,7 @@ int filterfid(ssparInfo parss, float *data, double *buffer,
    register double      *tmpbuffer,
                         *tmpdfilter,
                         sum;
-   int coeff_start, coeff_len, coeff_2, ntaps_2; 
+   int coeff_start, coeff_len, ntaps_2; 
 
    ntaps = parss.ntaps;
    nLSpts = ncdatapts - ntaps + 1;
@@ -1824,7 +1824,7 @@ int filterfid(ssparInfo parss, float *data, double *buffer,
    tmpbuffer = buffer;
    ntaps_2 = ntaps/2;
    coeff_start = ntaps_2;
-   coeff_2 = coeff_len = ntaps-coeff_start;
+   coeff_len = ntaps-coeff_start;
    sfactor = 0.0;
    tmpdfilter=dfilter+coeff_start;
    for (i = 0; i < coeff_len; i++)

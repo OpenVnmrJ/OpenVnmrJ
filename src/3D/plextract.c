@@ -22,7 +22,6 @@
 #include "struct3d.h"
 #include "constant.h"
 
-#define MAXPATHL	128
 #define MAXSTR		256
 
 #define PLEXTRACT
@@ -428,7 +427,7 @@ comInfo *parseinput(int argc, char *argv[], planeInfo *plinfo)
 
    if (pinfo->curexp.vset)
    {
-      char	tmppath[MAXPATHL],
+      char	tmppath[MAXPATH],
 		fext[25];
 
 /**********************************************
@@ -514,10 +513,11 @@ comInfo *parseinput(int argc, char *argv[], planeInfo *plinfo)
       {
          if (pinfo->overwrite.ival)
          {
-            char syscmd[MAXPATHL];
+            char syscmd[MAXPATH];
+            int ret __attribute__((unused));
 
             sprintf(syscmd, "rm -r \"%s\"\n", pinfo->outdirpath.sval);
-            (void) system(syscmd);
+            ret = system(syscmd);
 
             if ( mkdir(pinfo->outdirpath.sval, 0777) )
             {
@@ -636,11 +636,11 @@ hdrInfo *createDATAheader(filepar *fileinfo, datafileheader *datahead, int pltyp
 						(NI_DSPLY|NI2_DSPLY);
                   break;
       case F1F3:  hdrinfo->filehead->status |= (S_NP|S_NI);
-                  hdrinfo->blockhead->mode = datahead->mode,
+                  hdrinfo->blockhead->mode = datahead->mode &
 						(NI_DSPLY|NP_DSPLY);
                   break;
       case F2F3:  hdrinfo->filehead->status |= (S_NP|S_NI2);
-                  hdrinfo->blockhead->mode = datahead->mode,
+                  hdrinfo->blockhead->mode = datahead->mode &
 						(NI2_DSPLY|NP_DSPLY);
                   break;
       default:    (void) printf("\ncreateDATAheader():  internal error\n");
@@ -781,9 +781,9 @@ void closeDATAfiles(filedesc *dlist)
 +--------------------------------------*/
 info3D *openDATAfiles(char *indirpath)
 {
-   char			basedatapath[MAXPATHL],
-			datapath[MAXPATHL],
-			fext[10];
+   char			basedatapath[MAXPATH],
+			datapath[MAXPATH],
+			fext[16];
    int			i,
 			fd,
 			*fdlist;
@@ -911,7 +911,8 @@ datafileheader *readDATAheader(int fd)
       return(NULL);
    }
  
-   nbytes = sizeof(datafileheader) - nbytes - sizeof(float);
+   nbytes = sizeof(datafileheader) - 
+        (int) ((char *) &(datahead->maxval) - (char *) datahead);
    if ( read(fd, (char *) (&(datahead->maxval)), nbytes)
                 != nbytes )
    {
@@ -930,9 +931,10 @@ datafileheader *readDATAheader(int fd)
 +--------------------------------------*/
 int copypar(char *indirpath, char *outdirpath)
 {
-   char	infilepath[MAXPATHL],
-	outfilepath[MAXPATHL],
-	syscmd[MAXSTR];
+   char	infilepath[MAXPATH],
+	outfilepath[MAXPATH],
+	syscmd[MAXSTR*2+16];
+   int ret __attribute__((unused));
 
 
    (void) strcpy(infilepath, indirpath);
@@ -948,7 +950,7 @@ int copypar(char *indirpath, char *outdirpath)
    (void) strcat(outfilepath, "/procpar3d");
 
    (void) sprintf(syscmd, "cp \"%s\" \"%s\"\n", infilepath, outfilepath);
-   (void) system(syscmd);
+   ret = system(syscmd);
 
    if ( access(outfilepath, R_OK) )
    { 
@@ -1163,10 +1165,10 @@ static void convertProj(int *tmpprojbuffer, int np)
 +--------------------------------------*/
 int writeplanes(info3D *info, char *outdirpath, int plane, int f1f2flag)
 {
-   char		basefilepath[MAXPATHL],
-		basefilepathF1F2[MAXPATHL],
-		filepath[MAXPATHL],
-		fext[10];
+   char		basefilepath[MAXPATH],
+		basefilepathF1F2[MAXPATH],
+		filepath[MAXPATH],
+		fext[16];
    int		i,
 		j,
 		fdw,
@@ -1514,12 +1516,13 @@ int writeplanes(info3D *info, char *outdirpath, int plane, int f1f2flag)
 		   projflag = ( (plane == F1F3) || (plane == F2F3) );
                    (void) strcpy(filepath, basefilepath);
                    break;
-         case 1:   tmphdrinfo = hdrinfof1f2;
+         case 1:
+         default:
+		   tmphdrinfo = hdrinfof1f2;
                    tmpprojbuffer = projf1f2buffer; 
 		   projflag = ( f1f2flag || (plane == F1F2) );
                    (void) strcpy(filepath, basefilepathF1F2);
                    break;
-         default:  break;
       }
 
       if (projflag)

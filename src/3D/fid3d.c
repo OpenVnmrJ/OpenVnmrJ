@@ -577,13 +577,14 @@ comInfo	*pinfo;
 {
    char	outputfilepath[MAXPATHL],
 	textcopy[MAXPATHL];
+   int ret __attribute__((unused));
 
 
    (void) strcpy(outputfilepath, pinfo->outputdirpath);
    (void) strcat(outputfilepath, "/text");
    (void) sprintf(textcopy, "cp \"%s\" \"%s\"\n", pinfo->inputfilepath,
 		outputfilepath);
-   (void) system(textcopy);
+   ret = system(textcopy);
 
    return(COMPLETE);
 }

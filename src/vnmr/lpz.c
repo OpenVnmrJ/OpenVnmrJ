@@ -598,7 +598,7 @@ int setlppar(lpstruct *parLPinfo, int dimen, int pstatus,
 static void lpanalyz(lpinfo *lpparval)
 {
    char	filepath[MAXPATHL],
-	fext[8];
+	fext[16];
 
 
    if ( (lpparval->trace == dbgtrace) && (lpparval->printout & LPPRT_OPTS) )

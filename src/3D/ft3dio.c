@@ -37,7 +37,6 @@
 
 
 static off_t	compstbyte = 0;
-static int      firstFID = TRUE;
 
 extern char	*userdir;
 extern int	maxfn12;	/* maximum F1-F2 real Fourier number	*/
@@ -69,8 +68,7 @@ int readFIDdata(int fd, float *data, char *wspace, dfilehead *filehead,
 {
    int skip_blks;		/* Nbr of blocks before FID we want */
    int skip_fids;		/* Nbr of FIDs to skip at front of block */
-   int                  shift,
-			diff_block = 0;
+   int                  shift;
    float                rmult;
    dblockhead	        fidblockhead;
    off_t                fidOffset;
@@ -100,16 +98,6 @@ int readFIDdata(int fd, float *data, char *wspace, dfilehead *filehead,
    }
    else
    {
-      if (firstFID && pf3acq)
-      {
-         firstFID = FALSE;
-         diff_block = fid_nbr;
-      }
-      else
-      {
-         diff_block = fid_nbr - (*lastfid) - 1;
-      }
-
       skip_blks = fid_nbr / filehead->ntraces;
       skip_fids = fid_nbr % filehead->ntraces;
       fidOffset = sizeof(struct datafilehead);
@@ -171,7 +159,7 @@ comInfo		*pinfo;
 {
    char	maindatafilepath[MAXPATHL],
 	datafilepath[MAXPATHL],
-	fext[10];
+	fext[16];
    int	i,
 	ndatafiles,
 	*fdlist,
@@ -238,7 +226,8 @@ int writeDATAheader(int dfd, datafileheader *dataheader)
       return(ERROR);
    }
 
-   nbytes = sizeof(datafileheader) - nbytes - sizeof(float *);
+   nbytes = sizeof(datafileheader) - 
+        (int) ((char *) &(dataheader->maxval) - (char *) dataheader);
    if ( write(dfd, (char *) (&(dataheader->maxval)),
 	  nbytes) != nbytes )
    {
@@ -291,7 +280,8 @@ coef3D	*coef;
       return(NULL);
    }
 
-   nbytes = sizeof(datafileheader) - nbytes - sizeof(float *);
+   nbytes = sizeof(datafileheader) - 
+        (int) ((char *) &(filehead->maxval) - (char *) filehead);
    if ( read(fd, (char *) (&(filehead->maxval)), nbytes)
 		!= nbytes )
    {
@@ -468,7 +458,7 @@ comInfo *pinfo;		/* pointer to command line structure	*/
 {
    char		maindatafilepath[MAXPATHL],
 		datafilepath[MAXPATHL],
-		fext[10];
+		fext[16];
    int		i,
 		ndatafiles,
 		mode,
