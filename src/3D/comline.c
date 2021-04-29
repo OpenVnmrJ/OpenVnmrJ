@@ -356,6 +356,7 @@ procMode	*prcinfo;
 		tmpprocf3acq,
 		tmpmultifile,
 		tmplogfile;
+   int ret __attribute__((unused));
    ipar		selection;
    comInfo      *pinfo;
    void		pathadj();
@@ -846,7 +847,7 @@ procMode	*prcinfo;
    if (prcinfo->procf3 && pinfo->overwrite.ival)
    {
       char	planedir[MAXPATHL],
-         	syscmd[MAXPATHL]; 
+         	syscmd[MAXPATHL*2]; 
       int	n;
 
       (void) strcpy(planedir, pinfo->datadirpath.sval);
@@ -854,7 +855,7 @@ procMode	*prcinfo;
       planedir[n-5] = '\0';
       (void) strcat(planedir, "/extr");
       sprintf(syscmd, "rm -rf \"%s\"\n", planedir); 
-      (void) system(syscmd); 
+      ret = system(syscmd); 
    }
 
    if (prcinfo->procf3)
@@ -871,10 +872,10 @@ procMode	*prcinfo;
             }
             else
             {   
-               char syscmd[MAXPATHL]; 
+               char syscmd[MAXPATHL*2]; 
  
                sprintf(syscmd, "rm -rf \"%s\"\n", pinfo->datadirpath.sval); 
-               (void) system(syscmd); 
+               ret = system(syscmd); 
  
                if ( mkdir(pinfo->datadirpath.sval, 0777) )
                {

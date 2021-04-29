@@ -897,6 +897,7 @@ int main(int argc, char *argv[])
 				maxwords,
 				ndatafiles,
 				nmembytes;
+   int ret __attribute__((unused));
    float			*sinetab;
    dfilehead			*fidheader = NULL;
    datafileheader		*datahead = NULL;
@@ -1418,7 +1419,7 @@ int main(int argc, char *argv[])
 	&& (pinfo->getplane.vset || extr_for_fdf)
 	&& !pinfo->procf3acq.ival)
    {
-      char		syscmd[MAXPATHL],
+      char		syscmd[MAXPATHL*4],
 			datapath[MAXPATHL];
       int		n;
 
@@ -1445,7 +1446,7 @@ int main(int argc, char *argv[])
 	      "getplane -i \"%s\" -p %s", datapath, pinfo->getplane.sval);
       }
 
-      (void) system(syscmd);
+      ret = system(syscmd);
    }
 
    if (master_ft3d && pinfo->fdfheaderpath.vset)
@@ -1454,8 +1455,8 @@ int main(int argc, char *argv[])
        char fname[MAXPATHL+1];
        char hname[MAXPATHL+1];
        char oname[MAXPATHL+1];
-       char sname[MAXPATHL+1];
-       char command[2*MAXPATHL + 32];
+       char sname[MAXPATHL+16];
+       char command[3*MAXPATHL + 64];
        hdr_bytes = sizeof(dfilehead) + sizeof(dblockhead);
        sprintf(fname,"%.*s/data", MAXPATHL-16, pinfo->datadirpath.sval);
        sprintf(hname,"%.*s", MAXPATHL-16, pinfo->fdfheaderpath.sval);
@@ -1469,9 +1470,9 @@ int main(int argc, char *argv[])
        sprintf(command,"fdfgluer -offset %d -infiles %s# %s >%s",
 	       hdr_bytes, sname, hname, oname);
 #endif
-       (void)system(command);	/* Create FDF file */
+       ret = system(command);	/* Create FDF file */
        sprintf(command,"/bin/rm \"%s\"", hname);
-       (void)system(command);	/* Remove header file */
+       ret = system(command);	/* Remove header file */
        rm_numbered_files(fname);/* Remove old data file(s) */
        if (add_fdf_plane){
 	   /* Remove unrequested plane extraction files. */

@@ -43,7 +43,8 @@ int copyinfofiles(comInfo *pinfo)
    char	newinfodir[MAXPATHL],
 	foutpath[MAXPATHL],
 	finpath[MAXPATHL],
-	syscmd[2*MAXPATHL];
+	syscmd[3*MAXPATHL];
+   int ret __attribute__((unused));
 
 
    (void) strcpy(newinfodir, pinfo->datadirpath.sval);
@@ -65,7 +66,7 @@ int copyinfofiles(comInfo *pinfo)
    (void) strcat(finpath, "/procdat");
 
    sprintf(syscmd, "cp \"%s\" \"%s\"\n", finpath, foutpath);
-   (void) system(syscmd);
+   ret = system(syscmd);
 
    (void) strcpy(foutpath, newinfodir);
    (void) strcat(foutpath, "/procpar3d"); 
@@ -73,19 +74,19 @@ int copyinfofiles(comInfo *pinfo)
    (void) strcat(finpath, "/procpar3d");
  
    sprintf(syscmd, "cp \"%s\" \"%s\"\n", finpath, foutpath); 
-   (void) system(syscmd);
+   ret = system(syscmd);
 
    (void) strcpy(foutpath, newinfodir);
    (void) strcat(foutpath, "/coef");
 
    sprintf(syscmd, "cp \"%s\" \"%s\"\n", pinfo->coeffilepath.sval, foutpath);
-   (void) system(syscmd);
+   ret = system(syscmd);
 
    (void) strcpy(foutpath, newinfodir);
    (void) strcat(foutpath, "/auto");
 
    sprintf(syscmd, "cp \"%s\" \"%s\"\n", pinfo->autofilepath.sval, foutpath);
-   (void) system(syscmd);
+   ret = system(syscmd);
 
    return(COMPLETE);      
 }
