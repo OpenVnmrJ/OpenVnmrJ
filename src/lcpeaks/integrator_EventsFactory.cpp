@@ -76,48 +76,48 @@ TIntegrationEventsFactory::TIntegrationEventsFactory()
  * -------------------------- */
 {
     FExistingEvents[INTEGRATIONEVENT_SETPEAKWIDTH] =
-        new TIntegrationEvent_VALUE1("Set Peak Width",
-        "SPW",
+        new TIntegrationEvent_VALUE1((char *)"Set Peak Width",
+        (char *)"SPW",
         0, 0,
         INTEGRATIONEVENT_SETPEAKWIDTH,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_PARAMDETECT);
 
     FExistingEvents[INTEGRATIONEVENT_SETTHRESHOLD] =
-        new TIntegrationEvent_VALUE1("Set Threshold",
-        "STH",
+        new TIntegrationEvent_VALUE1((char *)"Set Threshold",
+        (char *)"STH",
         0, 10,
         INTEGRATIONEVENT_SETTHRESHOLD,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_PARAMDETECT );
 
     FExistingEvents[INTEGRATIONEVENT_DBLEPEAKWIDTH] =
-        new TIntegrationEvent_Now("Double Peak Width",
-        "DPW",
+        new TIntegrationEvent_Now((char *)"Double Peak Width",
+        (char *)"DPW",
         0,
         INTEGRATIONEVENT_DBLEPEAKWIDTH,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_PARAMDETECT);
 
     FExistingEvents[INTEGRATIONEVENT_HLVEPEAKWIDTH] =
-        new TIntegrationEvent_Now("'Halve Peak Width",
-        "HPW",
+        new TIntegrationEvent_Now((char *)"'Halve Peak Width",
+        (char *)"HPW",
         0,
         INTEGRATIONEVENT_HLVEPEAKWIDTH,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_PARAMDETECT);
 
     FExistingEvents[INTEGRATIONEVENT_ESTIMTHRESHOLD] =
-        new TIntegrationEvent_Now("Estimate Threshold",
-        "ETH",
+        new TIntegrationEvent_Now((char *)"Estimate Threshold",
+        (char *)"ETH",
         0,
         INTEGRATIONEVENT_ESTIMTHRESHOLD,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_PARAMDETECT);
 
     FExistingEvents[INTEGRATIONEVENT_COMPUTENOISE] =
-        new TIntegrationEvent_OnOff("Compute Noise",
-        "CPN",
+        new TIntegrationEvent_OnOff((char *)"Compute Noise",
+        (char *)"CPN",
         0,
         true,
         INTEGRATIONEVENT_COMPUTENOISE,
@@ -125,72 +125,72 @@ TIntegrationEventsFactory::TIntegrationEventsFactory()
         IEC_PARAMDETECT);
 
     FExistingEvents[INTEGRATIONEVENT_ADDTHRESHOLD] =
-        new TIntegrationEvent_VALUE1("Add to Threshold",
-        "ATH",
+        new TIntegrationEvent_VALUE1((char *)"Add to Threshold",
+        (char *)"ATH",
         0, 10,
         INTEGRATIONEVENT_ADDTHRESHOLD,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_PARAMDETECT);
 
     FExistingEvents[INTEGRATIONEVENT_MIN_HEIGHT] =
-        new TIntegrationEvent_VALUE1("Set Minimal Height",
-        "SMH",
+        new TIntegrationEvent_VALUE1((char *)"Set Minimal Height",
+        (char *)"SMH",
         0, 100,
         INTEGRATIONEVENT_MIN_HEIGHT,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_MINVALUES);
 
     FExistingEvents[INTEGRATIONEVENT_MIN_AREA] =
-        new TIntegrationEvent_VALUE1("Set Minimal Area",
-        "SMA",
+        new TIntegrationEvent_VALUE1((char *)"Set Minimal Area",
+        (char *)"SMA",
         0, 100,
         INTEGRATIONEVENT_MIN_AREA,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_MINVALUES);
 
     FExistingEvents[INTEGRATIONEVENT_MIN_HEIGHT_PERCENT] =
-        new TIntegrationEvent_VALUE1("Set Minimal Height %",
-        "SMH%",
+        new TIntegrationEvent_VALUE1((char *)"Set Minimal Height %",
+        (char *)"SMH%",
         0, 0.1,
         INTEGRATIONEVENT_MIN_HEIGHT_PERCENT,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_MINVALUES);
 
     FExistingEvents[INTEGRATIONEVENT_MIN_AREA_PERCENT] =
-        new TIntegrationEvent_VALUE1("Set Minimal Area %",
-        "SMA%",
+        new TIntegrationEvent_VALUE1((char *)"Set Minimal Area %",
+        (char *)"SMA%",
         0, 0.1,
         INTEGRATIONEVENT_MIN_AREA_PERCENT,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_MINVALUES);
 
     FExistingEvents[INTEGRATIONEVENT_INTEGRATION] =
-        new TIntegrationEvent_OnOff("Turn Integration",
-        "TI",
+        new TIntegrationEvent_OnOff((char *)"Turn Integration",
+        (char *)"TI",
         0, false,
         INTEGRATIONEVENT_INTEGRATION,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_FORCEDPEAKS);
 
     FExistingEvents[INTEGRATIONEVENT_STARTPEAK_NOW]=
-        new TIntegrationEvent_Now("Start Peak Now",
-        "SPN",
+        new TIntegrationEvent_Now((char *)"Start Peak Now",
+        (char *)"SPN",
         0,
         INTEGRATIONEVENT_STARTPEAK_NOW,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_FORCEDPEAKS);
 
     FExistingEvents[INTEGRATIONEVENT_ENDPEAK_NOW]=
-        new TIntegrationEvent_Now("Stop Peak Now",
-        "EPN",
+        new TIntegrationEvent_Now((char *)"Stop Peak Now",
+        (char *)"EPN",
         0,
         INTEGRATIONEVENT_ENDPEAK_NOW,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_FORCEDPEAKS);
 
     FExistingEvents[INTEGRATIONEVENT_SPLITPEAK_NOW] =
-        new TIntegrationEvent_Now("Split Peak Now",
-        "TPN",
+        new TIntegrationEvent_Now((char *)"Split Peak Now",
+        (char *)"TPN",
         0,
         INTEGRATIONEVENT_SPLITPEAK_NOW,
         INTEGRATION_PRIORITY_NORMAL,
@@ -198,160 +198,160 @@ TIntegrationEventsFactory::TIntegrationEventsFactory()
 
     FExistingEvents[INTEGRATIONEVENT_SLICE_INTEGRATION] =
         new TIntegrationEvent_OnOff(
-        "Slice Integration",
-        "SLI", 
+        (char *)"Slice Integration",
+        (char *)"SLI", 
         0, true,
         INTEGRATIONEVENT_SLICE_INTEGRATION,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_PARAMDETECT);
 
     FExistingEvents[INTEGRATIONEVENT_DETECTNEGPEAKS] =
-        new TIntegrationEvent_OnOff("Detect Negative Peaks",
-        "DNP",
+        new TIntegrationEvent_OnOff((char *)"Detect Negative Peaks",
+        (char *)"DNP",
         0, true,
         INTEGRATIONEVENT_DETECTNEGPEAKS,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_NEGPEAK);
 
     FExistingEvents[INTEGRATIONEVENT_ADDPEAKS] =
-        new TIntegrationEvent_OnOff("Add Peaks",
-        "ADP",
+        new TIntegrationEvent_OnOff((char *)"Add Peaks",
+        (char *)"ADP",
         0, true,
         INTEGRATIONEVENT_ADDPEAKS,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_FORCEDPEAKS);
 
     FExistingEvents[INTEGRATIONEVENT_VALTOVAL] =
-        new TIntegrationEvent_OnOff("Baseline Valley-to-Valley",
-        "VTV",
+        new TIntegrationEvent_OnOff((char *)"Baseline Valley-to-Valley",
+        (char *)"VTV",
         0, true,
         INTEGRATIONEVENT_VALTOVAL,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_HORIZLINE] =
-        new TIntegrationEvent_OnOff("Horizontal Baseline",
-        "HB",
+        new TIntegrationEvent_OnOff((char *)"Horizontal Baseline",
+        (char *)"HB",
         0, true,
         INTEGRATIONEVENT_HORIZLINE,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_HORIZLINE_BYPEAK] =
-        new TIntegrationEvent_OnOff("Horizontal Baseline by peak",
-        "HBP",
+        new TIntegrationEvent_OnOff((char *)"Horizontal Baseline by peak",
+        (char *)"HBP",
         0, true,
         INTEGRATIONEVENT_HORIZLINE_BYPEAK,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_HORIZLINE_BACK] =
-        new TIntegrationEvent_OnOff("Backward Horizontal Baseline",
-        "BHB",
+        new TIntegrationEvent_OnOff((char *)"Backward Horizontal Baseline",
+        (char *)"BHB",
         0, true,
         INTEGRATIONEVENT_HORIZLINE_BACK,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_HORIZLINE_BACK_BYPEAK] =
-        new TIntegrationEvent_OnOff("Backward Horizontal Baseline by peak",
-        "BHBP",
+        new TIntegrationEvent_OnOff((char *)"Backward Horizontal Baseline by peak",
+        (char *)"BHBP",
         0, true,
         INTEGRATIONEVENT_HORIZLINE_BACK_BYPEAK,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_COMMONLINE] =
-        new TIntegrationEvent_OnOff("Force Baseline",
-        "FB",
+        new TIntegrationEvent_OnOff((char *)"Force Baseline",
+        (char *)"FB",
         0, true,
         INTEGRATIONEVENT_COMMONLINE,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_COMMONLINE_BYPEAK] =
-        new TIntegrationEvent_OnOff("Force Baseline by peak",
-        "FBP",
+        new TIntegrationEvent_OnOff((char *)"Force Baseline by peak",
+        (char *)"FBP",
         0, true,
         INTEGRATIONEVENT_COMMONLINE_BYPEAK,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_BASELINE_NOW] =
-        new TIntegrationEvent_Now("Baseline Now",
-        "BN",
+        new TIntegrationEvent_Now((char *)"Baseline Now",
+        (char *)"BN",
         0,
         INTEGRATIONEVENT_BASELINE_NOW,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_BASELINE_NEXTVALLEY] =
-        new TIntegrationEvent_Now("Baseline Next Valley",
-        "BNV",
+        new TIntegrationEvent_Now((char *)"Baseline Next Valley",
+        (char *)"BNV",
         0,
         INTEGRATIONEVENT_BASELINE_NEXTVALLEY,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_BASELINE);
 
     FExistingEvents[INTEGRATIONEVENT_SETSKIMRATIO] =
-        new TIntegrationEvent_VALUE1("Set Skim Ratio",
-        "SKR",
+        new TIntegrationEvent_VALUE1((char *)"Set Skim Ratio",
+        (char *)"SKR",
         0, 4,
         INTEGRATIONEVENT_SETSKIMRATIO,
         INTEGRATION_PRIORITY_NORMAL,
         IEC_SKIMMING);
 
     FExistingEvents[INTEGRATIONEVENT_TANGENTSKIM] =
-        new TIntegrationEvent_OnOff("Tangent Skim Next Peaks",
-        "TSNP",
+        new TIntegrationEvent_OnOff((char *)"Tangent Skim Next Peaks",
+        (char *)"TSNP",
         0, true,
         INTEGRATIONEVENT_TANGENTSKIM,
         INTEGRATION_PRIORITY_LOW,
         IEC_SKIMMING);
 
     FExistingEvents[INTEGRATIONEVENT_TANGENTSKIM_REAR] =
-        new TIntegrationEvent_OnOff("Tangent Skim Rear",
-        "TSR",
+        new TIntegrationEvent_OnOff((char *)"Tangent Skim Rear",
+        (char *)"TSR",
         0, true,
         INTEGRATIONEVENT_TANGENTSKIM_REAR,
         INTEGRATION_PRIORITY_LOW,
         IEC_SKIMMING);
 
     FExistingEvents[INTEGRATIONEVENT_TANGENTSKIM_FRONT] =
-        new TIntegrationEvent_OnOff("Tangent Skim Front",
-        "TSF",
+        new TIntegrationEvent_OnOff((char *)"Tangent Skim Front",
+        (char *)"TSF",
         0, true,
         INTEGRATIONEVENT_TANGENTSKIM_FRONT,
         INTEGRATION_PRIORITY_LOW,
         IEC_SKIMMING);
 
     FExistingEvents[INTEGRATIONEVENT_TANGENTSKIM_EXP] =
-        new TIntegrationEvent_OnOff("Exponential Skim Next Peaks",
-        "ESNP",
+        new TIntegrationEvent_OnOff((char *)"Exponential Skim Next Peaks",
+        (char *)"ESNP",
         0,true,
         INTEGRATIONEVENT_TANGENTSKIM_EXP,
         INTEGRATION_PRIORITY_LOW,
         IEC_SKIMMING);
 
     FExistingEvents[INTEGRATIONEVENT_TANGENTSKIM_REAR_EXP] =
-        new TIntegrationEvent_OnOff("Exponential Skim Rear",
-        "ESR",
+        new TIntegrationEvent_OnOff((char *)"Exponential Skim Rear",
+        (char *)"ESR",
         0, true,
         INTEGRATIONEVENT_TANGENTSKIM_REAR_EXP,
         INTEGRATION_PRIORITY_LOW,
         IEC_SKIMMING);
 
     FExistingEvents[INTEGRATIONEVENT_TANGENTSKIM_FRONT_EXP] =
-        new TIntegrationEvent_OnOff("Exponential Skim Front",
-        "ESF",
+        new TIntegrationEvent_OnOff((char *)"Exponential Skim Front",
+        (char *)"ESF",
         0, true,
         INTEGRATIONEVENT_TANGENTSKIM_FRONT_EXP,
         INTEGRATION_PRIORITY_LOW,
         IEC_SKIMMING);
 
     FExistingEvents[INTEGRATIONEVENT_SETTHRESHOLD_SOLVENT] =
-        new TIntegrationEvent_VALUE1("Set Solvent Threshold",
-        "SST",
+        new TIntegrationEvent_VALUE1((char *)"Set Solvent Threshold",
+        (char *)"SST",
         0, 1000,
         INTEGRATIONEVENT_SETTHRESHOLD_SOLVENT,
         INTEGRATION_PRIORITY_NORMAL,
