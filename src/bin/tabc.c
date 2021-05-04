@@ -58,20 +58,20 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include <netinet/in.h>
+#include "data.h" 
 
 /* Removed 5/22/97 Matt Howitt, will create parameter in tabc macro 	*/
 /* tab_converted.  This is similar to the flash_converted param.	*/ 
-/* #define TABC_DONE   8  /*set in main_header.spare1 means already converted*/
+/* #define TABC_DONE   8  set in main_header.spare1 means already converted*/
 #define NUM_ARGS    4   /* # of command-line args not counting command name */
 #define NP          ntohl(main_header.np)
 #define NBLOCKS     ntohl(main_header.nblocks)
 #define NTRACES     ntohl(main_header.ntraces)
 #define EBYTES      ntohl(main_header.ebytes)
 
-#include "data.h" 
 
 struct datafilehead main_header;
 
