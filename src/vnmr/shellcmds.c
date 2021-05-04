@@ -308,12 +308,12 @@ int Whoinfo(int argc, char *argv[], int retc, char *retv[])
     char	*cmdstr;
     FILE	*stream;
 
+    (void) argc;
+    (void) argv;
+    (void) retc;
+    (void) retv;
     Wshow_text();
-#ifdef UNIX
     cmdstr = "/usr/bin/who";
-#else 
-    cmdstr = "SHOW USERS";
-#endif 
     if ((stream = popen_call( cmdstr, "r")) == NULL)
     {  Werrprintf("Problem with creating shell command with popen");
        ABORT;
@@ -331,6 +331,8 @@ int Whoinfo(int argc, char *argv[], int retc, char *retv[])
 +----------------------------------------------------------------------------*/
 int Uname(int argc, char *argv[], int retc, char *retv[]) {
 	static char osname[256] = { 0 };
+        (void) argc;
+        (void) argv;
 	if (strlen(osname) == 0) {
                 struct utsname buf;
 
@@ -354,6 +356,9 @@ int Uname(int argc, char *argv[], int retc, char *retv[]) {
 +----------------------------------------------------------------------------*/
 int Hname(int argc, char *argv[], int retc, char *retv[]) {
 	static char host[256] = { 0 };
+
+        (void) argc;
+        (void) argv;
 	if (strlen(host) == 0) {
                 struct utsname buf;
 
@@ -412,6 +417,7 @@ int Pwd(int argc, char *argv[], int retc, char *retv[])
 {
     char *tmpptr;
 
+    (void) argc;
    /*
     tmpptr = getcwd( &path[ 0 ], sizeof( path ) - 1 );
    */
@@ -610,11 +616,9 @@ int Lf(int argc, char *argv[], int retc, char *retv[])
     int   screenLength;
     FILE *stream;
 
-#ifdef UNIX
+   (void) retc;
+   (void) retv;
    strcpy(cmdstr,"/bin/ls -C -F");
-#else 
-   strcpy(cmdstr,"dir ");
-#endif 
    for (i=1; i<argc; i++)
    {  strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
       len = MAXSHSTRING - strlen(cmdstr) -1;
@@ -936,6 +940,8 @@ int Cat(int argc, char *argv[], int retc, char *retv[])
    char  tfilepath[MAXPATH];
    extern int printOn;
 
+    (void) retc;
+    (void) retv;
     if (argc == 1) /* This is a no no, must have arguments for cat */
     {	Werrprintf("Error: no arguments. Usage--cat('file')");
 	ABORT;
@@ -1101,6 +1107,8 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
 
+    (void) retc;
+    (void) retv;
     if ( !((argc == 3) || ( (argc == 4) && ! strcmp(argv[1],"-f") )) )
     {
       Werrprintf( "%s:  use exactly 2 arguments", argv[ 0 ] );
@@ -1287,6 +1295,7 @@ int Rm(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
 
+    (void) retv;
     if ( (argc == 2) || ( (argc == 3) && ! strcmp(argv[1],"-f") ) )
     {
        int argnum = (argc == 2) ? 1 : 2;
@@ -1302,7 +1311,7 @@ int Rm(int argc, char *argv[], int retc, char *retv[])
               ( !strcmp(argv[1],"-rf") || !strcmp(argv[1],"-r") || !strcmp(argv[1],"-R") ) )
     {
        int noWildCard = 1;
-       for (i=0; i<strlen(argv[2]); i++)
+       for (i=0; i<(int)strlen(argv[2]); i++)
           if (argv[2][i] == '*')
           {
              noWildCard = 0;
@@ -1424,6 +1433,7 @@ int rm_dir(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
 
+    (void) retv;
     strcpy(cmdstr,"/bin/rmdir");
     for (i=1; i<argc; i++)
     {
@@ -1468,6 +1478,8 @@ int del_file2(int argc, char *argv[], int retc, char *retv[])
 #endif 
     int  i,j;
 
+    (void) retc;
+    (void) retv;
     if (argc < 2)
 	RETURN;
 #ifdef VNMRJ
@@ -1498,7 +1510,7 @@ int del_file2(int argc, char *argv[], int retc, char *retv[])
 	    filename[i] = '\0';
     }
 
-       for (j=0; j<strlen(filename); j++)
+       for (j=0; j<(int) strlen(filename); j++)
           if (filename[j] == '*')
           {
              Werrprintf("No wildcards are permitted in the %s command", argv[0]);
@@ -1565,8 +1577,9 @@ int del_file(int argc, char *argv[], int retc, char *retv[])
     int  i,j;
     int isDir;
 
+    (void) retv;
     for (i=1; i<argc; i++)
-       for (j=0; j<strlen(argv[i]); j++)
+       for (j=0; j<(int) strlen(argv[i]); j++)
           if (argv[i][j] == '*')
           {
              Werrprintf("No wildcards are permitted in the delete command");
@@ -2100,6 +2113,8 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       len = strlen(inLine);          /* get buf length */
       if (len && inLine[len-1] == '\n')      /* check last char is '\n' */
          inLine[--len] = '\0'; 
+      if (len && inLine[len-1] == '\r')      /* check last char is '\r' */
+         inLine[--len] = '\0'; 
       lineOK = 1;
       if (argc > 3)
       {
@@ -2296,7 +2311,9 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                else if ( !strcmp(argv[index],"grep -w") )
                {
                   if ( (res) ||  
-                        ( (*(inLine+len) != ' ') && (*(inLine+len) != '\t') && (*(inLine+len) != '\0')) )
+                        ( (*(inLine+len) != ' ') &&
+                          (*(inLine+len) != '\t') &&
+                          (*(inLine+len) != '\0')) )
                   {
                     lineOK = 0;
                     break;
@@ -2305,7 +2322,21 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                else if ( !strcmp(argv[index],"grep -vw") || !strcmp(argv[index],"grep -wv") )
                {
                   if ( (!res) &&
-                         ((*(inLine+len) == ' ') || (*(inLine+len) == '\t') || (*(inLine+len) == '\0')))
+                         ((*(inLine+len) == ' ') ||
+                          (*(inLine+len) == '\t') ||
+                          (*(inLine+len) == '\0')))
+                  {
+                    lineOK = 0;
+                    break;
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -iw") )
+               {
+                  res=strncasecmp(inLine,&argv[index+1][1], len);
+                  if ( (res) ||  
+                        ( (*(inLine+len) != ' ') &&
+                          (*(inLine+len) != '\t') &&
+                          (*(inLine+len) != '\0')) )
                   {
                     lineOK = 0;
                     break;
@@ -2353,8 +2384,15 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                      len = strlen(argv[index+1]);
                      ptr2 = ptr;
  
-                     while ((ptr == ptr2) && (strlen(ptr2) >= len) &&
-                            (*(ptr+len) != ' ') && (*(ptr+len) != '\t') && (*(ptr+len) != '\0'))
+                     while (((ptr == ptr2) && (strlen(ptr2) >= len) &&
+                            (*(ptr+len) != ' ') &&
+                            (*(ptr+len) != '\t') &&
+                            (*(ptr+len) != '\0') ) ||
+                            ( (ptr != inLine) &&
+                              ( *(ptr-1) != ' ') &&
+                              ( *(ptr-1) != '\t')
+                            )
+                           )
                      {
                         ptr2++;
                         if ( (ptr  = strstr(ptr2,argv[index+1])) == NULL )
@@ -2375,8 +2413,15 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                      len = strlen(argv[index+1]);
                      ptr2 = ptr;
  
-                     while ((ptr == ptr2) && (strlen(ptr2) >= len) &&
-                            (*(ptr+len) != ' ') && (*(ptr+len) != '\t') && (*(ptr+len) != '\0'))
+                     while (((ptr == ptr2) && (strlen(ptr2) >= len) &&
+                            (*(ptr+len) != ' ') &&
+                            (*(ptr+len) != '\t') &&
+                            (*(ptr+len) != '\0') ) ||
+                            ( (ptr != inLine) &&
+                              ( *(ptr-1) != ' ') &&
+                              ( *(ptr-1) != '\t')
+                            )
+                           )
                      {
                          ptr2++;
                          if ( (ptr  = strstr(ptr2,argv[index+1])) == NULL )
@@ -2409,6 +2454,55 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                   {
                      lineOK = 0;
                      break;
+                  }
+               }
+               else if ( !strcmp(argv[index],"grep -iw") )
+               {
+                  char needle[APPENDLINE];
+                  char haystack[APPENDLINE];
+                  char *tptr, *fptr;
+                  char *ptr;
+
+                  fptr=inLine;
+                  tptr=haystack;
+                  while ( *fptr )
+                     *tptr++ = (isupper( *fptr )) ? *fptr++ + 'a' - 'A' : *fptr++;
+                  *tptr = '\0';
+                  fptr=argv[index+1];
+                  tptr=needle;
+                  while ( *fptr )
+                     *tptr++ = (isupper( *fptr )) ? *fptr++ + 'a' - 'A' : *fptr++;
+                  *tptr = '\0';
+
+                  if ( (ptr = strstr(haystack,needle)) == NULL )
+                  {
+                     lineOK = 0;
+                     break;
+                  }
+                  else
+                  {
+                     char *ptr2;
+                     len = strlen(needle);
+                     ptr2 = ptr;
+ 
+                     while (((ptr == ptr2) && (strlen(ptr2) >= len) &&
+                            (*(ptr+len) != ' ') &&
+                            (*(ptr+len) != '\t') &&
+                            (*(ptr+len) != '\0') ) ||
+                            ( (ptr != haystack) &&
+                              ( *(ptr-1) != ' ') &&
+                              ( *(ptr-1) != '\t')
+                            )
+                           )
+                     {
+                        ptr2++;
+                        if ( (ptr  = strstr(ptr2,needle)) == NULL )
+                        {
+                            lineOK = 0;
+                            break;
+                        }
+                        ptr2 = ptr;
+                     }
                   }
                }
             }

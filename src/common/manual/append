@@ -37,7 +37,7 @@ for append, appendstr, copyf, and copystr.  The following filters are available
 'grep -v',<search phrase>    - if a given line contains the <search phrase>, it
                              will not be added to toFile
 
-'grep -i',<search word>      - if a given line contains the <search word>, it
+'grep -i',<search phase>      - if a given line contains the <search phase>, it
                              will be added to toFile. This test in case
                              insensitive.
 
@@ -46,6 +46,10 @@ for append, appendstr, copyf, and copystr.  The following filters are available
 
 'grep -vw',<search word>     - if a given line contains the <search word>, it
                              will not be added to toFile
+
+'grep -iw',<search word>     - if a given line contains the <search word>, it
+                             will be added to toFile. This test in case
+                             insensitive.
 
 'awk',<format>               - replace the line with the format string. Words
                              from the original line are available at $1, etc.
@@ -80,6 +84,14 @@ for append, appendstr, copyf, and copystr.  The following filters are available
 If the <search phase> or <search word> starts with the '^' character, the match
 must occur at the beginning of the line.
 
+For the 'grep' filters, if a word is being search for with either the
+'-w', '-vw', or '-iw' options, a word is defined a little differently
+from the Linux grep command. Something is a word if it starts at the
+beginning of the line and is followed a space (' '), tab ('\t') or
+line feed ('\n') or it is at the end of the line and is preceded
+by a space or tab or it is in the middle of the line and is preceded and
+followed by a space or tab.
+
 The 'head' and 'tail' filters can each only be used once in a single call.
 The awk, sed, grep filters may be used multiple times.
 
@@ -91,6 +103,10 @@ append(<fromFile>,'grep','something','grep -v'.'something else','|wc'):$num,$lin
 
 If toFile is '|wc c', it is exactly like using '|wc' except that the number of words,
 rather than the number of lines, is returned.
+
+If the input file is a "dos" type file, that is, the lines are terminated with a
+carriage return and line feed ('\r\n'), then any lines outputted to a file of returned
+to a calling macro will have the carriage returns ('\r') removed.
 
 Following are some examples of shell calls and the
 equivalent append or copyf calls. If lines are added to toFile, then the command will
