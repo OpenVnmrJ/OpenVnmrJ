@@ -742,7 +742,7 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
     {  Werrprintf("%s: first argument must be 'poly0' or 'poly1'",argv[0]);
        ABORT;
     }
-    for (index=0; index<sizeof(col)/sizeof(int); index++)
+    for (index=0; index < (int)(sizeof(col)/sizeof(int)); index++)
        col[index] = index;
     if ( ! strcmp(argv[2],"file") )
     {
@@ -2081,6 +2081,13 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
 
       if (calcFID)
       {
+         double npnts;
+         double swval;
+
+         P_getreal(PROCESSED,"np",&npnts,1);
+         P_setreal(CURRENT,"np",npnts,1);
+         P_getreal(PROCESSED,"sw",&swval,1);
+         P_setreal(CURRENT,"sw",swval,1);
          new_fid_format = cur_fid_format;
       }
       else if (new_fid_format != UNDEFINED)
