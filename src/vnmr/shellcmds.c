@@ -395,7 +395,11 @@ int Touch(int argc, char *argv[], int retc, char *retv[]) {
    }
    else
    {
+#ifdef MACOS
+      futimes(res,NULL);
+#else
       futimens(res,NULL);
+#endif
       close(res);
       res = 1;
    }
