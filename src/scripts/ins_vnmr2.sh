@@ -1780,14 +1780,14 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
            mv /etc/init.d/postgresql /etc/init.d/postgresql.moveAside
         fi
         # Use older version. New version has problem with client server protocol
-        if [ $distmajor -eq 8 ] && [ -d "$dest_dir"/pgsql/bin_ver7 ] ; then
-           mv "$dest_dir"/pgsql/bin_ver7 "$dest_dir"/pgsql/bin
+        if [ $distmajor -eq 8 ] && [ -d "$dest_dir"/pgsql/bin_ver9 ] ; then
+           mv "$dest_dir"/pgsql/bin_ver9 "$dest_dir"/pgsql/bin
         fi
 
      else
         # Use older version. New version has problem with client server protocol
-        if [ $distmajor -gt 16 ] && [ -d "$dest_dir"/pgsql/bin_ver7 ] ; then
-           mv "$dest_dir"/pgsql/bin_ver7 "$dest_dir"/pgsql/bin
+        if [ $distmajor -gt 16 ] && [ -d "$dest_dir"/pgsql/bin_ver9 ] ; then
+           mv "$dest_dir"/pgsql/bin_ver9 "$dest_dir"/pgsql/bin
         fi
         if [ $distmajor -gt 16 ] ; then
            systemctl --now mask postgresql > /dev/null 2>&1

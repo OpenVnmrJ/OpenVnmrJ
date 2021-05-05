@@ -616,12 +616,12 @@ then
     if test ! -f "/usr/bin/pg_ctl"
     then
         # The system pg_ctl must not exist
-        if test -d "$vnmrsystem/pgsql/bin_ver7"
+        if test -d "$vnmrsystem/pgsql/bin_ver9"
         then
-            # bin_ver7 is still there, rename it to bin
-            mv "$vnmrsystem/pgsql/bin_ver7" "$vnmrsystem/pgsql/bin"
-            echo "Postgres not installed, switching to OpenVnmrJ's version 7.x"
-            echo "    mv $vnmrsystem/pgsql/bin_ver7 $vnmrsystem/pgsql/bin"
+            # bin_ver9 is still there, rename it to bin
+            mv "$vnmrsystem/pgsql/bin_ver9" "$vnmrsystem/pgsql/bin"
+            echo "Postgres not installed, switching to OpenVnmrJ's version 9.x"
+            echo "    mv $vnmrsystem/pgsql/bin_ver9 $vnmrsystem/pgsql/bin"
         fi
     fi
 fi
