@@ -74,6 +74,7 @@ extern "C" {
     void clearVar(const char *name);
     char *realString(double x);
     char *newString(const char *str);
+    char *intString(int val);
     int getWin_draw();
     char *sendGrayColorsToVj();
     int isIplanObj(int x, int y, int id);

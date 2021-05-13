@@ -23,7 +23,7 @@ public:
     static void deleteAnno(spAspFrame_t frame, AspAnno *anno);
 
     static void save(spAspFrame_t frame, char *path = NULL);
-    static void load(spAspFrame_t frame, char *path = NULL, bool show=false);
+    static void load(spAspFrame_t frame, char *path = NULL, bool show=false, int retc=1);
 
     static AspAnno *createAnno(spAspFrame_t frame, int x, int y, AnnoType_t type);
     static void modifyAnno(spAspFrame_t frame, AspAnno *anno, int x, int y, int prevX, int prevY);
@@ -34,6 +34,8 @@ public:
 
     static void paste(spAspFrame_t frame, string str, int x, int y);
     static string clipboardStr;
+    static void testAnno(spAspFrame_t frame, int argc, char *argv[],
+                     int retc, char *retv[]);
 
 private:
 
