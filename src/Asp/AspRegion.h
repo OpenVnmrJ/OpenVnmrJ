@@ -38,6 +38,8 @@ public:
     string dataID;
 
 private:
+    using AspAnno::display;
+    using AspAnno::select;
 };
 
 typedef boost::shared_ptr<AspRegion> spAspRegion_t;

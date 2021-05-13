@@ -31,6 +31,10 @@ using namespace std;
 
 string AspDisAnno::clipboardStr="";
 
+extern "C" {
+int do_mkdir(const char *dir, int psub, mode_t mode);
+}
+
 int AspDisAnno::aspAnno(int argc, char *argv[], int retc, char *retv[]) {
 
     spAspFrame_t frame = AspFrameMgr::get()->getCurrentFrame();
@@ -58,7 +62,7 @@ int AspDisAnno::aspAnno(int argc, char *argv[], int retc, char *retv[]) {
         if(argc >2) strcpy(path,argv[2]);
         else sprintf(path,"%s/datdir/annos",curexpdir); 
 
-        load(frame,path,true);
+        load(frame,path,true,retc);
    } else if(argc>1 && strcasecmp(argv[1],"delete") == 0) {
 	if(argc>2) frame->getAnnoList()->deleteAnno(atoi(argv[2])-1);
 	else frame->getAnnoList()->deleteAnno();
@@ -83,6 +87,21 @@ int AspDisAnno::aspAnno(int argc, char *argv[], int retc, char *retv[]) {
 	   if(anno) {
 		retv[0] = newString(anno->getProperty(argv[2]).c_str()); 
 	   }
+   } else if(argc == 2 && retc > 0 && strcasecmp(argv[1],"get") == 0) {
+           AspAnnoList *annoList = frame->getAnnoList();
+	   if(annoList) {
+              if (retc)
+		retv[0] = intString(annoList->getSize()); 
+              else
+                Winfoprintf("Number of annotions: %d", annoList->getSize());
+	   }
+           else
+           {
+              if (retc)
+		retv[0] = intString(0); 
+              else
+                Winfoprintf("Number of annotions: 0");
+           }
    } else if(argc>4 && strcasecmp(argv[1],"set") == 0) {
       AspAnno *anno;
       int annIndex;
@@ -216,11 +235,71 @@ int AspDisAnno::aspAnno(int argc, char *argv[], int retc, char *retv[]) {
 	if(retc>1) {
 	   retv[1] = newString(clipboardStr.c_str());
 	}
+   } else if(((argc == 4) || (argc == 6))  && strcasecmp(argv[1],"is") == 0) {
+        testAnno(frame, argc, argv, retc, retv);
    }
 
    frame->updateMenu();
 
    RETURN;
+}
+
+void AspDisAnno::testAnno(spAspFrame_t frame, int argc, char *argv[], int retc, char *retv[]) {
+   AspAnnoList *annoList = frame->getAnnoList();
+   int nannos = annoList->getSize();
+   if(nannos < 1) {
+       if (retc)
+       {
+	   retv[0] = intString(0); 
+           if (retc > 1)
+	      retv[1] = newString(""); 
+       }
+       else
+           Winfoprintf("Annotations of type %s with value %s: 0", argv[2], argv[3]);
+       return;
+   }
+   AspAnno *anno;
+   AspAnnoMap::iterator itr;
+   char ids[MAXSTR2];
+   char id[MAXSTR];
+
+   ids[0] = '\0';
+   int inx = 0;
+   for (anno= annoList->getFirstAnno(itr); anno != NULL; anno= annoList->getNextAnno(itr)) {
+         if ( ! strcmp(anno->getProperty(argv[2]).c_str(), argv[3]) )
+         {
+            if (argc == 6)
+            {
+               if ( ! strcmp(anno->getProperty(argv[4]).c_str(), argv[5]) )
+               {
+                  inx++;
+                  if (ids[0] == '\0')
+                     sprintf(id,"%d",anno->index + 1);
+                  else
+                     sprintf(id," %d",anno->index + 1);
+                  strcat(ids,id);
+               }
+            }
+            else
+            {
+               inx++;
+               if (ids[0] == '\0')
+                  sprintf(id,"%d",anno->index + 1);
+               else
+                  sprintf(id," %d",anno->index + 1);
+               strcat(ids,id);
+            }
+         }
+   }
+   if (retc)
+   {
+	   retv[0] = intString(inx); 
+           if (retc > 1)
+	      retv[1] = newString(ids); 
+   }
+   else
+           Winfoprintf("Annotations of type %s with value %s: %d", argv[2], argv[3], inx);
+   return;
 }
 
 void AspDisAnno::save(spAspFrame_t frame, char *path) {
@@ -238,9 +317,8 @@ void AspDisAnno::save(spAspFrame_t frame, char *path) {
 
    struct stat fstat;
    if (stat(dir.c_str(), &fstat) != 0) {
-       char str[MAXSTR2];
-       (void)sprintf(str, "mkdir -p %s \n", dir.c_str());
-       (void)system(str);
+       int ival __attribute__((unused));
+       ival = do_mkdir(dir.c_str(), 1, 0777);
    }
 
    FILE *fp;
@@ -284,7 +362,7 @@ void AspDisAnno::save(spAspFrame_t frame, char *path) {
    fclose(fp);
 }
 
-void AspDisAnno::load(spAspFrame_t frame, char *path, bool show) {
+void AspDisAnno::load(spAspFrame_t frame, char *path, bool show, int retc) {
 
    struct stat fstat;
    if(stat(path, &fstat) != 0) {
@@ -366,7 +444,7 @@ void AspDisAnno::load(spAspFrame_t frame, char *path, bool show) {
 	return;	
    }
 
-   if(nannos>0 && nannos != count) 
+   if ((nannos>0) && (nannos != count) && (retc == 0) ) 
 	Winfoprintf("Warning: number of annos does not match %d %d",nannos,count);
 
    frame->setAnnoFlag(ANN_ANNO,true);

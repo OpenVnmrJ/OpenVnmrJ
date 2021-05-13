@@ -47,6 +47,8 @@ public:
     double absValue,normValue;
 
 private:
+    using AspAnno::display;
+    using AspAnno::select;
 };
 
 typedef boost::shared_ptr<AspInteg> spAspInteg_t;
