@@ -360,7 +360,7 @@ char     opt;
 
 void cft2d(xfid, xni, xnp, opt, dim)  /* xni # complx pts; xnp # real pts - as in Vnmr */
 char     opt;
-int      xni, xnp;
+int      xni, xnp, dim;
 COMPLX **xfid[xni][xnp];      
 {
   int i, j, np;
@@ -419,7 +419,7 @@ COMPLX **xfid[xni][xnp];
 
 void cft2dx(xfid, xni, xnp, opt, dim)  /* frequency signs reversed */
 char     opt;
-int      xni, xnp;
+int      xni, xnp, dim;
 COMPLX **xfid[xni][xnp];      
 {
   int i, j, np;
@@ -609,7 +609,8 @@ double at, gf, gfs;
 double *wx[];
 {
   int    j;
-  double step, x;
+  double x;
+//  double step;
 
   gfs /= at;  gf/=at;
   if(np>fn) np=fn;                 /* ! make sure fn > 0 */
@@ -620,7 +621,7 @@ double *wx[];
 
   gf = 1.0/gf;
   gfs *= gf;
-  step = gf/(double) (np-1);
+  // step = gf/(double) (np-1);
   x = 0.0;
   for(j=0; j<np; j++)
   {
@@ -861,6 +862,7 @@ int      jx, xnp;
   return;  
 }
 
+#ifdef XXX
 void lsfid(xRe, xIm, xnp, xfq, xsw)    /* frequency shift */
 double  *xRe[], *xIm[], xfq;
 int      xnp;
@@ -872,6 +874,7 @@ int      xnp;
 	  
   return;  
 }
+#endif
 
 
 int peak(xRe, xIm, xnp)    /* find the maximum peak position in a 1d trace */
@@ -929,6 +932,7 @@ int     xnp;
 
 
 
+#ifdef XXX
 void xft(double *xRe[], double *xIm[], double *xcs, double *xsn, int np, double sign)
 {
   int	  i, j, k, m, istep;	
@@ -974,6 +978,7 @@ void xft(double *xRe[], double *xIm[], double *xcs, double *xsn, int np, double 
     k = istep;
   }
 }
+#endif
 
 
 void mk_mtx(xcs, xsn, xnp, opt)
@@ -998,6 +1003,7 @@ char    opt;
   }
 }
 
+#ifdef XXX
 void xfft(Re, Im, xcs, xsn, np, opt)                      /* matrix FFT */
 double   *Re[], *Im[], *xcs[], *xsn[];
 int       np;
@@ -1019,6 +1025,7 @@ char      opt;
 
   return;
 }
+#endif
 
 void scale1dC(xfid, xnp, scf)
 int      xnp;
