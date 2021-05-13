@@ -214,8 +214,9 @@ char *xname;
 {
   int    i, j;
   char  *s;
+  int    ret __attribute__((unused));
 
-  (int) check_expdir_fname(xname); 
+  ret = check_expdir_fname(xname); 
 
   if((s = strrchr(xname, '/')) == NULL) 
     return 0;
@@ -283,8 +284,9 @@ char *xname;
 void check_fname(xname)
 char *xname;
 {
+  int ret __attribute__((unused));
   if(fid_ext(xname)) return;  
-  else (int) check_expdir_fname(xname);
+  else ret = check_expdir_fname(xname);
   
   return;
 }
@@ -371,12 +373,13 @@ char *old, *new;
 short  rep;
 {
   char  cmd[MAXSTR];
+  int   ret __attribute__((unused));
   
   if(fid_exists(new, rep)) return 0;
 
   sprintf(cmd, "cp -r %s %s", old, new);   
   if(rep) printf("%s\n", cmd);
-  system(cmd);
+  ret = system(cmd);
 
   return 1;  
 }
@@ -385,9 +388,10 @@ void delete_fid(fname)
 char *fname;
 {
   char cmd[MAXSTR];
+  int  ret __attribute__((unused));
   
   sprintf(cmd, "rm -r %s\n", fname);
-  system(cmd);
+  ret = system(cmd);
   
   return;
 }
@@ -429,9 +433,10 @@ FILE *open_data(xname, mode)
 char *xname, *mode;
 {
   char fname[MAXSTR];
+  int  ret __attribute__((unused));
   
   strcpy(fname, xname);
-  (int) check_expdir_fname(fname);    
+  ret = check_expdir_fname(fname);    
 
   return open_file(strcat(fname, "/datdir/data"), mode);
 }
@@ -1191,19 +1196,19 @@ char  *xdir;
   return k;
 }
 
-int fread_tr(float *ffid[], int size, int np, FILE *src)
+int fread_tr(float ffid[], int size, int np, FILE *src)
 {
   int   i;
   float ff;
   
-  if(!pc_bytes) return fread(ffid[0], size, np, src);
+  if(!pc_bytes) return fread(ffid, size, np, src);
   else
   {
     for(i=0; i<np; i++) 
     {
       if((fread(&ff, size, 1, src)) < 1) break;
       swapbytes(&ff, size);
-      (*ffid)[i] = ff;
+      ffid[i] = ff;
     }
   } 
   
@@ -1444,6 +1449,7 @@ int get_bswp_fid(FILE *src, FILEHEADER xfhd, COMPLX *dfid[])
   float        ff;
   char         dp;
   COMPLX       ctm;    
+  int          ret __attribute__((unused));
   
   if(xfhd.status & 8)
     dp = 'f';
@@ -1462,8 +1468,10 @@ int get_bswp_fid(FILE *src, FILEHEADER xfhd, COMPLX *dfid[])
       {
         for (j=0; j <np; j++) 
         {
-          fread(&ii, sizeof(int), 1, src); swapbytes(&ii, sizeof(int)); ctm.re = (double) ii;
-          fread(&ii, sizeof(int), 1, src); swapbytes(&ii, sizeof(int)); ctm.im = (double) ii;
+          ret = fread(&ii, sizeof(int), 1, src);
+	  swapbytes(&ii, sizeof(int)); ctm.re = (double) ii;
+          ret = fread(&ii, sizeof(int), 1, src);
+	  swapbytes(&ii, sizeof(int)); ctm.im = (double) ii;
           (*dfid)[j] = ctm;
         }
       }
@@ -1475,8 +1483,10 @@ int get_bswp_fid(FILE *src, FILEHEADER xfhd, COMPLX *dfid[])
       {
         for (j=0; j <np; j++) 
         {
-          fread(&ff, sizeof(float), 1, src); swapbytes(&ff, sizeof(float)); ctm.re = (double) ff;
-          fread(&ff, sizeof(float), 1, src); swapbytes(&ff, sizeof(float)); ctm.im = (double) ff;
+          ret = fread(&ff, sizeof(float), 1, src);
+	  swapbytes(&ff, sizeof(float)); ctm.re = (double) ff;
+          ret = fread(&ff, sizeof(float), 1, src);
+	  swapbytes(&ff, sizeof(float)); ctm.im = (double) ff;
           (*dfid)[j] = ctm;  
         }
       }
@@ -1488,8 +1498,10 @@ int get_bswp_fid(FILE *src, FILEHEADER xfhd, COMPLX *dfid[])
       {
         for (j=0; j <np; j++) 
         {
-          fread(&jj, sizeof(short), 1, src); swapbytes(&jj, sizeof(short)); ctm.re = (double) jj;
-          fread(&jj, sizeof(short), 1, src); swapbytes(&jj, sizeof(short)); ctm.im = (double) jj;
+          ret = fread(&jj, sizeof(short), 1, src);
+	  swapbytes(&jj, sizeof(short)); ctm.re = (double) jj;
+          ret = fread(&jj, sizeof(short), 1, src);
+	  swapbytes(&jj, sizeof(short)); ctm.im = (double) jj;
           (*dfid)[j] = ctm;
         }
       }
@@ -1506,6 +1518,7 @@ int get_fid(FILE *src, FILEHEADER xfhd, COMPLX *dfid[])
   char         dp;
   DATA         fid;
   COMPLX       ctm;    
+  int          ret __attribute__((unused));
 
   if(pc_bytes) return get_bswp_fid(src, xfhd, dfid);
   
@@ -1526,7 +1539,7 @@ int get_fid(FILE *src, FILEHEADER xfhd, COMPLX *dfid[])
       {
         for (j=0; j <np; j++) 
         {
-          fread(&fid.dp, sizeof(DPFID), 1, src);
+          ret = fread(&fid.dp, sizeof(DPFID), 1, src);
           ctm.re = (double) fid.dp.re;
           ctm.im = (double) fid.dp.im;
           (*dfid)[j] = ctm;
@@ -1540,7 +1553,7 @@ int get_fid(FILE *src, FILEHEADER xfhd, COMPLX *dfid[])
       {
         for (j=0; j <np; j++) 
         {
-          fread(&fid.fp, sizeof(FPFID), 1, src);  	  
+          ret = fread(&fid.fp, sizeof(FPFID), 1, src);  	  
           ctm.re = (double) fid.fp.re;
           ctm.im = (double) fid.fp.im; 
           (*dfid)[j] = ctm;
@@ -1554,7 +1567,7 @@ int get_fid(FILE *src, FILEHEADER xfhd, COMPLX *dfid[])
       {
         for (j=0; j <np; j++) 
         {
-          fread(&fid.sp, sizeof(SPFID), 1, src);
+          ret = fread(&fid.sp, sizeof(SPFID), 1, src);
           ctm.re = (double) fid.sp.re;
           ctm.im = (double) fid.sp.im;
           (*dfid)[j] = ctm;
@@ -1632,7 +1645,7 @@ int          rep;
   int       i;
   int       j __attribute__((unused));
   COMPLX  **dfid;
-  BLOCKHEADER *bhd1, *bhd2;
+  BLOCKHEADER bhd1, bhd2;
 
   sprintf(fname, "%s", dir);  
   if((src = open_data(fname, "r")) == NULL)
@@ -2114,22 +2127,25 @@ FILE *fnm;
 char *str, *val;
 {
   char chr[MAXSTR];
+  int  ret __attribute__((unused));
+  char *retp __attribute__((unused));
 
   fseek(fnm, 0, 0); 
   while (fscanf(fnm, "%s", chr) != EOF)
   {
     while ((chr[0] == '#') || (chr[0] == '('))
     {
-      fgets(chr, MAXSTR, fnm); fscanf(fnm, "%s", chr);
+      retp = fgets(chr, MAXSTR, fnm);
+      ret = fscanf(fnm, "%s", chr);
     }
     if (chr[0] == str[0])
     {
       if (strcmp(chr,str) == 0)
       {
-        fscanf(fnm, "%s", chr); 
+        ret = fscanf(fnm, "%s", chr); 
         if (chr[0] == '=') 
         {
-          fscanf(fnm, "%s", val); 
+          ret = fscanf(fnm, "%s", val); 
           return 1;
         }
       } 
@@ -2151,6 +2167,7 @@ char   *prm, *pval;
 {
   int     i=-1, ptyp=0, k=0;
   char    pstr[MAXSTR], pnam[MAXSTR], s[MAXSTR], *ch;
+  char   *retp __attribute__((unused));
   
   fseek(fnm, 0, 0); 
   while (fgets(pstr, MAXSTR, fnm))		/* find parameter */
@@ -2160,7 +2177,7 @@ char   *prm, *pval;
      pnam, &ptyp, s, s, s, s, s, s, s, &k)==10) && 
     (strcmp(pnam,prm) == 0))
     {
-      fgets(pstr, MAXSTR, fnm); 
+      retp = fgets(pstr, MAXSTR, fnm); 
       if(sscanf(pstr, "%d %s\n", &i, pval) < 2)
       {
         printf("getprm: getval for %s failed\n", prm);
@@ -2194,6 +2211,7 @@ char   *prm;
     int     i=-1, ptyp=0, k=0;
     char    pstr[MAXSTR], pnam[MAXSTR], s[MAXSTR];
     char    pval[MAXSTR];
+    char   *retp __attribute__((unused));
     fseek(fnm, 0, 0);
     while (fgets(pstr, MAXSTR, fnm))      /* find parameter */
     {
@@ -2202,7 +2220,7 @@ char   *prm;
        pnam, &ptyp, s, s, s, s, s, s, s, &k)==10) &&
       (strcmp(pnam,prm) == 0))
       {
-        fgets(pstr, MAXSTR, fnm);
+        retp = fgets(pstr, MAXSTR, fnm);
         if(sscanf(pstr, "%d %s\n", &i, pval) < 2)
         {
           printf("getprm: getval for %s failed\n", prm);
@@ -2507,6 +2525,7 @@ char   *dir, *prm, *pval;
   FILE	  *fnm, *ftmp;
   int     i=-1, ptyp=0, k=0, ns=1, ok=1;
   char    pstr[MAXSTR], pnam[MAXSTR], s[MAXSTR];
+  char   *retp __attribute__((unused));
 
   strcat(strcpy(pstr, dir), "/procpar");
   strcat(strcpy(pnam, dir), "/tmp");
@@ -2533,7 +2552,7 @@ char   *dir, *prm, *pval;
         pnam, &ptyp, s, s, s, s, s, s, s, &k)==10) && 
        (strcmp(pnam,prm) == 0))
     {
-      fgets(pstr, MAXSTR, ftmp); 
+      retp = fgets(pstr, MAXSTR, ftmp); 
       if(sscanf(pstr, "%d %s\n", &i, s) < 2)
       {
         printf("setpar: setpar for %s failed\n", prm);
@@ -2586,6 +2605,7 @@ char   *dir, *prm;
   FILE	  *fnm, *ftmp;
   int     ax, i=-1, j=0;
   char    str[MAXSTR], str2[MAXSTR], *c1, *c2;
+  char   *retp __attribute__((unused));
 
   strcat(strcpy(str, dir), "/procpar");
   strcat(strcpy(str2, dir), "/tmp");
@@ -2611,7 +2631,7 @@ char   *dir, *prm;
     fputs(str, fnm);
     if((str[0] == prm[0]) && sscanf(str, "%s\n", str2) && (strcmp(str2, prm) == 0)) /* unarray prm */
     {
-      fgets(str, 512, ftmp);
+      retp = fgets(str, 512, ftmp);
       sscanf(str, "%d %s\n", &i, str2);           
       fprintf(fnm, "1 %s\n", str2);   
     }
@@ -2623,19 +2643,19 @@ char   *dir, *prm;
         {
           if (strcmp(str2, "arraydim") == 0)		          /* arraydim */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);           
             fprintf(fnm, "%d %d\n", i, j/ax);   
           }
           else if (strcmp(str2, "arrayelemts") == 0)           /* arrayelemts */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             fprintf(fnm, "%d %d\n", i, j-1);    
           }
           else if (strcmp(str2, "array") == 0)		        /* array */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %s\n", &i, str2); 
             if((c1 = strstr(str2, prm)) != NULL)
             {
@@ -2650,7 +2670,7 @@ char   *dir, *prm;
         {
           if (strcmp(str2, "acqcycles") == 0)        /* acqcycles */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             fprintf(fnm, "%d %d\n", i, j/ax);
           }
@@ -2660,7 +2680,7 @@ char   *dir, *prm;
         sscanf(str, "%s\n", str2);
         if (strcmp(str2, "celem") == 0)                        /* celem - completed increments */
         {
-          fgets(str, 512, ftmp);
+          retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %d\n", &i, &j);             
           fprintf(fnm, "%d %d\n", i, j/ax);
         }
@@ -2749,7 +2769,8 @@ short  rep;
   int     i, j, k;
   double  dm, tof, dofx, sfrq, dfrqx;
   char    str[512], str1[512], str2[512], rcvrs[32], 
-          tn[8], dn[8], sdn[8], sdof[8], sdfrq[8], rcvn[32];
+          tn[8], dn[8], sdn[16], sdof[16], sdfrq[16], rcvn[32];
+  char   *retp __attribute__((unused));
 
   if(rcvx < 2) return;
   
@@ -2800,19 +2821,19 @@ short  rep;
             sscanf(str, "%s\n", str2);
             if (strcmp(str2, sdfrq) == 0)		/* dfrq */
             {
-              fgets(str, 512, ftmp);  
+              retp = fgets(str, 512, ftmp);  
               sscanf(str, "%d %lf\n", &i, &dm);
               fprintf(fnm, "%d %.7f\n", i, sfrq); 
             }
             else if (strcmp(str2, sdn) == 0)             /* dn */
             {
-              fgets(str, 512, ftmp);  
+              retp = fgets(str, 512, ftmp);  
               sscanf(str, "%d %s\n", &i, str1);
               fprintf(fnm, "%d \"%s\" \n", i, tn);
             }
             else if (strcmp(str2, sdof) == 0)            /* dof */
             {
-              fgets(str, 512, ftmp);
+              retp = fgets(str, 512, ftmp);
               sscanf(str, "%d %lf\n", &i, &dm);
               fprintf(fnm, "%d %.2f\n", i, tof);
             }
@@ -2821,13 +2842,13 @@ short  rep;
             sscanf(str, "%s\n", str2);
             if (strcmp(str2, "reffrq") == 0) 	      /* reffrq */
             {
-              fgets(str, 512, ftmp);  
+              retp = fgets(str, 512, ftmp);  
               sscanf(str, "%d %lf\n", &i, &dm);
               fprintf(fnm, "%d %.7f\n", i, dfrqx); 
             }
             else if (strcmp(str2, "rcvrs") == 0)       /* rcvrs */
             {
-              fgets(str, 512, ftmp);  
+              retp = fgets(str, 512, ftmp);  
               sscanf(str, "%d %s\n", &i, str1);
               fprintf(fnm, "%d \"%s\" \n", i, rcvn); 
             }
@@ -2836,7 +2857,7 @@ short  rep;
             sscanf(str, "%s\n", str2);
             if (strcmp(str2, "sfrq") == 0)		/* sfrq */
             {
-              fgets(str, 512, ftmp);  
+              retp = fgets(str, 512, ftmp);  
               sscanf(str, "%d %lf\n", &i, &dm);
               fprintf(fnm, "%d %.7f\n", i, dfrqx); 
             }
@@ -2845,13 +2866,13 @@ short  rep;
             sscanf(str, "%s\n", str2);
             if (strcmp(str2, "tn") == 0)             /* tn */
             {
-              fgets(str, 512, ftmp);  
+              retp = fgets(str, 512, ftmp);  
               sscanf(str, "%d %s\n", &i, str1);
               fprintf(fnm, "%d \"%s\" \n", i, dn);  
             }
             else if (strcmp(str2, "tof") == 0)            /* tof */
             {
-              fgets(str, 512, ftmp);
+              retp = fgets(str, 512, ftmp);
               sscanf(str, "%d %lf\n", &i, &dm);
               fprintf(fnm, "%d %.2f\n", i, dofx);   
             }
@@ -2878,6 +2899,7 @@ short  rep;
   int     i, j, k, fni, rto, np_orig, ni_orig, ni2_orig, ph, ph2;
   double  dm;
   char    str[512], str2[512], rcvrs[32];
+  char   *retp __attribute__((unused));
 
   fni=0; rto=0; ph = 1; ph2 = 1;
   
@@ -2935,19 +2957,19 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if ((npx > -1) && (str2[1] == 'p') && (str2[2] == '\0'))	/* np */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d\n", &i, &j);
           fprintf(fnm, "%d %d\n", i, npx); 
         }
         else if ((nix > -1) && (str2[1] == 'i') && (str2[2] == '\0'))   /* ni */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d\n", &i, &j);
           fprintf(fnm, "%d %d\n", i, nix);
         }
         else if ((ni2x > -1) && (str2[1] == 'i') && (str2[2] == '2') && (str2[3] == '\0'))   /* ni2 */
         {
-          fgets(str, 512, ftmp);
+          retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %d\n", &i, &j);
           fprintf(fnm, "%d %d\n", i, ni2x);  
         }
@@ -2956,7 +2978,7 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if (strcmp(str2, "celem") == 0)                        /* celem - completed increments */
         {
-          fgets(str, 512, ftmp);
+          retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %d\n", &i, &j);             
           j /= rto;  
           dm = (double) j; 
@@ -2982,7 +3004,7 @@ short  rep;
         {
           if (strcmp(str2, "array") == 0)		        /* array */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %s\n", &i, str2); 
             if (ph == 2) fprintf(fnm, "%d \"phase2\" \n", i);  
             else if (ph2 == 2) fprintf(fnm, "%d \"phase\" \n", i);  
@@ -2990,7 +3012,7 @@ short  rep;
           }
           else if (strcmp(str2, "arraydim") == 0)		/* arraydim */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             j /= rto;   
             dm = (double) j; 
@@ -3011,7 +3033,7 @@ short  rep;
           }
           else if (strcmp(str2, "arrayelemts") == 0)     /* arrayelemts */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             if(((nix == 0) || (nix == 1)) && (ni_orig > 1)) j--;
             if(((ni2x == 0) || (ni2x == 1)) && (ni2_orig > 1)) j--;
@@ -3024,7 +3046,7 @@ short  rep;
         {
           if (strcmp(str2, "acqcycles") == 0)        /* acqcycles */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             dm = (double) j; 
             if(nix > -1)
@@ -3044,7 +3066,7 @@ short  rep;
           }
           else if (strcmp(str2, "acqdim") == 0)           /* acqdim */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             if(((nix == 0) || (nix == 1)) && (ni_orig > 1)) j--;
             if(((ni2x == 0) || (ni2x == 1)) && (ni2_orig > 1)) j--;
@@ -3053,7 +3075,7 @@ short  rep;
         }
         else if ((str2[1] == 't') && (str2[2] == '\0'))		/* at */
         {
-          fgets(str, 512, ftmp);
+          retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %lf\n", &i, &dm);
           if((npx > 1) && (np_orig > 0))
             dm *= (double) npx/np_orig;
@@ -3064,14 +3086,14 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if (strcmp(str2, "phase") == 0)		/* phase */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d %d", &i, &j, &k); 
           if ((nix > -1) && (ph > 1)) fprintf(fnm, "1 1\n"); 
           else fprintf(fnm, "%s", str); 
         }
         else if (strcmp(str2, "phase2") == 0)		/* phase2 */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d %d", &i, &j, &k); 
           if ((ni2x > -1) && (ph2 > 1)) fprintf(fnm, "1 1\n"); 
           else fprintf(fnm, "%s", str); 
@@ -3081,7 +3103,7 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if ((fni) && (npx > -1) && (str2[1] == 'n') && (str2[2] == '\0'))	/* fn */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d", &i, &j);
           fprintf(fnm, "%d %d\n", i, fni); 
         }
@@ -3162,9 +3184,11 @@ short  rep;
   char     fnm[MAXSTR], str[MAXSTR], pstr[MAXSTR];
   SFRQ     xsfrq;
   int      i, ptyp;
+  int      ret __attribute__((unused));
+  char    *retp __attribute__((unused));
 
   sprintf(fnm, "%s", xfnm);
-  (int) check_expdir_fname(fnm);
+  ret = check_expdir_fname(fnm);
   strcat(fnm, "/procpar");
   
   if ((sfile = open_file(fnm, "r")) == NULL)     /* open 2D source file */
@@ -3181,7 +3205,7 @@ short  rep;
         {
           if(is_par(str, "dof", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.dof) < 2)
               printf("getprm: getval for dof failed\n");
             else if(DBUG==1) 
@@ -3189,7 +3213,7 @@ short  rep;
           }
           else if(is_par(str, "dof2", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.dof2) < 2)
               printf("getprm: getval for dof2 failed\n");
             else if(DBUG==1) 
@@ -3197,7 +3221,7 @@ short  rep;
           }
           else if(is_par(str, "dof3", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.dof3) < 2)
               printf("getprm: getval for dof3 failed\n");
             else if(DBUG==1) 
@@ -3208,7 +3232,7 @@ short  rep;
         {
           if(is_par(str, "dfrq", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.dfrq) < 2)
               printf("getprm: getval for dfrq failed\n");
             else if(DBUG==1) 
@@ -3216,7 +3240,7 @@ short  rep;
           }
           else if(is_par(str, "dfrq2", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.dfrq2) < 2)
               printf("getprm: getval for dfrq2 failed\n");
             else if(DBUG==1) 
@@ -3224,7 +3248,7 @@ short  rep;
           }
           else if(is_par(str, "dfrq3", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.dfrq3) < 2)
               printf("getprm: getval for dfrq3 failed\n");
             else if(DBUG==1) 
@@ -3238,7 +3262,7 @@ short  rep;
         {
           if(is_par(str, "lockfreq", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.lockfreq) < 2)
               printf("getprm: getval for lockfreq failed\n");
             else if(DBUG==1) 
@@ -3246,7 +3270,7 @@ short  rep;
           }
           else if(is_par(str, "lockfreq_", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.lockfreq_) < 2)
               printf("getprm: getval for lockfreq_ failed\n");
             else if(DBUG==1) 
@@ -3262,7 +3286,7 @@ short  rep;
           {
             if(is_par(str, "reffrq", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
             {
-              fgets(pstr, MAXSTR, sfile);   
+              retp = fgets(pstr, MAXSTR, sfile);   
               if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.reffrq) < 2)
                 printf("getprm: getval for reffrq failed\n");
               else if(DBUG==1) 
@@ -3270,7 +3294,7 @@ short  rep;
             }
             else if(is_par(str, "reffrq1", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
             {
-              fgets(pstr, MAXSTR, sfile);   
+              retp = fgets(pstr, MAXSTR, sfile);   
               if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.reffrq1) < 2)
                 printf("getprm: getval for reffrq1 failed\n");
               else if(DBUG==1) 
@@ -3278,7 +3302,7 @@ short  rep;
             }
             else if(is_par(str, "reffrq2", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
             {
-              fgets(pstr, MAXSTR, sfile);   
+              retp = fgets(pstr, MAXSTR, sfile);   
               if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.reffrq2) < 2)
                 printf("getprm: getval for reffrq2 failed\n");
               else if(DBUG==1) 
@@ -3286,7 +3310,7 @@ short  rep;
             }
             else if(is_par(str, "reffrq3", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
             {
-              fgets(pstr, MAXSTR, sfile);   
+              retp = fgets(pstr, MAXSTR, sfile);   
               if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.reffrq3) < 2)
                 printf("getprm: getval for reffrq3 failed\n");
               else if(DBUG==1) 
@@ -3297,7 +3321,7 @@ short  rep;
           {          
             if(is_par(str, "refpos", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
             {
-              fgets(pstr, MAXSTR, sfile);   
+              retp = fgets(pstr, MAXSTR, sfile);   
               if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.refpos) < 2)
                 printf("getprm: getval for refpos failed\n");
               else if(DBUG==1) 
@@ -3305,7 +3329,7 @@ short  rep;
             }
             else if(is_par(str, "refpos1", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
             {
-              fgets(pstr, MAXSTR, sfile);   
+              retp = fgets(pstr, MAXSTR, sfile);   
               if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.refpos1) < 2)
                 printf("getprm: getval for refpos1 failed\n");
               else if(DBUG==1) 
@@ -3313,7 +3337,7 @@ short  rep;
             }
             else if(is_par(str, "refpos2", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
             {
-              fgets(pstr, MAXSTR, sfile);   
+              retp = fgets(pstr, MAXSTR, sfile);   
               if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.refpos2) < 2)
                 printf("getprm: getval for refpos2 failed\n");
               else if(DBUG==1) 
@@ -3321,7 +3345,7 @@ short  rep;
             }
             else if(is_par(str, "refpos3", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
             {
-              fgets(pstr, MAXSTR, sfile);   
+              retp = fgets(pstr, MAXSTR, sfile);   
               if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.refpos3) < 2)
                 printf("getprm: getval for refpos3 failed\n");
               else if(DBUG==1) 
@@ -3336,7 +3360,7 @@ short  rep;
         {
           if(is_par(str, "sfrq", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.sfrq) < 2)
               printf("getprm: getval for sfrq failed\n");
             else if(DBUG==1) 
@@ -3350,7 +3374,7 @@ short  rep;
         {
           if(is_par(str, "tof", &ptyp) && ((ptyp == 1) || (ptyp == 5)))
           {
-            fgets(pstr, MAXSTR, sfile);   
+            retp = fgets(pstr, MAXSTR, sfile);   
             if(sscanf(pstr, "%d %lf\n", &i, &xsfrq.tof) < 2)
               printf("getprm: getval for tof failed\n");
             else if(DBUG==1) 
@@ -3373,9 +3397,11 @@ char *xfnm;
   char     fnm[MAXSTR], str[MAXSTR], pstr[MAXSTR];
   PROCPAR  pp;
   int      i, ptyp;
+  int      ret __attribute__((unused));
+  char    *retp __attribute__((unused));
   
   sprintf(fnm, "%s", xfnm);
-  (int) check_expdir_fname(fnm);
+  ret = check_expdir_fname(fnm);
   strcat(fnm, "/procpar");
   
   if ((sfile = open_file(fnm, "r")) == NULL)     /* open 2D source file */
@@ -3391,7 +3417,7 @@ char *xfnm;
         if(is_par(str, "at", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.at) < 2)
           {
             printf("getprm: getval for at failed\n");
@@ -3404,7 +3430,7 @@ char *xfnm;
       case 'c' :
         if(is_par(str, "ct", &ptyp) && (ptyp == 7))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %d\n", &i, &pp.ct) < 2)
           {
             printf("getprm: getval for ct failed\n");
@@ -3418,7 +3444,7 @@ char *xfnm;
         if(is_par(str, "lb", &ptyp) && ((ptyp == 1) ||   
           (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.lb) < 2)
           {
             printf("getprm: getval for lb failed\n");
@@ -3429,7 +3455,7 @@ char *xfnm;
         else if(is_par(str, "lb1", &ptyp) && ((ptyp == 1) ||   
           (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.lb1) < 2)
           {
             printf("getprm: getval for lb1 failed\n");
@@ -3440,7 +3466,7 @@ char *xfnm;
         else if(is_par(str, "lb2", &ptyp) && ((ptyp == 1) ||   
           (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.lb2) < 2)
           {
             printf("getprm: getval for lb2 failed\n");
@@ -3453,7 +3479,7 @@ char *xfnm;
       case 'n' :
         if(is_par(str, "np", &ptyp) && (ptyp == 7))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %d\n", &i, &pp.np) < 2)
           {
             printf("getprm: getval for np failed\n");
@@ -3463,7 +3489,7 @@ char *xfnm;
         }
         else if(is_par(str, "ni", &ptyp) && (ptyp == 7))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %d\n", &i, &pp.ni) < 2)
           {
             printf("getprm: getval for ni failed\n");
@@ -3473,7 +3499,7 @@ char *xfnm;
         }
         else if(is_par(str, "ni2", &ptyp) && (ptyp == 7))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %d\n", &i, &pp.ni2) < 2)
           {
             printf("getprm: getval for ni2 failed\n");
@@ -3486,7 +3512,7 @@ char *xfnm;
       case 'f' :
         if(is_par(str, "fn", &ptyp) && (ptyp == 7))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %d\n", &i, &pp.fn) < 2)
           {
             printf("getprm: getval for fn failed\n");
@@ -3496,7 +3522,7 @@ char *xfnm;
         }
         else if(is_par(str, "fn1", &ptyp) && (ptyp == 7))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %d\n", &i, &pp.fn1) < 2)
           {
             printf("getprm: getval for fn1 failed\n");
@@ -3506,7 +3532,7 @@ char *xfnm;
         }
         else if(is_par(str, "fn2", &ptyp) && (ptyp == 7))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %d\n", &i, &pp.fn2) < 2)
           {
             printf("getprm: getval for fn2 failed\n");
@@ -3517,7 +3543,7 @@ char *xfnm;
         else if(is_par(str, "fpmult", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.fpmult) < 2)
           {
             printf("getprm: getval for fpmult failed\n");
@@ -3528,7 +3554,7 @@ char *xfnm;
         else if(is_par(str, "fpmult1", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.fpmult1) < 2)
           {
             printf("getprm: getval for fpmult1 failed\n");
@@ -3539,7 +3565,7 @@ char *xfnm;
         else if(is_par(str, "fpmult2", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.fpmult2) < 2)
           {
             printf("getprm: getval for fpmult2 failed\n");
@@ -3553,7 +3579,7 @@ char *xfnm;
         if(is_par(str, "gf", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.gf) < 2)
           {
             printf("getprm: getval for gf failed\n");
@@ -3564,7 +3590,7 @@ char *xfnm;
         else if(is_par(str, "gfs", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.gfs) < 2)
           {
             printf("getprm: getval for gfs failed\n");
@@ -3575,7 +3601,7 @@ char *xfnm;
         else if(is_par(str, "gf1", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.gf1) < 2)
           {
             printf("getprm: getval for gf1 failed\n");
@@ -3586,7 +3612,7 @@ char *xfnm;
         else if(is_par(str, "gfs1", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.gfs1) < 2)
           {
             printf("getprm: getval for gfs1 failed\n");
@@ -3597,7 +3623,7 @@ char *xfnm;
         else if(is_par(str, "gf2", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.gf2) < 2)
           {
             printf("getprm: getval for gf2 failed\n");
@@ -3608,7 +3634,7 @@ char *xfnm;
         else if(is_par(str, "gfs2", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.gfs2) < 2)
           {
             printf("getprm: getval for gfs2 failed\n");
@@ -3622,7 +3648,7 @@ char *xfnm;
         if(is_par(str, "sw", &ptyp) && ((ptyp == 1) ||   
           (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sw) < 2)
           {
             printf("getprm: getval for sw failed\n");
@@ -3633,7 +3659,7 @@ char *xfnm;
         else if(is_par(str, "sw1", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sw1) < 2)
           {
             printf("getprm: getval for sw1 failed\n");
@@ -3644,7 +3670,7 @@ char *xfnm;
         else if(is_par(str, "sw2", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sw2) < 2)
           {
             printf("getprm: getval for sw2 failed\n");
@@ -3655,7 +3681,7 @@ char *xfnm;
         else if(is_par(str, "sb", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sb) < 2)
           {
             printf("getprm: getval for sb failed\n");
@@ -3666,7 +3692,7 @@ char *xfnm;
         else if(is_par(str, "sbs", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sbs) < 2)
           {
             printf("getprm: getval for sbs failed\n");
@@ -3677,7 +3703,7 @@ char *xfnm;
         else if(is_par(str, "sb1", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sb1) < 2)
           {
             printf("getprm: getval for sb1 failed\n");
@@ -3688,7 +3714,7 @@ char *xfnm;
         else if(is_par(str, "sbs1", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sbs1) < 2)
           {
             printf("getprm: getval for sbs1 failed\n");
@@ -3699,7 +3725,7 @@ char *xfnm;
         else if(is_par(str, "sb2", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sb2) < 2)
           {
             printf("getprm: getval for sb2 failed\n");
@@ -3710,7 +3736,7 @@ char *xfnm;
         else if(is_par(str, "sbs2", &ptyp) && ((ptyp == 1) ||   
                (ptyp == 3) || (ptyp == 5) || (ptyp == 6) || (ptyp == 7)))
         {
-          fgets(pstr, MAXSTR, sfile);   
+          retp = fgets(pstr, MAXSTR, sfile);   
           if(sscanf(pstr, "%d %lf\n", &i, &pp.sbs2) < 2)
           {
             printf("getprm: getval for sbs2 failed\n");
@@ -3777,6 +3803,7 @@ short  rep;
   int     i, j, fni, np_orig;
   double  dm;
   char    str[512], str2[512];
+  char   *retp __attribute__((unused));
 
     
   if(rep) printf("changing np to: %d \n", new_np);  
@@ -3808,7 +3835,7 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if((str2[1] == 'p') && (str2[2] == '\0'))	       /* np */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d\n", &i, &j);
           fprintf(fnm, "%d %d\n", i, new_np); 
         }
@@ -3817,7 +3844,7 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if ((str2[1] == 't') && (str2[2] == '\0'))	      /* at */
         {
-          fgets(str, 512, ftmp);
+          retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %lf\n", &i, &dm);
           dm *= (double) new_np/np_orig;
           fprintf(fnm, "%d %.6f\n", i, dm);
@@ -3827,7 +3854,7 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if ((str2[1] == 'n') && (str2[2] == '\0'))	     /* fn */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d", &i, &j);
           fprintf(fnm, "%d %d\n", i, fni); 
         }
@@ -3852,6 +3879,7 @@ short  rep;
   FILE	  *fnm, *ftmp;
   int     i, j, k, celem;
   char    str[512], str2[512];
+  char   *retp __attribute__((unused));
   
   i = xni; j = xni2; k = xni3; celem = 1;
   if(i<2) i=1;
@@ -3878,19 +3906,19 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if((strcmp(str2, "ni") == 0) && (xni > -1))
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d\n", &i, &j);
           fprintf(fnm, "%d %d\n", i, xni); 
         }
         else if((strcmp(str2, "ni2") == 0) && (xni2 > -1))
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d\n", &i, &j);
           fprintf(fnm, "%d %d\n", i, xni2);  
         }
         else if((strcmp(str2, "ni3") == 0) && (xni3 > -1))
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           sscanf(str, "%d %d\n", &i, &j);
           fprintf(fnm, "%d %d\n", i, xni3);
         }
@@ -3899,7 +3927,7 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if (strcmp(str2, "celem") == 0)              /* celem - completed increments */
         {
-          fgets(str, 512, ftmp);
+          retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %d\n", &i, &j);  
           fprintf(fnm, "%d %d\n", i, celem);
         }
@@ -3908,13 +3936,13 @@ short  rep;
         sscanf(str, "%s\n", str2);
         if((str2[1] == 'r') && (str2[2] == 'r') && (strcmp(str2, "arraydim") == 0))       /* arraydim */
         {
-          fgets(str, 512, ftmp);
+          retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %d\n", &i, &j);           
           fprintf(fnm, "%d %d\n", i, celem);
         }
         else if((str2[1] == 'c') && (str2[2] == 'q') && (strcmp(str2, "acqcycles") == 0)) /* acqcycles */
         {
-          fgets(str, 512, ftmp);
+          retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %d\n", &i, &j);
           fprintf(fnm, "%d %d\n", i, celem);
         }
@@ -3947,6 +3975,7 @@ double sw, sw1, sw2;
   int     i;
   double  tm;
   char    str[512], str2[512];
+  char   *retp __attribute__((unused));
   
   strcat(strcpy(str, dir), "/procpar");
   strcat(strcpy(str2, dir), "/tmp");
@@ -3975,7 +4004,7 @@ double sw, sw1, sw2;
           sscanf(str, "%s", str2);
           if((strcmp(str2, "f1coef") == 0) || (strcmp(str2, "f2coef") == 0) || (strcmp(str2, "f3coef") == 0))
           {
-            fputs(str, fnm); fgets(str, 512, ftmp);            
+            fputs(str, fnm); retp = fgets(str, 512, ftmp);            
             if(sscanf(str, "%d %s", &i, str2) == 2)
               sprintf(str, "%d \"\" \n", i); 
           }
@@ -3988,7 +4017,7 @@ double sw, sw1, sw2;
           sscanf(str, "%s", str2);
           if((str2[2] == '\0') || ((str2[3] == '\0') && ((str2[2] == '1') || (str2[2] == '2') || (str2[2] == '3')))) 
           {
-            fputs(str, fnm); fgets(str, 512, ftmp);             
+            fputs(str, fnm); retp = fgets(str, 512, ftmp);             
             if(sscanf(str, "%d %lf", &i, &tm) == 2)
               sprintf(str, "%d 0.0\n", i); 
           }
@@ -4001,7 +4030,7 @@ double sw, sw1, sw2;
           sscanf(str, "%s", str2);
           if((strcmp(str2, "proc1") == 0) || (strcmp(str2, "proc2") == 0) || (strcmp(str2, "proc3") == 0))
           {
-            fputs(str, fnm); fgets(str, 512, ftmp);            
+            fputs(str, fnm); retp = fgets(str, 512, ftmp);            
             if(sscanf(str, "%d %s", &i, str2) == 2)
               sprintf(str, "%d \"\" \n", i); 
           }          
@@ -4014,7 +4043,7 @@ double sw, sw1, sw2;
           sscanf(str, "%s", str2);
           if((str2[2] == '\0') || ((str2[3] == '\0') && ((str2[2] == '1') || (str2[2] == '2') || (str2[2] == '3')))) 
           {
-            fputs(str, fnm); fgets(str, 512, ftmp);             
+            fputs(str, fnm); retp = fgets(str, 512, ftmp);             
             if(sscanf(str, "%d %lf", &i, &tm) == 2)
               sprintf(str, "%d 0.0\n", i); 
           }
@@ -4027,7 +4056,7 @@ double sw, sw1, sw2;
           sscanf(str, "%s", str2);
           if((str2[2] == '\0') && (sw > 0.1))
           {
-            fputs(str, fnm); fgets(str, 512, ftmp);             
+            fputs(str, fnm); retp = fgets(str, 512, ftmp);             
             if(sscanf(str, "%d %lf", &i, &tm) == 2)
               sprintf(str, "%d %.2f\n", i, sw); 
           }
@@ -4035,13 +4064,13 @@ double sw, sw1, sw2;
           {
             if((str2[2] == '1') && (sw1 > 0.1))
             {
-              fputs(str, fnm); fgets(str, 512, ftmp);             
+              fputs(str, fnm); retp = fgets(str, 512, ftmp);             
               if(sscanf(str, "%d %lf", &i, &tm) == 2)
                 sprintf(str, "%d %.2f\n", i, sw1); 
             }
             else if((str2[2] == '2') && (sw2 > 0.1))
             {
-              fputs(str, fnm); fgets(str, 512, ftmp);             
+              fputs(str, fnm); retp = fgets(str, 512, ftmp);             
               if(sscanf(str, "%d %lf", &i, &tm) == 2)
                 sprintf(str, "%d %.2f\n", i, sw2); 
             }
@@ -4072,7 +4101,8 @@ char *dir;
   int     i, j;
   int     ph __attribute__((unused));
   char    str[512], str2[512];
-  
+  char   *retp __attribute__((unused));
+	  
   strcat(strcpy(str, dir), "/procpar");
   strcat(strcpy(str2, dir), "/tmp");
 
@@ -4088,7 +4118,7 @@ char *dir;
     printf("fopen %s failed\n", str2); 
     exit(1); 
   }  
-       
+	       
   j = getval_s(ftmp, "array", str);
   if((strcmp(str, "phase,phase2") == 0) || (strcmp(str, "phase2,phase") == 0)) return 1;
   else if (strcmp(str, "phase") == 0) ph=2;
@@ -4106,10 +4136,10 @@ char *dir;
     switch (str[0])
     {   
       case 'c' :
-        sscanf(str, "%s\n", str2);
-        if (strcmp(str2, "celem") == 0)  /* celem - completed increments */
-        {
-          fgets(str, 512, ftmp);
+	sscanf(str, "%s\n", str2);
+	if (strcmp(str2, "celem") == 0)  /* celem - completed increments */
+	{
+	  retp = fgets(str, 512, ftmp);
           sscanf(str, "%d %d\n", &i, &j);             
           fprintf(fnm, "%d %d\n", i, 2*j);
         }
@@ -4120,19 +4150,19 @@ char *dir;
         {
           if (strcmp(str2, "array") == 0)		       /* array */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %s\n", &i, str2); 
             fprintf(fnm, "%d \"phase,phase2\" \n", i);  
           }
           else if (strcmp(str2, "arraydim") == 0)           /* arraydim */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);           
             fprintf(fnm, "%d %d\n", i, 2*j);
           }
           else if (strcmp(str2, "arrayelemts") == 0)     /* arrayelemts */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             fprintf(fnm, "%d %d\n", i, 2*j);
           }
@@ -4141,13 +4171,13 @@ char *dir;
         {
           if (strcmp(str2, "acqcycles") == 0)              /* acqcycles */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             fprintf(fnm, "%d %d\n", i, 2*j);
           }
           else if (strcmp(str2, "acqdim") == 0)               /* acqdim */
           {
-            fgets(str, 512, ftmp);
+            retp = fgets(str, 512, ftmp);
             sscanf(str, "%d %d\n", &i, &j);
             fprintf(fnm, "%d %d\n", i, j+1);
           }          
@@ -4157,12 +4187,12 @@ char *dir;
         sscanf(str, "%s\n", str2);
         if (strcmp(str2, "phase") == 0)		              /* phase */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           fprintf(fnm, "2 1 2\n"); 
         }
         else if (strcmp(str2, "phase2") == 0)		     /* phase2 */
         {
-          fgets(str, 512, ftmp);  
+          retp = fgets(str, 512, ftmp);  
           fprintf(fnm, "2 1 2\n"); 
         }
       break;          

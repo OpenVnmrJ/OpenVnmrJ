@@ -127,18 +127,21 @@ void reset_pars_se(dir)
     remove(str2);
 }
 
+#define TEST
 void proc_se(dfid, np, jx, nx)
     /* nx is block size, jx is SE size */
     int np, jx, nx;COMPLX **dfid[nx][np]; {
     int i, j, k, i0, i1, i2;
-    double tm, re, im, R1,R2,I1,I2;
+    double R1,R2,I1,I2;
+#ifndef TEST
+    double tm, re, im;
+#endif
 
     if (nx < jx) {
         printf("se_proc ignored: block size < SE size !\n");
         return;
     }
 
-#define TEST
     i0 = jx / 2;
     for (k = i0; k < nx; k += jx) {
         for (i = 0; i < i0; i++) {
