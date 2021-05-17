@@ -35,7 +35,7 @@ elseif $1='open' then
   $probe=probedtmp
   strstr($probe,'/probes/'):$ret,$appdir
   if ($ret) then
-	shell('basename '+$probe):$probe
+	substr($probe,'basename'):$probe
 	teststr('$adirs',$appdir,'local'):$ret2
 	if ($ret2) then
 	    $probe=$probe+' ['+$alabels[$ret2]+']'
@@ -83,9 +83,9 @@ elseif $1='cleanup' then
   destroy('probedNewAttr','global'):$dum
   $dir = userdir+'/templates/vnmrj/interface'
   $xfile = $dir+'/ProbeEdit.xml'
-  shell('rm -f '+$xfile):$dum
+  delete($xfile,''):$dum
   $pfile=userdir+'/persistence/ProbeEdit_probe'
-  shell('rm -f '+$pfile):$dum
+  delete($pfile,''):$dum
 
 "********************************************************"
 elseif $1='initpar' then
@@ -166,9 +166,6 @@ elseif $1='initpar' then
   
 "********************************************************"
 elseif $1='addnuc' then
-//	This is like addnucleus
-  $nfile=userdir+'/persistence/ProbeEdit_NewNuc'
-  write('reset',$nfile)
   if ($# < 2) then $2=probedNewNuc endif
   if ($2='') then return endif
 
@@ -179,6 +176,8 @@ elseif $1='addnuc' then
 	return
   endif
 
+  $nfile=userdir+'/persistence/ProbeEdit_NewNuc'
+  write('reset',$nfile)
   $gH=1
   $nucfrq=0
   getXi($2):$found,$nucfrq
@@ -211,7 +210,7 @@ elseif $1='addnuc' then
      write('file',$nfile,$2+'minrof2       %s',$srof2)
      write('file',$nfile,$2+'minalfa        10')
   endif
-  $date='' shell('date +%d-%b-%Y-%T'):$date
+  $date='' systemtime('%d-%b-%Y-%T'):$date
   write('file',$nfile,$2+'date           %s',$date)
 
   $nnattr='' $nnval=''
@@ -220,14 +219,37 @@ elseif $1='addnuc' then
         probedattr=probedattr,$nnattr
         probedval=probedval,$nnval
   endif
-  shell('rm -f '+$nfile):$dum
+  delete($nfile,''):$dum
   {$0}('build')    // build xml file
   {$0}('open')     // open dialog
   if ($# < 2) then probedNewNuc='' endif
 
 "********************************************************"
+elseif $1='addlk' then
+  teststr('probedattr','lk:','global'):$isin
+  if ($isin) then
+	write('error','lk already exists in this probe file')
+	return
+  endif
+
+  $nfile=userdir+'/persistence/ProbeEdit_NewNuc'
+  write('reset',$nfile)
+  addlkpars($nfile)
+  $date='' systemtime('%d-%b-%Y-%T'):$date
+  write('file',$nfile,'lkdate           %s',$date)
+
+  $nnattr='' $nnval=''
+  readfile($nfile,'$nnattr','$nnval','','local'):$ns2
+  if ($ns2>0) then
+        probedattr=probedattr,$nnattr
+        probedval=probedval,$nnval
+  endif
+  delete($nfile,''):$dum
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
 elseif ($1='delnuc') then
-//  This is like deletenucleus
   if ($# < 2) then $2=probedNewNuc endif
   if ($2='') then return endif
 
@@ -391,7 +413,7 @@ elseif $1='save' then
     until $i > $size
     write('file',$tfile,'')
     $date=''
-    shell('date +%Y_%m_%d_%H%M%S'):$date
+    systemtime('%Y_%m_%d_%H%M%S'):$date
     cp($file,$file+'.'+$date):$dum
     mv($tfile,$file)
     write('line3','Changes to %s saved',$file)
@@ -444,7 +466,7 @@ elseif $1='update' then
 	teststr('probedattr',$3+'date','global'):$i
 	if ($i) then
            $date=''
-           shell('date +%d-%b-%Y-%T'):$date
+           systemtime('%d-%b-%Y-%T'):$date
 	   probedval[$i]=$date
 	endif
         vnmrjcmd('pnew','probedval')
@@ -498,7 +520,7 @@ elseif ($1='xml') then
   write('reset',$xfile)
   write('file',$xfile,'<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>')
   write('file',$xfile,'<template element="panels" type="probe parameters">')
-  write('file',$xfile,'  <group loc="%g 15" size="87 22">',$maxx-70)
+  write('file',$xfile,'  <group loc="%g 115" size="87 22">',$maxx-70)
   write('file',$xfile,'  </group>\n')
   $id='Probe without ID'
   $id=''
@@ -506,7 +528,7 @@ elseif ($1='xml') then
   if ($idpos) then $id='Probe ID:  '+probedval[$idpos] endif
   write('file',$xfile,'   <textmessage loc="%g 10" size="400 25" style="PlainText" set="$VALUE=\'%s\'" />',($maxx-400)/2,$id)
 
-  write('file',$xfile,'  <folder loc="10 40" size="%g %g">',$maxx,$maxy+60)
+  write('file',$xfile,'  <folder loc="10 100" size="%g %g">',$maxx,$maxy+60)
 
   $limits=0
   $psize = size($a)
@@ -563,20 +585,23 @@ elseif ($1='xml') then
   write('file',$xfile,'  </folder>')
 
   if ($enable>0) then
-     write('file',$xfile,'  <group loc="%g %g" size="410 90">',($maxx-410)/2,$maxy+100)
+//     write('file',$xfile,'  <group loc="%g %g" size="410 90">',($maxx-410)/2,$maxy+100)
+     write('file',$xfile,'  <group loc="5 10" size="410 80">')
 
-     write('file',$xfile,'  <label loc="5 10" size="70 20" style="Label1" label="Nucleus" />')
-     write('file',$xfile,'  <entry loc="60 10" size="60 20" style="PlainText" vq="probedNewNuc" vc="probedNewNuc=\'$VALUE\'" set="$VALUE=probedNewNuc" />')
-     write('file',$xfile,'  <button loc="125 10" size="80 20" style="Heading2" label="Add" vq="probedNewNuc" vc="ProbeEdit(\'addnuc\',probedNewNuc)" />')
-     write('file',$xfile,'  <button loc="210 10" size="80 20" style="Heading2" label="Delete" vq="probedNewNuc" vc="ProbeEdit(\'delnuc\',probedNewNuc)" />')
-     write('file',$xfile,'  <button loc="60 40" size="230 20" style="Heading2" label="Save changes" vc="ProbeEdit(\'save\')" />')
-     write('file',$xfile,'  <button loc="300 10" size="100 20" style="Heading2" label="Add Lk Pars" vq="probedNewNuc" vc="addlkpars ProbePopup(\'editshowCurrentProbe\')" />')
-     write('file',$xfile,'  <button loc="300 40" size="100 20" style="Heading2" label="Add SF/SP" vq="probedNewNuc" vc="SFSPcorrect(\'updateprobe\') ProbePopup(\'editshowCurrentProbe\')" />')
+     write('file',$xfile,'  <label loc="10 10" size="70 20" style="Heading1" label="Nucleus" />')
+     write('file',$xfile,'  <entry loc="70 10" size="60 20" style="PlainText" vq="probedNewNuc" vc="probedNewNuc=\'$VALUE\'" set="$VALUE=probedNewNuc" />')
+     write('file',$xfile,'  <button loc="135 10" size="80 20" style="Heading2" label="Add" vq="probedNewNuc" vc="ProbeEdit(\'addnuc\',probedNewNuc)" />')
+     write('file',$xfile,'  <button loc="220 10" size="80 20" style="Heading2" label="Delete" vq="probedNewNuc" vc="ProbeEdit(\'delnuc\',probedNewNuc)" />')
+     teststr('probedattr','lk:','global'):$isin
+     if (not $isin) then
+        write('file',$xfile,'  <button loc="305 10" size="80 20" style="Heading2" label="Add lk" vc="ProbeEdit(\'addlk\')" />')
+     endif
+     write('file',$xfile,'  <button loc="70 40" size="230 30" style="Heading2" label="Save changes" vc="ProbeEdit(\'save\')" />')
      write('file',$xfile,'  </group>\n')
 //     $delta=50
   endif
   write('file',$xfile,'</template>')
- 
+
 "********************************************************"
 elseif ($1='probe' and $#>1.5) then
 // second argument is probe name
