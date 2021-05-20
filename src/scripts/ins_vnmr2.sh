@@ -1801,7 +1801,7 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
            fi
         fi
         #remove previous version
-        rm -f /usr/init.d/pgsql
+        rm -f /etc/init.d/pgsql
         sudo /usr/sbin/update-rc.d -f pgsql remove > /dev/null 2>&1
         #install new version
         sudo cp -p "$dest_dir"/bin/S99pgsql /etc/init.d/pgsql
