@@ -239,7 +239,7 @@ static int set2Ddatafile(int fn0, int fn1Val)
   double rfn;
   int r;
   int sperblock0;
-  int sperblock1;
+//  int sperblock1;
   int nblks;
 
   if (fn0 > (MAX2DFTSIZE*bufferscale))
@@ -294,7 +294,7 @@ static int set2Ddatafile(int fn0, int fn1Val)
         sperblock0 *= 2;
       }
 
-      sperblock1 = fn0/(2*nblks);
+//    sperblock1 = fn0/(2*nblks);
 
 // fprintf(stderr,"sperblock0=%d specblock1= %d nblks= %d\n",sperblock0, sperblock1, nblks);
 
@@ -441,6 +441,7 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
    int fnVal;
    int fn1Val = 0;
    int f2 = 1;
+   size_t ret __attribute__((unused));
 
    Wturnoff_buttons();
    D_allrelease();
@@ -525,7 +526,7 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
             {
                fseek(f1,(long) (j+i*fnVal)*sizeof(int), SEEK_SET);
             }
-            fread(&ibuf,sizeof(int),1,f1);
+            ret = fread(&ibuf,sizeof(int),1,f1);
             *rdata++ = (float) ibuf * scalefactor;
          }
       }
@@ -538,7 +539,7 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
             {
                fseek(f1,(long) (j+i*fnVal)*sizeof(float), SEEK_SET);
             }
-            fread(&fbuf,sizeof(float),1,f1);
+            ret = fread(&fbuf,sizeof(float),1,f1);
             *rdata++ = fbuf * scalefactor;
          }
       }
@@ -558,7 +559,7 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
    {
       for (i=0; i<fnVal; i++)
       {
-         fread(&ibuf,sizeof(int),1,f1);
+         ret = fread(&ibuf,sizeof(int),1,f1);
          *rdata++ = (float) ibuf * scalefactor;
       }
    }
@@ -566,7 +567,7 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
    {
       for (i=0; i<fnVal; i++)
       {
-         fread(&fbuf,sizeof(float),1,f1);
+         ret = fread(&fbuf,sizeof(float),1,f1);
          *rdata++ = fbuf * scalefactor;
       }
    }
@@ -863,6 +864,7 @@ int fitspec(int argc, char *argv[], int retc, char *retv[])
   double llfrq,llamp,vs,rfl,rfp,rflrfp,slw;
   float chisq;
   double value;
+  int ret __attribute__((unused));
 
 #ifdef CLOCKTIME
   /* Turn on a clocktime timer */
@@ -978,7 +980,7 @@ int fitspec(int argc, char *argv[], int retc, char *retv[])
 #endif 
   unlink(filename);
   sprintf(execstring,"fitspec %s",curexpdir);
-  system(execstring);
+  ret = system(execstring);
   if ( (inputfile=fopen(filename,"r")) )
     { if (fscanf(inputfile,"%d\n",&error)!=1)
         { Werrprintf("problem reading from fitspec.stat,line 1");
@@ -1172,7 +1174,7 @@ static int spins_system(char *systemstring)
   char paramfile[MAXSTR];
   char nuctable[8]; 
   char varname[4];
-  int  nucnumber[8];
+  // int  nucnumber[8];
   char dgastring[1024];
   char dlastring[512];
   double value,sw;
@@ -1188,10 +1190,10 @@ static int spins_system(char *systemstring)
               ABORT;
             }
           nuctable[nspins] = systemstring[i];
-          nucnumber[nspins] = 1;
+          // nucnumber[nspins] = 1;
           i++;
           if ((systemstring[i]>='1') && (systemstring[i]<='9'))
-            { nucnumber[nspins] = systemstring[i]-'0';
+            { // nucnumber[nspins] = systemstring[i]-'0';
               i++;
             }
           nspins++;
@@ -1361,7 +1363,7 @@ static int spins_calculate(char *options, int iterateflag)
   char systemstring[2*MAXSPINS+2];
   double value;
   char nuctable[MAXSPINS];
-  int nucnumber[MAXSPINS];
+  // int nucnumber[MAXSPINS];
   int i,j,nspins,r;
   int *clindex, clindexsize, clindexvalue;
   int *saveclindex;
@@ -1373,6 +1375,7 @@ static int spins_calculate(char *options, int iterateflag)
   char varname[4];
   char execstring[256];
   float f1,f2;
+  int ret __attribute__((unused));
 
   if (getsize(GLOBAL,"clindex",&clindexsize))
       ABORT;
@@ -1444,10 +1447,10 @@ static int spins_calculate(char *options, int iterateflag)
               ABORT;
             }
           nuctable[nspins] = systemstring[i];
-          nucnumber[nspins] = 1;
+          // nucnumber[nspins] = 1;
           i++;
           if ((systemstring[i]>='1') && (systemstring[i]<='9'))
-            { nucnumber[nspins] = systemstring[i]-'0';
+            { // nucnumber[nspins] = systemstring[i]-'0';
               i++;
             }
           nspins++;
@@ -1547,7 +1550,7 @@ static int spins_calculate(char *options, int iterateflag)
 #else 
   sprintf(execstring,"spins %s %s > %sspins.list",curexpdir,options,curexpdir);
 #endif 
-  system(execstring);
+  ret = system(execstring);
   if ( (inputfile=fopen(filename,"r")) )
     { if (fscanf(inputfile,"%d\n",&error)!=1)
         { Werrprintf("problem reading from fitspec.stat,line 1");
@@ -2148,6 +2151,7 @@ int dlalong(int argc, char *argv[], int retc, char *retv[])
     double          cladoub;
     double         *clfreq,	*slfreq,	*clamp;
     double         *saveclfreq,	*saveslfreq,    *saveclamp;
+    int ret __attribute__((unused));
 
     if (argc > 1) {
         if (strcmp( argv[ 1 ], "returnla" ) == 0)
@@ -2312,7 +2316,7 @@ int dlalong(int argc, char *argv[], int retc, char *retv[])
 
     if (returnla)
     {
-	    fscanf(outputfile,"%d %d\n",&claval,&clindexval);
+	    ret = fscanf(outputfile,"%d %d\n",&claval,&clindexval);
 	    while (fscanf(outputfile,"%d %d %d\n",&indx,&claval,&clindexval)==3)
 	    {
 	        j=1;

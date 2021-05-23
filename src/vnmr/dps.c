@@ -435,7 +435,7 @@ static  double  rlloopTime[MAX_RLLOOP+1];
 static  int     rlloopMult[MAX_RLLOOP+1];
 static  char    psgfile[MAXPATH];
 static  char    dpsfile[MAXPATH];
-static  char 	inputs[MAXPATH * 2 + 16];
+static  char 	inputs[MAXPATH * 2 + 32];
 static  char    *dps_label = NULL;
 static  char    *cmd_name = NULL;
 static  char    *argArray[64];
@@ -2450,7 +2450,7 @@ int check_args(int argc, char *argv[], int retc, char *retv[])
                return(1);
         }
         {
-            char msg[MAXPATH*2];
+            char msg[MAXPATH*3];
 
             sprintf(msg,"dps error: sequence '%s' does not exist", psgfile);
             if (retc == 0)
@@ -15517,13 +15517,13 @@ info_print(char *format, ...)
         va_list  vargs;
 
         va_start(vargs, format);
-        vsprintf(info_data, format, vargs);
+        vsprintf(inputs, format, vargs);
         va_end(vargs);
 #ifdef VNMRJ
-	sprintf(inputs, "info add %s\n", info_data);
-	writelineToVnmrJ("dps", inputs);
+	sprintf(info_data, "info add %s\n", inputs);
+	writelineToVnmrJ("dps", info_data);
 #else 
-	put_dps_info(info_data);
+	put_dps_info(inputs);
 #endif 
 }
 
