@@ -5,7 +5,7 @@ write('reset',$file)
 // use to get the latest results
 substr($file,'dirname'):$dir
 substr($file,'basename'):$name
-shell('cd "'+$dir+'"; rm -f report.txt; ln -s "'+$name+'" report.txt')
+shell('cd "'+$dir+'"; rm -f report.txt failed.txt; ln -s "'+$name+'" report.txt')
 getversion
 exists('vvLog','maclib'):$e,$path
 substr($path,'dirname'):$qapath
@@ -66,6 +66,14 @@ if ($e = 10) then
 // testAutotest
 // testSQ
   vvCheck('exit',$time)
+  copyf($dir+'/report.txt','grep','Failed','|wc'):$fail
+  if ($fail) then
+    touch($dir+'/failed.txt')
+  endif
 else
+  copyf($dir+'/report.txt','grep','Failed','|wc'):$fail
+  if ($fail) then
+    touch($dir+'/failed.txt')
+  endif
   exit
 endif
