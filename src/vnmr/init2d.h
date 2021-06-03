@@ -65,6 +65,7 @@ extern int	dfpnt,
 		npnt1,
                 normInt,        /* normalize 1d integral flag           */
                 normInt2;       /* normalize 2d integral flag           */
+extern int      showPlotBx;
 
 extern float	normalize;
 

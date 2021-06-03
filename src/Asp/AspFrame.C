@@ -221,11 +221,13 @@ void AspFrame::setDefaultFOV() {
    //psty = pixht - (psty+pht);
    psty = mnumypnts - (psty+pht);
 
+   // This causes small offsets in the positioning of annotations along the vertical axis
+   // when used with dpcon('axisonly')
    // add 2.0*dispcalib for 1D display (so spectrum is a little above axis).
-   if(dataInfo->rank == 1) {
-      double dispcalib = (float) (mnumypnts-ymin) / (float) wc2max;
-      pht = pht + 2.0*dispcalib;
-   }
+//   if(dataInfo->rank == 1) {
+//      double dispcalib = (float) (mnumypnts-ymin) / (float) wc2max;
+//      pht = pht + 2.0*dispcalib;
+//   }
 
 //Winfoprintf("### pixstx,pixsty,pixwd,pixht %f %f %f %f",pixstx,pixsty,pixwd,pixht);
    // DEBUG

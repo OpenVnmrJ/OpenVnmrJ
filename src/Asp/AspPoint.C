@@ -27,7 +27,7 @@ void AspPoint::create(spAspCell_t cell, int x, int y) {
    pCoord[0].x = x;
    pCoord[0].y = y;
    sCoord[0].x = cell->pix2val(HORIZ,x,mmbind); 
-   sCoord[0].y = cell->pix2val(VERT,y,mmbind); 
+   sCoord[0].y = cell->pix2val(VERT,y,mmbindY); 
    disFlag = ANN_SHOW_ROI | ANN_SHOW_LABEL | ANN_SHOW_LINK;
    created_type = ANNO_POINT;
 }
@@ -43,7 +43,7 @@ void AspPoint::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    int roiX,roiY,roiW,roiH;
    roiX=roiY=roiW=roiH=0;
    pCoord[0].x=cell->val2pix(HORIZ,sCoord[0].x,mmbind);
-   pCoord[0].y=cell->val2pix(VERT,sCoord[0].y,mmbind);
+   pCoord[0].y=cell->val2pix(VERT,sCoord[0].y,mmbindY);
    roiX = (int)pCoord[0].x;
    roiY = (int)pCoord[0].y;
    roiW = MARKSIZE;
@@ -57,7 +57,7 @@ void AspPoint::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    if((disFlag & ANN_SHOW_LABEL)) {
      getLabel(dataInfo,labelStr,labelW,labelH);
      labelX = (int)(cell->val2pix(HORIZ,sCoord[0].x,mmbind)+labelLoc.x) - labelW/2;
-     labelY = (int)(cell->val2pix(VERT,sCoord[0].y,mmbind)+labelLoc.y);
+     labelY = (int)(cell->val2pix(VERT,sCoord[0].y,mmbindY)+labelLoc.y);
 
      if((disFlag & ANN_SHOW_LINK)) { 
 
