@@ -103,7 +103,8 @@ void AspAnnoList::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    double px,py,pw,ph;
    cell->getPixCell(px,py,pw,ph);
 
-   set_clip_region((int)px,(int)py,(int)pw,(int)ph);
+   if (showPlotBx)
+      set_clip_region((int)px,(int)py,(int)pw,(int)ph);
    
    AspAnnoMap::iterator itr;
    for (itr = annoMap->begin(); itr != annoMap->end(); ++itr) {

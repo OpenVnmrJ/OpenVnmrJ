@@ -26,7 +26,7 @@ void AspPolygon::create(spAspCell_t cell, int x, int y) {
    pCoord[0].x=pCoord[1].x = x;
    pCoord[0].y=pCoord[1].y = y;
    sCoord[0].x=sCoord[1].x=cell->pix2val(HORIZ,x,mmbind);
-   sCoord[0].y=sCoord[1].y=cell->pix2val(VERT,y,mmbind);
+   sCoord[0].y=sCoord[1].y=cell->pix2val(VERT,y,mmbindY);
    disFlag = ANN_SHOW_ROI;
    created_type = ANNO_POLYGON;
 }
@@ -40,7 +40,7 @@ void AspPolygon::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
 
    for(int i=0; i<npts; i++) {
       pCoord[i].x=cell->val2pix(HORIZ,sCoord[i].x,mmbind);
-      pCoord[i].y=cell->val2pix(VERT,sCoord[i].y,mmbind);
+      pCoord[i].y=cell->val2pix(VERT,sCoord[i].y,mmbindY);
    }
 
    labelX=labelY=labelW=labelH=0;
@@ -84,7 +84,7 @@ void AspPolygon::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
      if(labelStr == "") labelStr="?";
 
      labelX = (int)(cell->val2pix(HORIZ,0.5*(sCoord[0].x+sCoord[1].x),mmbind)+labelLoc.x);
-     labelY = (int)(cell->val2pix(VERT,0.5*(sCoord[0].y+sCoord[1].y),mmbind)+labelLoc.y);
+     labelY = (int)(cell->val2pix(VERT,0.5*(sCoord[0].y+sCoord[1].y),mmbindY)+labelLoc.y);
 
      setFont(labelColor);
      AspUtil::drawString((char *)labelStr.c_str(), labelX,labelY, labelColor, "", rotate);

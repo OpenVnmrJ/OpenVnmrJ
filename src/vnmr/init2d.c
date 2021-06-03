@@ -172,6 +172,7 @@ int		newspec,	/* set by gettrace() and calc_spec()	*/
 		npnt,
 		fpnt1,
 		npnt1;
+int             showPlotBx = 0;
 
 float		normalize;
 
@@ -600,6 +601,7 @@ int init2d_getchartparms(int checkFreq)
 /**********************/
 {
   int	r;
+  double tmp;
 
   C_GETPAR("sc",&sc);
   C_GETPAR("wc",&wc);
@@ -619,6 +621,9 @@ int init2d_getchartparms(int checkFreq)
          && ((axisVert == 'c') || (axisVert == 'm') || (axisVert == 'u')))
        constrain_aspect_ratio();
   }
+  if (P_getreal(GLOBAL,"showPlotBox", &tmp, 1) )
+     tmp = 0.0;
+  showPlotBx= (int) tmp;
   return COMPLETE;
 }
 

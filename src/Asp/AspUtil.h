@@ -100,6 +100,7 @@ extern int dfpnt;
 extern int dnpnt;
 extern int dfpnt2;
 extern int dnpnt2;
+extern int showPlotBx;
 extern double sc;
 extern double wc;
 extern double sc2;

@@ -121,8 +121,7 @@ int getDscaleDecimal(int i) {
 }
 
 int showPlotBox() {
-  double d;
-  if(isInset() || (!d2flag && plot) || P_getreal(GLOBAL,"showPlotBox", &d, 1) || d < 1.0) return 0;
+  if(isInset() || (!d2flag && plot) || (showPlotBx < 1)) return 0;
   else return 1;
 }
 

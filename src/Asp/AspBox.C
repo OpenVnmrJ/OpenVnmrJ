@@ -26,7 +26,7 @@ void AspBox::create(spAspCell_t cell, int x, int y) {
    pCoord[0].x=pCoord[1].x = x;
    pCoord[0].y=pCoord[1].y = y;
    sCoord[0].x=sCoord[1].x=cell->pix2val(HORIZ,x,mmbind);
-   sCoord[0].y=sCoord[1].y=cell->pix2val(VERT,y,mmbind);
+   sCoord[0].y=sCoord[1].y=cell->pix2val(VERT,y,mmbindY);
    disFlag = ANN_SHOW_ROI;
    created_type = ANNO_BOX;
 }
@@ -39,9 +39,9 @@ void AspBox::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    setRoiColor(roiColor,thick);
 
    pCoord[0].x=cell->val2pix(HORIZ,sCoord[0].x,mmbind);
-   pCoord[0].y=cell->val2pix(VERT,sCoord[0].y,mmbind);
+   pCoord[0].y=cell->val2pix(VERT,sCoord[0].y,mmbindY);
    pCoord[1].x=cell->val2pix(HORIZ,sCoord[1].x,mmbind);
-   pCoord[1].y=cell->val2pix(VERT,sCoord[1].y,mmbind);
+   pCoord[1].y=cell->val2pix(VERT,sCoord[1].y,mmbindY);
 
    int roiX,roiY,roiW,roiH;
    labelX=labelY=labelW=labelH=0;
@@ -73,7 +73,7 @@ void AspBox::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
      if(labelStr == "") labelStr="?";
 
      labelX = (int)(cell->val2pix(HORIZ,0.5*(sCoord[0].x+sCoord[1].x),mmbind)+labelLoc.x);
-     labelY = (int)(cell->val2pix(VERT,0.5*(sCoord[0].y+sCoord[1].y),mmbind)+labelLoc.y);
+     labelY = (int)(cell->val2pix(VERT,0.5*(sCoord[0].y+sCoord[1].y),mmbindY)+labelLoc.y);
 
      setFont(labelColor);
      AspUtil::drawString((char *)labelStr.c_str(), labelX,labelY, labelColor, "", rotate);
@@ -131,22 +131,22 @@ void AspBox::modify(spAspCell_t cell, int x, int y, int prevX, int prevY) {
           pCoord[0].x=x;
           pCoord[0].y=y;
           sCoord[0].x=cell->pix2val(HORIZ,x,mmbind);
-          sCoord[0].y=cell->pix2val(VERT,y,mmbind);
+          sCoord[0].y=cell->pix2val(VERT,y,mmbindY);
         } else if(selectedHandle == HANDLE2) {
           pCoord[1].x=x;
           pCoord[0].y=y;
           sCoord[1].x=cell->pix2val(HORIZ,x,mmbind);
-          sCoord[0].y=cell->pix2val(VERT,y,mmbind);
+          sCoord[0].y=cell->pix2val(VERT,y,mmbindY);
         } else if(selectedHandle == HANDLE3) {
           pCoord[1].x=x;
           pCoord[1].y=y;
           sCoord[1].x=cell->pix2val(HORIZ,x,mmbind);
-          sCoord[1].y=cell->pix2val(VERT,y,mmbind);
+          sCoord[1].y=cell->pix2val(VERT,y,mmbindY);
         } else if(selectedHandle == HANDLE4) {
           pCoord[0].x=x;
           pCoord[1].y=y;
           sCoord[0].x=cell->pix2val(HORIZ,x,mmbind);
-          sCoord[1].y=cell->pix2val(VERT,y,mmbind);
+          sCoord[1].y=cell->pix2val(VERT,y,mmbindY);
 	}
 	return;
    } 
@@ -165,7 +165,7 @@ void AspBox::modify(spAspCell_t cell, int x, int y, int prevX, int prevY) {
             pCoord[i].x += cx;
             pCoord[i].y += cy;
             sCoord[i].x=cell->pix2val(HORIZ,pCoord[i].x,mmbind);
-            sCoord[i].y=cell->pix2val(VERT,pCoord[i].y,mmbind);
+            sCoord[i].y=cell->pix2val(VERT,pCoord[i].y,mmbindY);
         }
    } else if(selected == LABEL_SELECTED) {
      labelLoc.x += (x-prevX);
