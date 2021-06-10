@@ -31,7 +31,7 @@ IF ($1='init') THEN
 	$i=$i+1
      until $i > $tot
    endif
-   shell('rm -f '+$tmpfile):$dum
+   delete($tmpfile,''):$dum
 
 // Next send messages to all VJ's viewing the active study
 //   For every pid's in the SQwatch file, send this macro
@@ -52,7 +52,7 @@ IF ($1='init') THEN
         $i=$i+1
      until $i > $tot
    endif
-   shell('rm -f '+$tmpfile):$dum
+   delete($tmpfile,''):$dum
 
 // Next send messages to all VJ's viewing the study in sample view
 //   For every pid's in the SQwatch file, send this macro
@@ -73,7 +73,7 @@ IF ($1='init') THEN
         $i=$i+1
      until $i > $tot
    endif
-   shell('rm -f '+$tmpfile):$dum
+   delete($tmpfile,''):$dum
 
 ELSEIF ($1='updateTray') THEN
      if ($3='') or ($3='done') then
@@ -152,7 +152,7 @@ ELSEIF ($1='changeStatus') THEN
 		$sc=$sc+' set '+$node+' title "'+$title+'";'
 		$sc=$sc+' set '+$node+' data "'+$data+'";'
 		vnmrjcmd('SQ '+$sc)
-		shell('cp '+$from+' '+$to):$dum
+		cp($from,$to):$dum
 	    endif
 	    $i=$i+1
 	endif
@@ -167,16 +167,13 @@ ELSEIF ($1='Write') THEN
 	if ($3='') then $parex=0 endif
 	if ($parex) then
    	    write('file','/vnmr/acqqueue/SQwatch','%s %s %s',$2,vnmraddr,$3)
-   	    shell('chmod a+w /vnmr/acqqueue/SQwatch'):$dum
+   	    chmod('a+w','/vnmr/acqqueue/SQwatch'):$dum
 	endif
    endif
 
 ELSEIF ($1='Clear') THEN
-   shell('touch /vnmr/acqqueue/SQwatch'):$dum
-   shell('cp /vnmr/acqqueue/SQwatch /vnmr/tmp'):$dum
-   shell('(cat /vnmr/acqqueue/SQwatch | grep -v "'+vnmraddr+'" > /vnmr/tmp/SQwatch)'):$dum
-   shell('cp /vnmr/tmp/SQwatch /vnmr/acqqueue/SQwatch'):$dum
-   shell('rm -f /vnmr/tmp/SQwatch'):$dum
-   shell('chmod a+w /vnmr/acqqueue/SQwatch'):$dum
-
+   touch('/vnmr/acqqueue/SQwatch'):$dum
+   copyf('/vnmr/acqqueue/SQwatch','grep -v',vnmraddr,'/vnmr/tmp/SQwatch'):$dum
+   mv('/vnmr/tmp/SQwatch','/vnmr/acqqueue/SQwatch'):$dum
+   chmod('a+w','/vnmr/acqqueue/SQwatch'):$dum
 ENDIF
