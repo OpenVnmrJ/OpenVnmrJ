@@ -50,7 +50,7 @@ IF ($1='login') THEN
     endif
     if ($fex) then
 	write('line3','Persona set to %s',personaType)
-        shell('cp '+$fpath+' '+userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
+        cp($fpath,userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
 	return
     endif
 // Unassigned Operators take either Default persona or Owner persona
@@ -59,7 +59,7 @@ IF ($1='login') THEN
 // Do not allow owner to take Default persona
         write('line3','Persona set to Default')
 	personaType='Default'
-        shell('cp '+$fpath+' '+userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
+        cp($fpath,userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
         return
     endif
     if $ADMpersona<>'' then
@@ -75,7 +75,7 @@ IF ($1='login') THEN
         if ($fex) then
             write('line3','Persona set to Owner')
             personaType='Owner'
-            shell('cp '+$fpath+' '+userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
+            cp($fpath,userdir+'/persistence/RightsConfig_'+operator+'.txt'):$dum
             return
         endif
     endif
@@ -88,7 +88,7 @@ ELSEIF ($1='adjappdir') THEN
     exists($afile,'file'):$afex
     $update=0
     if ($afex) then
-            shell('(cat '+$afile+' | grep -c \'\/personalib\/\')'):$ok
+            append($afile,'grep','/personalib/','|wc'):$ok
             if ($ok) then $update=1 endif
     endif
 
@@ -103,7 +103,7 @@ ELSEIF ($1='adjappdir') THEN
     if ($update) then
     	$tmpfile=userdir+'/persistence/tmpapp'
     	write('reset',$tmpfile)
-    	shell('date'):$date
+    	systemtime('%c'):$date
     	write('file',$tmpfile,'# Updated by %s on %s',owner,$date)
     	appdir('file'):$file
     	$s1='' $s2=''
@@ -116,8 +116,7 @@ ELSEIF ($1='adjappdir') THEN
 	    endif
 	    $i=$i+1
     	until $i > $total
-    	copy($tmpfile,userdir+'/persistence/appdir_'+operator)
-    	delete($tmpfile)
+    	mv($tmpfile,userdir+'/persistence/appdir_'+operator)
     endif
     $update2=0
     if ($direx) then
@@ -194,7 +193,7 @@ ELSEIF ($1='toolPanel') THEN
 ELSEIF ($1='bootup') THEN
     if not ($pex) and ($ADMpersona='') then return endif
     $numop=0
-    shell('(cat '+systemdir+'/adm/users/profiles/user/'+owner+' | grep -w \'^operators\' | wc -l)'):$numop
+    append(systemdir+'/adm/users/profiles/user/'+owner,'grep -w','^operators','|wc'):$numop
     if ($numop<1.5) then
         personalogin('login')
         if (personaType<>'') then
