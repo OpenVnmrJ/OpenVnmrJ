@@ -16,9 +16,11 @@ if [[ $? -ne 0 ]]; then
   echo "This hostname should be added to the /etc/hosts file"
 fi
 
-grep -v ^::1 /etc/hosts | grep -w $(hostname) > /dev/null 2>&1
-if [[ $? -ne 0 ]]; then
+numHost=$(grep -v ^::1 /etc/hosts | grep -v ^# | grep -w $(hostname) | wc -l)
+if [[ $numHost -eq 0 ]]; then
   echo "Hostname $(hostname) should be added to the /etc/hosts file"
+elif [[ $numHost -gt 1 ]]; then
+  echo "Hostname $(hostname) should only be defined once in the /etc/hosts file"
 fi
 
 if hash ldd 2> /dev/null; then
