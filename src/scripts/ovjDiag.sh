@@ -16,6 +16,11 @@ if [[ $? -ne 0 ]]; then
   echo "This hostname should be added to the /etc/hosts file"
 fi
 
+grep -v ^::1 /etc/hosts | grep -w $(hostname) > /dev/null 2>&1
+if [[ $? -ne 0 ]]; then
+  echo "Hostname $(hostname) should be added to the /etc/hosts file"
+fi
+
 if hash ldd 2> /dev/null; then
   ldd /vnmr/bin/Vnmrbg | grep -i "not found" > /dev/null 2>&1
   if [[ $? -eq 0 ]]; then
