@@ -122,6 +122,8 @@ bool AspCell::select(int x, int y) {
    selected=false;
    double xmax=pstx+pwd;
    double ymax=psty+pht;
+   if (showPlotBx == 0)
+      ymax = mnumypnts;
    if(x>=pstx && x<=xmax && y>=psty && y<=ymax) {
       selected=true;
    }

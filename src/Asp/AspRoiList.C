@@ -32,7 +32,8 @@ void AspRoiList::drawRois(spAspCell_t cell) {
    double pstx, psty, pwd, pht;
    cell->getPixCell(pstx, psty, pwd, pht);
    int yoff = (int)(2*(cell->getCali(VERT)));
-   set_clip_region((int)pstx-1,(int)psty+yoff,(int)pwd,(int)pht);
+   if (showPlotBx)
+      set_clip_region((int)pstx-1,(int)psty+yoff,(int)pwd,(int)pht);
 
    AspRoiMap::iterator ri;
    spAspRoi_t roi;

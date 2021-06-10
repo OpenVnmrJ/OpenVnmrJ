@@ -704,13 +704,13 @@ int averag(int argc, char *argv[], int retc, char *retv[])
 /*----------------------------------------------------------------------
 |
 |       datafit
-|       Fit a file of data points to zero (average) or first (linear)
-|       order polynomial
+|       Fit a file of data points to zero (average), first (linear)
+|       order polynomial, or exponential
 |
 +---------------------------------------------------------------------*/
 int datafit(int argc, char *argv[], int retc, char *retv[])
 {
-    int polyOrder=0;
+    int fitType=0;
     int col[5];
     double val[5];
     FILE *fd = NULL;
@@ -730,16 +730,18 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
     int moreToDo = 1;
 
     if (argc < 3)
-    {   Werrprintf("usage: %s(<polynomial order>,'file',<datafile>) or", argv[0]);
-        Werrprintf("usage: %s(<polynomial order>,'parX',<'parY'>)", argv[0]);
+    {   Werrprintf("usage: %s(<fitType>,'file',<datafile>) or", argv[0]);
+        Werrprintf("usage: %s(<fitType>,'parX',<'parY'>)", argv[0]);
         ABORT;
     }
     if ( ! strcmp(argv[1],"poly0")  )
-       polyOrder = 0;
+       fitType = 0;
     else if ( ! strcmp(argv[1],"poly1") )
-       polyOrder = 1;
+       fitType = 1;
+    else if ( ! strcmp(argv[1],"exp") )
+       fitType = 2;
     else
-    {  Werrprintf("%s: first argument must be 'poly0' or 'poly1'",argv[0]);
+    {  Werrprintf("%s: first argument must be 'poly0', 'poly1', or 'exp'",argv[0]);
        ABORT;
     }
     for (index=0; index < (int)(sizeof(col)/sizeof(int)); index++)
@@ -777,11 +779,11 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
            ABORT;
        }
        r1 = v1->R;
-       if (polyOrder == 1)
+       if (fitType >= 1)
        {
           if (argc < 4)
           {
-             Werrprintf("usage: %s('poly1','parX','parY')", argv[0]);
+             Werrprintf("usage: %s('<poly1|exp>','parX','parY')", argv[0]);
              ABORT;
           }
           if ( argv[3][0] == '$' )
@@ -827,15 +829,17 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
              break;
           val[0] = r1->v.r;
           r1 = r1->next; 
-          if (polyOrder == 1)
+          if (fitType >= 1)
           {
              val[1] = r2->v.r;
              r2 = r2->next; 
+             if (fitType == 2)
+                val[1] = log(val[1]);
           }
        }
        sumx += val[col[0]];
        sumx2 += (val[col[0]]*val[col[0]]);
-       if (polyOrder == 1)
+       if (fitType >= 1)
        {
           sumy += val[col[1]];
           sumxy += (val[col[0]]*val[col[1]]);
@@ -845,7 +849,7 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
     }
     if (fd)
        fclose(fd);
-    if (polyOrder == 0)
+    if (fitType == 0)
     {
        double average;
        double stddev;
@@ -885,6 +889,8 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
        denom = N*sumx2 - (sumx*sumx);
        slope = ( N*sumxy - sumx*sumy ) / denom;
        intercept = ( sumx2*sumy - sumx*sumxy ) / denom;
+       if (fitType == 2)
+          intercept = exp(intercept);
        rSquared = (sumxy -sumx*sumy/N) / sqrt((sumx2 - sumx*sumx/N) * (sumy2 - sumy*sumy/N));
        if (retc)
        {
@@ -892,8 +898,10 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
           if (retc>=2) retv[1] = realString(intercept);
           if (retc>=3) retv[2] = realString(rSquared);
        }
-       else
+       else if (fitType == 1)
           Winfoprintf("slope: %g  intercept: %g R squared: %g",slope,intercept,rSquared);
+       else
+          Winfoprintf("exponent: %g  coefficent: %g R squared: %g",slope,intercept,rSquared);
     }
     RETURN;
 }       

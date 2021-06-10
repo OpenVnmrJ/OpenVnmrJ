@@ -71,11 +71,11 @@ void AspBar::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    if(created_type == ANNO_YBAR) {
      sCoord[1].x=sCoord[0].x;
      pCoord[0].x=pCoord[1].x=cell->val2pix(HORIZ,sCoord[0].x,mmbind);
-     pCoord[0].y=cell->val2pix(VERT,sCoord[0].y,mmbind);
-     pCoord[1].y=cell->val2pix(VERT,sCoord[1].y,mmbind);
+     pCoord[0].y=cell->val2pix(VERT,sCoord[0].y,mmbindY);
+     pCoord[1].y=cell->val2pix(VERT,sCoord[1].y,mmbindY);
    } else {
      sCoord[1].y=sCoord[0].y;
-     pCoord[0].y=pCoord[1].y=cell->val2pix(VERT,sCoord[0].y,mmbind);
+     pCoord[0].y=pCoord[1].y=cell->val2pix(VERT,sCoord[0].y,mmbindY);
      pCoord[0].x=cell->val2pix(HORIZ,sCoord[0].x,mmbind);
      pCoord[1].x=cell->val2pix(HORIZ,sCoord[1].x,mmbind);
    }
@@ -101,7 +101,7 @@ void AspBar::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
        }
      }
      labelX = (int)(cell->val2pix(HORIZ,0.5*(sCoord[0].x+sCoord[1].x),mmbind) + labelLoc.x) - labelW/2;
-     labelY = (int)(cell->val2pix(VERT,0.5*(sCoord[0].y+sCoord[1].y),mmbind) + labelLoc.y);
+     labelY = (int)(cell->val2pix(VERT,0.5*(sCoord[0].y+sCoord[1].y),mmbindY) + labelLoc.y);
 
 
      // draw connector
