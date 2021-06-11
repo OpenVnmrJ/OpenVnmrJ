@@ -237,7 +237,7 @@ set_datastation(int val)
 void
 Wseterrorkey(char *str)
 {
-  strncpy(ErrorKey,str,ERRORKEYSIZE);
+  strncpy(ErrorKey,str,ERRORKEYSIZE-1);
 }
 
 /*------------------------------------------------------------------
@@ -875,7 +875,8 @@ int jscroll_wheel_mouse(int clicks, int frome_csi) {
 void jmouse_spwp(int butnum, int x, int y, int mask){
 /***********************/
 	static int oldx=0,oldy=0;
-	static double init_vp=0,init_vo=0,init_ho=0,init_sc=0;
+	static double init_vp=0,init_vo=0,init_ho=0;
+	// static double init_sc=0;
 	static int initx,inity;
 	extern int get_frame_width();
 	extern int get_frame_height();
@@ -887,9 +888,9 @@ void jmouse_spwp(int butnum, int x, int y, int mask){
 	double arraystart=1;
 	double arraystop=1;
 	double arraydelta=1;
-	double vo_delta=1;
-	double ho_delta=1;
-	double sc_max=250,sc_min=0;
+//	double vo_delta=1;
+//	double ho_delta=1;
+//	double sc_max=250,sc_min=0;
 	double m_sc,m_wc,m_vo,m_ho,m_vp,m_vpf;
 	int num_traces=1;
 
@@ -919,6 +920,7 @@ void jmouse_spwp(int butnum, int x, int y, int mask){
     	P_getreal(CURRENT,"vo",&m_vo,1);
     	num_traces=(arraystop-arraystart)/arraydelta+1;
     	num_traces=num_traces<1?1:num_traces;
+        /*
     	vo_delta=(num_traces-1)*m_vo;
     	ho_delta=(num_traces-1)*m_ho;
     	if(ho_delta<=0){
@@ -929,6 +931,7 @@ void jmouse_spwp(int butnum, int x, int y, int mask){
 			sc_max=wcmax-m_wc-ho_delta;
 			sc_min=0;
     	}
+        */
     }
 	P_getreal(CURRENT,"vpf",&m_vpf,1);
 	P_getreal(CURRENT,"vp",&m_vp,1);
@@ -941,7 +944,7 @@ void jmouse_spwp(int butnum, int x, int y, int mask){
 		else
 			init_vp=m_vp;
 		if(stackplot){
-			init_sc=m_sc;
+			// init_sc=m_sc;
 			init_vo=m_vo;
 			init_ho=m_ho;
 			//Winfoprintf("button down x:%d y:%d vp:%g sc:%g\n",x,y,init_vp,init_sc);
@@ -3105,7 +3108,7 @@ int text_is(int argc, char *argv[], int retc, char *retv[])
   else if ((argc == 3) && (strcmp(argv[1],"set") == 0))
   {
     Wgettextdisplay(resetDisp,20);
-    strncpy(resetKey,argv[2],20);
+    strncpy(resetKey,argv[2],19);
     Wsettextdisplay(argv[2]);
   }
   else if ((argc == 3) && (strcmp(argv[1],"reset") == 0))
