@@ -1057,6 +1057,8 @@ typedef struct {Functionp dispatch; char *objname; } *Object;
 /*- End SISCO defines 						-*/
 /*---------------------------------------------------------------*/
 
+#include "decfuncs.h"
+
 extern void incr(int a);
 extern void decr(int a);
 extern void assign(int a, int b);
@@ -1134,6 +1136,8 @@ extern void gensim3shaped_pulse(char *name1, char *name2, char *name3,
                     int rfdevice1, int rfdevice2, int rfdevice3);
 extern void S_oblique_gradpulse(double level1, double level2, double level3,
                 double ang1, double ang2, double ang3, double gdelay);
+extern void S_oblique_gradient(double level1,double level2,double level3,
+                        double ang1,double ang2,double ang3);
 extern int pulse_phase_type(int val);
 extern int phase_var_type(int val);
 extern void stepsize(double stepsiz, int device);
@@ -1148,8 +1152,18 @@ extern int G_Offset( int firstkey, ... );
 extern int hsdelay(double time);
 extern void genspinlock(char *name, double pw_90, double deg_res, codeint phsval, int ncycles, int rfdevice);
 extern void G_Simpulse(int firstkey, ...);
+extern void gen_apshaped_pulse();
 extern void acquire(double datapts, double dwell);
 extern void sp1on();
 extern void sp1off();
+extern void diplexer_override(int state);
+extern int sync_on_event();
+extern void zero_all_gradients();
+extern void phaseshift();
+extern int Create_offset_list();
+extern void	setHSLdelay();
+extern void vget_elem();
+extern void calc_amp_tc(char chan, int eccno, double amp, double tc);
+extern int Create_freq_list();
 
 #endif

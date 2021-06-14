@@ -8,7 +8,8 @@ char *SCCSid_swtune_c(){
 
 #include "acodes.h"
 
-pre_fidsequence()
+extern int putcode(codeint word);
+void pre_fidsequence()
 {
     int chan;
     int attn;

@@ -47,7 +47,7 @@ extern int NUMch;	/* number of defined channels */
 |                       Author: Greg Brissey  11/14/88
 +---------------------------------------------------------------------*/
 /*VARARGS2*/
-sync_on_event(Object dev_obj, ...)
+int sync_on_event(Object dev_obj, ...)
 {
    char		   msge[128];
    va_list         vargs;
@@ -94,7 +94,7 @@ sync_on_event(Object dev_obj, ...)
 |		    syncing
 |                       Author: Greg Brissey  11/14/88
 +---------------------------------------------------------------------*/
-hardware_get(Object dev_obj, ...)
+int hardware_get(Object dev_obj, ...)
 {
    char		   msge[128];
    va_list         vargs;
@@ -172,8 +172,7 @@ int device;
 |   Modified   Author     Purpose
 |   --------   ------     -------
 +------------------------------------------------------------------*/
-rfchan_getrfband(device)
-int device;
+int rfchan_getrfband(int device)
 {
     int error;
     char msge[128];
@@ -205,8 +204,7 @@ int device;
 |   --------   ------     -------
 +------------------------------------------------------------------*/
 double
-rfchan_getlbandmax(device)
-int device;
+rfchan_getlbandmax(int device)
 {
     int error;
     char msge[128];
@@ -237,9 +235,7 @@ int device;
 |   Modified   Author     Purpose
 |   --------   ------     -------
 +------------------------------------------------------------------*/
-double
-rfchan_getfreqmax(device)
-int device;
+double rfchan_getfreqmax(int device)
 {
     int error;
     char msge[128];
@@ -270,8 +266,7 @@ int device;
 |   Modified   Author     Purpose
 |   --------   ------     -------
 +------------------------------------------------------------------*/
-rfchan_getampband(device)
-int device;
+int rfchan_getampband(int device)
 {
     int error;
     char msge[128];
@@ -302,9 +297,7 @@ int device;
 |   Modified   Author     Purpose
 |   --------   ------     -------
 +------------------------------------------------------------------*/
-double
-rfchan_getbasefreq(device)
-int device;
+double rfchan_getbasefreq(int device)
 {
     int error;
     char msge[128];
@@ -332,9 +325,7 @@ int device;
 |        get the frequency step size for this channel.
 |
 +------------------------------------------------------------------*/
-double
-rfchan_getfreqstep(device)
-int device;
+double rfchan_getfreqstep(int device)
 {
     int error;
     char msge[128];
@@ -365,9 +356,7 @@ int device;
 |	 returns ON (1) or OFF (0)
 |
 +------------------------------------------------------------------*/
-int
-rfchan_getxmtrstate(device)
-int device;
+int rfchan_getxmtrstate(int device)
 {
 	int		HSlines, HSmask;
 	int		error;
@@ -410,9 +399,7 @@ int device;
 |	return current power level for this channel
 |
 +----------------------------------------------------------------*/
-double
-rfchan_getpower( channel )
-int	channel;
+double rfchan_getpower(int channel )
 {
 	char		msge[ 128 ];
 	int		error;
@@ -446,9 +433,7 @@ int	channel;
 |	return current fine power level for this channel
 |
 +----------------------------------------------------------------*/
-double
-rfchan_getpwrf( channel )
-int	channel;
+double rfchan_getpwrf(int channel )
 {
 	char		msge[ 128 ];
 	int		error;

@@ -143,7 +143,7 @@ int readshapeline()
 |    930114	r.kyburz					|
 +--------------------------------------------------------------*/
 /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
-gen_apshaped_pulse(shape, pws, phs, pwrtbl, phstbl, rx1, rx2, device)
+void gen_apshaped_pulse(shape, pws, phs, pwrtbl, phstbl, rx1, rx2, device)
 char	shape[MAXSTR];
 codeint	phs,
 	pwrtbl,
