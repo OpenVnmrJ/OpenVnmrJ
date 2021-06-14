@@ -57,6 +57,7 @@ static void Tincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
                          codeint mult1, codeint mult2, codeint mult3);
 static int get_l_pfg_base(char where);
 static int get_t_pfg_base(char where);
+void calc_amp_tc(char chan, int eccno, double amp, double tc);
 
 /*
    if dynamic call then value = gamp0+gampi*mult;
@@ -81,7 +82,7 @@ static int get_t_pfg_base(char where);
             = 'hhhh'  homospoil pulse (z only)
 */
 
-static warnclip(val,cval,what)
+static void warnclip(val,cval,what)
 int val,cval;
 char what;
 {  
@@ -146,7 +147,7 @@ char what;
    return(x);
 }
 
-settmpgradtype(char *tmpgradname)
+void settmpgradtype(char *tmpgradname)
 {
   char tmpGradtype[MAXSTR];
   if (P_getstring(CURRENT, tmpgradname, tmpGradtype, 1, MAXSTR) == 0)
@@ -215,7 +216,7 @@ void rgradient(char axis, double value)
    }
 }
 
-S_vgradient(gid,gamp0,gampi,mult)
+void S_vgradient(gid,gamp0,gampi,mult)
 char gid;
 int gamp0,gampi;
 codeint mult;
@@ -231,7 +232,7 @@ codeint mult;
     default: text_error("illegal gradient case"); psg_abort(1);
   }
   if ((gid == 'n') || (gid == 'N'))
-    return(0);
+    return;
   switch (gradtype[ix])
   {
     case 'W': case 'w':	
@@ -250,7 +251,7 @@ codeint mult;
 
 /*	S_incgradient implements incgradient for the DAC board.
  */
-S_incgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
+void S_incgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
  char gid;
  int gamp0;
  int gamp1, gamp2, gamp3;
@@ -268,7 +269,7 @@ S_incgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
     default: text_error("illegal gradient case\n"); psg_abort(1);
   }
   if ((gid == 'n') || (gid == 'N'))
-    return(0);
+    return;
   switch (gradtype[ix])
   {
     case 'W': case 'w':	
@@ -293,7 +294,7 @@ S_incgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
   }
 }
 
-zero_all_gradients()
+void zero_all_gradients()
 {	
   char tag;
   tag = tolower(gradtype[0]);
@@ -1062,10 +1063,7 @@ double tcmax[4]={ 0.235,2.35,2.36,23.5};
 /*      chan = 'x','y','z',  tcno = {1,2,3,4}				*/
 /*      0<= amp <=100,  tcmax/11 <= tc <= tcmax			 	*/
 /************************************************************************/
-calc_amp_tc(chan,eccno,amp,tc)
-char chan;
-int eccno;
-double amp,tc;
+void calc_amp_tc(char chan, int eccno, double amp, double tc)
 {
      int amp12,tc12;
      double xx,tc_min,tc_max;

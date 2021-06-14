@@ -125,6 +125,7 @@ static union {
       } endianSwap;
 
 static void write_Acodes(int act);
+int putcode(codeint word);
 
 /*-----------------------------------------------------------------------
 |  createPS()
@@ -1928,8 +1929,7 @@ double arg2;
 |	puts integer word into Codes array, increments pointer
 |
 +------------------------------------------------------------------*/
-putcode(word)
-codeint word;
+int putcode(codeint word)
 {
     if (bgflag)
 	fprintf(stderr,"Code(%p) = %d(dec) or %4x(hex) \n",
@@ -1944,6 +1944,7 @@ codeint word;
 	text_error(msge);
 	psg_abort(0);
     }
+    return(0);
 }
 /*-----------------------------------------------------------------
 |       putLongCode()/1

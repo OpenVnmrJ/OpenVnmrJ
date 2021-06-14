@@ -99,7 +99,6 @@
 extern int bgflag;
 extern char gradtype[];
 extern double getval();
-extern double zero_all_gradients();
 extern float get_decctool_shimscale();
 
 

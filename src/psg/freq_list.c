@@ -287,7 +287,7 @@ free_global_list()
 	}
 }
 
-vget_elem(list_no, vindex)
+void vget_elem(list_no, vindex)
 /************************************************************************
 * Description:
 *	Element creates the acodes for indexing into a table of previously

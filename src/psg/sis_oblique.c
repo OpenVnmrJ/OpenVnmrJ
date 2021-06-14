@@ -832,9 +832,8 @@ close_obl_list()
                Procedure to set an oblique static gradient level.
         **********************************************************/
 
-S_oblique_gradient(level1,level2,level3,ang1,ang2,ang3)
-double level1,level2,level3;
-double ang1,ang2,ang3;
+void S_oblique_gradient(double level1,double level2,double level3,
+                        double ang1,double ang2,double ang3)
 {
     double xlevel,ylevel,zlevel;
     double Gx_dac, Gy_dac, Gz_dac;
