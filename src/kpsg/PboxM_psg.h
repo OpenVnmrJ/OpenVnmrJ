@@ -27,6 +27,7 @@
 #ifndef DPS
 #include <stdlib.h>
 #include <sys/file.h>
+#include "vfilesys.h"
 #endif
 
 #ifndef M_LN10
@@ -82,7 +83,7 @@ shape getRsh(char *shname)          /* retrieve parameters from .RF file header 
   shape    rshape;
   FILE     *inpf;
   int      j, k;
-  char     ch, str[MAXSTR];
+  char     ch, str[MAXSTR*2];
   extern char userdir[], systemdir[];
   double   am, ln;
 
@@ -131,7 +132,7 @@ shape getDsh(char *shname)      /* retrieve parameters from .DEC file header */
   FILE     *inpf;
   int      j, ok=1;
   char     ch, str[MAXSTR];
-  char     shapename[MAXSTR];
+  char     shapename[MAXSTR*2];
 
   dshape.ok = 0;
   dshape.pw = 0.0, dshape.pwr = 0.0, dshape.pwrf = 0.0, dshape.dres = 0.0,
@@ -465,7 +466,7 @@ shape getGsh(char *shname)			/* read .GRD shaped gradient */
   shape    gshape;
   FILE     *inpf;
   int      j, k;
-  char     ch, str[MAXSTR];
+  char     ch, str[MAXSTR*2];
   double   am, ln;
   extern char userdir[], systemdir[];
 
@@ -569,8 +570,9 @@ char  *shname;
 }
 
 				      /* modified shaped gradient statement */
-void shapedgradient(gname, gw, glvl, axis, nstp, dchr) 
-char  *gname, *dchr, axis;
+void shapedgradient(gname, gw, glvl, axis, nstp, dum) 
+char  *gname, axis;
+int  dum;
 int    nstp;
 double glvl, gw; 
 {
@@ -597,7 +599,7 @@ void pbox_grad(shape *gshape,
                double glvl, double gof1, double gof2) /* default (z) gradient */
 {
   delay(gof1);
-  shapedgradient(gshape->name, gshape->pw, glvl, 'Z', 1, "NOWAIT");
+  shapedgradient(gshape->name, gshape->pw, glvl, 'Z', 1, 1);
   delay(gof2);
 }
 
@@ -605,7 +607,7 @@ void pbox_zgrad(shape *gshape, double gw,
                 double glvl, double gof1, double gof2)	/* z gradient */
 {
   delay(gof1);
-  shapedgradient(gshape->name, gw, glvl, 'Z', 1, "NOWAIT");
+  shapedgradient(gshape->name, gw, glvl, 'Z', 1, 1);
   delay(gof2);
 }
 
@@ -639,46 +641,47 @@ void setlimit(const char *name, double param, double limt)
  *  making this available globally would only 
  *  interfere at this point
  */
-/* void presat()
-/* {
-/*   satdly = getval("satdly");
-/* 
-/*   if (satdly)
-/*   {
-/*     obspower(getval("satpwr"));
-/*     rcvroff(); obs_pw_ovr(TRUE); xmtroff();
-/*     delay(d1-satdly);
-/*     xmtron(); delay(satdly); xmtroff();
-/*     rcvron();  obs_pw_ovr(FALSE);
-/*     delay(5.0e-6);
-/*   }
-/*   else
-/*      delay(d1);
-/* }
-/* 
-/*     
-/* void pre_sat()
-/* {
-/*   satpwr = getval("satpwr");
-/*   setlimit("satpwr", satpwr, 10.0);
-/*   satfrq = getval("satfrq");
-/*   satdly = getval("satdly");
-/*     
-/*   if ((satmode[0] == 'y') && (satdly > 1.0e-5))
-/*   {
-/*     rcvroff(); obs_pw_ovr(TRUE); xmtroff();
-/*     obspower(satpwr); obsoffset(satfrq);
-/*     if (d1 > satdly)
-/*       delay(d1-satdly);
-/*     else
-/*       delay(d1);
-/*     xmtron(); delay(satdly); xmtroff();
-/*     rcvron();  obs_pw_ovr(FALSE);
-/*     obsoffset(tof);
-/*     delay(5.0e-6);
-/*   }
-/*   else
-/*     delay(d1);
-/* }
-/* */
+#ifdef BAD
+void presat()
+{
+  satdly = getval("satdly");
+
+  if (satdly)
+  {
+    obspower(getval("satpwr"));
+    rcvroff(); obs_pw_ovr(TRUE); xmtroff();
+    delay(d1-satdly);
+    xmtron(); delay(satdly); xmtroff();
+    rcvron();  obs_pw_ovr(FALSE);
+    delay(5.0e-6);
+  }
+  else
+     delay(d1);
+}
+
+    
+void pre_sat()
+{
+  satpwr = getval("satpwr");
+  setlimit("satpwr", satpwr, 10.0);
+  satfrq = getval("satfrq");
+  satdly = getval("satdly");
+    
+  if ((satmode[0] == 'y') && (satdly > 1.0e-5))
+  {
+    rcvroff(); obs_pw_ovr(TRUE); xmtroff();
+    obspower(satpwr); obsoffset(satfrq);
+    if (d1 > satdly)
+      delay(d1-satdly);
+    else
+      delay(d1);
+    xmtron(); delay(satdly); xmtroff();
+    rcvron();  obs_pw_ovr(FALSE);
+    obsoffset(tof);
+    delay(5.0e-6);
+  }
+  else
+    delay(d1);
+}
+#endif
 #endif

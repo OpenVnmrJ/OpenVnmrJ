@@ -875,10 +875,7 @@ static void writetable(Tableinfo *tblinfo)
 |                               Author:  S. Farmer  |
 |                                 Date:  11-8-88    |
 +--------------------------------------------------*/
-settable(tablename,numelements,tablearray)
-codeint	tablename;
-int	numelements,
-	tablearray[];
+void settable(codeint tablename, int numelements, int tablearray[])
 {
    int	index,
 	i,
@@ -959,10 +956,7 @@ int	numelements,
 |                               Author:  S. Farmer  |
 |                                 Date:  11-8-88    |
 +--------------------------------------------------*/
-getelem(tablename,indxptr,dstptr)
-codeint	indxptr,
-	dstptr,
-	tablename;
+void getelem(codeint tablename,codeint indxptr,codeint dstptr)
 {
    int	index;
 
@@ -1669,8 +1663,7 @@ static int table_math(int optype, int *value1, int *value2)
 }
 
 
-setreceiver(phaseptr)
-int phaseptr;
+void setreceiver(int phaseptr)
 {
       APsetreceiver(phaseptr);
 }

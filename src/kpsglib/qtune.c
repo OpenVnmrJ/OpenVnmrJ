@@ -10,8 +10,12 @@
 #include "acodes.h"
 
 extern int	cardb;
+extern int Create_freq_list();
+extern void vget_elem();
+extern int find(const char *word);
+extern void putcode(int datum);
 
-pre_fidsequence()
+void pre_fidsequence()
 {
     int chan;
     int attn;

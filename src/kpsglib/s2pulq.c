@@ -21,10 +21,9 @@ extern	double	tof_init;
 
 extern  int	fattn[10];
 extern	int	hr,hv;
+extern void putcode(int datum);
 
-settxif(offset, address)
-double	offset;
-int	address;
+void settxif(double offset, int address)
 {
 int     bits32, llbyte, hlbyte, lhbyte, hhbyte;
    bits32 = (int) (offset * FACTOR);

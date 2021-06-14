@@ -89,7 +89,7 @@ int globaltable;
 *	>= 0, Number of the list it has created. 
 *        < 0, No list created.
 *************************************************************************/
-Create_freq_list(list, nvals, device, list_no)
+int Create_freq_list(list, nvals, device, list_no)
 double *list;
 int	nvals;
 int	device;
@@ -530,7 +530,7 @@ close_global_list()
 *	NONE 
 *  
 *************************************************************************/
-vget_elem(list_no, vindex)
+void vget_elem(list_no, vindex)
 int 	list_no;
 codeint	vindex;
 {

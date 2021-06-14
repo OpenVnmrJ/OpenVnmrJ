@@ -18,28 +18,51 @@ static double amp1y,amp2y,amp3y,amp4y;
 static double tc1z,tc2z,tc3z,tc4z; 
 static double amp1z,amp2z,amp3z,amp4z; 
 static char   gread,gslice,gphase,command[MAXSTR],gradshape[MAXSTR];
+extern void calc_amp_tc();
+extern void pfg_reset(char where);
+extern void pfg_blank(char where);
+extern void pfg_enable(char where);
+extern int getorientation();
 
-void pulsesequence()
+void send_eddys(char chan, double deddy)
 {
-   int flag;
-   /* get variables */
-   flag = getorientation(&gread,&gphase,&gslice,"orient");
-   if (flag)
-     printf("flag\n");
-   gzlvl1=getval("gzlvl1");
-   getstr("cmd",command);
-   getstr("gshape",gradshape);
-   read_in_eddys();
-   /* equilibrium period */
-   status(A);
-   delay(d1);
-   rgpulse(p1, zero,rof1,rof2);
-   do_op();
-   status(C);
-   obspulse();
+   /* if deddy is set long enough 50 ms + each light with light */
+   if (chan == 'x')
+   {
+     calc_amp_tc('x',1,amp1x,tc1x);
+     delay(deddy);
+     calc_amp_tc('x',2,amp2x,tc2x);
+     delay(deddy);
+     calc_amp_tc('x',3,amp3x,tc3x);
+     delay(deddy);
+     calc_amp_tc('x',4,amp4x,tc4x);
+     delay(deddy);
+   }
+   if (chan == 'y')
+   {
+     calc_amp_tc('y',1,amp1y,tc1y);
+     delay(deddy);
+     calc_amp_tc('y',2,amp2y,tc2y);
+     delay(deddy);
+     calc_amp_tc('y',3,amp3y,tc3y);
+     delay(deddy);
+     calc_amp_tc('y',4,amp4y,tc4y);
+     delay(deddy);
+   }
+   if (chan == 'z')
+   {
+     calc_amp_tc('z',1,amp1z,tc1z);
+     delay(deddy);
+     calc_amp_tc('z',2,amp2z,tc2z);
+     delay(deddy);
+     calc_amp_tc('z',3,amp3z,tc3z);
+     delay(deddy);
+     calc_amp_tc('z',4,amp4z,tc4z);
+     delay(deddy);
+   }
 }
 
-do_op()
+void do_op()
 {
    /* respond to command string */
    /* pulse make a pulse for d2 of gzlvl1 on gread */
@@ -138,7 +161,7 @@ do_op()
    }
 }
 
-read_in_eddys()
+void read_in_eddys()
 {
    if (gread == 'x') 
    {
@@ -175,46 +198,26 @@ read_in_eddys()
    }
 }
 
-send_eddys(chan,deddy)
-char chan;
-double deddy;
-{
-   /* if deddy is set long enough 50 ms + each light with light */
-   if (chan == 'x')
-   {
-     calc_amp_tc('x',1,amp1x,tc1x);
-     delay(deddy);
-     calc_amp_tc('x',2,amp2x,tc2x);
-     delay(deddy);
-     calc_amp_tc('x',3,amp3x,tc3x);
-     delay(deddy);
-     calc_amp_tc('x',4,amp4x,tc4x);
-     delay(deddy);
-   }
-   if (chan == 'y')
-   {
-     calc_amp_tc('y',1,amp1y,tc1y);
-     delay(deddy);
-     calc_amp_tc('y',2,amp2y,tc2y);
-     delay(deddy);
-     calc_amp_tc('y',3,amp3y,tc3y);
-     delay(deddy);
-     calc_amp_tc('y',4,amp4y,tc4y);
-     delay(deddy);
-   }
-   if (chan == 'z')
-   {
-     calc_amp_tc('z',1,amp1z,tc1z);
-     delay(deddy);
-     calc_amp_tc('z',2,amp2z,tc2z);
-     delay(deddy);
-     calc_amp_tc('z',3,amp3z,tc3z);
-     delay(deddy);
-     calc_amp_tc('z',4,amp4z,tc4z);
-     delay(deddy);
-   }
-}
-
 /*
    pfg_quick_zero('z');
 */
+void pulsesequence()
+{
+   int flag;
+   /* get variables */
+   flag = getorientation(&gread,&gphase,&gslice,"orient");
+   if (flag)
+     printf("flag\n");
+   gzlvl1=getval("gzlvl1");
+   getstr("cmd",command);
+   getstr("gshape",gradshape);
+   read_in_eddys();
+   /* equilibrium period */
+   status(A);
+   delay(d1);
+   rgpulse(p1, zero,rof1,rof2);
+   do_op();
+   status(C);
+   obspulse();
+}
+

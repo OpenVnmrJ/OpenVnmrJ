@@ -120,7 +120,7 @@ if ((d1 - (gt3+gstab) -2.0*(gt4/2.0+gstab)) < 0.0)
    { d1 = (gt3+gstab) -2.0*(gt4/2.0+gstab);
      printf("Warning: d1 too short;  reset to minimum value\n");}
 
-if ((abs(gzlvl1)*(1+kappa)) > gzlvl_max)
+if ((fabs(gzlvl1)*(1+kappa)) > gzlvl_max)
    { abort_message("Max. grad. amplitude exceeded: reduce either gzlvl1 or kappa\n");
      }
 
@@ -212,7 +212,7 @@ if(delflag[0]=='y')
    status(B); /* first part of sequence */
    if(delflag[0]=='y')
    {
-   	if(gt1>0 && abs(gzlvl1)>0)
+   	if(gt1>0 && fabs(gzlvl1)>0)
    	{
 		if(selectCTP==2)
 		{

@@ -12,8 +12,12 @@
 #include "acodes.h"
 
 extern int      cardb;
+extern int Create_freq_list();
+extern void vget_elem();
+extern int find(const char *word);
+extern void putcode(int datum);
 
-pre_fidsequence()
+void pre_fidsequence()
 {
     int chan;
     int attn;
@@ -108,6 +112,6 @@ void pulsesequence()
         /*acquire((double)(2 * ppfreq), 0.003);*/
     }endloop(v2);
 
-    /* BEWARE: adding 1 ms delay here can delay sending data back by 2-3 sec!
+    /* BEWARE: adding 1 ms delay here can delay sending data back by 2-3 sec! */
     /*delay(0.001);*/
 }

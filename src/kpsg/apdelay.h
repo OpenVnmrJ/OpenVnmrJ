@@ -20,11 +20,11 @@
 #define MERCURY_PWRF_OVERHEAD			4.6e-6
 #define MERCURY_SAPS_OVERHEAD			13.8e-6
 /* offset:
-/* Hiband BB	( 0  + 76 )*1.15 =  87.40 usec
-/*        4-Nuc ( 0  + 76 )*1.15 =  87.40 usec
-/*        New   ( 0  + 34 )*1.15 =  39.10 usec
-/* Low Band BB  ( 18 + 76 )*1.15 = 108.10 usec
-/*        4-Nuc ( 11 + 76 )*1.15 = 100.05 usec 
+ * Hiband BB	( 0  + 76 )*1.15 =  87.40 usec
+ *        4-Nuc ( 0  + 76 )*1.15 =  87.40 usec
+ *        New   ( 0  + 34 )*1.15 =  39.10 usec
+ * Low Band BB  ( 18 + 76 )*1.15 = 108.10 usec
+ *        4-Nuc ( 11 + 76 )*1.15 = 100.05 usec 
  */
 #define MERCURY_OFFSET_OVERHEAD			97.75e-6
 #define MERCURY_OFFSET_LTCH_OVERHEAD		97.75e-6

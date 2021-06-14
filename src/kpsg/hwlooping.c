@@ -182,9 +182,7 @@ void turnoff_swdsp()
 #define	MAXLOOPLENGTH	32
 #define	TIME1MS		0x4000
 
-acquire(datapts,dwell)
-double datapts;
-double dwell;
+void acquire(double datapts,double dwell)
 {
 int	ntwords;		/* number of timer words */
 int	pairs;			/* number of ctc's */
@@ -324,7 +322,7 @@ int     twords;
 |	 the noise of the receiver channels.
 |				Author Greg Brissey  7/10/86
 +------------------------------------------------------------------*/
-donoisecalc()
+void donoisecalc()
 {
    noiseflag = TRUE;		/* indicate to acquire() this is noise acq */
 
