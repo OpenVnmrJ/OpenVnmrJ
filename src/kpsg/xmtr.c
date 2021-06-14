@@ -14,10 +14,11 @@
 #define HTXON   128                    /*  1H tx gate line */
 extern int	cardb;
 extern int	indirect;
+extern void gate(int gatebit, int on);
 
 /* the following functions work only if they are followed by a delay */
 /* they are here in HMQC					     */
-decon()
+void decon()
 {
    if (!indirect)
       gate(HTXON,TRUE);
@@ -25,7 +26,7 @@ decon()
       gate(CTXON,TRUE);
 }
 
-xmtron()
+void xmtron()
 {
    if (cardb)
       gate(CTXON,TRUE);
@@ -33,7 +34,7 @@ xmtron()
       gate(HTXON,TRUE);
 }
 
-decoff()
+void decoff()
 {
    if (!indirect)
       gate(HTXON,FALSE);
@@ -41,7 +42,7 @@ decoff()
       gate(CTXON,FALSE);
 }
 
-xmtroff()
+void xmtroff()
 {
    if (cardb)
       gate(CTXON,FALSE);

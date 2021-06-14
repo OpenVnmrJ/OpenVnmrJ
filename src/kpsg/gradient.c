@@ -27,6 +27,10 @@ static int warnclipDone = 0;
 static int warnclipix = 1;
 static int get_pfg_base(char where);
 void rgradient(char axis, double value);
+void calc_amp_tc();
+void pfg_reset(char where);
+void pfg_blank(char where);
+void pfg_enable(char where);
 
 /************************************************************************/
 /*									*/
@@ -43,7 +47,7 @@ void rgradient(char axis, double value);
 /*									*/
 /************************************************************************/
 
-static warnclip(val,cval,what)
+static void warnclip(val,cval,what)
 int	val,cval;
 char	what;
 {  
@@ -89,8 +93,7 @@ char what;
    return(x);
 }
 
-VAGRAD(glevel)
-double	glevel;
+void VAGRAD(double glevel)
 {
    if ((gradstepsz == 0.0) || (gmax == 0.0) )
    {  abort_message("vagradient(): 'gradstepz' or 'gmax' is zero");
@@ -223,7 +226,7 @@ zero_all_gradients()
   if (tolower(gradtype[1]) == 'a') rgradient('y',0.0);
 }
 
-getorientation(c1,c2,c3,orientname)
+int getorientation(c1,c2,c3,orientname)
 char  *c1,*c2,*c3,*orientname;
 {
    char orientstring[MAXSTR];
@@ -368,7 +371,7 @@ double tcmax[4]={ 0.235,2.35,165.0,23.5};
 /*      chan = 'x','y','z',  tcno = {1,2,3,4}				*/
 /*      0<= amp <=100,  tcmax/11 <= tc <= tcmax			 	*/
 /************************************************************************/
-calc_amp_tc(chan,eccno,amp,tc)
+void calc_amp_tc(chan,eccno,amp,tc)
 char chan;
 int eccno;
 double amp,tc;
@@ -411,23 +414,20 @@ double amp,tc;
      delay(0.000020);  /* HARD CODED 20 microseconds to let dacs update */
 }
 
-pfg_reset(where) /* THIS ACTION TAKES 50 MILLISECONDS */
-char where;
+void pfg_reset(char where) /* THIS ACTION TAKES 50 MILLISECONDS */
 {
    /* reset but not enabled */
    pfg_reg(where,2,2);
    pfg_reg(where,2,0);
 }
 
-pfg_blank(where)
-char where;
+void pfg_blank(char where)
 {
    /* disable - no reset */
    pfg_reg(where,2,0);
 }
 
-pfg_enable(where)
-char where;
+void pfg_enable(char where)
 {
    /* enable - no reset */
    pfg_reg(where,2,1);
@@ -570,8 +570,7 @@ int i,base;
        putcode(obuff[i]);
 }
 
-zgradpulse(gval,gdelay)
-double	gval, gdelay;
+void zgradpulse(double gval,double gdelay)
 {
    if (gdelay > 2e-7)
    {  rgradient('z',gval);

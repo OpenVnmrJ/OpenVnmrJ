@@ -8,6 +8,8 @@
 /*  ptune - new sequence to activate Pulse Tune through aux2 */
 
 #include <standard.h>
+extern void aux1on();
+extern void aux12off();
 
 void pulsesequence()
 {

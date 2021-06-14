@@ -28,6 +28,61 @@ extern double getval(const char *name);
 extern double getvalnwarn(const char *variable);
 extern void   getstr(const char *variable, char buf[]);
 extern void   getstrnwarn(const char *variable, char buf[]);
+extern int DPSprint(double timev, const char *format, ...);
+extern int DPStimer(int code, int subcode, int vnum, int fnum, ...);
+
+extern void loop(codeint count,codeint counter);
+extern void endloop(codeint counter);
+extern void starthardloop(int rtindex);
+extern void endhardloop();
+extern void ifzero(codeint rtvar);
+extern void ifmod2zero(codeint rtvar);
+extern void elsenz(codeint rtvar);
+extern void endif(codeint rtvar);
+extern void assign(int a, int b);
+extern void add(int a, int b, int c);
+extern void sub(int a, int b, int c);
+extern void dbl(int a, int b);
+extern void hlv(int a, int b);
+extern void initval(double rc, int  stl);
+extern void modn(int a, int b, int c);
+extern void mod4(int a, int b);
+extern void mod2(int a, int b);
+extern void mult(int a, int b, int c);
+extern void divn(int a, int b, int c);
+extern void incr(int a);
+extern void decr(int a);
+extern void settable(codeint tablename, int numelements, int tablearray[]);
+extern void getelem(codeint tablename,codeint indxptr,codeint dstptr);
+extern void delay(double delay);
+extern void hsdelay(double time);
+extern void rgpulse(double width, int phaseptr, double rx1, double rx2);
+extern void decrgpulse(double width, int phaseptr, double rx1, double rx2);
+extern void simpulse(double t1, double t2, int ph1, int ph2, double rx1, double rx2);
+extern void declvlon();
+extern void setSAP(int rtvar, int device);
+extern void declvloff();
+extern void gate(int gatebit, int on);
+extern void stepsize(double step, int device);
+extern void status(int f);
+extern void rgradient(char axis, double value);
+extern void zgradpulse(double gval,double gdelay);
+extern void rcvron();
+extern void rcvroff();
+extern void decon();
+extern void xmtron();
+extern void decoff();
+extern void xmtroff();
+extern void obs_pw_ovr(int longpulse);
+extern void dec_pw_ovr(int longpulse);
+extern void lk_sample();
+extern void lk_hold();
+extern void acquire(double datapts,double dwell);
+extern void offset(double freq, int device);
+extern void rlpower(double value, int device);
+extern void rlpwrf(double value, int device);
+extern void setphase90(int device, int value);
+extern void setreceiver(int phaseptr);
 
 #define dcplrphase(phaseptr)					\
 			setSAP(phaseptr,DODEV)
@@ -54,8 +109,8 @@ extern void   getstrnwarn(const char *variable, char buf[]);
 			decrgpulse(width,phaseptr,0.0,0.0)
 
 /* #define decshaped_pulse(shape, pws, phs, rx1, rx2)		\
-/* 			genshaped_pulse(shape,pws,phs,rx1,rx2,0.0,0.0,DODEV)
-/*  */
+ * 			genshaped_pulse(shape,pws,phs,rx1,rx2,0.0,0.0,DODEV)
+ */
 #define decspinlock(name, pp_90, pp_res, phase, nloops)      \
 			genspinlock(name,pp_90,pp_res,phase,nloops,DODEV)
 
@@ -103,8 +158,8 @@ extern void   getstrnwarn(const char *variable, char buf[]);
 #define setExpTime(duration)    g_setExpTime( (double) duration)
 
 /* #define shaped_pulse(shape, pws, phs,rx1, rx2)			\
-/* 			genshaped_pulse(shape,pws,phs,rx1,rx2,0.0,0.0,TODEV)
-/* */
+ * 			genshaped_pulse(shape,pws,phs,rx1,rx2,0.0,0.0,TODEV)
+ */
 #define spinlock(name, pp_90, pp_res, phase, nloops)      \
 			genspinlock(name,pp_90,pp_res,phase,nloops,TODEV)
 

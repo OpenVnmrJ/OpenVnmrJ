@@ -51,7 +51,7 @@ void pulsesequence()
       fprintf(stdout,"Warning:  ROF1 is less than 10 us\n");
 
 
-/* STEADY-STATE PHASECYCLING
+/* STEADY-STATE PHASECYCLING */
 /* This section determines if the phase calculations trigger off of (SS - SSCTR)
    or off of CT */
 

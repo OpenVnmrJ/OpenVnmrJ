@@ -73,7 +73,7 @@ void pulsesequence()
    if (p1 == 0.0)
       p1 = 2*pw;
 
-/* STEADY-STATE PHASECYCLING
+/* STEADY-STATE PHASECYCLING */
 /* This section determines if the phase calculations trigger off of (SS - SSCTR)
    or off of CT */
 

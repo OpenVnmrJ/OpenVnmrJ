@@ -16,6 +16,7 @@
 #else
 #include "acqparms.h"
 #endif
+#include "abort.h"
 
 extern int bgflag;	/* debugging flag */
 extern int newacq;
@@ -35,8 +36,15 @@ typedef	struct _aprecord {
 } aprecord;
 
 extern	aprecord apc;
-extern  codeint pop();
-extern  double looptimepop();
+extern void putcode(int datum);
+extern void incr(int a);
+extern void assign(int a, int b);
+void push(codeint word);
+codeint pop();
+void looptimepush(double word);
+double looptimepop();
+int validrtvar(codeint rtvar);
+
 /*-------------------------------------------------------------------
 |
 |	loop(count,counter)
@@ -51,9 +59,7 @@ extern  double looptimepop();
 |   --------   ------     -------
 |   6/15/89   Greg B.     1. Use new global parameters to calc acode offsets 
 +--------------------------------------------------------------------*/
-loop(count,counter)
-codeint count;		/* number of times to cycle */
-codeint counter;	/* offset to real time variable tobe the loop counter */
+void loop(codeint count,codeint counter)
 {
     codeint ifoffset;	/* offset to beginning of loop */
     codeint ioffset;	/* offset to branch to skip loop */
@@ -94,8 +100,7 @@ codeint counter;	/* offset to real time variable tobe the loop counter */
 |
 |				Author Greg Brissey  6/30/86
 +--------------------------------------------------------------------*/
-endloop(counter)
-codeint    counter;	/* offset to real time variable tobe the loop counter */
+void endloop(codeint counter)
 {
     codeint icount;		/* previous count push on stack by loop() */
     codeint lcounter;	/* previous counter push on stack by loop() */
@@ -147,8 +152,7 @@ codeint    counter;	/* offset to real time variable tobe the loop counter */
 |	the elsenz or endif statement.
 |				Author Greg Brissey  6/30/86
 +-----------------------------------------------------------------*/
-ifzero(rtvar)
-codeint rtvar;	/* offset to real time variable v1-v14 */
+void ifzero(codeint rtvar)
 {   codeint offset;
 
     notinhwloop("ifzero");
@@ -170,8 +174,7 @@ codeint rtvar;	/* offset to real time variable v1-v14 */
 |	if real time variable (v1 %2) = 0) then do Acodes to
 |	the elsenz or endif statement.
 +-----------------------------------------------------------------*/
-ifmod2zero(rtvar)
-codeint rtvar;	/* offset to real time variable v1-v14 */
+void ifmod2zero(codeint rtvar)
 {   codeint offset;
 
     notinhwloop("ifzero");
@@ -193,8 +196,7 @@ codeint rtvar;	/* offset to real time variable v1-v14 */
 |	the endif statement.
 |				Author Greg Brissey  6/30/86
 +-----------------------------------------------------------------*/
-elsenz(rtvar)
-codeint rtvar;
+void elsenz(codeint rtvar)
 {   codeint ifrtvar;	/* real time variable used in last ifzero */
     codeint ifzerobranch;	/* offset to ifzero branch offset */
     codeint elsenzoffset;	/* offset to this elsnz branch */
@@ -236,13 +238,11 @@ codeint rtvar;
 |	closes the if or if else statement.
 |				Author Greg Brissey  6/30/86
 +-----------------------------------------------------------------*/
-endif(rtvar)
-codeint rtvar;
+void endif(codeint rtvar)
 {   codeint ifrtvar;	/* real time variable used in last ifzero */
     codeint ifzerobranch;	/* offset to ifzero branch offset */
     codeint endifoffset;	/* offset to this endif */
     codeint *branchptr;	/* absolute address of ifzero branch offset */
-    codeint offset;	/* offset location of this elsenz branch offset */
 
     notinhwloop("endif");
     ifrtvar = pop();
@@ -265,8 +265,7 @@ codeint rtvar;
 |
 |				Author Greg Brissey  6/30/86
 +-------------------------------------------------------------------*/
-push(word)
-codeint word;	/* push on stack */
+void push(codeint word)
 {
     if (bgflag)
 	fprintf(stderr,"push(): stack: %d, word: %d \n",stackindex,word);
@@ -315,8 +314,7 @@ codeint pop()
 +-----------------------------------------------------------------*/
 #define OK 1
 #define NOTOK 0
-validrtvar(rtvar)
-codeint rtvar;		/* an offset to real time variable */
+int validrtvar(codeint rtvar)
 {
     if (v1 <= rtvar && rtvar <= v14)
         return(OK);
@@ -336,11 +334,10 @@ codeint rtvar;		/* an offset to real time variable */
 |	pushes a word on to the looptime stack
 |
 +-------------------------------------------------------------------*/
-looptimepush(word)
-double word;	/* push on stack */
+void looptimepush(double word)
 {
     if (bgflag)
-	fprintf(stderr,"looptimepush(): stack: %d, word: %d \n",
+	fprintf(stderr,"looptimepush(): stack: %d, word: %g \n",
 							timestackindex,word);
     if ( timestackindex < STKMAX)
     {
@@ -374,7 +371,7 @@ double looptimepop()
 	psg_abort(1);
     }
     if (bgflag)
-	fprintf(stderr,"looptimepop(): stack: %d, word: %d \n", 
+	fprintf(stderr,"looptimepop(): stack: %d, word: %g \n", 
 						timestackindex,word);
     return(word);
 }

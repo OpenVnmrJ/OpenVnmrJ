@@ -1542,10 +1542,7 @@ void rgpulse(double width, int phaseptr, double rx1, double rx2)
 /*-------------------------------*/
 /*       decrgpulse              */
 /*-------------------------------*/
-void decrgpulse(width, phaseptr, rx1,rx2)   
-double	width;
-int	phaseptr;
-double	rx1,rx2;   
+void decrgpulse(double width, int phaseptr, double rx1, double rx2)   
 {
    if (width > 0.0)
    {  if (!indirect)
@@ -1581,10 +1578,7 @@ double	rx1,rx2;
 /* Note that t1 and ph1 always are the observe, t2 and ph2 always are	*/
 /*      the decoupler, even if indirect is true				*/
 
-void simpulse(t1,t2, ph1,ph2, rx1,rx2)
-double	t1,t2;
-int	ph1,ph2;
-double	rx1,rx2;
+void simpulse(double t1, double t2, int ph1, int ph2, double rx1, double rx2)
 {
    gate(RFPC270,FALSE);
    gate(DC270,FALSE);
@@ -1634,8 +1628,7 @@ double	rx1,rx2;
 /*-------------------------------*/
 /*       obs_pw_ovr              */
 /*-------------------------------*/
-void obs_pw_ovr(longpulse)
-int	longpulse;
+void obs_pw_ovr(int longpulse)
 {
 int	bits;
    if (cardb)
@@ -1659,8 +1652,7 @@ int	bits;
 /*-------------------------------*/
 /*       dec_pw_ovr              */
 /*-------------------------------*/
-void dec_pw_ovr(longpulse)
-int	longpulse;
+void dec_pw_ovr(int longpulse)
 {
 int	bits;
    if (indirect)
