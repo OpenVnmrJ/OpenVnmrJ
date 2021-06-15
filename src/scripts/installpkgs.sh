@@ -216,7 +216,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   if [ $version -lt 8 ]; then
     commonList="$commonList rsh rsh-server"
   else
-    commonList="$commonList csh libnsl compat-openssl10 compat-libgfortran-48"
+    commonList="$commonList csh compat-openssl10 compat-libgfortran-48"
   fi
 
 # Must list 32-bit packages, since these are no longer
@@ -472,9 +472,6 @@ if [ ! -x /usr/bin/dpkg ]; then
     yum68List="$yum68List ${xpack}.i686"
   done
   yum68List="$yum68List ncurses-libs.i686"
-  if [ $version -ge 8 ]; then
-     yum68List="$yum68List libnsl.i686"
-  fi
   if [[ $repoGet -eq 1 ]]; then
     echo "Downloading standard packages (1 of 3)"
     echo "Downloading standard packages (1 of 3)" > $logfile
@@ -638,7 +635,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   fi
 
   if [ $version -ge 7 ]; then
-    systemctl unmask packagekit
+    systemctl unmask packagekit > /dev/null 2>&1
   fi
   if [[ $ovjRepo -eq 1 ]]; then
      rm -f /etc/yum.repos.d/openvnmrj.repo

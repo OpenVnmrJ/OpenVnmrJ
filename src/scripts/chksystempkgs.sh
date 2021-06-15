@@ -37,7 +37,7 @@ if [ ! -x /usr/bin/dpkg ]; then
       package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686'
       packagelist="$packagecommonlist $package71list $package32Bitlist"
       if [[ $version -eq 8 ]]; then
-        packagelist="$packageList tcsh libnsl compat-openssl10"
+        packagelist="$packagelist tcsh compat-openssl10"
       fi
    elif [ $version -eq 6 ]
    then
