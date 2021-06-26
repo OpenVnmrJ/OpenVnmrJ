@@ -41,6 +41,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "pvars.h"
 #include "allocate.h"
 #include "buttons.h"
@@ -2418,6 +2419,36 @@ static void enter(const char *id, PACK **rootpt)
     *rootpt = p;
 }
 
+
+int mvDir( char *indir, char *outdir )
+{
+   DIR	*dirp;
+   struct dirent *dp;
+   int ret = 0;
+ 
+   if ( (dirp = opendir(indir)) )
+   {
+      char inname[MAXPATH*2];
+      char outname[MAXPATH*2];
+
+      for (dp = readdir(dirp); dp != NULL; dp = readdir(dirp))
+      {
+         sprintf(inname,"%s/%s",indir,dp->d_name);
+         sprintf(outname,"%s/%s",outdir,dp->d_name);
+         if (rename(inname,outname))
+	 {
+	    if (errno != EBUSY)
+		 ret = -1;
+	 }
+      }   
+      closedir(dirp);
+   }
+   else
+   {
+      return(-1);
+   }
+   return(ret);
+}
 
 /*
  *  Removes all files in the named directory that end with the suffix

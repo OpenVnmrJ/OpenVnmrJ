@@ -8,8 +8,10 @@ systemtime('format'):$str - Return current time as a formatted string.
 
 unixtime('format','string'):$sec - Return arbitrary time as elapsed seconds since 1970
 unixtime('format',seconds):$str  - Convert arbitrary elapsed seconds since 1970 to a formatted time
+unixtime('format','string','newformat'):$str - reformat a formatted time string
 systemtime('format','string'):$sec - Return arbitrary time as elapsed seconds since 1970
 systemtime('format',seconds):$str  - Convert arbitrary elapsed seconds since 1970 to a formatted time
+systemtime('format','string','newformat'):$str - reformat a formatted time string
 *******************************************************************************
 
 unixtime and systemtime are two names for the same function. Everything
@@ -55,6 +57,7 @@ Some of the common conversions are
   %b   abbreviated month name
   %m   month as an integer (01 - 12)
   %d   day of the month (01 - 31)
+  %s   number of seconds since 1970-01-01
   %y   year as two digit number
   %Y   year as four digit number
   %F   Same as %Y-%m-%d
@@ -68,7 +71,7 @@ If two arguments are given, the behavior of unixtime depends on whether the seco
 argument is a number or a formatted time string. In both cases, the first argument
 is a format string as for the case above. If the second argument is a number, then
 unixtime uses its value as the elapsed time since 1970 to format a string  based
-on the first format argument. for example, using the examples above
+on the first format argument. For example, using the examples above
   unixtime('%T',$t1):$str
 would set $str to the hr:min:sec just before the ft2d program was called.
 If the second argument is a formatted string, then unixtime will return the elapsed
@@ -78,4 +81,13 @@ will set $sec to the elapsed seconds from 1970 to the data and time of the secon
 Note the the format conversion specification of the first argument must match the
 formatted second argument. If it does not match, or if there is not enough information
 to determine the number of seconds since 1970, a -1 is returned.
+
+If three arguments are given, reformat a previously formatted time string. For example,
+assume $date was formatted with
+systemtime('%F'):$date
+then to convert $date to the weekday name, use
+systemtime('%F',$date,'%a'):$day
+This is like the -d option to the Linux date command. It is equivalent to the following
+systemtime('%F',$date):$sec
+systemtime('%a',$sec):$day
 
