@@ -122,6 +122,7 @@ extern int   isDirectory(char *filename);
 static int   getcmd(char *cmd);
 static void  Shellret(FILE *stream, int retc, char *retv[]);
 int More(FILE *stream, int screenLength);
+extern int mvDir( char *indir, char *outdir );
 
 /*---------------------------------------------------------------------------
 |
@@ -738,7 +739,7 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
              RETURN;
           }
           if (res == NO_FIRST_FILE)
-             Werrprintf("%s: cannot copy file %s\n", argv[0],  fromFile);
+             Werrprintf("%s: cannot copy file %s", argv[0],  fromFile);
           else if (res == NO_SECOND_FILE)
              Werrprintf("%s: could not open %s for writing", argv[0],  toFile );
           else
@@ -765,7 +766,7 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        }
        else if ( ! res)
        {
-          Werrprintf("cannot symlink file %s\n", argv[1]);
+          Werrprintf("cannot symlink file %s", argv[1]);
           ABORT;
        }
        RETURN;
@@ -798,9 +799,9 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
           else
           {
              if (path1Ptr == NULL )
-                Werrprintf("cannot relsymlink from %s\n", argv[1]);
+                Werrprintf("cannot relsymlink from %s", argv[1]);
              if (path2Ptr == NULL )
-                Werrprintf("cannot relsymlink to %s\n", argv[2]);
+                Werrprintf("cannot relsymlink to %s", argv[2]);
              ABORT;
           }
        }
@@ -853,7 +854,7 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        }
        else if ( ! res)
        {
-          Werrprintf("cannot relsymlink file %s\n", argv[1]);
+          Werrprintf("cannot relsymlink file %s", argv[1]);
           ABORT;
        }
        RETURN;
@@ -875,7 +876,7 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        }
        else if ( ! res)
        {
-          Werrprintf("cannot link file %s\n", argv[1]);
+          Werrprintf("cannot link file %s", argv[1]);
           ABORT;
        }
        RETURN;
@@ -1110,6 +1111,7 @@ int More(FILE *stream, int screenLength)
 int Mv(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[1024];   
     int  i,len;
+    int mvErr = 0;
 
     (void) retc;
     (void) retv;
@@ -1118,21 +1120,29 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
       Werrprintf( "%s:  use exactly 2 arguments", argv[ 0 ] );
       ABORT;
     }
-    for (i=1; i<argc; i++)
-    {
-	if (verify_fname( argv[ i ] ) != 0)
-	{
-	    Werrprintf( "%s:  cannot use '%s' as a file name", argv[ 0 ], argv[ i ] );
-#ifdef VNMRJ
-	    writelineToVnmrJ("invalidfile",argv[i]);
-#endif 
-	    ABORT;
-	}
-    }
     i = 1;
     if (argc == 4)
        i = 2;
-    if ( rename(argv[i], argv[i+1]) )
+    len = strlen(argv[i]);
+    if ( isDirectory(argv[i+1]) &&
+         (argv[i][len-1] == '*') &&
+         (argv[i][len-2] == '/') )
+    {
+
+         strcpy(cmdstr, argv[i]);
+         cmdstr[len-2] = '\0';
+         if ( isDirectory(cmdstr) )
+            mvErr = mvDir( cmdstr, argv[i+1] );
+         else
+         {
+            mvErr = -1;
+         }
+    }
+    else
+    {
+         mvErr = rename(argv[i], argv[i+1]);
+    }
+    if ( mvErr )
     {
        strcpy(cmdstr,"/bin/mv");
        for (i=1; i<argc; i++)
@@ -1208,7 +1218,7 @@ static int mk_dir_args(mode_t *mode, int *psub, int *ict, int argc, char *argv[]
 	tmpmode = str_to_octal(argv[i] + 3);
         if ((tmpmode < 0500) || (tmpmode > 0777))
 /*        if ((tmpmode < 320) || (tmpmode > 511)) */
-	  Werrprintf("mkdir: invalid mode '%s', reset to 777\n",argv[i] + 3);
+	  Werrprintf("mkdir: invalid mode '%s', reset to 777",argv[i] + 3);
         else
 	  *mode = tmpmode;
       }
@@ -1787,7 +1797,7 @@ int shellcmds(int argc, char *argv[], int retc, char *retv[])
       case UNAME:	return (Uname(argc,argv,retc,retv));
       case HNAME:	return (Hname(argc,argv,retc,retv));
       case TOUCH:	return (Touch(argc,argv,retc,retv));
-      default:		Werrprintf("unknown shell command %s\n",argv[0]);
+      default:		Werrprintf("unknown shell command %s",argv[0]);
 			ABORT;
     }
 }
@@ -1888,7 +1898,7 @@ int unixtime(int argc, char *argv[], int retc, char *retv[])
         else
 	   Winfoprintf( "UNIX time: %s\n", tmpstr );
    }
-   else if (argc == 3)
+   else if (argc >= 3)
    {
         char tmpstr[MAXPATH];
         if (isReal(argv[2]) )
@@ -1915,10 +1925,24 @@ int unixtime(int argc, char *argv[], int retc, char *retv[])
            timeptr.tm_isdst = 0;
            strptime(argv[2], argv[1], &timeptr);
            timeptr.tm_isdst = -1;
-           if (retc)
-              retv[0] = intString( (int) mktime( &timeptr) );
+           if (argc == 3)
+           {
+              if (retc)
+                 retv[0] = intString( (int) mktime( &timeptr) );
+              else
+      	         Winfoprintf( "UNIX time: %d\n", (int) mktime( &timeptr) );
+           }
            else
-	      Winfoprintf( "UNIX time: %d\n", (int) mktime( &timeptr) );
+           {
+              clock.tv_sec = mktime( &timeptr );
+              strftime(tmpstr, MAXPATH, argv[3],
+                       localtime(&(clock.tv_sec)));
+              if (retc)
+                 retv[ 0 ] = newString( tmpstr );
+              else
+                 Winfoprintf( "UNIX time: %s\n", tmpstr );
+           }
+
         }
 
    }
@@ -1978,10 +2002,12 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    FILE *outFile = NULL;
    int lineCount = 0;
    int wordCount = -1;
-   int tailTotal = 0;
+   int headCount = 0;
+   int tailCount=0;
+   int skipCount = 0;
    int tailArg = 0;
+   int headArg = 0;
    int tailStage = -1;
-   int tailSkip = 0;
    int headOK = 1;
    int lineOK = 0;
    int fromStr;
@@ -2002,14 +2028,18 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    if (argc > 3)
    {
       int index;
-      int tailCount=0;
-      int headCount=0;
       for (index=2; index<argc-1; index += 2)
       {
          if ( !strcmp(argv[index],"head") )
+         {
             headCount++;
+            headArg = atoi(argv[index+1]);
+         }
          else if ( !strcmp(argv[index],"tail") )
+         {
             tailCount++;
+            tailArg = atoi(argv[index+1]);
+         }
 // sed, sed g, and tr require two arguments
          else if ( !strcmp(argv[index],"sed") ||
                    !strcmp(argv[index],"sed g") ||
@@ -2026,8 +2056,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
          Werrprintf("%s: can only use the 'tail' option once",argv[0]);
          ABORT;
       }
+      headCount = 0;
+      tailCount = 0;
    }
-   if ( !strcmp(argv[argc-1],"|wc c") || ! strcmp(argv[argc-1],"| wc c"))
+   if ( !strcmp(argv[argc-1],"|wc w") || ! strcmp(argv[argc-1],"| wc w"))
       wordCount = 0;
    if ( strcmp(argv[argc-1],"|wc") && strcmp(argv[argc-1],"| wc") &&
         (wordCount == -1) )
@@ -2109,9 +2141,9 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                if (fgets(inLine, sizeof(inLine), inFile) == NULL)
                   break;
             }
-            tailSkip = tailTotal - tailArg;
             lineCount = 0;
-            tailTotal = 0;
+            headCount = 0;
+            skipCount = 0;
          }
       }
       len = strlen(inLine);          /* get buf length */
@@ -2256,9 +2288,9 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             }
             else if ( !strcmp(argv[index],"head") )
             {
-               int headCount;
-               headCount = atoi(argv[index+1]);
-               if (headCount < lineCount+1)
+               if (lineOK)
+                  headCount++;
+               if (headArg < headCount)
                {
                   lineOK = 0;
                   if (tailStage)
@@ -2267,12 +2299,11 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             }
             else if ( !strcmp(argv[index],"tail") )
             {
-               tailArg = atoi(argv[index+1]);
-               if (lineOK)
-                  tailTotal++;
+               if (lineOK && (tailStage <= 0))
+                  tailCount++;
                if (argv[index+1][0] == '+')
                {
-                  if (tailTotal < tailArg)
+                  if (tailCount < tailArg)
                      lineOK = 0;
                }
                else
@@ -2285,9 +2316,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                   }
                   else if (tailStage == 1)
                   {
-                     if (tailSkip > 0)
+                     if (lineOK)
+                             skipCount++;
+                     if (tailCount - skipCount >= tailArg)
                         lineOK = 0;
-                     tailSkip--;
                   }
                }
             }
