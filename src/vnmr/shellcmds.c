@@ -2059,11 +2059,17 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       headCount = 0;
       tailCount = 0;
    }
-   if ( !strcmp(argv[argc-1],"|wc w") || ! strcmp(argv[argc-1],"| wc w"))
+   if ( !strcmp(argv[argc-1],"|wc w") || ! strcmp(argv[argc-1],"| wc w") ||
+        !strcmp(argv[argc-1],"|wc -w") || ! strcmp(argv[argc-1],"| wc -w"))
       wordCount = 0;
    if ( strcmp(argv[argc-1],"|wc") && strcmp(argv[argc-1],"| wc") &&
         (wordCount == -1) )
    {
+      if (strstr(argv[argc-1],"|"))  // probably a bad |wc argument
+      {
+         Werrprintf("%s: final argument '%s' is wrong",argv[0],argv[argc-1]);
+         ABORT;
+      }
       if ( !strncmp(argv[0], "app", 3) ) 
          outFile = fopen(argv[argc-1],"a");
       else
@@ -2366,7 +2372,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                     break;
                   }
                }
-               else if ( !strcmp(argv[index],"grep -iw") )
+               else if ( !strcmp(argv[index],"grep -iw") || !strcmp(argv[index],"grep -wi") )
                {
                   res=strncasecmp(inLine,&argv[index+1][1], len);
                   if ( (res) ||  
@@ -2386,6 +2392,11 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                     lineOK = 0;
                     break;
                   }
+               }
+               else
+               {
+                  Werrprintf("%s: unknown filter '%s'",argv[0],argv[index]);
+                  ABORT;
                }
             }
             else
@@ -2492,7 +2503,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                      break;
                   }
                }
-               else if ( !strcmp(argv[index],"grep -iw") )
+               else if ( !strcmp(argv[index],"grep -iw") || !strcmp(argv[index],"grep -wi") )
                {
                   char needle[APPENDLINE];
                   char haystack[APPENDLINE];
@@ -2540,6 +2551,11 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                         ptr2 = ptr;
                      }
                   }
+               }
+               else
+               {
+                  Werrprintf("%s: unknown filter '%s'",argv[0],argv[index]);
+                  ABORT;
                }
             }
          }
