@@ -42,21 +42,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 #include "pvars.h"
 #include "allocate.h"
 #include "buttons.h"
 #include "tools.h"
 #include "wjunk.h"
 
-#ifdef UNIX
 #include <unistd.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#else 
-#include  stat
-#include  "dirent.h"
-#endif 
 
 #ifdef  DEBUG
 extern int Tflag;
@@ -1137,6 +1133,39 @@ int substr(int argc, char *argv[], int retc, char *retv[])
                retv[0] = newString(  trimmed );
             else
                Winfoprintf("substr tr:  %s",trimmed);
+        }
+        else if (! strcmp(argv[2],"nuc"))
+        {
+            char nuc[STR64];
+            char *ptr;
+            char *ptr2;
+
+            ptr = argv[1];
+            ptr2 = nuc;
+            if ( (argv[1][0] >= '0') && (argv[1][0] <= '9') )
+            {
+               while ((*ptr >= '0') && (*ptr <= '9'))
+                  ptr++;
+               *ptr2++ = toupper( *ptr++ );
+               while (*ptr)
+                  *ptr2++ = tolower( *ptr++ );
+               ptr = argv[1];
+               while ((*ptr >= '0') && (*ptr <= '9'))
+                  *ptr2++ = *ptr++;
+               *ptr2 = '\0';
+            } 
+            else
+            {
+               *ptr2++ = toupper( *ptr++ );
+               while (*ptr)
+                  *ptr2++ = tolower( *ptr++ );
+               *ptr2 = '\0';
+               
+            }
+            if (retc)
+               retv[0] = newString(  nuc );
+            else
+               Winfoprintf("substr nuc:  %s",nuc);
         }
         else
         {   Werrprintf("substr: bad word index!");
