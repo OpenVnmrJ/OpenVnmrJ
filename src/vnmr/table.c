@@ -134,6 +134,7 @@ extern int continread();
 extern int convertbruker(int argc, char *argv[], int retc, char *retv[]);
 extern int convertdelta(int argc, char *argv[], int retc, char *retv[]);
 extern int convertqone(int argc, char *argv[], int retc, char *retv[]);
+extern int convertspinsolv(int argc, char *argv[], int retc, char *retv[]);
 extern int cpFilesInFile();
 extern int create();
 extern int createparams();
@@ -645,6 +646,7 @@ static cmd_t vnmr_table[] = {
         {"convertbruker", convertbruker,NO_REEXEC, 0},
         {"convertdelta", convertdelta,  NO_REEXEC, 0},
         {"convertqone", convertqone,  NO_REEXEC, 0},
+        {"convertspinsolv", convertspinsolv,NO_REEXEC, 0},
 	{"cos"	     , ln,		NO_REEXEC, 10},
 	{"cp"	     , shellcmds,	NO_REEXEC, 0},
 	{"cpFilesInFile", cpFilesInFile, NO_REEXEC, 0},

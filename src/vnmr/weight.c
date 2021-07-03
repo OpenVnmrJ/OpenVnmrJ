@@ -202,7 +202,10 @@ int init_wt1(struct wtparams *wtpar, int fdimname)
      get_weightpar_names(FN0_DIM, wtpar);
   }
   if (P_getparinfo(PROCESSED, swname, &(wtpar->sw), NULL))
+  {
+     Werrprintf("weighting: %s does not exist in processed tree.", swname);
      return(ERROR);
+  }
   return(get_weightpar_vals(CURRENT, wtpar));
 }
 
@@ -217,8 +220,7 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
 {
   char                  wtfname[MAXSTR],
                         wtfilename[MAXPATHL],
-                        parfilename[MAXPATHL],
-			run_usrwt[MAXSTR];
+                        parfilename[MAXPATHL];
   int                   maxpoint,
                         sinesquared,
                         wtfile,
@@ -242,8 +244,7 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
                         *fpnt,
 			lastwtval,
                         sbfunc;
-  FILE                  *fopen(),
-                        *fileres;
+  FILE                  *fileres;
 
 
   if (wtpar->sw == 0.0)
@@ -361,6 +362,7 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
 
         if (!rdwtflag)
         {
+	   char	run_usrwt[MAXSTR*3];
            int ret __attribute__((unused));
 
 /*  The UNIX command includes the complete path.  */
