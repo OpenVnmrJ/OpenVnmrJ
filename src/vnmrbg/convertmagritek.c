@@ -12,7 +12,7 @@
 #include "vnmrsys.h"
 #include "wjunk.h"
 
-int convertspinsolv(int argc, char *argv[], int retc, char *retv[])
+int convertmagritek(int argc, char *argv[], int retc, char *retv[])
 {
    Werrprintf("%s: not yet implemented",argv[0]);
    RETURN;
