@@ -513,10 +513,12 @@ typedef struct hypercmplxbhead	hycmplxhead;
 +------------------------------*/
 
 /* Bits 11-14 */
+#define S_VAR		0x0     /* 1 = Varian data           	*/ 
 #define S_QONE		0x800   /* 1 = Q-One data           	*/ 
 #define S_MAKEFID	0x1000  /* 1 = data from makefid        */
 #define S_JEOL		0x2000  /* 1 = JEOL data		*/ 
 #define S_BRU		0x4000  /* 1 = Bruker data		*/ 
+#define S_MAG		0x1800  /* 1 = Magritek data		*/ 
 
 #define P_VERS		0x003F	/* preserves version number	*/
 #define P_FILE_ID	0x07C0	/* preserves file ID status	*/

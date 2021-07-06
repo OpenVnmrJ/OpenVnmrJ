@@ -870,7 +870,7 @@ int check_and_clean_exp(char *cmd)
       strcat( remove_it_cmd, "/jdfpar");
       unlink(remove_it_cmd);
    }
-   else
+   else if (strcmp(cmd,"convertbruker"))
    {
       strcpy( remove_it_cmd, curexpdir);
       strcat( remove_it_cmd, "/brupar");

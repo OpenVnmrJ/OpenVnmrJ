@@ -104,7 +104,11 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   int btype = 0; /* This flags that a vers_id is requested */
   int jtype = 0; /* This asks if vers_id is S_JEOL */
   int qtype = 0; /* This asks if vers_id is S_QONE */
+  int mtype = 0; /* This asks if vers_id is S_MAG */
+  int vtype = 0; /* This asks if vers_id is S_VAR */
+  int ctype = 0; /* This asks if vers_id is S_MAKEFID */
   int itype = 0; /* This asks for vers_id */
+  int atype = 0; /* This asks for vers_id return */
 
   if ((argc >= 2) && ! strcmp(argv[1],"B") )
   {
@@ -127,6 +131,42 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   else if ((argc >= 2) && ! strcmp(argv[1],"Q") )
   {
     qtype = btype=1;
+    if (argc == 3)
+    {
+      strcpy(outfidpath, argv[2]);
+      btype = 2;     
+    }
+  }
+  else if ((argc >= 2) && ! strcmp(argv[1],"C") )
+  {
+    ctype = btype=1;
+    if (argc == 3)
+    {
+      strcpy(outfidpath, argv[2]);
+      btype = 2;     
+    }
+  }
+  else if ((argc >= 2) && ! strcmp(argv[1],"M") )
+  {
+    mtype = btype=1;
+    if (argc == 3)
+    {
+      strcpy(outfidpath, argv[2]);
+      btype = 2;     
+    }
+  }
+  else if ((argc >= 2) && ! strcmp(argv[1],"V") )
+  {
+    vtype = btype=1;
+    if (argc == 3)
+    {
+      strcpy(outfidpath, argv[2]);
+      btype = 2;     
+    }
+  }
+  else if ((argc >= 2) && ! strcmp(argv[1],"?") )
+  {
+    atype = btype=1;
     if (argc == 3)
     {
       strcpy(outfidpath, argv[2]);
@@ -208,19 +248,48 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
       }
     }
 
-  if (btype)                 /* return if S_BRU bit is set  */
+  if (btype)
   {
      if (retc)
      {
+         int id;
+
+         id = dhd.vers_id & P_VENDOR_ID;
          if (itype)
             retv[0] = intString( dhd.vers_id );
          else if (jtype)
-            retv[0] = intString( (dhd.vers_id & S_JEOL) ? 1 : 0 );
+            retv[0] = intString( (id ==  S_JEOL) ? 1 : 0 );
          else if (qtype)
-            retv[0] = intString( (dhd.vers_id & S_QONE) ? 1 : 0 );
+            retv[0] = intString( (id ==  S_QONE) ? 1 : 0 );
+         else if (ctype)
+            retv[0] = intString( (id ==  S_MAKEFID) ? 1 : 0 );
+         else if (mtype)
+            retv[0] = intString( (id ==  S_MAG) ? 1 : 0 );
+         else if (vtype)
+            retv[0] = intString( (id ==  S_VAR) ? 1 : 0 );
+         else if (!atype)
+            retv[0] = intString( (id ==  S_BRU) ? 1 : 0 );
          else
-            retv[0] = intString( (dhd.vers_id & S_BRU) ? 1 : 0 );
+         {
+            char type[2];
+
+            if (id == S_JEOL)
+               type[0] = 'J';
+            else if (id == S_QONE)
+               type[0] = 'Q';
+            else if (id == S_MAKEFID)
+               type[0] = 'C';
+            else if (id == S_MAG)
+               type[0] = 'M';
+            else if (id == S_VAR)
+               type[0] = 'V';
+            else // if (id == S_BRU)
+               type[0] = 'B';
+            type[1] = '\0';
+            retv[0] = newString(type);
+         }
      }
+
      D_close(D_USERFILE);
      return COMPLETE;
   }

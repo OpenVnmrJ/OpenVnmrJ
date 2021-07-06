@@ -208,6 +208,34 @@ int echo(int argc, char *argv[], int retc, char *retv[])
     RETURN;
 }
 
+void convertNuc(char *in, char *out)
+{
+   char *ptr;
+   char *ptr2;
+
+   ptr = in;
+   ptr2 = out;
+   if ( (in[0] >= '0') && (in[0] <= '9') )
+   {
+      while ((*ptr >= '0') && (*ptr <= '9'))
+         ptr++;
+      *ptr2++ = toupper( *ptr++ );
+      while (*ptr)
+         *ptr2++ = tolower( *ptr++ );
+      ptr = in;
+      while ((*ptr >= '0') && (*ptr <= '9'))
+         *ptr2++ = *ptr++;
+      *ptr2 = '\0';
+   } 
+   else
+   {
+      *ptr2++ = toupper( *ptr++ );
+      while (*ptr)
+         *ptr2++ = tolower( *ptr++ );
+      *ptr2 = '\0';
+   }
+}
+
 /*-----------------------------------------------------------------------
 |  is_whitespace : compare character to a whitespace string
 +----------------------------------------------------------------------*/
@@ -1137,31 +1165,8 @@ int substr(int argc, char *argv[], int retc, char *retv[])
         else if (! strcmp(argv[2],"nuc"))
         {
             char nuc[STR64];
-            char *ptr;
-            char *ptr2;
 
-            ptr = argv[1];
-            ptr2 = nuc;
-            if ( (argv[1][0] >= '0') && (argv[1][0] <= '9') )
-            {
-               while ((*ptr >= '0') && (*ptr <= '9'))
-                  ptr++;
-               *ptr2++ = toupper( *ptr++ );
-               while (*ptr)
-                  *ptr2++ = tolower( *ptr++ );
-               ptr = argv[1];
-               while ((*ptr >= '0') && (*ptr <= '9'))
-                  *ptr2++ = *ptr++;
-               *ptr2 = '\0';
-            } 
-            else
-            {
-               *ptr2++ = toupper( *ptr++ );
-               while (*ptr)
-                  *ptr2++ = tolower( *ptr++ );
-               *ptr2 = '\0';
-               
-            }
+            convertNuc(argv[1], nuc);
             if (retc)
                retv[0] = newString(  nuc );
             else
