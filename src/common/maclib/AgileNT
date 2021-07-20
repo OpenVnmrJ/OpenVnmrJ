@@ -24,12 +24,13 @@ elseif ($1='time') then
 	exists($2,'parlib'):$parex,$parpath
 	if ($parex=0) then return($3) endif
         $nt=0 $ss=0 $ad=0 $pad=0 $tn='' $ni=0
-        rtv($parpath,'noabort','nt'):$nt
-	rtv($parpath,'noabort','ss'):$ss
-	rtv($parpath,'noabort','arraydim'):$ad
-	rtv($parpath,'noabort','pad'):$pad
-	rtv($parpath,'noabort','tn'):$tn
-	rtv($parpath,'noabort','ni'):$ni
+        fread($parpath,'usertree','reset')
+        getvalue('nt','usertree'):$nt,$ok
+        getvalue('ss','usertree'):$ss,$ok
+        getvalue('arraydim','usertree'):$ad,$ok
+        getvalue('pad','usertree'):$pad,$ok
+        getvalue('tn','usertree'):$tn,$ok
+        getvalue('ni','usertree'):$ni,$ok
 //  for 1D and for ss<0
         if ($ni<2) or (($ni>1) and ($ss<0)) then
 	    $dim=1
@@ -200,12 +201,7 @@ else
 	il='n'
 	endif
   else
-	if ((nt>128) and (nt<1024)) then
-	bs=32
-        elseif (nt>1024) then
-	bs=128
-	endif
-        il='y'
+        if (arraydim > 1) then il='y' endif
   endif
 
 endif
