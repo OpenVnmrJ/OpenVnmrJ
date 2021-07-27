@@ -263,8 +263,7 @@ char *argv[];
 /*****************************************************************************
 *	Set up font and return character string with font name 
 ******************************************************************************/
-void setup_font(font_name)
-char **font_name;
+void setup_font(char **font_name)
 {
     int i;
     char *str;
@@ -283,6 +282,11 @@ char **font_name;
       *font_name = (char *)malloc(sizeof(char)*(strlen(str)+1));
       strcpy(*font_name,str);
       }
+    else
+    {
+       fprintf(stderr,"Font 8x16 is not installed\n");
+       exit(-1);
+    }
     char_width = xstruct->max_bounds.width;
     char_ascent = xstruct->max_bounds.ascent;
     char_descent = xstruct->max_bounds.descent;
@@ -1234,7 +1238,7 @@ int repaint_small_canvases(w, client_data, call_data)
 Widget w;
 caddr_t client_data, call_data;
 {
-    int obj;
+    int obj= -1;
 
     /* Figure out which canvas prompted this request and redraw it */
     if (w == object[SM_WIN_1])
@@ -1249,7 +1253,8 @@ caddr_t client_data, call_data;
       obj = SM_WIN_5;
     else if (w == object[SM_WIN_6])
       obj = SM_WIN_6;
-    do_repaint_small_canvases(obj);
+    if (obj > 0)
+       do_repaint_small_canvases(obj);
 }
 
 /******************************************************************************
