@@ -19,13 +19,13 @@ else
     if ($char <> '/') then
       pwd:$dir
       $FILENAME = $dir + '/' + $1
-      shell('basename '+$1):$filename
+      substr($1,'basename'):$filename
     else
       $FILENAME = $1
-      shell('basename '+$FILENAME):$filename
+      substr($FILENAME,'basename'):$filename
     endif 
     if ($filename='enterQ') then
-	shell('dirname '+$FILENAME):$FILENAME
+	substr($FILENAME,'dirname'):$FILENAME
     endif
     exists($FILENAME,'directory'):$ex
      if ($ex=0) then 
@@ -69,7 +69,7 @@ if ($iseq>0) then
    expactive('auto'):$expact
    if ($expact>0)and($inf>0) then
     	$sline=''
-    	shell('(cat '+$sampleinfo+' | grep -w SAMPLE#:)'):$sline
+    	append($sampleinfo,'grep -w','SAMPLE#:','|wc'):$num,$sline
 	if ($sline<>'') then
     	   substr($sline,2):$rno
 	endif
@@ -95,57 +95,59 @@ endif
   $dayfile=$filename
   exists($dayfile,'file'):$fex
   if $fex then
-  shell('(cat '+$dayfile+' | grep SAMPLE# >> '+$tmpblockq+')'):$dum
+    append($dayfile,'grep','SAMPLE#',$tmpblockq):$dum
   endif
 
   $laterdayfile=$filename+'.macdir/laterdayQ'
   exists($laterdayfile,'file'):$fex
   if $fex then
-  shell('(cat '+$laterdayfile+' | grep SAMPLE# >> '+$tmpblockq+')'):$dum
+    append($laterdayfile,'grep','SAMPLE#',$tmpblockq):$dum
   endif
 
   $laterprfile=$filename+'.macdir/laterpriorityQ'
   exists($laterprfile,'file'):$fex
   if $fex then
-  shell('(cat '+$laterprfile+' | grep SAMPLE# >> '+$tmpblockq+')'):$dum
+    append($laterprfile,'grep','SAMPLE#',$tmpblockq):$dum
   endif
 
   $nitefile=$filename+'.macdir/overniteQ'
   exists($nitefile,'file'):$fex
   if $fex then
-  shell('(cat '+$nitefile+' | grep SAMPLE# >> '+$tmpblockq+')'):$dum
+    append($nitefile,'grep','SAMPLE#',$tmpblockq):$dum
   endif
 
   $errorfile=$filename+'.macdir/cperrorQ'
   exists($errorfile,'file'):$fex
   if $fex then
-  shell('(cat '+$errorfile+' | grep SAMPLE# | awk \'{print $1" "$2}\' >> '+$tmpblockq+')'):$dum
+    append($errorfile,'grep','SAMPLE#','awk','$1 $2',$tmpblockq):$dum
   endif
 
   $startfile=$filename+'.macdir/cpstartQ'
   exists($startfile,'file'):$fex
   if $fex then
-  shell('(cat '+$startfile+' | grep SAMPLE# | awk \'{print $1" "$2}\' >> '+$tmpblockq+')'):$dum
+    append($startfile,'grep','SAMPLE#','awk','$1 $2',$tmpblockq):$dum
   endif
 
-  shell('cp '+$tmpblockq+' '+$tmpblockq+'1'):$dum
-  shell('(sort -n -k 2 -u '+$tmpblockq+'1 -o '+$tmpblockq+'1_sort; mv '+$tmpblockq+'1_sort '+$tmpblockq+'1)'):$dum
+  cp($tmpblockq,$tmpblockq+'1'):$dum
+  sortCmd($tmpblockq+'1','unk2',$tmpblockq+'1_sort')
+  mv($tmpblockq+'1_sort',$tmpblockq+'1'):$dum
 
   $donefile=$filename+'.macdir/cpdoneQ'
   exists($donefile,'file'):$fex
   if $fex then
-  shell('(cat '+$donefile+' | grep SAMPLE# | awk \'{print $1" "$2}\' >> '+$tmpblockq+')'):$dum
+    append($donefile,'grep','SAMPLE#','awk','$1 $2',$tmpblockq):$dum
   endif
 
-  shell('(sort -n -k 2 -u '+$tmpblockq+' -o '+$tmpblockq+'_sort; mv '+$tmpblockq+'_sort '+$tmpblockq+')'):$dum
+  sortCmd($tmpblockq,'unk2',$tmpblockq+'_sort')
+  mv($tmpblockq+'_sort',$tmpblockq):$dum
 
   $s1='' $s2='' $total=0
   readfile($tmpblockq,'$s1','$s2','SAMPLE#','local'):$total
   $s5='' $s6=''
   readfile($tmpblockq+'1','$s5','$s6','SAMPLE#','local')
 
-  shell('rm -f '+$tmpblockq):$dum
-  shell('rm -f '+$tmpblockq+'1'):$dum
+  delete($tmpblockq,''):$dum
+  delete($tmpblockq+'1',''):$dum
 
 	"There are no sample in this automation run"
   if ($total=0) then 
@@ -192,7 +194,7 @@ endif
 
 	"Find the first available reuselocQ"
   $reuseq=$filename+'.macdir/reuselocQ'
-  shell('touch '+$reuseq):$dum
+  touch($reuseq):$dum
   $s3='' $s4='' $nextloc=0
   readfile($reuseq,'$s3','$s4','SAMPLE#','local'):$total2
   if ($total2) then

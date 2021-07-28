@@ -1,8 +1,5 @@
 "macro vjsubmitQ"
 
-$tailX='tail'
-whichtail:$tailX
-
 walkupQ_init
 is_submitmode:$issubmit
 if ($issubmit) then
@@ -43,8 +40,8 @@ ELSEIF ($# < 4) THEN
    mkpar('string','multiloc','','multirack','','multizone','')
    if (replaceQ[1]='ActiveDay') or (replaceQ[1]='ActiveNight') then
        $sinfo=cursqexp+'/macdir/sampleinfo'
-       shell('(cat '+$sinfo+' | grep -w RACK: | awk \'{print $2}\')'):multirack
-       shell('(cat '+$sinfo+' | grep -w ZONE: | awk \'{print $2}\')'):multizone
+       append($sinfo,'grep -w','RACK:','awk','$2','|wc'):$e,multirack
+       append($sinfo,'grep -w','ZONE:','awk','$2','|wc'):$e,multizone
        multiloc=replaceQ[4]
    endif
    if (multiloc='') then
@@ -128,7 +125,7 @@ ELSEIF ($# > 3) THEN
   if (wqinit<>'enter') then
         $autodir=autodir $autofile='enterQ'
   else
-        $autodir=globalenter shell('basename '+globalenter):$autofile
+        $autodir=globalenter substr(globalenter,'basename'):$autofile
   endif
   $AUTOGLOBAL=$autodir+'/'+$autofile+'.macdir/AUTOGLOBAL'
   exists($AUTOGLOBAL,'file'):$agex
@@ -215,8 +212,8 @@ ELSEIF ($# > 3) THEN
 if (traymax=96) or (traymax=768) then
    $sinfo=cursqexp+'/macdir/sampleinfo'
    $replacerack='' $replacezone=''
-   shell('(cat '+cursqexp+'/macdir/sampleinfo | grep -w RACK: | awk \'{print $2}\')'):$replacerack
-   shell('(cat '+cursqexp+'/macdir/sampleinfo | grep -w ZONE: | awk \'{print $2}\')'):$replacezone
+   append(cursqexp+'/macdir/sampleinfo','grep -w','RACK:','awk','$2','|wc'):$e,$replacerack
+   append(cursqexp+'/macdir/sampleinfo','grep -w','ZONE:','awk','$2','|wc'):$e,$replacezone
 else
    $replacerack=$multirack[1]
    $replacezone=$multizone[1]
@@ -354,7 +351,7 @@ endif
                         $errorloc=$errorloc+' '+$multiloc[$i]
 		endif
 		if ($status='Error') and ($reuseerror='no') then
-		    shell('(cat '+$errorq+' | grep SAMPLE# | grep -wc '+$multiloc[$i]+')'):$isineq
+		    append($errorq,'grep','SAMPLE#','grep -w',$multiloc[$i],'|wc'):$isineq
 		    if ($isineq=0) then
 			write('file',$errorq,'SAMPLE#: %s %s %s %s',$multiloc[$i],$samplename,$locdir2,$who)
 		    endif
@@ -458,7 +455,7 @@ endif
 
    "  Set TEXT information"
         $text=''
-        shell('(head -n 1 '+curexp+'/text)'):$text
+        append(curexp+'/text','head',1,'|wc'):$e,$text
         ckstring($text,4):$text
 //	$text=text_string[1]
 // Limit the TEXT field to a maximum of 60 characters
@@ -469,20 +466,16 @@ endif
 	endif
 
    "***Create a Master copy of customization macros in curloc and curloclong ***"
-	shell('cp -r '+$maclibdir+'/* '+$autodir+'/'+$autofile+'.macdir/curloc'):$dum
-        write('reset',$autodir+'/'+$autofile+'.macdir/curloc/EXPLIST')
-        write('reset',$autodir+'/'+$autofile+'.macdir/curloc/LONGLIST')
-        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$autodir+'/'+$autofile+'.macdir/curloc/LONGLIST)'):$dum
-        shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$autodir+'/'+$autofile+'.macdir/curloc/EXPLIST)'):$dum
+	cp('-R',$maclibdir,$autodir+'/'+$autofile+'.macdir/curloc'):$dum
+        copyf(cursqexp+'/LONGLIST','grep -w','Queued',$autodir+'/'+$autofile+'.macdir/curloc/LONGLIST'):$dum
+        copyf(cursqexp+'/EXPLIST','grep -w','Queued',$autodir+'/'+$autofile+'.macdir/curloc/EXPLIST'):$dum
         write('reset',$autodir+'/'+$autofile+'.macdir/curloc/TtimeQ')
         write('file',$autodir+'/'+$autofile+'.macdir/curloc/TtimeQ','enterQ_TOTALTIME %d',$dtime)
         write('file',$autodir+'/'+$autofile+'.macdir/curloc/TtimeQ','overniteQ_TOTALTIME %d',$ltime)
 
-	shell('cp -r '+$maclibdir+'long/* '+$autodir+'/'+$autofile+'.macdir/curloclong'):$dum
-	write('reset',$autodir+'/'+$autofile+'.macdir/curloclong/EXPLIST')
-	write('reset',$autodir+'/'+$autofile+'.macdir/curloclong/LONGLIST')
-        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+$autodir+'/'+$autofile+'.macdir/curloclong/LONGLIST)'):$dum
-        shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+$autodir+'/'+$autofile+'.macdir/curloclong/EXPLIST)'):$dum
+	cp('-R',$maclibdir+'long',$autodir+'/'+$autofile+'.macdir/curloclong'):$dum
+        copyf(cursqexp+'/LONGLIST','grep -w','Queued',$autodir+'/'+$autofile+'.macdir/curloclong/LONGLIST'):$dum
+        copyf(cursqexp+'/EXPLIST','grep -w','Queued',$autodir+'/'+$autofile+'.macdir/curloclong/EXPLIST'):$dum
         write('reset',$autodir+'/'+$autofile+'.macdir/curloclong/TtimeQ')
         write('file',$autodir+'/'+$autofile+'.macdir/curloclong/TtimeQ','enterQ_TOTALTIME %d',$dtime)
         write('file',$autodir+'/'+$autofile+'.macdir/curloclong/TtimeQ','overniteQ_TOTALTIME %d',$ltime)
@@ -493,13 +486,13 @@ endif
      if ($macdirex) then
   	pwd:$curdir
   	cd($maclibdir):$dum
-  	shell('touch EXPLIST'):$dum
-  	shell('touch LONGLIST'):$dum
-	shell('(cat '+cursqexp+'/EXPLIST | grep -w Queued > '+cursqexp+'/EXPLISTqueued)'):$dum
-        shell('(cat '+cursqexp+'/LONGLIST | grep -w Queued > '+cursqexp+'/LONGLISTqueued)'):$dum
+  	touch('EXPLIST'):$dum
+  	touch('LONGLIST'):$dum
+	copyf(cursqexp+'/EXPLIST','grep -w','Queued',cursqexp+'/EXPLISTqueued'):$dum
+        copyf(cursqexp+'/LONGLIST','grep -w','Queued',cursqexp+'/LONGLISTqueued'):$dum
 	reconcileQ(cursqexp+'/EXPLISTqueued',cursqexp+'/LONGLISTqueued')
-	shell('rm -f '+cursqexp+'/EXPLISTqueued'):$dum
-	shell('rm -f '+cursqexp+'/LONGLISTqueued'):$dum
+	delete(cursqexp+'/EXPLISTqueued',''):$dum
+	delete(cursqexp+'/LONGLISTqueued',''):$dum
   	cd($curdir):$dum
      endif
    endif
@@ -578,18 +571,18 @@ endif
 	$curpQ=cursqexp+'/priorityQ'
 	$curnQ=cursqexp+'/overniteQ'
 	$curtQ=cursqexp+'/AutoTimeLog'
-	shell('touch '+$cureQ):$dum
-	shell('touch '+$curpQ):$dum
-	shell('touch '+$curHIpQ):$dum
-	shell('touch '+$curnQ):$dum
+	touch($cureQ):$dum
+	touch($curpQ):$dum
+	touch($curHIpQ):$dum
+	touch($curnQ):$dum
 	write('reset',$curtQ)
 
    "****Edit the master copy for each location****"
-    $date='' shell('date +%Y%m%d%H%M%S'):$date
+    $date='' systemtime('%Y%m%d%H%M%S'):$date
     $loci=1 $vrack='0' $vzone='0' $vloc='A00' $loc='0'
     $LOCdir='' $LOClist='' $L=1 $LOCqueue=''
     repeat
-	  shell('cp '+$infomaster+' '+$info):$dum
+	  cp($infomaster,$info):$dum
 	  $loc=$multiloc[$loci]
           if (traymax = 96) or (traymax=768) then
                 $vrack=$multirack[$loci]
@@ -597,47 +590,39 @@ endif
 		$vloc=$multiloc[$loci]
 	  endif	
 
-                $sedcmd=`sed -e 's|SAMPLE#:.*|SAMPLE#: `+$loc+`|'`
-                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
-                shell('mv '+$info+'1 '+$info):$dum
+            copyf($info,'sed','SAMPLE#:.*','SAMPLE#: '+$loc,$info+'1'):$dum
+            mv($info+'1',$info):$dum
 	    if (traymax = 96) or (traymax = 768) then
-                $sedcmd=`sed -e 's|RACK:.*|RACK: `+$vrack+`|'`
-                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
-                shell('mv '+$info+'1 '+$info):$dum
+                copyf($info,'sed','RACK#:.*','RACK#: '+$vrack,$info+'1'):$dum
+                mv($info+'1',$info):$dum
 
-                $sedcmd=`sed -e 's|ZONE:.*|ZONE: `+$vzone+`|'`
-                shell($sedcmd+` `+$info+` > `+$info+`1`):$dum
-                shell('mv '+$info+'1 '+$info):$dum
+                copyf($info,'sed','ZONE#:.*','ZONE#: '+$vzone,$info+'1'):$dum
+                mv($info+'1',$info):$dum
 	    endif
 
           $locname=$loc
 
 	  Svfname(autodir+'/enterQ.macdir/loc'+$locname+'_%R3%',''):$locdir
-	  shell('basename '+$locdir):$locdir
+	  substr($locdir,'basename'):$locdir
 
-	    $sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'day\')|\"'
-            shell('('+$sedcmd0+' '+$info+' > '+$info+'day)'):$dum
-            $sedcmd0='sed -e \"s|MACRO:.*|MACRO: cpautoQ(\''+$locdir+'\',\'night\')|\"'
-            shell('('+$sedcmd0+' '+$info+' > '+$info+'night)'):$dum
+            copyf($info,'sed','MACRO:.*','MACRO: cpautoQ(\''+$locdir+'\',\'day\')',$info+'day'):$dum
+            copyf($info,'sed','MACRO:.*','MACRO: cpautoQ(\''+$locdir+'\',\'night\')',$info+'night'):$dum
 	    if ($whenday = 'priority') then
 		if (prioritysample[2]='high') then
-                	$sedcmd=`sed -e 's|USER:.*|USER: `+operator+` priority high|'`
+                   copyf($info+'day','sed','USER:.*','USER: '+operator+' priority high',$info+'day1'):$dum
 		else
-                        $sedcmd=`sed -e 's|USER:.*|USER: `+operator+` priority|'`
+                   copyf($info+'day','sed','USER:.*','USER: '+operator+' priority',$info+'day1'):$dum
 		endif
-                shell($sedcmd+` `+$info+`day > `+$info+`day1`):$dum
-		shell('mv '+$info+'day1 '+$info+'day'):$dum
+		mv($info+'day1',$info+'day'):$dum
 	    endif
 	    if (traymax=768) then
 		$sdtime='' format($dtime+$changetime,0,0):$sdtime
 		$sltime='' format($ltime+$changetime,0,0):$sltime
-		$sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sdtime+`|'`
-                shell($sedcmd+` `+$info+`day > `+$info+`day1`):$dum
-                shell('mv '+$info+'day1 '+$info+'day'):$dum
+                copyf($info+'day','sed','EXPTIME:.*','EXPTIME: '+$sdtime,$info+'day1'):$dum
+                mv($info+'day1',$info+'day'):$dum
 
-                $sedcmd=`sed -e 's|EXPTIME:.*|EXPTIME: `+$sltime+`|'`
-                shell($sedcmd+` `+$info+`night > `+$info+`night1`):$dum
-                shell('mv '+$info+'night1 '+$info+'night'):$dum
+                copyf($info+'night','sed','EXPTIME:.*','EXPTIME: '+$sltime,$info+'night1'):$dum
+                mv($info+'night1',$info+'night'):$dum
 	    endif
 
     "*** Adjust studypar parameters ****"
@@ -666,37 +651,37 @@ endif
     "*** Write sample global to the directory ***"
 	  $curloc=$autodir+'/'+$autofile+'.macdir/curloc'
           savesampglobal($curloc)
-	  shell('cp '+$curloc+'/sampleglobal '+$curloc+'long'):$dum
+	  cp($curloc+'/sampleglobal',$curloc+'long'):$dum
 
     "*** Submit this to the temporary automation files ***"
 	  if ($explist <>'') then
 	     $dexl=0 wc($explist):$dexl
 	     if ($whenday = 'priority') then
 		if (prioritysample[2]='high') then
-		   shell('cat '+$info+'day >> '+$curHIpQ):$dum
+		   append($info+'day',$curHIpQ):$dum
 		else
-                   shell('cat '+$info+'day >> '+$curpQ):$dum
+                   append($info+'day',$curpQ):$dum
 		endif
                 write('file',$curtQ,'%s %s %dexperiments priorityQ %s 0 0 0 0',$locdir,$sample,$dexl,$date)
 	     else
-		shell('cat '+$info+'day >> '+$cureQ):$dum
+		append($info+'day',$cureQ):$dum
                 write('file',$curtQ,'%s %s %dexperiments dayQ %s 0 0 0 0',$locdir,$sample,$dexl,$date)
 	     endif
 	  endif
 	  if ($longlist<>'') then
-		shell('cat '+$info+'night >> '+$curnQ):$dum
+		append($info+'night',$curnQ):$dum
 		$dexl=0 wc($longlist):$dexl
                 write('file',$curtQ,'%s %s %dexperiments overniteQ %s 0 0 0 0',$locdir,$sample,$dexl,$date)
-		shell('rm '+$info+'1'):$dum
+		delete($info+'1',''):$dum
 	  endif
-          shell('cat '+$info+'day > '+$autodir+'/'+$autofile+'.macdir/curloc/sampleinfo'):$dum
-          shell('cat '+$info+'night > '+$autodir+'/'+$autofile+'.macdir/curloclong/sampleinfo'):$dum
+          copyf($info+'day',$autodir+'/'+$autofile+'.macdir/curloc/sampleinfo'):$dum
+          copyf($info+'night',$autodir+'/'+$autofile+'.macdir/curloclong/sampleinfo'):$dum
 
     "*******Copy customization macro directory************"
           locmacdir4($autodir+'/'+$autofile,$locdir+'/day','short')
           locmacdir4($autodir+'/'+$autofile,$locdir+'/night','long')
-	  shell('cp '+$curloc+'/sampleglobal '+$autodir+'/'+$autofile+'.macdir/'+$locdir):$dum
-	  shell('chmod -R g+rw '+$autodir+'/'+$autofile+'.macdir/'+$locdir):$dum
+	  cp($curloc+'/sampleglobal',$autodir+'/'+$autofile+'.macdir/'+$locdir):$dum
+	  chmod('-R g+rw',$autodir+'/'+$autofile+'.macdir/'+$locdir):$dum
 	  write('alpha','Sample %s submitted',$loc)
 
         $logmsg='' write('line3','%s Submitted',samplename):$logmsg
@@ -723,19 +708,19 @@ endif
                 $sdir=$autodir+'/'+$autofile+'.macdir/studytray'+$subtray
 		exists($sdir+'/loc'+$locname,'directory'):$ex
 		if ($ex=0) then
-		   shell('mkdir -p '+$sdir+'/loc'+$locname):$dum
+		   mkdir('-p',$sdir+'/loc'+$locname):$dum
 		else
-		   shell('touch '+$sdir+'/loc'+$locname):$dum
+		   touch($sdir+'/loc'+$locname):$dum
 		endif
 		studyid_='loc'+$locname
 		$studypar=$sdir+'/'+studyid_+'/studypar'
                 savestudypar($sdir+'/'+studyid_)
-		shell('chmod -R g+rw '+$sdir+'/loc'+$locname):$dum
+		chmod('-R g+rw',$sdir+'/loc'+$locname):$dum
 		updatestatus($autodir,$locname,studystatus,$zone,$rack)
    "*****Write autostudies file *****"
                 $autostudies=$autodir+'/autostudies'
                 $studypath=$autofile+'.macdir/studytray'+$subtray+'/'+studyid_
-                shell('(cat '+$autostudies+' | grep -cw '+$studypath+')'):$isthere
+                append($autostudies,'grep -w',$studypath,'|wc'):$isthere
                 if ($isthere=0) then
                    write('file',$autostudies,'%s',$studypath)
                 endif
@@ -768,29 +753,31 @@ endif
 	    autoq('lock')
         endif
 
-        shell('touch '+$cureQ+'1'):$dum
-        shell('touch '+$curpQ+'1'):$dum
-        shell('touch '+$curHIpQ+'1'):$dum
+        touch($cureQ+'1'):$dum
+        touch($curpQ+'1'):$dum
+        touch($curHIpQ+'1'):$dum
 
         $totlines=0 $totsamp=0 $sampperline=0 $totpr=0 $totHIpr=0
-        shell('(cat '+$autodir+'/'+$autofile+' | wc -l)'):$totlines
-        shell('(cat '+$autodir+'/'+$autofile+' | grep -wc SAMPLE#:)'):$totsamp
-        shell('(cat '+$autodir+'/'+$autofile+' | grep -w USER: | grep -wc priority)'):$totpr
-        shell('(cat '+$autodir+'/'+$autofile+' | grep -w USER: | grep -w priority | grep -wc high)'):$totHIpr
+        append($autodir+'/'+$autofile,'|wc'):$totlines
+        append($autodir+'/'+$autofile,'grep -w','SAMPLE#:','|wc'):$totsamp
+        append($autodir+'/'+$autofile,'grep -w','USER:',
+              'grep -w','priority','|wc'):$totpr
+        append($autodir+'/'+$autofile,'grep -w','USER:',
+              'grep -w','priority','grep -w','high','|wc'):$totHIpr
         if ($totsamp) then
                 $sampperline=$totlines/$totsamp
                 if ($totHIpr) then
-                   $hiprlines='' format($totHIpr*$sampperline,0,0):$hiprlines
-                   shell('head -n '+$hiprlines+' '+$autodir+'/'+$autofile+' > '+$curHIpQ+'1'):$dum
+                   $hiprlines=$totHIpr*$sampperline
+                   copyf($autodir+'/'+$autofile,'head',$hiprlines,$curHIpQ+'1'):$dum
                 endif
                 if ($totpr-$totHIpr > 0) then
-                   $prlines2='' format($totpr*$sampperline,0,0):$prlines2
-                   $prlines='' format(($totpr-$totHIpr)*$sampperline,0,0):$prlines
-                   shell('(head -n '+$prlines2+' '+$autodir+'/'+$autofile+' | '+$tailX+' -n '+$prlines+' > '+$curpQ+'1)'):$dum
+                   $prlines2=$totpr*$sampperline
+                   $prlines=($totpr-$totHIpr)*$sampperline
+                   copyf($autodir+'/'+$autofile,'head',$prlines2,'tail',$prlines,$curpQ+'1'):$dum
                 endif
                 if ($totsamp-$totpr > 0) then
-                   $eqlines='' format(($totsamp-$totpr)*$sampperline,0,0):$eqlines
-                   shell(''+$tailX+' -n '+$eqlines+' '+$autodir+'/'+$autofile+' > '+$cureQ+'1'):$dum
+                   $eqlines=($totsamp-$totpr)*$sampperline
+                   copyf($autodir+'/'+$autofile,'tail',$eqlines,$cureQ+'1'):$dum
                 endif
         endif
 	write('reset',$autodir+'/'+$autofile):$dum
@@ -805,22 +792,22 @@ endif
 	    if ($whennight='now') then
 		autoq('add',$curnQ)
 	    else
-                shell('cat '+$curnQ+' >> '+$autodir+'/'+$autofile+'.macdir/overniteQ'):$dum
+                append($curnQ,$autodir+'/'+$autofile+'.macdir/overniteQ'):$dum
 	    endif
 	else
-            shell('cat '+$curHIpQ+'1 >> '+$autodir+'/'+$autofile):$dum
-	    shell('cat '+$curHIpQ+' >> '+$autodir+'/'+$autofile):$dum
-            shell('cat '+$curpQ+'1 >> '+$autodir+'/'+$autofile):$dum
-	    shell('cat '+$curpQ+' >> '+$autodir+'/'+$autofile):$dum
-            shell('cat '+$cureQ+'1 >> '+$autodir+'/'+$autofile):$dum
-	    shell('cat '+$cureQ+' >> '+$autodir+'/'+$autofile):$dum
+            append($curHIpQ+'1',$autodir+'/'+$autofile):$dum
+	    append($curHIpQ+'',$autodir+'/'+$autofile):$dum
+            append($curpQ+'1',$autodir+'/'+$autofile):$dum
+	    append($curpQ,$autodir+'/'+$autofile):$dum
+            append($cureQ+'1',$autodir+'/'+$autofile):$dum
+	    append($cureQ,$autodir+'/'+$autofile):$dum
 	    if ($whennight = 'now') then
-		shell('cat '+$curnQ+' >> '+$autodir+'/'+$autofile):$dum
+		append($curnQ,$autodir+'/'+$autofile):$dum
 	    else
-		shell('cat '+$curnQ+' >> '+$autodir+'/'+$autofile+'.macdir/overniteQ'):$dum
+		append($curnQ,$autodir+'/'+$autofile+'.macdir/overniteQ'):$dum
 	    endif
 	endif
-        shell('cat '+$curtQ+' >> '+$autodir+'/'+$autofile+'.macdir/AutoTimeLog'):$dum
+        append($curtQ,$autodir+'/'+$autofile+'.macdir/AutoTimeLog'):$dum
 
    "  *** Remove these locations from reuselocQ ***"
 
@@ -829,12 +816,12 @@ endif
 	$loci=1
 	repeat
 	    $sampdoneq='SAMPLE#: '+$multiloc[$loci]
-            shell('touch '+$reuseq):$dum
-            shell('(cat '+$reuseq+' | grep -vw "'+$sampdoneq+'" > '+$reuseq+'1)'):$dum
-            shell('mv '+$reuseq+'1 '+$reuseq):$dum
+            touch($reuseq):$dum
+            copyf($reuseq,'grep -vw',$sampdoneq,$reuseq+'1'):$dum
+            mv($reuseq+'1',$reuseq):$dum
 	    $loci=$loci+1
 	until $loci > $totalloc
-	shell('chmod g+rw '+$reuseq):$dum
+	chmod('g+rw',$reuseq):$dum
     endif
 
    "  *** Remove these locations from errorQ ***"
@@ -842,14 +829,14 @@ endif
         $loci=1 $rebuildeq=0
         repeat
             $sampdoneq='SAMPLE#: '+$multiloc[$loci]
-            shell('touch '+$errorq):$dum
-            shell('(cat '+$errorq+' | grep -vw "'+$sampdoneq+'" > '+$errorq+'1)'):$dum
+            touch($errorq):$dum
+            copyf($errorq,'grep -vw',$sampdoneq,$errorq+'1'):$dum
 	    shell('(diff '+$errorq+' '+$errorq+'1 | wc -l)'):$eqdiff
 	    if ($eqdiff>0) then $rebuildeq=1 endif
-            shell('mv '+$errorq+'1 '+$errorq):$dum
+            mv($errorq+'1',$errorq):$dum
             $loci=$loci+1
         until $loci > $totalloc
-        shell('chmod g+rw '+$errorq):$dum
+        chmod('g+rw',$errorq):$dum
 	if ($rebuildeq) then
 		xmhaha_asx($autodir,'ErrorQ')
 	endif

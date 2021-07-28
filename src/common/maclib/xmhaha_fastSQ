@@ -16,8 +16,6 @@
 "		display/convenience ONLY			"
 "***************************************************************"
 
-$tailX='tail'
-whichtail:$tailX
 if ($# < 1) then $1='' endif
 if ($1='') then
    is_cpfid:$new
@@ -81,10 +79,11 @@ substr($archsamp,'basename'):$sample
 $archivedirsample=$archsamp
 exists($archsamp+'/dirinfo/macdir/sampleglobal','file'):$sgex
 if ($sgex) then
-    rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','samplename'):$samplename
-    rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','studyowner'):$studyowner
+    fread($archsamp+'/dirinfo/macdir/sampleglobal','usertree','reset')
+    getvalue('samplename','usertree'):$samplename,$ok
+    getvalue('studyowner','usertree'):$studyowner,$ok
     if ($studyowner='') then
-	rtv($archsamp+'/dirinfo/macdir/sampleglobal','noabort','operator_'):$studyowner
+       getvalue('operator_','usertree'):$studyowner,$ok
     endif
 else
 	$samplename=samplename
@@ -108,12 +107,12 @@ if ($rbld='rbld') then $xmldirex=0 endif
 is_submitmode:$submit
 if ($xmldirex) and ($submit=0) then
    $Ncount1=0 $Ncount2=0
-   shell('(cat "'+$xmldir+'/cpnodeinfo" | wc -l)'):$Ncount1
+   copyf($xmldir+'/cpnodeinfo','|wc'):$Ncount1
    getfile($xmldir+'/info'):$Ncount2
    if ($Ncount1<>$Ncount2) then 
 //  Sanity check failed !
 //  Remove the legacy xmldir and rebuild 
-	shell('rm -rf "'+$xmldir+'"'):$dum
+	rm('-rf',$xmldir):$dum
 	$xmldirex=0 
    endif
 endif
@@ -150,7 +149,7 @@ endif
 // But don't bother if there is no Active 
 //   experiment in ACQlist file
 $activenew=0 $active=0
-shell('(cat "'+$archsamp+'/'+$acqlog+'" | grep -wc Active)'):$active
+copyf($archsamp+'/'+$acqlog,'grep -w','Active','|wc'):$active
 if ($active) then
     xmhaha_subSQ($archsamp,'Active'):$activenew
 else
@@ -226,7 +225,7 @@ if ($fex) then
    exists($xmldir+'/fidlog','file'):$xmlfileex
    if ($xmlfileex) then
         $xmlreturn[1]=$xmldir+'/fidlog'
-	shell('(cat "'+$cpdir+'" | grep -w Completed | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+	append($cpdir,'grep -w','Completed','awk','$1 $4',$tmpfile):$dum
    endif
 endif
 
@@ -238,7 +237,7 @@ if ($fex) then
    exists($xmldir+'/spectrumlog','file'):$xmlfileex
    if ($xmlfileex) then
         $xmlreturn[2]=$xmldir+'/spectrumlog'
-        shell('(cat "'+$cpdir+'" | grep -w Spectrum | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        append($cpdir,'grep -w','Spectrum','awk','$1 $4',$tmpfile):$dum
    endif
 endif
 
@@ -250,7 +249,7 @@ if ($fex) then
    exists($xmldir+'/craftlog','file'):$xmlfileex
    if ($xmlfileex) then
         $xmlreturn[3]=$xmldir+'/craftlog'
-        shell('(cat "'+$cpdir+'" | grep -w Craft | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        append($cpdir,'grep -w','Craft','awk','$1 $4',$tmpfile):$dum
    endif
 endif
 
@@ -269,7 +268,7 @@ if ($aex) then
    endif
    if ($xmlfileex) then
 	$xmlreturn[4]=$xmldir+'/errorlog'
-        shell('(cat "'+$cpdir+'" | grep -w Error | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        append($cpdir,'grep -w','Error','awk','$1 $4',$tmpfile):$dum
    endif
 endif
 "*************************************************************************"
@@ -278,7 +277,7 @@ if ($aex) then
    exists($xmldir+'/active','file'):$xmlfileex
    if ($xmlfileex) then
 	$xmlreturn[5]=$xmldir+'/active'
-        shell('(cat "'+$cpdir+'" | grep -w Active | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        append($cpdir,'grep -w','Active','awk','$1 $4',$tmpfile):$dum
    endif
 endif
 
@@ -302,7 +301,7 @@ if ($eex) then
 	endif
     endif
     if ($xmlfileex) then
-        shell('(cat "'+$cpdir+'" | grep -w Queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        append($cpdir,'grep -w','Queued','awk','$1 $4',$tmpfile):$dum
     endif
 endif
 
@@ -315,7 +314,7 @@ if ($Eex) then
     exists($xmldir+'/EXPLIST','file'):$xmlfileex
     if ($xmlfileex) then
 	$xmlreturn[7]=$xmldir+'/EXPLIST'
-        shell('(cat "'+$cpdir+'" | grep -w Day_queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        append($cpdir,'grep -w','Day_queued','awk','$1 $4',$tmpfile):$dum
     endif
 endif
 
@@ -329,7 +328,7 @@ if ($Lex) then
     exists($xmldir+'/LONGLIST','file'):$xmlfileex
     if ($xmlfileex) then
 	$xmlreturn[8]=$xmldir+'/LONGLIST'
-        shell('(cat "'+$cpdir+'" | grep -w Night_queued | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+        append($cpdir,'grep -w','Night_queued','awk','$1 $4',$tmpfile):$dum
     endif
 endif
 
@@ -343,7 +342,7 @@ cd($curdir):$dum
   repeat
      if ($xmlreturn[$i]<>'') then
         $ok=0
-        shell('(cat "'+$xmlreturn[$i]+'" | wc -l)'):$ok
+        copyf($xmlreturn[$i],'|wc'):$ok
         if ($ok=0) then $xmlreturn[$i]='' endif
      endif
      $i=$i+1
@@ -356,7 +355,7 @@ cd($curdir):$dum
 //    if ($sampinfo='noSampInfo') then
 //       write('line3','StudyQueue is empty in %s',$1)
 //    endif
-    shell('rm -f '+$tmpfile):$dum
+    delete($tmpfile,''):$dum
     return
   endif
 
@@ -374,7 +373,7 @@ cd($curdir):$dum
 	endif
      endif
      if ($sample='NMR') then  //This is LC NMR
-        shell('basename '+$archive):$lcid
+        substr($archive,'basename'):$lcid
         $gtitle=$lcid
      endif
   endif
@@ -430,7 +429,7 @@ cd($curdir):$dum
     $attr3[$atx3]='title','SampleInfo'  $atx3=$atx3+2
 
     xmhaha_addnode('SampInfo',$attr,$attr3,$xml)
-    shell('(cat "'+sqdir+'/cpnodeinfo" | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+    append(sqdir+'/cpnodeinfo','awk','$1 $2 $3',$esq):$dum
   endif
    write('reset',sqdir+'/cpnodeinfo')
 
@@ -440,36 +439,36 @@ cd($curdir):$dum
   $i=1
   repeat
     if ($xmlreturn[$i]<>'') then
-            shell('(cat "'+$xmlreturn[$i]+'" >> '+$xml+')'):$dum
-	    if $i=3 then
+        append($xmlreturn[$i],$xml):$dum
+	if $i=3 then
                         // craft nodes. close protocols
-                write('file',$xml,'  </protocol>')
-            endif
-	    cd($xmldir):$dum
-	    shell('(cat cpnodeinfo | grep -w '+$filter[$i]+' | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
-	    shell('(cat cpnodeinfo | grep -w '+$filter[$i]+' | awk \'{print $1}\' >> '+$tmpfile2+')'):$dum
+           write('file',$xml,'  </protocol>')
+        endif
+	cd($xmldir):$dum
+	append('cpnodeinfo','grep -w',$filter[$i],'awk','$1 $2 $3',$esq):$dum
+	append('cpnodeinfo','grep -w',$filter[$i],'awk','$1',$tmpfile2):$dum
     endif
     $i=$i+1
   until $i > $xmlsize
   cd($curdir):$dum
 
   $retnode='' $oldnode=''
-  shell('(cat '+$esq+' | '+$tailX+' -n 1 | awk \'{print $1}\')'):$retnode
+  copyf($esq,'tail',1,'awk','$1','|wc'):$ok,$retnode
 
-  shell('rm -f '+sqdir+'/cpnodeinfo'):$dum
+  delete(sqdir+'/cpnodeinfo',''):$dum
 
   SampleViewPref('get','scout'):$parex
   if ($parex) and ($submit<0.5) then
         exists($xmldir+'/scoutlog','file'):$xmlfileex
         if ($xmlfileex) then
-            shell('(cat "'+$xmldir+'/scoutlog" | grep -c protocol)'):$xmlfileex
+            copyf($xmldir+'/scoutlog','grep','protocol','|wc'):$xmlfileex
         endif
         if ($xmlfileex) then
-            shell('(cat "'+$xmldir+'/scoutlog" >> '+$xml+')'):$dum
+            append($xmldir+'/scoutlog',$xml):$dum
             cd($xmldir):$dum
-            shell('(cat cpnodeinfo | grep -w Scout | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
-            shell('(cat cpnodeinfo | grep -w Scout | awk \'{print $1}\' >> '+$tmpfile2+')'):$dum
-            shell('(cat '+$cpdir+' | grep -w Scout | awk \'{print $1" "$4}\' >> '+$tmpfile+')'):$dum
+            append('cpnodeinfo','grep -w','Scout','awk','$1 $2 $3',$esq):$dum
+            append('cpnodeinfo','grep -w','Scout','awk','$1',$tmpfile2):$dum
+            append($cpdir,'grep -w','Scout','awk','$1 $4',$tmpfile):$dum
             write('file',$xml,'  </protocol>')
         endif
         cd($curdir):$dum
@@ -483,15 +482,15 @@ cd($curdir):$dum
   if ($tstot) then
     $ti=1
     repeat
-        shell('(cp -r "'+$xmldir+'/info/'+$ts1[$ti]+'" "'+sqdir+'/info")'):$dum
+        cp('-r',$xmldir+'/info/'+$ts1[$ti],sqdir+'/info'):$dum
         $ti=$ti+1
     until $ti>$tstot
   endif
-  shell('rm -f '+$tmpfile2):$dum
+  delete($tmpfile2,''):$dum
 
   vnmrjcmd('SQ delete tmpstudy')
   vnmrjcmd('SQ read '+$xml)
-  shell('chmod -R g+w '+$xmldir):$dum
+  chmod('-R g+w',$xmldir):$dum
 
 // All nodes are a priori locked.  So, the forcelock option
 //   is now obsolete
@@ -511,5 +510,5 @@ cd($curdir):$dum
      until $i>$total
   endif
 
-  shell('rm -f "'+$tmpfile+'"'):$dum
+  delete($tmpfile,''):$dum
   return($retnode)

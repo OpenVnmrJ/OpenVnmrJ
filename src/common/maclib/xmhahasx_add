@@ -5,9 +5,6 @@
 " arg3 - subxml file to be added from locdir			"
 " arg4 - destination file					"
 "***************************************************************"
-$tailX='tail'
-whichtail:$tailX
-
 if ($# < 4) then 
    return
 endif
@@ -51,9 +48,9 @@ if ($direx=0) then
    $st=0 $stx=''
    strstr($autodir,'.macdir/studytray'):$st,$stx
    if ($st) then
-	shell('dirname '+$stx):$autodir
+	substr($stx,'dirname'):$autodir
    endif
-   shell('basename '+$autodir):$Qname
+   substr($autodir,'basename'):$Qname
 else
    $Qname='enterQ'
 endif
@@ -80,7 +77,7 @@ repeat
    $esq=$sqdir+'/'+$4u[$z]+'_SQ'
    exists($queue,'file'):$fileex
    if ($fileex) then
-        shell('(cat '+$queue+' | wc -l)'):$totlines
+        append($queue,'|wc'):$totlines
         if ($totlines<2) then $fileex=0 endif
    endif
    if ($fileex=0) then
@@ -89,9 +86,9 @@ repeat
    else
 		// Create a tmp file without the grandpa node
    	write('reset',$queue+'tmp')
-   	$tail='' format($totlines-2,0,0):$tail
-   	$head='' format($totlines-1,0,0):$head
-   	shell('(head -n '+$head+' '+$queue+' | '+$tailX+' -n '+$tail+' > '+$queue+'tmp)'):$dum
+   	$tail=$totlines-2
+   	$head=$totlines-1
+   	copyf($queue,'head',$head,'tail',$tail,$queue+'tmp'):$dum
 	$x=1
 	repeat
 	  if ($4[$x]=$4u[$z]) then
@@ -106,49 +103,53 @@ repeat
 		    exists($subxml,'file'):$fileex2
 	    	endif
 	    	if ($fileex2) then
-   		    shell('(cat '+$subxml+' >> '+$queue+'tmp)'):$dum
+   		    append($subxml,$queue+'tmp'):$dum
    		    $s1='' $s2=''
-   		    shell('touch '+$cpnodes):$dum
+   		    touch($cpnodes):$dum
    		    readfile($cpnodes,'$s1','$s2','','local'):$nodetot
    		    if ($nodetot) then
     		    	$j=1
      		    	repeat
-   		            shell('cp -r '+$xmlinfodir+'/'+$s1[$j]+' '+$sqinfo):$dum
+   		            cp('-r',$xmlinfodir+'/'+$s1[$j],$sqinfo):$dum
   		            $j=$j+1
    		    	until $j > $nodetot
    		    endif
-   		    shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+   		    append($cpnodes,$esq):$dum
 	    	endif
 	     else
 		$fidname=$3[$x]
 		$fc='' substr($fidname,1,1):$fc
 		if ($fc<>'/') then $fidname=userdir+'/data/'+$fidname endif
-		exists($fidname+'.REC','directory'):$fidex
+                $ext='.REC'
+		exists($fidname+$ext,'directory'):$fidex
 		if ($fidex=0) then
-		    exists($fidname+'.rec','directory'):$fidex
+                    $ext='.rec'
+		    exists($fidname+$ext,'directory'):$fidex
 		endif
 		if ($fidex=0) then
+                    $ext=''
             	    exists($fidname+'.fid','directory'):$fidex
 		endif
             	write('reset',$sqdir+'/cpnodeinfo')
             	if ($fidex) then
                     $pslabel='' $cpname='' $studyowner='' $samplename=''
-		    rtv($fidname,'noabort','explist'):$cpname
-               	    rtv($fidname,'pslabel'):$pslabel
-		    rtv($fidname,'noabort','samplename'):$samplename
+                    fread($fidname+$ext,'usertree','reset')
+		    getvalue('explist','usertree'):$cpname,$dum
+               	    getvalue('pslabel','usertree'):$pslabel,$dum
+		    getvalue('samplename','usertree'):$samplename,$dum
 		    if ($cpname='') then $cpname=$pslabel endif
-                    rtv($fidname,'noabort','studyowner'):$studyowner
+                    getvalue('studyowner','usertree'):$studyowner,$dum
                     if ($studyowner='') then
-                   	rtv($fidname,'noabort','operator_'):$studyowner
+                   	getvalue('operator_','usertree'):$studyowner,$dum
                     endif
 		    $loc='' 
-		    rtv($fidname,'noabort','loc_'):$loc
+		    getvalue('loc_','usertree'):$loc,$dum
 		    if ($loc<>'') and ($loc<>'0') then $loc='loc'+$loc+'_' else $loc='' endif
-		    $sample='' shell('dirname '+$fidname):$sample
-		    shell('basename '+$sample):$sample
+		    $sample='' substr($fidname,'dirname'):$sample
+		    substr($sample,'basename'):$sample
 		    if ($samplename='') then $samplename=$sample endif
                     $path=$fidname
-                    shell('basename '+$fidname):$title
+                    substr($fidname,'basename'):$title
                     $atx=1 $attr=''
                     $attr[$atx]='status','Completed' $atx=$atx+2
                     $attr[$atx]='sqstatus','Completed' $atx=$atx+2
@@ -162,25 +163,24 @@ repeat
                     $snode=''
                     xmhaha_addnode($pslabel,$attr,'',$queue+'tmp'):$snode
                     if ($snode<>'') then
-                        shell('(cat '+$sqdir+'/cpnodeinfo | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+                        append($sqdir+'/cpnodeinfo','awk','$1 $2 $3',$esq):$dum
                    	write('reset',$sqdir+'/cpnodeinfo')
-                   	shell('cp -r '+$xmlinfodir+'/'+$snode+' '+$sqinfo):$dum
+                   	cp('-r',$xmlinfodir+'/'+$snode,$sqinfo):$dum
                     endif
                 endif
-                shell('rm -f '+$sqdir+'/cpnodeinfo'):$dum
+                delete($sqdir+'/cpnodeinfo',''):$dum
 	     endif
 	  endif
 	    $x=$x+1
 	until $x > $2size
 		// Now close the queue xml file
-        write('reset',$esq+'tmp')
-        shell('(cat '+$esq+' | grep -v \'^Qn\' > '+$esq+'tmp)'):$dum
+        copyf($esq,'grep -v','^Qn',$esq+'tmp'):$dum
    	xmhahasx_Qnodes($queue)
-   	shell('(cat '+$queue+'tmp >> '+$queue+')'):$dum
+   	append($queue+'tmp',$queue):$dum
    	write('file',$queue,'  </protocol>')
-   	shell('rm -f '+$queue+'tmp'):$dum
-	shell('(cat '+$esq+'tmp >> '+$esq+')'):$dum
-	shell('rm -f '+$esq+'tmp'):$dum
+   	delete($queue+'tmp',''):$dum
+	append($esq+'tmp',$esq):$dum
+	delete($esq+'tmp',''):$dum
    endif
    $z=$z+1
 until $z>$4usize

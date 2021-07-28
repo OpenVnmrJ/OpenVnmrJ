@@ -36,11 +36,6 @@
 //	swapqueue	moves a node from day to night and vice versa
 //	grandma		Create the grandma node in studyqueue
 
-$tailX='tail'
-whichtail:$tailX
-
-"******************************************************************"
-
 IF ($1='pause') THEN
    activestudy=''
    vnmrjcmd('SQ no-op activestudy=\'\'')
@@ -246,8 +241,8 @@ ELSEIF ($1='refreshSQ') THEN
 	$autodir=autodir
 	strstr($autodir,'studytray'):$ret
 	if ($ret) then
-	   shell('dirname '+$autodir):$dir
-	   shell('dirname '+$dir):$autodir
+	   substr($autodir,'dirname'):$dir
+	   substr($dir,'dirname'):$autodir
 	endif
 	if ($autodir<>'') and ($autodir<>'.') then
 		xmhaha('autoSQ',$autodir)
@@ -261,20 +256,6 @@ ELSEIF ($1 = 'showstudy') THEN
    bgmode_is:$bg
    if (auto='y') or ($bg) then return endif
    SQDisplay('sample')
-/*
-   if ($new=1) then 
-	$archsamp=archivedir+'/'+sample
-   else
-	shell('dirname '+file):$archsamp
-   endif
-
-   xmhaha('pause')
-   exists($archsamp+'/dirinfo','directory'):$direx
-   if ($direx=0) then return endif
-
-   $LIST='fidlog','ACQlist','explist','EXPLIST','LONGLIST'
-   xmhaha_buildSQ($archsamp,$LIST,'lock')
-*/
 
 "*******************************************************************"
 ELSEIF ($1 = 'mknode') THEN
@@ -323,15 +304,15 @@ ELSEIF ($1='deleteSQnode') THEN
     if ($sqnode<>'') then
         $file=sqdir+'/enterSQ'
 	vnmrjcmd('SQ delete '+$sqnode)
-	shell('(cat '+$file+' | grep -wv '+$sqnode+' > '+$file+'1)'):$dum
-	shell('mv '+$file+'1 '+$file):$dum
+	copyf($file,'grep -wv',$sqnode,$file+'1'):$dum
+	mv($file+'1',$file):$dum
     endif
 
 "*******************************************************************"
 ELSEIF ($1='emptytrash') THEN
-  shell('rm -rf '+userdir+'/trashstudy'):$dum
-  shell('mkdir -p '+userdir+'/trashstudy/info'):$dum
-  shell('mkdir -p '+userdir+'/trashstudy/data'):$dum
+  rm('-rf',userdir+'/trashstudy'):$dum
+  mkdir('-p',userdir+'/trashstudy/info'):$dum
+  mkdir('-p',userdir+'/trashstudy/data'):$dum
 
 "*******************************************************************"
 ELSEIF ($1='CQ2SQ') THEN
@@ -435,7 +416,7 @@ ELSEIF ($1='unknown') or ($1='file') THEN
    if ($OK) then
 // The file must have ONLY one column.
 	$ret=0
-	shell('(cat '+$2+' | awk \'{print $2}\' | wc -w)'):$ret
+	copyf($2,'awk','$2','|wc w'):$ret
 	if ($ret) then $OK=0 endif
    endif
    if ($OK) then
@@ -482,7 +463,7 @@ ELSEIF (($1='setupexp') or
    if ($macro='') then return endif
 
    exists($macro,'command'):$macex
-   getfilepath($macro,'studylib'):$studyex
+   exists($macro,'studylib'):$studyex
    if ($macex=0) and ($studyex=0) then return endif
 
    if ($pname='') then $pname=$macro endif
@@ -717,12 +698,7 @@ ELSEIF ($1 = 'grandma') THEN
 
   $atx=1
   if ($# < 2) then
-	is_postvj22b:$vj22c
-	if ($vj22c>0) then
-		$attr[$atx]='tooltext','Change Sample Info' $atx=$atx+2
-	else
-        	$attr[$atx]='tooltext','ChangeInfo OR Add Exp' $atx=$atx+2
-	endif
+	$attr[$atx]='tooltext','Change Sample Info' $atx=$atx+2
         $attr[$atx]='title','SampleInfo'  $atx=$atx+2
   else
 	$attr[$atx]='title',$2  $atx=$atx+2

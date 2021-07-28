@@ -1,6 +1,6 @@
 "macro ckstring"
 // ckstring - eliminates not allowed characters from a string to avoid errors
-// syntax: ckstring('$VALUE',<arg2>):$return
+// syntax: ckstring('$VALUE',<arg2>):$ret
 //	arg2=1 - Remove all special characters (default)
 //	arg2=2 - Removes all but forward slash 
 //	arg2=3 - Removes all but blank space
@@ -22,24 +22,29 @@ while $r1>0 do
     strstr($1,`'`):$r1,$s1,$s2
     if $r1 then $1=$s1+$s2 endif
 endwhile
-$return=$1
+$ret=$1
 
 IF ($2=1) THEN
-	shell('echo "'+$1+'" |tr "\+\ \.\,\;\:\*\!\?\(\)\[\]\{\}\<\>\~\#\$\%\&\/" "_______________________" |sed -e "s/_[_]*/_/g";cat'):$return
+  appendstr($1,'tr','+ .,;:*!?()[]{}<>~#$%&/','_',
+            'sed g','_[_]*','_','|wc'):$n,$ret
 
 ELSEIF ($2=2) THEN
-	shell('echo "'+$1+'" |tr "\+\ \.\,\;\:\*\!\?\(\)\[\]\{\}\<\>\~\#\$\%\&" "______________________" |sed -e "s/_[_]*/_/g";cat'):$return
+  appendstr($1,'tr','+ .,;:*!?()[]{}<>~#$%&','_',
+            'sed g','_[_]*','_','|wc'):$n,$ret
 
 ELSEIF ($2=3) THEN
-	shell('echo "'+$1+'" |tr "\+\,\.\;\:\*\!\?\(\)\[\]\{\}\<\>\~\#\$\%\&\/" "______________________" |sed -e "s/_[_]*/_/g";cat'):$return
+  appendstr($1,'tr','+,.;:*!?()[]{}<>~#$%&/','_',
+            'sed g','_[_]*','_','|wc'):$n,$ret
 ELSEIF ($2=4) THEN
-        shell('echo "'+$1+'" |tr "\+\*\{\}\<\>\~\#\$\%\&" "___________" |sed -e "s/_[_]*/_/g";cat'):$return
+  appendstr($1,'tr','+*{}<>~#$%&','_',
+            'sed g','_[_]*','_','|wc'):$n,$ret
 ELSEIF ($2=5) then
-        shell('echo "'+$1+'" |tr "\+\ \.\,\;\:\*\!\?\(\)\[\]\{\}\\\-\<\>\~\#\$\%\&\/" "________________________" |sed -e "s/_[_]*/_/g";cat'):$return
+  appendstr($1,'tr','+ .,;:*!?()[]{}\-<>~#$%&/','_',
+            'sed g','_[_]*','_','|wc'):$n,$ret
 ENDIF
 
-if ($1 <> $return) and ($## = 0) then
-  write('line3',`%s: special characters replaced: '%s' set to '%s'`,$0,$1,$return)
+if ($1 <> $ret) and ($## = 0) then
+  write('line3',`%s: special characters replaced: '%s' set to '%s'`,$0,$1,$ret)
 endif
 
-return($return)
+return($ret)

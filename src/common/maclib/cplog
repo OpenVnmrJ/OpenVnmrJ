@@ -1,6 +1,4 @@
 "macro cplog"
-$tailX='tail'
-whichtail:$tailX
 
 $name='' $archsamp=''
 if ($# < 2) then return($name,$archsamp) endif
@@ -104,7 +102,7 @@ IF (($arg2 <> 'last') and
 		$activedir=autodir+'/enterQ.macdir/'+$locdir+'/xmldir/Active'
 		exists($activedir,'directory'):$direx
 		if ($direx=0) then
-		    shell('mkdir '+$activedir):$dum
+		    mkdir($activedir):$dum
 		    exists($activedir,'directory'):$direx
 		endif
 		if ($direx) then
@@ -132,9 +130,9 @@ IF (($arg2 <> 'last') and
   endif
   if ($arg2<>'cmd') and ($arg2<>'spectrum') and ($arg2<>'craft') then
      $date=''
-     shell('date +%Y-%m-%d'):$date
+     systemtime('%Y-%m-%d'):$date
      $time=''
-     shell('date +%H%M%S'):$time
+     systemtime('%H%M%S'):$time
      $username=operator
      if (auto = 'y') then
         $username='auto for '+studyowner
@@ -229,8 +227,8 @@ ELSEIF ($arg2='wrxml') THEN
 	endif
 	if ($fidex) then
            $xmlcount=0
-	   shell('touch '+$xml):$dum
-           shell('(cat '+$xml+' | wc -l)'):$xmlcount
+	   touch($xml):$dum
+           copyf($xml,'|wc'):$xmlcount
 	   if ($xmlcount=0) then
 		if ($scout) then
 		    xmhaha_subSQ($archsamp,'scoutlog')
@@ -281,14 +279,14 @@ ELSEIF ($arg2='wrxml') THEN
 
 		if ($pslabel<>$cpname) and (not $spec) and (not $craft) then
 		    write('reset',$cpnodes+'1')
-		    shell('(cat '+$cpnodes+' | grep -w Completed > '+$cpnodes+'1)'):$dum
-                    shell('(cat '+$cpnodes+' | grep -vw Completed | grep -vw '+$cpname+' >> '+$cpnodes+'1)'):$dum
-                    shell('mv '+$cpnodes+'1 '+$cpnodes):$dum
+		    copyf($cpnodes,'grep -w','Completed',$cpnodes+'1'):$dum
+                    append($cpnodes,'grep -vw','Completed','grep -vw',$cpname,$cpnodes+'1'):$dum
+                    mv($cpnodes+'1',$cpnodes):$dum
 		endif
 		$snode=''
 		xmhaha_addnode($pslabel,$attr,'',$xml):$snode
 		if ($snode<>'') then xmhaha_fullSQ('set',$xmldir) endif
-		shell('chmod -R g+w '+$xmldir):$dum
+		chmod('-R g+w',$xmldir):$dum
 	endif
 
 ELSEIF ($arg2='last') or ($arg2 = 'first') THEN
@@ -352,16 +350,15 @@ ELSEIF ($arg2='last') or ($arg2 = 'first') THEN
         exists($fidlog,'file'):$lsfex
     endif
     if ($lsfex) then
-      shell('(grep -iw -- '+$1+': '+$fidlog+' | wc -l)'):$total
+      copyf($fidlog,'grep -iw',$1+':','|wc'):$total
     endif
     if ($total) then
 	$i=1 $j=0
 	repeat
-	   $sx='' format($i,'lower'):$sx
 	   if ($arg2='last') then
-	      shell('(grep -iw -- '+$1+': '+$fidlog+' | '+$tailX+' -n '+$sx+' | head -n 1)'):$lname
+	      copyf($fidlog,'grep -iw',$1+':','tail',$i,'head',1,'|wc'):$x,$lname
 	   else
-              shell('(grep -iw -- '+$1+': '+$fidlog+' | head -n '+$sx+' | '+$tailX+' -n 1)'):$lname
+	      copyf($fidlog,'grep -iw',$1+':','head',$i,'tail',1,'|wc'):$x,$lname
 	   endif
 	   $lastname=''
 	   substr($lname,2):$lastname
@@ -426,13 +423,13 @@ ELSEIF ($arg2 = 'iscpfid') THEN
     exists($studypar,'file'):$studyex
 
     $isthere=0
-    shell('(grep -wc -- '+$1+' "'+$fidlog+'")'):$isthere
+    copyf($fidlog,'grep -w',$1,'|wc'):$isthere
     if (not $isthere) then
-        shell('(grep -wc -- '+$1+'.REC "'+$fidlog+'")'):$isthere
+        copyf($fidlog,'grep -w',$1+'.REC','|wc'):$isthere
       if (not $isthere) then
-        shell('(grep -wc -- '+$1+'.rec "'+$fidlog+'")'):$isthere
+        copyf($fidlog,'grep -w',$1+'.rec','|wc'):$isthere
         if (not $isthere) then
-           shell('(grep -wc -- '+$1+'.fid "'+$fidlog+'")'):$isthere
+           copyf($fidlog,'grep -w',$1+'.fid','|wc'):$isthere
         endif
       endif
     endif
@@ -460,16 +457,16 @@ ELSEIF ($arg2 = 'parud') THEN
   endif
 
   $date=''
-  shell('date +%Y-%m-%d'):$date
+  systemtime('%Y-%m-%d'):$date
   $time=''
-  shell('date +%H%M%S'):$time
+  systemtime('%H%M%S'):$time
   $username=operator
 
   write('file',$archsamp+'/dirinfo/'+$listfile,'-------------------------------------')
   $chronentry=$date+'-'+$time+' '+$1+' updated by '+$username+'\@'+systemname
   write('file',$archsamp+'/dirinfo/'+$listfile,'%s',$chronentry)
   write('file',$archsamp+'/dirinfo/'+$listfile,'Login Username: %s',owner)
-  shell('cat '+$3+' >> '+$archsamp+'/dirinfo/'+$listfile):$dum
+  append($3,$archsamp+'/dirinfo/'+$listfile):$dum
 
 ELSEIF ($arg2='lastcraft') THEN
 

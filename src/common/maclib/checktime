@@ -86,9 +86,9 @@ IF ($auto) THEN
 // $addontime is the time from today's midnight to the next dayQ start time
 
     $currenttime=0
-    shell('date +%H'):$hour
-    shell('date +%M'):$minute
-    shell('date +%S'):$second
+    systemtime('%H'):$hour
+    systemtime('%M'):$minute
+    systemtime('%S'):$second
     $currenttime=$hour*3600+$minute*60+$second
 // $currenttime is current time expressed in seconds from beginning of today
 
@@ -115,15 +115,15 @@ IF ($auto) THEN
         //  there is no difference between night and day
 	//  $dayduration and $nightduration are the availabletimes
 
-	$today='' shell('date +%a'):$today
+	$today='' systemtime('%a'):$today
 	$startday=$today
 	exists(autodir+'/enterQ.macdir/DATE_runstart','file'):$filex
 	if $filex then
 	    $startday='' $startdate=''
-	    shell('(cat '+autodir+'/enterQ.macdir/DATE_runstart | tail -n 1)'):$startdate
+	    copyf(autodir+'/enterQ.macdir/DATE_runstart','tail',1,'|wc'):$ok,$startdate
 //	    lookup('mfile',autodir+'/enterQ.macdir/DATE_runstart','read'):$startdate
 	    strstr($startdate,'_'):$ret,$startdate
-	    shell('(date -d '+$startdate+' +%a)'):$startday
+	    systemtime('%F',$startdate,'%a'):$startday
 	    $7days='Mon','Tue','Wed','Thu','Fri','Sat','Sun'
 	    teststr('$7days',$startday,'local'):$sok
 	    if not $sok then $startday=$today endif

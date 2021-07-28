@@ -21,32 +21,34 @@ $spar=$1+'.macdir/studytray'+$subtray+'/loc'+$loc+'/studypar'
 $locdir='loc'+$loc
 exists($spar,'file'):$sparex
 if ($sparex) then
-	rtv($spar,'noabort','studystatus'):$status
-	rtv($spar,'noabort','studyowner'):$who
-	rtv($spar,'noabort','samplename'):$sampname
-	rtv($spar,'noabort','locdir'):$locdir
+  fread($spar,'usertree','reset')
+  getvalue('studystatus','usertree'):$status,$ok
+  getvalue('studyowner','usertree'):$who,$ok
+  getvalue('samplename','usertree'):$sampname,$ok
+  getvalue('locdir','usertree'):$locdir,$ok
 endif
 "******Adjust information if status is Active******"
 if ($status='Active') and ($sampname<>'ReFeReNCe') then
-	$who2='' $sampname2='' $locdir2=''
+   $who2='' $sampname2='' $locdir2=''
    $sg=$1+'.macdir/currentsampleglobal'
    $si=$1+'.macdir/currentsampleinfo'
    exists($sg,'file'):$fileex
    exists($si,'file'):$fileex2
    if ($fileex>0) and ($fileex2>0) then
-	rtv($sg,'noabort','studyowner'):$who2
-	rtv($sg,'noabort','samplename'):$sampname2
-	$MACRO='' $macro=''
-	shell('(cat '+$si+' | grep -w MACRO:)'):$MACRO
-	substr($MACRO,2):$macro
-	$s1='' $s2=''
-	strstr($macro,'\''):$ret,$s1,$s2
-	strstr($s2,'\''):$ret,$locdir2,$s1
-	if ($locdir=$locdir2) then
-		$who=$who2
-		$sampname=$sampname2
-		$locdir=$locdir2
-	endif
+     fread($sg,'userrtree','reset')
+     getvalue('studyowner','usertree'):$who2,$ok
+     getvalue('samplename','usertree'):$sampname2,$ok
+     $MACRO='' $macro=''
+     append($si,'grep -w','MACRO:','|wc'):$ok,$MACRO
+     substr($MACRO,2):$macro
+     $s1='' $s2=''
+     strstr($macro,'\''):$ret,$s1,$s2
+     strstr($s2,'\''):$ret,$locdir2,$s1
+     if ($locdir=$locdir2) then
+	$who=$who2
+	$sampname=$sampname2
+	$locdir=$locdir2
+     endif
    endif
 endif
 "************************************************"

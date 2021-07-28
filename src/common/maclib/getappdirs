@@ -1,36 +1,21 @@
 "macro getappdirs"
-is_postvj22b:$is22c
 $adirs='' $alabels=''
-if ($is22c=0) then
-   $adirs=userdir,systemdir
-   $alabels='Home account','Varian system'
+appdir('info'):$total
+if ($total>0) then
+  $i=1
+  repeat
+    appdir('info',$i):$label,$path
+    $adirs[$i]=$path
+    if ($label<>'') then
+      $alabels[$i]=$label
+    else
+      substr($path,'basename'):$alabels[$i]
+    endif
+    $i=$i+1
+  until $i > $total
 else
-  appdir('file'):$file
-  $line='' $line2=''
-  readfile($file,'$line','$line2','1;','local'):$total
-  if ($total>0) then
-    $i=1
-    repeat
-	$line3=$line[$i]
-	if ($line2[$i]<>'') then $line3=$line3+' '+$line2[$i] endif
-	strsv2array($line3,';'):$array
-	if ($array[2]='USERDIR') then
-	   $array[2]=userdir
-	endif
-	$adirs[$i]=$array[2]
-	$arraysize=size('$array')
-	if ($arraysize>2) then
-	   $alabels[$i]=$array[3]
-	else
-	   shell('basename '+$array[2]):$alabels[$i]
-	endif
-	$i=$i+1
-    until $i > $total
-  else
-    $adirs=userdir,systemdir
-    $alabels='Home account','Varian system'
-  endif
+  $adirs=userdir,systemdir
+  $alabels='Home account','OpenVnmrJ system'
 endif
 
-$atot=size('$adirs')
-return($atot,$adirs,$alabels)
+return($total,$adirs,$alabels)

@@ -105,16 +105,16 @@ if ($direx=0) then
    $st=0 $stx=''
    strstr($autodir,'.macdir/studytray'):$st,$stx
    if ($stx) then
-	shell('dirname '+$stx):$autodir
+	substr($stx,'dirname'):$autodir
    endif
-   shell('basename '+$autodir):$Qname
+   substr($autodir,'basename'):$Qname
    $copt=0 $eopt=0 $popt=0 $fopt=0
    if ($sopt) then $qopt=0 else $qopt=1 endif
 else
    $Qname='enterQ'
    if (cpautodir=autodir) then $curauto=1 endif
    $Nx=0
-   shell('(cat '+$autodir+'/enterQ.macdir/overniteQ | grep -wc SAMPLE#:)'):$Nx
+   append($autodir+'/enterQ.macdir/overniteQ','grep -w','SAMPLE#:','|wc'):$Nx
    if ($Nx>0) then
      $isnight='n'
    else
@@ -139,8 +139,8 @@ $xm=1
     $autosqdir=$autodir+'/'+$Qname+'.macdir/xmldir/'+$uinfo+'sqdir'
     exists($autosqdir,'directory'):$sqex
 // Always rebuild subxml for specific user option (slower)
-    if ($uinfo<>'') then shell('rm -rf '+$autosqdir):$dum $sqex=0 endif
-    if ($rbld='rbld') then shell('rm -rf '+$autosqdir):$dum $sqex=0 endif
+    if ($uinfo<>'') then rm('-rf',$autosqdir):$dum $sqex=0 endif
+    if ($rbld='rbld') then rm('-rf',$autosqdir):$dum $sqex=0 endif
 
     if ($sqex=0) then
 	xmhaha_asx($autodir,'',$uinfo,$rbld2)
@@ -195,7 +195,7 @@ $xm=1
         $ok=0
       endif
       if ($ok) then
-        shell('(cat '+$autosqdir+'/'+$subxml[$sx]+'.xml | wc -l)'):$ok
+        append($autosqdir+'/'+$subxml[$sx]+'.xml','|wc'):$ok
       endif
       if ($ok) then
         $xmlfiles[$xm]=$autosqdir+'/'+$subxml[$sx]+'.xml'
@@ -220,10 +220,10 @@ write('reset',$esq)
 write('reset',$studyxml)
 
     $subauto=''
-    shell('basename '+$autodir):$subauto
+    substr($autodir,'basename'):$subauto
     if ($islcauto) then
-	shell('dirname '+$autodir):$subdir
-	shell('basename '+$subdir):$subauto
+	substr($autodir,'dirname'):$subdir
+	substr($subdir,'basename'):$subauto
     endif
     $tt=$subauto
     $ttxt=$tt
@@ -257,7 +257,7 @@ $total=size('$xmlfiles')
 $i=1
 repeat
    if ($xmlfiles[$i]<>'') then
-	shell('(cat '+$xmlfiles[$i]+' >> '+$studyxml+')'):$dum
+	append($xmlfiles[$i],$studyxml):$dum
    endif
    $i=$i+1
 until $i > $total
@@ -274,7 +274,7 @@ repeat
     exists($cpnodes,'file'):$fileex
     if ($fileex) then
        write('reset',$tmpfile)
-       shell('(cat '+$cpnodes+' | awk \'{print $1}\' > '+$tmpfile+')'):$dum
+       copyf($cpnodes,'awk','$1',$tmpfile):$dum
 	$ts1='' $ts2='' $tstot=0
 	readfile($tmpfile,'$ts1','$ts2','','local'):$tstot
 	if ($tstot>0) then
@@ -292,11 +292,7 @@ repeat
 	        $ti=$ti+1
 	    until $ti>$tstot
 	endif
-//       pwd:$curdir2
-//       cd($infodir):$dum
-//       shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//       cd($curdir2):$dum
-       shell('(cat '+$cpnodes+' | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+       append($cpnodes,'awk','$1 $2 $3',$esq):$dum
     endif
     $i=$i+1
 until $i > $total
@@ -306,5 +302,5 @@ if ($curauto) and ($sopt=0) then
 	xmhaha_settime($timeest)
 endif
 
-shell('rm -f "'+$tmpfile+'"'):$dum
+delete($tmpfile,''):$dum
 cd($curdir):$dum
