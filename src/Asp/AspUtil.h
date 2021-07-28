@@ -92,6 +92,10 @@ void draw_arrow(int x1, int y1, int x2, int y2, int thick, int color);
 void draw_rect(int x1, int y1, int x2, int y2, int thick, int color, int fillRoi);
 void draw_round_rect(int x1, int y1, int x2, int y2, int thick, int color, int fillRoi);
 void draw_oval(int x1, int y1, int x2, int y2, int thick, int color, int fillRoi);
+int phasefileVal(int index, double freq, int dispTrace, double *val, double *off);
+void selectTraceNum( double freq, double y, int *newtrace);
+int traceShown(int trace);
+int mspecShown(int index);
 // old_pos is not used, should be NULL
 // n = 0 for first cursor, 1 for second cursor, 2 for threshold
 // c is color

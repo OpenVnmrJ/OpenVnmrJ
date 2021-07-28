@@ -883,7 +883,7 @@ int AspFrame::saveSession(char *path, bool full) {
 int AspFrame::loadSession(char *path) {
    struct stat fstat;
    string dir="";
-   char sessionFile[MAXSTR2],file[MAXSTR2];
+   char sessionFile[MAXSTR2],file[MAXSTR2+16];
    if(stat(path, &fstat) != 0) {
         Winfoprintf("Error: cannot find %s.",path);
         return 0;

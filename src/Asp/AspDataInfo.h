@@ -33,6 +33,7 @@ public:
 	string dataKey;
 	aspAxisInfo_t haxis, vaxis;
 	int rank;
+	int dsDisp;
 	bool hasData;
 
         void updateDataInfo();

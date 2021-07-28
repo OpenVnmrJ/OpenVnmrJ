@@ -35,7 +35,7 @@
 // MAXSPEC 128
 typedef struct {
   char key[STR64];
-  int yoff; // pixels
+  double yoff; // pixels
   char color[16];
   double scale; // additional scale to vs
 } mspecInfo;
@@ -46,7 +46,7 @@ static int mspecProcessing = 0;
 extern double yppmm;
 int getProcMspec() {return mspecProcessing;}
 int getSpecYoff(int i) {
-     return specList[i].yoff;
+     return( (int) specList[i].yoff);
 }
 void clearMspec() {
      int i;
@@ -408,6 +408,26 @@ int getShowMspec() {
    return count; 
 }
 
+int mspecElem(int index) {
+   return( atoi(&(specList[index-1].key[5])) ); 
+}
+
+int mspecShown(int index) {
+int i;
+   if(!mspecShow) return 0;
+
+   if (index >= MAXSPEC) return(0);
+   for(i=0;i<MAXSPEC;i++)
+   {
+      if ((strlen(specList[i].key) > 5) &&
+         (atoi(&(specList[i].key[5])) == index) )
+      {
+         return(i+1);
+      }
+   }
+   return(0);
+}
+
 int setSpecColor(int i) { 
       int color;
       if(strlen(specList[i].color)==0) return SPEC_COLOR;
@@ -423,7 +443,8 @@ int setSpecColor(int i) {
 // mspec(1,key1,yoff1,color1)
 // mspec(2,key2,yoff2,color2)
 int mspec(int argc, char *argv[], int retc, char *retv[]) {
-  int i, ind, iColor, yoff=0;
+  int i, ind, iColor;
+  double yoff=0;
   double voff, scale=1.0;
   char str[16];
   char color[16];
@@ -462,9 +483,9 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
      for(i=0;i<MAXSPEC;i++) strcpy(specList[i].key,"");
      if(!P_getreal(CURRENT,"vo", &voff, 1) && voff >= 0.0) {
        if(yppmm>0) voff *= yppmm;
-       yoff = (int)voff;
+       yoff = voff;
      } else {
-       yoff = dnpnt2/(argc);
+       yoff = (double) dnpnt2/(argc);
      }
      for(i=0;i<MAXSPEC && i<ntraces;i++) {
 /* 123456789 987654321 123456789
@@ -537,7 +558,7 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
      for(i=0;i<MAXSPEC;i++) strcpy(specList[i].key,"");
      if(!P_getreal(CURRENT,"vo", &voff, 1) && voff >= 0.0) {
        if(yppmm>0) voff *= yppmm;
-       yoff = (int)voff;
+       yoff = voff;
      } else {
        yoff = dnpnt2/(argc);
      }
@@ -599,14 +620,14 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
      } else i--;
      if (strlen(argv[2]) > sizeof(specList[i].key))
      {
-        Werrprintf("mspec: key length limited to %d characters",sizeof(specList[i].key));
+        Werrprintf("mspec: key length limited to %zd characters",sizeof(specList[i].key));
         ABORT;
      }
      strcpy(specList[i].key,argv[2]);
-     if(argc>3) yoff=atoi(argv[3]);
+     if(argc>3) yoff=atof(argv[3]);
      else if(!P_getreal(CURRENT,"vo", &voff, 1) && voff >= 0.0) {
        if(yppmm>0) voff *= yppmm;
-       yoff = (int)voff*i;
+       yoff = voff*i;
      }
      if(argc>4) {
        strcpy(color, argv[4]);
@@ -633,7 +654,7 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
      iColor = 0;
      if(!P_getreal(CURRENT,"vo", &voff, 1) && voff >= 0.0) {
        if(yppmm>0) voff *= yppmm;
-       yoff = (int)voff;
+       yoff = voff;
      } else {
        yoff = dnpnt2/(argc);
      }
@@ -681,7 +702,7 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
           strcpy(specList[i].color, color);
           if (strlen(argv[0]) > sizeof(specList[i].key))
           {
-             Werrprintf("mspec: key length limited to %d characters",sizeof(specList[i].key));
+             Werrprintf("mspec: key length limited to %zd characters",sizeof(specList[i].key));
              ABORT;
           }
           strcpy(specList[i].key,argv[0]);
@@ -710,7 +731,7 @@ int mspec(int argc, char *argv[], int retc, char *retv[]) {
   } else if(argc>1) { // mspec('SPEC:1','BASE:1',...)
      if(!P_getreal(CURRENT,"vo", &voff, 1) && voff >= 0.0) {
        if(yppmm>0) voff *= yppmm;
-       yoff = (int)voff;
+       yoff = voff;
      } else {
        yoff = dnpnt2/(argc);
      }

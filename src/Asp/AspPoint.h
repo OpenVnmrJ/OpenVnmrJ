@@ -18,7 +18,7 @@ class AspPoint : public AspAnno
 
 public:
 
-    AspPoint(spAspCell_t cell, int x, int y);
+    AspPoint(spAspCell_t cell, int x, int y, bool trCase=false);
     AspPoint(char words[MAXWORDNUM][MAXSTR], int nw);
 
     void create(spAspCell_t cell, int x, int y);

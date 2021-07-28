@@ -22,6 +22,7 @@ using namespace std;
 #include "AspDis1D.h"
 
 extern "C" {
+int do_mkdir(const char *dir, int psub, mode_t mode);
 }
 
 int AspDisInteg::aspInteg(int argc, char *argv[], int retc, char *retv[]) {
@@ -143,9 +144,11 @@ void AspDisInteg::save(spAspFrame_t frame, char *path) {
 
    struct stat fstat;
    if (stat(dir.c_str(), &fstat) != 0) {
-       char str[MAXSTR2];
-       (void)sprintf(str, "mkdir -p %s \n", dir.c_str());
-       (void)system(str);
+         if (do_mkdir(dir.c_str(), 1, 0777))
+         {
+	        Winfoprintf("Failed to make directory %s.",dir.c_str());
+	        return;
+         }
    }
 
    FILE *fp;

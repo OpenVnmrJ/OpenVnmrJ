@@ -3013,6 +3013,7 @@ Winfoprintf("##ds %d %d %s",argc,i,argv[i]);
 
   if (!fidshim) {
       Wturnoff_buttons();
+
       if (WgraphicsdisplayValid(argv[0])) {
           set_turnoff_routine(turnoff_ds);
       }
@@ -3073,7 +3074,6 @@ Winfoprintf("##ds %d %d %s",argc,i,argv[i]);
       }
       else
       {
-        Werrprintf("Must be in ds to use %s option",argv[1]);
         ABORT;
       }
     }

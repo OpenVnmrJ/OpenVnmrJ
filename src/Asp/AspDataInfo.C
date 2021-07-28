@@ -22,7 +22,9 @@ extern "C" {
 #include "data.h"
 #include "init2d.h"
 #include "init_display.h"
-extern int getAxisOnly();
+int getAxisOnly();
+int currentindex();
+int getShowMspec();
 }
 
 spAspDataInfo_t nullAspData = spAspDataInfo_t(NULL);
@@ -37,6 +39,7 @@ AspDataInfo::~AspDataInfo() {
 void AspDataInfo::initDataInfo() {
 	rank=0;
         hasData = false;
+        dsDisp = 0;
  	haxis.name="?";
 	haxis.label="?";
 	haxis.dunits="?";
@@ -72,6 +75,13 @@ void AspDataInfo::updateDataInfo() {
 
 	char str[20];
         Wgetgraphicsdisplay(str, 20);
+
+        if ( ! strcmp(str,"ds") && ! getShowMspec() )
+           dsDisp = currentindex();
+        else if ( ! strcmp(str,"ds") )
+           dsDisp = -getShowMspec();
+        else
+           dsDisp = 0;
 
         if (str[0] == '\0')
            return;
@@ -191,7 +201,7 @@ void AspDataInfo::init1D_vaxis() {
    vaxis.scale = getVscale();
 
    vaxis.width= AspUtil::getReal("wc2",100)/vaxis.scale;
-   vaxis.start= -getVpos()/vaxis.scale;
+   vaxis.start= (2.0-getVpos())/vaxis.scale;
 
    if(vaxis.rev) {
      vaxis.maxwidth = -vaxis.maxwidth;

@@ -20,6 +20,7 @@
 ******************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include "data.h"
@@ -74,6 +75,10 @@ extern int  setplotter();
 extern int	dim1count();    /* located in ft2d.c  */
 extern void setArraydis(int mode);
 extern int expdir_to_expnum(char *expdir);
+extern int datapoint(double freq, double sw, int fn);
+extern int currentindex();
+extern int getShowMspec();
+extern int mspecElem(int index);
 
 #ifdef VNMRJ
 extern int frame_set_pnt();
@@ -374,7 +379,6 @@ int check2d(int get_rev)
 		ni0name[6];
   int		r;
   double	rni;
-  int           dim0;
 
 
 /******************************************************
@@ -386,7 +390,6 @@ int check2d(int get_rev)
 
   /* Defaults for 1D data */
   ndflag = ONE_D;
-  dim0 = S_NP;
   dimension_name = S_NP;
   d2flag = FALSE;
   ni = 1;
@@ -1202,6 +1205,167 @@ int exp_factors( int spec)
   return COMPLETE;
 }
     
+//  trace is trace number
+//  freq is frequency in ppm
+//  *val is amplitude of the spectrum at that frequency
+int phasefileVal(int trace, double freq, int dispTrace, double *val, double *off)
+{
+   char  filepath[MAXPATH];
+   int e;
+   dpointers block;
+   int pt;
+   double reffrq;
+   
+
+   *val = 0.0;
+   *off = 0.0;
+   if ( (e = D_gethead(D_PHASFILE, &phasehead)) )
+   {
+
+      if (e == D_NOTOPEN)
+      {
+         if ( (e = D_getfilepath(D_PHASFILE, filepath, curexpdir)) )
+         {
+            D_error(e);
+            return(ERROR);
+         }
+
+         e = D_open(D_PHASFILE, filepath, &phasehead);  /* open the file */
+      }
+
+      if (e && removephasefile())
+      {
+         D_error(e);
+         return(ERROR);
+      }
+   }
+   if ((trace < 0) || (trace >= phasehead.nblocks))
+   {
+      Werrprintf("trace number %d out of bounds for phasefile", trace);
+      return(ERROR);
+   }
+   if (D_getbuf(D_PHASFILE, phasehead.nblocks, trace, &block))
+   {
+      return(ERROR);
+   }
+   getReffrq(HORIZ, &reffrq);
+   pt = datapoint(freq*reffrq + rflrfp,sw,fn/2);
+   *val = (double) block.data[pt];
+   *off = (WgraphicsdisplayValid("ds") && ! getShowMspec() ) ? 0.0 : ((dispTrace-1) * vo)/vs;
+
+   D_release(D_PHASFILE, trace);
+   return(0);
+}
+
+int selectTraceNum(double freq, double y, int *newtrace)
+{
+   int e;
+   int i;
+   float dispcalib;
+   int min;
+   int minTrace=0;
+   int pnt;
+   double selVal;
+   char  filepath[MAXPATH];
+   dpointers block;
+   int pt;
+   double reffrq;
+   double val;
+   int mspecNum = 0;
+
+   if (WgraphicsdisplayValid("ds"))
+   {
+      mspecNum = getShowMspec();
+      if ( ! mspecNum )
+      {
+         *newtrace = currentindex();
+         return(0);
+      }
+   }
+   dispcalib = (float) (mnumypnts-ymin) / (float) wc2max;
+          
+   if ( (e = D_gethead(D_PHASFILE, &phasehead)) )
+   {
+
+      if (e == D_NOTOPEN)
+      {
+         if ( (e = D_getfilepath(D_PHASFILE, filepath, curexpdir)) )
+         {
+            D_error(e);
+            return(ERROR);
+         }
+
+         e = D_open(D_PHASFILE, filepath, &phasehead);  /* open the file */
+      }
+
+      if (e && removephasefile())
+      {
+         D_error(e);
+         return(ERROR);
+      }
+   }
+   getReffrq(HORIZ, &reffrq);
+   pt = datapoint(freq*reffrq + rflrfp,sw,fn/2);
+   min=2*mnumypnts;
+   if ( ! mspecNum )
+      e = P_getsize(CURRENT,"dsSelect",NULL);
+   else
+      e = mspecNum;
+   for (i= 0; i< e; i++)
+   {
+      int ret;
+      if ( ! mspecNum )
+         ret = P_getreal(CURRENT,"dsSelect", &selVal, i+1);
+      else
+      {
+         selVal = mspecElem(i+1);
+         ret = 0;
+      }
+      if ( ! ret )
+      {
+         if (D_getbuf(D_PHASFILE, phasehead.nblocks, (int) (selVal-1), &block))
+            return(ERROR);
+         val = (double) block.data[pt];
+         D_release(D_PHASFILE, (int) (selVal-1));
+         pnt = mnumypnts - (int)(dispcalib*(val*vs + vp + i*vo)) -dfpnt2;
+         if (abs((int)y-pnt) < min)
+         {
+            min = abs((int)y-pnt);
+            minTrace = i;
+         }
+      }
+   }
+   minTrace++;
+   if ( ! mspecNum )
+   {
+   if ( ! P_getreal(CURRENT,"dsSelect", &selVal, minTrace))
+      *newtrace= (int) selVal;
+   else
+      *newtrace=minTrace;
+   }
+   else
+   {
+      *newtrace = mspecElem(minTrace);
+   }
+
+   return(0);
+}
+
+int traceShown(int trace)
+{
+   int e;
+   int index;
+   int num = 0;
+   double selVal;
+   e = P_getsize(CURRENT,"dsSelect",NULL);
+   for (index = 1; index <= e; index++)
+   {
+      if ( ! P_getreal(CURRENT,"dsSelect", &selVal, index))
+         if (trace == (int) selVal)
+            return(index);
+   }
+   return(num);
+}
 
 /*-----------------------------------------------
 |						|

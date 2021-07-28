@@ -106,6 +106,7 @@ AspMouse::mouseState_t AspMouse::setState(mouseState_t newState) {
     case createRegion:
 	writelineToVnmrJ("vnmrjcmd","writeToFrameTitle mouse:  [LEFT] click or drag to define baseline."); 
     case createPoint:
+    case createPointTR:
     case createText:
 	writelineToVnmrJ("vnmrjcmd","writeToFrameTitle mouse:  [LEFT] click to create annotation."); 
     case createPolygon:
@@ -656,10 +657,13 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
       case createBand:
       case createBox:
       case createPoint:
+      case createPointTR:
       case createLine:
+      case createLineTR:
       case createXBar:
       case createYBar:
       case createArrow:
+      case createArrowTR:
       case createOval:
       case createPolygon:
       case createPolyline:
@@ -698,7 +702,9 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 			}
 			break;
 		  case createPoint:
-			anno = AspDisAnno::createAnno(frame, x, y, ANNO_POINT);
+		  case createPointTR:
+			anno = AspDisAnno::createAnno(frame, x, y, ANNO_POINT,
+                                           (state == createPointTR) );
 			if(anno != NULL) {
 		  	   setState(restoreState);
 	    		   creating=true;
@@ -715,7 +721,9 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 			}
 			break;
 		  case createLine:
-			anno = AspDisAnno::createAnno(frame, x, y, ANNO_LINE);
+		  case createLineTR:
+			anno = AspDisAnno::createAnno(frame, x, y, ANNO_LINE,
+                                           (state == createLineTR) );
 			if(anno != NULL) {
 		  	   setState(modifyLine);
 	    		   creating=true;
@@ -736,7 +744,9 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 			}
 			break;
 		  case createArrow:
-			anno = AspDisAnno::createAnno(frame, x, y, ANNO_ARROW);
+		  case createArrowTR:
+			anno = AspDisAnno::createAnno(frame, x, y, ANNO_ARROW,
+                                           (state == createArrowTR) );
 			if(anno != NULL) {
 		  	   setState(modifyArrow);
 	    		   creating=true;
@@ -799,7 +809,13 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 	        creating=false;
 		frame->modifyRoi(roi,x,y);
 	    } else if(anno != NULL) {
-		AspDisAnno::modifyAnno(frame, anno, x, y, prevX, prevY);
+                if (((state == modifyPoint) ||
+                     (state == modifyLine) ||
+                     (state == modifyArrow)) &&
+                          (mask == b1+drag))
+		   AspDisAnno::modifyAnno(frame, anno, x, y, prevX, prevY, true);
+                else
+		   AspDisAnno::modifyAnno(frame, anno, x, y, prevX, prevY, false);
 	    }
             break;
         case b1+up:
