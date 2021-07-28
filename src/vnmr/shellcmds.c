@@ -47,6 +47,8 @@
 #include "pvars.h"
 #include "wjunk.h"
 #include "allocate.h"
+#include "variables.h"
+extern int assignString(const char *s, varInfo *v, int i);
 
 #ifdef UNIX
 #include <sys/file.h>
@@ -2012,6 +2014,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    int lineOK = 0;
    int fromStr;
    char *fromStrPtr = NULL;
+   varInfo *v1 = NULL;
    char inLine[APPENDLINE];
 
    if (argc < 3)
@@ -2070,19 +2073,40 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
          Werrprintf("%s: final argument '%s' is wrong",argv[0],argv[argc-1]);
          ABORT;
       }
-      if ( !strncmp(argv[0], "app", 3) ) 
-         outFile = fopen(argv[argc-1],"a");
-      else
-         outFile = fopen(argv[argc-1],"w");
-      if (outFile == NULL)
+      if ( argv[argc-1][0] == '$' )
       {
-         if (retc)
+         symbol **root;
+         if ((root=selectVarTree(argv[argc-1])) == NULL)
          {
-            retv[ 0 ] = intString(0);
-            RETURN;
+            Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[argc-1]);
+            ABORT;
          }
-         Werrprintf("%s: cannot append to file %s",argv[0],argv[argc-1]);
-         ABORT;
+         if ((v1 = rfindVar(argv[argc-1],root)) == NULL)
+         {   Werrprintf("%s: variable \"%s\" doesn't exist",argv[0],argv[argc-1]);
+             ABORT;
+         }
+         if (v1->T.basicType == T_REAL)
+         {   Werrprintf("%s: variable \"%s\" must be of string type",argv[0],argv[argc-1]);
+             ABORT;
+         }
+         assignString("",v1,0);
+      }
+      else
+      {
+         if ( !strncmp(argv[0], "app", 3) ) 
+            outFile = fopen(argv[argc-1],"a");
+         else
+            outFile = fopen(argv[argc-1],"w");
+         if (outFile == NULL)
+         {
+            if (retc)
+            {
+               retv[ 0 ] = intString(0);
+               RETURN;
+            }
+            Werrprintf("%s: cannot append to file %s",argv[0],argv[argc-1]);
+            ABORT;
+         }
       }
    }
    if ( ! fromStr)
@@ -2090,6 +2114,8 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       if ( isDirectory(argv[1]) )
       {
          Werrprintf("%s: Input file %s is a directory",argv[0],argv[1]);
+         if (outFile)
+            fclose(outFile);
          ABORT;
       }
       inFile = fopen(argv[1],"r");
@@ -2396,6 +2422,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                else
                {
                   Werrprintf("%s: unknown filter '%s'",argv[0],argv[index]);
+                  if (inFile)
+                     fclose(inFile);
+                  if (outFile)
+                     fclose(outFile);
                   ABORT;
                }
             }
@@ -2555,6 +2585,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                else
                {
                   Werrprintf("%s: unknown filter '%s'",argv[0],argv[index]);
+                  if (inFile)
+                     fclose(inFile);
+                  if (outFile)
+                     fclose(outFile);
                   ABORT;
                }
             }
@@ -2570,6 +2604,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
          else if (tailStage && (lineCount <= retc) )
          {
             retv[lineCount] = newString(inLine);
+         }
+         if (tailStage && v1)
+         {
+            assignString(inLine,v1,lineCount);
          }
          lineOK = 0;
       }
