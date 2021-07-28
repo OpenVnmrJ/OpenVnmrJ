@@ -33,6 +33,7 @@ string AspDisAnno::clipboardStr="";
 
 extern "C" {
 int do_mkdir(const char *dir, int psub, mode_t mode);
+char *intString(int i);
 }
 
 int AspDisAnno::aspAnno(int argc, char *argv[], int retc, char *retv[]) {
@@ -524,7 +525,8 @@ void AspDisAnno::show(spAspFrame_t frame, int argc, char *argv[]) {
 
 // this is called when mouse released from dragging rubber band 
 // threshold th will be used if x=y=prevX=prevY=0
-AspAnno *AspDisAnno::createAnno(spAspFrame_t frame, int x, int y, AnnoType_t type) {
+AspAnno *AspDisAnno::createAnno(spAspFrame_t frame, int x, int y, AnnoType_t type,
+                                bool trCase) {
 
     if(frame == nullAspFrame) return NULL; 
     spAspDataInfo_t dataInfo = frame->getDefaultDataInfo();
@@ -541,13 +543,13 @@ AspAnno *AspDisAnno::createAnno(spAspFrame_t frame, int x, int y, AnnoType_t typ
     AspAnno *anno = NULL;
     switch (type) {
 	case ANNO_POINT:
-	   anno = new AspPoint(cell, x, y);
+	   anno = new AspPoint(cell, x, y, trCase);
 	   break;
 	case ANNO_TEXT:
 	   anno = new AspText(cell, x, y);
 	   break;
 	case ANNO_LINE:
-	   anno = new AspLine(cell, x, y);
+	   anno = new AspLine(cell, x, y, trCase);
 	   break;
 	case ANNO_XBAR:
 	   anno = new AspBar(cell, x, y);
@@ -558,7 +560,7 @@ AspAnno *AspDisAnno::createAnno(spAspFrame_t frame, int x, int y, AnnoType_t typ
 	   anno->setType(ANNO_YBAR);
 	   break;
 	case ANNO_ARROW:
-	   anno = new AspArrow(cell, x, y);
+	   anno = new AspArrow(cell, x, y, trCase);
 	   break;
 	case ANNO_BOX:
 	   anno = new AspBox(cell, x, y);
@@ -588,14 +590,18 @@ AspAnno *AspDisAnno::createAnno(spAspFrame_t frame, int x, int y, AnnoType_t typ
    return anno;
 }
 
-void AspDisAnno::modifyAnno(spAspFrame_t frame, AspAnno *anno, int x, int y, int prevX, int prevY) {
+void AspDisAnno::modifyAnno(spAspFrame_t frame, AspAnno *anno, int x, int y,
+                            int prevX, int prevY, bool trCase) {
    if(anno == NULL) return;
    if(frame == nullAspFrame) return;
    spAspCell_t cell =  frame->selectCell(x,y);
 
    if(cell == nullAspCell) return;
 
-   anno->modify(cell,x,y,prevX,prevY); 
+   if (trCase)
+      anno->modifyTR(cell,x,y,prevX,prevY,trCase); 
+   else
+      anno->modify(cell,x,y,prevX,prevY); 
    frame->displayTop();
 }
 

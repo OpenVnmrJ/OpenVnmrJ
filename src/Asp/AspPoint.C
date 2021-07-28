@@ -14,7 +14,8 @@
 AspPoint::AspPoint(char words[MAXWORDNUM][MAXSTR], int nw) : AspAnno(words,nw) {
 }
 
-AspPoint::AspPoint(spAspCell_t cell, int x, int y) : AspAnno() {
+AspPoint::AspPoint(spAspCell_t cell, int x, int y, bool trCase) : AspAnno() {
+  doTraces = trCase;
   create(cell,x,y);
 }
 
@@ -27,13 +28,44 @@ void AspPoint::create(spAspCell_t cell, int x, int y) {
    pCoord[0].x = x;
    pCoord[0].y = y;
    sCoord[0].x = cell->pix2val(HORIZ,x,mmbind); 
-   sCoord[0].y = cell->pix2val(VERT,y,mmbindY); 
+   if (! doTraces )
+      sCoord[0].y = cell->pix2val(VERT,y,mmbindY); 
+   else
+   {
+      int trace;
+      selectTraceNum( sCoord[0].x, y, &trace);
+      sCoord[0].y=trace;
+   }
    disFlag = ANN_SHOW_ROI | ANN_SHOW_LABEL | ANN_SHOW_LINK;
    created_type = ANNO_POINT;
 }
 
 void AspPoint::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    
+   double val;
+   double off;
+   int dispTrace = 0;
+
+   if ( doTraces )
+   {
+      if ( (dataInfo->dsDisp >= 1) && (dataInfo->dsDisp != sCoord[0].y) )
+         return;
+      if ( ! dataInfo->dsDisp ) // dss mode
+      {
+         if ( (dispTrace = traceShown((int)sCoord[0].y)) == 0 )
+            return;
+      }
+      else if (dataInfo->dsDisp < 0) // mspec display
+      {
+         if ( (dispTrace = mspecShown((int)sCoord[0].y)) == 0 )
+            return;
+      }
+      else  // plain ds display
+      {
+         dispTrace = 1;
+      }
+      
+   }
    set_transparency_level(transparency);
 
    int labelColor,roiColor,thick;
@@ -43,7 +75,13 @@ void AspPoint::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    int roiX,roiY,roiW,roiH;
    roiX=roiY=roiW=roiH=0;
    pCoord[0].x=cell->val2pix(HORIZ,sCoord[0].x,mmbind);
-   pCoord[0].y=cell->val2pix(VERT,sCoord[0].y,mmbindY);
+   if (doTraces)
+   {
+     phasefileVal((int) sCoord[0].y-1, sCoord[0].x, dispTrace,  &val, &off);
+     pCoord[0].y = cell->offsetval2pix(VERT,val,mmbindY, -off);
+   }
+   else
+     pCoord[0].y=cell->val2pix(VERT,sCoord[0].y,mmbindY);
    roiX = (int)pCoord[0].x;
    roiY = (int)pCoord[0].y;
    roiW = MARKSIZE;
@@ -57,7 +95,10 @@ void AspPoint::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    if((disFlag & ANN_SHOW_LABEL)) {
      getLabel(dataInfo,labelStr,labelW,labelH);
      labelX = (int)(cell->val2pix(HORIZ,sCoord[0].x,mmbind)+labelLoc.x) - labelW/2;
-     labelY = (int)(cell->val2pix(VERT,sCoord[0].y,mmbindY)+labelLoc.y);
+     if (doTraces)
+       labelY = (int) (cell->offsetval2pix(VERT,val,mmbindY, -off) + labelLoc.y);
+     else
+       labelY = (int)(cell->val2pix(VERT,sCoord[0].y,mmbindY)+labelLoc.y);
 
      if((disFlag & ANN_SHOW_LINK)) { 
 

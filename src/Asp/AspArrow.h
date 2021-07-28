@@ -18,7 +18,7 @@ class AspArrow : public AspLine
 
 public:
 
-    AspArrow(spAspCell_t cell, int x, int y);
+    AspArrow(spAspCell_t cell, int x, int y, bool trCase = false);
     AspArrow(char words[MAXWORDNUM][MAXSTR], int nw);
 
 private:

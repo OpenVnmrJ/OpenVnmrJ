@@ -80,6 +80,9 @@ public:
 	modifyPolyline,
 	createRegion = 38,
 	modifyRegion,
+	createPointTR = 40,
+	createLineTR = 41,
+	createArrowTR = 42,
 	userMode = 98,
         lastExternalState,
     } mouseState_t;

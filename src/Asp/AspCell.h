@@ -33,6 +33,7 @@ public:
 
         double pix2val(int dim, double d, bool mm=false);
         double val2pix(int dim, double d, bool mm=false);
+    double offsetval2pix(int dim, double val, bool mm, double offset);
     double pix2mm(int dim, double pix);
     double mm2pix(int dim, double mm);
 

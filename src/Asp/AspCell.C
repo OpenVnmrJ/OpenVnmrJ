@@ -118,6 +118,25 @@ double AspCell::val2pix(int dim, double val, bool mm) {
  }
 }
 
+double AspCell::offsetval2pix(int dim, double val, bool mm, double off) {
+ if(mm) {
+   return mm2pix(dim,val);
+ } else {
+   if(dim == VERT && vht < 0)
+   {
+      return psty + (val-vsty-off+vht) * (pht / vht);
+   }
+   else if(dim == VERT)
+   {
+      return psty + pht - (vsty-val) *(pht / vht);
+   }
+   else
+   {
+      return pstx + (vstx-val) *(pwd / vwd);
+   }
+ }
+}
+
 bool AspCell::select(int x, int y) {
    selected=false;
    double xmax=pstx+pwd;

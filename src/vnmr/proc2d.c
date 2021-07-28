@@ -109,8 +109,10 @@ static int checkblock(int trace, int *ok, int file_id)
            {
               D_error(r);
               D_close(file_id);
+           c_buffer = -1;
               return(ERROR);
            }
+           c_buffer = -1;
         }
 
 	if ( (r = D_getbuf(file_id, nblocks, block1, &c_block)) )
@@ -1301,19 +1303,20 @@ int rel_spec()
   if(c_buffer>=0) /* release last used block */
     if ( (res=D_release(D_PHASFILE,c_buffer)) )
     {
-      D_error(res); 
-      D_close(D_PHASFILE);  
+      c_buffer = -1;
       ABORT;
     }
+  c_buffer = -1;
   RETURN;
 }
 
 int rel_data()
 {
-  if (D_release(D_DATAFILE,c_buffer))
-     ABORT;
-  else
-     RETURN;
+  if(c_buffer>=0) /* release last used block */
+     if (D_release(D_DATAFILE,c_buffer))
+        ABORT;
+  c_buffer = -1;
+  RETURN;
 }
 
 float *get_data_buf(int trace)

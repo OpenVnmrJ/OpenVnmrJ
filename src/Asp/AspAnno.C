@@ -54,6 +54,7 @@ void AspAnno::init() {
     arrows=1;
     amp=0.0;
     vol=0.0;
+    doTraces = false;
 }
 
 AspAnno::AspAnno() {
@@ -172,6 +173,12 @@ AspAnno::AspAnno(char words[MAXWORDNUM][MAXSTR], int nw) {
                   {
                       mmbind = mmbindY = true;
                   }
+                  else if (val == 3)
+                  {
+                      mmbind = false;
+                      mmbindY = false;
+                      doTraces = true;
+                  }
                   else
                   {
                       mmbind = false;
@@ -227,7 +234,7 @@ string AspAnno::toString() {
 
    if(created_type == ANNO_BAND || created_type == ANNO_INTEG) {
 	   for(int i=0;i<npts;i++) {
-		sprintf(str,"%.4g ",sCoord[i].x);
+		sprintf(str,"%.4f ",sCoord[i].x);
 		coordStr += string(str);
 	   }
    } else {
@@ -236,13 +243,16 @@ string AspAnno::toString() {
 		coordStr += string(str);
 	   }
 	   for(int i=0;i<npts;i++) {
-		sprintf(str,"%.4g ",sCoord[i].x);
+		sprintf(str,"%.4f ",sCoord[i].x);
 		coordStr += string(str);
-		sprintf(str,"%.4g ",sCoord[i].y);
+		sprintf(str,"%.4f ",sCoord[i].y);
 		coordStr += string(str);
 	   }
    }
-   mmbindVal = (mmbind && mmbindY) ? 1 : (mmbindY) ? 2 : 0;
+   if (doTraces)
+      mmbindVal = 3;
+   else
+      mmbindVal = (mmbind && mmbindY) ? 1 : (mmbindY) ? 2 : 0;
    if(created_type == ANNO_POINT)
      sprintf(str,"%d %s %s |%s| %.3g %.3g %d %d %d %d %s %d %s %s %s %.2f %f %f",
         index+1,getName(created_type).c_str(),coordStr.c_str(),label.c_str(), 
@@ -393,20 +403,70 @@ void AspAnno::modify(spAspCell_t cell, int x, int y, int prevX, int prevY) {
           pCoord[i].x=x;
           pCoord[i].y=y;
           sCoord[i].x=cell->pix2val(HORIZ,x,mmbind);
-          sCoord[i].y=cell->pix2val(VERT,y,mmbindY);
+          if ( ! doTraces )
+             sCoord[i].y=cell->pix2val(VERT,y,mmbindY);
 	}
 	return;
    }
 
-   double cx=0;
-   double cy=0;
-   for(int i=0; i<npts; i++) {
-       cx += pCoord[i].x;
-       cy += pCoord[i].y;
-   }
-   cx /= npts;
-   cy /= npts;
    if(selected == ROI_SELECTED) {
+        double cx=0;
+        double cy=0;
+        for(int i=0; i<npts; i++) {
+           cx += pCoord[i].x;
+           cy += pCoord[i].y;
+        }
+        cx /= npts;
+        cy /= npts;
+        cx = x-cx;
+        cy = y-cy;
+        for(int i=0; i<npts; i++) {
+            pCoord[i].x += cx;
+            pCoord[i].y += cy;
+            sCoord[i].x=cell->pix2val(HORIZ,pCoord[i].x,mmbind);
+            sCoord[i].y=cell->pix2val(VERT,pCoord[i].y,mmbindY);
+        }
+   } else if(selected == LABEL_SELECTED) {
+     labelLoc.x += (x-prevX);
+     labelLoc.y += (y-prevY);
+   }
+}
+
+void AspAnno::modifyTR(spAspCell_t cell, int x, int y, int prevX, int prevY, bool trCase) {
+
+   if(npts<1) return;
+   if ((npts==2) && trCase && (selected == 0))
+   {
+      selected =  HANDLE_SELECTED;
+      selectedHandle = 2;
+   }
+   if(selected == HANDLE_SELECTED) {
+        int i=selectedHandle-1;
+	if(i>=0 && i<npts) { 
+          pCoord[i].x=x;
+          pCoord[i].y=y;
+          sCoord[i].x=cell->pix2val(HORIZ,x,mmbind);
+          if ( ! doTraces )
+             sCoord[i].y=cell->pix2val(VERT,y,mmbindY);
+          else if (trCase)
+          {
+             int trace;
+             selectTraceNum( sCoord[i].x, y, &trace);
+             sCoord[i].y=trace;
+          }
+	}
+	return;
+   }
+
+   if ((selected == ROI_SELECTED) && ! trCase) {
+        double cx=0;
+        double cy=0;
+        for(int i=0; i<npts; i++) {
+           cx += pCoord[i].x;
+           cy += pCoord[i].y;
+        }
+        cx /= npts;
+        cy /= npts;
         cx = x-cx;
         cy = y-cy;
         for(int i=0; i<npts; i++) {
@@ -584,15 +644,30 @@ void AspAnno::setProperty(char *name, char *value, spAspCell_t cell) {
        if (mmbindVal == 1)
        {
            mmbind = mmbindY = true;
+           doTraces = false;
+       }
+       else if (mmbindVal == 3)
+       {
+           mmbind = false;
+           mmbindY = false;
+           doTraces = true;
        }
        else
        {
            mmbind = false;
            mmbindY = (mmbindVal == 2) ? true : false;
+           doTraces = false;
        }
       for(int i=0; i<npts; i++) {
 	     sCoord[i].x = cell->pix2val(HORIZ,pCoord[i].x,mmbind);
-	     sCoord[i].y = cell->pix2val(VERT,pCoord[i].y,mmbindY);
+             if (! doTraces)
+	        sCoord[i].y = cell->pix2val(VERT,pCoord[i].y,mmbindY);
+             else
+             {
+                int trace;
+                selectTraceNum( sCoord[i].x, pCoord[i].y, &trace);
+                sCoord[i].y=trace;
+             }
       }
    }
    else if(strcasecmp(name,"showRoi") == 0 && atoi(value) > 0) disFlag |= ANN_SHOW_ROI;
@@ -607,13 +682,13 @@ void AspAnno::setProperty(char *name, char *value, spAspCell_t cell) {
    else if(strcasecmp(name,"h") == 0) setH(cell, atof(value));
    else if(strstr(name,"x") == name) {
 	int i = atoi(++name) - 1;
-	if(i<npts) {
+	if( (i >= 0) && (i<npts)) {
 	   sCoord[i].x=atof(value);
            pCoord[i].x=cell->val2pix(HORIZ,sCoord[i].x,mmbind);
         }
    } else if(strstr(name,"y") == name) {
 	int i = atoi(++name) - 1;
-	if(i<npts) {
+	if( (i >= 0) && (i<npts)) {
 	   sCoord[i].y=atof(value);
            pCoord[i].y=cell->val2pix(VERT,sCoord[i].y,mmbindY);
         }
@@ -682,7 +757,8 @@ string AspAnno::getProperty(char *name) {
 	else sprintf(str,"0");
 	return string(str);
    } else if(strcasecmp(name,"mm") == 0) {
-	if(mmbind && mmbindY) sprintf(str,"1");	
+        if (doTraces) sprintf(str,"3");
+	else if(mmbind && mmbindY) sprintf(str,"1");	
 	else if (mmbindY) sprintf(str,"2");
 	else sprintf(str,"0");
 	return string(str);
@@ -875,9 +951,20 @@ void AspAnno::setX(spAspCell_t cell, double x) {
 
 void AspAnno::setY(spAspCell_t cell, double y) {
    if(npts<1) return;
-   if(npts<2) {
+   if(npts<=2) {
         sCoord[0].y=y;
-        pCoord[0].y=cell->val2pix(VERT,y,mmbindY);
+        if (doTraces)
+        {
+           double val;
+           double off;
+           int dispTrace;
+
+           dispTrace = traceShown(sCoord[0].y);
+           phasefileVal((int)sCoord[0].y-1, sCoord[0].x, dispTrace,  &val, &off);
+           pCoord[0].y = cell->offsetval2pix(VERT,val,mmbindY, -off);
+        }
+        else
+           pCoord[0].y=cell->val2pix(VERT,y,mmbindY);
 	return;
    }
 

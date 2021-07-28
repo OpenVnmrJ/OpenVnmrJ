@@ -13,7 +13,7 @@
 AspArrow::AspArrow(char words[MAXWORDNUM][MAXSTR], int nw) : AspLine(words,nw) {
 }
 
-AspArrow::AspArrow(spAspCell_t cell, int x, int y) : AspLine(cell,x,y) {
+AspArrow::AspArrow(spAspCell_t cell, int x, int y, bool trCase) : AspLine(cell,x,y,trCase) {
   created_type = ANNO_ARROW;
   disFlag = ANN_SHOW_ROI;
 }

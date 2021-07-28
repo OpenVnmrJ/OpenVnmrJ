@@ -18,7 +18,7 @@ class AspLine : public AspAnno
 
 public:
 
-    AspLine(spAspCell_t cell, int x, int y);
+    AspLine(spAspCell_t cell, int x, int y, bool trCase=false);
     AspLine(char words[MAXWORDNUM][MAXSTR], int nw);
 
     void create(spAspCell_t cell, int x, int y);

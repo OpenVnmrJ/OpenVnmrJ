@@ -25,8 +25,10 @@ public:
     static void save(spAspFrame_t frame, char *path = NULL);
     static void load(spAspFrame_t frame, char *path = NULL, bool show=false, int retc=1);
 
-    static AspAnno *createAnno(spAspFrame_t frame, int x, int y, AnnoType_t type);
-    static void modifyAnno(spAspFrame_t frame, AspAnno *anno, int x, int y, int prevX, int prevY);
+    static AspAnno *createAnno(spAspFrame_t frame, int x, int y, AnnoType_t type,
+                               bool trCase=false);
+    static void modifyAnno(spAspFrame_t frame, AspAnno *anno, int x, int y, int prevX, int prevY,
+                           bool trCase = false);
     static void addPoint(spAspFrame_t frame, AspAnno *anno, int x, int y, bool insert=false);
     static void deletePoint(spAspFrame_t frame, AspAnno *anno, int x, int y);
 

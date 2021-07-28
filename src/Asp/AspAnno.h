@@ -104,6 +104,7 @@ public:
     virtual string toString();
 
     virtual void modify(spAspCell_t cell, int x, int y, int prevX, int prevY);
+    virtual void modifyTR(spAspCell_t cell, int x, int y, int prevX, int prevY, bool trCase=false);
     virtual void display(spAspCell_t cell, spAspDataInfo_t dataInfo);
     virtual void getLabel(spAspDataInfo_t dataInfo, string &lbl, int &cwd, int &cht);
 
@@ -118,6 +119,7 @@ public:
     int arrows;
     double amp;
     double vol;
+    bool doTraces;
 
     void setProperty(char *name, char *value, spAspCell_t cell=nullAspCell);
     string getProperty(char *name);
