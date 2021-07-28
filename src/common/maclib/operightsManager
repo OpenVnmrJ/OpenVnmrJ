@@ -11,7 +11,7 @@ $opsize=10
 $rdir=userdir+'/persistence/OperatorRights'
 exists($rdir,'directory'):$direx
 if ($direx=0) then
-    shell('mkdir '+$rdir):$dum
+    mkdir($rdir):$dum
 endif
 
 IF ($1='init') or ($1='Start') THEN
@@ -51,7 +51,7 @@ IF ($1='init') or ($1='Start') THEN
 
    exists(userdir+'/templates/vnmrj/panelitems','directory'):$direx
    if ($direx=0) then
-        shell('mkdir -p '+userdir+'/templates/vnmrj/panelitems'):$dum
+        mkdir('-p',userdir+'/templates/vnmrj/panelitems'):$dum
    endif
    $file2=userdir+'/templates/vnmrj/panelitems/operightsManager_panelgroup.xml'
    write('reset',$file2)
@@ -109,7 +109,7 @@ IF ($1='init') or ($1='Start') THEN
 
    exists(userdir+'/templates/vnmrj/interface','directory'):$direx
    if ($direx=0) then
-      shell('mkdir -p '+userdir+'/templates/vnmrj/interface'):$dum
+      mkdir('-p',userdir+'/templates/vnmrj/interface'):$dum
    endif
 
    $file=userdir+'/templates/vnmrj/interface/operightsManager.xml'
@@ -307,7 +307,7 @@ ELSEIF ($1='operatormenu') THEN
         exists($oplist,'file'):$opex
         if ($opex) then
 	    write('reset',$oplistlist+'_tmp')
-	    shell('(cat '+$oplist+' | grep \'^operators\' > '+$oplistlist+'_tmp)'):$devnull
+	    copyf($oplist,'grep','^operators',$oplistlist+'_tmp'):$devnull
 	    $key=$oplistlist+'_tmp'
 	    $op=''
 	    lookup('mfile',$key,'seekcs','operators','read','filekey'):$op,$key,$ret
@@ -374,7 +374,7 @@ ELSEIF ($1='save') THEN
    if ($arg2='all') then
 // All rights come from the owner rights
 //  So remove all operators' rights definition file
-	shell('rm -f '+$rdir+'/opeRights_*.txt'):$dum
+	rm('regex',$rdir,'^opeRights_.*\\.txt$'):$dum
 	$arg2=owner
    elseif ($arg2='default') then
 // Owner rights are the default for all operators

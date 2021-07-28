@@ -60,8 +60,11 @@ if ($submit) and (appmode<>'imaging') then
     	vnmrjcmd('SQ set '+studyid+' title "'+$title+'"')
     endif
     $node=''
-    shell('(cat '+sqdir+'/enterSQ | grep -w SampleInfo)'):$node
-    substr($node,1):$node
+    exists(sqdir+'/enterSQ','file'):$e
+    if ($e) then
+      append(sqdir+'/enterSQ','grep -w','SampleInfo','|wc'):$e,$node
+      substr($node,1):$node
+    endif
     if ($node<>'') then
 	$dtime=0 $ltime=0
 	invformattime(daytime):$dtime

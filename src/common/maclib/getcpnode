@@ -1,6 +1,4 @@
 "macro getcpnode"
-$tailX='tail'
-whichtail:$tailX
 
 "*******************************************************************"
 IF ($1 <> 'sq') THEN
@@ -10,11 +8,11 @@ IF ($1 <> 'sq') THEN
    write('reset',$tmpfile)
    exists($expfile,'file'):$fileex
    if ($fileex) then
-  	shell('cat '+$expfile+' > '+$tmpfile):$dum
+  	copyf($expfile,$tmpfile):$e
    endif
    exists($lngfile,'file'):$fileex
    if ($fileex) then
-  	shell('cat '+$lngfile+' >> '+$tmpfile):$dum
+  	append($lngfile,$tmpfile):$e
    endif
 ENDIF
 "*******************************************************************"
@@ -50,12 +48,12 @@ ELSEIF ($1='cp') THEN
 
 is_submitmode:$submit
 if ($submit<1) then
-   shell('(cat '+$2+'/ACQlist >> '+$tmpfile+')'):$dum
+   append($2+'/ACQlist',$tmpfile):$e
 endif
 $return=''
-shell('(cat '+$tmpfile+' | wc -l)'):$oldstuff
+copyf($tmpfile,'|wc'):$oldstuff
 if ($oldstuff=0) then
-   shell('rm -f '+$tmpfile):$dum
+   delete($tmpfile,''):$e
    $return=$3+'_001'
    $ext='001'
    return($return,$ext)
@@ -63,7 +61,7 @@ endif
 
 $node='' $dum=''
 readfile($tmpfile,'$node','$dum',$3+'_','local')
-shell('rm -f '+$tmpfile):$dum
+delete($tmpfile,''):$e
 
 if ($node[1]<>'') then
   $total=size('$node')
@@ -97,12 +95,12 @@ ELSEIF ($1 = 'rev') THEN
 		"   2nd return argument specifies whether the cpnode"
 		"	is in longQ (long) or shortQ (no)	"
 
-shell('rm -f '+$tmpfile):$dum
+delete($tmpfile,''):$e
 $return=''
-shell('(cat '+$expfile+' | grep -w '+$3+' | '+$tailX+' -n 1 | awk \'{print $1}\')'):$return
+copyf($expfile,'grep -w',$3,'tail',1,'awk','$1','|wc'):$num,$return
 if ($return<>'') then return($return,'no') endif
 
-shell('(cat '+$lngfile+' | grep -w '+$3+' | '+$tailX+' -n 1 | awk \'{print $1}\')'):$return
+copyf($lngfile,'grep -w',$3,'tail',1,'awk','$1','|wc'):$num,$return
 if ($return<>'') then return($return,'long') endif
 return($return,'no')
 
@@ -113,8 +111,8 @@ ELSEIF ($1 = 'rev2') THEN
 		" arg3 - cpnode"
 
 $return=''
-shell('(cat '+$tmpfile+' | grep \'^'+$3+'\' | '+$tailX+' -n 1 | awk \'{print $4}\')'):$return
-shell('rm -f '+$tmpfile):$dum
+copyf($tmpfile,'grep -w','^'+$3,'tail',1,'awk','$4','|wc'):$num,$return
+delete($tmpfile,''):$e
 if ($return='') then
 	$return='xx000'
 endif

@@ -9,8 +9,8 @@ $autodir='' $Qname=''
 $studyxml=$1
 $queue='' $sqdir=''
 
-shell('basename '+$studyxml+' .xml'):$queue
-shell('dirname '+$studyxml):$sqdir
+substr($studyxml,'basename','.xml'):$queue
+substr($studyxml,'dirname'):$sqdir
 $esq=$sqdir+'/'+$queue+'_SQ'
 if ($queue='ActiveQ') then
     Svfname($sqdir+'/'+$queue,'','.xml'):$newqueue
@@ -19,8 +19,8 @@ if ($queue='ActiveQ') then
 endif
 
 strstr($sqdir,'.macdir'):$ret,$autodir
-shell('basename '+$autodir):$Qname
-shell('dirname '+$autodir):$autodir
+substr($autodir,'basename'):$Qname
+substr($autodir,'dirname'):$autodir
 exists($autodir,'directory'):$direx
 if ($direx=0) or ($autodir='') or ($Qname='') then
    write('line3','Directory %s not found',$1)
@@ -40,7 +40,7 @@ $xmlinfodir=$xmldir+'/info'
 
 $sqinfo=$sqdir+'/info'
 exists($sqinfo,'directory'):$direx
-if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
+if ($direx=0) then mkdir('-p',$sqinfo):$dum endif
 
 "*************************************************************"
    $totS='' $title='' $tt='' $node='' $xml='' $time=''
@@ -59,7 +59,7 @@ if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
    if ($#>2) then $time=$3 endif
    if ($queue='DoneQ') or ($queue='RevDoneQ') then
      	if ($totS='') then
-		shell('(cat '+$cpdoneq+' | wc -l)'):$totS
+		copyf($cpdoneq,'|wc'):$totS
 		$totS=' ('+$totS+' Samples)'
      	endif
 	$tt='Completed '+$nodename
@@ -71,7 +71,7 @@ if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
    endif
    if ($queue='DoneDayQ') or ($queue='RevDoneDayQ') then
         if ($totS='') then
-   		shell('(cat '+$cpdonedayq+' | wc -l)'):$totS
+   		copyf($cpdonedayq,'|wc'):$totS
                 $totS=' ('+$totS+' Samples)'
 	endif
         $tt=$nodename+' in progress'
@@ -88,7 +88,7 @@ if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
    endif
    if ($queue='ErrorQ') or ($queue='RevErrorQ') then
         if ($totS='') then
-        	shell('(cat '+$cperrorq+' | wc -l)'):$totS
+        	copyf($cperrorq,'|wc'):$totS
                 $totS=' ('+$totS+' Samples)'
 	endif
 	$tt='Errored '+$nodename
@@ -124,7 +124,7 @@ if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
    endif
    if ($queue='PriorityQ') then
         if ($totS='') then
-   		shell('(cat '+$enterq+' | grep USER: | grep -wc priority)'):$totS
+   		copyf($enterq,'grep','USER:','grep -w','priority','|wc'):$totS
                 $totS=' ('+$totS+' Samples)'
 	endif
         $tt='Priority '+$nodename
@@ -136,11 +136,11 @@ if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
      	if ($Qname='enterQ') then
                 lookup('mfile',$autodir+'/enterQ.macdir/AUTOGLOBAL','seekcs','LONGRUN:','read',1):$isnight
                 $Nx=0
-                shell('(cat '+$autodir+'/enterQ.macdir/overniteQ | grep -wc SAMPLE#:)'):$Nx
+                copyf($autodir+'/enterQ.macdir/overniteQ','grep -w','SAMPLE#:','|wc'):$Nx
                 if ($Nx>0) then $isnight='n' endif
      	endif
         if ($totS='') then
-        	shell('(cat '+$enterq+' | grep USER: | grep -v priority | wc -l)'):$totS
+        	copyf($enterq,'grep','USER:','grep -v','priority','|wc'):$totS
                 $totS=' ('+$totS+' Samples)'
 	endif
 	if ($isnight='y') then
@@ -153,7 +153,7 @@ if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
     endif
     if ($queue='NightQ') then
         if ($totS='') then
-                shell('(cat '+$nightq+' | grep -wc USER:)'):$totS
+                copyf($nightq,'grep -w','USER:','|wc'):$totS
                 $totS=' ('+$totS+' Samples)'
         endif
         $tt=$nodename+' in night queue'
@@ -167,22 +167,10 @@ if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
 	    $node='Qn018'
 	endif
 	if ($totS='') then
-		shell('(cat '+$autodir+'/enterQ.macdir/expfidlog | wc -l)'):$totS
+		copyf($autodir+'/enterQ.macdir/expfidlog','|wc'):$totS
 		$totS=' ('+$totS+' Fids)'
 	endif
 	$time=''
-//	exists($esq,'file'):$esqex
-//	$s3='' $s4=''
-//	if ($esqex) then 
-//		readfile($esq,'$s3','$s4','','local'):$esqtot 
-//		if ($esqtot>0) then
-//		    $ei=1
-//		    repeat
-//			shell('rm -rf '+$xmlinfodir+'/'+$s3[$ei]):$dum
-//			$ei=$ei+1
-//		    until $ei>$esqtot
-//		endif
-//	endif
    endif
 
    if ($islcauto) then 
@@ -205,8 +193,7 @@ if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
    $attr3[$atx3]='sqnode',$node $atx3=$atx3+2
 //   xmhaha_addnode('AutoPriorityQ','',$attr3,$studyxml,'','protocol')
    xmhaha_addnode($queue,'',$attr3,$studyxml,'','protocol')
-   shell('(cat '+$sqdir+'/cpnodeinfo | awk \'{print $1" "$2" "$3}\' > '+$esq+')'):$dum
-   shell('rm -f '+$sqdir+'/cpnodeinfo'):$dum
-   shell('cp -r '+$xmlinfodir+'/'+$node+' '+$sqinfo):$dum
+   copyf($sqdir+'/cpnodeinfo','awk','$1 $2 $3',$esq):$dum
+   delete($sqdir+'/cpnodeinfo',''):$dum
+   cp('-r ',$xmlinfodir+'/'+$node,$sqinfo):$dum
    return($studyxml,$esq)
-"*************************************************************"

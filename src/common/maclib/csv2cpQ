@@ -37,9 +37,6 @@
 "		Submit /home/csvdir/test.csv to AutoFile, printout    "
 "====================================================================="
 
-$tailX='tail'
-whichtail:$tailX
-
 if ($# < 1) then
    write('error','Usage: csv2cpQ(csvfilename,<auto or enter or acq>,<print or noprint>)')
    return
@@ -100,21 +97,16 @@ if ($fileex=0) then
 endif
 
 $origdirname=''
-shell('dirname '+$origfilename):$origdirname
+substr($origfilename,'dirname'):$origdirname
 
         "The following makes sure dos to unix conversion is done"
 $filename=userdir+'/persistence/csvfile'
-$origfiledir='' shell('dirname '+$origfilename):$origfiledir
-$filename2='' shell('basename '+$origfilename):$filename2
-pwd:$curdir
-cd($origfiledir):$dum
-fixcsvfile($filename2,$filename)
-cd($curdir):$dum
+fixcsvfile($origfilename,$filename)
 
-shell('(cat '+$filename+' | wc -l)'):$total
+append($filename,'|wc'):$total
 if ($total < 2) then
    write('error','There are no entries in %s',$input)
-   shell('rm -f '+$filename):$dum
+   delete($filename,''):$dum
    return
 endif
 
@@ -123,7 +115,7 @@ if (seqfil='Submitq') or (seqfil='Startq') then
         $issubmitmode=1
         if (wqinit<>$wqinit) then
                 write('error','current submission mode is to %s',wqinit)
-                shell('rm -f '+$filename):$dum
+                delete($filename,''):$dum
 		return
         endif
 endif
@@ -138,13 +130,13 @@ if (traymax<>768) and (traymax<>96) then
       getadminfo('multisubmit'):$msub
       if ($total-1 > $emptytot) and ($msub='no') then
          write('error','There are %d samples, but only %s empty locations',$total-1,$emptytot)
-         shell('rm -f '+$filename):$dum
+         delete($filename,''):$dum
 	 return
       endif
    elseif $wqacq<>'autodir' then
       if ($total>2) then
 	  write('error','There are %d samples in this file',$total-1)
- 	  shell('rm -f '+$filename):$dum
+ 	  delete($filename,''):$dum
 	  return
       endif
    endif
@@ -161,7 +153,7 @@ endif
 "	and translate keywords to parameter names  "
 
 $params='' $loctype='real'
-shell('(head -n 1 '+$filename+')'):$firstline
+append($filename,'head',1,'|wc'):$dum,$firstline
 strsv2array($firstline,','):$params
 
 $totpars=size('$params')
@@ -187,7 +179,7 @@ teststr('$params','prioritysample','local'):$prsampex
         "location - findout if it is string or real"
 if ($sampex) then
         $params[$sampex]='loc' $2ndline=''
-        shell('(head -n 2 '+$filename+' | '+$tailX+' -n 1)'):$2ndline
+        append($filename,'head',2,'tail',1,'|wc'):$dum,$2ndline
         strsv2array($2ndline,','):$2ndline
         format($2ndline[$sampex],'upper'):$tmploc
         if typeof('$tmploc') then
@@ -248,7 +240,7 @@ endif
 if ($error) then 
     parampopup($popuppar)
     write('error','Populate these REQUIRED parameters and reexecute csv2cpQ')
-    shell('rm -f '+$filename):$dum
+    delete($filename,''):$dum
     return
 endif
 
@@ -260,7 +252,7 @@ if ($parflg[1]='') then $parflgsize=0 endif
 if ($parlng[1]='') then $parlngsize=0 endif
 if ($parflgsize=0) and ($parlngsize=0) and ($dayex=0) and ($nightex=0) then
 	write('error','No experiment information')
-	shell('rm -f '+$filename):$dum
+	delete($filename,''):$dum
 	return
 endif
 "**************************************************************"
@@ -282,7 +274,7 @@ if ($nightex) then $params[$nightex]='' endif
 //   endif
 //endif
 if (wqinit='enter') then
-   shell('basename '+globalenter):$autofile
+   substr(globalenter,'basename'):$autofile
    $autofile=globalenter+'/'+$autofile
    vnmrjcmd('tray close')
    traydisplay='n'
@@ -320,8 +312,7 @@ endif
    $i=2
    repeat
         $parval='' $sampline='' $ok2submit=0
-        $head='' format($i,'lower'):$head
-        shell('(head -n '+$head+' '+$filename+' | '+$tailX+' -n 1)'):$sampline
+        append($filename,'head',$i,'tail',1,'|wc'):$dum,$sampline
         strsv2array($sampline,','):$parval
 
 	$parvalsize=size('$parval')
@@ -388,7 +379,7 @@ endif
 	$explist='' $expcsv='' $expsub=''
 	if ($dayex) then
 	    $explist=$parval[$dayex]
-	    shell('(echo "'+$explist+'" | sed -e \'s|-| |g\')'):$explist
+	    appendstr($explist,'sed g','-',' ','|wc'):$dum,$explist
 	    $expcsv=$explist
 	    string2array($explist):$explist
 	    $explisttot=size('$explist')
@@ -409,7 +400,7 @@ endif
 	$longlist='' $lngcsv='' $lngsub=''
 	if ($nightex) then
 	    $longlist=$parval[$nightex]
-	    shell('(echo "'+$longlist+'" | sed -e \'s|-| |g\')'):$longlist
+	    appendstr($longlist,'sed g','-',' ','|wc'):$dum,$longlist
 	    $lngcsv=$longlist
 	    string2array($longlist):$longlist
             $longlisttot=size('$longlist')
@@ -431,7 +422,8 @@ endif
 	if ($solvex) then
 		if $parval[$solvex]='' then $parval[$solvex]='other' endif
 		cksynonym($parval[$solvex],'solvent'):$parval[$solvex]
-		shell('(cat '+systemdir+'/solvents | grep -ci \'^'+$parval[$solvex]+'\')'):$solvok
+                append(systemdir+'/solvents',
+                      'grep -i','^'+$parval[$solvex],'|wc'):$solvok
 		$solvent=$parval[$solvex]
 		if ($solvok=0) then $ok2submit=0 endif
 	endif
@@ -508,7 +500,7 @@ endif
                            format($parval[$x],'lower'):{$params[$x]}[1]
                        endif
                        $usmacro='_'+$params[$x]
-                       getmacropath($usmacro):$ismac
+                       exists($usmacro,'maclib'):$ismac
 		       if ($ismac) then exec($usmacro) endif
 		// Get operator email address
 			if $params[$x]='operator' then
@@ -643,7 +635,7 @@ endif
    traydisplay='y'
    walkupQ('clear','all')
    fread(cursqexp+'/csv2cpQpars','current','reset')
-   shell('rm -f '+cursqexp+'/csv2cpQpars'):$dum
+   delete(cursqexp+'/csv2cpQpars',''):$dum
 //   walkupQ('refresh')
    if (operator<>$curoperator) then
 	setvalue('operator',$curoperator,'global')
@@ -666,9 +658,9 @@ endif
 	xmhaha('refreshSQ')
    endif
 
-   shell('(cat '+$tkfile2+' | wc -l)'):$errors
+   append($tkfile2,'|wc'):$errors
    if ($errors>1) then
-	shell('(cat '+$tkfile2+' > '+$origfilename+'_error)'):$dum
+	cp($tkfile2,$origfilename+'_error'):$dum
 	printon 
 	   write('alpha','*************************************************')
 	   write('alpha','Following entries were not submitted due to error')
@@ -678,13 +670,13 @@ endif
 	printoff
    endif
 
-   shell('(cat '+$tkfile+' > '+$origfilename+'_submitted)'):$dum
+   cp($tkfile,$origfilename+'_submitted'):$dum
    if ($print='print') then
    	printon cat($tkfile) printoff
    endif
-   shell('rm -f '+$tkfile):$dum
-   shell('rm -f '+$tkfile2):$dum
-   shell('rm -f '+$filename):$dum
+   delete($tkfile,''):$dum
+   delete($tkfile2,''):$dum
+   delete($filename,''):$dum
 //   if ($wqinit='auto') then
 //        setautosaflag(autodir+'/enterQ',$autosaflag)
 //        getautosaflag(autodir+'/enterQ'):$autosaflag

@@ -11,20 +11,21 @@ $outfile=userdir+'/persistence/wraptext_tmp'
 write('reset',$outfile)
 $key=$infile
 $textlines=0
-shell('(cat '+$key+' | wc -l)'):$textlines
+copyf($key,'|wc'):$textlines
 $txi=1
 repeat
     $line='' $lineswords=0
     lookup('mfile',$key,'readline','filekey'):$line,$key,$ret
     if ($ret>1) then
-        shell('(echo \"'+$line+'\" | wc -w)'):$linewords
+        substr($line,'wc'):$linewords
 	if ($linewords>$2) then
-	   	$words='' string2array($line):$words
+	   	$word=''
 		$i=1
 		repeat
 		   $i2=1
 		   repeat
-		        write('fileline',$outfile,'%s ',$words[$i])
+                        substr($line,$i):$word
+		        write('fileline',$outfile,'%s ',$word)
 		        $i2=$i2+1
 		        $i=$i+1
 		   until $i2>$2 or $i>$linewords
@@ -42,6 +43,5 @@ repeat
     endif
     $txi=$txi+1
 until $txi>$textlines
-shell('cp '+$outfile+' '+$infile):$dum
-shell('rm -f '+$outfile):$dum
+mv($outfile,$infile):$dum
 

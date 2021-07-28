@@ -4,7 +4,7 @@ expactive:$isactive
 $newautodir='daily'
 getadminfo('newautodir'):$newautodir
 if (traymax<2) then $newautodir='daily' endif
-$todaycount=0 shell('(date +%j)'):$todaycount
+$todaycount=0 systemtime('%j'):$todaycount
 if ($todaycount<7) then $todaycount=$todaycount+365 endif
 $autodaycount=$todaycount-1
 $adirdate=''
@@ -18,12 +18,12 @@ if ($newautodir='daily') and ($isactive>-1) then
     endif
     if (autodir<>'') then
 	$adirdate=''
-	shell('(cat '+autodir+'/enterQ.macdir/DATE_runstart | tail -n 1)'):$adirdate
+	append(autodir+'/enterQ.macdir/DATE_runstart','tail',1,'|wc'):$x,$adirdate
 //	lookup('mfile',autodir+'/enterQ.macdir/DATE_runstart','read',1):$adirdate
 	strstr($adirdate,'_'):$ret,$adirdate
 	if not $ret then autodir='' 
 	else
-	    shell('(date -d '+$adirdate+' +%j)'):$autodaycount
+	    systemtime('%F',$adirdate,'%j'):$autodaycount
 	    if $autodaycount < 7 then $autodaycount=$autodaycount+365 endif
 	endif
     endif
@@ -46,13 +46,13 @@ if (autodir='') then
 endif
 
 $today=''
-shell('date +%Y-%m-%d'):$today
+systemtime('%Y-%m-%d'):$today
 updateautodir(autodir,'enterQ')
 
 // Here we evaluate if a newauto is required.
 $ds=0 $dt=0 $ns=0 $nt=0
 getautoinfo:$ds,$dt,$ns,$nt
-shell('date +%H'):$hour shell('date +%M'):$minute shell('date +%S'):$second
+systemtime('%H'):$hour systemtime('%M'):$minute systemtime('%S'):$second
 $currenttime=$hour*3600+$minute*60+$second
 
 // by default it is dayQ and currentAutodir is not OK
@@ -124,7 +124,7 @@ if ($curAutoDirOK=0) then
 // Current autodir is not ok.
     $active='no'
     $ret=0
-    shell('(cat '+autodir+'/enterQ | wc -l)'):$ret
+    append(autodir+'/enterQ','|wc'):$ret
     if ($ret) then $active='auto' endif
     if ($active='no') then
 	$who='no'
@@ -143,7 +143,7 @@ if ($curAutoDirOK=0) then
 	write('file',$infofile,'Yesterday\'s Automation')
 	write('file',$infofile,'   is not complete yet')
 	write('error','Yesterday\'s Automation is not complete yet')
-        shell('cp '+$infofile+' '+$infofile1):$dum
+        cp($infofile,$infofile1):$dum
 	if ($NLex>0) then NextLoc='0' endif
 	seqfil=$seqfil
 	return(0)
@@ -152,7 +152,7 @@ if ($curAutoDirOK=0) then
 	write('file',$infofile,'A manual acquisition')
 	write('file',$infofile,'   is in progress')
 	write('error','A manual acquisition is in progress')
-        shell('cp '+$infofile+' '+$infofile1):$dum
+        cp($infofile,$infofile1):$dum
 	if ($NLex>0) then NextLoc='0' endif
         seqfil=$seqfil 
 	return(0)
@@ -174,16 +174,16 @@ if ($longrun <> $oldlongrun) and ($isactive>-1) then
 		automerge(autodir,'NoSaRa')
 	endif
    endif
-   shell('(cat '+$AUTOGLOBAL+' | grep -vw LONGRUN: > '+$AUTOGLOBAL+'1)'):$dum
+   copyf($AUTOGLOBAL,'grep -vw','LONGRUN:',$AUTOGLOBAL+'1'):$dum
    write('file',$AUTOGLOBAL+'1','LONGRUN: %s',$longrun)
-   shell('mv '+$AUTOGLOBAL+'1 '+$AUTOGLOBAL):$dum
+   mv($AUTOGLOBAL+'1',$AUTOGLOBAL):$dum
    if ($isactive>-1) and ($longrun<>'y') then 
 	setupautomerge(autodir) 
     	$date=''
-    	shell('date +%Y-%m-%d_%H%M%S'):$date
+    	systemtime('%Y-%m-%d_%H%M%S'):$date
 	write('file',autodir+'/enterQ.macdir/DATE_runstart','%s',$date)
     endif
-   shell('chmod a+rw '+$AUTOGLOBAL):$dum
+   chmod('a+rw',$AUTOGLOBAL):$dum
 endif
 wrautoinfo('auto'):$curAutoDirOK
 //setcurrentQ
