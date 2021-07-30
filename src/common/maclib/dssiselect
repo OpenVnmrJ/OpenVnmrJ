@@ -13,24 +13,33 @@
 //  	- string (example 'N thru M' - N, M and all indices in between will be included)
 
 
-readheader(curexp+'/datdir/data'):$np,$datdim
-if $# < 2 then
-    write('line3','1 thru %d',$datdim):$2
-endif
-if $# < 1 then $1='' endif
-
 if $# < 3 then
     exists('craft_dssiselect','maclib'):$macex
-	// branch off to craft_dssiselect
-	//  it serves both craft results and non-craft results
-	// but, if the number of argument is greater than 2
-	//   then there is no difference betwen this macro
-	//   and the craft_dssiselect macro
+        // branch off to craft_dssiselect
+        //  it serves both craft results and non-craft results
+        // but, if the number of argument is greater than 2
+        //   then there is no difference betwen this macro
+        //   and the craft_dssiselect macro
     if $macex then
-	craft_dssiselect($1,$2)
-	return
+	if $#<1 then craft_dssiselect
+	elseif $# < 2 then craft_dssiselect($1)
+	else craft_dssiselect($1,$2) 
+	endif
+   	return
     endif
 endif
+
+readheader(curexp+'/datdir/data'):$np,$datdim
+if $# < 2 then
+    exists('dssitrace','parameter'):$pex
+    if $pex then if dssitrace=0 then $pex=0 endif endif
+    if $pex then
+        $2=dssitrace
+    else
+        write('line3','1 thru %d',$datdim):$2
+    endif
+endif
+if $# < 1 then $1='' endif
 
 if $1<>'' and $1<>'add' and $1<>'remove' and $1<>'stack' then
     write('error','invalid first argument for %s',$0)
@@ -42,7 +51,9 @@ endif
     while $i<=$# do
 	write('line3','$%d',$i):$arg
 	if not typeof($arg) then
-	    $j=$j+1 $trace[$j]={$arg}
+                // this can be an array of reals
+            $j=$j+1 $trace[$j]={$arg}
+            $j=size('$trace')
 	else
 	    $ok=0
 	    //  Must have 3 words
@@ -135,8 +146,10 @@ endif
 	endif
       endif
     endif
-
-    create('dssitrace','real','current',0)
+    exists('dssitrace','parameter'):$pex
+    if not $pex then
+    	create('dssitrace','real','current',0)
+    endif
     setgroup('dssitrace','display')
     setprotect('dssitrace','on',256,'current')
     dssitrace=$newtrace

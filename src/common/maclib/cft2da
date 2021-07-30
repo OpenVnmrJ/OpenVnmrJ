@@ -43,12 +43,11 @@ if $1<>curexp and $1<>'' then
     endif
 endif
 
-//if $fex and $1<>curexp then
-//    exists('craft_extend_F1np','parameter'):$fex
-//endif
 if $fex then
     exists('readheader','command'):$fex
 endif
+
+if ni>1 then $ftarg='ni' else $ftarg='ni2' endif
 
 if $fex then
     readheader($fidf1):$f1np,$f2np
@@ -74,59 +73,62 @@ if $fex then
 	    copy($imgf1,curexp+'/fidf1i'):$dum
 	endif
     endif
-    $origni=ni 
+    $origni={$ftarg}
     readheader(curexp+'/acqfil/fid'):$np,$origdim
-//getvalue('arraydim','processed'):$origdim
     $mult=$origdim/$origni
-//    fn1=$f1np
-//    trace='f1'
     if $imgf1<>'' then
 	pmode='full'
     else
         pmode='partial'
     endif
     if $1<>curexp then
-        setLP1(0)
+	if $ftarg='ni' then setLP1(0) else setLP2(0) endif
     endif
     $nus=0
     is_NUS2d:$nus
     if $nus then
-	$ni=ni
-	$psize=size('phase')
+	$ni={$ftarg}
+	if $ftarg='ni' then 
+	    $psize=size('phase')
+	else
+	    $psize=size('phase2')
+	endif
 	$mult=$psize
-	ni=$origdim/$psize
-	setvalue('ni',ni,'processed')
+	{$ftarg}=$origdim/$psize
+	setvalue($ftarg,{$ftarg},'processed')
 	setvalue('arraydim',$origdim)
 	setvalue('arraydim',$origdim,'processed')
-	wft1da
-	ni=$ni
-	setvalue('ni',ni,'processed')
+	wft1da($ftarg)
+	{$ftarg}=$ni
+        setvalue($ftarg,{$ftarg},'processed')
 	setvalue('arraydim',$origdim,'processed')
 	setvalue('arraydim',$origdim,'processed')
     else
-    	wft1da
+    	wft1da($ftarg)
     endif
-    if fn1<$f1np then
-	downsizefid(fn1,curexp+'/fidf1r')
+    if $ftarg='ni' then $fn1=fn1 else $fn1=fn2 endif
+
+    if $fn1<$f1np then
+	downsizefid($fn1,curexp+'/fidf1r')
 	if $imgf1<>'' then
-	    downsizefid(fn1,curexp+'/fidf1i')
+	    downsizefid($fn1,curexp+'/fidf1i')
 	endif
-    elseif fn1>$f1np then
-	zerofillfid(fn1,curexp+'/fidf1r')
+    elseif $fn1>$f1np then
+	zerofillfid($fn1,curexp+'/fidf1r')
 	if $imgf1<>'' then
-	    zerofillfid(fn1,curexp+'/fidf1i')
+	    zerofillfid($fn1,curexp+'/fidf1i')
 	endif
     endif
     readf1
-    ni=$f1np/2
-    setvalue('ni',ni,'processed')
-    setvalue('arraydim',ni*$mult)
-    setvalue('arraydim',ni*$mult,'processed')
+    {$ftarg}=$f1np/2
+    setvalue($ftarg,{$ftarg},'processed')
+    setvalue('arraydim',{$ftarg}*$mult)
+    setvalue('arraydim',{$ftarg}*$mult,'processed')
     if $0='cft1da' then return endif
     lp1=0 rp1=0
-    wft2da
-    ni=$origni
-    setvalue('ni',ni,'processed')
+    wft2da($ftarg)
+    {$ftarg}=$origni
+    setvalue($ftarg,{$ftarg},'processed')
     setvalue('arraydim',$origdim)
     setvalue('arraydim',$origdim,'processed')
     if $1<>curexp then
@@ -136,6 +138,6 @@ if $fex then
 	endif
     endif
 else
-    wft2da
+    wft2da($ftarg)
 endif
 

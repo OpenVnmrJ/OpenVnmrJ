@@ -4,6 +4,12 @@
 newexp('quiet'):$nexp1
 newexp('quiet'):$nexp2
 $proj=$1
+exists('procplane','parameter'):$parex
+if $parex then
+    if procplane='ni2' then $isni2=1 else $isni2=0 endif
+else
+    substr(proccmd,'find','ni2','delimiter','\',('):$isni2
+endif
 
 dconi 
 if $#>3 then
@@ -15,7 +21,12 @@ elseif $#>1 then
 else
     proj($nexp1)
 endif
-rp1=rp1+180 dconi 
+if $isni2 then
+    rp2=rp2+180
+else
+    rp1=rp1+180 
+endif
+dconi 
 if $#>3 then
     proj($nexp2,$2,$3,$4)
 elseif $#>2 then
@@ -25,7 +36,12 @@ elseif $#>1 then
 else
     proj($nexp2)
 endif
-rp1=rp1-180 dconi
+if $isni2 then
+    rp2=rp2-180
+else
+    rp1=rp1-180
+endif
+dconi
 
 $addsub=addsubexp
 addsubexp=$proj clradd:$dum
