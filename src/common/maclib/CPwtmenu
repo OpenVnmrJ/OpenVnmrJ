@@ -6,7 +6,7 @@
 " CPwtmenu(dimension,'readfile',file) "
 " CPwtmenu(dimension,'read'<,directory>) "
 " CPwtmenu(dimension,'copy',fromdim)"
-"       arg1 is typically 'acq' or 'f1' or 'f2' or 'f3' "
+"       arg1 is typically 'acq' or 'f1' or 'f2' "
 "	arg3 for set option can be 'none' - "
 "		- turns off all window functions"
 "	default arg3 for save/read option is curexp or autodir"
@@ -19,25 +19,30 @@ $ret=''
 $arg1=$1
 $arg2=$2
 
-  getdim:$dim
-  if ($dim=2) and ($arg1='f2') then
-	$arg1='acq'
-  endif
-  if ($dim=3) and ($arg1='f3') then
-	$arg1='acq'
-  endif
+//  getdim:$dim
+// arg1 is interpreted as is.  There is no instance
+//   where f2 or f3 is used.  
+//   The f2 can be used even for 2D with ni2 incrementation
+
+//  if ($dim=2) and ($arg1='f2') then
+//	$arg1='acq'
+//  endif
+//  if ($dim=3) and ($arg1='f3') then
+//	$arg1='acq'
+//  endif
   if ($arg1<>'acq') and ($arg1<>'f1') and ($arg1<>'f2') then
 	write('error','Argument %s not supported',$arg1)
 	return($ret)
   endif
   if $arg2='copy' then
     $arg3=$3
-    if ($dim=2) and ($arg3='f2') then
-	$arg3='acq'
-    endif
-    if ($dim=3) and ($arg3='f3') then
-	$arg3='acq'
-    endif
+// arg3 is interpreted as is.
+//    if ($dim=2) and ($arg3='f2') then
+//	$arg3='acq'
+//    endif
+//    if ($dim=3) and ($arg3='f3') then
+//	$arg3='acq'
+//    endif
     if ($arg3<>'acq') and ($arg3<>'f1') and ($arg3<>'f3') then
         write('error','Argument %s not supported',$arg3)
         return($ret)
@@ -144,7 +149,7 @@ ELSEIF ($arg2 = 'read') or ($arg2='readfile') THEN
     else
 	$parfile=$3
     endif
-  shell('touch '+$parfile):$dum
+  touch($parfile):$dum
   fread($parfile)
 	"Now update panel pages"
   string2array($pars):$pars
@@ -175,17 +180,17 @@ ELSEIF ($arg2 = 'purge') THEN
         else $3=curexp endif
   endif
   $parfile=$3+'/windowpars_'+$arg1
-  shell('rm -f '+$parfile):$dum
+  delete($parfile,''):$dum
 
 ELSEIF ($arg2 = 'copy') THEN
 
     $arg3=$3
-    if ($dim=2) and ($arg3='f2') then
-        $arg3='acq'
-    endif
-    if ($dim=3) and ($arg3='f3') then
-        $arg3='acq'
-    endif
+//    if ($dim=2) and ($arg3='f2') then
+//        $arg3='acq'
+//    endif
+//    if ($dim=3) and ($arg3='f3') then
+//        $arg3='acq'
+//    endif
     if ($arg3<>'acq') and ($arg3<>'f1') and ($arg3<>'f3') then
         write('error','Argument %s not supported',$arg3)
         return

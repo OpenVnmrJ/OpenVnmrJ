@@ -24,6 +24,16 @@
 
 // The real and string arguments are mutually exclusive
 
+//*** another special case (2021-04-27)
+   // one or two arguments
+   // one string and one non-array'ed real
+   // The string cannot be one of the specials, above
+   // some examples below:
+   //  dssi(1,'red') will display trace 1 in red
+   //  dssi(4) will display trace 4 in dssicolors[4] OR in spectrum color
+   //  dssi('red') will display trace 1 red
+//*** end of special case
+
 // Use of dssi with a return value is a special case
     if($##>0) then
 	dss:$dim
@@ -31,6 +41,60 @@
 	else return(arraydim) endif
     endif
 
+// if the number of arguments is =1 or 2, check for a special case
+    $special=0
+    if $#>0 then
+	if typeof('$1') then
+	    if $1='voup' or
+           	$1='vodown' or 
+           	$1='vo0' or 
+           	$1='select' or 
+           	$1='unselect' or 
+           	$1='all' then 
+                    $special=1 
+	    endif
+	else
+	    if $1=0 then $special=1 endif
+	endif
+    endif
+
+    if ($# > 0 and $# < 3) and not $special then
+	$color='' $inx=0
+	if typeof('$1') then
+	    $color=$1
+	    if $#>1 then
+		if not typeof('$2') then
+		    $inx=$2
+		    if not $inx then $inx=1 endif
+		endif
+	    else
+		$inx=1
+	    endif
+	else
+	    $inx=$1
+	    if $#>1 then
+		$color=$2 
+	    endif
+	endif
+ 		// Exclude an array of $inx
+	$size=size('$inx')
+	    if $color='' then
+	        exists('dssicolors','parameter'):$pex
+    		if $pex then $size=size('dssicolors') else $size=0 endif
+    		if $size>=$inx then
+    		    $color=dssicolors[$inx]
+    		endif
+	    endif
+	    if $color='' then $color='spectrum' endif
+	    mspec('clear')
+	    write('line3',`mspec(%d,'%s')`,$inx,$color):$cmd
+	    exec($cmd)
+	    intmod='off' ds
+	    return
+    endif
+
+// end of special case
+	      
 // If argument is supplied, interpret it, set appropriate
 //   parameter and call dssi again
     if ($# > 0) then
@@ -38,7 +102,20 @@
 	    $vo=vo*0.1
 	    if $vo<0.2 then $vo=0.2 endif
 	    if ($1='voup') then
-	    	vo=vo+$vo
+		if vo=0 then
+			// This is a special case, reset vo to a nominal value
+			// based on the number of trace
+		    exists('dssitrace','parameter'):$pex
+		    if $pex=1 then if dssitrace=0 then $pex=0 endif endif
+		    if not $pex then
+			readheader(curexp+'/acqfil/fid'):$np,$tdim
+		    else
+			$tdim=size('dssitrace')
+		    endif
+		    vo=0.7*wc2max/$tdim
+		else
+	    	    vo=vo+$vo
+		endif
 	    	dssi
 	    elseif ($1='vodown') then
 	        $vo=vo-$vo
@@ -49,11 +126,14 @@
 		vo=0
 		dssi
 	    elseif ($1='all') then
-		dssi(1)
+		dssi(0)
 	    elseif ($1='select') then
-		if $# < 2 then dssi(1)
+		if $# < 2 then dssi(0)
 		else
-		    create('dssitrace','real','current',0):$dum
+		    exists('dssitrace','parameter'):$pex
+		    if not $pex then
+		    	create('dssitrace','real','current',0):$dum
+		    endif
 		    setgroup('dssitrace','display')
 		    dssitrace=0
 		    $i=2 $j=1
@@ -66,9 +146,12 @@
 		    dssi
 		endif
 	    elseif ($1='unselect') then
-		if $# < 2 then dssi(1)
+		if $# < 2 then dssi(0)
 		else
-                    create('dssitrace','real','current',0):$dum
+                    exists('dssitrace','parameter'):$pex
+                    if not $pex then
+                        create('dssitrace','real','current',0):$dum
+		    endif
                     setgroup('dssitrace','display')
 		    getvalue('arraydim','processed'):$dim
 		    $i=1 $trace=0
@@ -101,7 +184,10 @@
 	    $start=$1 $end=$dim $step=1
 	    if ($# > 1) then $end=$2 endif
 	    if ($# > 2) then $step=$3 endif
-	    create('dssitrace','integer','current',0):$dum
+            exists('dssitrace','parameter'):$pex
+            if not $pex then
+                create('dssitrace','real','current',0):$dum
+            endif
 	    setgroup('dssitrace','display')
 	    dssitrace=0
 	    $x=$start $j=1
@@ -148,10 +234,10 @@
     if ($trace[1]=0) then $tracedim=0 endif
 
 // evaluate the total number of real traces and
-//  if it exceeds 128, mspec will panic.  
-//  if it exceeds 128, call dssn instead for each
+//  if it exceeds 512, mspec will abort.  
+//  if it exceeds 512, call dssn instead for each
 //  trace
-    if $tracedim>128 then
+    if $tracedim>512 then
 	$i=1 $realdim=0
 	repeat
 	    if ($trace[$i]>0.5) then
@@ -159,7 +245,7 @@
 	    endif
 	    $i=$i+1
 	until $i > $tracedim
-	if $realdim > 128 then
+	if $realdim > 512 then
 // Dont bother with color here
 	    $i=1 $first=1 $vp=vp
 	    repeat

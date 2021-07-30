@@ -155,7 +155,8 @@ $option=''
 if $mode='quiet' then $progress='-noprogress' else $progress='' endif
 $iconic='-iconic'
 bgmode_is:$bg
-if $bg then $progress='-noprogress' $iconic='' endif
+if $bg then $progress='-noprogress' endif
+if $progress='-noprogress' then $iconic='' endif
 
 // Check if this is an ni2 2D plane
 if ( ($ni<2 ) and ($ni2>1) )   then 
@@ -198,7 +199,7 @@ if ($nDIM < 3) then
 
        // data is in experiment - all processing done in curexp/pipe directory:
         
-	$pipe_cmd=' xterm '+$iconic+' -geom 30x20 -bg dodgerblue3 -fg white -cr white   -T NMRPipe -e " '\
+	$pipe_cmd=' xterm '+$iconic+' -geom 60x20+200+200 -bg Gray82 -fg Navy -fa Monospace -fs 9 -T NMRPipe -e " '\
                   + $prg +' vj2pipe.com    -nograph  -clean -cd '+curexp+ ' -vjfid ' + curexp+  '/acqfil/fid '\
 		  + ' '+$f1negate+' '+$f1window+' '+$f2window+' -istTMult '+pipeistTMult+' -istCMult '+pipeistCMult\
 		  + ' -istIter '+pipeistIter+' -istMaxRes '+pipeistMaxRes\
@@ -219,14 +220,33 @@ if ($nDIM < 3) then
 	setvalue('procdim',2,'processed')
 	nm2d
 	dconi
+		// adjust proccmd to reflect processing by ist
+	if ni>1 then
+	    write('line3','%s(\'ni\')',$0):$proccmd
+	else
+	    write('line3','%s(\'ni2\')',$0):$proccmd
+	endif
+	setvalue('proccmd',$proccmd)
+	setvalue('proccmd',$proccmd,'processed')
 
+	create('procplane','string','current',''):$cdum
+	create('procplane','string','processed',''):$cdum
+	setgroup('procplane','processing')
+	setgroup('procplane','processing','processed')
+	if ni>1 then 
+	    setvalue('procplane','ni')
+	    setvalue('procplane','ni','processed')
+	else
+            setvalue('procplane','ni2')
+            setvalue('procplane','ni2','processed')
+	endif
 // record some key values in the pipe directory
 // This helps to decide (by other macros) if reprocessing is required
 // For now record fn,fn1,fn2 and file parameters
 	if $f1window<>'' then
 	    create('pipeF1window','string','current',$2):$dum
 	endif
-	writeparam(curexp+'/pipe/PipePar','fn fn1 pipeF1window fn2 file pipeGLB pipeELB','current')
+	writeparam(curexp+'/pipe/PipePar','fn fn1 pipeF1window fn2 file pipeGLB pipeELB proccmd procplane','current')
 	if $f1window<>'' then
 	    destroy('pipeF1window'):$dum
 	endif
