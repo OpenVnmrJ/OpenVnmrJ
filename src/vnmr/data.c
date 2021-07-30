@@ -1903,7 +1903,7 @@ int D_release(int fileindex, int index)
 
    b = findblock(fileindex, index);
    if (checkblockfind(b, filedata[fileindex].hpointers[b]))
-      return(D_NOTFOUND);
+      return(COMPLETE);
    filedata[fileindex].inuse[b] = NOT_IN_USE;
 
    if (Rflag > 2)
