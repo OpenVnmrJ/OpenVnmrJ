@@ -97,18 +97,29 @@ AspMouse::mouseState_t AspMouse::setState(mouseState_t newState) {
     case createBox:
     case createBand:
     case createPeak:
-    case createLine:
     case createXBar:
     case createYBar:
-    case createArrow:
     case createOval:
 	writelineToVnmrJ("vnmrjcmd","writeToFrameTitle mouse:  [LEFT] drag to create annotation."); 
+        curType = "pencil";
+         break;
+    case createLine:
+    case createLineTR:
+    case createArrow:
+    case createArrowTR:
+	writelineToVnmrJ("vnmrjcmd","writeToFrameTitle mouse:  [LEFT] drag to create annotation. [RIGHT] to exit annotations."); 
+        curType = "pencil";
+        break;
     case createRegion:
 	writelineToVnmrJ("vnmrjcmd","writeToFrameTitle mouse:  [LEFT] click or drag to define baseline."); 
+        curType = "pencil";
+        break;
     case createPoint:
     case createPointTR:
     case createText:
-	writelineToVnmrJ("vnmrjcmd","writeToFrameTitle mouse:  [LEFT] click to create annotation."); 
+	writelineToVnmrJ("vnmrjcmd","writeToFrameTitle mouse:  [LEFT] click to create annotation. [RIGHT] to exit annotations."); 
+        curType = "pencil";
+        break;
     case createPolygon:
     case createPolyline:
 	writelineToVnmrJ("vnmrjcmd","writeToFrameTitle mouse:  [LEFT] click to add N-1 points    [RIGHT] click to add last point."); 
@@ -681,8 +692,10 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 		  restoreState = ((mask & ctrl) || (mask & shift)) ? state : cursor1;
 		else if(state == createBand && numCursors ==2)
 		  restoreState = ((mask & ctrl) || (mask & shift)) ? state : cursor2;
-		else
+		else if ( (state == createPolygon) || (state == createPolyline) )
 		  restoreState = ((mask & ctrl) || (mask & shift)) ? state : noState;
+		else
+		  restoreState = state;
 		//mouseHandled = true;
                 switch (state) {
 /*
@@ -783,7 +796,13 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 		  default:
 			break;
 		}
+		break;
 	   }
+	   case b3+up:
+	   {
+		setState(noState);
+		break;
+           }
 		break;
 	   default:
 		break;
