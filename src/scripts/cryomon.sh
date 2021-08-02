@@ -90,20 +90,15 @@ while [ "$FLAGSDONE" = "false" ]; do
     esac
 done
 
+JAVA=$SYSDIR/jre/bin/java
+if [[ ! -f $JAVA ]]; then
+   JAVA="java"
+fi
 
 # Note: The "eval" is needed to get the quotes right in the command string
-ostype=`uname -s`
-if [ x$ostype = "xInterix" ]
-then
-  eval $SYSDIR/bin/cryomon.exe $GUIFLAG &
-
-
-else
   #echo -------- vnmruser=$vnmruser
   #echo -------- USERDIR=$USERDIR
   #echo -------- DISPLAY=$DISPLAY
 
-  eval $SYSDIR/jre/bin/java -mx128m -classpath $SYSDIR/java/cryomon.jar -Dsysdir=$SYSDIR -Duserdir=$USERDIR vnmr.cryomon.CryoMonitorControls  $VNMRJ $GUIFLAG $MASTER $DEBUG &
-
-fi
+  eval $JAVA -mx128m -classpath $SYSDIR/java/cryomon.jar -Dsysdir=$SYSDIR -Duserdir=$USERDIR vnmr.cryomon.CryoMonitorControls  $VNMRJ $GUIFLAG $MASTER $DEBUG &
 
