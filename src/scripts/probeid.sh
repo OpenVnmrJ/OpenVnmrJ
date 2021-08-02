@@ -643,6 +643,9 @@ fi
 
 # java runtime
 JAVA=$SYSDIR/jre/bin/java
+if [[ ! -f $JAVA ]]; then
+   JAVA="java"
+fi
 
 # one common option: JAVAOPTS="-mx128m"
 # java debugger option: 

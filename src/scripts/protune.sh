@@ -44,6 +44,10 @@ else
   USERDIR=$vnmruser
 fi
 
+JAVA=$SYSDIR/jre/bin/java
+if [[ ! -f $JAVA ]]; then
+   JAVA="java"
+fi
 
 # Read the command flags:
 FLAGSDONE="false"
@@ -107,7 +111,7 @@ while [ "$FLAGSDONE" = "false" ]; do
              if [ -f "$pfile" ]
              then
                 ptext=`cat $pfile`
-                CMD="$SYSDIR/jre/bin/java -cp $SYSDIR/java/apt.jar "
+                CMD="$JAVA -cp $SYSDIR/java/apt.jar "
 		CMD=${CMD}"vnmr.apt.ProtuneQuit "
                 CMD=${CMD}$ptext
                 CMD="$CMD &"
@@ -169,7 +173,6 @@ fi
   #echo -------- USERDIR=$USERDIR
   #echo -------- DISPLAY=$DISPLAY
   #JAVADBG="-Xdebug -Xrunjdwp:transport=dt_socket,address=8000,server=n,suspend=n"
-  JAVA=$SYSDIR/jre/bin/java
   JAVADBG="-Xdebug"
   JAR="$SYSDIR/java/apt.jar:$SYSDIR/java/probeid.jar:$SYSDIR/java/junit.jar:$SYSDIR/java/vnmrutil.jar"
   MAIN="vnmr.apt.ProbeTune"
