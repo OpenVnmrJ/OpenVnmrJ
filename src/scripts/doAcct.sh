@@ -51,7 +51,7 @@ then
    sMon=12
    sYear=$((eYear-1))
 else
-   sMon=$((eMon-1))
+   sMon=$((10#$eMon-1))
    sYear=$eYear
 fi
 doCut=0
