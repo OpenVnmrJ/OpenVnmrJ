@@ -432,9 +432,8 @@ case x$os_version in
             lflvr="suse"
         elif [  -r /etc/debian_version ]
         then
-            distro=$(lsb_release -is)    # Ubuntu
-            distrover=$(lsb_release -rs) # 8.04, 9.04, etc.
-            distmajor=$(echo $distrover | cut -f1 -d.)
+            . /etc/lsb-release
+            distmajor=${DISTRIB_RELEASE:0:2}
             lflvr="debian"
                  # Ubuntu has awk
                  NAWK="awk"
@@ -959,34 +958,6 @@ echo "ALL REQUESTED SOFTWARE EXTRACTED"
 #fix some things, depending on what system we are
 if [ x$did_vnmr = "xy" ]
 then
-
-   #Check if jre exists and is newer than 1.1.6, if not, load it
-
-   if [ -x /usr/bin/jre ]
-   then
-      version=$(/usr/bin/jre -version 2>&1 | grep Version)
-      minor=$(echo $version | awk 'BEGIN { FS = "." } { print $2 }')
-      sub=$(echo $version | awk 'BEGIN { FS = "." } { print $3 }')
-      if [ x$minor = "x" ]
-      then
-         minor=1
-         sub=3
-      fi 
-      if [ $minor -lt 2 ]
-      then 
-         if [ $sub -lt 6 ]
-         then
-            load=1
-         else
-            load=0
-         fi
-      else
-         load=0
-      fi
-   else
-      version=""
-      load=1
-   fi
 
    load_type=${cons_type}.opt
 
@@ -1865,8 +1836,6 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
          fi 
 
          # for RHEL 6.1 
-         # if [ "$(lsb_release -rs  | grep '6' > /dev/null;echo $?)" == "0" ]; then   # appears some version of RHEL 5.X don't have lsb_release
-         # if [ "$(echo $distrover  | grep '6' > /dev/null;echo $?)" == "0" ]; then
          if [ $distmajor -ge 6 ]
          then
             # shareutils package nolonger resides on the RHEL 6.X Installation DVD
