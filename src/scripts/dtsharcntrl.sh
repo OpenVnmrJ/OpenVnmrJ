@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -23,22 +23,10 @@
 # set -x
 
 #
-# For Ubuntu use the system provided Vino interface, rather than the X11 Server for VNC
 #
-distro=`lsb_release -is`    # RedHatEnterpriseClient or Ubuntu
-if [ x$distro = "xUbuntu" ]; then
-   echo "On Ubuntu, Use System->Preferences->Remote Desktop, to enable desktop sharing"
+if [ -f /etc/debian_version ]; then
+   echo "On Ubuntu, use Settings->Sharing to enable desktop sharing"
    exit 1
-fi
-
-#
-# For RHEL 6.X  use the system provided Vino interface, rather than the X11 Server for VNC
-#
-if [ "$(echo $distro  | grep -i 'RedHat' > /dev/null;echo $?)" == "0" ]; then
-   if [ "$(lsb_release -rs | grep 6 > /dev/null;echo $?)" == "0" ]; then
-      echo "On RHEL 6.X, Use System->Preferences->Remote Desktop, to enable desktop sharing"
-      exit 1
-   fi
 fi
 
 #

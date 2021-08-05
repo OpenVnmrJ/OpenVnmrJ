@@ -32,7 +32,7 @@ if [ ! -x /usr/bin/dpkg ]; then
    if [[ $version -eq 7 ]] || [[ $version -eq 8 ]]
    then
 #     for RHEL 7.X must list 32-bit packages, since these are no longer installed with the 64-bit versions
-      package71list='libgfortran motif'
+      package71list='libgfortran motif java-1.8.0-openjdk'
       package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686 mesa-libGL-devel mesa-libGL mesa-libGLU'
       package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686'
       packagelist="$packagecommonlist $package71list $package32Bitlist"
@@ -54,8 +54,8 @@ if [ ! -x /usr/bin/dpkg ]; then
 
 else
    echo "Checking for Ubuntu / Debian packages required by OpenVnmrJ"
-   distrover=$(lsb_release -rs)
-   distmajor=${distrover:0:2}
+   . /etc/lsb-release
+   distmajor=${DISTRIB_RELEASE:0:2}
    packagecommonlist='tcsh make gcc gfortran expect openssh-server mutt sharutils sendmail-cf gnome-power-manager kdiff3 ghostscript imagemagick xterm'
    if [ $distmajor -ge 16 ] ; then
      packageXlist='openjdk-8-jre bc libmotif-dev'
@@ -68,7 +68,6 @@ else
    fi
    packagelist="$packagecommonlist $packageXlist";
 fi
-#       libidn is contained within the ia32-libs
 
 if [ ! -x /usr/bin/dpkg ]; then
    for xpack in $packagelist
