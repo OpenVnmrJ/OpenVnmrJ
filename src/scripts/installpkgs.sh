@@ -508,7 +508,8 @@ if [ ! -x /usr/bin/dpkg ]; then
     echo "Downloading required packages (2 of 3)" >> $logfile
     yum -y install $repoArg $packageList &>> $logfile
     if [ $version -eq 8 ] && [ -z $(type -t subscription-manager) ]; then
-      yum -y --enablerepo=PowerTools install $repoArg sharutils &>> $logfile
+      # Capitalization of PowerTools causes problems with 8.3
+      yum -y --enablerepo=?ower?ools install $repoArg sharutils &>> $logfile
       if [ $version -eq 8 ]; then
         cp -f $repoPath/* $repoPathTmp > /dev/null 2>&1
       fi
@@ -546,7 +547,8 @@ if [ ! -x /usr/bin/dpkg ]; then
     if [ $version -eq 8 ] && [ -z $(type -t subscription-manager) ]; then
       if [ "$(rpm -q sharutils | grep 'not installed' > /dev/null;echo $?)" == "0" ]
       then
-        yum -y --enablerepo=PowerTools install sharutils &>> $logfile
+        # Capitalization of PowerTools causes problems with 8.3
+        yum -y --enablerepo=?ower?ools install sharutils &>> $logfile
       fi
     fi
     yum -y install $yum68List &>> $logfile
