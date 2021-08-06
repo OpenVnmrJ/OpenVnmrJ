@@ -63,7 +63,7 @@ if [ -f /etc/debian_version ]; then
    outfile="/etc/apt/sources.ovj"
    mv $infile $outfile
 #   grep "^deb" $outfile | awk '$2="file:'$repoPath'"' > $infile
-   echo "deb [ allow-insecure=yes ] file:$repoPath /" > $infile
+   echo "deb [ trusted=yes ] file:$repoPath /" > $infile
    apt-get update 2> /dev/null
 else
    rm -f /etc/yum.repos.d/openvnmrj.repo

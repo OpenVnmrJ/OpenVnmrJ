@@ -595,21 +595,21 @@ log_this "PART IV -- INSTALLATION FILES -- $dest_dir"
 # copy some of the installation programs
 #Add jre to DVD
 
-       dir="jre"
-      #log_this "   Tarring jre                     for : "
-       tarring "$dir"
-       cd $OVJ_TOOLS/java
-       tar --exclude=.gitignore -cf $dest_dir_code/$Tarfiles/jre.tar jre
-       # tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/jre.tar" "jre"
-       cd $dest_dir_code
-       tar xpf $Tarfiles/jre.tar
-       rm -rf jre.linux
-       mv jre jre.linux
-       getSize $dest_dir_code/jre.linux
-       makeTOC jre.tar $Vnmr rht/vnmrs.rht      \
-                             rht/mr400.rht      \
-                             rht/propulse.rht
-       rm $Tarfiles/jre.tar     # exception
+#      dir="jre"
+#     #log_this "   Tarring jre                     for : "
+#      tarring "$dir"
+#      cd $OVJ_TOOLS/java
+#      tar --exclude=.gitignore -cf $dest_dir_code/$Tarfiles/jre.tar jre
+#      # tarIt "--exclude=.gitignore" "$dest_dir_code/$Tarfiles/jre.tar" "jre"
+#      cd $dest_dir_code
+#      tar xpf $Tarfiles/jre.tar
+#      rm -rf jre.linux
+#      mv jre jre.linux
+#      getSize $dest_dir_code/jre.linux
+#      makeTOC jre.tar $Vnmr rht/vnmrs.rht      \
+#                            rht/mr400.rht      \
+#                            rht/propulse.rht
+#      rm $Tarfiles/jre.tar     # exception
 
 #Nirvana CD only
 touch $dest_dir_code/.nv
