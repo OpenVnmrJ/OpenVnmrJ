@@ -50,7 +50,8 @@ turboRepo() {
 name=TurboVNC official RPMs
 baseurl=https://sourceforge.net/projects/turbovnc/files
 gpgcheck=1
-gpgkey=http://pgp.mit.edu/pks/lookup?op=get&search=0x6BBEFA1972FEB9CE
+gpgkey=https://sourceforge.net/projects/turbovnc/files/VGL-GPG-KEY
+       https://sourceforge.net/projects/turbovnc/files/VGL-GPG-KEY-1024
 enabled=1
 exclude=turbovnc-*.*.9[0-9]-*
 EOF
@@ -144,6 +145,8 @@ if [ -d /tmp/ovj_preinstall ]; then
 else
   logfile="/tmp/pkgInstall.log_$postfix"
 fi
+touch $logfile
+chmod 666 $logfile
 
 if [ ! -x /usr/bin/dpkg ]; then
   if [ -f /etc/centos-release ]; then
@@ -371,7 +374,6 @@ if [ ! -x /usr/bin/dpkg ]; then
     PyGreSQL
     sharutils
     a2ps
-    compat-libstdc++-33
     fuseiso
     gconf-editor
   '
@@ -428,7 +430,7 @@ if [ ! -x /usr/bin/dpkg ]; then
 #  Add older motif package
     packageList="openmotif $item68List $commonList $bit32List $pipeList"
   else
-    packageList="$item68List $commonList $pipeList"
+    packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl"
   fi
 
 

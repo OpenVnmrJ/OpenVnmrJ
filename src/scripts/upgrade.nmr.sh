@@ -55,9 +55,9 @@ if [[ $# -gt 0 ]]; then
         fi
         mv "$vnmrsystem"/bin/sudoins $tmp_save/bin
         mv "$vnmrsystem"/bin/sudoins.new "$vnmrsystem"/bin/sudoins
-        /vnmr/bin/sudoins
+        /vnmr/bin/sudoins >& /dev/null
     elif [[ -f  $tmp_save/bin/sudoins ]]; then
-        /vnmr/bin/sudoins
+        /vnmr/bin/sudoins >& /dev/null
     fi
     if [[ -f "/etc/init.d/rc.vnmr" ]]; then
         diff --brief "$vnmrsystem"/acqbin/rc.vnmr /etc/init.d/rc.vnmr >& /dev/null
@@ -70,6 +70,21 @@ if [[ $# -gt 0 ]]; then
         if [[ $? -ne 0 ]]; then
             cp "$vnmrsystem"/acqbin/vnmr.service /usr/lib/systemd/system/vnmr.service >& /dev/null
         fi
+    fi
+    if [ -f /etc/debian_version ]; then
+       if [ "$(dpkg --get-selections openjdk-8-jre 2>&1 |
+         grep -w 'install' > /dev/null;echo $?)" != "0" ]
+       then
+          echo "Updating java"
+          apt-get -y install openjdk-8-jre > /dev/null 2>&1
+       fi
+    else
+       if [ "$(rpm -q java-1.8.0-openjdk |
+             grep 'not installed' > /dev/null;echo $?)" = "0" ]
+       then
+          echo "Updating java"
+          yum -y install java-1.8.0-openjdk > /dev/null 2>&1
+       fi
     fi
     exit 0
 fi
@@ -338,6 +353,24 @@ doUpgrade () {
     if [[ -f $tmp_save/bin/Vnmrbg ]]; then
         cp -f "$vnmrsystem"/bin/Vnmrbg "$vnmrsystem"/bin/Vnmr
     fi
+    if [[ -d $vnmrsystem/jre ]]; then
+       mv $vnmrsystem/jre $tmp_save/.
+    fi
+    if [[ -d $vnmrsystem/pgsql/bin_ver7 ||
+          -f $vnmrsystem/pgsql/bin/pg_id ]]; then
+       mv $vnmrsystem/pgsql $tmp_save/.
+       cp code/tarfiles/pgsql.tar $vnmrsystem/.
+       (cd $vnmrsystem && tar -xf pgsql.tar)
+       rm -f $vnmrsystem/pgsql.tar
+       if [[ -d $tmp_save/pgsql/bin ]]; then
+          mv $vnmrsystem/pgsq/bin_ver9 $vnmrsystem/pgsq/bin
+       fi
+       if [[ -f $tmp_save/pgsql/persistence/LocatorOff ]]; then
+          touch /vnmr/pgsql/persistence/LocatorOff
+       else
+          dbsetup
+       fi
+    fi
     echo ""
    
     return 0
@@ -441,6 +474,20 @@ if [[ -f "$vnmrsystem"/acqbin/acqpresent ]]; then
             doAcq=1
         fi
     fi
+fi
+
+if [ -f /etc/debian_version ]; then
+   if [ "$(dpkg --get-selections openjdk-8-jre 2>&1 |
+         grep -w 'install' > /dev/null;echo $?)" != "0" ]
+   then
+      doAcq=1
+   fi
+else
+   if [ "$(rpm -q java-1.8.0-openjdk |
+         grep 'not installed' > /dev/null;echo $?)" = "0" ]
+   then
+      doAcq=1
+   fi
 fi
 
 if [[ $doAcq -eq 1 ]]; then

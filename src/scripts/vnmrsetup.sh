@@ -19,16 +19,11 @@
 #
 # set -x
 
-#This script also responsible for loading JRE enviroment in order to
-#start running LoadNmr
-#
-
 xhost + > /dev/null
 
 set_system_stuff() {
    ostype=$(uname -s)
    os_type="rht"
-   JRE="jre.linux"
    default_dir="/home"
    if [ -f /etc/debian_version ]; then
       distroType="debian"
@@ -382,7 +377,6 @@ then
 fi
 
 host_name=$(uname -n)
-JRE="jre"
 set_system_stuff
 
 #
@@ -405,7 +399,6 @@ user_dir="$default_dir"
 nmr_group="nmr"
 
 adm_base_dir="/var/tmp"
-jre_base_dir=$adm_base_dir
  
 if [ ! -d $adm_base_dir ]
 then
@@ -473,8 +466,6 @@ fi
 
 echo "Starting the OpenVnmrJ installation program..."
 
-jre_base_dir=$src_code_dir
-java_cmd=$jre_base_dir/${JRE}/bin/java
 # Save pipe directory in case we need to copy it
 if [[ -d /vnmr ]] ; then
    oldVnmr=$(readlink /vnmr)
@@ -489,7 +480,7 @@ newgrp=/tmp/newgrp
 rm -f $insLog
 rm -f $newgrp
 
-$java_cmd -classpath $jre_base_dir/${JRE}/lib/rt.jar:$adm_base_dir/VnmrAdmin.jar LoadNmr $base_dir $dest_dir $nmr_user $user_dir $nmr_group $os_type $1
+java -classpath $adm_base_dir/VnmrAdmin.jar LoadNmr $base_dir $dest_dir $nmr_user $user_dir $nmr_group $os_type $1
 if [ $? -ne 0 ]
 then
    rm -f $insLog
