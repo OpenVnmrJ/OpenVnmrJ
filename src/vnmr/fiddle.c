@@ -854,10 +854,10 @@ static int i_fiddle(int argc, char *argv[])
 				(((int) 										
 	(strlen(writename))<5)||(strcmp(&writename[strlen(writename)-4],".fid")))
 				    strcat(writename,".fid");
-				sprintf(sysstr,"mkdir %s",writename);
+				sprintf(sysstr,"mkdir \"%s\"",writename);
 				if(system(sysstr))
 				{
-					sprintf(sysstr,"cd %s",writename);
+					sprintf(sysstr,"cd \"%s\"",writename);
 					if(system(sysstr))
 					{
 						Werrprintf("System error: %s",sysstr);
@@ -1104,7 +1104,7 @@ static int i_fiddle(int argc, char *argv[])
 	{
 		if (r==D_NOTOPEN)
 		{
-			Wscrprintf("phas NOTOPEN\n");
+			// Wscrprintf("phas NOTOPEN\n");
 			strcpy(path,curexpdir);
 			strcat(path,"/datdir/phasefile");
 			r=D_open(D_PHASFILE,path,&phasehead);
@@ -1738,7 +1738,7 @@ int getfidblockheadforwrite()
 			return(ERROR);
 		}
 	}
-	sprintf(sysstr,"cp %s/text %s",curexpdir,writename);
+	sprintf(sysstr,"cp %s/text \"%s\"",curexpdir,writename);
 	if (system(sysstr))
 	{
 		Werrprintf("could not copy text from file?\n");
