@@ -558,7 +558,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   if [ $perlHomeInstalled -eq 0 ]
   then
     echo "Removing perl-home rpm" &>> $logfile
-    yum -y erase perl-homedir &>> $logfile
+    yum -y erase perl-homedir > /dev/null 2>&1
   fi
 
  # No need to add repos if OVJ repo is being used

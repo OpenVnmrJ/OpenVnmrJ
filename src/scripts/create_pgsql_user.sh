@@ -22,18 +22,7 @@ if [ x$vnmrsystem = "x" ]
 then
    vnmrsystem="/vnmr"
 fi
-# Are we using the newer postgres or the old version distributed with vnmrj?
-# If createuser exists in $vnmrsystem/pgsql/bin/, use it, 
-# else use system version.
-file="$vnmrsystem/pgsql/bin/createuser"
-if [ -f "$file" ]
-then
-    # Old one, use appropriate path and args
-    $vnmrsystem/pgsql/bin/createuser -a -q -d -h /tmp $1
-else
-    # New one, use no path and appropriate args
-    createuser -d -h /tmp -S -R $1 2> /dev/null
-fi
+createuser -d -h /tmp -S -R $1 2> /dev/null
 
 echo "DONE"
 
