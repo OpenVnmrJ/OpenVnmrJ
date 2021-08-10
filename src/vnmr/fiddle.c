@@ -16,6 +16,17 @@
 /*
  */
 
+/*	VERSION Manchester OpenVnmrJ 2.1 from OpenVnmrJ 2.1 release	*/
+/*	DI fixes for crash if space used in writefid filename 10viii21 	*/
+/*	Apply to writecf and readf too 10viii21 			*/
+/*	GAM 3viii21 Implement correction of every element of an array	*/
+/*		using the first element of an array of correction 	*/
+/*		functions, using keyword "readsinglecf" instead of	*/
+/*	 	"readcf"						*/
+/*	GAM 2viii21 Correct effect of autophase on ref region when      */
+/*	         writing out correction function                        */
+/*	GAM 2viii21 Correct bug in 1st point of corrected FID           */
+/*	GAM 30vii21 Use same endian conversion in writeout, readincf    */
 /*	VERSION Manchester VNMRJ 4.2 from DI 2014.10.07 from 2.2C	*/
 /*	GAM 27x15 Add endian conversion for readincf 			*/
 /*	GAM 27x15 Neaten up: pad correction function with zeroes	*/
@@ -27,9 +38,11 @@
 /*	Split lines rejoined 7i09					*/
 /*	Correct phasfile to phasefile  1ix99  GAM/PBC			*/
 /*	Revision 21 May 1998						*/
+/*	Don't average 1st and last points of corrected fid 21v98	*/
 /*	Major reorganisation 4iii97					*/
 /*	Add read/write of correction function 4iii97			*/
 /*	Neatened up for circulation 10 vi 97				*/
+/*	Correct error in application of dc correction 27ii97		*/
 /*	Set f1 reference frequency by rfl1 7xi96			*/
 /*	ct=0 bug fixed 7xi96						*/
 /*	Fix quantflag with new ideal calculation GAM 24x96		*/
@@ -38,11 +51,9 @@
 /*	Add automatic phasing 12 xi 96					*/
 /*	Add alternating phase for hypercomplex with new ideal calc  	*/
 /*	Make autophasing of reference the default			*/
-/*	Correct error in application of dc correction 27ii97		*/
-/*	Don't average 1st and last points of corrected fid 21v98	*/
 
-/* 	Copyright 1996,1997
 
+/*      Copyright 1996,1997
 
 	This software was produced using contributions from G.A. Morris, 
 	A. Gibbs, H. Barjat and C. England, using source material from 
@@ -168,7 +179,8 @@ static float *data1,*data2,*data3,*data4,*wtfunc;
 static int  startno,finishno,stepno,incno;
 static int  halffg,difffg,udifffg,firstfg,secondfg,nosub,invert;
 static int  
-aphflg,altfg,oflag,flag2d,writefg,makereffg,ldcflag,readcfflg,writecfflg;
+/* GAM 3viii21 */
+aphflg,altfg,oflag,flag2d,writefg,makereffg,ldcflag,readsinglecfflg,readcfflg,writecfflg;
 static int writescalefg;
 static float scaleVal;
 static double *spg,*spy,*resets;
@@ -429,11 +441,12 @@ corrected fid %f \n",
 				      inp[1]);
 				*/
 				/* Halve first point of corrected fid */
-				/* hang about, does this do anything??? */
+/* GAM 2viii21 */
+/* Correct halving of first point before FT */
 				if (halffg) /* default true */
 				{
-					data1[0]=0.5*(data1[0]);
-					data1[1]=0.5*(data1[1]);
+					inp[0]=0.5*inp[0];
+					inp[1]=0.5*inp[1];
 				}
 
 				if (npi<np0)
@@ -650,11 +663,14 @@ static int i_fiddle(int argc, char *argv[])
 	char	alternate[]		= "alternate";
 	char	noaph[]			= "noaph";
 	char	readcf[]		= "readcf";
+/* GAM 3viii21 */
+	char	readsinglecf[]		= "readsinglecf";
 	char	writecf[]		= "writecf";
 	char	writescale[]   	        = "writescaledfid";
 
 
-	readcfflg=writecfflg=corfunc=noift=noftflag=invert=solvent=FALSE;
+/* GAM 3viii21 */
+	readsinglecfflg=readcfflg=writecfflg=corfunc=noift=noftflag=invert=solvent=FALSE;
 	dccorr=baseline=verbose=numsats=FALSE;
 	apod=udifffg=difffg=firstfg=secondfg=nosub=FALSE;
 	stopflag=0;
@@ -854,10 +870,10 @@ static int i_fiddle(int argc, char *argv[])
 				(((int) 										
 	(strlen(writename))<5)||(strcmp(&writename[strlen(writename)-4],".fid")))
 				    strcat(writename,".fid");
-				sprintf(sysstr,"mkdir \"%s\"",writename);
+				sprintf(sysstr,"mkdir \"%s\"",writename); /* DI 10viii21 */
 				if(system(sysstr))
 				{
-					sprintf(sysstr,"cd \"%s\"",writename);
+					sprintf(sysstr,"cd \"%s\"",writename); /* DI 10viii21 */
 					if(system(sysstr))
 					{
 						Werrprintf("System error: %s",sysstr);
@@ -901,10 +917,10 @@ static int i_fiddle(int argc, char *argv[])
 	(strlen(writecfname))<5)||(strcmp(&writecfname[strlen(writecfname)-4],
 				    ".fid")))
 				    strcat(writecfname,".fid");
-				sprintf(sysstr,"mkdir %s",writecfname);
+				sprintf(sysstr,"mkdir \"%s\"",writecfname); /* GAM/DI 10viii21 */
 				if(system(sysstr))
 				{
-					sprintf(sysstr,"cd %s",writecfname);
+					sprintf(sysstr,"cd \"%s\"",writecfname); /* GAM/DI 10viii21 */
 					if(system(sysstr))
 					{
 						Werrprintf("System error: %s",sysstr);
@@ -913,10 +929,12 @@ static int i_fiddle(int argc, char *argv[])
 				}
 /* GAM 27x15 */			if (verbose) Wscrprintf("Writing correction function out; destination file: %s\n",writecfname);
 			}
-			else if (equal(argv[i],readcf))
+/* GAM 3viii21 */
+			else if (equal(argv[i],readcf)||equal(argv[i],readsinglecf))
 			{
 				if (verbose) Wscrprintf("Correction function will be read from disk \n");
 				readcfflg=TRUE;
+				if (equal(argv[i],readsinglecf)) readsinglecfflg=TRUE;
 				i++;
 				if ((argc-1)<i)
 				{
@@ -936,7 +954,7 @@ static int i_fiddle(int argc, char *argv[])
 	(strlen(readcfname))<5)||(strcmp(&readcfname[strlen(readcfname)-4],
 				    ".fid")))
 				   strcat(readcfname,".fid");
-				sprintf(sysstr,"cd %s",readcfname);
+                                sprintf(sysstr,"cd \"%s\"",readcfname); /* GAM/DI 10viii21 */
 				if(system(sysstr))
 				{
 					Werrprintf("System error: %s",sysstr);
@@ -968,6 +986,8 @@ static int i_fiddle(int argc, char *argv[])
 	if (noift&&!stopflag) stopflag=2;
 	if (stopflag==4&&!difffg) stopflag=3;
 	if (difffg) finishno++;
+/* GAM 4viii21 */
+	if (readsinglecfflg) aphflg = FALSE; /* No need to adjust reference region phase since reference region not used */
 
 	D_allrelease();
 
@@ -1104,7 +1124,7 @@ static int i_fiddle(int argc, char *argv[])
 	{
 		if (r==D_NOTOPEN)
 		{
-			// Wscrprintf("phas NOTOPEN\n");
+			//Wscrprintf("phas NOTOPEN\n"); /* DI 10viii21 */
 			strcpy(path,curexpdir);
 			strcat(path,"/datdir/phasefile");
 			r=D_open(D_PHASFILE,path,&phasehead);
@@ -1149,7 +1169,7 @@ static int i_fiddle(int argc, char *argv[])
 			freall(TRUE);
 		}
 	}
-	if(readcfflg) setupreadcf();
+	if (readcfflg) setupreadcf();
 
 	/* setup weighting function for ideal fid */
 	if (init_wt1(&wtp,S_NP))
@@ -1426,7 +1446,8 @@ void setupwritecf()
 {
 	if ((writecffile=fopen(writecfname,"w+"))==0)
 	{
-		Werrprintf("cannot open output fid file\n");
+/* GAM 28vii21 */
+		Werrprintf("cannot open correction function file\n");
 		freall(TRUE);
 	}
 	/* tweak file header */
@@ -1522,6 +1543,10 @@ void writeoutcf()
 
 {
 	register int i;
+   union u_tag {
+      float fval;
+      int   ival;
+   } uval;
 	cfbhead.index=(short)cfcount;
 #ifdef LINUX
         movmem((char *)(&cfbhead), (char *) (&swapbhead),
@@ -1532,25 +1557,26 @@ void writeoutcf()
 	fwrite((char *)&(cfbhead),sizeof(dblockhead),1,writecffile);
 #endif
 	disp_status("WRITE CF");
-	scale=32768.0;
-	if (cfcount==0)
-	{
-		for (i=0;i<np0w;i++)
-			if (fabs((32768.0*data2[i]))>max) max=fabs(data2[i]);
-		if (verbose) Wscrprintf("Maximum corrected fid signal %f\n",max);
-		if (max>2e9) /* 2e9 = 2^31, 32bit max */
-		{
-			scale=1e9/max;
-			Wscrprintf("WARNING: Corrected fid scaled down to fit 32 bits.\n");
-		}
-	}
+/* GAM 30vii21 */
+/* Scale correction function up by 10^6 so that it displays with sensible vf, then scale down again when read in */
+	scale=1000000.0;
+/* GAM 2viii21 */
+/* Apply the autophase correction found for the reference region ... */
+	rotate2(data2,np0/2,0.0,finalph);
+/* Remove scaling now saving as floating point */
 	for (i=0;i<np0w;i++)
-#ifdef LINUX
-           intbuf[i]=ntohl((int)(scale*data2[i]));
+/* GAM 30vii21 */
+	{
+	#ifdef LINUX
+        uval.fval = data2[i]*scale;
+        intbuf[i]=ntohl(uval.ival);
 #else
-	   intbuf[i]=(int)(scale*data2[i]); 
+	intbuf[i]=(int)(scale*data2[i]);
 #endif
+	}
 	fwrite(intbuf,4,np0w,writecffile); 
+/* ... then reverse */
+	rotate2(data2,np0/2,0.0,-finalph);
 	cfcount++;
 }
 
@@ -1738,7 +1764,7 @@ int getfidblockheadforwrite()
 			return(ERROR);
 		}
 	}
-	sprintf(sysstr,"cp %s/text \"%s\"",curexpdir,writename);
+	sprintf(sysstr,"cp %s/text \"%s\"",curexpdir,writename); /* DI 10viii21 */
 	if (system(sysstr))
 	{
 		Werrprintf("could not copy text from file?\n");
@@ -1783,7 +1809,7 @@ int getfidblockheadforcf()
 			return(ERROR);
 		}
 	}
-	sprintf(sysstr,"cp %s/text %s",curexpdir,writecfname);
+	sprintf(sysstr,"cp %s/text \"%s\"",curexpdir,writecfname); /* GAM/DI 10viii21 */
 	if (system(sysstr))
 	{
 		Werrprintf("could not copy text from file?\n");
@@ -1813,7 +1839,18 @@ int getfidblockheadforcf()
 void readincf()
 {
 	register int i;
+/* GAM 30vii21 */
+   union u_tag {
+      float fval;
+      int   ival;
+   } uval;
 	int bytes __attribute__((unused));
+/* GAM 2viii21 */ 
+/* Always read in the first correction function in any array */
+	if (readsinglecfflg)
+	{
+	 	fseek(readcffile,32,SEEK_SET);
+	}
 	bytes=fread(intbuf,sizeof(dblockhead),1,readcffile);
 /*	Should really test for compatibility here, and report errors	*/
 	bytes=fread((char *)(intbuf),4,np0w,readcffile);
@@ -1821,7 +1858,17 @@ void readincf()
 	{
 		if (feof(readcffile)) Wscrprintf("End of file detected");
 	}
-/* GAM 27x15 */	for (i=0;i<np0w;i++) data2[i]=(float)(int)htonl((intbuf[i]));
+/* GAM 30vii21 */
+	for (i=0;i<np0w;i++)
+	{
+/* Scale down by 10^6 as scaled up when written, so that correction function displays with normal vf */
+#ifdef LINUX
+        uval.ival = htonl(intbuf[i]);
+        data2[i]=uval.fval/1000000.0;
+#else
+	data2[i]=(float)intbuf[i]/1000000.0;
+#endif
+	}
 /* GAM 27x15 */	for (i=np0w;i<np0;i++) data2[i]=0.0;
 }
 
