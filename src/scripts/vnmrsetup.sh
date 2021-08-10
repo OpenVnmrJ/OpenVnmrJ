@@ -469,6 +469,10 @@ echo "Starting the OpenVnmrJ installation program..."
 # Save pipe directory in case we need to copy it
 if [[ -d /vnmr ]] ; then
    oldVnmr=$(readlink /vnmr)
+   oldJava=$(echo $PATH | grep jre)
+   if [[ ! -z $oldJava ]]; then
+      export PATH=$(echo $PATH | sed 's|/vnmr/jre/bin:||')
+   fi
 else
    oldVnmr=""
 fi
