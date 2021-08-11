@@ -84,7 +84,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-url="https://www.dropbox.com/s/uzmboforig7uwwl/vnmrjManuals.zip?dl=0"
+url="https://www.dropbox.com/s/jtpg43bm0jaunsx/vnmrjManuals.zip?dl=0"
 
 downloadMac() {
    $OVJ_VECHO "Downloading Manual files to MacOS file system"
