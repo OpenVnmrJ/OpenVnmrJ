@@ -23,17 +23,6 @@ if not os.path.exists(ovjtools):
 # obtain system platform
 platform = sys.platform
 
-#
-# define function to convert SUA paths to Windows
-#
-def Sua2WinPath(suaPath):
-   if ( '/dev/fs/' in suaPath ):
-     dLetter = suaPath[8:9]
-     # print(dLetter)
-     return dLetter + ':' + suaPath[9:]
-   else:
-      return suaPath
-
 # target
 VnmrAdminTarget = 'VnmrAdmin.jar'
 
@@ -49,14 +38,6 @@ if (platform.startswith('linux')):
 elif ( 'darwin' in platform):
    javaBinPath = os.path.join('/', 'usr', 'bin')
    jarBin = os.path.join(javaBinPath, 'jar')
-elif ( 'interix6' in platform): # Interix
-   javaBaseDir = os.path.join('/','dev','fs','C','\'Program Files (x86)\'','Java','jdk1.6.0_23')
-   javaBinPath = os.path.join('/','dev','fs','C','"Program Files (x86)"','Java','jdk1.6.0_23','bin')
-   jarBin = os.path.join(javaBinPath, 'jar.exe')
-elif ( 'interix3' in platform): # Interix
-   javaBaseDir = os.path.join('/','dev','fs','C','\'Program Files\'','Java','jdk1.6.0_23')
-   javaBinPath = os.path.join('/','dev','fs','C','"Program Files"','Java','jdk1.6.0_23','bin')
-   jarBin = os.path.join(javaBinPath, 'jar.exe')
 else:
    print("Unknown Platform: ", platform)
    sys.exit()
@@ -78,18 +59,11 @@ if (platform.startswith('linux')):
                           'CLASSPATH' : classesPath,
                           'PATH' : javaBinPath + ':' + os.environ['PATH']})
 elif ( 'darwin' in platform) :
+   if not "JAVA_HOME" in os.environ:
+      os.environ['JAVA_HOME'] = os.popen('/usr/libexec/java_home -v 1.8').read()
    jEnv = Environment(ENV = {'CLASSPATH' : classesPath,
-                          'PATH' : javaBinPath + ':' + os.environ['PATH']})
-else:
-   fbpath = Sua2WinPath(cwd)
-   jEnv = Environment( JAVAC = os.path.join(javaBinPath,'javac.exe'),
-                       JAVACLASSPATH = [
-                                         os.path.join(fbpath, 'classes'),
-                                       ],
-                       ENV = {'JAVA_HOME' : javaBinPath,
-                              'CLASSPATH' : [ 'classes', os.path.join(fbpath, 'classes') ],
+                             'JAVA_HOME' : os.environ['JAVA_HOME'],
                              'PATH' : javaBinPath + ':' + os.environ['PATH']})
-
 
 # actual builds
 srcPath = os.path.join(cwd, 'src')
@@ -106,20 +80,7 @@ f.write('\n')
 f.write('Main-Class: LoadNmr\n')
 f.close()
 
-if ( 'interix' in platform):
-  # cdCmd = 'cd ' + os.path.join(classesPath,os.pardir) +' ; '
-  cdCmd = 'cd ' + cwd +' ; '
-  jarCmd = cdCmd + jarBin + ' -cfm VnmrAdmin.jar ' + Sua2WinPath(manifestFile) + ' -C ' + Sua2WinPath(classesPath) + ' .'
-  jarBuildObject = jEnv.Command(target = VnmrAdminTarget,
-               source = [ classesPath, manifestFile],
-               action = jarCmd,
-              )
-  jEnv.Depends( target = VnmrAdminTarget,
-                dependency = [ classesPath, manifestFile],
-              )
-
-else:
-  jarBuildObject = jEnv.Jar(JAR      = jarBin,
+jarBuildObject = jEnv.Jar(JAR      = jarBin,
                           target   = VnmrAdminTarget,
                           source   = [classesPath,
                                       manifestFile],

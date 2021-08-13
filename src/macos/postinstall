@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dir="/Applications/OpenVnmrJ_2.1.app/Contents/Resources/OpenVnmrJ"
+dir="/Applications/OpenVnmrJ.app/Contents/Resources/OpenVnmrJ"
 osVer=$(sw_vers -productVersion | tr "." " " | awk '{print $1}')
 osSubVer=$(sw_vers -productVersion | tr "." " " | awk '{print $2}')
 
@@ -9,12 +9,15 @@ if ! [[ $osVer -gt 10 ]] && ! [[ $osSubVer -ge 15 ]]; then
    ln -s $dir /vnmr
 else
    if [[ -f /etc/synthetic.conf ]]; then
-      grep -w vnmr /etc/synthetic.conf
-      if [[ $? -eq 0 ]]; then
-         grep -vw vnmr /etc/synthetic.conf > /etc/synthetic
-         mv /etc/synthetic /etc/synthetic.conf
+      grep "/Applications/OpenVnmrJ.app/Contents/Resources/OpenVnmrJ" /etc/synthetic.conf >& /dev/null
+      if [[ $? -ne 0 ]]; then
+         grep -w vnmr /etc/synthetic.conf
+         if [[ $? -eq 0 ]]; then
+            grep -vw vnmr /etc/synthetic.conf > /etc/synthetic
+            mv /etc/synthetic /etc/synthetic.conf
+         fi
+         printf "vnmr\t%s\n" $dir >> /etc/synthetic.conf  
       fi
-      printf "vnmr\t%s\n" $dir >> /etc/synthetic.conf  
    else
       printf "vnmr\t%s\n" $dir > /etc/synthetic.conf  
    fi

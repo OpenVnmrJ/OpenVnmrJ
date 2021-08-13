@@ -173,14 +173,14 @@ then
 fi
 modsArg=""
 vers=$($javabin -fullversion 2>&1 | awk 'BEGIN {FS="\""} {print $2}' | awk 'BEGIN {FS="."} {print $1}')
-if [[ $vers > 8 ]]
+if [[ $vers -gt 8 ]]
 then
   modsArg="--add-modules ALL-SYSTEM"
 fi
 
 # Set the "MultiClickTime"
 if [ -e $HOME/.vxresource ]; then
-   xrdb -merge $HOME/.vxresource
+   xrdb -merge $HOME/.vxresource >& /dev/null
 fi
 
 # Remember which X DISPLAY to use

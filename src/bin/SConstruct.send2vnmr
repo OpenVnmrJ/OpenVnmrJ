@@ -28,20 +28,11 @@ env = Environment(CCFLAGS    = '-O2 -m32',
 
 if ('darwin' in platform):
     env.Replace(CC = 'clang')
-    env.Replace(CCFLAGS = '-Wall -Os -arch x86_64')
+    env.Replace(CCFLAGS = '-Os -Wall -arch x86_64 -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       env.Append(CCFLAGS = os.getenv('osxflags'))
     env.Replace(LINKFLAGS = '-Os -Wl,-rpath,/vnmr/lib')
-
-if ('interix' in platform):    # Interix
-   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
-   LibAcqCom=File(os.path.join(os.pardir,'ncomm','libacqcomm.a'))
-   env.Replace( CC=interixgcc )
-   env.Replace(  LINKFLAGS='-O -m32' )
-   env.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','LINUX']  )
-   env.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib') ]  )
-   env.Replace( LIBS= ['stdc++','socket','m',LibAcqCom ])
-   # print("CC is:", env['CC'])
-   # print("C++ is:", env['CXX'])
-
 
 # actual builds
 send2Vnmr = env.Program(target  = send2VnmrTarget,

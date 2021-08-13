@@ -47,14 +47,13 @@ starsEnv = Environment(CCFLAGS   = '-m64 -O2 -DLINUX -Wall',
                        LINKFLAGS = '-m64 ',
                        CPPPATH   = [cwd])
 
-if ('interix' in platform):    # Interix
-   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
-   starsEnv.Replace( CC=interixgcc )
-   starsEnv.Replace(  LINKFLAGS='-O -m64' )
-   starsEnv.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','LINUX']  )
-   starsEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib') ]  )
-   #print("CC is:", starsEnv['CC'])
-   #print("C++ is:", starsEnv['CXX'])
+if ('darwin' in platform):
+    starsEnv.Replace(CC = 'clang')
+    starsEnv.Replace(CCFLAGS = '-Os -Wall -arch x86_64 -DLINUX -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       starsEnv.Append(CCFLAGS = os.getenv('osxflags'))
+    starsEnv.Replace(LINKFLAGS = '-Os')
 
 # actual builds
 stars = starsEnv.Program(target  = starsTarget,

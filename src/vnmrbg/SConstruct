@@ -640,27 +640,15 @@ vnmrBgCEnv = Environment(CCFLAGS    = ccflags_32_64,
 if (platform=="darwin"):
     vnmrBgCEnv.Append(CPPDEFINES = 'MACOS')
     vnmrBgCEnv.Replace(CC = 'clang')
+    vnmrBgCEnv.Append(CCFLAGS = ' -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       vnmrBgCEnv.Append(CCFLAGS = os.getenv('osxflags'))
 if (opensource=="true"):
     if (gplsource=="true"):
         vnmrBgCEnv.Append(CPPDEFINES = 'VNMR_GPL')
 
-if ('interix' in platform):    # Interix
-   # print(interixgcc)
-   vnmrBgCEnv.Replace(  CC=interixgcc  )
-   vnmrBgCEnv.Replace(  CXX=interixgpp  )
-   vnmrBgCEnv.Replace(  LINKFLAGS='-O -m32' )
-   vnmrBgCEnv.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','_REENTRANT','USE_HTONS','WINDRIDGE','NO_WIN_MMAP','BSDACQ','NESSIE','LINUX','VNMRJ','SUN','X11','NOMOTIF']  )
-   vnmrBgCEnv.Append(  CPPPATH=[ '/usr/include','/usr/X11R6/include/']  )
-   vnmrBgCEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib') ]  )
-
-   # vnmrBgCppEnv = vnmrBgCEnv.Clone(CXX=interixgpp)
-   vnmrBgCppEnv = vnmrBgCEnv.Clone()
-   # print("CC is:", vnmrBgCppEnv['CC'])
-   # print("C++ is:", vnmrBgCppEnv['CXX'])
-   # print(vnmrBgCppEnv)
-
-else:
-   vnmrBgCppEnv = vnmrBgCEnv.Clone(CC         = 'g++',
+vnmrBgCppEnv = vnmrBgCEnv.Clone(CC         = 'g++',
                                CCFLAG = '',
                                CPPDEFINES = ['LINUX', 'VNMRJ'])
 

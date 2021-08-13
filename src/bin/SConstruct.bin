@@ -5,21 +5,7 @@ import os
 import sys
 import shutil
 
-platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
-
-def isUbuntuVersion():
-   if os.path.exists("/etc/debian_version"):
-      value=1
-      f=open("/etc/issue",'r')
-      for line in f:
-         if (line.find("Ubuntu") > -1):
-            print(line)
-            break
-      f.close()
-   else:
-      value=0
-   return(value)
-
+platform = sys.platform
 
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
@@ -65,16 +51,11 @@ env = Environment(CCFLAGS = '-O2 -Wall -m64',
 
 if ('darwin' in platform):
     env.Replace(CC = 'clang')
-    env.Replace(CCFLAGS = '-Wall -Os -arch x86_64')
+    env.Replace(CCFLAGS = '-Os -Wall -arch x86_64 -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       env.Append(CCFLAGS = os.getenv('osxflags'))
     env.Replace(LINKFLAGS = '-Os')
-
-env64 = Environment(CCFLAGS = '-O2 -Wall -m64',
-                  LINKFLAGS = '-m64')
-
-if ('darwin' in platform):
-    env64.Replace(CC = 'clang')
-    env64.Replace(CCFLAGS = '-Wall -Os -arch x86_64')
-    env64.Replace(LINKFLAGS = '-Os')
 
 # define with absolute path where built files will be copied
 vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
@@ -98,11 +79,11 @@ for i in bit32FileList:
 
 for i in bit64FileList:
    (filename, ext) = os.path.splitext(i)
-   tempBuildObj = env64.Program(target = filename,
+   tempBuildObj = env.Program(target = filename,
                               source = i,
                               LIBS   = ['m'])
 
-   env64.AddPostAction(tempBuildObj,
+   env.AddPostAction(tempBuildObj,
                      Action(Copy(vnmrInstallPath, os.path.join(cwd, filename))))
 
 if (platform!="darwin"):
