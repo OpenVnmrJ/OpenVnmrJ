@@ -1,34 +1,26 @@
 
-OpenVnmrJ Version 3.1 Installation or Upgrade
+OpenVnmrJ Version 2.1 Installation or Upgrade
 
 For upgrade information, see the end of this document.
 
-OpenVnmrJ Version 3 has been installed on CentOS systems running
-versions 7.5, 7.6, 7.7, 7.8, 7.9, and RHEL systems running 8.3 and 8.4.
-It has also been installed on AlmaLinux 8.4 and on Ubuntu
-Version 18 and 20 systems.
-
+OpenVnmrJ Version 2 has been installed on RedHat/CentOS systems running
+versions 6.8, 6.9, 6.10, 7.5, 7.6, 7.7, 8.1, 8.2, and 8.3.
+It has also been installed on Ubuntu Version 14, 16, 18, and 20 systems.
 The MacOS version of OpenVnmrJ has been installed on versions Yosemite (10.10)
-to Big Sur (16.3). Installation on RHEL/CentOS and Ubuntu 20 systems
-can be used to run a spectrometer. The MacOS version is for data-processing only.
+to Catalina (10.15). Installation on RHEL/CentOS and Ubuntu 20 systems
+can be used to run a spectrometer. (Note, support for Ubuntu 20 as an
+acquisition system will be available in the release after version 2.1.
+If use build a release yourself, as described in the README.md file in
+the ovjTools repository, then the resulting dvdimage will support Ubuntu 20.)
+The MacOS version is for data-processing only.
 
 To install on CentOS 6.x systems, we recommend using the CentOS KickStart
-DVD available from Agilent, available [here](https://drive.google.com/drive/folders/10-pQ-HquslWJfWBkoOj7cM0yHST5RFbU)
-Note that support for CentOS 6 from RedHat has ended and OpenVnmrJ 3.1
-does not support CentOS 6.x. OpenVnmrJ 2.1 does support CentOS 6.x.
-Also, if one uses the ovjBuild script from OpenVnmrJ 3.1 to build a release
-on CentOS 6 directly from the github source code, it will function of that platform.
+DVD available from Agilent, available from
+https://drive.google.com/drive/folders/10-pQ-HquslWJfWBkoOj7cM0yHST5RFbU 
 
 For CentOS 7.x and 8.x systems, one can start by installing a standard
 OS using the CentOS-7-x86_64-DVD-*.iso or CentOS-8-x86_64-DVD-*.iso images
 available from https://www.centos.org/download/
-Note that support for CentOS 8 from RedHat will end at the end of 2021.
-
-RedHat has introduced a no cost developer subscription for up to 
-16 systems. [Details are here](https://developers.redhat.com/blog/2021/02/10/how-to-activate-your-no-cost-red-hat-enterprise-linux-subscription/?sc_cid=7013a0000026TeTAAU)
-
-For AlmaLinux systems, one can start by downloading one of the x86_64 images
-available from https://mirrors.almalinux.org/isos
 
 For Ubuntu systems, one can start by downloading one of the images available
 from https://ubuntu.com/download/desktop
@@ -38,7 +30,7 @@ Ubuntu_16, were chosen, then the system, if connected to network, will
 prompt for OS updates at a later stage.  It is up to the user and/or
 their organization policies to opt for OS updates or not.
 
-A typical Linux 7.x or 8.x installation may involve selecting, in the
+A typical CentOS 7.x or 8.x installation may involve selecting, in the
 "SOFTWARE SELECTION" options, the GNOME Desktop as the base environment
 and the GNOME applications, Legacy X Window System Compatibility,
 Compatibility Libraries, and Development Tools as add-ons. One does
@@ -56,7 +48,13 @@ The OpenVnmrJ installer may be downloaded from
 Move the zip file to /tmp and unzip it.  If you are logged in
 as root, do not try to install it from the root home directory (/root). It will
 not work. First unzip the file and cd into dvdimageOVJ (or dvdimageOVJMI).
-Run ./load.nmr.  The first thing it will do is install missing CentOS
+If you are using CentOS 8, some modifications to the currently released
+OpenVnmrJ 2.1 are required. Download the ver81.zip file from the github
+releases page, copy it to the dvdimageOVJ directory, and run
+  unzip -o ver81.zip
+Note the -o argument. The contents of ver81.zip are also compatible with
+installations on earlier CentOS versions. After unzipping the ver81.zip file,
+run ./load.nmr.  The first thing it will do is install missing CentOS
 packages. It uses yum and will require network access. Since it turns off
 SELinux, a reboot is needed after the packages are installed.
 
@@ -66,9 +64,8 @@ find that all required packages have been installed and start a normal
 OpenVnmrJ installation. Following that, it will prompt you to set up
 some standard accounts (walkup and service), install the latest version
 of NMRPipe, install the VnmrJ 4.2 manual set, and setup the network for
-console communications. If you make the walkup and service accounts, on
-Ubuntu systems, they will be given the initial password of abcd1234.
-On CentOS, RHEL, and AlmaLinux systems, they will not be given a password.
+console communications. If you make the walkup and service accounts, they
+will be given passwords abcd1234.
 
 Note that access to the network is tested by trying to "ping" google.com 
 Some firewalls disable ping. If you are sure you have network access,
@@ -87,14 +84,23 @@ will not download it.  To create the repositories described below, a fresh
 install of CentOS 7 with only the Gnome desktop and "Development tools"
 selection was used. The ovjGetRepo script puts the packages in a directory
 named openvnmrj.repo in the parent directory of the dvdimageOVJ direcory.
-For the repositories described below, this was repeated for CentOS 7.9
-and AlmaLinux 8.4 since each has different package dependencies.  The
-openvnmrj.repo directories were zipped and given names to reflect the
-specific OS.  They can be downloaded with these links:
+For the repositories described below, this was repeated for CentOS 7.5,
+7.6, 7.7, 8.1, and 8.2 since each has different package dependencies.  The
+openvnmrj.repo directories were zipped to files named ovjCentos75.repo.zip,
+ovjCentos76.repo.zip, ovjCentos77.repo.zip, ovjCentos81.repo.zip, and
+ovjCentos82.repo.zip.  They can be downloaded with these links:
 
-   https://www.dropbox.com/s/yi5s29olowogia8/ovj3Centos79.repo.zip?dl=0
+   https://www.dropbox.com/s/1abfx71q7ppnz5k/ovjCentos75.repo.zip?dl=0
 
-   https://www.dropbox.com/s/hsav3k3flowkhxn/ovj3AlmaLinux84.repo.zip?dl=0
+   https://www.dropbox.com/s/n95wnuyhmmccpby/ovjCentos76.repo.zip?dl=0
+
+   https://www.dropbox.com/s/rx0fiprusehf78r/ovjCentos77.repo.zip?dl=0
+
+   https://www.dropbox.com/s/fxzqxlltruss73r/ovjCentos78.repo.zip?dl=0
+
+   https://www.dropbox.com/s/a98p04s0kiyn2sm/ovjCentos81.repo.zip?dl=0
+
+   https://www.dropbox.com/s/e77kql65nsokmvt/ovjCentos82.repo.zip?dl=0
 
 The second script is ovjUseRepo. It takes an optional path name for the
 openvnmrj.repo but defaults to the parent of the dvdimageOVJ directory.
@@ -105,7 +111,7 @@ Internet access is not required. A typical process would be to download
 the OpenVnmrJ installer and one of the above CentOS repositories. Move
 both files to /tmp and then do
    unzip <OpenVnmrJ installer>
-   unzip <OS package repository>
+   unzip <CentOS repository>
    cd dvdimageOVJ
    ./ovjUseRepo
    ./load.nmr
@@ -125,32 +131,28 @@ the administrator (vnmr1) account.
 Newer CentOS and Ubuntu systems use the Gnome 3 display manager.
 The "Standard" display manager no longer has desktop icons. Rather, it has
 an Activities button at the upper left corner. Clicking that button will
-display a "Type to search..." entry field. If you enter vnmrj or openvnmr,
-the OpenVnmrJ launch icon will appear. This can be dragged to the favorites
-toolbar or right-clicked and select "Add to Favorites". If the OpenVnmrJ
-launch icon does not appear, re-run makeuser on that account. You may also
-need to log out and log in again.
+display a "Type to search..." entry field. If you enter vnmrj, the
+OpenVnmrJ launch icon will appear. This can be dragged to the favorites
+toolbar. If the OpenVnmrJ launch icon does not appear, re-run makeuser on
+that account. You may also need to log out and log in again.
 
 Gnome 3 also supports the "Classic" display manager, where desktop icons
-are displayed. One can select the display manager from the login screen.
-A settings icon is available after selecting the user, but before entering
-the password. On CentOS, it is next to the "Sign in" button. Select the
-"Classic (Wayland display server)" and then log in. On Ubuntu, the settings
-icon is at the lower right-hand corner of the display. Select either of
-the "Ubuntu" settings. The OpenVnmrJ desktop launch icons will be displayed.
-Before they can be used, they must be enabled by clicking the right mouse
-button on them and selecting "Allow Launching".
+are displayed. One can select the display manager from the CentOS login screen.
+After selecting the user, but before entering the password, click the settings
+icon next to the "Sign in" button. Select the "Classic (Wayland display server)"
+and then log in. The OpenVnmrJ desktop launch icons will be displayed. Before
+they can be used, they must be enabled by clicking the right mouse button on
+them and selecting "Allow Launching".
 
 
 The MacOS version needs java version 1.8 or newer to be installed.
-Also, if installed on MacOS Catalina (10.15) or Big Sur (16.3), the
-Mac must be rebooted following installation of OpenVnmrJ. If one
-installs OpenVnmrJ Version 3 on a Mac running Yosemite to Mojave and
-subsequently upgrades to Catalina or newer MacOS versions, OpenVnmrJ
-will stop working.  This is because Catalina and newer MacOS versions
-have implemented a "read-only" system directory and OpenVnmrJ will have
-been moved to a different disk locations and the /vnmr link will have
-been removed. To re-enable OpenVnmrJ, run the script
+Also, if installed on MacOS Catalina (10.15), the Mac must be rebooted
+following installation of OpenVnmrJ. If one installs OpenVnmrJ Version 2
+on a Mac running Yosemite to Mojave and subsequently upgrades to Catalina,
+OpenVnmrJ will stop working. This is because Catalina has implemented a
+"read-only" system directory and OpenVnmrJ will have been moved to a different
+disk locations and the /vnmr link will have been removed. To re-enable
+OpenVnmrJ, run the script
 
   ~/vnmrsys/vnmr/bin/ovjFixMac
 
@@ -171,7 +173,10 @@ Then move the jdk-13.0.2.jdk directory with the command
 Upgrading an existing OpenVnmrJ installation.
 =============================================
 
-Running
+With releases of OpenVnmrJ newer than OpenVnmrJ 2.1A, an upgrade.nmr script
+is also available in the dvdimage directory. If use build a release yourself,
+as described in the README.md file in the ovjTools repository, then it will
+also have the upgrade.nmr script.  Running
   ./load.nmr
 will install the new release as described above. If one instead runs
   ./upgrade.nmr
