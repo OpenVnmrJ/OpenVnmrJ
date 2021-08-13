@@ -49,11 +49,15 @@ struct {
 
 // From data.h
 
+#define S_VAR           0x0     /* 1 = Varian data               */ 
 #define S_QONE          0x800   /* 1 = Q-One data               */ 
 #define S_MAKEFID       0x1000  /* 1 = data from makefid        */
 #define S_JEOL          0x2000  /* 1 = JEOL data                */ 
 #define S_BRU           0x4000  /* 1 = Bruker data              */ 
+#define S_MAG           0x1800  /* 1 = Magritek data              */ 
 #define P_VENDOR_ID     0x7800  /* preserves vendor ID status   */
+#define S_COMPLEX       0x10    /* 0 = real         1 = complex    */
+#define VERSION 1
 
 /*** PROGRAM BEGIN *************************************/
 int main(int argc, char *argv[])
@@ -123,16 +127,29 @@ int main(int argc, char *argv[])
       if ( versID)
       {
          short vers_id;
+         short status;
          vers_id = ntohs(datafilehead.vers_id);
+         status = ntohs(datafilehead.status);
+         if ( ! (status & S_COMPLEX) )
+         {
+            status  &= ~(0x40);
+            status |= S_COMPLEX;
+            datafilehead.status = htons(status);
+         }
          vers_id &= ~P_VENDOR_ID;
+         if (argv[3][0] == 'V')
+            vers_id |= S_VAR;
          if (argv[3][0] == 'B')
             vers_id |= S_BRU;
          if (argv[3][0] == 'J')
             vers_id |= S_JEOL;
          if (argv[3][0] == 'Q')
             vers_id |= S_QONE;
-         if (strstr(argv[3],"M") != NULL)
+         if (argv[3][0] == 'C')
             vers_id |= S_MAKEFID;
+         if (argv[3][0] == 'M')
+            vers_id |= S_MAG;
+         vers_id |= VERSION;
         
          datafilehead.vers_id = htons(vers_id);
          rewind(in_file);  
