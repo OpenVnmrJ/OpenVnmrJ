@@ -31,6 +31,13 @@ if ! [[ $osVer -gt 10 ]] && ! [[ $osSubVer -ge 15 ]]; then
    exit 1
 fi
 
+if [[ -f /etc/synthetic.conf ]]; then
+   grep "/Applications/OpenVnmrJ.app/Contents/Resources/OpenVnmrJ" /etc/synthetic.conf >& /dev/null
+   if [[ $? -eq 0 ]]; then
+      echo "OpenVnmrJ access is already correct"
+      exit 1
+   fi
+fi
 #-------------------------------------------------
 #  MAIN Main main
 #-------------------------------------------------
@@ -87,31 +94,12 @@ fi
 # User is now root.
 #
 
-ovjApps=$(ls -d /Applications/OpenVnmrJ*app)
-revmajor=2
-revminor=0
-for app in $ovjApps
-do
-   ver=$(basename $app .app | tr "_" " " | awk '{print $2}')
-   major=$(echo $ver | tr "." " " | awk '{print $1}')
-   minor=$(echo $ver | tr "." " " | awk '{print $2}')
-   if [[ $major -gt $revmajor ]]; then
-      revmajor=$major
-      revminor=$minor
-   elif [[ $minor -gt $revminor ]]; then
-      revminor=$minor
-   fi
-done
-
 if [[ -f /etc/synthetic.conf ]]; then
-   grep -w vnmr /etc/synthetic.conf
-   if [[ $? -eq 0 ]]; then
-      grep -vw vnmr /etc/synthetic.conf > /etc/synthetic
-      mv /etc/synthetic /etc/synthetic.conf
-   fi
-   printf "vnmr\t/Applications/OpenVnmrJ_%d.%d.app/Contents/Resources/OpenVnmrJ\n" $revmajor $revminor >> /etc/synthetic.conf  
+   grep -vw vnmr /etc/synthetic.conf > /etc/synthetic
+   mv /etc/synthetic /etc/synthetic.conf
+   printf "vnmr\t/Applications/OpenVnmrJ.app/Contents/Resources/OpenVnmrJ\n" >> /etc/synthetic.conf  
 else
-   printf "vnmr\t/Applications/OpenVnmrJ_%d.%d.app/Contents/Resources/OpenVnmrJ\n" $revmajor $revminor > /etc/synthetic.conf  
+   printf "vnmr\t/Applications/OpenVnmrJ.app/Contents/Resources/OpenVnmrJ\n" > /etc/synthetic.conf  
 fi
 
 rm -f /System/Volumes/Data/vnmr

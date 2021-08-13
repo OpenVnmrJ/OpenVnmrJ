@@ -29,9 +29,8 @@ optddrdir="${gitdir}/../options/console/ddr"
 ddrconsoledir="${gitdir}/../console/ddr"
 
 VnmrRevId=$(grep RevID ${gitdir}/src/vnmr/revdate.c | cut -s -d\" -f2 | cut -d\  -f3)
-ovjAppName=OpenVnmrJ_${VnmrRevId}.app
+ovjAppName=OpenVnmrJ.app
 
-# TODO replace this with spiffy OS X app that does away with installer...
 packagedir="${workspacedir}/${dvdBuildName1}/Package_contents"
 resdir="${workspacedir}/${dvdBuildName1}/install_resources"
 mkdir -p "${packagedir}"
@@ -40,7 +39,7 @@ mkdir "${resdir}"
 cd "${gitdir}/src/macos"
 cp -r VnmrJ.app "${packagedir}/$ovjAppName"
 rm -f VJ
-cc -Os -mmacosx-version-min=10.8 -arch x86_64 VJ.c -o VJ
+cc -Os $osxflags -arch x86_64 VJ.c -o VJ
 mkdir -p "${packagedir}/$ovjAppName/Contents/MacOS"
 cp VJ "${packagedir}/$ovjAppName/Contents/MacOS/."
 rm -f "${vnmrdir}/bin/convert"
@@ -55,15 +54,16 @@ mkdir -p "${vjdir}"
 mkdir "${vjdir}/tmp" "$vjdir/acqqueue"
 chmod 777 "${vjdir}/tmp" "$vjdir/acqqueue"
 
-cp "${gitdir}/src/macos/preinstall" $resdir/.
-cp "${gitdir}/src/macos/postinstall" $resdir/.
+(cd "${packagedir}/$ovjAppName"; mv Contents Contents_${VnmrRevId}_Beta2; ln -s Contents_${VnmrRevId}_Beta2 Contents)
+
+cat "${gitdir}/src/macos/preinstall" |
+        sed -e "s|OVJVERS|$VnmrRevId|" > ${resdir}/preinstall
+cp "${gitdir}/src/macos/postinstall" ${resdir}/postinstall
 chmod +x $resdir/p*
 
 cd "$vnmrdir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
 cd "$ddrconsoledir"; tar cf - --exclude .gitignore --exclude "._*" . | (cd "$vjdir"; tar xpf -)
 rm -rf $vjdir/Bayes3
-mv -f $vjdir/maclib/mtune_ddr $vjdir/maclib/mtune
-mv -f $vjdir/maclib/_sw_ddr $vjdir/maclib/_sw
 
 optionslist=`ls $standardsdir`
 for file in $optionslist
@@ -108,6 +108,8 @@ codesign -s "3rd Party Mac Developer Application:" --entitlements "${gitdir}/src
 if [[ -f /usr/local/bin/packagesbuild ]]
 then
    echo "Making MacOS package of OpenVnmrJ"
+   cat "${gitdir}/src/macos/ReadMe" |
+        sed -e "s|OVJVERS|$VnmrRevId|" > "${gitdir}/src/macos/ReadMe.txt" |
    /usr/local/bin/packagesbuild -v -F "${workspacedir}" "${gitdir}/src/macos/ovjpkg.pkgproj"
 else
    echo "MacOS Packages.app not installed"

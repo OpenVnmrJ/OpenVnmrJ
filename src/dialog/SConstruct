@@ -30,7 +30,10 @@ platform = sys.platform
 if (platform=="darwin"):
    javaBinDir = os.path.join('/', 'usr', 'bin')
    jarBin = os.path.join(javaBinDir, 'jar')
-   jEnv = Environment(ENV = {'PATH' : javaBinDir + ':' + os.environ['PATH']})
+   if not "JAVA_HOME" in os.environ:
+      os.environ['JAVA_HOME'] = os.popen('/usr/libexec/java_home -v 1.8').read()
+   jEnv = Environment(ENV = {'PATH' : javaBinDir + ':' + os.environ['PATH'],
+                             'JAVA_HOME' : os.environ['JAVA_HOME']})
 else:
    javaBinDir = os.path.join(ovjtools, 'java', 'bin')
    jarBin = os.path.join(javaBinDir, 'jar')

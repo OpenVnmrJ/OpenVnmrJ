@@ -24,16 +24,10 @@ dpsPsGenEnv = Environment(CCFLAGS   = '-O -Wall',
 
 if ( 'darwin' in platform ):
     dpsPsGenEnv.Replace(CC = 'clang')
-    dpsPsGenEnv.Replace(CCFLAGS = '-Os -Wall -DMACOS')
-
-if ('interix' in platform):    # Interix
-   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
-   dpsPsGenEnv.Replace( CC=interixgcc )
-   dpsPsGenEnv.Replace(  LINKFLAGS='-O -m32' )
-   dpsPsGenEnv.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','LINUX','VNMRJ','SUN']  )
-   dpsPsGenEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib') ]  )
-   # print("CC is:", dpsPsGenEnv['CC'])
-   # print("C++ is:", dpsPsGenEnv['CXX'])
+    dpsPsGenEnv.Replace(CCFLAGS = '-Os -DMACOS -Wall -arch x86_64 -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       dpsPsGenEnv.Append(CCFLAGS = os.getenv('osxflags'))
 
 buildMethods.makeSymLinks(dpsPsGenEnv, dpsPsGenTarget, cwd, vnmrPath, vnmrHdrList)
 

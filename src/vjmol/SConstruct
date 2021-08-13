@@ -8,7 +8,15 @@ import sys
 import shutil
 import datetime
 
+# current working directory
+cwd = os.getcwd()
+
 ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print("OVJ_TOOLS env not found. Trying default location.")
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
 if not ovjtools:
     print("OVJ_TOOLS env not found.")
     print("For bash and variants, use export OVJ_TOOLS=<path>")
@@ -17,9 +25,6 @@ if not ovjtools:
 
 # MAC -> darwin, Linux -> linux2
 platform = sys.platform
-
-# current working directory
-cwd = os.getcwd()
 
 # target
 vjmolTarget = 'vjmol.jar'
@@ -97,7 +102,10 @@ if (platform!="darwin"):
                           'CLASSPATH' : classesPath + ':' + os.path.join(cwd, 'jmol.jar'),
                           'PATH' : javaPath + ':' + os.environ['PATH']})
 else:
+   if not "JAVA_HOME" in os.environ:
+      os.environ['JAVA_HOME'] = os.popen('/usr/libexec/java_home -v 1.8').read()
    jEnv = Environment(ENV = {'CLASSPATH' : classesPath + ':' + os.path.join(cwd, 'jmol.jar'),
+                             'JAVA_HOME' : os.environ['JAVA_HOME'],
                           'PATH' : javaPath + ':' + os.environ['PATH']})
 
 # actual builds

@@ -71,27 +71,11 @@ env = Environment(CCFLAGS    = '-fPIC -c -Wall -O -m32',
 if ('darwin' in platform):
     env.Replace(CC = 'clang')
     env.Append(CPPDEFINES = ['MACOS','NOASYNC'])
-    env.Replace(CCFLAGS = '-Os -arch x86_64 -fPIC')
-    env.Replace(CPPFLAGS = '-Wall -Wno-format-security -Wno-return-type -mmacosx-version-min=10.8')
-
-if ('interix' in platform):
-   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
-   interixar= os.path.join(os.sep,'opt','gcc.3.3','bin','ar')
-   env.Replace( CCFLAGS = '-Wall -O -m32' )
-   env.Replace( CC=interixgcc )
-   env.Replace( LINK=interixgcc )
-   env.Replace( SHLINK=interixgcc )
-   env.Replace( AR=interixar )
-   env.Replace(  LINKFLAGS='-O -m32' )
-   env.AppendUnique(  CPPDEFINES=[ 'ULONG','_ALL_SOURCE','__INTERIX','NOACQ','USE_HTONS','NESSIE','LINUX','SUN','NO_WIN_MMAP']  )
-   env.Replace(  CPPPATH= [ cwd,  
-                  os.path.join(cwd, os.pardir, os.pardir,'3rdParty', 'jdk1.6.0_12', 'include'),
-                  os.path.join(cwd, os.pardir, os.pardir,'3rdParty', 'jdk1.6.0_12', 'include','linux') ] ),
-
-
-   env.AppendUnique(  CPPPATH=[ '/usr/include','/usr/X11R6/include/']  )
-   env.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr'
-,'lib') ]  )
+    env.Replace(CCFLAGS = '-Os -arch x86_64 -fPIC -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       env.Append(CCFLAGS = os.getenv('osxflags'))
+    env.Replace(CPPFLAGS = '-Wall -Wno-format-security -Wno-return-type')
 
 
 buildMethods.makeSymLinks(env, acqcommStaticTarget, cwd, expprocPath, expprocFileList)
