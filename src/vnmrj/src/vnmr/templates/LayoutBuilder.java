@@ -527,11 +527,15 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
         addVObject("selmenu",       vnmr.bo.VSelMenu.class);
         addVObject("selfilemenu",   vnmr.bo.VSelFileMenu.class);
         addVObject("plot",          vnmr.bo.VPlot.class);
-        addVObject("lcplot",        vnmr.lc.VLcPlot.class);
-        addVObject("msplot",        vnmr.lc.VMsPlot.class);
-        addVObject("pdaplot",       vnmr.lc.VPdaPlot.class);
-        addVObject("pdaimage",      vnmr.lc.VPdaImage.class);
-        addVObject("lcTableItem",   vnmr.lc.VLcTableItem.class);
+        // CORBA has been remove after java 1.8
+        if ( System.getProperty("java.version").startsWith("1.") )
+        {
+           addVObject("lcplot",        vnmr.lc.VLcPlot.class);
+           addVObject("msplot",        vnmr.lc.VMsPlot.class);
+           addVObject("pdaplot",       vnmr.lc.VPdaPlot.class);
+           addVObject("pdaimage",      vnmr.lc.VPdaImage.class);
+           addVObject("lcTableItem",   vnmr.lc.VLcTableItem.class);
+        }
         addVObject("undobutton",    vnmr.bo.VUndoButton.class);
         addVObject("redobutton",    vnmr.bo.VRedoButton.class);
         addVObject("rfmonbutton",   vnmr.bo.VRFMonButton.class);

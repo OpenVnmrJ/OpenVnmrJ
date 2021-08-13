@@ -173,7 +173,7 @@ then
 fi
 modsArg=""
 vers=$($javabin -fullversion 2>&1 | awk 'BEGIN {FS="\""} {print $2}' | awk 'BEGIN {FS="."} {print $1}')
-if [[ $vers > 8 ]]
+if [[ $vers -gt 8 ]]
 then
   modsArg="--add-modules ALL-SYSTEM"
 fi
