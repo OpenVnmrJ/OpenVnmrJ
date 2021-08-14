@@ -248,6 +248,7 @@ doUpgrade () {
         acq/info
         p11/part11Config
         adm/users/profiles/accPolicy
+        adm/users/userDefaults
         pulsecal
         imaging/gradtables
         "
