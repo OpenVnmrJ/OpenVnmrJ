@@ -143,9 +143,23 @@ button on them and selecting "Allow Launching".
 
 
 The MacOS version needs java version 1.8 or newer to be installed.
+To install on the Mac, open the "Finder" and navigate to the OpenVnmrj.pkg
+file. Right-click on the icon and select "Open".
+If you double-click on the icon, it may result in System security
+complaining it’s “not registered developer” and then quit.
+To get around this security issue, go to
+  Apple Pull down menu
+    System Preferences
+    Security & Privacy 
+    Click on lock icon bottom left of window and enter administrator password
+        General Tab
+        Bottom Section
+        Allow apps downloaded from:
+           Select OpenVnmrJ and choose “Open Anyways”
+
 Also, if installed on MacOS Catalina (10.15) or Big Sur (16.3), the
 Mac must be rebooted following installation of OpenVnmrJ. If one
-installs OpenVnmrJ Version 3 on a Mac running Yosemite to Mojave and
+installs OpenVnmrJ Version 3 on a Mac running Mojave and
 subsequently upgrades to Catalina or newer MacOS versions, OpenVnmrJ
 will stop working.  This is because Catalina and newer MacOS versions
 have implemented a "read-only" system directory and OpenVnmrJ will have
@@ -157,15 +171,15 @@ been removed. To re-enable OpenVnmrJ, run the script
 A system reboot will then be necessary.
 
 The open-source version of java for MacOS may be obtained from https://jdk.java.net.
-Download, for example, the JDK 13.0.2 release. Unpack the java package with the commands
+Download, for example, the JDK 14.0.2 release. Unpack the java package with the commands
 
-  gunzip openjdk-13.0.2_osx-x64_bin.tar.gz
+  gunzip openjdk-14.0.2_osx-x64_bin.tar.gz
 
-  tar xvf openjdk-13.0.2_osx-x64_bin.tar
+  tar xvf openjdk-14.0.2_osx-x64_bin.tar
 
-Then move the jdk-13.0.2.jdk directory with the command
+Then move the jdk-14.0.2.jdk directory with the command
 
-  sudo mv jdk-13.0.2.jdk /Library/Java/JavaVirtualMachines
+  sudo mv jdk-14.0.2.jdk /Library/Java/JavaVirtualMachines
 
 
 Upgrading an existing OpenVnmrJ installation.
