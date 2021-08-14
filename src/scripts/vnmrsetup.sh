@@ -343,8 +343,9 @@ if [ "x$distroType" = "xrhel" -o "x$distroType" = "xdebian" ]; then
           acqProg="b12"
       fi
       $dirpath/code/installpkgs "$@" $acqProg
-      if [ $? -ne 0 ]; then
-         if [[ $? -ne 2 ]]; then
+      err=$?
+      if [ $err -ne 0 ]; then
+         if [[ $err -ne 2 ]]; then
            cat $dirpath/code/rpmInstruction.txt
          fi
          exit 2

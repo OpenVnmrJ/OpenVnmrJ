@@ -462,7 +462,7 @@ if [ ! -x /usr/bin/dpkg ]; then
     echo "CentOS / RedHat PackageKit is preventing installation"
     echo "Please try again in 5-10 minutes,"
     echo "after this tool completes its task."
-    exit 1
+    exit 2
   fi
 
   echo "You can monitor the progress in a separate terminal window with the command"
@@ -663,7 +663,7 @@ else
   if [ $distmajor -lt 14 ] ; then
     echo "Only Ubuntu 14 or newer is supported"
     echo " "
-    exit 1
+    exit 2
   fi
 
   echo "You can monitor progress in a separate terminal window with the command"
@@ -701,7 +701,7 @@ else
   then
     echo "Ubuntu unattended-update is preventing installation"
     echo "Please try again in 5-10 minutes, after this tool completes its task."
-    exit 1
+    exit 2
   fi
   acqInstall=""
   if [[ $b12Acq -eq 1 ]]; then
@@ -716,7 +716,11 @@ else
       fi
   fi
   apt-get -qq update
-# apt-get -qq -y dist-upgrade
+  if [[ $? -ne 0 ]]; then
+    echo "Ubuntu software update is preventing installation"
+    echo "Please try again in 5-10 minutes, after this tool completes its task."
+    exit 2
+  fi
   if [[ $ovjRepo -eq 1 ]]; then
      repoArg="--allow-unauthenticated"
   fi
