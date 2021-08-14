@@ -23,5 +23,5 @@ For data processing only, OpenVnmrJ Version 2 is also compatible with:
 - For OpenVnmrJ on CentOS 8.x systems, the ver81.zip file will also be needed.
 
 ## Installation
-See the [Install](../../blob/master/Install.md) file for installation instructions.
+See the [Install2](../../blob/master/Install2.md) file for installation instructions.
 
