@@ -708,8 +708,14 @@ if [ $? -ne 0 ] ; then
    fi
    reboot=1
 else
-   echo "Network for the spectrometer is configured correctly"
+   echo "Network for the spectrometer is configured"
+   ${vnmrsystem}/bin/setNIC show
    echo " "
+   echo "Would you like to re-configure it (y/n) [n]? "
+   read ans
+   if [[ "x$ans" = "xy" ]] ; then
+      ${vnmrsystem}/bin/setNIC
+   fi
 fi
 
 #-----------------------------------------------------------------
@@ -831,6 +837,29 @@ else
          systemctl start rlogin.socket
       fi
      fi
+
+     if [[ -f $sysdDir/tftp.socket ]]; then
+      systemctl is-enabled --quiet tftp.socket
+      if [[ $? -ne 0 ]]; then
+         systemctl enable --quiet tftp.socket
+      fi
+      systemctl is-active --quiet tftp.socket
+      if [[ $? -ne 0 ]]; then
+         systemctl start tftp.socket
+      fi
+     fi
+
+     if [[ -f $sysdDir/tftp.service ]]; then
+      systemctl is-enabled --quiet tftp.service
+      if [[ $? -ne 0 ]]; then
+         systemctl enable --quiet tftp.service
+      fi
+      systemctl is-active --quiet tftp.service
+      if [[ $? -ne 0 ]]; then
+         systemctl start tftp.service
+      fi
+     fi
+
    fi
 fi
 
