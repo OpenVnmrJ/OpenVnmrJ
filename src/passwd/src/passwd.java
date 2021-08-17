@@ -10,7 +10,6 @@
 
 import java.io.*;
 import java.util.*;
-import javax.xml.bind.*;
 
 import java.security.*;
 
@@ -51,7 +50,7 @@ public class passwd
         }
 
         byte raw[] = md.digest(); //step 4
-        String hash = DatatypeConverter.printBase64Binary(raw); //step 5
+        String hash = Base64.getEncoder().encodeToString(raw); //step 5
         plaintext = "";
         return hash; //step 6
     }
