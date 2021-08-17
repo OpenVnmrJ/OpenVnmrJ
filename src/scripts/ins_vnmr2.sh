@@ -574,6 +574,9 @@ then
          fi
          cp /vnmr/devicenames /tmp/devicenames
          cp /vnmr/devicetable /tmp/devicetable
+         cp /vnmr/solventlist /tmp/. 
+         cp /vnmr/solventppm /tmp/. 
+         cp /vnmr/solvents /tmp/. 
          rm -rf /tmp/probes /tmp/shims
          cp -r /vnmr/probes /tmp/probes
          cp -r /vnmr/shims /tmp/shims
@@ -1073,6 +1076,12 @@ then
       mv /tmp/devicetable "$dest_dir"/devicetable
       ${chown_cmd} $nmr_adm   "$dest_dir"/devicenames "$dest_dir"/devicetable "$dest_dir"/conpar.prev
       ${chgrp_cmd} $nmr_group "$dest_dir"/devicenames "$dest_dir"/devicetable "$dest_dir"/conpar.prev
+      echo "Restoring solvent information."
+      mv /tmp/solventlist "$dest_dir"/.
+      mv /tmp/solventppm "$dest_dir"/.
+      mv /tmp/solvents "$dest_dir"/.
+      ${chown_cmd} $nmr_adm   "$dest_dir"/solventlist "$dest_dir"/solventppm "$dest_dir"/solvents
+      ${chgrp_cmd} $nmr_group "$dest_dir"/solventlist "$dest_dir"/solventppm "$dest_dir"/solvents
       echo "Restoring shim and probe-calibration files"
       mv /tmp/shims/* "$dest_dir"/shims
       # if probelist is zero length string the for loop does not execute.
