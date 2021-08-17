@@ -21,6 +21,10 @@ collectFiles()
    fi
    cp devicenames $toDir/.
    cp devicetable $toDir/.
+   echo "Collecting solvent information"
+   cp solventlist $toDir/.
+   cp solventppm $toDir/.
+   cp solvents $toDir/.
    echo "Collecting probe information"
    tar -cf - probes | (cd $toDir; tar -xpf -)
    rm -f $toDir/probes/probe.tmplt

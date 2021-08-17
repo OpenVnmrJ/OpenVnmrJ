@@ -251,6 +251,9 @@ doUpgrade () {
         adm/users/userDefaults
         pulsecal
         imaging/gradtables
+        solventlist
+        solventppm
+        solvents
         "
 
     OLDIFS=$IFS

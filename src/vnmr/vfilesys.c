@@ -402,7 +402,10 @@ int appdirFind(const char *filename, const char *lib, char *fullpath,
    while ( currentPath[0] != '\0' )
    {
       findIndex++;
-      sprintf(searchPath,"%s/%s/%s",currentPath,lib,filename);
+      if ( *lib == '\0')
+         sprintf(searchPath,"%s/%s",currentPath,filename);
+      else
+         sprintf(searchPath,"%s/%s/%s",currentPath,lib,filename);
       if (!access( searchPath, perm))
       {
          if (fullpath != NULL)

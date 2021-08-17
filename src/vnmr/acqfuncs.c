@@ -1275,17 +1275,12 @@ get_solv_factor(double *solvfactor)
       if ( strcmp(solvent, "") && strcmp(solvent, "none") )
       {
          /* construct absolute path to solvent table */
-         strcpy(solvpath, systemdir);
-
-#ifdef UNIX
-         strcat(solvpath, "/solvents");
-#else 
-         strcat(solvpath, "solvents");
-#endif 
-
-         if (getsolventinfo(solvent, solvpath, solvname, &dshift) == 0)
+         if ( appdirFind("solvents", "", solvpath, "", R_OK) )
          {
-            *solvfactor = (dshift - 5.0) * 1e-6;
+            if (getsolventinfo(solvent, solvpath, solvname, &dshift) == 0)
+            {
+               *solvfactor = (dshift - 5.0) * 1e-6;
+            }
          }
       }
    }
@@ -1686,16 +1681,11 @@ int solvinfo(int argc, char *argv[], int retc, char *retv[])
    if ( strcmp(solvent, "") && strcmp(solvent, "none") )
    {
       /* construct absolute path to solvent table */
-      strcpy(solvpath, systemdir);
-
-#ifdef UNIX
-      strcat(solvpath, "/solvents");
-#else 
-      strcat(solvpath, "solvents");
-#endif 
-
-      if (getsolventinfo(solvent, solvpath, solvname, &dshift))
-	 ABORT;
+      if ( appdirFind("solvents", "", solvpath, "", R_OK) )
+      {
+         if (getsolventinfo(solvent, solvpath, solvname, &dshift))
+	    ABORT;
+      }
 
       if (retc > 0)
       {
