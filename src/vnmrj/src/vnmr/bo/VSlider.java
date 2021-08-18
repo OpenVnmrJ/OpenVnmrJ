@@ -86,6 +86,7 @@ public class VSlider extends ComboSlider implements VObjIF, VEditIF,
     protected DecimalFormat valformat = new DecimalFormat("#");
     protected double vmin = 0;
     protected double vmax = 100;
+    protected double vstep = 0;
     protected double vincr1 = 1;
     protected double vincr2 = 2;
     private boolean m_dragging = false;
@@ -676,16 +677,15 @@ public class VSlider extends ComboSlider implements VObjIF, VEditIF,
         
         String fstring="#" ;
         
-        if(vincr1<1){
-            int i;
-            fstring="";
-            int fraction_digits=(int)(-Math.log10(vincr1));
-            int value_digits=(int)(Math.log10(Math.floor(Math.abs(vmax-vmin))));
-            value_digits=(value_digits==0)?1:value_digits;
-            fstring+="0";
-            fstring+=".";
-            for(i=0;i<fraction_digits;i++)
-                fstring+="0";
+        if( (vstep > 0.0) && (vstep<1.0))
+        {
+           double tmp = vstep;
+           fstring="0.";
+           while (tmp < 1.0)
+           {
+              fstring+="0";
+              tmp *= 10;
+           }
         }
 
         valformat = new DecimalFormat(fstring);
@@ -862,6 +862,8 @@ public class VSlider extends ComboSlider implements VObjIF, VEditIF,
                     vmax = Double.parseDouble(mstr);
                     mstr = tok.nextToken();
                     vmin = Double.parseDouble(mstr);                    
+                    mstr = tok.nextToken();
+                    vstep = Double.parseDouble(mstr);                    
                     setSliderLimits();
                     validate();
                     repaint();
