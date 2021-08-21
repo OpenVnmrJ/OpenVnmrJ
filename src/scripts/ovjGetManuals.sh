@@ -90,11 +90,11 @@ downloadMac() {
    $OVJ_VECHO "Downloading Manual files to MacOS file system"
    if [ "x${OVJ_LOG}" = "x" ] ; then
       $OVJ_VECHO "Downloading VnmrJ 4.2 manuals"
-      curl -O $url
+      curl -L -O $url
    else
       $OVJ_VECHO "Downloading VnmrJ 4.2 manuals"
       echo "Downloading VnmrJ 4.2 manuals" >> ${OVJ_LOG}
-      curl -O $url 2>> ${OVJ_LOG}
+      curl -L -O $url 2>> ${OVJ_LOG}
    fi
 }
 
@@ -217,7 +217,11 @@ if [[ $? -ne 0 ]]; then
    fi
    exit 1
 fi
-unzip -q ${filename}*
+if [ x$(uname -s) = "xDarwin" ]; then
+   ditto -x -k  ${filename}* /vnmr/help
+else
+   unzip -q ${filename}*
+fi
 rm -f ${filename}*
 $OVJ_VECHO ""
 $OVJ_VECHO "VnmrJ 4.2 manuals installation complete"
