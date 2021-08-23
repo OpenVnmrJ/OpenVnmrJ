@@ -374,11 +374,12 @@ extern int purgeCache();
 extern int quadtt();
 extern int raster_dump();
 extern int readf1(int argc, char *argv[], int retc, char *retv[]);
-extern int readfile();
+extern int readfile(int argc, char *argv[], int retc, char *retv[]);
 extern int readhw();
 extern int readlk();
 extern int readparam();
 extern int readspectrum(int argc, char *argv[], int retc, char *retv[]);
+extern int readstr(int argc, char *argv[], int retc, char *retv[]);
 extern int real();
 extern int recon();
 extern int recon_all();
@@ -1006,6 +1007,7 @@ static cmd_t vnmr_table[] = {
 	{"readheader" , readheader,	NO_REEXEC, 0},
 	{"readlk"     , readlk,		NO_REEXEC, 0},
 	{"readparam"  , readparam,	NO_REEXEC, 0},
+	{"readstr"    , readstr, 	NO_REEXEC, 0},
 	{"real"       , real,		NO_REEXEC, 0},
 	{"recon"      , recon,		NO_REEXEC, 0},
 	{"recon_all"  , recon_all,     	NO_REEXEC, 0},
