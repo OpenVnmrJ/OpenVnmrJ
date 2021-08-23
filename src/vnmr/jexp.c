@@ -101,6 +101,7 @@ extern int p11_writeAuditTrails_S(char* func, char* origpath, char* destpath);
 extern int p11_isPart11Dir(char *str);
 extern void p11_checkData();
 extern void currentDate(char *cstr, int len );
+extern int isVfs(char *s);
 extern int isFid(char *s);
 extern int isPar(char *s);
 extern int is_exp_acquiring(int this_expnum );
@@ -439,9 +440,6 @@ int jexp(int argc, char *argv[], int retc, char *retv[])
       unlockExperiment( atoi(estring), mode_of_vnmr );
       ABORT;
     }
-#ifdef VMS
-    vms_purge( curexpdir );
-#endif 
   }
 
   disp_status("JEXP    ");
@@ -1646,7 +1644,8 @@ int svf(int argc, char *argv[], int retc, char *retv[])
       else
       {
          ptmp = filepath +strlen(filepath)-4; 
-         if ( strcmp(ptmp,".fid") && strcmp(ptmp,".rec") && strcmp(ptmp,".REC"))
+         if ( strcmp(ptmp,".fid") && strcmp(ptmp,".rec") &&
+              strcmp(ptmp,".REC") && strcmp(ptmp,".vfs") )
          {
  	    strcat(filepath,".fid");
          }
@@ -1668,10 +1667,6 @@ int svf(int argc, char *argv[], int retc, char *retv[])
       else if (!isPar(filepath))
         strcat(filepath,".par");
     }
-#ifdef VMS
-    filepath[ strlen( filepath ) - 4 ] = '_';		/*  Replace '.' with '_'  */
-    make_vmstree(filepath,filepath,MAXPATHL-20);	/*  Make into VMS directory  */
-#endif 
   disp_status("SVF/SVP ");
   svf_nofid = 0;
 
@@ -2226,8 +2221,8 @@ int rt(int argc, char *argv[], int retc, char *retv[])
     strcpy(filepath0,name);
   strcpy(filepath,filepath0);
 
-  // if extension missing, try to attach .REC or .rec
-  // filepath will be altered only if .REC or .rec exist.
+  // if extension missing, try to attach .REC or .rec or .vfs
+  // filepath will be altered only if .REC or .rec or .vfs exist.
   pathptr = filepath;
   if (access(filepath,F_OK) && !strrchr(pathptr+strlen(filepath)-4,'.')) {
      strcpy(path,filepath);
@@ -2237,6 +2232,12 @@ int rt(int argc, char *argv[], int retc, char *retv[])
        strcpy(path,filepath);
        strcat(path,".rec");
        if(!access(path,F_OK)) strcpy(filepath,path);
+       else
+       {
+          strcpy(path,filepath);
+          strcat(path,".vfs");
+          if(!access(path,F_OK)) strcpy(filepath,path);
+       }
      }
   }
   // if filepath ends with .fid, but access failed, try to replace it with .REC or .rec
@@ -2278,29 +2279,23 @@ int rt(int argc, char *argv[], int retc, char *retv[])
   }
   if (!parFile)
   {
-    if ((!isFid(filepath))&&(!isPar(filepath)) && !recFile )
+    if ( !isFid(filepath) && !isPar(filepath) &&
+         !isVfs(filepath) && !recFile )
     { if (fidflag)
         strcat(filepath,".fid");
       else
         strcat(filepath,".par");
     }
-#ifdef VMS
-    filepath[ strlen( filepath ) - 4 ] = '_';
-    strcat(filepath,".dir");
-#endif 
   }
   if (access(filepath,F_OK))
     { strcpy(filepath,filepath0);
-      if ((!isFid(filepath))&&(!isPar(filepath)) && !recFile )
+      if ( !isFid(filepath) && !isPar(filepath) &&
+           !isVfs(filepath) && !recFile )
         { if (fidflag)
             strcat(filepath,".par");
           else
             strcat(filepath,".fid");
         }
-#ifdef VMS
-      filepath[ strlen( filepath ) - 4 ] = '_';
-      strcat(filepath,".dir");
-#endif 
       if (access(filepath,F_OK))
         {
           if ( (rtvStrcmp == 0) && (retc == 1) && (argc > 3) &&
@@ -2330,7 +2325,7 @@ int rt(int argc, char *argv[], int retc, char *retv[])
      else if (!strstr(pathptr+strlen(filepath)-8,"/procpar")) 
      	strcat(filepath,"/procpar");
   } else if(recFile) {
-     if(isFDARec(filepath) || isRec(filepath))  
+     if(isFDARec(filepath) || isRec(filepath))
 	strcat(filepath,"/acqfil");
   }
 
@@ -2339,10 +2334,6 @@ int rt(int argc, char *argv[], int retc, char *retv[])
       disp_status("        ");
       ABORT;
     }
-
-#ifdef VMS
-  make_vmstree(filepath,filepath,MAXPATHL-20);
-#endif 
 
 if (gettxtflag)
   { /* now copy text file */
@@ -2366,9 +2357,12 @@ if (gettxtflag)
 /*  Remove the ACQPAR file from the current experiment.  Prevents RA from
     working after RT is executed; you have to enter the GO command first.  */
 
-  strcpy( path, &curexpdir[0] );
-  strcat( path, "/acqfil/acqpar" );
-  i = unlink( &path[ 0 ] );		/* assume it works and ignore result */
+  if (rtvStrcmp !=0 )
+  {
+     strcpy( path, &curexpdir[0] );
+     strcat( path, "/acqfil/acqpar" );
+     i = unlink( &path[ 0 ] );		/* assume it works and ignore result */
+  }
 
   if (parFile)
      strcpy( path, filepath );
@@ -2600,7 +2594,10 @@ if (gettxtflag)
 
   /* now check whether fid is in file */
   strcpy(path,filepath);
-  strcat(path,"/fid");
+  if( isVfs(filepath) )
+     strcat(path,"/acqfil/fid");
+  else
+     strcat(path,"/fid");
   if (access(path,F_OK))
     { Winfoprintf("no fid in file, only parameters copied\n");
       P_setstring(CURRENT,"file",filepath0,0);

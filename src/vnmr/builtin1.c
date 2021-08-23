@@ -1062,13 +1062,43 @@ int f_read(int argc, char *argv[], int retc, char *retv[])
        // see if .fid or .par directories exist
        else
        {
-          strcat(path,".fid");
+          strcat(path,".REC");
           if ( ! access(path, R_OK))
           {
-             strcat(path,"/procpar");
+             strcat(path,"/acqfil/procpar");
              stream = fopen(path,"r");
           }
-          else
+          if ( stream == NULL )
+          {
+             strcpy(path,argv[1]);
+             strcat(path,".rec");
+             if ( ! access(path, R_OK))
+             {
+                strcat(path,"/acqfil/procpar");
+                stream = fopen(path,"r");
+             }
+          }
+          if ( stream == NULL )
+          {
+             strcpy(path,argv[1]);
+             strcat(path,".vfs");
+             if ( ! access(path, R_OK))
+             {
+                strcat(path,"/procpar");
+                stream = fopen(path,"r");
+             }
+          }
+          if ( stream == NULL )
+          {
+             strcpy(path,argv[1]);
+             strcat(path,".fid");
+             if ( ! access(path, R_OK))
+             {
+                strcat(path,"/procpar");
+                stream = fopen(path,"r");
+             }
+          }
+          if ( stream == NULL )
           {
              strcpy(path,argv[1]);
              strcat(path,".par");
