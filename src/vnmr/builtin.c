@@ -1842,6 +1842,11 @@ int paramcopy(int argc, char *argv[], int retc, char *retv[])
       }
       if (P_copyvar(fromTree,toTree,argv[1],argv[2]) < 0)
       {
+         if (retc)
+         {
+            retv[0] = intString(0);
+            RETURN;
+         }
          Werrprintf("paramcopy: parameter \"%s\" does not exist", argv[1]);
          ABORT;
       }
@@ -1850,6 +1855,8 @@ int paramcopy(int argc, char *argv[], int retc, char *retv[])
    {   Werrprintf("Usage -- paramcopy(fromVar,toVar<,fromTree<,toTree>>)");
        ABORT;
    }
+   if (retc)
+      retv[0] = intString(1);
    RETURN;
 }
 
