@@ -4141,6 +4141,155 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
     RETURN;
 }
 
+#define MAXPAR 16
+int readstr(int argc, char *argv[], int retc, char *retv[])
+{
+   symbol **root;
+   varInfo *vIn, *vOut[MAXPAR];
+   Rval *r;
+   char line1[LINE_LIMIT], first[LINE_LIMIT];
+   char *ptr;
+   char c;
+   int  length, i, numRows=0;
+   int  index;
+   int  wLen;
+
+   /* Put args into variables */ 
+   /* Must be at least 3 args */
+   if(argc < 4) {
+      Werrprintf("Usage: %s(stringvar, par1, par2, ...):$num",argv[0]);
+      ABORT;
+   }
+   if(argc > MAXPAR+2) {
+      Werrprintf("%s: maximum returned parameters is %d", argv[0], MAXPAR);
+      ABORT;
+   }
+   if (argv[1][0] != '$')
+   {
+      Werrprintf("%s: string variable \"%s\" must be a $var",argv[0],argv[1]);
+      ABORT;
+   }
+   if ((root=selectVarTree(argv[1])) == NULL)
+   {
+      Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[1]);
+      ABORT;
+   }
+   if ((vIn = rfindVar(argv[1],root)) == NULL)
+   {   Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[1]);
+       ABORT;
+   }
+   if (vIn->T.basicType == T_REAL)
+   {
+      Werrprintf("%s: local variable \"%s\" must be string type",argv[0],argv[1]);
+      ABORT;
+   }
+   for ( i=0; i<MAXPAR; i++)
+      vOut[i] = NULL;
+   for (i = 0; i < argc-2; i++)
+   {
+      if (strlen(argv[i+2]))
+      {
+         if ( (vOut[i] = rfindVar(argv[i+2],root)) == NULL)
+         {
+             Werrprintf("%s: return parameter \"%s\" doesn't exist",
+                        argv[0],argv[i+2]);
+             ABORT;
+         }
+         else
+         {
+            if (vOut[i]->T.basicType == T_REAL)
+               assignReal(0.0,vOut[i],0);
+            else
+               assignString("",vOut[i],0);
+         }
+      }
+   }
+   r = vIn->R;
+   for (index = 0; index < vIn->T.size; index++)
+   {
+      int j;
+      strcpy(line1, r->v.s);
+      r  = r->next;
+      length = strlen(line1);
+      if(length == 0)
+         continue;
+      for(i=0; i < length; i++) {
+         c = line1[i];
+         /* skip white space */
+         if(c != ' ' && c != '\t') {
+            /* break out of for loop, and process the rest of the string */
+            break;
+         }
+      }
+
+      /* Nothing useful in this line, skip on */
+      if(i == length)
+         continue;
+      /* Count up the rows which we kept and this is the param index. */
+      numRows++;
+      j = 0;
+      /* Get the part of the string following any leading white space */
+      ptr = &line1[i];
+      length = strlen(ptr);
+      while ( j < (argc - 3)  )
+      {
+         wLen = 0;
+         while ( ( (c = ptr[wLen]) != ' ') &&
+                   (c != '\t') && (c != '\0') )
+         {
+            wLen++;
+         }
+         /* wLen is length of the word */
+         strncpy(first, ptr, wLen);
+         /* terminate it */
+         first[wLen] = '\0';
+         ptr += wLen;
+         while ( ( (c = *ptr) == ' ') || (c == '\t') )
+         {
+            ptr++;
+         }
+         if (vOut[j])
+         {
+            if (vOut[j]->T.basicType == T_REAL) {
+               assignReal(strtod(first, (char **)NULL), vOut[j], numRows);
+            }
+            else {
+               assignString(first,vOut[j],numRows);
+            }
+         }
+         j++;
+      }
+
+      if (vOut[j])
+      {
+         while ( ( (c = *ptr) == ' ') || (c == '\t') )
+         {
+            ptr++;
+         }
+         strcpy(first, ptr);
+         length = strlen(first);
+         // Remove trailing space space
+         while (--length > 0)
+         {
+            if ( (first[length] == ' ') || (first[length] == '\t') )
+               first[length] = '\0';
+            else
+               length = 0;
+         }
+         if (vOut[index]->T.basicType == T_REAL) {
+            assignReal(strtod(first, (char **)NULL), vOut[j], numRows);
+         }
+         else {
+            assignString(first,vOut[j],numRows);
+         }
+      }
+   }
+   if(retc == 1) {
+      retv[0] = (char *)intString(numRows);
+   }
+   RETURN;
+}
+
 
 /************************************************/
 /*  priv_getline returns the next line from a file	*/
