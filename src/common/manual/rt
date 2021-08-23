@@ -5,21 +5,49 @@ rtp<(filename)> -  Retrieve Parameters
 rtv(filename,paramname,....):val - Retrieve individual parameter(s)
 ******************************************************************************
   
-  "rt" retrieves all fid's stored in the file "filename.fid" into the
-  current experiment. If "filename.fid" does not exist, and "filename.par" does,
-  it retrieves the parameters only from "filename.par". If the argument 'nolog'
-  is specified the log-file will not be retrieved.
-  "rtp" does retrieve parameters from "filename.par", if this file exists. If
-  not, and if "filename.fid" exists, it retrieves the parameters only from 
-  "filename.fid".
+  "rt" retrieves a fid and paramters into the current experiment. If no fid
+  exists in the filename directory, then only parameters are retrieved.
+  "rtp" retrieves parameters into the current experiment.
+  "rtv" retrieves one or more parameters into the current experiment
+  or into local macro parameters..
+
+  The filename argument specifies where the data will be obtained from.
+  For "rt", the filename is expected to be a directory with a fid and
+  procpar file in it. In only a procpar exists, then only parameters
+  will be retrieved.
+  For "rtp", the filename is expected to be a directory with a procpar
+  file in it.
+  For "rtv", the filename can be a directory with a procpar file in it
+  or it can be a full name of a parameter file.
+
+  For "rt", if the filename does exist and if "fid" exists in that directory,
+  it will be used along with the procpar. If "fid" does not exist, only
+  the "procpar" will be retrieved.
+  For "rt", if the filename does not exist,the following will be appended to
+  the file name. The first "fid" file that is found will be used.  The names
+  appended, in order, are: ".REC/acqfil/fid", ".rec/acqfil/fid",
+  ".vfs/acqfil/fid", and finally ".fid/fid". If no "fid" file is found but there
+  exists filename with ".par/procpar" appended to it, only parameters will be
+  retrieved.
+
+  For "rtp", if the filename does not exist,the following will be appended to
+  the file name. The first "procpar" file that is found will be used.  The names
+  appended, in order, are: ".REC/acqfil/procpar", ".rec/acqfil/procpar",
+  ".vfs/procpar", ".fid/procpar" and finally ".par/procpar".
+
+  For "rtv", if the file exists and it is not a directory, parameters will be
+  read from it. If the file exists and it is a directory, parameters will be
+  read from a procpar from within that directory. If the file does not exist,
+  the following will be appended to the file name. The first one that is found
+  will be used. The names appended, in order, are: ".REC/acqfil/procpar",
+  ".rec/acqfil/procpar", ".vfs/procpar", ".fid/procpar", and finally ".par/procpar".
+  Note that this is the same search order used by fread.
+
+  If the argument 'nolog' is specified the log-file will not be retrieved.
 
   "rtv" retrieves one or several parameters from a parameter file. The file
   may have been made with "svf" or "svp" or "sd" commands, or it may be
-  from another experiment. For rtv, if the supplied filename is a directory,
-  (with or without the .fid or .par extension), then the
-  parameters will be retrieved from the procpar file in that directory.
-  If the filename does not correspond to a directory but rather is a 
-  Vnmr parameter file, that file will be used.  If rtv is used without
+  from another experiment. If rtv is used without
   returning values to the macro by appending a colon and macro variables,
   then the parameters will be copied into the experiments "current" tree.
   If the parameter does not already exist in the current tree, it will be

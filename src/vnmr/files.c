@@ -115,6 +115,29 @@ int isRec(char *s)
 }
 
 /*----------------------------------------------------------------------
+|   isVfs  
+|
+|   This routine determines if the directory is a vfs diredtory.
+|   It returns 1 if it is, a 0 if it is not.  
++-----------------------------------------------------------------------*/
+int isVfs(char *s)
+{
+	char *ptr;
+
+/*   directory path has the form  /abc/xxx.vfs   */
+
+	if (!(ptr = strrchr(s,'.'))) {		/* find last dot in last field */  
+		return 0;
+	}
+	if (strncmp(".vfs",ptr,4) == 0  && strlen(ptr) == 4) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
+
+/*----------------------------------------------------------------------
 |   isFid  
 |
 |   This routine determines if the directory is a fid diredtory.
