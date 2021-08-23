@@ -2,6 +2,8 @@
 Description=Bootp Daemon
 ConditionPathExists=/usr/sbin/bootpd
 Before=vnmr.service
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=forking
