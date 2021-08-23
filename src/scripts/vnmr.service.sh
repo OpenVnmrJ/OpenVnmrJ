@@ -1,6 +1,8 @@
 [Unit]
 Description=Acquisition Communication Daemon
 ConditionPathExists=/vnmr/acqbin/acqpresent
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=simple
