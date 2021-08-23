@@ -27,12 +27,13 @@ if [ "x$Arg" = "xhelp" ]; then
     elif [ -f $vnmrsystem/manual/ovjcraft ]; then
         cat $vnmrsystem/vnmrsys/manual/ovjcraft
     else
-        echo "Supports 4 arguments -"
+        echo "Supports 5 keyword arguments -"
         echo "    submit - displays submit2craft popup"
         echo "    admin  - displays craft queue manager"
         echo "    qest   - displays craftQnmr options"
 	echo "    pref   - displays craftPref options"
         echo "    exit   - exits craft application"
+	echo " Any other argument is sent to Vnmrbg as is"
     fi
 
 elif [ "x$Arg" = "xfg" ]; then
@@ -48,5 +49,7 @@ else
         Vnmrbg -mback -n- -s sendMessage "craftQnmr('window')" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
     elif [ "x$Arg" = "xpref" ]; then
         Vnmrbg -mback -n- -s sendMessage "craftPref('window') cpparbg='bg'" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
+    else
+	Vnmrbg -mback -n- -s sendMessage "$Arg" "-splash $vnmrsystem/iconlib/Splash_CRAFT.png"
     fi
 fi
