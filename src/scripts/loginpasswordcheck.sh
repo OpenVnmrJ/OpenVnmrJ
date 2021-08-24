@@ -1,4 +1,4 @@
-#: '@(#)loginpasswordcheck.sh 22.1 03/24/08 1999-2002 '
+#! /usr/bin/expect -f
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -9,7 +9,6 @@
 # For more information, see the LICENSE file.
 # 
 #
-#! /bin/sh -f
 
 # Checks unix password by doing su username password
 
