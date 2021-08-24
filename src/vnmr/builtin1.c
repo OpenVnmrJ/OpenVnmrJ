@@ -4276,7 +4276,7 @@ int readstr(int argc, char *argv[], int retc, char *retv[])
             else
                length = 0;
          }
-         if (vOut[index]->T.basicType == T_REAL) {
+         if (vOut[j]->T.basicType == T_REAL) {
             assignReal(strtod(first, (char **)NULL), vOut[j], numRows);
          }
          else {
