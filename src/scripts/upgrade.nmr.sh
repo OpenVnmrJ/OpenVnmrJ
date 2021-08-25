@@ -36,6 +36,10 @@ savePath=$(sed -n '2,2p' vnmrrev | tr -s " ," _)
 upgrade_temp_dir="$vnmrsystem"/tmp/upgrade
 upgrade_adm_dir="$vnmrsystem"/adm/upgrade
 upgrade_save_dir=$upgrade_adm_dir/$savePath
+sysdDir=""
+if [[ ! -z $(type -t systemctl) ]] ; then
+   sysdDir=$(pkg-config systemd --variable=systemdsystemunitdir)
+fi
 
 # This section is run as root to set acquisition files
 if [[ $# -gt 0 ]]; then
@@ -65,10 +69,17 @@ if [[ $# -gt 0 ]]; then
             cp -f "$vnmrsystem"/acqbin/rc.vnmr /etc/init.d/rc.vnmr
         fi
     fi
-    if [[ -d "/usr/lib/systemd/system" ]]; then
-        diff --brief "$vnmrsystem"/acqbin/vnmr.service /usr/lib/systemd/system/vnmr.service >& /dev/null
+    if [[ -f "$sysdDir/vnmr.service" ]]; then
+        diff --brief "$vnmrsystem"/acqbin/vnmr.service $sysdDir/vnmr.service >& /dev/null
         if [[ $? -ne 0 ]]; then
-            cp "$vnmrsystem"/acqbin/vnmr.service /usr/lib/systemd/system/vnmr.service >& /dev/null
+            cp "$vnmrsystem"/acqbin/vnmr.service $sysdDir/vnmr.service
+        fi
+    fi
+    if [[ -f "$sysdDir/bootpd.service" ]] &&
+       [[ -f "$vnmrsystem"/acqbin/bootpd.service ]]; then
+        diff --brief "$vnmrsystem"/acqbin/bootpd.service $sysdDir/bootpd.service >& /dev/null
+        if [[ $? -ne 0 ]]; then
+            cp "$vnmrsystem"/acqbin/bootpd.service $sysdDir/bootpd.service
         fi
     fi
     if [ -f /etc/debian_version ]; then
@@ -129,6 +140,8 @@ checkRev () {
         mv )    spectrometer="MERCURY-Vx"
                 ;;
         pr )    spectrometer="ProPulse"
+                ;;
+        b1 )    spectrometer="Bridge12"
                 ;;
         * )
                 ;;
@@ -243,6 +256,7 @@ doUpgrade () {
         code/tarfiles/devicetable.tar
         code/tarfiles/pgsql.tar
         code/tarfiles/jre.tar
+        code/tarfiles/spinapi.tar
         )
     ignoreFiles="
         acq/info
@@ -472,8 +486,15 @@ if [[ -f "$vnmrsystem"/acqbin/acqpresent ]]; then
             doAcq=1
         fi
     fi
-    if [[ $doAcq -eq 0 ]] && [[ -d /usr/lib/systemd/system ]]; then
-        diff --brief "$vnmrsystem"/acqbin/vnmr.service /usr/lib/systemd/system/vnmr.service >& /dev/null
+    if [[ $doAcq -eq 0 ]] && [[ -f $sysdDir/vnmr.service ]]; then
+        diff --brief "$vnmrsystem"/acqbin/vnmr.service $sysdDir/vnmr.service >& /dev/null
+        if [[ $? -ne 0 ]]; then
+            doAcq=1
+        fi
+    fi
+    if [[ $doAcq -eq 0 ]] && [[ -f $sysdDir/bootpd.service ]] &&
+        [[ -f "$vnmrsystem"/acqbin/bootpd.service ]]; then
+        diff --brief "$vnmrsystem"/acqbin/bootpd.service $sysdDir/bootpd.service >& /dev/null
         if [[ $? -ne 0 ]]; then
             doAcq=1
         fi
