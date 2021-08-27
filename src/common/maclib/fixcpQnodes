@@ -19,8 +19,6 @@ else
    $nmd=$ndir
 endif
 $md=archivedir+'/'+sample+'/dirinfo/macdir'
-$ldtmp=$ld+'/tmp'
-shell('mkdir '+$ldtmp):$dum
 
 $d=$ddir+'/EXPLIST'
 $dx=$ndir+'/EXPLIST'
@@ -34,10 +32,10 @@ if ($fileex=0) and ($file2ex=0) then return($rbld) endif
 $a=$md+'/ACQlist'
 $e=$md+'/EXPLIST'
 $l=$md+'/LONGLIST'
-shell('touch '+$e):$dum
-shell('touch '+$l):$dum
-shell('touch '+$d):$dum
-shell('touch '+$n):$dum
+touch($e):$dum
+touch($l):$dum
+touch($d):$dum
+touch($n):$dum
 
 $s0='' $s1='' $s2='' $s3=''
 exists($a,'file'):$aex
@@ -49,11 +47,13 @@ readfile($e,'$s1','$s2','','local'):$etot
 readfile($l,'$s2','$s3','','local'):$ltot
 if ($etot=0) and ($ltot=0) and ($aex=0) then return($rbld) endif
 $s1=$s0,$s1,$s2
+$ldtmp=$ld+'/tmp'
+mkdir($ldtmp):$dum
 
-shell('cp '+$e+' '+$ldtmp):$dum
-shell('cp '+$l+' '+$ldtmp):$dum
+cp($e,$ldtmp):$dum
+cp($l,$ldtmp):$dum
 if ($aex) then
-    shell('cp '+$a+' '+$ldtmp):$dum
+    cp($a,$ldtmp):$dum
 endif
 
 $c1='' $c2='' $c3=''
@@ -107,22 +107,22 @@ if ($dt) then
 	    endif
 	    exists($dmd+'/'+$s2[$i]+'acq','file'):$fex
 	    if ($fex) then
-		shell('mv '+$dmd+'/'+$s2[$i]+'acq '+$dmd+'/'+$s7+'acq'):$dum
+		mv($dmd+'/'+$s2[$i]+'acq',$dmd+'/'+$s7+'acq'):$dum
 	    endif
             exists($dmd+'/'+$s2[$i]+'acqpars','file'):$fex
             if ($fex) then
-                shell('mv '+$dmd+'/'+$s2[$i]+'acqpars '+$dmd+'/'+$s7+'acqpars'):$dum
+                mv($dmd+'/'+$s2[$i]+'acqpars',$dmd+'/'+$s7+'acqpars'):$dum
             endif
             exists($dmd+'/'+$s2[$i]+'_Attr','file'):$fex
             if ($fex) then
-                shell('mv '+$dmd+'/'+$s2[$i]+'_Attr '+$dmd+'/'+$s7+'_Attr'):$dum
+                mv($dmd+'/'+$s2[$i]+'_Attr',$dmd+'/'+$s7+'_Attr'):$dum
             endif
 	endif
 	$i=$i+1
     until $i > $dt
-    shell('mv '+$tmp+' '+$d):$dum
+    mv($tmp,$d):$dum
     if ($ndir<>'') then
-        shell('cp '+$d+' '+$dx):$dum
+        cp($d,$dx):$dum
     endif
 endif
 
@@ -149,22 +149,22 @@ if ($nt) and ($ndir<>'')  then
             endif
             exists($nmd+'/'+$s4[$i]+'acq','file'):$fex
             if ($fex) then
-                shell('mv '+$nmd+'/'+$s4[$i]+'acq '+$nmd+'/'+$s7+'acq'):$dum
+                mv($nmd+'/'+$s4[$i]+'acq',$nmd+'/'+$s7+'acq'):$dum
             endif
             exists($nmd+'/'+$s4[$i]+'acqpars','file'):$fex
             if ($fex) then
-                shell('mv '+$nmd+'/'+$s4[$i]+'acqpars '+$nmd+'/'+$s7+'acqpars'):$dum
+                mv($nmd+'/'+$s4[$i]+'acqpars',$nmd+'/'+$s7+'acqpars'):$dum
             endif
             exists($nmd+'/'+$s4[$i]+'_Attr','file'):$fex
             if ($fex) then
-                shell('mv '+$nmd+'/'+$s4[$i]+'_Attr '+$nmd+'/'+$s7+'_Attr'):$dum
+                mv($nmd+'/'+$s4[$i]+'_Attr',$nmd+'/'+$s7+'_Attr'):$dum
             endif
         endif
         $i=$i+1
     until $i > $nt
-    shell('mv '+$tmp+' '+$n):$dum
-    shell('cp '+$n+' '+$nx):$dum
+    mv($tmp,$n):$dum
+    cp($n,$nx):$dum
 endif
 
-shell('rm -rf '+$ldtmp):$dum
+rm('-rf',$ldtmp):$dum
 return($rbld)

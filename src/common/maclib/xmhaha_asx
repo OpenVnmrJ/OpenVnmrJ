@@ -43,10 +43,8 @@ if ($direx=0) then
    strstr($autodir,'.macdir/studytray'):$st,$stx
    if ($st) then 
 	substr($stx,'dirname'):$autodir
-//	shell('dirname '+$stx):$autodir
    endif
    substr($autodir,'basename'):$Qname
-//   shell('basename '+$autodir):$Qname
 else
    $Qname='enterQ'
 endif
@@ -71,7 +69,7 @@ $xmlinfodir=$xmldir+'/info'
 $sqdir=$xmldir+'/'+$3+'sqdir'
 $sqinfo=$sqdir+'/info'
 exists($sqinfo,'directory'):$direx
-if ($direx=0) then shell('mkdir -p '+$sqinfo):$dum endif
+if ($direx=0) then mkdir('-p',$sqinfo):$dum endif
 if ($Qname<>'enterQ') then $currentq='' $currentsg='' endif
 
 "*************************************************************************"
@@ -82,16 +80,14 @@ if ($4='rbld') then
    if ($currentq<>'') then
        getlocid($currentq):$Aloc,$Alocdir
    endif
-   write('reset',$tmpfile)
-   shell('(cat '+$cpdoneq+' | awk \'{print $4}\' >> '+$tmpfile+')'):$dum
-   shell('(cat '+$cpdonedayq+' | awk \'{print $4}\' >> '+$tmpfile+')'):$dum
-   readfile($tmpfile,'$locdir','$s1','','local')
-   shell('rm -f '+$tmpfile):$dum
-   $Elocdir='' $s1=''
-   write('reset',$tmpfile)
-   shell('(cat '+$cperrorq+' | awk \'{print $4}\' > '+$tmpfile+')'):$dum
-   readfile($tmpfile,'$Elocdir','$s1','','local')
-   shell('rm -f '+$tmpfile):$dum
+   
+   $tmps=''
+   copyf($cpdoneq,'awk','$4','$tmps'):$dum
+   $locdir=$tmps
+   copyf($cpdonedayq,'awk','$4','$tmps'):$dum
+   $locdir=$locdir,$tmps
+   $Elocdir=''
+   copyf($cperrorq,'awk','$4','$Elocdir'):$dum
    $locdir=$locdir,$Elocdir,$Alocdir
    $eq_loc='' $eq_locdir=''
    getlocid($enterq):$eq_loc,$eq_locdir
@@ -170,16 +166,16 @@ endif
    $locdir='' $s1='' $user=''
    write('reset',$tmpfile)
    if ($2='DoneQ') then
-   	shell('(cat '+$cpdoneq+' | awk \'{print $4" "$5}\' >> '+$tmpfile+')'):$dum
+   	append($cpdoneq,'awk','$4 $5',$tmpfile):$dum
    endif
    if ($2='DoneDayQ') then
-   	shell('(cat '+$cpdonedayq+' | awk \'{print $4" "$5}\' >> '+$tmpfile+')'):$dum
+   	append($cpdonedayq,'awk','$4 $5',$tmpfile):$dum
    endif
    if ($2='ErrorQ') then
-   	shell('(cat '+$cperrorq+' | awk \'{print $4" "$5}\' >> '+$tmpfile+')'):$dum
+   	append($cperrorq,'awk','$4 $5',$tmpfile):$dum
    endif
    readfile($tmpfile,'$locdir','$user','','local')
-   shell('rm -f '+$tmpfile):$dum
+   delete($tmpfile,''):$dum
    if ($2='ActiveQ') then
 	$locdir=$locdir,$Alocdir
 	$user=$user,$Auser
@@ -239,13 +235,10 @@ $esqRev=$sqdir+'/Rev'+$2+'_SQ'
 "*************************************************************************"
 IF ($2='DoneQ') THEN
 
-   cd($autodir):$dum
+   cd($autodir):$sdir
    $total=0
-   $s1='' $s2=''
-   write('reset',$tmpfile)
-   shell('(cat '+$cpdoneq+' | awk \'{print $4}\' > '+$tmpfile+')'):$dum
-   readfile($tmpfile,'$s2','$s1','','local'):$total
-   shell('rm -f '+$tmpfile):$dum
+   $s2=''
+   append($cpdoneq,'awk','$4','$s2'):$total
 
    xmhahasx_Qnodes($studyxml,$total)
    xmhahasx_Qnodes($studyxmlRev,$total)
@@ -255,7 +248,7 @@ IF ($2='DoneQ') THEN
      repeat
 	$OK=1
 	if ($3<>'') then
-	    shell('(cat '+$cpdoneq+' | grep -w '+$s2[$i]+' | grep -wc '+$3+')'):$OK
+	    copyf($cpdoneq,'grep -w',$s2[$i],'grep -w',$3,'|wc'):$OK
 	endif
 	$xml=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo.xml'
         $cpnodes=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo_SQ'
@@ -263,13 +256,13 @@ IF ($2='DoneQ') THEN
         $cpnodes2=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/FidLog_SQ'
         if ($OK) then exists($xml2,'file'):$OK endif
 	if ($OK) then
-		shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-		shell('(cat '+$xml2+' >> '+$studyxml+')'):$dum
-		shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
+		append($cpnodes2,'awk','$1',$tmpfile):$dum
+		append($xml2,$studyxml):$dum
+		append($cpnodes2,$esq):$dum
 	else
-                shell('(cat '+$cpnodes+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+                append($cpnodes,'awk','$1',$tmpfile):$dum
+                append($xml,$studyxml):$dum
+                append($cpnodes,$esq):$dum
 	endif
     	$i=$i+1
      until $i > $total
@@ -278,7 +271,7 @@ IF ($2='DoneQ') THEN
      repeat
         $OK=1
         if ($3<>'') then
-            shell('(cat '+$cpdoneq+' | grep -w '+$s2[$i]+' | grep -wc '+$3+')'):$OK
+	    copyf($cpdoneq,'grep -w',$s2[$i],'grep -w',$3,'|wc'):$OK
         endif
         $xml=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo.xml'
         $cpnodes=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo_SQ'
@@ -286,18 +279,17 @@ IF ($2='DoneQ') THEN
         $cpnodes2=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/FidLog_SQ'
         if ($OK) then exists($xml2,'file'):$OK endif
         if ($OK) then
-                shell('(cat '+$xml2+' >> '+$studyxmlRev+')'):$dum
-                shell('(cat '+$cpnodes2+' >> '+$esqRev+')'):$dum
+                append($xml2,$studyxmlRev):$dum
+                append($cpnodes2,$esqRev):$dum
         else
-                shell('(cat '+$xml+' >> '+$studyxmlRev+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esqRev+')'):$dum
+                append($xml,$studyxmlRev):$dum
+                append($cpnodes,$esqRev):$dum
         endif
 	$i=$i-1
      until $i < 1
 
      $ts1='' $ts2='' $nodes=0
      readfile($tmpfile,'$ts1','$ts2','','local'):$nodes
-//     shell('(cat '+$tmpfile+' | wc -l)'):$nodes
      if ($nodes) then
 	$ti=1
 	repeat
@@ -307,25 +299,18 @@ IF ($2='DoneQ') THEN
 	    endif
 	    $ti=$ti+1
 	until $ti>$nodes
-//	cd($xmlinfodir):$dum
-//	shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//	cd($autodir):$dum
      endif
-     shell('rm -f '+$tmpfile):$dum
+     delete($tmpfile,''):$dum
    endif
    write('file',$studyxml,'  </protocol>')
    write('file',$studyxmlRev,'  </protocol>')
-   cd($curdir):$dum
 "*************************************************************************"
 ELSEIF ($2='DoneDayQ') THEN
 
-   cd($autodir):$dum
+   cd($autodir):$sdir
    $total=0
-   $s1='' $s2=''
-   write('reset',$tmpfile)
-   shell('(cat '+$cpdonedayq+' | awk \'{print $4}\' > '+$tmpfile+')'):$dum
-   readfile($tmpfile,'$s2','$s1','','local'):$total
-   shell('rm -f '+$tmpfile):$dum
+   $s2=''
+   copyf($cpdonedayq,'awk','$4','$s2'):$total
    xmhahasx_Qnodes($studyxml,$total)
    xmhahasx_Qnodes($studyxmlRev,$total)
 
@@ -335,7 +320,7 @@ ELSEIF ($2='DoneDayQ') THEN
      repeat
         $OK=1
         if ($3<>'') then
-            shell('(cat '+$cpdonedayq+' | grep -w '+$s2[$i]+' | grep -wc '+$3+')'):$OK
+            copyf($cpdonedayq,'grep -w',$s2[$i],'grep -w',$3,'|wc'):$OK
         endif
         $xml=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo.xml'
         $cpnodes=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo_SQ'
@@ -345,17 +330,17 @@ ELSEIF ($2='DoneDayQ') THEN
         $cpnodes3=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LONGLIST_SQ'
 	if ($OK) then exists($xml2,'file'):$OK endif
         if ($OK) then
-                shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$cpnodes3+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml2+' | grep -v \'protocol>\' >> '+$studyxml+')'):$dum
-                shell('(cat '+$xml3+' | grep -v \'<protocol\' | grep -v \'protocol>\' >> '+$studyxml+')'):$dum
+                append($cpnodes2,'awk','$1',$tmpfile):$dum
+                append($cpnodes3,'awk','$1',$tmpfile):$dum
+                append($xml2,'grep -v','protocol>',$studyxml):$dum
+                append($xml3,'grep -v','<protocol','grep -v','protocol>',$studyxml):$dum
                 write('file',$studyxml,'  </protocol>')
-                shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
-                shell('(cat '+$cpnodes3+' >> '+$esq+')'):$dum
+                append($cpnodes2,$esq):$dum
+                append($cpnodes3,$esq):$dum
         else
-                shell('(cat '+$cpnodes+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+                append($cpnodes,'awk','$1',$tmpfile):$dum
+                append($xml,$studyxml):$dum
+                append($cpnodes,$esq):$dum
         endif
         $i=$i+1
      until $i > $total
@@ -363,7 +348,7 @@ ELSEIF ($2='DoneDayQ') THEN
      repeat
         $OK=1
         if ($3<>'') then
-            shell('(cat '+$cpdonedayq+' | grep -w '+$s2[$i]+' | grep -wc '+$3+')'):$OK
+            copyf($cpdonedayq,'grep -w',$s2[$i],'grep -w',$3,'|wc'):$OK
         endif
         $xml=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo.xml'
         $cpnodes=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo_SQ'
@@ -373,20 +358,19 @@ ELSEIF ($2='DoneDayQ') THEN
         $cpnodes3=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LONGLIST_SQ'
         if ($OK) then exists($xml2,'file'):$OK endif
         if ($OK) then
-                shell('(cat '+$xml2+' | grep -v \'protocol>\' >> '+$studyxmlRev+')'):$dum
-                shell('(cat '+$xml3+' | grep -v \'<protocol\' | grep -v \'protocol>\' >> '+$studyxmlRev+')'):$dum
+                append($xml2,'grep -v','protocol>',$studyxmlRev):$dum
+                append($xml3,'grep -v','<protocol','grep -v','protocol>',$studyxmlRev):$dum
                 write('file',$studyxmlRev,'  </protocol>')
-                shell('(cat '+$cpnodes2+' >> '+$esqRev+')'):$dum
-                shell('(cat '+$cpnodes3+' >> '+$esqRev+')'):$dum
+                append($cpnodes2,$esqRev):$dum
+                append($cpnodes3,$esqRev):$dum
         else
-                shell('(cat '+$xml+' >> '+$studyxmlRev+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esqRev+')'):$dum
+                append($xml,$studyxmlRev):$dum
+                append($cpnodes,$esqRev):$dum
         endif
         $i=$i-1
      until $i < 1
      $ts1='' $ts2='' $nodes=0
      readfile($tmpfile,'$ts1','$ts2','','local'):$nodes
-//     shell('(cat '+$tmpfile+' | wc -l)'):$nodes
      if ($nodes) then
         $ti=1
         repeat
@@ -396,19 +380,15 @@ ELSEIF ($2='DoneDayQ') THEN
 	    endif
             $ti=$ti+1
         until $ti>$nodes
-//      cd($xmlinfodir):$dum
-//      shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//      cd($autodir):$dum
      endif
-     shell('rm -f '+$tmpfile):$dum
+     delete($tmpfile,''):$dum
    endif
    write('file',$studyxml,'  </protocol>')
    write('file',$studyxmlRev,'  </protocol>')
-   cd($curdir):$dum
 
 "**************************************************************************"
 ELSEIF ($2='ChronQ') THEN
-   cd($autodir):$dum
+   cd($autodir):$sdir
    $locdir=$chronlocdir
    $user=$chronuser
    $total=size('$locdir')
@@ -434,17 +414,17 @@ if ($total) then
         $cpnodes3=$autodir+'/'+$Qname+'.macdir/'+$locdir[$i]+'/xmldir/LONGLIST_SQ'
         if ($OK) then exists($xml2,'file'):$OK endif
         if ($OK) then
-                shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$cpnodes3+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml2+' | grep -v \'protocol>\' >> '+$studyxml+')'):$dum
-                shell('(cat '+$xml3+' | grep -v \'<protocol\' | grep -v \'protocol>\' >> '+$studyxml+')'):$dum
+                append($cpnodes2,'awk','$1',$tmpfile):$dum
+                append($cpnodes3,'awk','$1',$tmpfile):$dum
+                append($xml2,'grep -v','protocol>',$studyxml):$dum
+                append($xml3,'grep -v','<protocol','grep -v','protocol>',$studyxml):$dum
                 write('file',$studyxml,'  </protocol>')
-                shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
-                shell('(cat '+$cpnodes3+' >> '+$esq+')'):$dum
+                append($cpnodes2,$esq):$dum
+                append($cpnodes3,$esq):$dum
         else
-                shell('(cat '+$cpnodes+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+                append($cpnodes,'awk','$1',$tmpfile):$dum
+                append($xml,$studyxml):$dum
+                append($cpnodes,$esq):$dum
         endif
      elseif ($is4) then
         $OK=1
@@ -460,31 +440,30 @@ if ($total) then
         if ($OK) then exists($xml2,'file'):$OK endif
         if ($OK) then
 	    $ok2=0
-	    shell('(cat '+$xml3+' | wc -l)'):$ok2
+	    copyf($xml3,'|wc'):$ok2
 	    if ($ok2>2) then
-                shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$cpnodes3+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-		shell('(cat '+$xml2+' | grep \'<protocol\' >> '+$studyxml+')'):$dum
-                shell('(cat '+$xml3+' | grep -v \'<protocol\' | grep -v \'protocol>\' >> '+$studyxml+')'):$dum
-                shell('(cat '+$xml2+' | grep -v \'<protocol\' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes3+' >> '+$esq+')'):$dum
-                shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
+                append($cpnodes2,'awk','$1',$tmpfile):$dum
+                append($cpnodes3,'awk','$1',$tmpfile):$dum
+		append($xml2,'grep','<protocol',$studyxml):$dum
+                append($xml3,'grep -v','<protocol','grep -v','protocol>',$studyxml):$dum
+                append($xml2,'grep -v','<protocol',$studyxml):$dum
+                append($cpnodes3,$esq):$dum
+                append($cpnodes2,$esq):$dum
 	    else
-         	shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml2+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
+         	append($cpnodes2,'awk','$1',$tmpfile):$dum
+                append($xml2,$studyxml):$dum
+                append($cpnodes2,$esq):$dum
 	    endif
         else
-                shell('(cat '+$cpnodes+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+                append($cpnodes,'awk','$1',$tmpfile):$dum
+                append($xml,$studyxml):$dum
+                append($cpnodes,$esq):$dum
         endif
      endif
      $i=$i+1
    until $i > $total
      $ts1='' $ts2='' $nodes=0
      readfile($tmpfile,'$ts1','$ts2','','local'):$nodes
-//     shell('(cat '+$tmpfile+' | wc -l)'):$nodes
      if ($nodes) then
         $ti=1
         repeat
@@ -494,24 +473,17 @@ if ($total) then
             endif
             $ti=$ti+1
         until $ti>$nodes
-//      cd($xmlinfodir):$dum
-//      shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//      cd($autodir):$dum
      endif
-   shell('rm -f '+$tmpfile):$dum
+   delete($tmpfile,''):$dum
 endif
 write('file',$studyxml,'  </protocol>')
-cd($curdir):$dum
 "*********************************************************************"
 ELSEIF ($2='ErrorQ') THEN
 
-   cd($autodir):$dum
+   cd($autodir):$sdir
    $total=0
-   $s1='' $s2=''
-   write('reset',$tmpfile)
-   shell('(cat '+$cperrorq+' | awk \'{print $4}\' > '+$tmpfile+')'):$dum
-   readfile($tmpfile,'$s2','$s1','','local'):$total
-   shell('rm -f '+$tmpfile):$dum
+   $s2=''
+   copyf($cperrorq,'awk','$4','$s2'):$total
    xmhahasx_Qnodes($studyxml,$total)
    xmhahasx_Qnodes($studyxmlRev,$total)
 
@@ -521,7 +493,7 @@ ELSEIF ($2='ErrorQ') THEN
      repeat
         $OK=1
         if ($3<>'') then
-            shell('(cat '+$cperrorq+' | grep -w '+$s2[$i]+' | grep -wc '+$3+')'):$OK
+            copyf($cperrorq,'grep -w',$s2[$i],'grep -w',$3,'|wc'):$OK
         endif
         $xml=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo.xml'
         $cpnodes=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo_SQ'
@@ -535,13 +507,13 @@ ELSEIF ($2='ErrorQ') THEN
 		exists($xml2,'file'):$OK
 	endif
         if ($OK) then
-                shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml2+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
+                append($cpnodes2,'awk','$1',$tmpfile):$dum
+                append($xml2,$studyxml):$dum
+                append($cpnodes2,$esq):$dum
         else
-                shell('(cat '+$cpnodes+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+                append($cpnodes,'awk','$1',$tmpfile):$dum
+                append($xml,$studyxml):$dum
+                append($cpnodes,$esq):$dum
         endif
         $i=$i+1
      until $i > $total
@@ -549,7 +521,7 @@ ELSEIF ($2='ErrorQ') THEN
      repeat
         $OK=1
         if ($3<>'') then
-            shell('(cat '+$cperrorq+' | grep -w '+$s2[$i]+' | grep -wc '+$3+')'):$OK
+            copyf($cperrorq,'grep -w',$s2[$i],'grep -w',$3,'|wc'):$OK
         endif
         $xml=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo.xml'
         $cpnodes=$autodir+'/'+$Qname+'.macdir/'+$s2[$i]+'/xmldir/LocInfo_SQ'
@@ -563,17 +535,16 @@ ELSEIF ($2='ErrorQ') THEN
                 exists($xml2,'file'):$OK
         endif
         if ($OK) then
-                shell('(cat '+$xml2+' >> '+$studyxmlRev+')'):$dum
-                shell('(cat '+$cpnodes2+' >> '+$esqRev+')'):$dum
+                append($xml2,$studyxmlRev):$dum
+                append($cpnodes2,$esqRev):$dum
         else
-                shell('(cat '+$xml+' >> '+$studyxmlRev+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esqRev+')'):$dum
+                append($xml,$studyxmlRev):$dum
+                append($cpnodes,$esqRev):$dum
         endif
         $i=$i-1
      until $i < 1
      $ts1='' $ts2='' $nodes=0
      readfile($tmpfile,'$ts1','$ts2','','local'):$nodes
-//     shell('(cat '+$tmpfile+' | wc -l)'):$nodes
      if ($nodes) then
         $ti=1
         repeat
@@ -583,15 +554,11 @@ ELSEIF ($2='ErrorQ') THEN
             endif
             $ti=$ti+1
         until $ti>$nodes
-//      cd($xmlinfodir):$dum
-//      shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//      cd($autodir):$dum
      endif
-     shell('rm -f '+$tmpfile):$dum
+     delete($tmpfile,''):$dum
    endif
    write('file',$studyxml,'  </protocol>')
    write('file',$studyxmlRev,'  </protocol>')
-   cd($curdir):$dum
 
 "*************************************************************************"
 	"***Get info on current sample***"
@@ -610,15 +577,15 @@ ELSEIF ($2='ActiveQ') THEN
     if ($islcauto) then
 	$activelocuser=''
     endif
-    shell('(cat '+$enterq+' | grep -w MACRO: | grep -c '+$Alocdir+')'):$isinq
+    copyf($enterq,'grep -w','MACRO:','grep -c',$Alocdir,'|wc'):$isinq
     if ($isinq=0) then
-         shell('(cat '+$nightq+' | grep -w MACRO: | grep -c '+$Alocdir+')'):$isinq
+         copyf($nightq,'grep -w','MACRO:','grep -c',$Alocdir,'|wc'):$isinq
     endif
     $completetime=''
     if ($isinq=0) and ($islcauto=0) then
          estimatestart('getexptime',$Alocdir,'Active'):$timestX,$completetime
     endif
-    cd($autodir):$dum
+    cd($autodir):$sdir
     $AQ='' if ($activelocuser<>'') then $AQ=' ('+$activelocuser+')' endif
     if ($completetime<>'') then $completetime=' (Completes at: '+$completetime+')' endif
     if ($islcauto) then
@@ -637,44 +604,39 @@ ELSEIF ($2='ActiveQ') THEN
                 xmhaha_baQ:$direx
 	endif
 	if ($direx) then
-	   shell('(cat '+$Activedir+'/fidlog.xml >> '+$studyxml2+')'):$dum
-           shell('(cat '+$Activedir+'/Active.xml >> '+$studyxml2+')'):$dum
-           shell('(cat '+$Activedir+'/Queue.xml >> '+$studyxml2+')'):$dum
-	   shell('(cat '+$Activedir+'/fidlog_SQ >> '+$esq2+')'):$dum
-           shell('(cat '+$Activedir+'/Active_SQ >> '+$esq2+')'):$dum
-           shell('(cat '+$Activedir+'/Queue_SQ >> '+$esq2+')'):$dum
-	   shell('(cp -r '+$tmpinfo+'/* '+$sqinfo+')'):$dum
-//           cd($tmpinfo):$dum
-//           shell('(tar cf - * | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//           cd($autodir):$dum
+	   append($Activedir+'/fidlog.xml',$studyxml2):$dum
+           append($Activedir+'/Active.xml',$studyxml2):$dum
+           append($Activedir+'/Queue.xml',$studyxml2):$dum
+	   append($Activedir+'/fidlog_SQ',$esq2):$dum
+           append($Activedir+'/Active_SQ',$esq2):$dum
+           append($Activedir+'/Queue_SQ',$esq2):$dum
+	   cp('-r',$tmpinfo+'/*',$sqinfo):$dum
 	endif
     endif
     write('file',$studyxml2,'  </protocol>')
     if ($studyxml<>$studyxml2) then
-	shell('mv '+$studyxml2+' '+$studyxml):$dum
-	shell('mv '+$esq2+' '+$esq):$dum
+	mv($studyxml2,$studyxml):$dum
+	mv($esq2,$esq):$dum
     endif
   endif
-  cd($curdir):$dum
 
 "*************************************************************************"
 ELSEIF ($2='DefPeakQ') and ($islcauto) THEN
   exists($autodir+'/'+$Qname+'.macdir/LcGenPeak/xmldir','directory'):$lcgenex
   if ($lcgenex) then
-    cd($autodir):$dum
+    cd($autodir):$sdir
     xmhahasx_Qnodes($studyxml,'','','LcGenPeak')
     write('reset',$tmpfile)
     $xml2=$autodir+'/'+$Qname+'.macdir/LcGenPeak/xmldir/EXPLIST.xml'
     $cpnodes2=$autodir+'/'+$Qname+'.macdir/LcGenPeak/xmldir/EXPLIST_SQ'
     exists($xml2,'file'):$OK
     if ($OK) then
-         shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-         shell('(cat '+$xml2+' >> '+$studyxml+')'):$dum
-         shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
+         append($cpnodes2,'awk','$1',$tmpfile):$dum
+         append($xml2,$studyxml):$dum
+         append($cpnodes2,$esq):$dum
     endif
      $ts1='' $ts2='' $nodes=0
      readfile($tmpfile,'$ts1','$ts2','','local'):$nodes
-//     shell('(cat '+$tmpfile+' | wc -l)'):$nodes
      if ($nodes) then
         $ti=1
         repeat
@@ -684,19 +646,15 @@ ELSEIF ($2='DefPeakQ') and ($islcauto) THEN
             endif
             $ti=$ti+1
         until $ti>$nodes
-//      cd($xmlinfodir):$dum
-//      shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//      cd($autodir):$dum
      endif
-    shell('rm -f '+$tmpfile):$dum
+    delete($tmpfile,''):$dum
     write('file',$studyxml,'  </protocol>')
-    cd($curdir):$dum
   endif
 
 "*************************************************************************"
 ELSEIF ($2='FidQ') THEN
 
-   cd($autodir):$dum
+   cd($autodir):$sdir
    $total=0
    $s1='' $s2=''
    exists($fidlog,'file'):$fidlogex
@@ -740,9 +698,9 @@ ELSEIF ($2='FidQ') THEN
 	    endif
 	    if ($fidex) then
                 $path=$fidname
-		shell('basename '+$fidname):$title
-		$sample='' shell('dirname '+$fidname):$sample
-		shell('basename '+$sample):$sample
+		substr($fidname,'basename'):$title
+		$sample='' substr($fidname,'dirname'):$sample
+		substr($sample,'basename'):$sample
 		if ($samplename='') then $samplename=$sample endif
                 $atx=1 $attr=''
                 $attr[$atx]='status','Completed' $atx=$atx+2
@@ -758,12 +716,12 @@ ELSEIF ($2='FidQ') THEN
 		$snode=''
 		xmhaha_addnode($pslabel,$attr,'',$studyxml):$snode
 		if ($snode<>'') then
-		   shell('(cat '+$sqdir+'/cpnodeinfo | awk \'{print $1" "$2" "$3}\' >> '+$esq+')'):$dum
+		   append($sqdir+'/cpnodeinfo','awk','$1 $2 $3',$esq):$dum
 		   write('reset',$sqdir+'/cpnodeinfo')
-		   shell('cp -r '+$xmlinfodir+'/'+$snode+' '+$sqinfo):$dum
+		   cp('-r',$xmlinfodir+'/'+$snode,$sqinfo):$dum
 		endif
 	    endif
-	    shell('rm -f '+$sqdir+'/cpnodeinfo'):$dum
+	    delete($sqdir+'/cpnodeinfo',''):$dum
 	    $i=$i+1
 	until $i > $total
 
@@ -799,9 +757,9 @@ ELSEIF ($2='FidQ') THEN
             endif
             if ($fidex) then
                 $path=$fidname
-                shell('basename '+$fidname):$title
-                $sample='' shell('dirname '+$fidname):$sample
-                shell('basename '+$sample):$sample
+                substr($fidname,'basename'):$title
+                $sample='' substr($fidname,'dirname'):$sample
+                substr($sample,'basename'):$sample
                 if ($samplename='') then $samplename=$sample endif
                 $atx=1 $attr=''
                 $attr[$atx]='status','Completed' $atx=$atx+2
@@ -817,18 +775,17 @@ ELSEIF ($2='FidQ') THEN
                 $snode=''
                 xmhaha_addnode($pslabel,$attr,'',$studyxmlRev):$snode
                 if ($snode<>'') then
-                   shell('(cat '+$sqdir+'/cpnodeinfo | awk \'{print $1" "$2" "$3}\' >> '+$esqRev+')'):$dum
+                   append($sqdir+'/cpnodeinfo','awk','$1 $2 $3',$esqRev):$dum
                    write('reset',$sqdir+'/cpnodeinfo')
-                   shell('cp -r '+$xmlinfodir+'/'+$snode+' '+$sqinfo):$dum
+                   cp('-r',$xmlinfodir+'/'+$snode,$sqinfo):$dum
                 endif
             endif
-            shell('rm -f '+$sqdir+'/cpnodeinfo'):$dum
+            delete($sqdir+'/cpnodeinfo',''):$dum
             $i=$i-1
         until $i < 1
    endif
    write('file',$studyxml,'  </protocol>')
    write('file',$studyxmlRev,'  </protocol>')
-   cd($curdir):$dum
 
 ENDIF
 "*************************************************************************"
@@ -841,16 +798,16 @@ IF ($2='PriorityQ') or ($2='DayQ') or ($2='NightQ') THEN
    formattime($rday-$rpriority):$timeX,$daytime
    formattime($rnight):$timeX,$nighttime
 
-   $P=0 shell('(cat '+$enterq+' | grep USER: | grep -wc priority)'):$P
-   $D=0 shell('(cat '+$enterq+' | grep USER: | grep -v priority | wc -l)'):$D
-   $N=0 shell('(cat '+$nightq+' | grep -wc USER:)'):$N
+   $P=0 copyf($enterq,'grep','USER:','grep -w','priority','|wc'):$P
+   $D=0 copyf($enterq,'grep','USER:','grep -v','priority','|wc'):$D
+   $N=0 copyf($nightq,'grep -w','USER','|wc'):$N
    $prioritytime=' (QueueTime: '+$prioritytime+')'
    $daytime=' (QueueTime: '+$daytime+')'
    $nighttime=' (QueueTime: '+$nighttime+')'
 
 ENDIF
 IF ($2='PriorityQ') or ($2='DayQ') THEN
-   cd($autodir):$dum
+   cd($autodir):$sdir
    $total=0
    $loc='' $locdir='' $when='' $zone='' $rack=''
    $who='' $priority=''
@@ -881,20 +838,19 @@ IF ($2='PriorityQ') THEN
           $cpnodes2=$autodir+'/'+$Qname+'.macdir/'+$locdir[$i]+'/xmldir/EXPLIST_SQ'
           if ($OK) then exists($xml2,'file'):$OK endif
           if ($OK) then
-                shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml2+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
+                append($cpnodes2,'awk','$1',$tmpfile):$dum
+                append($xml2,$studyxml):$dum
+                append($cpnodes2,$esq):$dum
           else
-                shell('(cat '+$cpnodes+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+                append($cpnodes,'awk','$1',$tmpfile):$dum
+                append($xml,$studyxml):$dum
+                append($cpnodes,$esq):$dum
           endif
        endif
        $i=$i+1
      until $i > $total
      $ts1='' $ts2='' $nodes=0
      readfile($tmpfile,'$ts1','$ts2','','local'):$nodes
-//     shell('(cat '+$tmpfile+' | wc -l)'):$nodes
      if ($nodes) then
         $ti=1
         repeat
@@ -904,11 +860,8 @@ IF ($2='PriorityQ') THEN
             endif
             $ti=$ti+1
         until $ti>$nodes
-//      cd($xmlinfodir):$dum
-//      shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//      cd($autodir):$dum
      endif
-     shell('rm -f '+$tmpfile):$dum
+     delete($tmpfile,''):$dum
    endif
    write('file',$studyxml,'  </protocol>')
 ENDIF
@@ -933,20 +886,19 @@ IF ($2='DayQ') THEN
 	  endif
           if ($OK) then exists($xml2,'file'):$OK endif
           if ($OK) then
-                shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml2+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
+                append($cpnodes2,'awk','$1',$tmpfile):$dum
+                append($xml2,$studyxml):$dum
+                append($cpnodes2,$esq):$dum
           else
-                shell('(cat '+$cpnodes+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+                append($cpnodes,'awk','$1',$tmpfile):$dum
+                append($xml,$studyxml):$dum
+                append($cpnodes,$esq):$dum
           endif
        endif
        $i=$i+1
      until $i > $total
      $ts1='' $ts2='' $nodes=0
      readfile($tmpfile,'$ts1','$ts2','','local'):$nodes
-//     shell('(cat '+$tmpfile+' | wc -l)'):$nodes
      if ($nodes) then
         $ti=1
         repeat
@@ -956,18 +908,15 @@ IF ($2='DayQ') THEN
             endif
             $ti=$ti+1
         until $ti>$nodes
-//      cd($xmlinfodir):$dum
-//      shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//      cd($autodir):$dum
      endif
-     shell('rm -f '+$tmpfile):$dum
+     delete($tmpfile,''):$dum
    endif
    write('file',$studyxml,'  </protocol>')
 ENDIF
 "*************************************************************************"
         "***Get a list of all samples in overniteQ***"
 IF ($2='NightQ') THEN
-   cd($autodir):$dum
+   cd($autodir):$sdir
    $total=0
    $loc='' $locdir='' $when='' $zone='' $rack=''
    $who='' $priority=''
@@ -993,19 +942,18 @@ IF ($2='NightQ') THEN
           $cpnodes2=$autodir+'/'+$Qname+'.macdir/'+$locdir[$i]+'/xmldir/LONGLIST_SQ'
           if ($OK) then exists($xml2,'file'):$OK endif
           if ($OK) then
-                shell('(cat '+$cpnodes2+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml2+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes2+' >> '+$esq+')'):$dum
+                append($cpnodes2,'awk','$1',$tmpfile):$dum
+                append($xml2,$studyxml):$dum
+                append($cpnodes2,$esq):$dum
           else
-                shell('(cat '+$cpnodes+' | awk \'{print $1}\' >> '+$tmpfile+')'):$dum
-                shell('(cat '+$xml+' >> '+$studyxml+')'):$dum
-                shell('(cat '+$cpnodes+' >> '+$esq+')'):$dum
+                append($cpnodes,'awk','$1',$tmpfile):$dum
+                append($xml,$studyxml):$dum
+                append($cpnodes,$esq):$dum
           endif
        $i=$i+1
      until $i > $total
      $ts1='' $ts2='' $nodes=0
      readfile($tmpfile,'$ts1','$ts2','','local'):$nodes
-//     shell('(cat '+$tmpfile+' | wc -l)'):$nodes
      if ($nodes) then
         $ti=1
         repeat
@@ -1015,17 +963,13 @@ IF ($2='NightQ') THEN
             endif
             $ti=$ti+1
         until $ti>$nodes
-//      cd($xmlinfodir):$dum
-//      shell('(tar cf - `cat '+$tmpfile+'` | (cd '+$sqinfo+'; tar xfBp -))'):$dum
-//      cd($autodir):$dum
      endif
-     shell('rm -f '+$tmpfile):$dum
+     delete($tmpfile,''):$dum
    endif
    write('file',$studyxml,'  </protocol>')
-   cd($curdir):$dum
 ENDIF
 "****************************************************************************"
-shell('chmod -R g+w '+$sqdir):$dum
-shell('rm -f '+$tmpfile):$dum
-cd($curdir):$dum
+chmod('-R g+w',$sqdir):$dum
+delete($tmpfile,''):$dum
+cd($curdir):$sdir
 if ($2='ActiveQ') then return($timestX) endif
