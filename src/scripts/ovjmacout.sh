@@ -54,10 +54,13 @@ mkdir -p "${vjdir}"
 mkdir "${vjdir}/tmp" "$vjdir/acqqueue"
 chmod 777 "${vjdir}/tmp" "$vjdir/acqqueue"
 
-(cd "${packagedir}/$ovjAppName"; mv Contents Contents_${VnmrRevId}_Beta2; ln -s Contents_${VnmrRevId}_Beta2 Contents)
+VnmrRel=$(grep RevID ${gitdir}/src/vnmr/revdate.c | cut -s -d\" -f2 | cut -d\  -f4-)
+VnmrRelFile=$(echo $VnmrRel | tr ' ' _)
+(cd "${packagedir}/$ovjAppName"; mv Contents Contents_${VnmrRevId}_${VnmrRelFile}; ln -s Contents_${VnmrRevId}_${VnmrRelFile} Contents)
 
 cat "${gitdir}/src/macos/preinstall" |
-        sed -e "s|OVJVERS|$VnmrRevId|" > ${resdir}/preinstall
+        sed -e "s|OVJVERS|$VnmrRevId|" |
+        sed -e "s|OVJREL|$VnmrRel|"  > ${resdir}/preinstall
 cp "${gitdir}/src/macos/postinstall" ${resdir}/postinstall
 chmod +x $resdir/p*
 
@@ -109,7 +112,8 @@ if [[ -f /usr/local/bin/packagesbuild ]]
 then
    echo "Making MacOS package of OpenVnmrJ"
    cat "${gitdir}/src/macos/ReadMe" |
-        sed -e "s|OVJVERS|$VnmrRevId|" > "${gitdir}/src/macos/ReadMe.txt" |
+        sed -e "s|OVJVERS|$VnmrRevId|" |
+        sed -e "s|OVJREL|$VnmrRel|" > "${gitdir}/src/macos/ReadMe.txt" |
    /usr/local/bin/packagesbuild -v -F "${workspacedir}" "${gitdir}/src/macos/ovjpkg.pkgproj"
 else
    echo "MacOS Packages.app not installed"
