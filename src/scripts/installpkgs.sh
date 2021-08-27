@@ -39,7 +39,7 @@ if [ $userId != "uid=0(root)" ]; then
     echo "Type $0 to start the installation program again"
     echo ""
   fi
-  exit
+  exit 2
 fi
 
 
@@ -159,6 +159,7 @@ if [ ! -x /usr/bin/dpkg ]; then
     version=$(cat /etc/$rel | sed -E 's/[^0-9]+//')
   else
 #   Assume Linux variant is like CentOS 8
+    rel=centos-release
     version="8.0"
   fi
 # remove all characters from end including first dot
@@ -219,7 +220,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   if [ $version -lt 8 ]; then
     commonList="$commonList rsh rsh-server"
   else
-    commonList="$commonList csh compat-openssl10 compat-libgfortran-48"
+    commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
   fi
 
 # Must list 32-bit packages, since these are no longer
@@ -379,39 +380,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   '
     item68List="$item68List $item68Listb"
   fi
-#These do not need to be installed for running OpenVnmrJ
-#Just if you intend to build it
-  buildList='
-  motif-devel
-  libXmu-devel
-  libXaw-devel.i686
-  libXext-devel.i686
-  libX11-devel.i686
-  libXau.i686
-  libX11.i686
-  libXi.i686
-  libXt.i686
-  libXaw.i686
-  libXpm.i686
-  libXt-devel.i686
-  libXtst-devel.i686
-  ncurses-libs.i686
-  ncurses-devel.i686
-  libxml2.i686
-  libxml2-devel.i686
-  alsa-lib.i686
-  atk-devel.i686
-  glibc-devel.i686
-  gtk2-devel.i686
-  libidn-devel.i686
-  libstdc++-devel.i686
-  expat.i686
-  expat-devel.i686
-  kde-baseapps-libs
-  atk.i686
-  gtk2.i686
-  libidn.i686
- '
+
 # from epel-release
   epelList='
   ntfsprogs
@@ -422,9 +391,6 @@ if [ ! -x /usr/bin/dpkg ]; then
     epelList="$epelList scons meld x11vnc"
   else
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
-    if [ ! -z $(type -t subscription-manager) ]; then
-        epelList="$epelList sharutils"
-    fi
   fi
   if [ $version -lt 7 ]; then
 #  Add older motif package
@@ -462,7 +428,7 @@ if [ ! -x /usr/bin/dpkg ]; then
     echo "CentOS / RedHat PackageKit is preventing installation"
     echo "Please try again in 5-10 minutes,"
     echo "after this tool completes its task."
-    exit 2
+    exit 1
   fi
 
   echo "You can monitor the progress in a separate terminal window with the command"
@@ -507,7 +473,8 @@ if [ ! -x /usr/bin/dpkg ]; then
     echo "Downloading required packages (2 of 3)"
     echo "Downloading required packages (2 of 3)" >> $logfile
     yum -y install $repoArg $packageList &>> $logfile
-    if [ $version -eq 8 ] && [ -z $(type -t subscription-manager) ]; then
+    if [[ $version -eq 8 ]] &&
+       [[ $rel  = "centos-release" ]]; then
       # Capitalization of PowerTools causes problems with 8.3
       yum -y --enablerepo=?ower?ools install $repoArg sharutils &>> $logfile
       if [ $version -eq 8 ]; then
@@ -541,10 +508,20 @@ if [ ! -x /usr/bin/dpkg ]; then
     fi
     yum -y install --disablerepo="*" --enablerepo="openvnmrj" $yum68List &>> $logfile
   else
+    if [[ $version -eq 8 ]] &&
+       [[ $rel  = "redhat-release" ]]; then
+	    if [[ $(subscription-manager repos --list-enabled |
+	 	     grep -i codeready > /dev/null; echo $?) != 0 ]]; then
+          ARCH=$(/bin/arch)
+          subscription-manager repos --enable "codeready-builder-for-rhel-8-${ARCH}-rpms" &>> $logfile
+        fi
+        yumList="$yumList sharutils"
+    fi
     if [ "x$yumList" != "x" ]; then
       yum -y install $yumList &>> $logfile
     fi
-    if [ $version -eq 8 ] && [ -z $(type -t subscription-manager) ]; then
+    if [[ $version -eq 8 ]] &&
+       [[ $rel  = "centos-release" ]]; then
       if [ "$(rpm -q sharutils | grep 'not installed' > /dev/null;echo $?)" == "0" ]
       then
         # Capitalization of PowerTools causes problems with 8.3
@@ -568,12 +545,12 @@ if [ ! -x /usr/bin/dpkg ]; then
   fi
   if [ $epelInstalled -eq 0 ]
   then
-    if [ -z $(type -t subscription-manager) ]; then
+    if [[ $rel  = "centos-release" ]]; then
         yum -y install epel-release &>> $logfile
     else
         yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm &>> $logfile
-	if [[ $(subscription-manager repos --list-enabled |
-		grep -i codeready > /dev/null; echo $?) != 0 ]]; then
+	    if [[ $(subscription-manager repos --list-enabled |
+	 	     grep -i codeready > /dev/null; echo $?) != 0 ]]; then
           ARCH=$(/bin/arch)
           subscription-manager repos --enable "codeready-builder-for-rhel-8-${ARCH}-rpms" &>> $logfile
         fi
@@ -701,7 +678,7 @@ else
   then
     echo "Ubuntu unattended-update is preventing installation"
     echo "Please try again in 5-10 minutes, after this tool completes its task."
-    exit 2
+    exit 1
   fi
   acqInstall=""
   if [[ $b12Acq -eq 1 ]]; then
@@ -719,7 +696,7 @@ else
   if [[ $? -ne 0 ]]; then
     echo "Ubuntu software update is preventing installation"
     echo "Please try again in 5-10 minutes, after this tool completes its task."
-    exit 2
+    exit 1
   fi
   if [[ $ovjRepo -eq 1 ]]; then
      repoArg="--allow-unauthenticated"
