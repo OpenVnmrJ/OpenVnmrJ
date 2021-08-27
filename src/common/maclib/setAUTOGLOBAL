@@ -10,20 +10,20 @@
 
 "***************************************************************************"
 	"check if TtimeQ file be rewritten?"
-    shell('touch '+$enterfile):$dum
-    shell('touch '+$nQfile):$dum
-    shell('touch '+$timeQfile):$dum
-    shell('(cat '+$enterfile+' | wc -l)'):$eqtotal
-    shell('(cat '+$nQfile+' | wc -l)'):$nqtotal
+    touch($enterfile):$dum
+    touch($nQfile):$dum
+    touch($timeQfile):$dum
+    copyf($enterfile,'|wc'):$eqtotal
+    copyf($nQfile,'|wc'):$nqtotal
 
     $rewrite=0
     $daytime=0 $prtime=0 $nitetime=0
     readTtimeQ($macdir):$prtime,$daytime,$nitetime
-    shell('(cat '+$timeQfile+' | grep -wc priorityQ_TOTALTIME)'):$ret
+    copyf($timeQfile,'grep -w','priorityQ_TOTALTIME','|wc'):$ret
     if ($ret=0) then $rewrite=1 endif
-    shell('(cat '+$timeQfile+' | grep -wc enterQ_TOTALTIME)'):$ret
+    copyf($timeQfile,'grep -w','enterQ_TOTALTIME','|wc'):$ret
     if ($ret=0) then $rewrite=1 endif
-    shell('(cat '+$timeQfile+' | grep -wc overniteQ_TOTALTIME)'):$ret
+    copyf($timeQfile,'grep -w','overniteQ_TOTALTIME','|wc'):$ret
     if ($ret=0) then $rewrite=1 endif
     if (($eqtotal=0) and (($daytime<>0) or ($prtime<>0))) then
         $daytime=0 $prtime=0 $rewrite=1
@@ -46,8 +46,8 @@ IF ($2 = 'enterQ') THEN
 
    expactive:$isactive
    if ($autoglobalex=0) or (($newautodir<>'daily') and ($isactive>-1)) then
-        shell('date +%H'):$hour
-        shell('date +%M'):$minute
+        systemtime('%H'):$hour
+        systemtime('%M'):$minute
         $currenttime=$hour*3600+$minute*60
 
         getautoinfo:$shortstarttime,$shortlength,$longstarttime,$longlength
@@ -76,7 +76,7 @@ IF ($2 = 'enterQ') THEN
 
 	$autosortflg='none'
 	if ($autoglobalex) then
-	   shell('(cat '+$AUTOGLOBAL+' | grep -w AUTOSAFLAG:)'):$line
+	   copyf($AUTOGLOBAL,'grep -w','AUTOSAFLAG:','|wc'):$ret,$line
 	   substr($line,2):$autosortflg
 	endif
 	write('reset',$AUTOGLOBAL)
@@ -89,7 +89,7 @@ IF ($2 = 'enterQ') THEN
 	else
 	   write('file',$AUTOGLOBAL,'TRAYMAX: %d',traymax)
 	endif
-	shell('chmod a+rw '+$AUTOGLOBAL):$dum
+	chmod('a+rw',$AUTOGLOBAL):$dum
 
 	if ($isactive>-1) and ($longrun<>'y') then setupautomerge($1) endif
 //        if (($longstarttime>=0) and ($longstarttime<=24*3600) and
@@ -98,13 +98,13 @@ IF ($2 = 'enterQ') THEN
 //	  endif
 
         $date=''
-        shell('date +%Y%m%d'):$date
+        systemtime('%Y%m%d'):$date
         $admintemp=userdir+'/adm/walkupadm/SERVICE_'+$date
         exists($admintemp,'file'):$tempex
 	if ($tempex) then
-		shell('cp '+$admintemp+' '+$macdir+'/SERVICE_'+$date):$dum
-		shell('chmod a+rw '+$macdir+'/SERVICE_'+$date):$dum
-		shell('mv '+$admintemp+' '+$admintemp+'_done'):$dum
+		cp($admintemp,$macdir+'/SERVICE_'+$date):$dum
+		chmod('a+rw',$macdir+'/SERVICE_'+$date):$dum
+		mv($admintemp,$admintemp+'_done'):$dum
 	endif
 
    endif
@@ -137,7 +137,7 @@ ELSE
 	else
 	   write('file',$AUTOGLOBAL,'TRAYMAX: %d',traymax)
 	endif
-	shell('chmod a+rw '+$AUTOGLOBAL):$dum
+	chmod('a+rw',$AUTOGLOBAL):$dum
     ENDIF
 
 ENDIF
@@ -145,10 +145,10 @@ ENDIF
 if ($rewrite>0) then
    writeTtimeQ($macdir,$prtime,$daytime,$nitetime)
 endif
-shell('rm -rf '+$macdir+'/okayQ'):$dum
-shell('rm -rf '+$macdir+'/addQ'):$dum
+rm('-rf',$macdir+'/okayQ'):$dum
+rm('-rf',$macdir+'/addQ'):$dum
 
-shell('chmod -R g+rw '+$1):$dum
+chmod('-R g+rw',$1):$dum
 
 $refloc=0
 $lastsample='current'
