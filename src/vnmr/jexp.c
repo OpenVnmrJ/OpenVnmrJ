@@ -1567,6 +1567,7 @@ int svf(int argc, char *argv[], int retc, char *retv[])
   int svf_nofid;		/* saving FID, but do not copy FID.  See below */
   int nolog, no_arch, i;
   int doDB;
+  static int onDB = 1;
   int force;
   int opt;
   vInfo info;
@@ -1607,6 +1608,13 @@ int svf(int argc, char *argv[], int retc, char *retv[])
   if (force) argc--;
   if (opt) argc--;
 
+  if (onDB == 1)
+  {
+     sprintf(destpath,"%s/pgsql/persistence/LocatorOff",systemdir);
+     onDB = access(destpath,F_OK);
+  }
+  if ( !onDB )
+     doDB = FALSE;
   if (argc<2)
     { W_getInput("File name (enter name and <return>)? ",filepath,MAXPATH-1);
       name = filepath;
