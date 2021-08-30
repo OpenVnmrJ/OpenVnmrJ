@@ -632,29 +632,31 @@ if [ -e /tmp/.ovj_installed ]; then
       echo " "
    fi
 
-   echo " "
-   echo "The VnmrJ 4.2 fidlib can be installed."
-   echo "Depending on network speed, it can take from"
-   echo "5 to 35 minutes."
-   echo "Would you like to install it now? (y/n) "
-   read ans
-   if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
-      echo "Installing VnmrJ fidlib" >> $insLog
-      if [ x$distroType = "xdebian" ]; then
-         sudo -i -u $nmr_user /vnmr/bin/ovjGetFidlib
+   if  [[ ! -d /vnmr/fidlib/Ethylindanone ]]; then
+      echo " "
+      echo "The VnmrJ 4.2 fidlib can be installed."
+      echo "Depending on network speed, it can take from"
+      echo "5 to 35 minutes."
+      echo "Would you like to install it now? (y/n) "
+      read ans
+      if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
+         echo "Installing VnmrJ fidlib" >> $insLog
+         if [ x$distroType = "xdebian" ]; then
+            sudo -i -u $nmr_user /vnmr/bin/ovjGetFidlib
+         else
+            su - $nmr_user -c "/vnmr/bin/ovjGetFidlib"
+         fi
+         echo " "
       else
-         su - $nmr_user -c "/vnmr/bin/ovjGetFidlib"
+         echo "The VnmrJ fidlib may be installed at any time by running"
+         echo "/vnmr/bin/ovjGetFidlib"
       fi
       echo " "
-   else
-      echo "The VnmrJ fidlib may be installed at any time by running"
-      echo "/vnmr/bin/ovjGetFidlib"
+      echo "To see all the fidlib installation options, such as installing"
+      echo "the it without network access, use"
+      echo "/vnmr/bin/ovjGetFidlib -h"
+      echo " "
    fi
-   echo " "
-   echo "To see all the fidlib installation options, such as installing"
-   echo "the it without network access, use"
-   echo "/vnmr/bin/ovjGetFidlib -h"
-   echo " "
 
    echo "Shall this system be configured as a spectrometer."
    if [ -d /vnmr/acq/download ] || [ -d /vnmr/acq/vxBoot ]
