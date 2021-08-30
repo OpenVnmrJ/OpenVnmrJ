@@ -1,17 +1,24 @@
 #!/bin/bash
 
+# set -x
+
 orig=$(readlink /vnmr)
-if [ -d $orig/fidlib ]
-then
-  (cd $orig; zip -ryq fidlib.zip fidlib; mv fidlib.zip /tmp )
+if [[ -d $orig/fidlib/Ethylindanone ]] ||
+   [[ -d $orig/help ]] ||
+   [[ -d $orig/nmrpipe ]]; then
+   olddir=$(dirname $(dirname $(dirname $orig)))
+   orig=$(readlink $(dirname $(dirname $orig)))
+   echo $olddir/$orig/Resources/OpenVnmrJ > /tmp/vnmrOrigPath
 fi
-if [ -d $orig/help ]
-then
-  (cd $orig; zip -ryq help.zip help; mv help.zip /tmp )
+dir="/Applications/OpenVnmrJ.app"
+if [[ -d $dir ]]; then
+   new=$(readlink $dir/Contents)
+   if [[ ! -z $new ]]; then
+     if [[ $new = Contents_OVJVERS_OVJREL ]]; then
+        mv $dir/Contents_OVJVERS_OVJREL $dir/OrIgCoNtEnTs
+     else
+        rm -rf $dir/Contents_OVJVERS_OVJREL
+     fi
+   fi
+   rm -f $dir/Contents
 fi
-if [ -d $orig/nmrPipe ]
-then
-  (cd $orig; zip -ryq nmrpipe.zip nmrPipe; mv nmrpipe.zip /tmp )
-fi
-rm -rf /Applications/OpenVnmrJ.app/Contents_OVJVERS_OVJREL
-rm -f /Applications/OpenVnmrJ.app/Contents
