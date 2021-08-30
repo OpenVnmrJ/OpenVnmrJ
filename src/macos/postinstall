@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# set -x
+
 dir="/Applications/OpenVnmrJ.app/Contents/Resources/OpenVnmrJ"
 osVer=$(sw_vers -productVersion | tr "." " " | awk '{print $1}')
 osSubVer=$(sw_vers -productVersion | tr "." " " | awk '{print $2}')
@@ -31,18 +33,35 @@ $dir/bin/ovjuser $username
 cmd="source $dir/user_templates/.vnmrenvsh; $dir/bin/Vnmrbg -mback -n1 -s config auto; cd ~/vnmrsys; rm -f vnmr;  ln -s $dir vnmr"
 su $username -c "$cmd"
 # /vnmr/bin/dbsetup root /vnmr 
-if [ -f /tmp/fidlib.zip ]
-then
-  mv /tmp/fidlib.zip $dir
-  (cd $dir; unzip -q fidlib.zip; rm -f fidlib.zip)
+appdir="/Applications/OpenVnmrJ.app"
+if [[ -d $appdir/OrIgCoNtEnTs ]]; then
+   path=$appdir/OrIgCoNtEnTs/Resources/OpenVnmrJ
+   if [[ -d  $path/fidlib/Ethylindanone ]]; then
+      rm -rf $dir/fidlib
+      mv $path/fidlib $dir/fidlib
+   fi
+   if [[ -d  $path/help ]]; then
+      mv $path/help $dir/help
+   fi
+   if [[ -d  $path/nmrpipe ]]; then
+      mv $path/nmrpipe $dir/nmrpipe
+   fi
+   rm -rf $appdir/OrIgCoNtEnTs
+   rm -f /tmp/vnmrOrigPath
+   chown -R -L $username $dir
 fi
-if [ -f /tmp/help.zip ]
-then
-  mv /tmp/help.zip $dir
-  (cd $dir; unzip -q help.zip; rm -f help.zip)
-fi
-if [ -f /tmp/nmrpipe.zip ]
-then
-  mv /tmp/nmrpipe.zip $dir
-  (cd $dir; unzip -q nmrpipe.zip; rm -f nmrpipe.zip)
+if [[ -f /tmp/vnmrOrigPath ]]; then
+   path=$(cat /tmp/vnmrOrigPath)
+   rm /tmp/vnmrOrigPath
+   if [[ -d  $path/fidlib/Ethylindanone ]]; then
+      rm -rf $dir/fidlib
+      (cd $path; tar cf - fidlib | (cd $dir && tar xpf -))
+   fi
+   if [[ -d  $path/help ]]; then
+      (cd $path; tar cf - help | (cd $dir && tar xpf -))
+   fi
+   if [[ -d  $path/nmrpipe ]]; then
+      (cd $path; tar cf - nmrpipe | (cd $dir && tar xpf -))
+   fi
+   chown -R -L $username $dir
 fi
