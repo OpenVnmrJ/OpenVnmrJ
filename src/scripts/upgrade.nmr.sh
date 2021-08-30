@@ -256,6 +256,7 @@ doUpgrade () {
         code/tarfiles/devicetable.tar
         code/tarfiles/pgsql.tar
         code/tarfiles/jre.tar
+        code/tarfiles/fidlib.tar
         code/tarfiles/spinapi.tar
         )
     ignoreFiles="
