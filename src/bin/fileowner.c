@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <pwd.h>
+#include <grp.h>
 
 /**************************************************************************
     fileowner  returns the full name of the owner of the specified file.
@@ -48,6 +49,24 @@ int main(int argc, char *argv[])
            exit(0);
         }
         strcpy(namebuf, pwbuf->pw_name);
+        printf("%s\n",namebuf );
+    }
+    else if((argc == 3) &&  ! strcmp(argv[1],"-g") )
+    {
+        struct group  *grpbuf;
+        /* Open the output file. */
+        if ( stat(argv[2], &stbuf ) == -1)
+        {
+           printf("\n" );
+           exit(0);
+        }
+        grpbuf = getgrgid( stbuf.st_gid);
+        if (grpbuf == NULL)
+        {
+           printf("\n" );
+           exit(0);
+        }
+        strcpy(namebuf, grpbuf->gr_name);
         printf("%s\n",namebuf );
     }
     else
