@@ -256,6 +256,7 @@ doUpgrade () {
         code/tarfiles/devicetable.tar
         code/tarfiles/pgsql.tar
         code/tarfiles/jre.tar
+        code/tarfiles/fidlib.tar
         code/tarfiles/spinapi.tar
         )
     ignoreFiles="
@@ -470,8 +471,16 @@ if [[ $(stat -c %a "$vnmrsystem"/bin/execkillacqproc) -eq 500 ]]; then
     doAcq=1
 fi
 
+noWeb=0
+if [[ ! -d /vnmr/web ]]; then
+   noWeb=1
+fi
+
 doUpgrade
 
+if [[ $noWeb -eq 1  ]]; then
+    rm -rf $vnmrsystem/web
+fi
 if [[ $doAcq -eq 0 ]]; then
     if [[ -f $upgrade_save_dir/bin/sudoins ]]; then
         doAcq=1

@@ -5,6 +5,17 @@
 #-----------------------------------------------------------------
 # make sure no VnmrJ is running
 #
+
+#if python does not exist, exit
+if [[ -z $(type -t python) ]]; then
+   exit 0
+fi
+
+#if /vnmr/web does not exist, exit
+if [[ ! -d /vnmr/web ]]; then
+   exit 0
+fi
+
 findacqproc="ps -e  | grep Vnmr | awk '{ printf(\"%d \",\$1) }'"
 npids=`eval $findacqproc`
 if (test x"$npids" != "x" )
