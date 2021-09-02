@@ -515,7 +515,7 @@ if [ -e /tmp/vskippkgchk ]; then
    rm -f /tmp/vskippkgchk
 fi
 
-if ! hash python 2> /dev/null; then
+if [[ -z $(type -t python) ]]; then
    if [ -d /vnmr/web ]; then
       mv /vnmr/web /vnmr/web_off
    fi
