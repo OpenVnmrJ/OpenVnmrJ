@@ -11,7 +11,7 @@ As a spectrometer host, OpenVnmrJ Version 3 is compatible with:
 - Ubuntu:    Version 20.
 
 For data processing only, OpenVnmrJ Version 3 is also compatible with:
-- MacOS: Versions 10.14 (Mojave) to 16.3 (Big Sur).
+- MacOS: Versions 10.13 (High Sierra) to 16.3 (Big Sur).
 
 ## Download instructions
 - For VNMRS and later systems download the OpenVnmrJ_3.1_DDR.zip file.

@@ -159,7 +159,7 @@ To get around this security issue, go to
 
 Also, if installed on MacOS Catalina (10.15) or Big Sur (16.3), the
 Mac must be rebooted following installation of OpenVnmrJ. If one
-installs OpenVnmrJ Version 3 on a Mac running Mojave and
+installs OpenVnmrJ Version 3 on a Mac running Mojave or older versions and
 subsequently upgrades to Catalina or newer MacOS versions, OpenVnmrJ
 will stop working.  This is because Catalina and newer MacOS versions
 have implemented a "read-only" system directory and OpenVnmrJ will have
