@@ -8,7 +8,7 @@ OpenVnmrJ 3 supports the following:
 - RHEL:      Version 8.4
 - AlmaLinux: Version 8.4
 - Ubuntu:    Versions 20.
-- MacOS:     Versions 10.14 (Mojave) to 11.3 (Big Sur). (data station only)
+- MacOS:     Versions 10.13 (High Sierra) to 11.3 (Big Sur). (data station only)
 
 OpenVnmrJ Version 2 was the first OpenVnmrJ release to not require VnmrJ 4.2 to be installed in order to function as a spectrometer host. It contains additions as described in the [Notes.txt](Notes.txt) file. Installation instructions are in the [Install2](Install2.md) file.
 OpenVnmrJ 2 supports the following:
