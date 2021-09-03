@@ -107,6 +107,16 @@ elseif $arg='redisplay' then
   if($e and ($n2 = 'dss')) then
     $dss=$dcmd+'(`select`)'
     exec($dss)
+    if shownumbers='v' or shownumbers='s' then
+      $e=size('dsSelect')
+      if ($e > 1) then
+        $incr=dsSelect[2]-dsSelect[1]
+      else
+        $incr=1
+      endif
+      $dssl='dssl('+$style+''+$val+''+$rev+'dsSelect[1],dsSelect[$e],$incr)'
+      exec($dssl)
+    endif
   else
     $dss=$dcmd+'(arraystart,arraystop,arraydelta'+$dc+$ctraces+')'
     exec($dss)
@@ -114,14 +124,14 @@ elseif $arg='redisplay' then
       $dssl='dssl('+$style+''+$val+''+$rev+'arraystart,arraystop,arraydelta)'
       exec($dssl)
     endif
-    if arraydscale='y' then
+  endif
+  if arraydscale='y' then
 /*
       if showcontent='f' then dscale(-vo*arraystop/arraydelta)
       else dscale
       endif
 */
-      dscale
-    endif
+    dscale
   endif
 
 elseif $arg='plot' then

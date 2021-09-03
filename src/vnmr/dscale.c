@@ -1836,6 +1836,9 @@ int dscale(int argc, char *argv[], int retc, char *retv[])
   }
   else
   {
+    if (WgraphicsdisplayValid("dss") ||
+        WgraphicsdisplayValid("dfs") )
+       setArraydis(1);
     dispcalib = (float) (mnumypnts-ymin) / (float) wc2max;
     if (scale_flag)
        new_dscale(TRUE,FALSE);
