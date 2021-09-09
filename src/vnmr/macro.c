@@ -20,13 +20,12 @@
 |	macrodir    - list of macros in userdir directory 
 |	macrosysdir - list of macros in systemdir directory
 |	macrocat    - cat contents of macro in userdir 
-|	macrosyscat - cat contents of macro in systemdir 
 |	macrorm     - remove a macro from userdir 
-|	macrosysrm  - remove a macro from systemdir 
 |	macrocp     - copy macro in userdir 
 |	macrosyscp  - cp macro from systemdir to userdir 
 |	macrold     - load a macro from userdir 
 |	macrosysld  - load a macro from systemdir 
+|	macroLine   - return current line of executing macro
 |
 |   01/08/91   RL   Allocated memory tagged with ID "newMacro" was released
 |		    in several places, mostly under error conditions.  This
@@ -70,6 +69,7 @@ extern int More(FILE *stream, int screenLength);
 extern void showTree(int n, char *m, node *p);
 extern void dispose(node *p);
 extern int  sendTripleEscToMaster(char code, char *string_to_send );
+extern int getMacroLine();
 
 static FILE   *stream;
 static symbol *macroCache = NULL;
@@ -320,7 +320,7 @@ int macroDir(int argc, char *argv[], int retc, char *retv[])
 }
 
 /*--------------------------------------------------------------------------
-|	macrocat  macrosyscat
+|	macrocat
 |
 |	This command lists the contents of macros in the userdir and
 |	systemdir paths.
@@ -340,20 +340,12 @@ int macroCat(int argc, char *argv[], int retc, char *retv[])
     {	Werrprintf("Usage -- %s('macro_name'[,'macro_name'....])",argv[0]);
 	ABORT;
     }
-#ifdef UNIX
     strcpy(cmdstr,"/bin/cat");
-#else 
-    strcpy(cmdstr,"typ ");
-#endif 
     if ( ! strcmp("macrocat",argv[0]))  /* userdir  directory ?*/
        strcpy(dirname,userdir);
     else
        strcpy(dirname,systemdir);
-#ifdef UNIX
     strcat(dirname,"/maclib/");
-#else 
-    vms_fname_cat(dirname,"[.maclib]");
-#endif 
     for (i=1; i<argc; i++)
     {
         char macroname[MAXSHSTRING];
@@ -368,10 +360,6 @@ int macroCat(int argc, char *argv[], int retc, char *retv[])
            found = 1;
            strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
 	   strncat(cmdstr,macroname,MAXSHSTRING - strlen(cmdstr) -1);
-#ifdef VMS
-	   if (i < argc-1) strcat(cmdstr,"., ");
-	   else            strcat(cmdstr,".");
-#endif 
         }
     }
     TPRINT1("macroCat: command string \"%s\"\n",cmdstr);
@@ -390,9 +378,9 @@ int macroCat(int argc, char *argv[], int retc, char *retv[])
 }
 
 /*--------------------------------------------------------------------------
-|	macrorm  macrosysrm
+|	macrorm
 |
-|	These commands remove macros from userdir and systemdir.
+|	These commands remove macros from userdir
 |
 /+--------------------------------------------------------------------------*/
 int macroRm(int argc, char *argv[], int retc, char *retv[])
@@ -409,11 +397,7 @@ int macroRm(int argc, char *argv[], int retc, char *retv[])
 	    strncat(path,userdir,MAXPATHL - strlen(path) -1);
 	else  /* remove from systemdir */
 	    strncat(path,systemdir,MAXPATHL - strlen(path) -1);
-#ifdef UNIX
 	strncat(path,"/maclib/",MAXPATHL - strlen(path) -1);
-#else 
-	vms_fname_cat(path,"[.maclib]");
-#endif 
      	strncat(path,argv[i],MAXPATHL - strlen(path) -1);
 	TPRINT1("macroRm: unlinking \"%s\"\n",path);
 	if (unlink(path)) 
@@ -563,4 +547,15 @@ int macroLoad(char *name, char *filepath)
   releaseAllWithId("newMacro");
   renameAllocation("tmpSavenewMacro","newMacro");
   return(-1);
+}
+
+int macroLine(int argc, char *argv[], int retc, char *retv[])
+{
+   int ret;
+   ret = getMacroLine();
+   if (retc)
+      retv[0] = intString( ret );
+   else
+      Winfoprintf("macro line %d",ret);
+   RETURN;
 }
