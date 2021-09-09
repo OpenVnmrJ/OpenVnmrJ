@@ -329,6 +329,7 @@ extern int macroCat();
 extern int macroCp();
 extern int macroDir();
 extern int macroLd();
+extern int macroLine(int argc, char *argv[], int retc, char *retv[]);
 extern int macroRm();
 extern int magicvars();
 extern int magnetom();			/* magnetom */
@@ -893,11 +894,10 @@ static cmd_t vnmr_table[] = {
 	{"macrocp"    , macroCp,	NO_REEXEC, 0},
 	{"macrodir"   , macroDir,	NO_REEXEC, 0},
 	{"macrold"    , macroLd,	NO_REEXEC, 10},
+	{"macroLine"  , macroLine,	NO_REEXEC, 0},
 	{"macrorm"    , macroRm,	NO_REEXEC, 0},
-	{"macrosyscat", macroCat,	NO_REEXEC, 0},
 	{"macrosyscp" , macroCp,	NO_REEXEC, 0},
 	{"macrosysdir", macroDir,	NO_REEXEC, 0},
-	{"macrosysrm" , macroRm,	NO_REEXEC, 0},
 	{"magicvars"  , magicvars,	NO_REEXEC, 0},
 	{"magnetom"   , magnetom,	NO_REEXEC, 0},
 	{"makefid"    , makefid,	NO_REEXEC, 0},

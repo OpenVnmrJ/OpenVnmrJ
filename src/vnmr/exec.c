@@ -104,6 +104,7 @@ int             MflagVJcmd=0;
 int             MflagIndent=0;
 static int      execStringRes = 0;
 static int      execLevel = 0;
+static int      _L_ = 0;  // Line number of executing macro
 
 static int cmCnt = -1; /* number of commas in the CMLIST element */
 static int cmIter = 0; /* loop count through CMLIST elements */
@@ -415,6 +416,11 @@ int procRetv(int i, node *n, int retc, char *retv[], char *macroName)
         return(i);
 }
 
+int getMacroLine()
+{
+   return _L_;
+}
+
 /*------------------------------------------------------------------------------
 |
 |       execP/3
@@ -492,6 +498,7 @@ static int execP(char *callname, char *n, int (*p)(), node *a, node *r, char *ma
                      MflagIndent++;
                   }
                 }
+                _L_ = macroLine;
                 gives = !((*p)(argc,argv,retc,retv));
                 DPRINT1(3,"execP: ...back from procedure, process upto %d returns...\n",retc);
 
