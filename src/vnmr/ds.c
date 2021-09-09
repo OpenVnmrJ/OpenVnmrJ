@@ -43,6 +43,7 @@
 extern int is_aip_window_opened();
 extern int     start_from_ft;   /* set by ft if ds is to be executed */
 extern int     inRepaintMode;
+extern int showFlushDisp;
 extern float  *get_data_buf(int trace);
 extern int   grafIsOn;
 extern int  rel_data();
@@ -2668,7 +2669,8 @@ int selecT(int argc, char *argv[], int retc, char *retv[])
       }
       else
       {
-         disp_specIndex(specIndex);
+         if (showFlushDisp)
+            disp_specIndex(specIndex);
       }
    }
    else

@@ -442,7 +442,8 @@ int jexp(int argc, char *argv[], int retc, char *retv[])
     }
   }
 
-  disp_status("JEXP    ");
+  if (showFlushDisp)
+     disp_status("JEXP    ");
   setfilepaths(0);
   D_getparfilepath(CURRENT, path, exppath);
   P_treereset(CURRENT);		/* clear the tree first */

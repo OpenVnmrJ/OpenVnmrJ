@@ -201,7 +201,8 @@ extern int encipher(int argc, char *argv[], int retc, char *retv[]);
 /* extern int epi_recon();      */
 extern int ernst();
 extern int errlog();
-extern int exec();
+extern int exec(int argc, char *argv[], int retc, char *retv[]);
+extern int execexp(int argc, char *argv[], int retc, char *retv[]);
 extern int exists();
 extern int expactive();
 extern int export_files();			/* magnetom */
@@ -743,6 +744,7 @@ static cmd_t vnmr_table[] = {
 	{"ernst"      , ernst,		NO_REEXEC, 0},
 	{"errlog"     , errlog,		NO_REEXEC, 0},
 	{"exec"       , exec,		NO_REEXEC, 12},
+	{"execexp"    , execexp,	NO_REEXEC, 12},
 	{"vnmrexit"   , nmrExit,	NO_REEXEC, 0},
 	{"exp"        , ln,		NO_REEXEC, 0},
 	{"expactive"  , expactive,	NO_REEXEC, 0},
