@@ -46,6 +46,7 @@ int abortActive = 1;    /* if abort is active */
 
 extern int AbortRobo;
 static int as_lan = 0;
+static char devPort[64];
 
 /*
  * Port Numbers are hard coded.
@@ -69,6 +70,8 @@ ioDev devTable [] = {
         open_serial, read_serial, write_serial, close_serial, ioctl_serial },
   { "SMS_COM1",
         open_serial, read_serial, write_serial, close_serial, ioctl_serial },
+  { "SMS_DEV",
+        open_serial, read_serial, write_serial, close_serial, ioctl_serial },
   { "ASM_TTYA",
         open_serial, read_serial, write_serial, close_serial, ioctl_serial },
   { "ASM_TTYB",
@@ -79,11 +82,15 @@ ioDev devTable [] = {
         open_serial, read_serial, write_serial, close_serial, ioctl_serial },
   { "GIL_COM1",
         open_serial, read_serial, write_serial, close_serial, ioctl_serial },
+  { "GIL_DEV",
+        open_serial, read_serial, write_serial, close_serial, ioctl_serial },
   { "NMS_TTYA",
         open_serial, read_serial, write_serial, close_serial, ioctl_serial },
   { "NMS_TTYB",
         open_serial, read_serial, write_serial, close_serial, ioctl_serial },
   { "NMS_COM1",
+        open_serial, read_serial, write_serial, close_serial, ioctl_serial },
+  { "NMS_DEV",
         open_serial, read_serial, write_serial, close_serial, ioctl_serial },
   { "HRM_ROBOT",
         open_lan,    read_lan,    write_lan,    close_lan,    ioctl_lan    },
@@ -677,6 +684,8 @@ int open_serial(char *devName)
       serDev = "/dev/term/b";
     else if  (strstr(devName, "COM1") != NULL)
       serDev = "/dev/ttyS0";
+    else if  (strstr(devName, "DEV") != NULL)
+      serDev = devPort;
     else
       serDev = "/dev/term/a";
 
@@ -738,8 +747,9 @@ int ioctl_serial(int fd, int action, ...)
 ioDev *setupSmsComms(char *smsPortPath)
 {
     int fd, bytes=0, i=0;
-    char devName[10], *chrptr, *portchr, *type, port[30];
+    char devName[64], *chrptr, *portchr, *type, port[30];
 
+    devPort[0] = '\0';
     fd = open(smsPortPath,O_RDONLY);
     if (fd == -1) {
         /* NO smsport file, so default to serial port A and SMS */
@@ -752,7 +762,6 @@ ioDev *setupSmsComms(char *smsPortPath)
             smsPortPath, bytes, port[0]);
     chrptr = &port[0];
     portchr = strtok(chrptr," ");
-    *portchr = toupper(*portchr);
     DPRINT1(1, "portchr: '%s'\n", portchr);
 
     /* test if 'not used' selected, then default to serial port a */
@@ -775,28 +784,40 @@ ioDev *setupSmsComms(char *smsPortPath)
     }
     else
     {
-       switch (*portchr) {
-       case 'A':
-       case 'B':
+       if ( ! strcmp( portchr, "a" ) || ! strcmp (portchr, "b") )
+       {
            strncpy(devName, type, 3);
            strncpy(devName+3, "_TTY", 4);
-           devName[7] = *portchr;
+           devName[7] = toupper(*portchr);
            devName[8] = '\0';
-           break;
-       case 'C':
+       }
+       else if ( ! strcmp( portchr, "c1" ) )
+       {
            strncpy(devName, type, 3);
            strncpy(devName+3, "_COM", 4);
            devName[7] = *(portchr+1);
            devName[8] = '\0';
-           break;
-       case 'E':
+       }
+       else if ( ! strcmp( portchr, "E" ) || ! strcmp( portchr, "e" ) )
+       {
            /* Ethernet only applicable to Hermes Robot */
            strncpy(devName, type, 3);
            strncpy(devName+3, "_ROBOT", 7);
-           break;
+       }
+       else
+       {
+           strncpy(devName, type, 3);
+           strncpy(devName+3, "_DEV", 4);
+           devName[7] = '\0';
+           strcpy(devPort, "/dev/");
+           strcat(devPort, portchr);
+           if ( devPort[strlen(devPort) -1 ] == '\n' )
+              devPort[strlen(devPort) -1 ] = '\0';
        }
     }
 
+    DPRINT1(1, "devName is %s\n", devName);
+    DPRINT1(1, "devPort is '%s'\n", devPort);
     while (devTable[i].devName != NULL) {
         if (strncmp(devTable[i].devName, devName, strlen(devName)) == 0) {
             return &devTable[i];
