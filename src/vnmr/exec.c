@@ -426,7 +426,7 @@ int procRetv(int i, node *n, int retc, char *retv[], char *macroName)
 |
 +-----------------------------------------------------------------------------*/
 
-static int execP(char *callname, char *n, int (*p)(), node *a, node *r, char *macroName)
+static int execP(char *callname, char *n, int (*p)(), node *a, node *r, char *macroName, int macroLine)
 {   char **argv;
     char **retv;
     int    argc;
@@ -487,7 +487,7 @@ static int execP(char *callname, char *n, int (*p)(), node *a, node *r, char *ma
                            fprintf(stderr,"%s'%s'",(args==1) ? "(" : ",",
                                 (argv[args] == NULL) ? "null" : argv[args]);
                  
-                     fprintf(stderr,"%sstarted\n", (argc>1) ? ") " : " ");
+                     fprintf(stderr,"%s started from %s:%d\n", (argc>1) ? ")" : "",macroName,macroLine);
                      fflush(stderr);
                      MflagIndent++;
                   }
@@ -771,7 +771,7 @@ static int execM(char *n, node *a, node *r, char *macroName, int macroLine)
 
                 if (M2flag)
                 {
-                   fprintf(stderr,"%s started\n", (argc) ? ")" : "");
+                   fprintf(stderr,"%s started from %s:%d\n", (argc>1) ? ")" : "",macroName,macroLine);
                 }
                 pushTree();
                 if ((codeTree=findMacro(n)) == NULL)
@@ -891,10 +891,10 @@ static int execMP(char *n, node *a, node *r, char *macroName, int macroLine)
            {
               fflush(stdout);
               fflush(stderr);
-              fprintf(stderr,"%*scommand %s started\n",MflagIndent,"",n);
+              fprintf(stderr,"%*scommand %s started from %s:%d\n",MflagIndent,"",n,macroName,macroLine);
               MflagIndent++;
            }
-           give = execP(n,newname,p,a,r,macroName);
+           give = execP(n,newname,p,a,r,macroName,macroLine);
            if (showP)
            {
               if (MflagIndent)
@@ -906,7 +906,7 @@ static int execMP(char *n, node *a, node *r, char *macroName, int macroLine)
         }
         else
         {
-           give = execP(n,newname,p,a,r,macroName);
+           give = execP(n,newname,p,a,r,macroName,macroLine);
         }
         if ( ! give && macroName && (Mflag || M2flag || M3flag || M0flag) )
         {
@@ -932,7 +932,7 @@ static int execMP(char *n, node *a, node *r, char *macroName, int macroLine)
         {
            fflush(stdout);
            fflush(stderr);
-           fprintf(stderr,"%*smacro %s started\n",MflagIndent,"",n);
+           fprintf(stderr,"%*smacro %s started from %s:%d\n",MflagIndent,"",n,macroName,macroLine);
            MflagIndent++;
            give = execM(n,a,r,macroName,macroLine);
            if (MflagIndent)
