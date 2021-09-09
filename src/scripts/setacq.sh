@@ -893,11 +893,6 @@ if [[ ! -z $sysdDir ]] ; then
        chmod 644 $sysdDir/bootpd.service
        systemctl enable --quiet bootpd.service
    fi
-   if [[ -f $vnmrsystem/web/scripts/vnmrweb.service ]]; then
-       cp $vnmrsystem/web/scripts/vnmrweb.service $sysdDir/.
-       chmod 644 $sysdDir/vnmrweb.service
-       systemctl enable --quiet vnmrweb.service
-   fi
 else
    cp -p $vnmrsystem/acqbin/rc.vnmr /etc/init.d
    chmod +x /etc/init.d/rc.vnmr
@@ -952,25 +947,24 @@ else
 fi
 echo ""
 
-if [[ ${doingMI} -eq 0 ]] ; then
-#-----------------------------------------------------------------
-# Activate the NMR status web service
-#-----------------------------------------------------------------
-   ${vnmrsystem}/bin/rsu_bt_setup -noprompt -nonet -q
-   if [ $? -eq 4 ]; then
-     echo ""
-     echo "NMR Status Web service is now configured but requires network restart."
-     echo "As root type '/sbin/service network restart' to restart networking"
-     echo ""
-   fi
-fi
-
-export vnmrsystem
-#  ${vnmrsystem}/bin/makesuacqproc silent
-
 echo ""
 echo "NMR Console software installation complete"
 echo ""
+
+#-----------------------------------------------------------------
+# Activate the NMR status web service
+#-----------------------------------------------------------------
+if [[ -d $vnmrsystem/web ]] ; then
+   echo "Would you like to setup the Remote Status Unit"
+   echo "web server (y/n) [y]? "
+   read ans
+   if [[ "x$ans" != "xn" ]] ; then
+      ${vnmrsystem}/bin/rsu_bt_setup
+   fi
+   echo ""
+fi
+
+export vnmrsystem
 
 #-----------------------------------------------------------------
 if [ $reboot -eq 1 ]

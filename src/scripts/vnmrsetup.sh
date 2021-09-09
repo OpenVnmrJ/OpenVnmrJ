@@ -515,12 +515,6 @@ if [ -e /tmp/vskippkgchk ]; then
    rm -f /tmp/vskippkgchk
 fi
 
-if [[ -z $(type -t python) ]]; then
-   if [ -d /vnmr/web ]; then
-      mv /vnmr/web /vnmr/web_off
-   fi
-fi
-
 if [ -e /tmp/.ovj_installed ]; then
    nmr_user=$(/vnmr/bin/fileowner /vnmr/vnmrrev)
    opFile="/vnmr/adm/users/operators/operatorlist"

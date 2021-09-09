@@ -205,7 +205,7 @@ class ExpStat(expstat):
     was visited. It maintains the stat when asked to as a list that has been
     constructed for the sake of easy comparisons.
     """
-    DefaultPath = '/tmp'
+    DefaultPath = '/vnmr/acqqueue'
     ValueErrorSeenAlready = False
 
     def __init__(self, path=None):
@@ -262,7 +262,7 @@ class ExpStat(expstat):
         return stat
 
     @classmethod
-    def mmap_init(cls, path='/tmp/ExpStatus', length=1236):
+    def mmap_init(cls, path='/vnmr/acqqueue/ExpStatus', length=1236):
         """ Initialize a memory-mapped file (for testing purposes on other than NMR hosts) """
         f = os.open(path, os.O_RDWR|os.O_CREAT|os.O_TRUNC)
         os.write(f, '\x00'*len)  # zero out the shared memory segment
@@ -270,7 +270,7 @@ class ExpStat(expstat):
         os.close(f)
 
     @classmethod
-    def change(cls, key, value, path='/tmp/ExpStatus', length=1236):
+    def change(cls, key, value, path='/vnmr/acqqueue/ExpStatus', length=1236):
         """ 
         Change a field (for testing purposes only!  The map is usually 
         read-only).  Unfortunately calcsize doesn't work on ctype Structures, 

@@ -68,7 +68,7 @@ class Heartbeat(Checker):
             yield ('heartbeat',self._timestamp)
         
 class ExpStatChecker(Checker):
-    DefaultPath = '/tmp'
+    DefaultPath = '/vnmr/acqqueue'
     def __init__(self,path=None):
         if not path: path = ExpStatChecker.DefaultPath
         super(ExpStatChecker,self).__init__()
@@ -77,7 +77,7 @@ class ExpStatChecker(Checker):
     def check(self,t=1):
         return self.expstat.changes(remember=True)
 
-    def follow(self,t=1):
+    def follow(self,t=2):
         while not self.shutdown.isSet():
             try:                
                 changes = self.expstat.changes(remember=True)
@@ -161,7 +161,7 @@ class CryoChecker(Checker):
         except IOError as e:
             logging.warning("{0}: I/O error({1}): {2}".format(self.prefs_path, e.errno, e.strerror))
 
-    def follow(self):
+    def follow(self,t=60):
         try:
             line = self.last(1)
             if len(line):
@@ -178,6 +178,7 @@ class CryoChecker(Checker):
                 yield ('cryomon', self._cache)
         except IOError:
             self.data_file = None
+        time.sleep(t)
 
     @staticmethod
     def default():
@@ -478,7 +479,7 @@ def runTst():
     runExpStatTst()
 
 """
-to test standalone uncomment the following lines and modifiy /tmp/ExpStatus
+to test standalone uncomment the following lines and modifiy /vnmr/acqqueue/ExpStatus
 tst = threading.Thread(target=runExpStatTst)
 tst.start()
 """

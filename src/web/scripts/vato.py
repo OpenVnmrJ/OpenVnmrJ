@@ -65,7 +65,10 @@ import tornado.netutil
 import tornado.httpserver
 import tornado.escape     # for json_encode
 import tornado.gen
-import httplib
+try:
+  import http.client as httplib
+except ImportError:
+   import httplib
 
 import hashlib
 import base64
@@ -308,7 +311,7 @@ class Monitor(object):
         self.cryomon = CryoChecker(path)
         self.cryomonmon = CryoMonMonitor(self.cryomon)
         self.acqmsg  = AcqMsgChecker(path+"/acqqueue")
-        self.expstat = ExpStatChecker('/tmp')
+        self.expstat = ExpStatChecker('/vnmr/acqqueue')
         self.heartbeat = Heartbeat(5.0)
         self.shutdown = threading.Event()
         self._cache = {}
@@ -430,7 +433,7 @@ class EventSourceHandler(tornado.web.RequestHandler):
         self._event_class = event_class
         self._retry = None
         logging.debug("initializing %s keepalive = %d"% (str(self),int(keepalive)))
-        if keepalive is not 0:
+        if keepalive != 0:
             self._keepalive = tornado.ioloop.PeriodicCallback(self.push_keepalive, int(keepalive))
         else:
             self._keepalive = None
