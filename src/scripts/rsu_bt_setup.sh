@@ -5,11 +5,7 @@
 #-----------------------------------------------------------------
 # make sure no VnmrJ is running
 #
-
-#if python does not exist, exit
-if [[ -z $(type -t python) ]]; then
-   exit 0
-fi
+# set -x
 
 #if /vnmr/web does not exist, exit
 if [[ ! -d /vnmr/web ]]; then
@@ -64,11 +60,6 @@ vnmrsystem="/vnmr"
 version_file="${vnmrsystem}/web/.version"
 install_log="${vnmrsystem}/web/run/.install_log"
 
-# tornado
-tornado_version="3.1"
-tornado=tornado-${tornado_version}
-tornado_dist=${vnmrsystem}/web/dist/${tornado}.tar.gz
-
 # enable network restart
 restart_network=1
 network_restart_required=0
@@ -95,27 +86,20 @@ warn()
   echo -e "\nWARNING: $*" | tee -a ${install_log}
 }
 
-have_bt_dongle()
-{
-  local dongled=`lsusb | grep -i "Bluetooth Dongle" | wc -l`
-  if [[ $# -gt 0 ]]; then
-    eval "$1=$dongled"
-  else
-    echo $dongled
-  fi
-}
-
 check_bt_dongle()
 {
-  local congled=0
   msg_ "checking bluetooth dongle.. "
-  have_bt_dongle dongled  #=`lsusb | grep -i "Bluetooth Dongle" | wc -l`
-  while [ $dongled == 0 ]; do
+  dongled=$(lsusb | grep -i "Bluetooth Dongle" | wc -l)
+  if [ $dongled -eq 0 ]; then
+    echo ""
+    echo ""
     echo "no bluetooth dongle detected."
-    read -n1 -p "Please attach and press enter to continue or Ctrl-C to quit"
-    have_bt_dongle dongled  #=`lsusb | grep -i "Bluetooth Dongle" | wc -l`
-  done
+    echo "If you want bluetooth enabled, attach the dongle and re-run"
+    echo "$this_script"
+    return
+  fi
   msg "OK"
+  return
 }
 
 check_hci_device()
@@ -130,76 +114,40 @@ check_hci_device()
   fi
 }
 
-check_rhel_version()
-{
-  msg_ "checking Redhat release"
-  rhel_rel=`cat /etc/redhat-release | sed -r 's/[^0-9]+//' | sed -r 's/[^0-9.]+$//'`
-  if [[ $rhel_rel < 6.1 ]]; then
-    error ".. older than release 6.1 - vjweb is not supported for Redhat version $rhel_rel"
-  fi
-  msg ".. $rhel_rel - OK"
-}
-
 check_required_rpms()
 {
   msg_ "checking for required RPM packages"
   have_bluez=`rpm -q blue | grep -v "not installed" | wc -l`
-  if [[ $have_bluez < 1 ]]; then 
+  if [[ $have_bluez -lt 1 ]]; then 
     error "required RHEL package bluez is missing - install RHEL installation disk and restart the $0";
   fi
-}
-
-check_vjweb_version()
-{
-  msg_ "checking vjweb version"
-  if [[ -e ${version_file} ]]; then
-    installed_version=`cat ${version_file}`
-    if [[ $installed_version < $version ]]; then
-      error "installed version $installed_version is newer than this this version $version"
-    fi
-  fi
-  msg ".. OK"
-}
-
-check_python_version()
-{
-  msg_ "checking python version"
-  version=`python --version |& cut -d' ' -f2`
-  if [[ ${version} < 2.6 ]]; then
-     error ".. $version - python must be at version 2.6 or above"
-  fi
-  msg ".. ${version} - OK"
-}
-
-check_tornado_version()
-{
-  #msg_ "checking tornado version"
-  tornado_installed=`printf "import tornado\nprint tornado.version" | python`
-  if [[ $tornado_installed < 3.1 ]]; then
-    warn "${program} has only been tested with tornado version 3.1 or later"
-    return 1
-  fi
-  #msg ".. ${tornado_installed} - OK"
-  return 0
 }
 
 install_tornado()
 {
   msg_ "installing web server"
-  if [[ $rhel_rel > 7.1 ]]; then
-    if [ "$(rpm -q python-tornado | grep 'not installed' > /dev/null;echo $?)" == "0" ]
-    then
-      yum -y install ${vnmrsystem}/web/dist/python-tornado-4.2.1-1.el7.x86_64.rpm &>> ${install_log}
+  if [[ -x /usr/bin/dpkg ]]; then
+      dpkg-query -l python3-tornado >& /dev/null
+      if [[ $? -eq 1 ]]; then
+      vers=$(python3 --version | cut -d" " -f2 | cut -d. -f2)
+      if [[ $vers -ge 8 ]]; then
+         apt-get -y install ${vnmrsystem}/web/dist/python3-tornado_6.0.3+really5.1.1-3_amd64.deb  &>> ${install_log}
+      else
+         apt-get -y install ${vnmrsystem}/web/dist/python3-tornado_4.5.3-1ubuntu0.2_amd64.deb  &>> ${install_log}
+      fi
+    fi
+    
+  elif [[ -z $(type -t python) ]]; then
+    if [[ "$(rpm -q python3-tornado |
+         grep 'not installed' > /dev/null;echo $?)" == "0" ]]; then
+      yum -y install ${vnmrsystem}/web/dist/python3-tornado-6.0.2-1.el8.x86_64.rpm  &>> ${install_log}
     fi
   else
-    pushd /tmp > /dev/null
-    tar xf ${tornado_dist}
-    cd ${tornado}
-    python setup.py build >> ${install_log}
-    /usr/bin/sudo python setup.py install >> ${install_log}
-    popd > /dev/null
+    if [[ "$(rpm -q python-tornado |
+         grep 'not installed' > /dev/null;echo $?)" == "0" ]]; then
+      yum -y install ${vnmrsystem}/web/dist/python-tornado-4.2.1-1.el7.x86_64.rpm &>> ${install_log}
+    fi
   fi
-  check_tornado_version || error "tornado installation failed"
   msg ".. OK"
 }
 
@@ -224,7 +172,7 @@ setup_bt_dhcpd()
     dhcp_seems_configured=`egrep -v '(^[[:space:]]*$)|(^[[:space:]]*#)' ${dhcpd_conf} | wc -l`
     timestamp=`date +"%y-%m-%d.%H:%M:%S"`
     saved_dhcpd_conf=${dhcpd_conf}.${timestamp}
-    if [[ $dhcp_seems_configured > 0 ]]; then
+    if [[ $dhcp_seems_configured -gt 0 ]]; then
       msg "${dhcpd_conf} seems to be configured, saving to ${saved_dhcpd_conf}"
     fi
     mv ${dhcpd_conf} ${saved_dhcpd_conf}
@@ -255,7 +203,7 @@ EOF
   msg ".. OK"
   msg_ "restarting DHCP server"
   dhcpd_hiccuped=`/sbin/service dhcpd restart 2>&1 | tee -a ${install_log} | grep FAILED | wc -l`
-  if [[ $dhcpd_hiccuped < 1 ]]; then 
+  if [[ $dhcpd_hiccuped -lt 1 ]]; then 
     msg ".. OK" 
   else
     msg ".. FAILED - check /var/log/messages"
@@ -283,13 +231,13 @@ install_bt()
   /usr/sbin/hciconfig ${hci_device} piscan
 
   have_pscan=`/usr/sbin/hciconfig $hci_device | grep -iw pscan | wc -l`
-  if [[ $have_pscan < 1 ]]; then
+  if [[ $have_pscan -lt 1 ]]; then
     msg ".. could not configure $hci_device for page scan"
     exit 2
   fi
 
   have_iscan=`/usr/sbin/hciconfig $hci_device | grep -iw iscan | wc -l`
-  if [[ $have_iscan < 1 ]]; then
+  if [[ $have_iscan -lt 1 ]]; then
     msg ".. could not configure $hci_device for inquiry scan"
     exit 2
   fi
@@ -357,7 +305,7 @@ EOF
   echo "1" > /proc/sys/net/ipv4/ip_forward
 
   pan_configured=`/usr/sbin/brctl show | grep ${pan_device} | wc -l`
-  if [[ $pan_configured < 1 ]]; then
+  if [[ $pan_configured -lt 1 ]]; then
     /usr/sbin/brctl addbr ${pan_device}
   fi
   /sbin/ifconfig ${pan_device} ${pan_ip_addr}
@@ -371,38 +319,24 @@ EOF
   msg ".. OK"
 }
 
-check_ip_config()
-{
-  # check the most likely candidate
-  wormhole=wormhole
-  wormholeip=`gethostip $wormhole | awk '{print $2}'`
-  if [[ "$wormholeip" != "172.16.0.1" && "$wormholeip" != "10.0.0.1" ]]; then
-    echo "console port has not been configured correctly - run setacq"
-    exit 2
-  fi
-
-  msg_ "determining console network interface"
-  consolenic=""
-  file=${vnmrsystem}/adm/log/CONSOLE_NIC
-  if [[ -e ${file} ]]; then
-    nic=$(cat ${file})
-    msg ".. selected $nic for tablet network"
-    consolenic=$nic
-  fi
-  if [[ "$consolenic" == "" ]]; then
-    error "console NIC ($wormhole) could not be determined - run setacq"
-  fi
-}
-
 setup_install_log()
 {
-  logdir=`dirname ${install_log}`
+  logdir=$(dirname ${install_log})
   mkdir -p $logdir || error "could not create ${logdir}"
   touch ${install_log} || error "could not write to ${install_log}"
 }
 
 stop_nmrwebd()
 {
+  if [[ -f $vnmrsystem/web/scripts/vnmrweb.service ]]; then
+    if [[ ! -z $(type -t systemctl) ]] ; then
+       sysdDir=$(pkg-config systemd --variable=systemdsystemunitdir)
+       rm -f $sysdDir/vnmrweb.service
+       cp $vnmrsystem/web/scripts/vnmrweb.service $sysdDir/.
+       chmod 644 $sysdDir/vnmrweb.service
+       systemctl enable --quiet vnmrweb.service
+    fi
+  fi
   if [[ -e /vnmr/web/run/nmrwebd.pid ]]; then
     msg_ "NMR web services are already running - stopping nmrwebd"
     if [[ ! -z $(type -t systemctl) ]] ; then
@@ -429,7 +363,7 @@ start_nmrwebd()
   else
     nmrwebd_started=0
   fi
-  if [[ $nmrwebd_started < 1 ]]; then
+  if [[ $nmrwebd_started -lt 1 ]]; then
     error "nmrwebd failed to start"
   else
     msg ".. OK"
@@ -438,9 +372,6 @@ start_nmrwebd()
 
 install_nmrwebd_components()
 {
-  check_rhel_version
-  check_python_version
-  check_vjweb_version
   stop_nmrwebd
   install_tornado
   start_nmrwebd
@@ -449,11 +380,13 @@ install_nmrwebd_components()
 install_bt_components()
 {
   check_bt_dongle
-  install_bt
-  check_hci_device
-  install_bt_pan
-  sysconfig_dhcpd
-  setup_bt_dhcpd
+  if [[ dongled -ne 0 ]]; then
+     install_bt
+     check_hci_device
+     install_bt_pan
+     sysconfig_dhcpd
+     setup_bt_dhcpd
+  fi
 }
 
 as_root()
@@ -461,15 +394,18 @@ as_root()
   s=1
   t=3
   while [ $s == 1 -a ! $t == 0 ]; do
-     echo
-     echo "Please enter this system's root user password"
-     echo
-     su root -c "$this_script $*";
+     if [ -x /usr/bin/dpkg ]; then
+        echo "If requested, enter the admin (sudo) password"
+        sudo $this_script $* ;
+     else
+        echo "Please enter this system's root user password"
+        su root -c "$this_script $*";
+     fi
      s=$?
      t=`expr $t - 1`
      echo " "
   done
-  if [ $t == 0 ]; then
+  if [ $t -eq 0 ]; then
       echo "Access denied. Type cntrl-C to exit this window."
       echo "Type $this_script to start the installation program again"
       echo
@@ -483,40 +419,26 @@ fi
 
 for arg in $*; do
   # check if the script should be run silently (except errors)
-  if [[ "$arg" == "-q" ]]; then quiet=1; fi
-  if [[ "$arg" == "-nobt" ]]; then dont_install_bt=1; fi
-  if [[ "$arg" == "-noprompt" ]]; then dont_prompt=1; fi
-  if [[ "$arg" == "-nonet" ]]; then dont_restart_network=1; fi
+  if [[ "$arg" = "-q" ]]; then quiet=1; fi
+  if [[ "$arg" = "-nobt" ]]; then dont_install_bt=1; fi
+  if [[ "$arg" = "-noprompt" ]]; then dont_prompt=1; fi
+  if [[ "$arg" = "-nonet" ]]; then dont_restart_network=1; fi
 done
 
 setup_install_log
 
-if [[ ! -e /etc/redhat-release ]]; then
-  REPLY="N"
-  if [[ $dont_prompt == 0 ]]; then
-    read -n1 -p "warning - this script is only known to work on Redhat Enterprise Linux systems - continue? [yN] "
-  else
-    error "RSU configuration is only known to work on Redhat Enterprise Linux systems - exiting"
-    exit 2;
-  fi
-  if [[ "$REPLY" != "y" && "$REPLY" != "Y" ]]; then 
-    exit 2; 
-  fi
-fi
-
 install_nmrwebd_components
-if [[ $dont_install_bt == 0 ]]; then
-  dongled=$(have_bt_dongle)
+if [[ $dont_install_bt -eq 0 ]]; then
   # install the bluetooth dongle related softwared if we have a dongle
   # or it is ok to prompt the user to install it
-  if [[ $dongled == 1 || $dont_prompt == 0 ]]; then
+  if [[ $dont_prompt == 0 ]]; then
     install_bt_components
   fi
 fi
 
-if [[ $network_restart_required == 1 ]]; then
-  if [[ $restart_network == 1 ]]; then
-    if [[ $dont_restart_network == 0 ]]; then
+if [[ $network_restart_required -eq 1 ]]; then
+  if [[ $restart_network -eq 1 ]]; then
+    if [[ $dont_restart_network -eq 0 ]]; then
       /sbin/service network restart
     else
       exit_code=4
@@ -524,10 +446,14 @@ if [[ $network_restart_required == 1 ]]; then
   fi
 fi
 
-if [[ $quiet == 0 ]]; then
+if [[ $quiet -eq 0 ]]; then
   echo
   echo "Remote Status Unit host setup complete"
   echo
 fi
+
+admin=$(/vnmr/bin/fileowner /vnmr/vnmrrev)
+grp=$(/vnmr/bin/fileowner -g /vnmr/vnmrrev)
+chown -R $admin:$grp /vnmr/web/run
 
 exit $exit_code

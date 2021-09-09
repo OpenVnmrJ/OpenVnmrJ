@@ -12,12 +12,16 @@
 from __future__ import print_function
 import threading
 import socket
-import SocketServer
+try:
+  import socketserver as SocketServer
+  import queue as Queue
+except ImportError:
+  import SocketServer
+  import Queue
 import tornado.websocket
 import logging
 import struct
 import subprocess
-import Queue
 import pprint
 import tornado.escape     # for json_encode
 
