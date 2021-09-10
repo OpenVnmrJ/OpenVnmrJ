@@ -50,6 +50,7 @@
 #include "vnmrsys.h"
 #include "allocate.h"
 #include "tools.h"
+#include "vfilesys.h"
 #include "wjunk.h"
 
 #ifdef UNIX
@@ -332,7 +333,6 @@ int macroDir(int argc, char *argv[], int retc, char *retv[])
 /+--------------------------------------------------------------------------*/
 int macroCat(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[MAXSHSTRING];   
-    char dirname[MAXSHSTRING];   
     int  i;
     int  found = 0;
 
@@ -341,25 +341,19 @@ int macroCat(int argc, char *argv[], int retc, char *retv[])
 	ABORT;
     }
     strcpy(cmdstr,"/bin/cat");
-    if ( ! strcmp("macrocat",argv[0]))  /* userdir  directory ?*/
-       strcpy(dirname,userdir);
-    else
-       strcpy(dirname,systemdir);
-    strcat(dirname,"/maclib/");
     for (i=1; i<argc; i++)
     {
-        char macroname[MAXSHSTRING];
+        char macroname[MAXPATH];
 
-        strcpy(macroname,dirname);
-        strcat(macroname,argv[i]);
-        if (access(macroname,F_OK|R_OK) == -1)
-        {  Werrprintf("Macro %s is not accessible",macroname);
-        }
-        else
+        if ( appdirFind(argv[i], "maclib", macroname, "", R_OK) )
         {
            found = 1;
            strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
 	   strncat(cmdstr,macroname,MAXSHSTRING - strlen(cmdstr) -1);
+        }
+        else
+        {
+           Werrprintf("Macro %s is not accessible",argv[i]);
         }
     }
     TPRINT1("macroCat: command string \"%s\"\n",cmdstr);

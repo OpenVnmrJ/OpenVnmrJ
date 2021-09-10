@@ -1,0 +1,33 @@
+"macro viewman"
+/*  Display a manual page.  If none is specified, the current pulse sequence
+    seqfil is used.  An absolute path to a text file not in a manual directory
+    can also be used (For example: '/vnmr/psglib/s2pul.c').
+
+    viewman<(macro)>
+    E. Alvarado, U of Michigan, 02/05/10
+*/
+
+if $#>0 then
+  $filename=$1
+else
+  $filename=seqfil
+endif
+
+exists($filename, 'manual'):$found, $pathfile
+if (not $found) then
+  exists($filename, 'file'):$found
+  if ($found) then
+    $pathfile=$filename
+  else
+    write('error', 'File not found')
+    return
+  endif
+endif
+
+//GTK version.
+shell('zenity --title=' +$pathfile+ ' --width=800 --height=600 --text-info --filename ' +$pathfile+ ' &')
+
+//KDE version.
+//See tutorial: http://techbase.kde.org/Development/Tutorials/Shell_Scripting_with_KDE_Dialogs
+//shell('kdialog --title ' +$pathfile+ ' --textbox ' +$pathfile+ ' 800 600 &')
+
