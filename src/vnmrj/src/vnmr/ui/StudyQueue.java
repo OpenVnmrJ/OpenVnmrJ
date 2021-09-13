@@ -503,6 +503,7 @@ public class StudyQueue implements VObjDef
                 }
                 mgr.newTree(path);
 		// set sqdirs[jviewport]=path
+		path = tok.nextToken().trim();
 		sendSQpath(path);
                 fp.delete();
             }
