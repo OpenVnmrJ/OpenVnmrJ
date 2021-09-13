@@ -355,6 +355,7 @@ extern int writespectrum();
 extern int Off();
 extern int onCancel(int argc, char *argv[], int retc, char *retv[]);
 extern int output_sdf();			/* ImageBrowser */
+extern int ovjCount(int argc, char *argv[], int retc, char *retv[]);
 extern int p11_action();
 extern int p11_switchOpt();
 extern int page();
@@ -935,6 +936,7 @@ static cmd_t vnmr_table[] = {
 	{"off"        , Off,		NO_REEXEC, 0},
 	{"on"         , Off,		NO_REEXEC, 0},
         {"onCancel"   , onCancel,       NO_REEXEC, 0},
+        {"ovjCount"   , ovjCount,       NO_REEXEC, 0},
 	{"p1"         , ernst,		NO_REEXEC, 0},
         {"p11_switchOpt"  , p11_switchOpt, NO_REEXEC, 0},
         {"p11_action" , p11_action,     NO_REEXEC, 0},

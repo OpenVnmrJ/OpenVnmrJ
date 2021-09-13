@@ -127,6 +127,19 @@ void clearRets(int retc, char *retv[])
         retv[i] = NULL;
 }
 
+int ovjCount(int argc, char *argv[], int retc, char *retv[])
+{
+    static int count = 0;
+    count++;
+    if ( (argc > 1) && (count >= atoi(argv[1])) )
+       count = 1;
+    if (retc)
+       retv[0] = intString( count );
+    else
+       Winfoprintf("ovjCount = %d",count);
+    RETURN;
+}
+
 /*-----------------------------------------------------------------------
 |
 |       beeper
