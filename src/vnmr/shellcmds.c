@@ -2105,7 +2105,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                RETURN;
             }
             Werrprintf("%s: cannot append to file %s",argv[0],argv[argc-1]);
-            ABORT;
+            RETURN;
          }
       }
    }
@@ -2129,7 +2129,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             RETURN;
          }
          Werrprintf("%s: Input file %s not found",argv[0],argv[1]);
-         ABORT;
+         RETURN;
       }
    }
    else
