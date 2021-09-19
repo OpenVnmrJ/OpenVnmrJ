@@ -51,6 +51,13 @@ endif
 //   files, as well as change the status all active locations to error
 //   just in case the last study was aborted uncleanly
 
+exists('studyowner','parameter'):$e
+if ($e) then
+  if (studyowner <> operator) then
+    setvalue('operator',studyowner,'global')
+    appdir('update')
+  endif
+endif
     write('reset',autodir+'/enterQ.macdir/currentsampleinfo')
     write('reset',autodir+'/enterQ.macdir/currentsampleglobal')
     write('reset',autodir+'/enterQ.macdir/currentQ')
@@ -191,7 +198,7 @@ if ($e < 0.5) then
       $i=$i+1
     until $i > $total
   endif
-  shell('cat '+curexp+'/psgQtmp >> '+autodir+'/psgQ'):$dum
+  append(curexp+'/psgQtmp',autodir+'/psgQ'):$dum
   delete(curexp+'/psgQtmp')
 else
   "Locate the .fid file by looking in curexp/psgdone, then"
