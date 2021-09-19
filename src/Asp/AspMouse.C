@@ -823,7 +823,7 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
         case b1+ctrl+drag:
         case b1+shift+drag:
         case b1+ctrl+shift+drag:
-	    if(roi != nullAspRoi) {
+	    if( (state == modifyBand) && (roi != nullAspRoi)) {
 	        if(creating) frame->selectRoiHandle(roi,x,y,!((mask & shift) || (mask & ctrl)));
 	        creating=false;
 		frame->modifyRoi(roi,x,y);
@@ -838,10 +838,15 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 	    }
             break;
         case b1+up:
-	    if(roi != nullAspRoi && frame->getRoiList()->autoAdjusting) {
+	    if( (state == modifyBand) && roi != nullAspRoi &&
+               frame->getRoiList()->autoAdjusting) {
 	       frame->getRoiList()->autoAdjust(roi);
 	    }
-            if(roi != nullAspRoi) roi->selected=false;
+            if((state == modifyBand) && roi != nullAspRoi)
+            {
+                roi->selected=false;
+		frame->unselectRois();
+            }
             if(anno != NULL) {
 		anno->selected=0;
 		anno->selectedHandle=0;
@@ -856,7 +861,8 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
         case b1+shift+up:
         case b1+ctrl+shift+up:
 	{
-	    if(roi != nullAspRoi && frame->getRoiList()->autoAdjusting) {
+	    if( (state == modifyBand) && roi != nullAspRoi &&
+                 frame->getRoiList()->autoAdjusting) {
 	       frame->getRoiList()->autoAdjust(roi);
 	    }
             if(roi != nullAspRoi) roi->selected=false;
