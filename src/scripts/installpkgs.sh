@@ -724,6 +724,8 @@ else
    # these are needed to build
     installList='gdm3
                  gnome-session
+                 gcc-multilib
+                 g++-multilib
                  openjdk-8-jre
                  lib32stdc++-8-dev
                  libc6-dev
