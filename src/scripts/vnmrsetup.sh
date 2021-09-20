@@ -354,6 +354,12 @@ if [ "x$distroType" = "xrhel" -o "x$distroType" = "xdebian" ]; then
   fi
 fi
 
+if [[ -z $(type -t java) ]] ; then
+   echo "java program not installed"
+   echo "Likely failure with the package installation"
+   echo "Please try again in 5-10 minutes"
+   exit 1
+fi
 # remove reboot flag for SELinux disabling
 rm -f /tmp/reboot
 
