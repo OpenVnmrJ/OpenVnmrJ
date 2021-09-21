@@ -487,7 +487,7 @@ class rshCmd:
         index = first_substring(outputlinelist, b'undefined symbol:')
         logger.debug('undefined symbol: index ' + str(index))
         if ( index == -1 ):
-           # print outputlinelist
+           # print(outputlinelist)
            # find the answer, use that index to access value
            index = first_substring(outputlinelist, b'value =')
            d1,d2,icatID = outputlinelist[index].decode('ascii').split('=',2)
@@ -659,6 +659,11 @@ class rshCmd:
         logger.debug(outputlinelist)
         return outputlinelist[1:-2]
 
+    def rm(self):
+        outputlinelist = self.sendCmd('ffdel "*.o"');
+        logger.debug(outputlinelist)
+        return outputlinelist
+
 
     def getNumberUsedAndFreeSpace(self):
         """Returns a tuple of three, number of files, total bytesused, free space"""
@@ -798,8 +803,8 @@ def md5DownloadList():
    #dwnldlist = ( glob.glob('/vnmr/acq/download/*.o') + glob.glob('/vnmr/acq/download/*.bit') + 
    #              glob.glob('/vnmr/acq/download/*.4th') + glob.glob('/vnmr/acq/download/*.bdx') + 
    #              ['/vnmr/acq/download/nvScript'] )
-   dwnldlist = ( glob.glob(options.dwnldpath+'/*.o') + glob.glob(options.dwnldpath+'/*.bit') + 
-                 glob.glob(options.dwnldpath+'/*.4th') + glob.glob(options.dwnldpath+'/*.bdx') + 
+   dwnldlist = ( glob.glob(options.dwnldpath+'/*.bdx') + glob.glob(options.dwnldpath+'/*.o') + 
+                 glob.glob(options.dwnldpath+'/*.4th') + glob.glob(options.dwnldpath+'/*.bit') + 
                  [options.dwnldpath+'/nvScript'] )
    # print dwnldlist
    logger.debug(dwnldlist);
@@ -887,12 +892,9 @@ def main():
 
        logger.debug(nddstypedic)
 
-       cpuId = cntlrRsh.getCpuId()
-       #fpgaInfo = cntlrRsh.getFPGAInfo()
-       #print fpgaInfo
-       #os._exit(1)
        
        if ( options.verboseflag == True ):
+          cpuId = cntlrRsh.getCpuId()
           logger.info(' ')
           logger.info('------------------------------------------------------------------ ')
           logger.info('------------------------------------------------------------------ ')
@@ -901,20 +903,29 @@ def main():
        else:
           logger.info('Controller %d of %d (%s)' %(activelist.index(cntlr)+1,len(activelist),cntlr))
 
-
-       icatPresent = False
-       if ( 'rf' in cntlr ):
-          icatPresent = cntlrRsh.isIcatAttached()
-          if ( icatPresent ):
-             # rftypedic['ICAT RF'].append(cntlr)    not in python 2.4  that's on RHEL 5.3 or earlier 
-             rftypedic.setdefault('ICAT RF',[]).append(cntlr)
-             icatDNA = cntlrRsh.getIcatDNA()
-             # print icatDNA
-             isflist = cntlrRsh.icatdir()
-             #print isflist
+       if ( (options.removeflag == True) and (options.noupdateflag == False) ):
+          if (options.autoupdateflag == True):
+             cntlrRsh.rm()
           else:
-             #rftypedic['VNMRS RF'].append(cntlr) not in python 2.4  that's on RHEL 5.3 or earlier
-             rftypedic.setdefault('VNMRS RF',[]).append(cntlr)
+             answer = input('\r\nRemove .o files? (y/n): ')
+             # print answer
+             if ( answer in [ 'y', 'yes', 'Y', 'Yes','YES' ] ):
+                cntlrRsh.rm()
+
+       if ( options.verboseflag == True ):
+          icatPresent = False
+          if ( 'rf' in cntlr ):
+             icatPresent = cntlrRsh.isIcatAttached()
+             if ( icatPresent ):
+                # rftypedic['ICAT RF'].append(cntlr)    not in python 2.4  that's on RHEL 5.3 or earlier 
+                rftypedic.setdefault('ICAT RF',[]).append(cntlr)
+                icatDNA = cntlrRsh.getIcatDNA()
+                # print icatDNA
+                isflist = cntlrRsh.icatdir()
+                #print isflist
+             else:
+                #rftypedic['VNMRS RF'].append(cntlr) not in python 2.4  that's on RHEL 5.3 or earlier
+                rftypedic.setdefault('VNMRS RF',[]).append(cntlr)
 
 
        #
@@ -1125,6 +1136,9 @@ if __name__ == "__main__":
     parser.add_option("-v", "--verbose",
                   action="store_true", dest="verboseflag", default=False,
                   help="Verbose output as in previous versions")
+    parser.add_option("-r", "--remove",
+                  action="store_true", dest="removeflag", default=False,
+                  help="Remove *.o files from controller")
 
 
 
