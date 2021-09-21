@@ -132,19 +132,19 @@ downloadLinux() {
    $OVJ_VECHO "Downloading NMRPipe files to Linux file system"
    if [ "x${OVJ_LOG}" = "x" ] ; then
       $OVJ_VECHO "Downloading file 1 of 7"
-      wget -nv --show-progress https://www.ibbr.umd.edu/nmrpipe/install.com
+      wget -nv https://www.ibbr.umd.edu/nmrpipe/install.com
       $OVJ_VECHO "Downloading file 2 of 7"
-      wget -nv --show-progress https://www.ibbr.umd.edu/nmrpipe/binval.com
+      wget -nv https://www.ibbr.umd.edu/nmrpipe/binval.com
       $OVJ_VECHO "Downloading file 3 of 7"
-      wget -nv --show-progress https://www.ibbr.umd.edu/nmrpipe/NMRPipeX.tZ
+      wget -nv https://www.ibbr.umd.edu/nmrpipe/NMRPipeX.tZ
       $OVJ_VECHO "Downloading file 4 of 7"
-      wget -nv --show-progress https://www.ibbr.umd.edu/nmrpipe/s.tZ
+      wget -nv https://www.ibbr.umd.edu/nmrpipe/s.tZ
       $OVJ_VECHO "Downloading file 5 of 7"
-      wget -nv --show-progress https://www.ibbr.umd.edu/nmrpipe/dyn.tZ
+      wget -nv https://www.ibbr.umd.edu/nmrpipe/dyn.tZ
       $OVJ_VECHO "Downloading file 6 of 7"
-      wget -nv --show-progress https://spin.niddk.nih.gov/bax/software/talos_nmrPipe.tZ
+      wget -nv https://spin.niddk.nih.gov/bax/software/talos_nmrPipe.tZ
       $OVJ_VECHO "Downloading file 7 of 7"
-      wget -nv --show-progress https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ
+      wget -nv https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ
    else
       $OVJ_VECHO "Downloading file 1 of 7"
       echo "Downloading file 1 of 7 (install.com)" >> ${OVJ_LOG}
@@ -275,7 +275,7 @@ if [ -d /vnmr/nmrpipe ]; then
          if [ x$(uname -s) = "xDarwin" ]; then
             curl -O https://www.ibbr.umd.edu/nmrpipe/version.txt
          elif [ x$(uname -s) = "xLinux" ]; then
-            wget -nv --show-progress https://www.ibbr.umd.edu/nmrpipe/version.txt
+            wget -nv https://www.ibbr.umd.edu/nmrpipe/version.txt
          fi
          if [[ -f version.txt ]]; then
              newVer=$(cat version.txt)

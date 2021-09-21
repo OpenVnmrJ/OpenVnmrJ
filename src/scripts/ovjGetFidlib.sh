@@ -102,7 +102,7 @@ downloadLinux() {
    $OVJ_VECHO "Downloading fidlib to Linux file system"
    if [ "x${OVJ_LOG}" = "x" ] ; then
       $OVJ_VECHO "Downloading VnmrJ 4.2 fidlib"
-      wget -nv --show-progress $url
+      wget -nv $url
    else
       $OVJ_VECHO "Downloading VnmrJ 4.2 fidlib"
       echo "Downloading VnmrJ 4.2 fidlib" >> ${OVJ_LOG}
