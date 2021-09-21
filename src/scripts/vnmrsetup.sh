@@ -170,8 +170,8 @@ On all systems:
        You can use vnmrj adm for this
        See Configure -> Users-> Update users...
        Or each user can run /vnmr/bin/makeuser
-    2. In the OpenVnmrJ interface from the
-       Edit (non-imaging) or Tools (imaging) menu,
+    2. In the OpenVnmrJ interface, as the admin (vnmr1) user,
+       from the Edit (non-imaging) or Tools (imaging) menu,
        select 'System Settings...' and then click
        'System config'
 
