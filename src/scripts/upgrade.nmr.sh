@@ -526,8 +526,12 @@ fi
 
 if [[ $doAcq -eq 1 ]]; then
     echo ""
-    echo "Final step of upgrade requires superuser permission"
-    echo "Please enter password when requested"
+    echo "Final step of the upgrade requires elevated permissions"
+    if [ -f /etc/debian_version ]; then
+       echo "Please enter the $user sudo password when requested"
+    else
+       echo "Please enter the root password when requested"
+    fi
     echo ""
     if [ -f /etc/debian_version ]; then
         sudo $0 doAcq ;
