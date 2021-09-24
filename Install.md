@@ -194,4 +194,7 @@ the release will not be created. The current system and user configuration
 files will be maintained, along with any gradient shimming, probe, or
 other calibration files. All other files that have changed or been added
 since the previous version will be installed. There is no graphical
-interface when the upgrade is performed.
+interface when the upgrade is performed. The upgrade.nmr process only upgrades
+the files in /vnmr. It does not upgrade files in individual user accounts.
+For that, one should use either "vnmrj adm" or makeuser.
+
