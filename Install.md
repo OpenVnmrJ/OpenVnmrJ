@@ -9,7 +9,7 @@ It has also been installed on AlmaLinux 8.4 and on Ubuntu
 Version 18 and 20 systems.
 
 The MacOS version of OpenVnmrJ has been installed on versions Yosemite (10.10)
-to Big Sur (16.3). Installation on RHEL/CentOS and Ubuntu 20 systems
+to Big Sur (16.3). Installation on RHEL/CentOS, AlmaLinux, and Ubuntu systems
 can be used to run a spectrometer. The MacOS version is for data-processing only.
 
 To install on CentOS 6.x systems, we recommend using the CentOS KickStart
