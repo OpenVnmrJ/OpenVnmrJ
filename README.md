@@ -7,8 +7,9 @@ OpenVnmrJ 3 supports the following:
 - CentOS:    Version 7.5 - 7.9.
 - RHEL:      Version 8.4
 - AlmaLinux: Version 8.4
-- Ubuntu:    Versions 20.
+- Ubuntu:    Version 20.
 - MacOS:     Versions 10.13 (High Sierra) to 11.3 (Big Sur). (data station only)
+<a href="https://doi.org/10.5281/zenodo.5550489"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.5550489.svg" alt="DOI"></a>
 
 OpenVnmrJ Version 2 was the first OpenVnmrJ release to not require VnmrJ 4.2 to be installed in order to function as a spectrometer host. It contains additions as described in the [Notes.txt](Notes.txt) file. Installation instructions are in the [Install2](Install2.md) file.
 OpenVnmrJ 2 supports the following:
@@ -16,6 +17,7 @@ OpenVnmrJ 2 supports the following:
 - RHEL:      Versions 6, 7, and 8.
 - Ubuntu:    Versions 14, 16, 18, and 20. (data station only)
 - MacOS:     Versions 10.10 (Yosemite) to 11.3 (Big Sur). (data station only)
+<a href="https://doi.org/10.5281/zenodo.4304999"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.4304999.svg" alt="DOI"></a>
 
 
 OpenVnmrJ Version 1 was the original release of the open-sourced parts of Varian and Agilent's VnmrJ 4.2.  For a completely functional spectrometer, it required that VnmrJ 4.2 also be installed.
@@ -26,8 +28,6 @@ If you want to use or test OpenVnmrJ, download the release appropriate for your 
 [![Github All Releases](https://img.shields.io/github/downloads/OpenVnmrJ/OpenVnmrJ/total.svg?maxAge=2592000?style=flat-square)]()  
 
 The latest binary releases for OpenVnmrJ are available from [Releases](https://github.com/OpenVnmrJ/OpenVnmrJ/releases).  
-
-<a href="https://doi.org/10.5281/zenodo.4304999"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.4304999.svg" alt="DOI"></a>
 
 
 ## Read more
