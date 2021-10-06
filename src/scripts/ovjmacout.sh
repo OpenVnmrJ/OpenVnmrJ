@@ -60,7 +60,7 @@ VnmrRelFile=$(echo $VnmrRel | tr ' ' _)
 
 cat "${gitdir}/src/macos/preinstall" |
         sed -e "s|OVJVERS|$VnmrRevId|" |
-        sed -e "s|OVJREL|$VnmrRel|"  > ${resdir}/preinstall
+        sed -e "s|OVJREL|$VnmrRelFile|"  > ${resdir}/preinstall
 cp "${gitdir}/src/macos/postinstall" ${resdir}/postinstall
 chmod +x $resdir/p*
 
