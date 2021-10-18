@@ -328,7 +328,7 @@ void wet4(codeint phaseA, codeint phaseB)
 #ifndef NVPSG
     getstr("dmmwet",dmmwet);
     if (rfwg[DECch-1] == 'n')
-	setstatus(DECch,FALSE,dmmwet,FALSE,dmfwet);
+	setstatus(DECch,FALSE,dmmwet[0],FALSE,dmfwet);
     else
 	decprgon(dseqwet,1/dmfwet,dreswet); 
 #endif
