@@ -1,4 +1,4 @@
-: '@(#)psggen.sh 22.1 03/24/08 1991-2006 '
+#!/bin/bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -16,13 +16,6 @@
 #		  directory; it executes the "makeuserpsg"  #
 #		  makefile stored in /vnmr/psg.		    #
 #                                                           #
-#    02/1996	  Extended to define PATH so the search for #
-#		  executables starts with GNU and then goes #
-#		  to /usr/ccs/bin on Solaris.  Corrects an  #
-#		  obscure bug which results when the shell  #
-#		  finds the (non-functioning) /usr/ucb/cc   #
-#		  compiler.				    #
-#							    #
 #############################################################
 
 
@@ -58,12 +51,7 @@ then
    echo " "
    exit 1
 else
-   if test $osname = "Interix"
-   then
-     makename="makeuserpsg"
-   else
-     makename="makeuserpsg.lnx"
-   fi
+   makename="makeuserpsg.lnx"
    cd "$vnmruser"/psg
    if (test ! -f $makename)
    then
@@ -86,23 +74,39 @@ cd "$vnmruser"/psg
 if test $osname = "Linux"
 then
    rm -f *.o
-   make -e -s -f makeuserpsg.lnx lib
+# Silence warnings from newer gcc compilers
+   Wextra=""
+   gcc -Q --help=warning | grep Wunused-but-set-variable >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra="-Wno-unused-but-set-variable"
+   fi
+   gcc -Q --help=warning | grep Wunused-result >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra=${Wextra}" -Wno-unused-result"
+   fi
+   gcc -Q --help=warning | grep Wmisleading-indentation >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra=${Wextra}" -Wno-misleading-indentation"
+   fi
+   gcc -Q --help=warning | grep Wstringop-truncation >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra=${Wextra}" -Wno-stringop-truncation"
+   fi
+   gcc -Q --help=warning | grep Wformat-overflow >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra=${Wextra}" -Wno-format-overflow"
+   fi
+   make -e -s -f makeuserpsg.lnx CFLAGS="-O -fPIC -m32 ${Wextra}" lib
 else
    if test $osname = "Darwin"
    then
       rm -f *.o
       make -e -s -f makeuserpsg.lnx maclib
-   else
-      if test $osname = "Interix"
-      then
-         rm -f *.o
-         make -e -s -f makeuserpsg libwin
-      else
-         PATH="$GNUDIR"/bin:/usr/ccs/bin:"$PATH"
-         export PATH
-         make -e -s -f makeuserpsg libsol
-         chmod 755 libpsglib.a
-      fi
    fi
 fi
 find . ! -name "*.so" -type l -exec rm {} \;
