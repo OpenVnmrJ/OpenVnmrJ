@@ -65,8 +65,9 @@ startProcs() {
    LOGNAME=root ;               			\
    NESSIE_CONSOLE=inova;				\
    NIRVANA_CONSOLE=wormhole;				\
+   HOME=$vnmrsystem/bin;                                \
    PATH="$PATH:$vnmrsystem/bin:" ;    			\
-   export TERM TERMCAP LOGNAME TCL_LIBRARY NESSIE_CONSOLE NIRVANA_CONSOLE PATH vnmrsystem; \
+   export TERM TERMCAP LOGNAME TCL_LIBRARY NESSIE_CONSOLE NIRVANA_CONSOLE PATH HOME vnmrsystem; \
    ./Expproc )
 }
 
