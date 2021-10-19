@@ -34,6 +34,13 @@ if hash ldd 2> /dev/null; then
     echo "to install the missing libraries"
     echo ""
   fi
+  ldd /vnmr/bin/Vnmrbg | grep -i "not a dynamic executable" > /dev/null 2>&1
+  if [[ $? -eq 0 ]]; then
+    echo "Some libraries appear to be missing."
+    echo "Use /vnmr/bin/installpkgs"
+    echo "to install the missing libraries"
+    echo ""
+  fi
 fi
 
 echo ""
