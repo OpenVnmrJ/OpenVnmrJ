@@ -302,7 +302,7 @@ doUpgrade () {
 
         upgrade_temp_dir="$vnmrsystem"/tmp/upgrade
         rm -rf $upgrade_temp_dir/*
-        contents=$(tar tf $File | grep -v seqlib)
+        contents=$(tar tf $File)
         cp $File $upgrade_temp_dir/file.tar
         (cd $upgrade_temp_dir && tar -xf file.tar)
         for content in $contents
