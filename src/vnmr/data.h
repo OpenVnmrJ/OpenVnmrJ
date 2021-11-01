@@ -519,6 +519,7 @@ typedef struct hypercmplxbhead	hycmplxhead;
 #define S_JEOL		0x2000  /* 1 = JEOL data		*/ 
 #define S_BRU		0x4000  /* 1 = Bruker data		*/ 
 #define S_MAG		0x1800  /* 1 = Magritek data		*/ 
+#define S_OX		0x2800  /* 1 = Oxford data		*/ 
 
 #define P_VERS		0x003F	/* preserves version number	*/
 #define P_FILE_ID	0x07C0	/* preserves file ID status	*/

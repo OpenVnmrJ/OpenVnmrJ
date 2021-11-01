@@ -105,6 +105,7 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   int jtype = 0; /* This asks if vers_id is S_JEOL */
   int qtype = 0; /* This asks if vers_id is S_QONE */
   int mtype = 0; /* This asks if vers_id is S_MAG */
+  int otype = 0; /* This asks if vers_id is S_OX */
   int vtype = 0; /* This asks if vers_id is S_VAR */
   int ctype = 0; /* This asks if vers_id is S_MAKEFID */
   int itype = 0; /* This asks for vers_id */
@@ -149,6 +150,15 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
   else if ((argc >= 2) && ! strcmp(argv[1],"M") )
   {
     mtype = btype=1;
+    if (argc == 3)
+    {
+      strcpy(outfidpath, argv[2]);
+      btype = 2;     
+    }
+  }
+  else if ((argc >= 2) && ! strcmp(argv[1],"O") )
+  {
+    otype = btype=1;
     if (argc == 3)
     {
       strcpy(outfidpath, argv[2]);
@@ -265,6 +275,8 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
             retv[0] = intString( (id ==  S_MAKEFID) ? 1 : 0 );
          else if (mtype)
             retv[0] = intString( (id ==  S_MAG) ? 1 : 0 );
+         else if (otype)
+            retv[0] = intString( (id ==  S_OX) ? 1 : 0 );
          else if (vtype)
             retv[0] = intString( (id ==  S_VAR) ? 1 : 0 );
          else if (!atype)
