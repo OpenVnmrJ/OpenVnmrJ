@@ -293,6 +293,8 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
                type[0] = 'C';
             else if (id == S_MAG)
                type[0] = 'M';
+            else if (id == S_OX)
+               type[0] = 'O';
             else if (id == S_VAR)
                type[0] = 'V';
             else // if (id == S_BRU)
