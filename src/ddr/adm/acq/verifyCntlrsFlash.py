@@ -621,24 +621,25 @@ class rshCmd:
            sys.stdout.write("    Obtaining Directory Info: ")
         sys.stdout.flush()
         for lval in outputlinelist[1:-6]:
-           # print "lval: " + lval
+           # print("lval: " , lval)
            (  name, size ) = lval.split('\t ',1)
            name = name.strip(' \t')
            size = size.strip(' \t')
            logger.debug('name: "'+name+'"')
            logger.debug('size: "'+size+'"')
            self.dirdic[name] = ( size,'0' )
-        #print self.dirdic
+        #print(self.dirdic)
 
         #
         # store the directory info as well, number of filesm size, and free space
         #
-        logger.debug(outputlinelist[-5])
-        ( name, size ) = outputlinelist[-5].split('\t',1)
-        self.dirinfodic['nfiles'] = ( name.strip(' '), size.strip(' \t') )
-        logger.debug(outputlinelist[-4])
-        ( name, size ) = outputlinelist[-4].split('\t',1)
-        self.dirinfodic['freespace'] = ( name.strip(' \t'), size.strip(' \t') )
+        if ( options.verboseflag == True ):
+           logger.debug(outputlinelist[-5])
+           ( name, size ) = outputlinelist[-5].split('\t',1)
+           self.dirinfodic['nfiles'] = ( name.strip(' '), size.strip(' \t') )
+           logger.debug(outputlinelist[-4])
+           ( name, size ) = outputlinelist[-4].split('\t',1)
+           self.dirinfodic['freespace'] = ( name.strip(' \t'), size.strip(' \t') )
 
         #
         # get the md5 signitures for each file
@@ -660,8 +661,8 @@ class rshCmd:
         logger.debug(outputlinelist)
         return outputlinelist[1:-2]
 
-    def rm(self):
-        outputlinelist = self.sendCmd('ffdel "*.o"');
+    def rm(self,cmdtimeout=120):
+        outputlinelist = self.sendCmd('ffdel "*.o"',cmdtimeout);
         logger.debug(outputlinelist)
         return outputlinelist
 
@@ -950,8 +951,8 @@ def main():
        #
        # print directory listing
        #
-       ( nfiles, fsize, tsize ) = cntlrRsh.getNumberUsedAndFreeSpace()
        if ( options.verboseflag == True ):
+          ( nfiles, fsize, tsize ) = cntlrRsh.getNumberUsedAndFreeSpace()
           logger.info(" ")
           logger.info("Controller Directory listing: %11s  %20s,   %20s" % (nfiles, fsize, tsize))
           logger.info(" ")
@@ -961,10 +962,9 @@ def main():
           logger.info(' ')
 
        
-       notfoundlist = [ ]
-       notfoundlist = cntlrRsh.isFileOnHost(md5sums.keys())
-       notfoundlist.remove('boot.ini')   # remove the Visionware bootloader ini file, it's always present
-       if ( options.verboseflag == True ):
+          notfoundlist = [ ]
+          notfoundlist = cntlrRsh.isFileOnHost(md5sums.keys())
+          notfoundlist.remove('boot.ini')   # remove the Visionware bootloader ini file, it's always present
           if ( len(notfoundlist) > 0 ):
              logger.info("Non-Release files found on Controller: %s" % ', '.join(notfoundlist))
              logger.info(' ')
