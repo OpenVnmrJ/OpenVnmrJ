@@ -161,8 +161,17 @@ int setFullChart(int d2flag) {
     { P_err(r,"current ","wc2:"); return 1; }
 
       if ( d2flag ) { 
-  	  double xband = 9*xcharpixels/((double)(mnumxpnts-right_edge) / wcmax);
-	  double yband = 3*ycharpixels/((double)(mnumypnts-ymin) / wc2max); 
+  	  double xband;
+	  double yband; 
+          if ( ((mnumxpnts-right_edge) < 5) || ((mnumypnts-ymin) < 5) )
+          {
+             yband = xband = wcmax / 10.0;
+          }
+          else
+          {
+  	     xband = 9*xcharpixels/((double)(mnumxpnts-right_edge) / wcmax);
+	     yband = 3*ycharpixels/((double)(mnumypnts-ymin) / wc2max); 
+          }
 	  wc  = wcmax - xband;
 	  sc  = 0;
           wc2 = wc2max - yband;
@@ -269,6 +278,13 @@ int full(int argc, char *argv[], int retc, char *retv[])
 
   if (strcmp(argv[0],"full")==0) 
     {
+        if (argc > 1)
+        {
+           if ( !strcasecmp(argv[1],"1d") )
+              d2flag = 0;
+           else if ( !strcasecmp(argv[1],"2d") )
+              d2flag = 1;
+        }
 	setFullChart(d2flag && (!dsflag));
   	appendvarlist("sc,wc,sc2,wc2");
 	RETURN;
