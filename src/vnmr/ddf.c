@@ -975,6 +975,7 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
        if (fitType == 2)
           intercept = exp(intercept);
        rSquared = (sumxy -sumx*sumy/N) / sqrt((sumx2 - sumx*sumx/N) * (sumy2 - sumy*sumy/N));
+       rSquared *= rSquared;
        if (retc)
        {
           retv[0] = realString(slope);
