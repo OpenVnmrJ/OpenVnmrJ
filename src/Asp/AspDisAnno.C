@@ -40,14 +40,23 @@ int AspDisAnno::aspAnno(int argc, char *argv[], int retc, char *retv[]) {
 
     spAspFrame_t frame = AspFrameMgr::get()->getCurrentFrame();
 
-    if(frame == nullAspFrame) RETURN;
 
     if(argc==1 && retc > 0) { // quary display info
-	if(frame->getAnnoFlag() == 0) retv[0]=realString(0.0);
-	else retv[0]=realString(1.0);
-	if(retc>1) retv[1]=realString((double)(frame->getAnnoList()->getSize()));
+       if(frame == nullAspFrame)
+       {
+	  retv[0]=realString(0.0);
+	  if(retc>1) retv[1]=realString(0.0);
+       }
+       else
+       {
+	  if(frame->getAnnoFlag() == 0) retv[0]=realString(0.0);
+	  else retv[0]=realString(1.0);
+	  if(retc>1) retv[1]=realString((double)(frame->getAnnoList()->getSize()));
+       }
 	RETURN;
     }
+
+    if(frame == nullAspFrame) RETURN;
 
    spAspDataInfo_t dataInfo = frame->getDefaultDataInfo(true);
    if(dataInfo == nullAspData) RETURN;
