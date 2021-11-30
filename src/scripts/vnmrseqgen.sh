@@ -42,17 +42,6 @@ if [[ ! -z $LOGNAME ]] && [[ $USER != $LOGNAME ]]; then
    exit
 fi
 
-if [[ ! -f "$vnmrsystem"/lib/libparam.so ]]
-then
-   echo " "
-   echo " "
-   echo "No PSG library was found in system directory."
-   echo "Specifically, $vnmrsystem/lib/libparam.so does not exist."
-   echo "This is an irrecoverable error."
-   echo " "
-   exit 1
-fi
-
 #  Check for USER pulse sequence generation directory (PSG).  If
 #  one does not exist, set the PSG directory to the SYSTEM PSG
 #  directory (/VNMR/PSG).
@@ -81,7 +70,7 @@ if [ -d "$vnmruser"/psg ]; then
 fi
 
 # Silence warnings from newer gcc compilers
-if [ x$osname="xLinux" ]; then
+if [ x$osname = "xLinux" ]; then
    Wextra=""
    gcc -Q --help=warning | grep Wunused-but-set-variable >& /dev/null
    if [[ $? -eq 0 ]]

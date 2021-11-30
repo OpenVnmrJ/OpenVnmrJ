@@ -38,17 +38,6 @@ then
    source /vnmr/user_templates/.vnmrenvsh
 fi
 
-if [[ ! -f "$vnmrsystem"/lib/libparam.so ]]
-then
-   echo " "
-   echo " "
-   echo "No PSG library was found in system directory."
-   echo "Specifically, $vnmrsystem/lib/libparam.so does not exist."
-   echo "This is an irrecoverable error."
-   echo " "
-   exit 1
-fi
-
 #  Check for USER directory for compiled pulse sequences (SEQLIB). If
 #  it is not present, create it.
 
