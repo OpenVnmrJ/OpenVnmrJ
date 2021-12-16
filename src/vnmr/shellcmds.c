@@ -886,9 +886,10 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
     strcpy(cmdstr,"/bin/cp ");
     for (i=1; i<argc; i++)
     {
-	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
+	strncat(cmdstr," '",MAXSHSTRING - strlen(cmdstr) -1);
 	len = MAXSHSTRING - strlen(cmdstr) -1;
 	strncat(cmdstr,argv[i],len);
+	strncat(cmdstr,"'",len);
     }
     
     TPRINT1("cp: command string \"%s\"\n",cmdstr);
