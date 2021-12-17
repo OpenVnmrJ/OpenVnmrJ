@@ -38,10 +38,11 @@ mkdir "${resdir}"
 
 cd "${gitdir}/src/macos"
 cp -r VnmrJ.app "${packagedir}/$ovjAppName"
-rm -f VJ
-cc -Os $osxflags -arch x86_64 VJ.c -o VJ
+# rm -f VJ
+# cc -Os $osxflags -arch x86_64 VJ.c -o VJ
 mkdir -p "${packagedir}/$ovjAppName/Contents/MacOS"
-cp VJ "${packagedir}/$ovjAppName/Contents/MacOS/."
+cp VJ.sh "${packagedir}/$ovjAppName/Contents/MacOS/VJ"
+chmod 755 "${packagedir}/$ovjAppName/Contents/MacOS/VJ"
 rm -f "${vnmrdir}/bin/convert"
 rm -f "${vnmrdir}/bin/Infostat"
 tar jxf ImageMagick.tar.bz2 -C $vnmrdir
