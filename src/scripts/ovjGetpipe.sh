@@ -335,9 +335,9 @@ if [ ${OVJ_PIPETEST} -eq 1 ]; then
    fi
 else
    if [ "x${OVJ_LOG}" = "x" ] ; then
-      ./install.com +dest /vnmr/nmrpipe +nopost
+      ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc
    else
-      ./install.com +dest /vnmr/nmrpipe +nopost >> ${OVJ_LOG}
+      ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc >> ${OVJ_LOG}
    fi
 fi
 cleanup
