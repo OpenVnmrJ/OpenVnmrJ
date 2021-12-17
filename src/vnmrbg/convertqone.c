@@ -12,7 +12,7 @@
 #include "vnmrsys.h"
 #include "wjunk.h"
 
-int convertbruker(int argc, char *argv[], int retc, char *retv[])
+int convertqone(int argc, char *argv[], int retc, char *retv[])
 {
    Werrprintf("%s: not yet implemented",argv[0]);
    RETURN;
