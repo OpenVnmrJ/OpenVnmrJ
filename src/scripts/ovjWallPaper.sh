@@ -29,8 +29,15 @@ if [[ $# -ge 1 ]]; then
     style=$2
   fi
 fi
-if hash gsettings 2> /dev/null; then
+if [[ ! -z $(type -t gsettings) ]]; then
     schema="org.gnome.desktop.background"
+    if [[ $# -eq 0 ]]; then
+       current=$(gsettings get $schema picture-uri | sed "s/'//g")
+       echo $current | grep "/vnmr/iconlib" >& /dev/null
+       if [[ $? -eq 0 ]]; then
+          exit
+       fi
+    fi
     if [[ -z $DBUS_SESSION_BUS_ADDRESS ]]; then
        dbus-launch gsettings set $schema picture-uri $icon 2> /dev/null
        dbus-launch gsettings set $schema picture-options $style 2> /dev/null
@@ -39,7 +46,14 @@ if hash gsettings 2> /dev/null; then
        gsettings set $schema picture-options $style 2> /dev/null
     fi
 else
-    schema="/desktop/gnome/background/"
+    schema="/desktop/gnome/background"
+    if [[ $# -eq 0 ]]; then
+       current=$(gconftool-2 --get ${schema}/picture_filename)
+       echo $current | grep "/vnmr/iconlib" >& /dev/null
+       if [[ $? -eq 0 ]]; then
+          exit
+       fi
+    fi
     gconftool-2 --type=string --set ${schema}/picture_filename $icon
     gconftool-2 --type=string --set ${schema}/picture_options $style
 fi
