@@ -2583,7 +2583,7 @@ static int readParsFromDisk(FILE *stream)
 		/*  Read values */
 		for (i=1; i<num+1; i++)
 		{   if (rscanf(stream,buf,1024)<0)
-		    {	Werrprintf("P_ispar: premature EOF\n");
+		    {	// Werrprintf("P_ispar: premature EOF\n");
 			return(0);
 		    }
 		}
@@ -2593,13 +2593,12 @@ static int readParsFromDisk(FILE *stream)
 		TPRINT1(2,"P_ispar: num of enums =%d\n",num);
 		for (i=1; i<num+1; i++)
 		{   if (rscanf(stream,buf,1024)<0)
-		    {	Werrprintf("readNamesFromDisk: premature EOF\n");
+		    {	// Werrprintf("readNamesFromDisk: premature EOF\n");
 			return(0);
 		    }
 		}
 		break;
 	  default:
-		Werrprintf("P_ispar: %s has nonexistent type\n", name);
 		return(0);
 	}
     }
