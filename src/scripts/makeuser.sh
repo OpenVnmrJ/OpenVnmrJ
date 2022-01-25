@@ -788,6 +788,13 @@ do
     echo "  $file updated from templates."
 done
 
+if [[ -f .vnmrenv ]]; then
+   shl=$(getent passwd $name_add | cut -s -d: -f7 | grep -w csh)
+   if [[ -z $shl ]]; then
+      mv .vnmrenv .vnmrenvOff
+   fi
+fi
+
 if test -f .bash_profile
 then
    envFound=`grep vnmrenvbash .bash_profile`
@@ -1033,6 +1040,12 @@ then
     rm -f persistence/Graphics
     rm -f persistence/Interface
     rm -f persistence/Plot
+    appfiles=$(ls persistence/appdir_* 2> /dev/null)
+    for file in $appfiles
+    do
+       cat $file | grep -v "CPpatch;" > ${file}_bk
+       mv ${file}_bk $file
+    done
     echo "  persistence directory cleaned."
 fi
 
