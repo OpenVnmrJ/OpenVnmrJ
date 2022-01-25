@@ -3863,7 +3863,7 @@ int exists(int argc, char *argv[], int retc, char *retv[])
          if (is_parfile)
             Winfoprintf("%s is a parameter file",argv[1]);
          else
-            Winfoprintf("%s is not an parameter file",argv[1]);
+            Winfoprintf("%s is not a parameter file",argv[1]);
       }
       else
          retv[0] = realString((double)is_parfile);
