@@ -126,13 +126,16 @@ static union {
 
 static void write_Acodes(int act);
 int putcode(codeint word);
+void putval(char *paramname, double paramvalue);
+void updt_interfiddelay(double updttime);
+static void init_interfiddelay();
 
 /*-----------------------------------------------------------------------
 |  createPS()
 |	create the acode for the Pulse Sequence.
 |				Author Greg Brissey  6/30/86
 +-----------------------------------------------------------------------*/
-createPS()
+void createPS()
 {
     int	i;
     double maxlbsw;
@@ -242,7 +245,7 @@ createPS()
         putcode(WGGLOAD);	/* load patterns */
         for (chan = 1; chan <= NUMch; chan++)
         { /* reset the WFG's for the RF channels */
-          if ( addr = getWfgAPaddr(chan) )
+          if ( ( addr = getWfgAPaddr(chan) ) )
              	   command_wg(addr, 0x80);
         }
        if (newacq) endif(initflagrt);  /* Interleaving */
@@ -387,7 +390,7 @@ createPS()
 
     oldvttemp = vttemp;		/* set old temperature to new */
 
-/*     pre_pulsesequence();	/* user pre - pulse sequence control func */
+//     pre_pulsesequence();	/* user pre - pulse sequence control func */
     setMRGains();
     setMRFilters();
 
@@ -473,9 +476,6 @@ createPS()
 	assign(zero,scanflag);	/* Init scan flag to false */
     }
 
-    /* pre-acquisition delay moved to initauto2(), autofuncs.c  */
-    /*if (setupflag == 0) preacqdelay();/*  pre-acquisition delay */
-    
     nsc_ptr = (int) (Codeptr - Aacode); /* offset of start of scan */
     if (bgflag)
 	fprintf(stderr,"nsc_ptr offset: %d \n",nsc_ptr);
@@ -504,18 +504,6 @@ createPS()
 	   endif(bsval);
 	}
     }
-
-
-    /* For Block Size wshim we must add an shim acode within the NSC loop */
-/*    if ( (oldwhenshim == 4) ) /* wshim = 'bs' */
-/*    {
-/*      putcode(SHIMA);             /* Acode for auto shimming */
-/*      putcode(1);          /* Acode for auto shimming */
-/*      putcode(INIT);  /* re initialize digital hardware (STM),incase shimming */
-	              /* to avoid bustrap when wshim='f', 29K onto stack, not good! */
-/*      putcode(CLEAR); /* clear data table incase of fid shimming */
-/*    }
-*/
 
     if (!newacq)
     {
@@ -747,6 +735,208 @@ char tmpstr[];
                 break;
    }
    return(val);
+}
+
+/*
+  The default mapping for high band observe would be
+  pulse sequence        Controller ID
+  	obs		rf1
+	dec		rf2
+	dec2		rf3
+	dec3		rf4
+  The default mapping for low band observe would be
+  pulse sequence        Controller ID
+  	obs		rf2
+	dec		rf1
+	dec2		rf3
+	dec3		rf4
+  Given the high band channel one/low band channel 2 standard.
+  a new parameter probeConnect is used to assist the
+  configuration = "X1,X2,X3,X4,X5,X6"  (to numrfchannels)
+  compare tn to probeConnect when matched set that to rf? if
+  preAmpConfig shows a pre amp (of correct band) on that channel, ok
+  same with dn etc.
+
+  These would be overridden by the Vnmr parameter
+  rfchannel.
+  rfchannel works like
+  tnchannel dnchannel dn2channel etc.
+
+  probeConnect associates via nucleus..
+  'NUC1 NUC2 NUC3 NUC4'
+  rf1 connects to NUC1 etc.
+  example
+  'H1 C13 P31'  rf1->H1 rf2->C13 rf3=P31
+   tn=H1 rf1 observe, tn = C13 rf2 observe etc.
+*/
+
+/* returns a zero if not found else position of match */
+/* matches X in probeConnect to first non-match */
+/* extension if b2 = '' index = 9 */
+/* extension if X does not match H or F */
+
+int Xunused;
+int usedMask;
+
+int posIndex(char *b1,char *b2)
+{
+  char *p1,*p2;
+  int j,flag,k;
+  if (strlen(b2) < 1) return(9);
+  k = (strcmp(b2,"H1") != 0) && (strcmp(b2,"F19") != 0);
+  p1 = strstr(b1,b2);
+  if (p1 == NULL) {
+    p1 = strstr(b1,"X");
+    if (k && (Xunused) && (p1 != NULL)) // exclude hiband
+      Xunused = 0;  // used now - p1 is ok..
+    else
+      return(0); 
+  }
+  j = 1;
+  flag = 1;  // prevent paired spaces paired comma prevent channel use.
+  for (p2 = b1; p2 < p1; p2++)
+  {
+    if (*p2 == ' ')
+    {
+      if (flag ==1)
+      {
+         j++;
+         flag = 0;
+      }
+      else
+        flag = 1;
+    }
+    else
+      flag = 1;
+    if (*p2 == ',')
+       j++;
+  }
+  return(j);
+}
+
+int next_free()
+{
+  int i,j;
+  i = 1;
+  j=0;
+  while ((i < 7) && (j==0))
+	{
+	  if (!(usedMask & (1<< i))) j = i;
+          i++;
+        }
+  if (i == 7) abort_message("probe connect mapping failed");
+  // allocate the mask
+  usedMask |= 1 << j;
+  return(j);
+}
+// allocate "" channels..
+int clean(int numRFChan)
+{
+  // OBSch not a problem..
+  if (DECch == 9)
+      DECch = next_free();
+  if (numRFChan < 3)
+    return(0);
+  if (DEC2ch == 9)
+      DEC2ch = next_free();
+  if (numRFChan < 4)
+      return(0);
+  if (DEC3ch == 9)
+      DEC3ch = next_free();
+   if (numRFChan < 5)
+      return(0);
+   if (DEC4ch == 9)
+      DEC4ch = next_free();
+   if (numRFChan < 6)
+    return(0);
+  return(-1);
+}
+//
+//  map the channels with probeConnect
+//  return codes 
+//  0 mapped ok
+//  -1 probeConnect failed to map
+//  1 no probeConnect
+int RFConfigMap()
+{
+  int index,trialMask;
+  int i;
+  int hbuserMask,hbchanCount,xx;
+  char probeConnect[MAXSTR],preAmpConfig[MAXSTR],tmpstr[MAXSTR];
+  const char *use[]={"tn","dn","dn2","dn3","dn4"};
+  // note hbusermask is right shifted against userMask
+  index = 0;
+  hbuserMask = 0;
+  hbchanCount = 0;
+  Xunused = 1; 
+  usedMask=0;
+  trialMask=0;
+  if(P_getstring(GLOBAL,"probeConnect",probeConnect,1,MAXSTR) < 0)
+     return(1);  //
+  if (strlen(probeConnect) < 3) return(1);
+  if(P_getstring(GLOBAL,"preAmpConfig",preAmpConfig,1,MAXSTR) < 0)
+     strcpy(preAmpConfig,"HLXXX"); // system default
+  // makes the readily assigned associations
+  for (i = 0; i < NUMch; i++)  // actually iterates tn,dn,dn2...
+  {
+      if (P_getstring(CURRENT,use[i],tmpstr,1,MAXSTR))
+        strcpy(tmpstr,"");
+      index = posIndex(probeConnect,tmpstr);
+      if ((!strcmp(tmpstr,"H1") || !strcmp("F19",tmpstr)))
+      {
+         hbuserMask |= 1 << i;  // note if hband channel in functional
+         hbchanCount++;
+         if (index == 0) index = 2;  // Force combo mode! If there's a conflict, error exit.
+      }
+      switch (i) {
+        case 0:
+           if (!strcmp(tmpstr,"lk"))
+                return(-3);   // was index = 2 conflicts with tn==lk
+           OBSch  = index;
+           break;
+        case 1:  DECch  = index; break;
+        case 2:  DEC2ch = index; break;
+        case 3:  DEC3ch = index; break;
+        case 4:  DEC4ch = index; break;
+        default:  return(-9); /* not supported past dn4 */
+        }
+        if ((index > 0) && (index < 9))
+              trialMask = 1 << (index);
+        else
+              trialMask = 0;
+        if (trialMask & usedMask)
+           return(-4);
+        usedMask |= trialMask; // Mask is physical channel #
+  }
+  // end readily assigned associations
+  // shared mode logic works ONLY IF either chan1 or chan2 is unassigned
+  // bit 1 or 2 in usedMask and the other is high band
+  // two hibands - observe is 2 and high band then 
+  if ((hbchanCount == 2) && (OBSch==2) && (hbuserMask & 1))
+  {
+      // force to channel 1 combo mode must use 1.
+      OBSch = 1;
+      xx = hbuserMask & 0x1e;
+
+      switch (xx) {
+         case 2:  DECch = 2; break;
+         case 4:  DEC2ch = 2; break;
+         case 8:  DEC3ch = 2;   break;
+         case 16:  DEC4ch = 2; break;
+         default:
+          return(-9);
+      }
+  }
+  // find unused channels ...
+  clean(NUMch);
+  if (preAmpConfig[OBSch-1] == 'X')
+     text_message("no preamplifier configured for %d channel\n",OBSch);
+
+  if ((NUMch == 3) && ((OBSch + DECch + DEC2ch) != 6)) return(-1); // fail
+     if ((NUMch == 4) && ((OBSch + DECch + DEC2ch + DEC3ch ) != 10)) return(-1); // fail
+     if ((NUMch == 5) && ((OBSch + DECch + DEC2ch + DEC3ch + DEC4ch) != 15)) return(-1); // fail
+
+     return(0);
 }
 
 /*
@@ -1074,6 +1264,7 @@ char dpchar;
 	dsp_params.rt_downsamp);
 }
 
+
 /*-----------------------------------------------------------------
 |	initparms()/
 |	initializes the main variables used 
@@ -1086,7 +1277,7 @@ char dpchar;
 |			     of dhp.
 |    4/21/89   Greg B.    1. Added Code to initialize interleave parameter (il)
 +------------------------------------------------------------------*/
-initparms()
+void initparms()
 {
     double getval();
     double getvalnwarn();
@@ -1115,6 +1306,9 @@ initparms()
 
     if (ap_interface == 4)
     {
+       int ans;
+       int tnlkflag;
+       int ok = 0;
        if ( (P_getstring(CURRENT, "dn", tmpstr, 1, 9) == 0) &&
             strcmp(tmpstr,"H1") && (tmpstr[0] != '\000') )
        {
@@ -1132,7 +1326,25 @@ initparms()
              setModInfo(DODEV,DECch);
           }
        }
-       if (P_getstring(CURRENT, "rfchannel", tmpstr, 1, 12) == 0)
+       P_getstring(CURRENT,"tn",tmpstr,1,12);
+       if (strcmp(tmpstr,"lk"))
+         tnlkflag = 0;
+       else
+         tnlkflag = 1;
+       ans = RFConfigMap();
+       if ( (ans < 0) && (tnlkflag == 0) && ! tuneflag )
+          warn_message("probeConnect failed to map. Using system default...");
+       if (ans == 0)
+       {
+          sprintf(tmpstr,"%1d%1d%1d%1d%1d",OBSch,DECch,DEC2ch,DEC3ch,DEC4ch);
+          *(tmpstr+NUMch) = '\0';
+          ok = 1;
+       }
+       else if (P_getstring(CURRENT, "rfchannel", tmpstr, 1, 12) == 0)
+       {
+          ok = 1;
+       }
+       if (ok)
        {
           if ( channelvalok(NUMch,tmpstr) )
           {
@@ -2137,9 +2349,7 @@ register unsigned char *ref_ptr;
     return(index);
 }
 
-put_code_offset(ptr,size,refnum,checknum)
-codelong *ptr;
-int size, refnum,checknum;
+void put_code_offset(codelong *ptr, int size, int refnum, int checknum)
 {
 /*
    fprintf(stderr,"pco %d in %d in %d\n",size,refnum,checknum);
@@ -2158,7 +2368,7 @@ extern codeint *preCodes;
 static int max_acode = 0;
 static int do_compress = 0;
 
-init_compress(int num)
+void init_compress(int num)
 {
     char compress[MAXSTR];
 /****************************************************************
@@ -2256,7 +2466,7 @@ static void write_Acodes(int act)
 	pstar = tmp_array;
       }
     }
-    put_code_offset(pstar,sizetowrite,bufn|kind,check);
+    put_code_offset( (codelong *) pstar,sizetowrite,bufn|kind,check);
     bytes = write(PSfile,pstar,sizetowrite + 2 * sizeof(codelong));
     if (bgflag) 
     {
@@ -2267,8 +2477,7 @@ static void write_Acodes(int act)
     }
 }
 
-init_codefile(codepath)
-char *codepath;
+void init_codefile(char *codepath)
 {
     if (bgflag)
       fprintf(stderr,"Opening Code file: '%s' \n",codepath);
@@ -2280,7 +2489,7 @@ char *codepath;
     }
 }
 
-close_codefile()
+void close_codefile()
 {
     if (newacq)
     {
@@ -2303,7 +2512,7 @@ int getmaxval(const char *parname )
     double   dval;
     vInfo    varinfo;
 
-    if (r = P_getVarInfo(CURRENT, parname, &varinfo)) {
+    if ( (r = P_getVarInfo(CURRENT, parname, &varinfo)) ) {
         printf("getmaxval: could not find the parameter \"%s\"\n",parname);
 	psg_abort(1);
     }
@@ -2331,9 +2540,7 @@ int getmaxval(const char *parname )
 |	putval()/2
 |	Sets a vnmr parmeter to a given value.
 +------------------------------------------------------------------*/
-putval(paramname,paramvalue)
-char *paramname;
-double paramvalue;
+void putval(char *paramname, double paramvalue)
 {
    int stat,expnum;
    char	message[STDVAR];
@@ -2364,9 +2571,7 @@ double paramvalue;
 |	putstr()/2
 |	Sets a vnmr parmeter to a given string.
 +------------------------------------------------------------------*/
-putstr(paramname,paramstring)
-char *paramname;
-char *paramstring;
+void putstr(char *paramname,char *paramstring)
 {
    int stat,expnum;
    char	message[STDVAR];
@@ -2397,7 +2602,7 @@ char *paramstring;
 |       init_interfiddelay()/1
 |       Initializes variables for interfiddelay. 
 +------------------------------------------------------------------*/
-init_interfiddelay()
+static void init_interfiddelay()
 {
     interfiddelayflag = FALSE;
     if (newacq && (ix==1))
@@ -2418,8 +2623,7 @@ init_interfiddelay()
 |       updt_interfiddelay()/1
 |       Updates delay time "interfiddelay" with more time. 
 +------------------------------------------------------------------*/
-updt_interfiddelay(updttime)
-double updttime;
+void updt_interfiddelay(double updttime)
 {
     totaltime = totaltime + updttime;
     if (interfiddelayflag)
