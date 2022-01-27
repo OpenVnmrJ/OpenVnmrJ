@@ -1,0 +1,107 @@
+"macro SFSPcorrect"
+"*********************************************************************************"
+" SFSPcorrect - macro for legacy chempackers 					"
+"    Usage SFSPcorrect($arg1)							"
+"	arg1='updateprobe' - update current probe file and adds SFC and SFP parameters "
+"	arg1='tn' - corrects tn parameters for solvent (called by setobspars)	"
+"	arg1='dn' - corrects dn parameters for solvent (called by setdecpars)   "
+"*********************************************************************************"
+
+IF ($1='updateprobe') THEN
+
+   if ($# < 2) then $2=probe endif
+   $probe=$2
+   $probefile=''
+
+   getProbePath($probe,'alert'):$e,$probefile,$rw
+   if ($rw=0) then return endif
+  
+   write('line3','probe file %s being updated. Please wait...',$probe)
+   $param='' $value='' $nuc='' $i=1
+   "***************SFx is multiplier for pw90 or pwx or pp****************"
+   "***************SPx is dB change for tpwr or pwxlvl or pplvl***************"
+
+   $sfpars='SFC','SFH','SFP','SFF'
+   $sppars='SPC','SPH','SPP','SPF'
+   $sfspsize=size('$sfpars')
+   $si=1
+   repeat
+	  $ex=''
+	  shell('grep '+$sfpars[$si]+': '+$probefile):$ex
+	  if ($ex = '') then
+	    write('file',$probefile,' ')
+	    write('file',$probefile,'%s:     Parameters',$sfpars[$si])
+	    write('file',$probefile,'%sdate     00-00-0000',$sfpars[$si])
+	    write('file',$probefile,' ')
+	  endif
+	  $ex=''
+	  shell('grep '+$sppars[$si]+': '+$probefile):$ex
+	  if ($ex = '') then
+	    write('file',$probefile,' ')
+	    write('file',$probefile,'%s:     Parameters',$sppars[$si])
+	    write('file',$probefile,'%sdate     00-00-0000',$sppars[$si])
+	    write('file',$probefile,' ')
+	  endif
+
+	 $param[$i]='cdcl3'    $value[$i]='1'          $nuc[$i]=$sfpars[$si]   $i=$i+1
+	 $param[$i]='dmso'     $value[$i]='1'          $nuc[$i]=$sfpars[$si]   $i=$i+1
+	 $param[$i]='acetone'  $value[$i]='1'          $nuc[$i]=$sfpars[$si]   $i=$i+1
+	 $param[$i]='d2o'      $value[$i]='1'          $nuc[$i]=$sfpars[$si]   $i=$i+1
+	 $param[$i]='c6d6'     $value[$i]='1'          $nuc[$i]=$sfpars[$si]   $i=$i+1
+	 $param[$i]='cd2cl2'   $value[$i]='1'          $nuc[$i]=$sfpars[$si]   $i=$i+1
+	 $param[$i]='cd3od'    $value[$i]='1'          $nuc[$i]=$sfpars[$si]   $i=$i+1
+
+	 $param[$i]='cdcl3'    $value[$i]='0'          $nuc[$i]=$sppars[$si]   $i=$i+1
+	 $param[$i]='dmso'     $value[$i]='0'          $nuc[$i]=$sppars[$si]   $i=$i+1
+	 $param[$i]='acetone'  $value[$i]='0'          $nuc[$i]=$sppars[$si]   $i=$i+1
+	 $param[$i]='d2o'      $value[$i]='0'          $nuc[$i]=$sppars[$si]   $i=$i+1
+	 $param[$i]='c6d6'     $value[$i]='0'          $nuc[$i]=$sppars[$si]   $i=$i+1
+	 $param[$i]='cd2cl2'   $value[$i]='0'          $nuc[$i]=$sppars[$si]   $i=$i+1
+	 $param[$i]='cd3od'    $value[$i]='0'          $nuc[$i]=$sppars[$si]   $i=$i+1
+
+	 $si=$si+1
+
+   until $si > $sfspsize
+   "*****************************************************************************"
+   $x=1
+   repeat
+	 $parex=''
+	 shell('grep '+$nuc[$x]+$param[$x]+' '+$probefile):$parex
+	 if ($parex = '') then
+	      addparams($param[$x],$value[$x],$nuc[$x],$probe)
+	 endif
+	 $x=$x+1
+   until $x = $i
+   RETURN
+ENDIF
+
+"*********************************************************"
+"***Do solvent correction for H, F, C, P******************"
+
+$sfactor=1 $lnfactor=1 $spfactor=0 $solv=''
+format(solvent,'lower'):$solv
+$correct='y'
+if ({$1} = 'C13') then $nuc='C'
+elseif ({$1} = 'H1') then $nuc='H'
+elseif ({$1} = 'P31') then $nuc='P'
+elseif ({$1} = 'F19') then $nuc='F'
+else $correct='n' endif
+
+if ($correct='n') then return endif
+
+getparam($solv,'SF'+$nuc):$sfactor
+getparam($solv,'SP'+$nuc):$spfactor
+
+if ($1='tn') then
+    pw90=pw90*$sfactor
+    tpwr=tpwr+$spfactor
+elseif ($1='dn') then
+    ln($sfactor):$lnfactor
+    $dpwrdiff = trunc((20*0.43429*$lnfactor)+0.5)
+    pwx = pwx*$sfactor
+    pp = pp*$sfactor
+    pwxlvl = pwxlvl+$spfactor
+    pplvl = pplvl+$spfactor
+    dpwr = dpwr+$dpwrdiff+$spfactor
+endif
+

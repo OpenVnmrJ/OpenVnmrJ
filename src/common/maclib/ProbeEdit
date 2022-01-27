@@ -132,7 +132,7 @@ elseif $1='initpar' then
   setprotect('probedNewNuc','on',32768,'global')
   probedNewNuc=''
 
-  exists('probedNewAttr','parameter','global'):$e
+exists('probedNewAttr','parameter','global'):$e
   if not($e) then
       create('probedNewAttr','string','global')
   endif
@@ -245,6 +245,40 @@ elseif $1='addlk' then
         probedval=probedval,$nnval
   endif
   delete($nfile,''):$dum
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
+elseif $1='addSF' then
+  teststr('probedattr','SFH:','global'):$isin
+  if ($isin) then
+	write('error','Solvent factors already exist in this probe file')
+	return
+  endif
+
+  $nfile=userdir+'/persistence/ProbeEdit_NewNuc'
+  write('reset',$nfile)
+  SFSPcorrect(updateprobe,$nfile)
+
+  $nnattr='' $nnval=''
+  readfile($nfile,'$nnattr','$nnval','','local'):$ns2
+  if ($ns2>0) then
+        probedattr=probedattr,$nnattr
+        probedval=probedval,$nnval
+  endif
+  delete($nfile,''):$dum
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
+elseif $1='createprobeConnect' then
+  create('probeConnect','string','global')
+  {$0}('build')    // build xml file
+  {$0}('open')     // open dialog
+
+"********************************************************"
+elseif $1='destroyprobeConnect' then
+  destroy('probeConnect','global')
   {$0}('build')    // build xml file
   {$0}('open')     // open dialog
 
@@ -557,7 +591,7 @@ elseif ($1='xml') then
 	  $name=$s2
         endif
         write('file',$xfile,'    <group loc="%g 10" size="%g %g" value="%s">',2*$hct,$maxx-5,$maxy+20,$name)
-        write('file',$xfile,'      <group loc="5 0" size="%g %g">',$maxx-10,$maxy+10)
+        write('file',$xfile,'      <group loc="5 0" size="%g %g">',$maxx-10,$maxy+10) 
         $hct=$hct+1
       else
         $yc=10*$lct
@@ -586,17 +620,29 @@ elseif ($1='xml') then
 
   if ($enable>0) then
 //     write('file',$xfile,'  <group loc="%g %g" size="410 90">',($maxx-410)/2,$maxy+100)
-     write('file',$xfile,'  <group loc="5 10" size="410 80">')
+     write('file',$xfile,'  <group loc="5 10" size="600 80">')
 
      write('file',$xfile,'  <label loc="10 10" size="70 20" style="Heading1" label="Nucleus" />')
      write('file',$xfile,'  <entry loc="70 10" size="60 20" style="PlainText" vq="probedNewNuc" vc="probedNewNuc=\'$VALUE\'" set="$VALUE=probedNewNuc" />')
-     write('file',$xfile,'  <button loc="135 10" size="80 20" style="Heading2" label="Add" vq="probedNewNuc" vc="ProbeEdit(\'addnuc\',probedNewNuc)" />')
-     write('file',$xfile,'  <button loc="220 10" size="80 20" style="Heading2" label="Delete" vq="probedNewNuc" vc="ProbeEdit(\'delnuc\',probedNewNuc)" />')
+     write('file',$xfile,'  <button loc="135 10" size="60 20" style="Heading2" label="Add" vq="probedNewNuc" vc="ProbeEdit(\'addnuc\',probedNewNuc)" />')
+     write('file',$xfile,'  <button loc="200 10" size="60 20" style="Heading2" label="Delete" vq="probedNewNuc" vc="ProbeEdit(\'delnuc\',probedNewNuc)" />')
      teststr('probedattr','lk:','global'):$isin
      if (not $isin) then
-        write('file',$xfile,'  <button loc="305 10" size="80 20" style="Heading2" label="Add lk" vc="ProbeEdit(\'addlk\')" />')
+        write('file',$xfile,'  <button loc="280 40" size="80 30" style="Heading2" label="Add lk" vc="ProbeEdit(\'addlk\')" />')
      endif
-     write('file',$xfile,'  <button loc="70 40" size="230 30" style="Heading2" label="Save changes" vc="ProbeEdit(\'save\')" />')
+     teststr('probedattr','SFH:','global'):$isin
+     if (not $isin) then
+        write('file',$xfile,'  <button loc="375 40" size="155 30" style="Heading2" label="Add Solvent Factors" vc="ProbeEdit(\'addSF\')" />')
+     endif
+     write('file',$xfile,'  <button loc="70 40" size="190 30" style="Heading2" label="Save changes" vc="ProbeEdit(\'save\')" />')
+     write('file',$xfile,'  <label loc="280 10" size="100 20" style="Heading1" label="probeConnect" />')
+     write('file',$xfile,'  <entry loc="375 10" size="90 20" style="PlainText" vq="probeConnect" show="exists(\'probeConnect\',\'parameter\',\'global\'):$ENABLE" vc="probeConnect=\'$VALUE\'" set="$VALUE=probeConnect" />')
+     exists('probeConnect','parameter','global'):$ex
+     if $ex then
+        write('file',$xfile,'  <button loc="470 10" size="60 20" style="Heading2" label="Delete" vc="ProbeEdit(\'destroyprobeConnect\')" />')
+     else
+        write('file',$xfile,'  <button loc="470 10" size="60 20" style="Heading2" label="Create" vc="ProbeEdit(\'createprobeConnect\')" />')
+     endif
      write('file',$xfile,'  </group>\n')
 //     $delta=50
   endif
