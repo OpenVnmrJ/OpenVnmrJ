@@ -11,7 +11,7 @@
 
          pp -  proton 90 degree decoupler pulse
       pplvl -  power level for proton decoupler pulse
-  modified for use with Gemini 2000  */
+ */
 
 
 #include <standard.h>
@@ -35,19 +35,13 @@ void pulsesequence()
   
 
    status(A);
+      decpower(pplvl);
       hsdelay(d1);
    status(B);
       pulse(pw, v1);
       delay(d2);
-         if (declvlonoff)
-            declvlon();         /* sets power to pplvl */
-         else
-            decpower(pplvl);
       simpulse(p1, pp, v1, v1, rof1, rof1);
-         if (declvlonoff)
-            declvloff();
-         else
-            decpower(dpwr);
+      decpower(dpwr);
       delay(d2);
    status(C);
 }
