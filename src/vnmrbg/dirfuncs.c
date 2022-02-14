@@ -419,7 +419,15 @@ int getitem(char *dirname, int index, char *filename, char *fileCmp, int recurse
          if ( (node->fts_info == FTS_F) || (node->fts_info == FTS_SL) )
          {
          
-            if ( regExp )
+            if ( regExp == 3 )
+            {
+               if (regexec(&regex, node->fts_path, 0, &matches, 0) == 0)
+               {
+                  cnt++;
+                  found = 1;
+               }
+            }
+            else if ( regExp )
             {
                if (regexec(&regex, node->fts_name, 0, &matches, 0) == 0)
                {
@@ -435,7 +443,16 @@ int getitem(char *dirname, int index, char *filename, char *fileCmp, int recurse
          }
          else if (node->fts_info == FTS_D)
          {
-            if ( regExp )
+            if ( regExp == 3 )
+            {
+               if (regexec(&regex, node->fts_path, 0, NULL, 0) == 0)
+                  if ( strcmp(dirname,node->fts_path) )
+                  {
+                     cnt++;
+                     found = 1;
+                  }
+            }
+            else if ( regExp )
             {
                if (regexec(&regex, node->fts_name, 0, NULL, 0) == 0)
                   if ( strcmp(dirname,node->fts_path) )
@@ -453,21 +470,23 @@ int getitem(char *dirname, int index, char *filename, char *fileCmp, int recurse
                }
             }
             if (( ! recurse ) && strcmp(dirname,node->fts_path) )
+            {
                fts_set(tree, node, FTS_SKIP);
+            }
          }
       }
       if (found && saveInPar)
       {
          if (cnt == 1)
             assignString("",v1,0);
-         if (recurse)
+         if ( (recurse) || (regExp == 3) )
             assignString(&node->fts_path[len],v1,cnt);
          else
             assignString(node->fts_name,v1,cnt);
       }
       if (index && (index == cnt))
       {
-         if (recurse)
+         if ( (recurse) || (regExp == 3) )
             strcpy(filename,&node->fts_path[len]);
          else
             strcpy(filename,node->fts_name);
@@ -560,7 +579,12 @@ int getitem_sorted(char *dirname, int index, char *filename, char *fileCmp, int 
          if ( (node->fts_info == FTS_F) || (node->fts_info == FTS_SL) )
          {
          
-            if ( regExp )
+            if ( regExp == 3 )
+            {
+               if (regexec(&regex, node->fts_path, 0, &matches, 0) == 0)
+                  cnt++;
+            }
+            else if ( regExp )
             {
                if (regexec(&regex, node->fts_name, 0, &matches, 0) == 0)
                   cnt++;
@@ -572,7 +596,15 @@ int getitem_sorted(char *dirname, int index, char *filename, char *fileCmp, int 
          }
          else if (node->fts_info == FTS_D)
          {
-            if ( regExp )
+            if ( regExp == 3 )
+            {
+               if (regexec(&regex, node->fts_path, 0, NULL, 0) == 0)
+                  if ( strcmp(dirname,node->fts_path) )
+                  {
+                     cnt++;
+                  }
+            }
+            else if ( regExp )
             {
                if (regexec(&regex, node->fts_name, 0, NULL, 0) == 0)
                   if ( strcmp(dirname,node->fts_path) )
@@ -606,7 +638,15 @@ int getitem_sorted(char *dirname, int index, char *filename, char *fileCmp, int 
       {
          if ( (node->fts_info == FTS_F) || (node->fts_info == FTS_SL) )
          {
-            if ( regExp )
+            if ( regExp == 3 )
+            {
+               if (regexec(&regex, node->fts_path, 0, &matches, 0) == 0)
+               {
+                  cnt++;
+                  found = 1;
+               }
+            }
+            else if ( regExp )
             {
                if (regexec(&regex, node->fts_name, 0, &matches, 0) == 0)
                {
@@ -622,7 +662,16 @@ int getitem_sorted(char *dirname, int index, char *filename, char *fileCmp, int 
          }
          else if (node->fts_info == FTS_D)
          {
-            if ( regExp )
+            if ( regExp == 3 )
+            {
+               if  (regexec(&regex, node->fts_path, 0, NULL, 0) == 0)
+                  if ( strcmp(dirname,node->fts_path) )
+                  {
+                     cnt++;
+                     found = 1;
+                  }
+            }
+            else if ( regExp )
             {
                if  (regexec(&regex, node->fts_name, 0, NULL, 0) == 0)
                   if ( strcmp(dirname,node->fts_path) )
@@ -645,7 +694,7 @@ int getitem_sorted(char *dirname, int index, char *filename, char *fileCmp, int 
       }
       if (found)
       {
-         if (recurse)
+         if ( (recurse) || (regExp == 3) )
             strcpy(sortPath[cnt-1].path, &node->fts_path[len]);
          else
             strcpy(sortPath[cnt-1].path, node->fts_name);
