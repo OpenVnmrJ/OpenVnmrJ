@@ -2717,6 +2717,8 @@ int getfile(int argc, char *argv[], int retc, char *retv[])
         regExp = 1;
      else if (! strcmp(argv[i],"regexdot") )
         regExp = 2;
+     else if (! strcmp(argv[i],"regexpath") )
+        regExp = 3;
      else
         strcpy(fileCmp,argv[i]);
   }
