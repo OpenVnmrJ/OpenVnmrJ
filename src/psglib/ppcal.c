@@ -35,31 +35,14 @@ void pulsesequence()
    }
 
    status(A);
+      decpower(pplvl);
       hsdelay(d1);
    status(B);
       settable(t1,4,phasecycle);
       pulse(pw, t1);
       delay(d2);
-      if (newdecamp)
-      {
-         pplvl  = getval("pplvl");
-         decpower(pplvl);  /* sets DEC atten = pplvl */
-      }
-      else
-      {
-         declvlon();         /* sets dhp = 255 level */
-      }
-
       simpulse(p1, pp, t1, t1, rof1, rof1);
-      if (newdecamp)
-      {
-         decpower(dpwr);  /* sets DEC atten = dpwr */
-      }
-      else
-      {
-         declvloff();
-      }
-
+      decpower(dpwr);
       delay(d2);
    status(C);
    setreceiver(t1);
