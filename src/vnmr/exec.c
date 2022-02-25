@@ -778,7 +778,7 @@ static int execM(char *n, node *a, node *r, char *macroName, int macroLine)
 
                 if (M2flag)
                 {
-                   fprintf(stderr,"%s started from %s:%d\n", (argc>1) ? ")" : "",macroName,macroLine);
+                   fprintf(stderr,"%s started from %s:%d\n", (argc>0) ? ")" : "",macroName,macroLine);
                 }
                 pushTree();
                 if ((codeTree=findMacro(n)) == NULL)
