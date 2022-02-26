@@ -66,7 +66,7 @@ static int	addsub_complex,
 		save_complex,
 		shift,
 		range,
-                replaceFid,
+                replaceData,
 		trace;			/* trace number in addsub exp */
 static int      old_blocks, fidhead_status;
 static int	interactive_addi = FALSE;
@@ -252,6 +252,8 @@ static int get_addsub_data(int newexp, dpointers *new_file, char *exppath,
         return(ERROR);
      }
 
+     if (replaceData && (trace == datahead.nblocks) )
+        newbuf = 1;
      if (newbuf)
      {
         trace = datahead.nblocks;
@@ -406,11 +408,24 @@ static void combine_data(float *out1, float *in1, float mult1, float *in2,
     }
   }
   else
-    while (pts--)
+  {
+    if (replaceData)
     {
-      *out1 = *in2++ * mult2 + *in1++ * mult1;
-      out1 += incr;
+       while (pts--)
+       {
+         *out1 = *in2++ * mult2;
+         out1 += incr;
+       }
     }
+    else
+    {
+       while (pts--)
+       {
+         *out1 = *in2++ * mult2 + *in1++ * mult1;
+         out1 += incr;
+       }
+    }
+  }
   if (shift<0)
     while (shift++)
     {
@@ -1002,7 +1017,7 @@ static int addfid(int argc, char *argv[], int retc, char *retv[],
 
   if (do_sub)
      multiplier *= -1.0;
-  if (newbuf || replaceFid)
+  if (newbuf || replaceData)
   {
      new_fid.head->ctcount = 1;
      new_fid.head->scale = 0;
@@ -1239,7 +1254,7 @@ static int addspec(int argc, char *argv[], int retc, char *retv[],
                 dummy,
                 addsub_mode,
 		display_mode,
-		orig_d2flag,
+		// orig_d2flag,
                 pts,
 		stat;
   float         *spectrum,
@@ -1382,7 +1397,7 @@ static int addspec(int argc, char *argv[], int retc, char *retv[],
 
   addsub_complex = (new_spec.head->status & S_COMPLEX);  /* always TRUE now */
   specperblock = 1;		/* added for crude 2D */
-  orig_d2flag = d2flag;
+  // orig_d2flag = d2flag;
   d2flag = FALSE;		/* added for crude 2D */
 
   newptr = (float *)new_spec.data;
@@ -1631,7 +1646,7 @@ static int checkinput(int argc, char *argv[], int newexp)
     else if ( (strcmp(*argv,"trace") == 0) || (strcmp(*argv,"newtrace") == 0) )
     {
        if (strcmp(*argv,"newtrace") == 0)
-          replaceFid = 1;
+          replaceData = 1;
        argc--;
        if (argc && isReal(*++argv))
        {
@@ -1942,7 +1957,7 @@ int addsub(int argc, char *argv[], int retc, char *retv[])
      Wscrprintf("addsub exp %s\n", (newexp) ? "does not exist" : "exists");
 
   fidadd = specadd = FALSE;	/* initialization */
-  replaceFid = 0;
+  replaceData = 0;
   clradd = ( strcmp(argv[0], "clradd") == 0 );
 
   if (!clradd)

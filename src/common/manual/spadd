@@ -11,13 +11,17 @@ spadd<('trace',index)>  - add the current spectrum to the "index" element
                           in the add/subtract experiment
 spsub<('trace',index)>  - subtract the current spectrum from the "index"
                           element in the add/subtract
+spadd<('newtrace',index)>  - replace the "index" element in the add/subtract
+                             experiment with the current spectrum
+spsub<('newtrace',index)>  - replace the "index" element in the add/subtract
+                             experiment with negative of the current spectrum
 spadd<('range'<,highfield,lowfield>)>  - add a spectral range to the add/subtract
                                          experiment
 *******************************************************************************
 
-Non-interactive spectral addition and subtraction uses the ``spadd'' and
-``spsub'' commands.  The last displayed or selected spectrum is added to
-("spadd") or subtracted from ("spsub") the current contents of the
+Non-interactive spectral addition and subtraction uses the spadd and
+spsub commands.  The last displayed or selected spectrum is added to
+(spadd) or subtracted from (spsub) the current contents of the
 add/subtract experiment.  The spmin and spmax, instead of adding or subtracting,
 take the minimum and maximum, respectively, of the two spectra.
 
@@ -52,6 +56,7 @@ be made in the add/subtract experiment.  If, on the other hand,  the
 commands select(2) spadd('new') were typed,  then the add/subtract experiment
 will contain an array of two spectra corresponding to the original spectra
 one and two, respectively.
+
 Individual spectra in a multi-elemnet add/subtract experiment may subsequently
 be added to and subtracted from.  The spadd and spsub command without a
 'trace' argument will add or subtract from the first spectrum in the
@@ -62,6 +67,15 @@ spectrum from the current experiment and add it to the sixth spectrum in the
 add/subtract experiment.  When using the 'trace' argument, that spectrum must
 already exist in the add/subtract experiment by using an appropriate number
 of spadd('new') or spsub('new') commands.
+
+The spadd and spsub commands support a 'newtrace' argument, which is the same
+as the 'trace' argument except that the data in the selected add/sub trace
+is replaced with the new data.  If 'newtrace' is used in conjunction with
+the 'range' argument, only the selected range in the add/sub trace will be
+replaced with the new data.  If the index provided with newtrace is 1 larger
+than the number of spectra in the add/sub experiment, it is equivalent to
+using the 'new' argument.
+
 The results can be examined by joining the add/subtract experiment with the
 jaddsub macro and using the normal spectral display and plotting commands.
 
@@ -88,7 +102,9 @@ Examples
            spadd
            spsub(0.75)
            spadd('new')
-           spadd('trace',2)
-           spadd('range')              // And the spectral range between sp and sp+wp
-           spadd('range',cr-delta,cr)  // And the spectral range between the cursors
+           spadd('trace',2)            // add current data to add/sub trace 2
+           spadd('newtrace',2)         // replace add/sub trace 2 with current data
+           spadd('range')              // add the spectral range between sp and sp+wp
+           spadd('range',cr-delta,cr)  // add the spectral range between the cursors
+           spadd('newtrace',2,'range') // replace the spectral range between sp and sp+wp
 
