@@ -32,6 +32,7 @@
 +------------------------------------------------------*/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "group.h"
 #include "data.h"
@@ -46,6 +47,7 @@ extern int currentindex();
 extern int rel_spec();
 extern void dodc(float *ptr, int offset, double oldlvl, double oldtlt);
 extern void  Wturnoff_buttons();
+extern void  setle4dc( int val );
 
 /*********/
 static int dc()
@@ -167,6 +169,10 @@ int ai(int argc, char *argv[], int retc, char *retv[])
    }
    else if (strcmp(argv[0], "dc") == 0)
    {
+      if (argc > 1)
+      {
+         setle4dc( atoi(argv[1]) );
+      }
       if (dc())
       {
          Werrprintf("cannot do drift correction");

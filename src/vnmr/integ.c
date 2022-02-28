@@ -543,6 +543,13 @@ static void aver(float *ptr, int start, int length, float *av, int offset)
   *av /= (float) length;
 }
 
+static int le4dc = 0;
+
+void setle4dc(int val)
+{
+   le4dc = val;
+}
+
   
 /******************************/
 void dodc(float *ptr, int offset, double oldlvl, double oldtlt)
@@ -562,7 +569,15 @@ void dodc(float *ptr, int offset, double oldlvl, double oldtlt)
 *  Calculate lvl/tlt parameters.  *
 **********************************/
 
-  le = 1 + 2 * (int) ((float) npnt / 40.0);
+  if (le4dc <= 0)
+  {
+     le = 1 + 2 * (int) ((float) npnt / 40.0);
+  }
+  else
+  {
+     le = le4dc;
+     le4dc = 0;
+  }
   if (le > 351) le = 351;
   spacing = npnt - le;
 
@@ -1696,7 +1711,7 @@ static int fit2ddata(struct base baseline[], double coef[], int order,
          return(ERROR);
       }
 
-      if (!c_block.head->status & S_DATA)
+      if (!(c_block.head->status & S_DATA))
       {
          Werrprintf("no data in block %d", block_no + 1);
          return(ERROR);
