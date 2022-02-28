@@ -56,6 +56,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
     String       selectedTabName;
     String       buildFile            = null;                   // the source
                                                                  // of xml file
+    String       locatorName          = null;
     long         dateOfbuildFile      = 0;
     Component    popupComp            = null;
     PushpinPanel locatorPanel         = null;
@@ -724,6 +725,8 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
     }
 
     private String getLocatorName() {
+        if ( locatorName != null )
+            return Util.getLabelString(locatorName);
         String name = "Holding";
         if (Util.isImagingUser())
             name = "Study";
@@ -1215,6 +1218,8 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
                 if ( toolFile == null ) return;
 
             } else {
+                if (lastName.equals("Locator"))
+                    locatorName = attr.getValue("label");
                 vargs = new Object[1];
                 vargs[0] = sshare;
             }
