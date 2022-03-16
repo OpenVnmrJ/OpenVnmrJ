@@ -840,7 +840,7 @@ int do_TRUNC(pair *a, pair *b)
       {  if (b->T.basicType == T_STRING)
 	 {
             if (b->R->v.s != NULL)
-	        WerrprintfWithPos("Can't trunc a STRING %s", b->R->v.s);
+	        WerrprintfWithPos("Can't trunc STRING %s", b->R->v.s);
             else
 	        WerrprintfWithPos("Can't trunc a STRING");
             execPError = 1;
@@ -889,9 +889,9 @@ int do_SQRT(pair *a, pair *b)
       {  if (b->T.basicType == T_STRING)
 	 {
             if (b->R->v.s != NULL)
-	        WerrprintfWithPos("Can't trunc a STRING %s", b->R->v.s);
+	        WerrprintfWithPos("Can't take sqrt of STRING %s", b->R->v.s);
             else
-	        WerrprintfWithPos("Can't trunc a STRING");
+	        WerrprintfWithPos("Can't take sqrt of a STRING");
             execPError = 1;
 #ifdef VNMRJ
 	    jExpressionError();
@@ -943,9 +943,9 @@ int do_NOT(pair *a, pair *b)
       {  if (b->T.basicType == T_STRING)
 	 {
             if (b->R->v.s != NULL)
-	        WerrprintfWithPos("Can't trunc a STRING %s", b->R->v.s);
+	        WerrprintfWithPos("Can't use not with STRING %s", b->R->v.s);
             else
-	        WerrprintfWithPos("Can't trunc a STRING");
+	        WerrprintfWithPos("Can't use not with a STRING");
             execPError = 1;
 #ifdef VNMRJ
 	    jExpressionError();
