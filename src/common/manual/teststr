@@ -6,6 +6,9 @@ teststr(parameter,string ,tree,'starts'):$ret - find which array element
                                                     starts with string
 teststr(parameter,string ,tree,'startsNocase'):$ret - find which array element
                                                     starts with string (case insensitive)
+teststr(parameter,string ,tree,'last'):$ret - find the last array element that matches string
+teststr(parameter,string ,tree,'$ret'):$tot - return array indices in $ret of all elements
+                                                     that matches string
 ****************************************************************************
 
   The teststr command requires at least two arguments. The first is the
@@ -13,18 +16,27 @@ teststr(parameter,string ,tree,'startsNocase'):$ret - find which array element
   in single quotes.  The teststr command needs the name of the parameter, not
   its values.  The second is a string.  The optional third
   argument is the parameter tree. The default is current.  An optional fourth
-  argument is the keyword 'nocase', 'starts', or 'startsnocase'.  These select
+  or fifth argument is the keyword 'nocase', 'starts', or 'startsnocase'.  These select
   a case-insensitive match, a match that starts with the string, and a
   case-insensitive match that starts with the string, respectively. The keywords
-  themselves are case-insensitve.  The parameter tree argument must be supplied
-  in order to use one of these three keywords.
+  themselves are case-insensitve. The keyword 'last' selects the last element that matches
+  the string. If the name of a local variable, that is, one that starts with a $, then
+  the indices of all elements that match the string are arrayed in that variable.
+  The $ variable must exist and it must be of real type.
+  The 'last' keyword or the $ variable can be used with the 'nocase', 'starts', and
+  'startsnocase'.  The parameter tree argument must be supplied
+  in order to use one of these keywords.
 
   Macro parameters can be used as the first argument.  In this case, the
   third argument must be 'local'.
 
   This command sets $ret to the index of the array element that matches
   the second argument.  If none of the array values of the parameter match
-  the second argument, a zero is returned.
+  the second argument, a zero is returned. If the local $ variable is used
+  to get the indices of all the matches, then the return value from teststr
+  is the total number of matches.
+
+  If the 'last' argument is given, 
 
   For example,
 
@@ -70,3 +82,12 @@ teststr(parameter,string ,tree,'startsNocase'):$ret - find which array element
 
   teststr('$greet','labas','local'):r1
 
+  $var = 'type0','type1','type1','type3'
+  $indices=0
+
+  teststr('$var','type1','local'):$ret
+  sets $ret=2
+  teststr('$var','type1','local','last'):$ret
+  sets $ret=3
+  teststr('$var','type1','local','$indices'):$tot
+  sets $tot=2 and $indices=2,3

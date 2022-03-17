@@ -2179,18 +2179,23 @@ int getvalue(int argc, char *argv[], int retc, char *retv[])
 int teststr(int argc, char *argv[], int retc, char *retv[])
 {   char    *tree;
     symbol **root;
+    symbol **rootOutput;
     varInfo *v;
+    varInfo *v1 = NULL;
     int      index;
     int nocase = 0;
     int starts = -1;
     int startsnocase = -1;
+    int last = 0;
+    int all = 0;
+    int cnt = 0;
 
 #ifdef DEBUG
     if (Tflag)
       for (index=0; index<argc ;index++)
         TPRINT3("%s: argv[%d] = \"%s\"\n",argv[0],index,argv[index]);
 #endif 
-    if ((argc < 3) || (argc > 5))
+    if ((argc < 3) || (argc > 6))
     {
       Werrprintf("Usage -- %s(name,key[,tree[,<'nocase', 'starts' or 'startsNocase'> ]])",argv[0]);
       ABORT;
@@ -2209,6 +2214,43 @@ int teststr(int argc, char *argv[], int retc, char *retv[])
           starts = (int) strlen(argv[2]);
        if (!strcasecmp(argv[4],"startsnocase") )
           startsnocase = (int) strlen(argv[2]);
+       if (!strcasecmp(argv[4],"last") )
+          last = 1;
+       if (argv[4][0] == '$')
+          all = 4;
+    }
+    if (argc > 5)
+    {
+       if (!strcasecmp(argv[5],"nocase") )
+          nocase = 1;
+       if (!strcasecmp(argv[5],"starts") )
+          starts = (int) strlen(argv[2]);
+       if (!strcasecmp(argv[5],"startsnocase") )
+          startsnocase = (int) strlen(argv[2]);
+       if (!strcasecmp(argv[5],"last") )
+          last = 1;
+       if (argv[5][0] == '$')
+          all = 5;
+    }
+    if (all)
+    {
+       if ((rootOutput=selectVarTree(argv[all])) == NULL)
+       {
+          Werrprintf("%s: local variable for output \"%s\" doesn't exist",argv[0],argv[all]);
+	  ABORT;
+       }
+       if ((v1 = rfindVar(argv[all],rootOutput)) == NULL)
+       {
+          Werrprintf("%s: variable \"%s\" doesn't exist",argv[0],argv[all]);
+          ABORT;
+       }
+       if (v1->T.basicType != T_REAL)
+       {
+      	  Werrprintf("%s: output variable %s must be a real parameter",argv[0], argv[all]);
+	  ABORT;
+       }
+       assignReal(0.0,v1,0); // clear existing arrayed values.
+       last = 1;             // search the entire array list
     }
     if (strcmp(tree,"local") == 0)
     {
@@ -2241,7 +2283,11 @@ int teststr(int argc, char *argv[], int retc, char *retv[])
                   if (strcasecmp(argv[2],r->v.s) == 0)   
                   {   
 	             index = i;
-	             i = v->T.size + 1;
+                     cnt++;
+                     if (all)
+                        assignReal((double) i,v1, cnt);
+                     if ( ! last)
+	                i = v->T.size + 1;
                   }
                }
                else if (starts >= 0)
@@ -2249,7 +2295,11 @@ int teststr(int argc, char *argv[], int retc, char *retv[])
                   if (strncmp(argv[2],r->v.s, starts) == 0)   
                   {   
 	             index = i;
-	             i = v->T.size + 1;
+                     cnt++;
+                     if (all)
+                        assignReal((double) i,v1, cnt);
+                     if ( ! last)
+	                i = v->T.size + 1;
                   }
                }
                else if (startsnocase >= 0)
@@ -2257,7 +2307,11 @@ int teststr(int argc, char *argv[], int retc, char *retv[])
                   if (strncasecmp(argv[2],r->v.s, startsnocase) == 0)   
                   {   
 	             index = i;
-	             i = v->T.size + 1;
+                     cnt++;
+                     if (all)
+                        assignReal((double) i,v1, cnt);
+                     if ( ! last)
+	                i = v->T.size + 1;
                   }
                }
                else
@@ -2265,7 +2319,11 @@ int teststr(int argc, char *argv[], int retc, char *retv[])
                   if (strcmp(argv[2],r->v.s) == 0)   
                   {   
 	             index = i;
-	             i = v->T.size + 1;
+                     cnt++;
+                     if (all)
+                        assignReal((double) i,v1, cnt);
+                     if ( ! last)
+	                i = v->T.size + 1;
                   }
                }
 	       r = r->next;
@@ -2282,7 +2340,12 @@ int teststr(int argc, char *argv[], int retc, char *retv[])
 	ABORT;
     }
     if (retc>0)
-       retv[0] = (char *)intString(index);
+    {
+       if (all)
+          retv[0] = (char *)intString(cnt);
+       else
+          retv[0] = (char *)intString(index);
+    }
     else if (index)
        Winfoprintf("%s matches %s[%d]",argv[2],argv[1],index);
     else
