@@ -209,6 +209,16 @@ installTftp() {
    then
       apt-get -y install tftpd-hpa &>> ${vnmrsystem}/adm/log/tftp.log
    fi
+ else
+   if [ "$(rpm -q tftp --quiet;echo $?)" != "0" ] 
+   then
+      echo "Installing console communication tool (tftp)..."
+      yum -y install tftp &>> ${vnmrsystem}/adm/log/tftp.log
+   fi
+   if [ "$(rpm -q tftp-server --quiet;echo $?)" != "0" ] 
+   then
+      yum -y install tftp-server &>> ${vnmrsystem}/adm/log/tftp.log
+   fi
  fi
 }
 
@@ -310,6 +320,9 @@ enableTftp() {
          echo " "
          exit 0
       fi
+   else
+     systemctl enable tftp.socket
+     systemctl start tftp.socket
    fi
  fi
 }
@@ -791,7 +804,7 @@ if [[ x${cons} = "xinova" ]] || [[ x${cons} = "xmerc"* ]] ; then
 # Done no matter what, in case CPU (=ethernet address) was changed
 #-----------------------------------------------------------------
 
-   enableTftp 0
+   enableTftp 1
    backup_bootpd
    cp "${vnmrsystem}/acqbin/bootpd.51" /usr/sbin/bootpd
    vnmr_bootptab="${vnmrsystem}/acq/bootptab.51"
