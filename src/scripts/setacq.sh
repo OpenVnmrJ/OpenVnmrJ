@@ -310,6 +310,16 @@ enableTftp() {
          echo " "
          exit 0
       fi
+      if [[ -f $sysdDir/tftp.socket ]]; then
+         systemctl is-enabled --quiet tftp.socket
+         if [[ $? -ne 0 ]]; then
+            systemctl enable --quiet tftp.socket
+         fi
+         systemctl is-active --quiet tftp.socket
+         if [[ $? -ne 0 ]]; then
+            systemctl start tftp.socket
+         fi
+      fi
    fi
  fi
 }
@@ -846,17 +856,6 @@ else
       systemctl is-active --quiet tftp.socket
       if [[ $? -ne 0 ]]; then
          systemctl start tftp.socket
-      fi
-     fi
-
-     if [[ -f $sysdDir/tftp.service ]]; then
-      systemctl is-enabled --quiet tftp.service
-      if [[ $? -ne 0 ]]; then
-         systemctl enable --quiet tftp.service
-      fi
-      systemctl is-active --quiet tftp.service
-      if [[ $? -ne 0 ]]; then
-         systemctl start tftp.service
       fi
      fi
 
