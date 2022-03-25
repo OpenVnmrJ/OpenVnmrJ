@@ -391,6 +391,7 @@ if [ ! -x /usr/bin/dpkg ]; then
     epelList="$epelList scons meld x11vnc"
   else
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
+    package68List="$package68List libtirpc-devel"
   fi
   if [ $version -lt 7 ]; then
 #  Add older motif package
