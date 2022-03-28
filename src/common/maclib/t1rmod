@@ -1,0 +1,26 @@
+// t1rho macro
+nll:$peaks
+alphatextname:$file
+$arg='' if $#>0 then $arg=$1 endif
+$line=''
+readfile($file,'$line','','','local'):$origlines
+copystr('peak\tfrq/ppm\tintens\tT1rho\terror',$file)
+$i=0
+$outline=''
+while ($i < $peaks) do
+   $i=$i+1
+   substr($line[$i+1],2):$frq
+   substr($line[$i+1],3):$amp
+   substr($line[$peaks+$i+3],2):$t1
+   substr($line[$peaks+$i+3],3):$err
+   write('line3','%d\t%g\t%g\t%g\t%g',$i,$frq,$amp,$t1,$err):$outline
+   appendstr($outline,$file)
+endwhile
+if $arg <> 'tableonly' then
+  appendstr('',$file)
+  $i = $peaks*2 + 3
+  while ($i < $origlines) do
+     $i=$i+1
+     appendstr($line[$i],$file)
+  endwhile
+endif
