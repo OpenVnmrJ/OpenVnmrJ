@@ -523,7 +523,7 @@ char *check_spaces(char *inptr, char *outptr, int maxlen )
 /************************************************************************/
 /*  The routine "verify_fname" was written to help fix a problem
     where the 'svf' command would create file names with obscure
-    characters
+    characters, such as ' ', causing problems with UNIX.
 
     If the argument contains a character listed in the table or
     is a control character (ADE < 32), the routine returns -1;
@@ -531,6 +531,7 @@ char *check_spaces(char *inptr, char *outptr, int maxlen )
 
     Each character in the table below is disallowed for one of
     the following reasons:
+        It leads to inconvenient file names, e. g. ' '
 	The shell uses the character for its own reasons, e. g. '<', '|'
 	The character is a quotation character - ', ", `
 	The file-name interpreter uses the character, e. g. '*', '?', '~'
@@ -538,9 +539,16 @@ char *check_spaces(char *inptr, char *outptr, int maxlen )
     The NUL character serves to terminate this table.			*/
 /************************************************************************/
 
+#if defined(__INTERIX) || defined(MACOS)
+/*  Space character allowed for Interix or MACOS */
 static char illegal_fchars[] = {
 	     '!', '"', '$', '&', '\'', '(', ')', '*', ';', '<', '>', '?',
 	'\\', '[', ']', '^', '`', '{', '}', '|', ',', '\0' };
+#else
+static char illegal_fchars[] = {
+        ' ', '!', '"', '$', '&', '\'', '(', ')', '*', ';', '<', '>', '?',
+        '\\', '[', ']', '^', '`', '{', '}', '|', ',', '\0' };
+#endif
 
 /*  Returns 0 is supplied character is valid for a file name
  *  returns -1 if supplied character is not valid for a file name
