@@ -4207,6 +4207,7 @@ int readfile(int argc, char *argv[], int retc, char *retv[])
 #define MAXPAR 16
 int readstr(int argc, char *argv[], int retc, char *retv[])
 {
+   symbol **inRoot;
    symbol **root;
    varInfo *vIn, *vOut[MAXPAR];
    Rval *r;
@@ -4216,6 +4217,7 @@ int readstr(int argc, char *argv[], int retc, char *retv[])
    int  length, i, numRows=0;
    int  index;
    int  wLen;
+   int  argOffset;
 
    /* Put args into variables */ 
    /* Must be at least 3 args */
@@ -4223,39 +4225,56 @@ int readstr(int argc, char *argv[], int retc, char *retv[])
       Werrprintf("Usage: %s(stringvar, par1, par2, ...):$num",argv[0]);
       ABORT;
    }
-   if(argc > MAXPAR+2) {
+   argOffset = 2;
+   if (argv[1][0] != '$')
+   {
+      if (argv[2][0] == '$')
+      {
+         inRoot = getTreeRootByIndex(CURRENT);
+      }
+      else
+      {
+         if ((inRoot = getTreeRoot(argv[2])) == NULL)
+         {
+            Werrprintf("%s: \"%s\" no such tree.",argv[0], argv[2]);
+            ABORT;
+         }
+         argOffset = 3;
+      }
+      root=selectVarTree(argv[argOffset]);
+   }
+   else
+   {
+      if ((inRoot=selectVarTree(argv[1])) == NULL)
+      {
+         Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[1]);
+         ABORT;
+      }
+      root = inRoot;
+   }
+   if(argc > MAXPAR+argOffset) {
       Werrprintf("%s: maximum returned parameters is %d", argv[0], MAXPAR);
       ABORT;
    }
-   if (argv[1][0] != '$')
-   {
-      Werrprintf("%s: string variable \"%s\" must be a $var",argv[0],argv[1]);
-      ABORT;
-   }
-   if ((root=selectVarTree(argv[1])) == NULL)
-   {
-      Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[1]);
-      ABORT;
-   }
-   if ((vIn = rfindVar(argv[1],root)) == NULL)
-   {   Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[1]);
+   if ((vIn = rfindVar(argv[1],inRoot)) == NULL)
+   {   Werrprintf("%s: input variable \"%s\" doesn't exist",argv[0],argv[1]);
        ABORT;
    }
    if (vIn->T.basicType == T_REAL)
    {
-      Werrprintf("%s: local variable \"%s\" must be string type",argv[0],argv[1]);
+      Werrprintf("%s: input variable \"%s\" must be string type",argv[0],argv[1]);
       ABORT;
    }
    for ( i=0; i<MAXPAR; i++)
       vOut[i] = NULL;
-   for (i = 0; i < argc-2; i++)
+   for (i = 0; i < argc-argOffset; i++)
    {
-      if (strlen(argv[i+2]))
+      if (strlen(argv[i+argOffset]))
       {
-         if ( (vOut[i] = rfindVar(argv[i+2],root)) == NULL)
+         if ( (vOut[i] = rfindVar(argv[i+argOffset],root)) == NULL)
          {
              Werrprintf("%s: return parameter \"%s\" doesn't exist",
-                        argv[0],argv[i+2]);
+                        argv[0],argv[i+argOffset]);
              ABORT;
          }
          else
@@ -4294,7 +4313,7 @@ int readstr(int argc, char *argv[], int retc, char *retv[])
       /* Get the part of the string following any leading white space */
       ptr = &line1[i];
       length = strlen(ptr);
-      while ( j < (argc - 3)  )
+      while ( j < (argc - argOffset - 1)  )
       {
          wLen = 0;
          while ( ( (c = ptr[wLen]) != ' ') &&
