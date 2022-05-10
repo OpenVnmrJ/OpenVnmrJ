@@ -57,14 +57,10 @@ else
    . /etc/lsb-release
    distmajor=${DISTRIB_RELEASE:0:2}
    packagecommonlist='tcsh make gcc gfortran expect openssh-server mutt sharutils sendmail-cf gnome-power-manager kdiff3 ghostscript imagemagick xterm'
-   if [ $distmajor -ge 16 ] ; then
+   if [ $distmajor -ge 22 ] ; then
+     packageXlist='default-jre bc libmotif-dev'
+   elif [ $distmajor -gt 16 ] ; then
      packageXlist='openjdk-8-jre bc libmotif-dev'
-   elif [ $distmajor -ge 14 ] ; then
-     packageXlist='openjdk-6-jre libmotif-dev'
-   elif [ $distmajor -gt 10 ] ; then
-     packageXlist='openjdk-6-jre ia32-libs lesstif2-dev'
-   else
-     packageXlist='ia32-sun-java6-bin ia32-libs lesstif2-dev'
    fi
    packagelist="$packagecommonlist $packageXlist";
 fi
