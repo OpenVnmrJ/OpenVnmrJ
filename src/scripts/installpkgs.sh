@@ -638,8 +638,8 @@ if [ ! -x /usr/bin/dpkg ]; then
 else
   . /etc/lsb-release
   distmajor=${DISTRIB_RELEASE:0:2}
-  if [ $distmajor -lt 14 ] ; then
-    echo "Only Ubuntu 14 or newer is supported"
+  if [ $distmajor -lt 18 ] ; then
+    echo "Only Ubuntu 18 or newer is supported"
     echo " "
     exit 2
   fi
@@ -727,11 +727,14 @@ else
                  gnome-session
                  gcc-multilib
                  g++-multilib
-                 openjdk-8-jre
-                 lib32stdc++-8-dev
                  libc6-dev
                  libglu1-mesa-dev
                  libgsl-dev'
+    if [[ $distmajor -gt 20 ]]; then
+       installList="$installList default-jre lib32stdc++6"
+    else
+       installList="$installList openjdk-8-jre lib32stdc++-8-dev"
+    fi
     if [[ $b12Acq -ne 1 ]]; then
        installList="$installList libcrypt1:i386"
     fi
@@ -740,14 +743,6 @@ else
    # these are needed to build
     apt-get $repoArg -y install gdm3 gnome-session openjdk-8-jre \
       lib32stdc++-7-dev libc6-dev-i386 libglu1-mesa-dev libgsl-dev &>> $logfile
-  elif [ $distmajor -gt 14 ] ; then
-   # these are needed to build
-    apt-get $repoArg -y install postgresql gdm3 gnome-session openjdk-8-jre \
-      lib32stdc++-5-dev libc6-dev-i386 libglu1-mesa-dev libgsl-dev &>> $logfile
-  else
-    # these are needed to build
-    apt-get $repoArg -y install postgresql openjdk-6-jre lib32stdc++-4.8-dev \
-            libc6-dev-i386 libglu1-mesa-dev libgsl0-dev &>> $logfile
   fi
   if [[ $ovjRepo -eq 1 ]]; then
      repoPath=$(head -n 1 /etc/apt/sources.list | awk '{print $5}')
