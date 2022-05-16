@@ -48,9 +48,19 @@ void AspBox::display(spAspCell_t cell, spAspDataInfo_t dataInfo) {
    roiX=roiY=roiW=roiH=0;
    if(disFlag & ANN_SHOW_ROI) {
      roiX=(int)pCoord[0].x;
-     roiY=(int)pCoord[0].y;
      roiW=(int)pCoord[1].x-roiX;
+     if (roiW < 0)
+     {
+       roiX=(int)pCoord[1].x;
+       roiW=(int)pCoord[0].x-roiX;
+     }
+     roiY=(int)pCoord[0].y;
      roiH=(int)pCoord[1].y-roiY;
+     if (roiH < 0)
+     {
+       roiY=(int)pCoord[1].y;
+       roiH=(int)pCoord[0].y-roiY;
+     }
      if(created_type == ANNO_OVAL)
 	draw_oval(roiX,roiY,roiX+roiW,roiY+roiH,0,roiColor,fillRoi);
      else if(roundBox)

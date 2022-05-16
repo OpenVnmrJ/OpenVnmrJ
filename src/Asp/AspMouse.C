@@ -848,6 +848,12 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 		frame->unselectRois();
             }
             if(anno != NULL) {
+                if ((state == modifyBox) ||
+                     (state == modifyOval) )
+                {
+		   AspDisAnno::checkAnno(frame, anno, x, y);
+                }
+         
 		anno->selected=0;
 		anno->selectedHandle=0;
            	sprintf(cmd,"aspCmd('annoModified',%d,%d,%d)\n",anno->index,x,y);

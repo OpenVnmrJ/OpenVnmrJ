@@ -614,6 +614,18 @@ void AspDisAnno::modifyAnno(spAspFrame_t frame, AspAnno *anno, int x, int y,
    frame->displayTop();
 }
 
+void AspDisAnno::checkAnno(spAspFrame_t frame, AspAnno *anno, int x, int y)
+{
+   if(anno == NULL) return;
+   if(frame == nullAspFrame) return;
+   spAspCell_t cell =  frame->selectCell(x,y);
+
+   if(cell == nullAspCell) return;
+
+   anno->check(cell); 
+   frame->displayTop();
+}
+
 void AspDisAnno::deleteAnno(spAspFrame_t frame, AspAnno *anno) {
    AspAnnoList *annoList = frame->getAnnoList();
    if(annoList == NULL) return;

@@ -394,6 +394,30 @@ int AspAnno::selectLabel(int x, int y) {
    return selected;
 }
 
+void AspAnno::check(spAspCell_t cell) {
+   if(npts<1) return;
+   double tmp;
+   if (sCoord[1].x > sCoord[0].x )
+   {
+      tmp = sCoord[0].x;
+      sCoord[0].x = sCoord[1].x;
+      sCoord[1].x = tmp;
+      tmp = pCoord[0].x;
+      pCoord[0].x = pCoord[1].x;
+      pCoord[1].x = tmp;
+   }
+   if (sCoord[1].y < sCoord[0].y )
+   {
+      tmp = sCoord[0].y;
+      sCoord[0].y = sCoord[1].y;
+      sCoord[1].y = tmp;
+      tmp = pCoord[0].y;
+      pCoord[0].y = pCoord[1].y;
+      pCoord[1].y = tmp;
+   }
+
+}
+
 void AspAnno::modify(spAspCell_t cell, int x, int y, int prevX, int prevY) {
 
    if(npts<1) return;
