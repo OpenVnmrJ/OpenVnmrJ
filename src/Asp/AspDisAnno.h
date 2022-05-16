@@ -27,6 +27,7 @@ public:
 
     static AspAnno *createAnno(spAspFrame_t frame, int x, int y, AnnoType_t type,
                                bool trCase=false);
+    static void checkAnno(spAspFrame_t frame, AspAnno *anno, int x, int y);
     static void modifyAnno(spAspFrame_t frame, AspAnno *anno, int x, int y, int prevX, int prevY,
                            bool trCase = false);
     static void addPoint(spAspFrame_t frame, AspAnno *anno, int x, int y, bool insert=false);

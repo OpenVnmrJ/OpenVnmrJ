@@ -103,6 +103,7 @@ public:
 
     virtual string toString();
 
+    virtual void check(spAspCell_t cell);
     virtual void modify(spAspCell_t cell, int x, int y, int prevX, int prevY);
     virtual void modifyTR(spAspCell_t cell, int x, int y, int prevX, int prevY, bool trCase=false);
     virtual void display(spAspCell_t cell, spAspDataInfo_t dataInfo);
