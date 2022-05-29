@@ -441,7 +441,7 @@ int copyFile(const char *fromFile, const char *toFile, mode_t mode)
       return(NO_FIRST_FILE);
    }
    if (mode == 0)
-      mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
+      mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
    if ( (f2=open(toFile,O_WRONLY|O_CREAT|O_TRUNC,mode)) == -1 )
    {
       close(f1);
@@ -455,7 +455,6 @@ int copyFile(const char *fromFile, const char *toFile, mode_t mode)
          return(SIZE_MISMATCH);
       }
    }
-   fchmod(f2,mode);
    close(f1);
    close(f2);
    return(0);
