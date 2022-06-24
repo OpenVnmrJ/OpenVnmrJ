@@ -106,7 +106,8 @@ public  class SmsInfoPanel extends JPanel implements SmsDef
         zone2Menu.addActionListener(zoneL);
         zone2Menu.addItem("1");
         zone2Menu.addItem("2");
-        zone2Menu.addItem("All");
+        zone2Menu.addItem("1,2");
+        zone2Menu.addItem("2,1");
 
         orientL = new OrientListener();
         orientMenu = new JComboBox();
@@ -531,8 +532,11 @@ public  class SmsInfoPanel extends JPanel implements SmsDef
                return;
             SmsUtil.setZone(str);
             // textPan.setText("");
-            if (str.compareToIgnoreCase("All")!=0)
-                Util.getActiveView().sendToVnmr("vzone="+str);
+            if ( ! str.contains(",") )
+            {
+               if (str.compareToIgnoreCase("All") != 0)
+                  Util.getActiveView().sendToVnmr("vzone="+str);
+            }
             showSampleInfo(null);
             setZoneInfo(str);
         }

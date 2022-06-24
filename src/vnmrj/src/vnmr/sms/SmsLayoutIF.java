@@ -13,5 +13,6 @@ public interface  SmsLayoutIF {
     public void setSampleList(SmsSample s[]);
     public void setStartSample(int s);
     public void setLastSample(int s);
+    public void setRev(int s);
     public int  zoomDir();
 }

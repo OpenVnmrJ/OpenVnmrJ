@@ -33,6 +33,9 @@ public class GrkLayout implements LayoutManager, SmsLayoutIF, SmsDef
    public void setLastSample(int s) {
    }
 
+   public void setRev(int s) {
+   }
+
    public int zoomDir() {
        return scaleDir;
    }

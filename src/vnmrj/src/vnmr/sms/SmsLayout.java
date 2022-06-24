@@ -17,6 +17,7 @@ public class SmsLayout implements LayoutManager, SmsLayoutIF
    private SmsSample sList[] = null;
    private int first;
    private int last;
+   private int rev = 0;
    private int scaleDir = 0;
    static int[] nums = {6, 7, 6, 7, 6, 7, 6, 5, 6, 7};
 
@@ -30,6 +31,10 @@ public class SmsLayout implements LayoutManager, SmsLayoutIF
 
    public void setLastSample(int s) {
        last = s;
+   }
+
+   public void setRev(int s) {
+       rev = s;
    }
 
    public int zoomDir() {
@@ -126,6 +131,13 @@ public class SmsLayout implements LayoutManager, SmsLayoutIF
          SmsSample obj;
          y1 = (h - w2 * rows - hgap * (rows - 1) ) / 2;
          x1 = (w - w2 * cols - hgap * (cols - 1) ) / 2;
+         if (rev == 1)
+         {
+            if (vertical)
+               y1 = y1 + w2 * 9 + hgap * 8;
+            else
+               x1 = x1 + w2 * 8 + hgap * 7;
+         }
          index = first;
          y = y1;
          samples = first + 49;
@@ -151,11 +163,17 @@ public class SmsLayout implements LayoutManager, SmsLayoutIF
                 break;
             samples += 50;
             if (vertical) {
-               y = y1 + w2 * 9 + hgap * 8;
+               if (rev == 1)
+                  y = (h - w2 * rows - hgap * (rows - 1) ) / 2;
+               else
+                  y = y1 + w2 * 9 + hgap * 8;
             }
             else {
                y = y1;
-               x1 = x1 + w2 * 8 + hgap * 7;
+               if (rev == 1)
+                  x1 = (w - w2 * cols - hgap * (cols - 1) ) / 2;
+               else
+                  x1 = x1 + w2 * 8 + hgap * 7;
             }
          }
       }
