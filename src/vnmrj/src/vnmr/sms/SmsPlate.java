@@ -19,6 +19,7 @@ public class SmsPlate extends GenPlateIF implements SmsDef
    public int firstSample = 1;
    public int lastSample = 1;
    public int sampleNum = 1;
+   public int rev = 0;
    public int objW = 0;
    public int fontH = 16;
    public int fontH2 = 16;
@@ -73,15 +74,18 @@ public class SmsPlate extends GenPlateIF implements SmsDef
    }
 
    public void setZone(int s) {
+       rev = 0;
        if (s <= 1) {
           firstSample = 1;
           lastSample = 50;
        }
        else {
           if (sampleNum == 100) {
-             if (s > 900) {  // all
+             if (s > 900) {  // all or 1,2 or 2,1
                  firstSample = 1;
                  lastSample = 100;
+                 if (s == 998)
+                    rev = 1;
              }
              else {
                  firstSample = 51;
@@ -92,6 +96,7 @@ public class SmsPlate extends GenPlateIF implements SmsDef
        clearSelect(true);
        smsLayout.setStartSample(firstSample);
        smsLayout.setLastSample(lastSample);
+       smsLayout.setRev(rev);
    }
 
    public SmsSample getSample(int zone, int num) {

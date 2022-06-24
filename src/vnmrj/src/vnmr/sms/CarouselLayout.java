@@ -31,6 +31,9 @@ public class  CarouselLayout implements LayoutManager, SmsLayoutIF
        last = s;
    }
 
+   public void setRev(int s) {
+   }
+
    public int zoomDir() {
        return scaleDir;
    }

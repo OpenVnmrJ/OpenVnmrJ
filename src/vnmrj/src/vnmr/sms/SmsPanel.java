@@ -420,8 +420,11 @@ public class SmsPanel extends JPanel
         int n = 0;
         if (s == null)
            return;
-        if (s.equalsIgnoreCase("All"))
+        if ( s.equalsIgnoreCase("All") ||
+             s.equalsIgnoreCase("1,2") )
            n = 999;
+        else if ( s.equalsIgnoreCase("2,1"))
+           n = 998;
         else {
            try {
              n = Integer.parseInt(s);
