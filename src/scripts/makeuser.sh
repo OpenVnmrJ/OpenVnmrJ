@@ -631,10 +631,10 @@ else  #current user is root
     then
 	if [ x$user_update = "xy" ]
 	then
-            cp_backup "$vnmrsystem/user_templates/.login" "$cur_homedir/.login"
+            # cp_backup "$vnmrsystem/user_templates/.login" "$cur_homedir/.login"
             if [ x$ostype = "xLinux" ]
             then
-                cp_backup "$vnmrsystem/user_templates/.vnmrenv" "$cur_homedir/.vnmrenv"
+                # cp_backup "$vnmrsystem/user_templates/.vnmrenv" "$cur_homedir/.vnmrenv"
                 cp_backup "$vnmrsystem/user_templates/.vnmrenvbash" "$cur_homedir/.vnmrenvbash"
                 cp_backup "$vnmrsystem/user_templates/.vnmrenvsh" "$cur_homedir/.vnmrenvsh"
                 cp_backup "$vnmrsystem/user_templates/.vxresource" "$cur_homedir/.vxresource"
