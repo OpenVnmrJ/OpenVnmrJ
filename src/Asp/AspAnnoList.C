@@ -89,6 +89,7 @@ void AspAnnoList::deleteAnno() {
    for (itr = annoMap->begin(); itr != annoMap->end(); ++itr) {
         if(itr->second->selected != 0) {
 	  annoMap->erase(itr->first);
+	  break;
 	}
    }
    int inx=0;
