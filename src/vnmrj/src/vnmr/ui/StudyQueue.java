@@ -498,13 +498,13 @@ public class StudyQueue implements VObjDef
                 String path = FileUtil.openPath(fn);
                 if (path == null) {
                     fp.delete();
-                    postError("cannot load study file " + fn);
+                    setDebug("cannot load study file " + fn);
                     return;
                 }
                 mgr.newTree(path);
-		// set sqdirs[jviewport]=path
-		path = tok.nextToken().trim();
-		sendSQpath(path);
+		        // set sqdirs[jviewport]=path
+		        path = tok.nextToken().trim();
+		        sendSQpath(path);
                 fp.delete();
             }
         }
