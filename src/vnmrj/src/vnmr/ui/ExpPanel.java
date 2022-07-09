@@ -7204,7 +7204,24 @@ public class ExpPanel extends JPanel
         //if(outPort != null)
         //	System.out.println("lost:"+cmd);
 
-        sendToVnmr(cmd);
+        if ( !cmd.contains("$") || cmd.startsWith("jFunc") )
+        {
+           sendToVnmr(cmd);
+        }
+        else
+        {
+           StringBuffer sb = new StringBuffer().append("jFunc(104,`");
+           for (int i=0; i<cmd.length(); i++)
+           {
+              if (cmd.charAt(i) == '`') {
+                 if (i == 0 || cmd.charAt(i-1) != '\\')
+                    sb.append('\\');
+              }
+              sb.append(cmd.charAt(i));
+           }
+           sb.append("`)\n");
+           sendToVnmr(sb.toString());
+        }
     }
 
     public void setCanvasCursor(String c) {

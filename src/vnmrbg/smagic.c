@@ -3404,6 +3404,27 @@ static void jShowExpression(int exnum, char *express, char *format )
 	jExpressUse = 0;
 }
 
+/* execute command jFunc 104
+ * this is to avoid creating $variables in the current tree.
+ */
+static void jExecCmd(char *incmd )
+{
+   char cmd[ 8*MAXPATH ];
+   strcpy(cmd,incmd);
+   if ( cmd[strlen(cmd)] != '\n')
+      strcat(cmd,"\n");
+   if (strstr(cmd,"$"))
+   {
+      pushTree();
+      execString( cmd );
+      popTree();
+   }
+   else
+   {
+      execString( cmd );
+   }
+}
+
 /* execute expression ($VALUE = ...) or any command */
 static void jExecExpression(char *key, char *exnum, char *express, char *format )
 {
@@ -3892,6 +3913,7 @@ int isimagebrowser(int argc, char *argv[], int retc, char *retv[])
 #define CMDLINEOK  101
 #define RETEVAL  102
 #define FVERTICAL 103
+#define JEXECCMD 104
 
 #define JGRAPH 	1
 #define VPORT 	2
@@ -4234,6 +4256,11 @@ static int jxFunc(int func, int argc, char *argv[])
                      if (argc > 3)
                         k = atoi(argv[3]);
                      set_jframe_vertical(i, k);
+		     break;
+               case JEXECCMD:  // 104x
+                     if (argc < 3)
+                        return(1);
+                     jExecCmd(argv[2]);
 		     break;
                default:
                      return (0);
