@@ -456,8 +456,6 @@ int Pwd(int argc, char *argv[], int retc, char *retv[])
 |
 +-----------------------------------------------------------------------------*/
 
-#define MAXSHSTRING	1024
-
 /*
 static char *my_argv[] = { 0 , 0 };
 */
@@ -658,7 +656,7 @@ int Lf(int argc, char *argv[], int retc, char *retv[])
 
 int Cp(int argc, char *argv[], int retc, char *retv[])
 {   char cmdstr[MAXSHSTRING];
-    int  i,len;
+    int  i,j;
     int res;
 
     if ( (argc == 3) || ( (argc == 4) && ! strcmp(argv[1],"-p") ) )  // simple copy
@@ -883,14 +881,32 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        }
        RETURN;
     }
-    strcpy(cmdstr,"/bin/cp ");
+    strcpy(cmdstr,"cp ");
+    j = 2;
+    if (argc < 3)
+    {
+       Werrprintf("%s command requires at least 2 arguments", argv[0]);
+       ABORT;
+    }
     for (i=1; i<argc; i++)
     {
-	strncat(cmdstr," '",MAXSHSTRING - strlen(cmdstr) -1);
-	len = MAXSHSTRING - strlen(cmdstr) -1;
-	strncat(cmdstr,argv[i],len);
-	strncat(cmdstr,"'",len);
+       int k = 0;
+       cmdstr[j++] = ' ';
+       if (j + strlen(argv[i]) > MAXSHSTRING - 18)
+       {
+          Werrprintf("%s arguments exceed %d characters",
+                     argv[0], MAXSHSTRING - 18);
+          ABORT;
+       }
+       while (k < strlen(argv[i]))
+       {
+          if (argv[i][k] == ' ')
+             cmdstr[j++] = '\\';
+          cmdstr[j++] = argv[i][k];
+          k++;
+       }
     }
+    cmdstr[j] = '\0';
     
     TPRINT1("cp: command string \"%s\"\n",cmdstr);
     strncat(cmdstr," 2> /dev/null", MAXSHSTRING - strlen(cmdstr) - 14);
