@@ -163,32 +163,93 @@ int AspFrameMgr::aspRoi(int argc, char *argv[], int retc, char *retv[]) {
 
    spAspFrame_t frame = mgr->getCurrentFrame();
    if(frame == nullAspFrame) {
-	RETURN;
+      if (retc)
+      {
+	      retv[0]=realString(0.0);
+         if (retc > 1)
+	         retv[1]=realString(0.0);
+      }
+      RETURN;
    }
 
    if(retc>0) {
-	int flag = frame->getAnnoFlag();
-	if(flag & ANN_ROIS) retv[0]=realString(1.0);
-	else retv[0]=realString(0.0);
-	retc--;
-	retv++;
-	if(retc>1) {
-	  retv[0]=realString((double)frame->getRoiList()->getNumRois());
-	  retc--;
-	  retv++;
-	}
-	AspRoiList *roiList = frame->getRoiList();
-	AspRoiMap::iterator itr;
-	spAspRoi_t roi;
-	for (roi= roiList->getFirstRoi(itr); roi != nullAspRoi && retc>1; roi= roiList->getNextRoi(itr)) {
-	  retv[0] = realString(roi->cursor1->resonances[0].freq); 
-	  retc--;
-	  retv++;
-	  retv[0] = realString(roi->cursor2->resonances[0].freq); 
-	  retc--;
-	  retv++;
-	}
-	RETURN;
+      if (argc == 1)
+      {
+  	      int flag = frame->getAnnoFlag();
+	      if(flag & ANN_ROIS) retv[0]=realString(1.0);
+	      else retv[0]=realString(0.0);
+	      retc--;
+      	retv++;
+	      if(retc>0)
+	        retv[0]=realString((double)frame->getRoiList()->getNumRois());
+         RETURN;
+      }
+      else if ((argc == 2) && ((retc == 2) || (retc == 3)) )
+      {
+         int id;
+         int count = 0;
+         id = atoi(argv[1]);
+	      AspRoiList *roiList = frame->getRoiList();
+         if ( (id < 0) || (id > roiList->getNumRois()) )
+         {
+	         retv[0]=realString(0.0);
+	         Winfoprintf("%s(%d) index out of bounds",argv[0],id);
+            RETURN;
+         }
+         AspRoiMap::iterator itr;
+         spAspRoi_t roi;
+         for (roi= roiList->getFirstRoi(itr); roi != nullAspRoi && retc>1;
+             roi= roiList->getNextRoi(itr)) {
+            count++;
+            if (count == id)
+            {
+	            retv[0] = realString(roi->cursor1->resonances[0].freq); 
+	            retc--;
+	            retv++;
+	            retv[0] = realString(roi->cursor2->resonances[0].freq); 
+	            retc--;
+	            retv++;
+               if (retc > 0)
+               {
+	               retv[0] = intString(roi->height); 
+               }
+               RETURN;
+            }
+         }
+	      ABORT;
+      }
+      else if ((argc == 4) && (retc == 1))
+      {
+         int id = 0;
+         int ht;
+         double c1, c2;
+	      c1=atof(argv[1]);
+	      c2=atof(argv[2]);
+         ht = atoi(argv[3]);
+    	   if(c1<c2) {double tmp=c1; c1=c2; c2=tmp;}
+
+	      AspRoiList *roiList = frame->getRoiList();
+         AspRoiMap::iterator itr;
+         spAspRoi_t roi;
+         for (roi= roiList->getFirstRoi(itr); roi != nullAspRoi;
+             roi= roiList->getNextRoi(itr)) {
+               id++;
+	            if ((roi->cursor1->resonances[0].freq == c1) &&
+	                (roi->cursor2->resonances[0].freq == c2) &&
+	                (roi->height == ht) )
+               {
+	               retv[0] = intString(id); 
+                  RETURN;
+               }
+         }
+	      retv[0] = intString(0); 
+         RETURN;
+      }
+      else
+      {
+	      Winfoprintf("%s illegal call %d args and %d returns",argv[0],argc-1,retc);
+         ABORT;
+      }
    }
 
    if(argc < 2) {

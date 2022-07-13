@@ -155,10 +155,11 @@ void AspRoiList::addRoi(spAspRoi_t roi) {
                roi->cursor1->resonances[1].freq,
                roi->cursor2->resonances[1].freq);
    } else if(rank==1) {
-       sprintf(str,"%s %.4f %.4f",
+       sprintf(str,"%s %.4f %.4f %d",
                roi->cursor1->resonances[0].name.c_str(),
                roi->cursor1->resonances[0].freq,
-               roi->cursor2->resonances[0].freq);
+               roi->cursor2->resonances[0].freq,
+               roi->height);
    }
    string key = string(str);
    roiList->erase(key);
@@ -283,7 +284,7 @@ void AspRoiList::saveRois(char *path) {
 	freq1 = itr1->second->cursor1->resonances[0].freq;
 	freq2 = itr1->second->cursor2->resonances[0].freq;
 
-	roi = getRoi(freq1,freq2);
+	roi = getRoi(freq1,freq2,itr1->second->height);
 	if(roi == nullAspRoi)
         {
            continue;
@@ -373,7 +374,10 @@ void AspRoiList::deleteSelRoi() {
    AspRoiMap::iterator ri;
    for (ri = roiList->begin();  ri != roiList->end(); ++ri) {
         if(ri->second->selected)
-	   roiList->erase(ri->first);
+        {
+	        roiList->erase(ri->first);
+           break;
+        }
    }
 }
 
@@ -710,14 +714,15 @@ list<double> *AspRoiList::getRoiFreqs(int dim) {
    return roiFreqs;    
 }
 
-spAspRoi_t AspRoiList::getRoi(double freq1, double freq2) {
+spAspRoi_t AspRoiList::getRoi(double freq1, double freq2, int ht) {
    AspRoiMap::iterator ri;
    spAspRoi_t roi;
    for (roi= getFirstRoi(ri); roi != nullAspRoi; roi= getNextRoi(ri)) {
-	if((roi->cursor1->resonances[0].freq == freq1 &&
+	if(((roi->cursor1->resonances[0].freq == freq1 &&
 		roi->cursor2->resonances[0].freq == freq2) ||
 	  (roi->cursor1->resonances[0].freq == freq2 &&
-                roi->cursor2->resonances[0].freq == freq1) ) return roi;
+                roi->cursor2->resonances[0].freq == freq1)) &&
+       (roi->height == ht ) ) return roi;
    }
    return nullAspRoi;
 }
