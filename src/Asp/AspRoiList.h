@@ -40,7 +40,7 @@ public:
     int getNumRois();
     void removeRois();
     spAspRoi_t getRoi(int id);
-    spAspRoi_t getRoi(double freq1, double freq2);
+    spAspRoi_t getRoi(double freq1, double freq2, int ht);
     spAspRoi_t getFirstRoi(AspRoiMap::iterator& roiItr);
     spAspRoi_t getNextRoi(AspRoiMap::iterator& roiItr);
 
