@@ -74,9 +74,9 @@ static int arraydim;
 static int miceperchannel;
 static double *ro_frq;
 
-float *pss;
-float *upss;
-int nmice;
+extern float *pss;
+extern float *upss;
+extern int nmice;
 
 /* prototype */
 void recon_mmabort();

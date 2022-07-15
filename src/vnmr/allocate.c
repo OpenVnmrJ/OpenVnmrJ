@@ -46,7 +46,7 @@
 #define nil 0
 #define UNIQUE 75
 
-int Eflag;
+int Eflag = 0;
 
 struct block { int           size;
 	       const char   *id;

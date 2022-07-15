@@ -176,8 +176,8 @@ float *SpecData::getTrace(int ind, int npts) {
 
 }
 
-void SpecData::getDataMax(register float  *datapntr, register int npnt, register float  *max) {
-   register float        tmp, maxval;
+void SpecData::getDataMax(float  *datapntr, int npnt, float  *max) {
+   float        tmp, maxval;
 
   maxval = -0.1*FLT_MAX;
   while (--npnt)
@@ -188,8 +188,8 @@ void SpecData::getDataMax(register float  *datapntr, register int npnt, register
   *max = maxval;
 }
 
-void SpecData::getDataMin(register float  *datapntr, register int npnt, register float  *min) {
-   register float        tmp, minval; 
+void SpecData::getDataMin(float  *datapntr, int npnt, float  *min) {
+   float        tmp, minval; 
 
   minval = FLT_MAX;
   while (--npnt)

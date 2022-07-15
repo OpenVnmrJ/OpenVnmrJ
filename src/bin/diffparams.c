@@ -548,7 +548,6 @@ int main(int argc, char *argv[] )
     parameters in that set.  (VNMR Source file pvars.c)			*/
 
 int	Dflag = 0;
-int	Eflag = 0;
 
 /*  The next two actually do something.  */
 

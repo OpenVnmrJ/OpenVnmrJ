@@ -31,8 +31,6 @@
 
 char ProcName[256];
 
-int chanId;
-
 MSG_Q_ID pRecvMsgQ;
 MSG_Q_ID pExpMsgQ;
 

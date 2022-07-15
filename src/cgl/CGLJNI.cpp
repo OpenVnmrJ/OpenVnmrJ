@@ -189,7 +189,7 @@ JNIEXPORT void JNICALL Java_vnmr_jgl_CGLJNI_CCsetDataPtr
 {
 	CGLRenderer *renderer=getRenderer(e,c);
 	if(renderer){
-		if(p >0){
+		if(p != NULL){
 			jboolean iscopy=false;
 			void *data=e->GetPrimitiveArrayCritical(p,&iscopy);
 			if(iscopy)
@@ -218,7 +218,7 @@ JNIEXPORT void JNICALL Java_vnmr_jgl_CGLJNI_CCreleaseDataPtr(JNIEnv *e, jobject 
 	CGLRenderer *renderer=getRenderer(e,c);
 	if(renderer){
 		jfloat *data=renderer->getDataPtr();
-		if(p >0)
+		if(p != NULL)
 			e->ReleasePrimitiveArrayCritical(p, data, 0);
 #ifdef DEBUG_NATIVE
 		std::cout << "CGLJNI releaseDataPtr("<< data << ")" << std::endl;

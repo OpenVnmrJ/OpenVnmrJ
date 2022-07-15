@@ -48,7 +48,7 @@ typedef struct Console_Stat
     char  probeId1[20];
 } Console_Stat;
 
-Console_Stat StatBlock;
+extern Console_Stat StatBlock;
 
 typedef int MSG_Q_ID;
 

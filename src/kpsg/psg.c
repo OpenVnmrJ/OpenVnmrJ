@@ -197,7 +197,7 @@ int DEC4ch=5;                   /* The Acting 4th Decoupler Channel */
        int   d2_index = 0;      /* d2 increment (from 0 to ni-1) */
        int   d3_index = 0;      /* d3 increment (from 0 to ni2-1) */
        int	NUMch=2;		/* Number of channels configured */
-       int	ok;			/* global error flag */
+extern int	ok;			/* global error flag */
        int	ok2bumpflag;
        int	oldwhenshim;		/* previous value of shimming mask */
 static int	pipe1[2];
@@ -222,7 +222,7 @@ extern short	*Aacode; 	/* pointer to Acode array, also Start Address */
        short	*Codeptr; 	/* pointer into the Acode array */
        short	*Codes;		/* pointer to the start of the Acodes array */
        short	*codestadr;	/* acode start address in Codes */
-       short	 fidctr;	/* offset into code to bsct */
+extern short	 fidctr;	/* offset into code to bsct */
 extern short	*lc_stadr;	/* Low Core Start Address */
        short	*preCodes;	/* pointer to the start of the malloced space */
 

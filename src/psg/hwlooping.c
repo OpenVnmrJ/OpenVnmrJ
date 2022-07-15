@@ -47,7 +47,7 @@ static int go_dqd=0;
 
 void find_dqdfrq(double *truefrq, double *dqdfrq);
 
-SHR_EXP_STRUCT ExpInfo;
+extern SHR_EXP_STRUCT ExpInfo;
 
 /* time for fifo word to be transfered from the pre-fifo to the looping fifo */
 #define PF2FTIME 400.0e-9

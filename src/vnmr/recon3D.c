@@ -82,9 +82,9 @@ static FILE *temp3D_file;
 
 static double *ro_frqP, *pe_frqP;
 
-int nmice;
-float *pss;
-float *upss;
+extern int nmice;
+extern float *pss;
+extern float *upss;
 
 /* prototype */
 void recon3D_abort();
