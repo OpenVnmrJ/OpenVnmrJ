@@ -137,7 +137,7 @@ ARBProgram::~ARBProgram(){
 //-------------------------------------------------------------      
 void ARBProgram::initSymbolTable(){
     MALLOC(MAXSYMBOLS,char*,symbols);
-    if(symbols>0){
+    if(symbols != NULL){
         for(int i=0;i<MAXSYMBOLS;i++)
             symbols[i]=0;
     }

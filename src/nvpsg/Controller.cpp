@@ -761,17 +761,17 @@ int Controller::outputACode(int Code, int many, int *stream)
      cout << Name << " emits " << many << " codes" << endl;
      switch (Code)
      {
-     case DLOAD:  cout << "DLOAD with " << many << setw(8) << setfill('0') << endl;
+     case (int) DLOAD:  cout << "DLOAD with " << many << setw(8) << setfill('0') << endl;
           for (i=0; i < many; i++)
              cout  << setw(5) << setfill('0') << i << "   " << setw(8) << hex << *(stream+i)<< dec << endl;
           break;
-     case PFGSETZCORR: ASSERT_COUNT(2); cout << "PFGSETZCORR high=" << hex << *(stream) << "low= " << *(stream+1) << endl;   break;
-     case VDELAY: ASSERT_COUNT(2); cout << "V DELAY with " << hex << *(stream) << " and " << *(stream+1) << endl;   break;
-     case EXECUTEPATTERN:   ASSERT_COUNT(1); cout << "Link 2 pattern # " << hex << *(stream) << endl; break;
-     case TABLEDEF:   cout << "TABLE DEFINE -- NYI ----" << endl;  break;
-     case VRFAMPS:   ASSERT_COUNT(2); cout << " V RF AMPS  factor => " << hex << *(stream) << "  vvar = "<< dec << *(stream+1) << endl; break;
-     case VPHASEC:   ASSERT_COUNT(2); cout << " V RF PHASEC factor => " << hex << *(stream) << " vvar ->"<< dec << *(stream+1) << endl; break;
-     case ADVISE_FREQ: cout << " ADVISE FREQ => " << hex;
+     case (int) PFGSETZCORR: ASSERT_COUNT(2); cout << "PFGSETZCORR high=" << hex << *(stream) << "low= " << *(stream+1) << endl;   break;
+     case (int) VDELAY: ASSERT_COUNT(2); cout << "V DELAY with " << hex << *(stream) << " and " << *(stream+1) << endl;   break;
+     case (int) EXECUTEPATTERN:   ASSERT_COUNT(1); cout << "Link 2 pattern # " << hex << *(stream) << endl; break;
+     case (int) TABLEDEF:   cout << "TABLE DEFINE -- NYI ----" << endl;  break;
+     case (int) VRFAMPS:   ASSERT_COUNT(2); cout << " V RF AMPS  factor => " << hex << *(stream) << "  vvar = "<< dec << *(stream+1) << endl; break;
+     case (int) VPHASEC:   ASSERT_COUNT(2); cout << " V RF PHASEC factor => " << hex << *(stream) << " vvar ->"<< dec << *(stream+1) << endl; break;
+     case (int) ADVISE_FREQ: cout << " ADVISE FREQ => " << hex;
           for (int i=0; i<many; i++)
              cout  << setw(5) << setfill('0') << i << "   " << setw(8) << hex << *(stream+i)<< dec << endl;
           break;

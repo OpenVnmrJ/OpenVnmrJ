@@ -383,14 +383,14 @@ extern int dvchar(char ch);
 extern int dvstring(char *s);
 extern int vstring(char *s);
 extern int graf_no_op();
-extern void clear_ybar(register struct ybar *ybar_ptr, register int n);
+extern void clear_ybar(struct ybar *ybar_ptr, int n);
 extern void ybars(int dfpnt, int depnt, struct ybar *out, int vertical, int maxv, int minv);
-extern void range_ybar(register int dfpnt, register int depnt, register struct ybar *out,
-                register int maxv, register int minv);
+extern void range_ybar(int dfpnt, int depnt, struct ybar *out,
+                int maxv, int minv);
 extern void expand(short *bufpnt, int pnx, struct ybar *out, int onx, int vo);
 extern void expand32(int *bufpnt, int pnx, struct ybar *out, int onx, int vo);
 extern void compress(short *bufpnt, int pnx, struct ybar *out0, int onx, int vo);
-extern void fid_expand(register short *bufpnt, int pnx, register struct ybar *out, int onx, int vo);
+extern void fid_expand(short *bufpnt, int pnx, struct ybar *out, int onx, int vo);
 extern int grayscale_box(int oldx, int oldy, int x, int y, int shade);
 extern int box(int x, int y); 
 extern int grf_batch(int on);

@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include "starsprog.h"
 
-FILE *resfile,*macfile;
+extern FILE *resfile,*macfile;
 
 extern float csaspec_1();
 extern float qcsaspec_1();

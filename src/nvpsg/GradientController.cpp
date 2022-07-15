@@ -135,8 +135,8 @@ int GradientController::outputACode(int Code, int many, int *stream)
 {  
   // the default clause does all the work - made for easy edits..
   switch (Code) {
-    case DLOAD:  case RTOP: case RT2OP: case RT3OP:  break; 
-    case TASSIGN: case TABLE: case TPUT:  break; 
+    case (int) DLOAD:  case (int) RTOP: case (int) RT2OP: case (int) RT3OP:  break; 
+    case (int) TASSIGN: case (int) TABLE: case (int) TPUT:  break; 
     default:  flushGridDelay(); // 
   }
   Controller::outputACode(Code,many,stream);

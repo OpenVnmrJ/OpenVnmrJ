@@ -19,10 +19,10 @@
 extern "C" {
 int getSpecPoints();
 int writeFDFSpecfile_spectrum(char *fdfpath, int msg);
-int nblocks;
-int specperblock;
 int colorindex(char *colorname, int *index);
 }
+extern "C" int nblocks;
+extern "C" int specperblock;
 
 spAspTrace_t nullAspTrace = spAspTrace_t(NULL);
 

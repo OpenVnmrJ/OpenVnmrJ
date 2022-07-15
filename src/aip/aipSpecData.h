@@ -27,8 +27,8 @@ public:
     ~SpecData();
 
     static bool fillSpecStruct(DDLSymbolTable *newSt, specStruct_t *newSs);
-    static void getDataMax(register float  *datapntr, register int npnt, register float  *max);
-    static void getDataMin(register float  *datapntr, register int npnt, register float  *min);
+    static void getDataMax(float  *datapntr, int npnt, float  *max);
+    static void getDataMin(float  *datapntr, int npnt, float  *min);
 
     string getKey() {return key;}
     string getPath() {return path;}

@@ -737,7 +737,7 @@ static int coord0(int x, int y)
 
 int graphon_hds_coord0(int x, int y)
 {
-    register int yy;
+    int yy;
     int	yhigh,ylow,xhigh,xlow;
 
     /* add vertical offset for old style knob labels */
@@ -1126,7 +1126,7 @@ graf_no_op()
 { return 0; }
 
 /********************/
-void clear_ybar(register struct ybar *ybar_ptr, register int n)  /* blanks a region of ybars */
+void clear_ybar(struct ybar *ybar_ptr, int n)  /* blanks a region of ybars */
 /********************/
 { while (n--)
     { ybar_ptr->mn = 1;
@@ -1151,11 +1151,11 @@ void ybars(int dfpnt, int depnt, struct ybar *out, int vertical, int maxv, int m
  *  is less than ybar.mn
  */
 /***********************************************/
-void range_ybar(register int dfpnt, register int depnt, register struct ybar *out,
-                register int maxv, register int minv)
+void range_ybar(int dfpnt, int depnt, struct ybar *out,
+                int maxv, int minv)
 /***********************************************/
 {
-   register int i;
+   int i;
 
    for (i=dfpnt; i<depnt; i++)
       if (out[i].mx >= out[i].mn)
@@ -1179,7 +1179,7 @@ default_ybars()
 void
 tek_ybars(int dfpnt, int depnt, struct ybar *out, int vertical, int maxv, int minv)  /* draws a spectrum */
 /*******************************************/
-{ register int i,j,k;
+{ int i,j,k;
 	
   /* first check vertical limits */
   if (maxv)
@@ -1271,7 +1271,7 @@ tek_ybars(int dfpnt, int depnt, struct ybar *out, int vertical, int maxv, int mi
 void
 graphon_hds_ybars(int dfpnt, int depnt, struct ybar *out, int vertical, int maxv, int minv)  /* draws a spectrum */
 /***************************************************/
-{ register int i,j,k;
+{ int i,j,k;
 	
   /* first check vertical limits */
   if (maxv)
@@ -1395,9 +1395,9 @@ void
 expand(short *bufpnt, int pnx, struct ybar *out, int onx, int vo)
 /***************************/
 { int ix,ox;
-  register int lasty,nexty,thisy,stependi;
-  register float cury,curstep;
-  register double xstep,stepend;
+  int lasty,nexty,thisy,stependi;
+  float cury,curstep;
+  double xstep,stepend;
   double    rnd;
 
   if (saveSpecData)
@@ -1434,9 +1434,9 @@ void
 expand32(int *bufpnt, int pnx, struct ybar *out, int onx, int vo)
 /***************************/
 { int ix,ox;
-  register int lasty,nexty,thisy,stependi;
-  register float cury,curstep;
-  register double xstep,stepend;
+  int lasty,nexty,thisy,stependi;
+  float cury,curstep;
+  double xstep,stepend;
   double    rnd;
 
   rnd = 0.1 / (double) onx;
@@ -1469,12 +1469,12 @@ expand32(int *bufpnt, int pnx, struct ybar *out, int onx, int vo)
 /*****************************/
 void compress(short *bufpnt, int pnx, struct ybar *out0, int onx, int vo)
 /*****************************/
-{ register int inx; /* counter through input points */
-  register double d; /* counter through input data points */
-  register double f; /* compression factor */
-  register int v,v1;
-  register struct ybar *out;
-  register int cnt;
+{ int inx; /* counter through input points */
+  double d; /* counter through input data points */
+  double f; /* compression factor */
+  int v,v1;
+  struct ybar *out;
+  int cnt;
 
   if (saveSpecData)
      save_spec_raw_data(bufpnt, pnx, onx, vo);
@@ -1517,13 +1517,13 @@ void compress(short *bufpnt, int pnx, struct ybar *out0, int onx, int vo)
 }
 
 /********************************/
-void fid_expand(register short *bufpnt, int pnx, register struct ybar *out, int onx, int vo)
+void fid_expand(short *bufpnt, int pnx, struct ybar *out, int onx, int vo)
 /********************************/
-{ register int ix,ox,stependi;
-  register int thisy;
-  register double xstep,stepend;
-  register int dot_add, dot2;
-  register double    rnd;
+{ int ix,ox,stependi;
+  int thisy;
+  double xstep,stepend;
+  int dot_add, dot2;
+  double    rnd;
 
   ox = dot_add = 0;
   rnd = 0.1 / (double) onx;

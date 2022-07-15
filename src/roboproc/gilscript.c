@@ -35,7 +35,7 @@ extern void start_timer();
 #define MAXPATHL 256
 
 /************************** GLOBAL VARIABLES ********************************/
-int   AbortRobo;
+extern int   AbortRobo;
 char  systemdir[MAXPATHL];       /* vnmr system directory */
 ioDev *smsDevEntry = NULL;
 int   smsDev = -1;

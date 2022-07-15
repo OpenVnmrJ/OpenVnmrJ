@@ -308,7 +308,7 @@
 #endif
 
 
-int interupt;  // for killing the process
+extern int interupt;  // for killing the process
 
 /*-------------------------------------------*/
 /*---- Structure to hold input filenames ----*/
