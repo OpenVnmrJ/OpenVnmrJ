@@ -276,9 +276,9 @@ char* getname0(char *varType, char *varSuffix, char *chXtra)
 {
    int i, descrCount, typeCount, capCount;
    extern char varName[];
-   char chDescr[MAXSTR];
+   char chDescr[16];
    char chSeqType[MAXSTR];
-   char chUP[MAXSTR], chLOW[MAXSTR];
+   char chUP[16], chLOW[16];
 
 //====================================================================
 // Break up the seqType into leading lowercase characters
@@ -321,9 +321,9 @@ char* getname1(char *varType, char *varSuffix, int chnl)
 {
    int i, descrCount, typeCount, capCount;
    extern char varName[];
-   char chDescr[MAXSTR];
+   char chDescr[16];
    char chSeqType[MAXSTR];
-   char chUP[MAXSTR], chLOW[MAXSTR], chID[MAXSTR];
+   char chUP[16], chLOW[16], chID[16];
 
 //===============================================================
 // Break up the seqType into leading lowercase characters
