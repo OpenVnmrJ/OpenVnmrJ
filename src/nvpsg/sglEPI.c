@@ -300,7 +300,7 @@ void calc_epi(EPI_GRADIENT_T          *epi_grad,
     
   /* Variables for generating tables */
   int  n, seg, steps;
-  char order_str[MAXSTR],gpe_tab[MAXSTR],tab_file[MAXSTR];
+  char order_str[MAXSTR],gpe_tab[MAXSTR*2],tab_file[MAXSTR*3];
   FILE *fp;
 
   /********************************************************************************/

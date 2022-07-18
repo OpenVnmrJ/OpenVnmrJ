@@ -751,7 +751,7 @@ double calc_zfill_gradient2(FLOWCOMP_T *grad0, FLOWCOMP_T  *grad1,
 /**************************************************************************/
 /*** RF pulse *************************************************************/
 /**************************************************************************/
-void init_rf (RF_PULSE_T *rf, char rfName[MAX_STR], double pw, double flip,
+void init_rf (RF_PULSE_T *rf, char rfName[], double pw, double flip,
               double rof1, double rof2)
    {
    if ((ix > 1) && !sglarray) {
@@ -782,7 +782,7 @@ void init_rf (RF_PULSE_T *rf, char rfName[MAX_STR], double pw, double flip,
      sgl_abort_message("ERROR rf shape '%s': RF Fraction must be between 0 and 1",rfName);
    }
 
-void shape_rf (RF_PULSE_T *rf, char rfBase[MAX_STR], char rfName[MAX_STR], double pw, double flip,
+void shape_rf (RF_PULSE_T *rf, char rfBase[], char rfName[], double pw, double flip,
               double rof1, double rof2)
    {
    if ((ix > 1) && !sglarray) {

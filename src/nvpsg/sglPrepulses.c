@@ -1205,7 +1205,7 @@ double calc_aslTime(double asladd,double trepmin,int *treptype)
   double irtime[MAXMIR];  /* the timings of MIR pulses */
   struct stat buf;        /* file info */
   char timefile[MAX_STR]; /* name of aslmirtime file */
-  char timecmd[MAX_STR];  /* command to run aslmirtime */
+  char timecmd[MAX_STR+32];  /* command to run aslmirtime */
   int i;
   FILE *fp;
 

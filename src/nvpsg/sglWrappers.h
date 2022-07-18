@@ -54,8 +54,8 @@ void init_dephase( GENERIC_GRADIENT_T *grad, char name[] );
 
 void calc_dephase( GENERIC_GRADIENT_T *grad, int write_flag, double moment0, char VJparam_g[], char VJparam_t[] );
 
-void   init_rf ( RF_PULSE_T *rf, char rfName[MAX_STR], double pw, double flip, double rof1, double rof2);
-void   shape_rf ( RF_PULSE_T *rf, char rfBase[MAX_STR], char rfName[MAX_STR], double pw, double flip, double rof1, double rof2);
+void   init_rf ( RF_PULSE_T *rf, char rfName[], double pw, double flip, double rof1, double rof2);
+void   shape_rf ( RF_PULSE_T *rf, char rfBase[], char rfName[], double pw, double flip, double rof1, double rof2);
 void   init_slice_butterfly( SLICE_SELECT_GRADIENT_T *grad, char name[], double thk, double gcrush, double tcrush);
 void   init_slice_refocus( REFOCUS_GRADIENT_T *refgrad, char name[]); 
 void   trapezoid( GENERIC_GRADIENT_T *grad, char name[], double amp, double time, double moment, int write_flag);
@@ -84,10 +84,10 @@ void t_init_dephase( GENERIC_GRADIENT_T *grad, char name[] );
 
 void t_calc_dephase( GENERIC_GRADIENT_T *grad, int write_flag, double moment0, char VJparam_g[], char VJparam_t[] );
 
-void   t_init_rf ( RF_PULSE_T *rf, char rfName[MAX_STR], double pw, double flip, double rof1, double rof2);
+void   t_init_rf ( RF_PULSE_T *rf, char rfName[], double pw, double flip, double rof1, double rof2);
 void   t_shape_rf ( RF_PULSE_T *rf, 
-                 char rfBase[MAX_STR],
-                 char rfName[MAX_STR], 
+                 char rfBase[],
+                 char rfName[], 
                  double pw, 
                  double flip,
                  double rof1, 
@@ -121,10 +121,10 @@ void x_init_dephase( GENERIC_GRADIENT_T *grad, char name[] );
 
 void x_calc_dephase( GENERIC_GRADIENT_T *grad, int write_flag, double moment0, char VJparam_g[], char VJparam_t[]);
 
-void   x_init_rf ( RF_PULSE_T *rf, char rfName[MAX_STR], double pw, double flip, double rof1, double rof2);
+void   x_init_rf ( RF_PULSE_T *rf, char rfName[], double pw, double flip, double rof1, double rof2);
 void   x_shape_rf ( RF_PULSE_T *rf, 
-                 char rfBase[MAX_STR],
-                 char rfName[MAX_STR], 
+                 char rfBase[],
+                 char rfName[], 
                  double pw, 
                  double flip,
                  double rof1, 
