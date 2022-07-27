@@ -792,7 +792,7 @@ if [[ x${cons} = "xinova" ]] || [[ x${cons} = "xmerc"* ]] ; then
    echo 
    echo "One moment please..."
    echo 
-   macaddr=$(/usr/sbin/tcpdump -i $nic host 255.255.255.255 -t -n  -X -c 1 2>/dev/null |
+   macaddr=$(tcpdump -i $nic host 255.255.255.255 -t -n  -X -c 1 2>/dev/null |
          grep 0x0030 | awk '{print $6 $7 $8}')
 
 
