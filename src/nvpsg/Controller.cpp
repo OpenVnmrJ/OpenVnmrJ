@@ -114,7 +114,12 @@ cPatternEntry *cPatternEntry::match(const char *nm, int ky)
    if (this == NULL)
      return(NULL);
    if(strcmp(name,nm))
-     return(pNext->match(nm,ky));
+   {
+      if ( ! pNext )
+         return(NULL);
+      else
+         return(pNext->match(nm,ky));
+   }
    else
      return(this);
 }
