@@ -2618,7 +2618,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             wordCount += countWords(inLine);
          if (outFile && tailStage)
             fprintf(outFile,"%s\n",inLine);
-         else if (tailStage && (lineCount <= retc) )
+         else if (tailStage && (lineCount < retc) )
          {
             retv[lineCount] = newString(inLine);
          }
@@ -2636,7 +2636,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       lineCount++;
       if (outFile && tailStage && fromStr)
             fprintf(outFile,"%s\n",inLine);
-      else if (tailStage && (lineCount <= retc) )
+      else if (tailStage && (lineCount < retc) )
       {
          retv[lineCount] = newString(inLine);
       }
