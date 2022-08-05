@@ -182,8 +182,8 @@ static int DoExtension(FILE *fd);
 static int readImage(FILE *fd, int x, int y, int w, int h, int cmapSize, int interlace);
 
 static char  inputs[1024];
-static char  imgPath[512];
-static char  iplotPath[MAXPATH];
+static char  imgPath[1024+64];
+static char  iplotPath[MAXPATH*2];
 static char  *expDir = NULL;
 static char  *osPrinterName = NULL;
 static char  *imageMark = "start plotting";
@@ -2810,7 +2810,7 @@ void
 printjimage(int args, char *argv[])
 {
     int   k, n;
-    int   imgWidth, imgHeight;
+//    int   imgWidth, imgHeight;
     int   paperWidth, paperHeight;
     int   psWidth, psHeight;
     int   marginX, marginY;
@@ -2819,37 +2819,38 @@ printjimage(int args, char *argv[])
     int   doPrint;
     int   doClear;
     int   isColor;
-    int   quiet;
+//    int   quiet;
     int   dpi;
     int   rotateDegree;
     int   numCopies;
     IMGNode  *ngf;
     DIM_NODE *dnode;
     char  *inFile = NULL;
-    char  *inType = NULL;
+//    char  *inType = NULL;
     char  *outFile = NULL;
     char  *outFormat = NULL;
     char  *orient = NULL;
-    char  *paperSize = NULL;
-    char  *prtSize = NULL;
+//    char  *paperSize = NULL;
+//    char  *prtSize = NULL;
     char  *plotter = NULL;
     char  tmpPath[256];
     char  tmpCmd[512];
     FILE  *outfd;
+    int   ret __attribute__((unused));
 
     n = args - 1;
     paperWidth = 0;
     paperHeight = 0;
     psWidth = 0;
     psHeight = 0;
-    imgWidth = 0;
-    imgHeight = 0;
+//    imgWidth = 0;
+//    imgHeight = 0;
     doPrint = 0;
     doClear = 0;
     outfd = NULL;
     dpi = 300;
     isColor = 1;
-    quiet = 0;
+//    quiet = 0;
     mX = -1;
     mY = -1;
     numCopies = 1;
@@ -2861,7 +2862,7 @@ printjimage(int args, char *argv[])
                 continue;
             }
             if (strcmp(argv[k], "-jpg") == 0) {
-                inType = argv[k];
+                //inType = argv[k];
                 continue;
             }
             if (strcmp(argv[k], "-clear") == 0) {
@@ -2873,7 +2874,7 @@ printjimage(int args, char *argv[])
                 continue;
             }
             if (strcmp(argv[k], "-quiet") == 0) {
-                quiet = 1;
+                //quiet = 1;
                 continue;
             }
             if (k >= n)
@@ -2902,12 +2903,12 @@ printjimage(int args, char *argv[])
             }
             if (strcmp(argv[k], "-paper") == 0) {
                 k++;
-                paperSize = argv[k];
+                //paperSize = argv[k];
                 continue;
             }
             if (strcmp(argv[k], "-size") == 0) {
                 k++;
-                prtSize = argv[k];
+                //prtSize = argv[k];
                 continue;
             }
             if (strcmp(argv[k], "-iformat") == 0) {
@@ -2917,12 +2918,12 @@ printjimage(int args, char *argv[])
             }
             if (strcmp(argv[k], "-width") == 0) {
                 k++;
-                imgWidth = atoi(argv[k]);
+                //imgWidth = atoi(argv[k]);
                 continue;
             }
             if (strcmp(argv[k], "-height") == 0) {
                 k++;
-                imgHeight = atoi(argv[k]);
+                //imgHeight = atoi(argv[k]);
                 continue;
             }
             if (strcmp(argv[k], "-pwidth") == 0) {
@@ -3125,7 +3126,7 @@ printjimage(int args, char *argv[])
     if (outFormat == NULL || strcmp(outFormat, "ps") == 0) {
         // sprintf(inputs, "%s -sDEVICE=pswrite -q %s", tmpCmd, newPlotPath);
         sprintf(inputs, "mv %s %s", newPlotPath, outFile);
-        system(inputs);
+        ret = system(inputs);
     }
     else if (strcmp(outFormat, "pcl") == 0) {
         if (isColor)
@@ -3133,12 +3134,12 @@ printjimage(int args, char *argv[])
         else
            sprintf(inputs, "%s -sDEVICE=ljet4 -r%d -q %s", tmpCmd, dpi, newPlotPath);
                  // sprintf(inputs, "vnmr_gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=laserjet -sOutputFile=%s -r%d -q %s", outFile, dpi, newPlotPath);
-        system(inputs);
+        ret = system(inputs);
     }
     else {
         if (strcmp(outFormat, "pdf") == 0) {
            sprintf(inputs, "%s -sDEVICE=pdfwrite -r%d -q %s", tmpCmd, dpi, newPlotPath);
-           system(inputs);
+           ret = system(inputs);
         }
         else {
 			image_convert("", "", newPlotPath, outFormat, outFile);
@@ -3147,7 +3148,7 @@ printjimage(int args, char *argv[])
     unlink(newPlotPath);
     if (doPrint == 0) {
          sprintf(inputs, "chmod 644 %s", outFile);
-         system(inputs);
+         ret = system(inputs);
          Winfoprintf("Saving file: %s\n", outFile);
          return;
     }
@@ -3851,10 +3852,10 @@ int
 imagefile_flush()
 {
      PLOT_NODE  *node;
-     IMGNode    *gf;
+//     IMGNode    *gf;
      char  *d, *oldPath;
      FILE  *plotFd;
-     int  isMarked = 0;
+//     int  isMarked = 0;
 
     if (plotList == NULL)
 	return (0);
@@ -3898,7 +3899,7 @@ imagefile_flush()
     *******/
     while ((d = fgets(inputs, 500, plotFd)) != NULL) {
 	if (*d == '%' && strncmp(d+1, imageMark,(int) strlen(imageMark)) == 0) {
-            isMarked = 1;
+            //isMarked = 1;
 	    break;
         }
 	else
@@ -3915,7 +3916,7 @@ imagefile_flush()
 
         node = plotList;
         while (node != NULL) {
-            gf = node->gf;
+           // gf = node->gf;
            if (!node->covered)
 	        WritePSImage(newPlotFd, node);
            node = node->next;
@@ -3942,7 +3943,7 @@ int
 ps_imagefile_flush()
 {
      PLOT_NODE  *node;
-     IMGNode    *gf;
+//     IMGNode    *gf;
      FILE  *plotFd;
 
     if (plotList == NULL) {
@@ -3962,7 +3963,7 @@ ps_imagefile_flush()
 
     node = plotList;
     while (node != NULL) {
-        gf = node->gf;
+        //gf = node->gf;
         if (!node->covered)
              WritePSImage(newPlotFd, node);
         node = node->next;
@@ -3981,6 +3982,8 @@ void image_convert(char *options, char *fmt1, char *file1, char *fmt2, char *fil
     char data[MAXPATH];
     char f1[16];
     char f2[16];
+    int  ret __attribute__((unused));
+
     strncpy(f1,fmt1,14);
     strncpy(f2,fmt2,14);
     if(strlen(f1)>0)
@@ -3998,7 +4001,7 @@ void image_convert(char *options, char *fmt1, char *file1, char *fmt2, char *fil
 	exec_shell(data);
 #else
 	sprintf(data, "convert %s %s%s %s%s", options, f1,file1, f2, file2);
-	system(data);
+	ret = system(data);
 #endif
 #ifdef DEBUG_CONVERT
 	Winfoprintf("image_convert:%s",data);
@@ -4052,6 +4055,7 @@ int iplot(int argc, char *argv[], int retc, char *retv[])
     double dv;
     double fv;
     struct timeval clock;
+    int    ret __attribute__((unused));
 
     outFile = NULL;
     outFormat = NULL;
@@ -4235,7 +4239,7 @@ int iplot(int argc, char *argv[], int retc, char *retv[])
     }
     else {
          sprintf(inputs, "vnmr_iplot %s", iplotPath);
-         system(inputs);
+         ret = system(inputs);
     }
 
     exit(1);
@@ -4395,8 +4399,6 @@ plot_header(char *fname, int x, int y, int w, int h) {
     ps_info_font();
     ps_light_color();
     y2 = headerY - ycharpixels * 0.5;
-    amove(headerX, y2);
-    rdraw(headerWidth, 0);
 
     while ((data = fgets(inputs, 500, fd)) != NULL) {
         while (*data == ' ' || *data == '\t')
@@ -4411,7 +4413,18 @@ plot_header(char *fname, int x, int y, int w, int h) {
             while (*value == ' ' || *value == '\t')
                 value++;
         }
+        if (strcmp(key, "Left") == 0) {
+            headerX = 0;
+            continue;
+        }
+        if (strcmp(key, "Center") == 0) {
+            headerWidth += headerX;
+            headerX = 0;
+            continue;
+        }
         if (strcmp(key, "Title") == 0) {
+            amove(headerX, y2);
+            rdraw(headerWidth, 0);
             if ((data = fgets(inputs, 500, fd)) != NULL) {
                 while (*data == ' ' || *data == '\t')
                     data++;
