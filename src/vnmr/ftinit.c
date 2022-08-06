@@ -59,6 +59,7 @@ extern void ds_digfilter(double *dbuffer, double decfactor, int ntaps, int norm)
 extern int  init_downsample_files(ftparInfo *ftpar);
 extern int  dim1count();
 extern int p11_saveFDAfiles_processed(char* func, char* orig, char* dest);
+extern int init2d_getfidparms(int dis_setup);
 
 
 
@@ -2575,6 +2576,11 @@ int i_fid(dfilehead *fidhead, ftparInfo *ftpar)
 *  Check FID file header parameters  *
 *************************************/
 
+   if (fidhead->np == 0)
+   {
+      Werrprintf("No data in FID file");
+      return(ERROR);
+   }
    if (ftpar->np0 != fidhead->np)
    {
       Werrprintf("np = %d is inconsistent with data; actual np = %d",
@@ -2582,6 +2588,8 @@ int i_fid(dfilehead *fidhead, ftparInfo *ftpar)
       ftpar->np0 = fidhead->np;
       P_setreal(CURRENT, "np", (double) (ftpar->np0), 0);
       P_setreal(PROCESSED, "np",(double) (ftpar->np0), 0);
+      if (init2d_getfidparms(1))
+         Werrprintf("error correcting sf and wf");
    }
  
    ftpar->dpflag = (fidhead->ebytes == 4);
