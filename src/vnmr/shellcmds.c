@@ -1391,6 +1391,7 @@ int Rm(int argc, char *argv[], int retc, char *retv[])
           if ( ! Rmfiles(argv[2], argv[3], testOnly) )
              RETURN;
        }
+       RETURN;
     }
     strcpy(cmdstr,"/bin/rm");
     for (i=1; i<argc; i++)
