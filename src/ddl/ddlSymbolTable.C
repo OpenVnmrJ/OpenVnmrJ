@@ -207,7 +207,7 @@ char *DDLSymbolTable::MallocReadData(char *mapfile, MFILE_ID *mobj) {
 
 	int rank = 0;
 	int bits = 0;
-	unsigned long buflen=0;
+	int buflen=0;
 	GetValue("rank", rank);
 	GetValue("bits", bits);
 	buflen = bits / 8; // Bytes per word
@@ -232,7 +232,7 @@ char *DDLSymbolTable::MallocReadData(char *mapfile, MFILE_ID *mobj) {
 			sprintf(msg, "Entire file is DDL header: %.900s", srcid);
 			return msg;
 		} else if (data_length != buflen) {
-			sprintf(msg, "Specified image bytes=%d, data size=%d: %s", (int) buflen,
+			sprintf(msg, "Specified image bytes=%d, data size=%d: %s", buflen,
 					data_length, srcid);
 			return msg;
 		} else if (mapfile != NULL) {			
@@ -258,11 +258,11 @@ char *DDLSymbolTable::MallocReadData(char *mapfile, MFILE_ID *mobj) {
 
 		if (bigendian_hdr != BigEndian) {
 			int num = data_length / sizeof(float);
-			long *lptr = (long *) data;
+			int *iptr = (int *) data;
 			int cnt;
 			for (cnt = 0; cnt < num; cnt++) {
-				ByteSwap5(*lptr);
-				lptr++;
+				ByteSwap5(*iptr);
+				iptr++;
 			}
 		}
 		if (ddl_in.gcount() == 0) {
@@ -275,13 +275,13 @@ char *DDLSymbolTable::MallocReadData(char *mapfile, MFILE_ID *mobj) {
 
 
 DDLNodeLink& DDLNodeLink::Print() {
-  printf("object[%d]\n", item);
+  printf("object[%p]\n", item);
   return *this;
 }
 
 void CheckDelete(DDLNode *n)
 {
-  printf("deleting %x\n", n);
+  printf("deleting %p\n", n);
 }
 
 void DDLSymbolTable::SaveSymbolsAndData(ostream& os)
