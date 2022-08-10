@@ -75,7 +75,7 @@ DDLNode *StructExprInit()
 DDLNode *StringExpr(char *s)
 {
   StringData *sd = new StringData(s);
-  delete s;
+  free(s);
   return sd;
 }
 
