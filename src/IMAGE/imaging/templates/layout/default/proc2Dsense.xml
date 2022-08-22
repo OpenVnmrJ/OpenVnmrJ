@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+ ! 
+ ! Agilent Technologies All Rights Reserved.
+ ! This software contains proprietary and confidential
+ ! information of Agilent Technologies and its contributors.
+ ! Use, disclosure and reproduction is prohibited without
+ ! prior consent.
+ !
+ -->
+
+<template name="proc2Dsense" element="pages" type="processing" >
+  <group size="800 270"
+    style="PlainText"
+    label="Sense"
+    vq="rcvrs"
+    vc="aip2Dsmap('genpars') aip2Dsmap('refdir')"
+    show="aip2Drecon('nrcvrs'):$nr $VALUE=($nr&gt;1)"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="proc2Dsense"
+    useref="no"
+    subtype="Convenience"
+    expanded="yes"
+    >
+    <group loc="435 0" size="210 95"
+      style="Heading1"
+      label="SENSE Reduction"
+      vq="recon"
+      show="$VALUE=(recon='sensibility')"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Display"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <label loc="160 20" size="40 20"
+        style="Label1"
+        label="Phase"
+        />
+      <scroll loc="160 40" size="35 20"
+        style="PlainText"
+        label="value1"
+        vq="foldnv accelphase"
+        vc="foldnv=$VALUE if (foldnv&gt;nv) then foldnv=nv endif accelphase=nv/foldnv"
+        set="$VALUE=foldnv"
+        values="foldnv+2 foldnv-2"
+        />
+      <entry loc="155 60" size="40 20"
+        style="PlainText"
+        vq="accelphase foldnv nv"
+        vc="accelphase=$VALUE foldnv=nv/accelphase"
+        set="$VALUE=accelphase"
+        digits="2"
+        />
+      <label loc="105 20" size="40 20"
+        style="Label1"
+        label="Read"
+        />
+      <scroll loc="105 40" size="35 20"
+        style="PlainText"
+        label="value1"
+        vq="foldnp accelread"
+        vc="foldnp=$VALUE if (foldnp&gt;np) then foldnp=np endif accelread=np/foldnp"
+        set="$VALUE=foldnp"
+        values="foldnp+4  foldnp-4"
+        />
+      <entry loc="100 60" size="40 20"
+        style="PlainText"
+        vq="accelread foldnp np"
+        vc="accelread=$VALUE foldnp=np/accelread"
+        set="$VALUE=accelread"
+        digits="2"
+        />
+      <label loc="10 60" size="80 20"
+        style="Label1"
+        label="Reduction"
+        />
+    </group>
+    <group loc="5 50" size="210 80"
+      style="Heading1"
+      label="Reference Reduction"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Display"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <menu loc="150 40" size="55 20"
+        style="PlainText"
+        label="menu"
+        vq="rmapphase"
+        vc="aip2Dsmap('genpars')  rmapphase=$VALUE"
+        set="$VALUE = rmapphase"
+        editable="No"
+        >
+        <mlabel 
+          label="Off"
+          chval="0"
+          />
+        <mlabel 
+          label="x2"
+          chval="2"
+          />
+        <mlabel 
+          label="x4"
+          chval="4"
+          />
+        <mlabel 
+          label="x8"
+          chval="8"
+          />
+      </menu>
+      <menu loc="90 40" size="55 20"
+        style="PlainText"
+        label="menu"
+        vq="rmapread"
+        vc="aip2Dsmap('genpars')  rmapread=$VALUE"
+        set="$VALUE = rmapread"
+        editable="No"
+        >
+        <mlabel 
+          label="Off"
+          chval="0"
+          />
+        <mlabel 
+          label="x2"
+          chval="2"
+          />
+        <mlabel 
+          label="x4"
+          chval="4"
+          />
+        <mlabel 
+          label="x8"
+          chval="8"
+          />
+      </menu>
+      <label loc="10 40" size="80 20"
+        style="Label1"
+        label="Factor"
+        />
+      <label loc="150 20" size="40 20"
+        style="Label1"
+        label="Phase"
+        />
+      <label loc="90 20" size="40 20"
+        style="Label1"
+        label="Read"
+        />
+    </group>
+    <button loc="30 205" size="150 20"
+      style="PlainText"
+      label="Mask Page"
+      vq="maskpage"
+      vc="if (maskpage='n') then maskpage='y' else maskpage='n' endif"
+      bg="transparent"
+      decor1="yes"
+      />
+    <button loc="30 230" size="150 20"
+      style="PlainText"
+      label="Sensitivity Map Page"
+      vq="smappage"
+      vc="if (smappage='n') then smappage='y' else smappage='n' endif"
+      bg="transparent"
+      decor1="yes"
+      />
+    <group loc="5 130" size="210 65"
+      style="Heading1"
+      label="Sense Reference"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="VolumeCoilReference"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <filemenu loc="10 25" size="190 20"
+        style="PlainText"
+        vq="senserefselect"
+        vc="aip2Dsmap('genpars') senserefselect='$VALUE' senseref=senserefdir+senserefselect"
+        set="$VALUE=senserefselect"
+        file="$VALUE=userdir aip2Dsmap('refdir'):$VALUE"
+        type="directory"
+        editable="No"
+        statshow="yes"
+        elastic="no"
+        display="yes"
+        />
+    </group>
+    <group loc="220 0" size="210 195"
+      style="Heading1"
+      label="Sensibility Output"
+      vq="recon"
+      show="$VALUE=(recon='sensibility')"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Display"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <button loc="110 165" size="90 20"
+        style="PlainText"
+        label="Clear"
+        vc="aip2Dsense('clear')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="110 140" size="90 20"
+        style="PlainText"
+        label="Display"
+        vc="aip2Dsense('display')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <button loc="10 140" size="90 20"
+        style="PlainText"
+        label="Generate"
+        vc="aip2Dsense('generate')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <check loc="10 110" size="175 20"
+        style="PlainText"
+        label="Print Noise Matrix"
+        vq="printNM"
+        vc="aip2Dsmap('genpars') printNM='y'"
+        vc2="aip2Dsmap('genpars') printNM='n'"
+        set="$VALUE=(printNM='y')"
+        />
+      <radio loc="10 85" size="195 20"
+        style="PlainText"
+        label="Assume Noise Not Correlated"
+        vq="noisematrix"
+        vc="aip2Dsmap('genpars') noisematrix='n'"
+        vc2="aip2Dsmap('genpars') noisematrix='y'"
+        set="$VALUE=(noisematrix='n')"
+        />
+      <check loc="10 45" size="175 20"
+        style="PlainText"
+        label="Relative SNR"
+        vq="imRS"
+        vc="aip2Dsmap('genpars') imRS='y'"
+        vc2="aip2Dsmap('genpars') imRS='n'"
+        set="$VALUE=(imRS='y')"
+        />
+      <radio loc="10 65" size="195 20"
+        style="PlainText"
+        label="Account For Noise Correlation"
+        vq="noisematrix"
+        vc="aip2Dsmap('genpars') noisematrix='y'"
+        vc2="aip2Dsmap('genpars') noisematrix='n'"
+        set="$VALUE=(noisematrix='y')"
+        />
+      <check loc="10 20" size="175 20"
+        style="PlainText"
+        label="Geometry Factor"
+        vq="imGF"
+        vc="aip2Dsmap('genpars') imGF='y'"
+        vc2="aip2Dsmap('genpars') imGF='n'"
+        set="$VALUE=(imGF='y')"
+        />
+    </group>
+    <group loc="5 0" size="210 50"
+      style="Heading1"
+      label="Recon"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="ReconType"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <menu loc="60 20" size="85 20"
+        style="PlainText"
+        label="menu"
+        vq="recon"
+        vc="if '$VALUE'='sense' then accelread=initaread accelphase=initaphase else foldnp=np foldnv=nv endif recon='$VALUE' "
+        set="$VALUE=recon"
+        editable="No"
+        >
+        <mlabel 
+          label="Internal"
+          chval="internal"
+          />
+        <mlabel 
+          label="External"
+          chval="external"
+          />
+        <mlabel 
+          label="Sense"
+          chval="sense"
+          />
+        <mlabel 
+          label="Sensibility"
+          chval="sensibility"
+          />
+      </menu>
+      <label loc="10 20" size="50 20"
+        style="Label1"
+        label="Type"
+        />
+    </group>
+  </group>
+</template>

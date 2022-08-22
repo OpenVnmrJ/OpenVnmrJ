@@ -1,0 +1,376 @@
+"macro"
+"*****************************************************************************"
+"
+" acq2Dsense - macro for 2D sense acquisition setup"
+"
+"*****************************************************************************"
+
+$action=''
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action='init') then
+  $ret=''
+
+  if ($# = 2) then
+    if ($2 = 'reset') then
+      if (nvSave<>0) then nv=nvSave endif
+      exists('nseg','parameter'):$e
+      if ($e>0.5 AND nsegSave<>0) then nseg=nsegSave endif
+      destroy('nsegSave')
+      if (npSave<>0) then np=npSave endif
+      if (accelreadSave<>0) then accelread=accelreadSave endif
+      if (accelphaseSave<>0) then accelphase=accelphaseSave endif
+      if (lroSave<>0) then lro=lroSave endif
+      if (lpeSave<>0) then lpe=lpeSave endif
+      destroy('nvSave npSave accelreadSave accelphaseSave lroSave lpeSave'):$e
+      if (senserefSave <> 'NotSet') then senseref=senserefSave endif
+      if (rcvrsSave <> 'NotSet') then rcvrs=rcvrsSave endif
+      if (vcoilrefSave <> 'NotSet') then vcoilref=vcoilrefSave endif
+      if (arraySave <> 'NotSet') then array=arraySave endif
+      destroy('senserefSave rcvrsSave vcoilrefSave arraySave'):$e
+      return
+    elseif ($2 = 'init') then
+      create('npSave','integer','current',0)
+      npSave=0
+      create('nvSave','integer','current',0)
+      nvSave=0
+      create('nsegSave','integer','current',0)
+      nsegSave=0
+      create('accelreadSave','real','current',0)
+      accelreadSave=0
+      create('accelphaseSave','real','current',0)
+      accelphaseSave=0
+      create('lroSave','real','current',0)
+      lroSave=0
+      create('lpeSave','real','current',0)
+      lpeSave=0
+      create('arraySave','string','current','')
+      arraySave='NotSet'
+      create('vcoilrefSave','string','current','')
+      vcoilrefSave='NotSet'
+      create('rcvrsSave','string','current','')
+      rcvrsSave='NotSet'
+      create('senserefSave','string','current','')
+      senserefSave='NotSet'
+    endif
+  endif
+  acq2Dsense('genpars') "make sure SENSE parameters exist"
+
+  "Check degeneracy is not greater than number of receiver coils"
+  aipXrecon('nrcvrs'):$nr
+  if (trunc(accelread) < accelread) then $degen=trunc(accelread)+1 else $degen=accelread endif
+  if (trunc(accelphase) < accelphase) then $degen=$degen*(trunc(accelphase)+1) else $degen=$degen*accelphase endif
+  if ($degen>$nr) then
+    write('error','SENSE: Folded data can not have degeneracy greater than %d, reduce SENSE reduction factor',$nr)
+    abort
+  endif
+
+  "The globals VCOILREF and SENSEREF give the filenames of volume coil and "
+  "sense reference scans respectively. If a new study is started then they "
+  "are set to VCOILREF='' and SENSEREF='' in macro xminit.                 "
+  "Check to see if there is SENSE reference data. If not then acquire some."
+  if (SENSEREF = '') then
+    acquireref='y'
+  endif
+    
+  if (acquireref = 'y') then "we do SENSE reference scans"
+
+    "If we are running in a queue then pause it for the reference scans"
+    if (sqmode='go') then
+      "We will use temp global Qmode to flag we have paused a running queue"
+      create('Qmode','string','global','')
+      sqmode='pause'
+      Qmode='paused'
+    endif
+  
+    if (sensestatus = 'vcoilref') then "volume coil reference is required"
+      initaread=1 initaphase=1
+      "Set and write required parameters"
+      saveAs('fid'):vcoilref
+      acq2Dsense('trim',vcoilref):vcoilrefselect
+      VCOILREF=vcoilref
+      smapref='vcoil'
+
+      // Save pars
+      arraySave=array
+      npSave=np
+      nvSave=nv
+      exists('nseg','parameter'):$e
+      if ($e>0.5) then nsegSave=nseg endif
+      accelreadSave=accelread
+      accelphaseSave=accelphase
+      lroSave=lro
+      lpeSave=lpe
+      rcvrsSave=rcvrs
+      vcoilrefSave=vcoilref
+      substr(arraySave,'find','pss','delimiter','( ,)'):$e
+      if ($e > 0.5) then array='pss' else array='' endif
+
+      np=refnp nv=refnv "nfmod=nv"
+      setnseg('etl')
+      setloop
+      go('check')
+      volumercv='y' rcvrs='y'
+      vcoilref='' senseref=''
+      accelread=1 accelphase=1
+      wdone=''
+      $ret='wait'
+
+    elseif (sensestatus = 'senseref') then "array coil reference is required"
+      if (vcoil = 'y') then "we have acquired volume coil reference"        
+        if (npSave <> 0) then np = npSave endif
+        if (nvSave <> 0) then nv = nvSave endif
+        exists('nseg','parameter'):$e
+        if ($e>0.5 AND nsegSave<>0) then nseg=nsegSave endif
+        if (accelreadSave <> 0) then accelread = accelreadSave endif
+        if (accelphaseSave <> 0) then accelphase = accelphaseSave endif
+        if (rcvrsSave <> 'NotSet') then rcvrs=rcvrsSave endif
+        if (vcoilrefSave <> 'NotSet') then vcoilref = vcoilrefSave endif
+        if (arraySave <> 'NotSet') then array = arraySave endif
+      else
+        vcoilref=''
+        if (smapref <> 'sos') AND (smapref <> 'super') then
+          smapref='sos'
+        endif
+      endif
+      initaread=1 initaphase=1
+      "Set and write required parameters"
+      saveAs('fid'):senseref
+      acq2Dsense('trim',senseref):senserefselect
+      SENSEREF=senseref
+
+      // Save pars
+      arraySave=array
+      vcoilrefSave=vcoilref
+      rcvrsSave=rcvrs
+      senserefSave=senseref
+      npSave=np
+      nvSave=nv
+      exists('nseg','parameter'):$e"
+      if ($e>0.5) then nsegSave=nseg endif
+      accelreadSave=accelread
+      accelphaseSave=accelphase
+      lroSave=lro
+      lpeSave=lpe
+      substr(arraySave,'find','pss','delimiter','( ,)'):$e
+      if ($e > 0.5) then array='pss' else array='' endif
+
+      np=refnp nv=refnv "nfmod=nv"
+      setnseg('etl')
+      setloop
+      if (vcoil<>'y') then go('check') endif
+      volumercv='n'
+      senseref=''
+      accelread=1 accelphase=1
+      wdone=''
+      $ret='wait'
+
+    elseif (sensestatus = 'sense') then
+      if (npSave <> 0) then np = npSave endif
+      if (nvSave <> 0) then nv = nvSave endif
+      exists('nseg','parameter'):$e
+      if ($e>0.5 AND nsegSave<>0) then nseg=nsegSave endif
+      if (accelreadSave <> 0) then accelread = accelreadSave endif
+      if (accelphaseSave <> 0) then accelphase = accelphaseSave endif
+      if (senserefSave <> 'NotSet') then senseref = senserefSave endif
+      if (arraySave <> 'NotSet') then array = arraySave endif
+      initaread=accelread initaphase=accelphase
+      foldnp=np/accelread foldnv=nv/accelphase
+      accelread=np/foldnp accelphase=nv/foldnv
+      np=foldnp nv=foldnv "nfmod=nv"
+      lro=lro/accelread lpe=lpe/accelphase
+      setnseg('etl')
+      setloop
+      "Adjust DDR filter width to give folded data"
+      ddrfw1=accelread
+      ddrfw2=accelread
+      volumercv='n'
+      wnt=`wdone='xmwexp' wnt=''` "turn off real-time recon"
+      recon='sense'
+    endif   
+
+  else "end of if acquireref='y'"
+
+    vcoilref=VCOILREF
+    acq2Dsense('trim',vcoilref):vcoilrefselect
+    if (vcoil = 'y') then "volume coil reference"
+      smapref='vcoil'
+    else
+      if (smapref <> 'sos') AND (smapref <> 'super') then
+        smapref='sos'
+      endif
+    endif
+    senseref=SENSEREF
+    acq2Dsense('trim',senseref):senserefselect
+    npSave=np
+    nvSave=nv
+    exists('nseg','parameter'):$e
+    if ($e>0.5) then nsegSave=nseg endif
+    accelreadSave=accelread
+    accelphaseSave=accelphase
+    initaread=accelread initaphase=accelphase
+    foldnp=np/accelread foldnv=nv/accelphase
+    accelread=np/foldnp accelphase=nv/foldnv
+    np=foldnp nv=foldnv "nfmod=nv"
+    setnseg('etl')
+    setloop
+    lro=lro/accelread lpe=lpe/accelphase
+    "Adjust DDR filter width to give folded data"
+    ddrfw1=accelread
+    ddrfw2=accelread
+    sensestatus='sense'
+    volumercv='n'
+    wnt='' "turn off real-time recon"
+    recon='sense'
+
+  endif
+
+  return($ret)
+endif
+
+if ($action='wexp') then
+
+  if (acquireref = 'y') then "we do SENSE reference scans"
+    if (sensestatus = 'vcoilref') then "end of volume coil reference scan"
+      sensestatus='senseref' "flag set up of SENSE reference scan"
+      acq2Dsense('init')
+      au('next','wait')
+      xm1(`start`,`Executing`)
+    elseif (sensestatus = 'senseref') then "end of SENSE reference scan"
+      sensestatus='sense' "flag set up of SENSE scan"
+      acq2Dsense('init')
+      au('next')
+      xm1(`start`,`Executing`)
+    elseif (sensestatus = 'sense') then "end of SENSE scan"
+      "See if a queue has been paused, and if so, resume"
+      exists('Qmode','parameter','global'):$e
+      if ($e > 0) then
+        if (Qmode = 'paused') then
+          destroy('Qmode','global')
+          wdone=wdone+' shell(\'sleep 1\') startq'
+        endif
+      endif
+    endif
+  endif
+
+endif
+
+if ($action='set') then
+
+  acq2Dsense('genpars')
+  "Use nread and nphase rather than np and nv, if they exist"
+  exists('nread','parameter'):$nread exists('nphase','parameter'):$nphase 
+  if ($nread>0) then $np=nread else $np=np endif
+  if ($nphase>0) then $nv=nphase else $nv=nv endif
+  foldnp=$np/accelread
+  foldnv=$nv/accelphase
+  
+endif
+
+if ($action='checkfolded') then
+
+  "Use nread and nphase rather than np and nv, if they exist"
+  exists('nread','parameter'):$nread exists('nphase','parameter'):$nphase 
+  if ($nread>0) then $np=nread nread=foldnp else $np=np np=foldnp endif
+  if ($nphase>0) then $nv=nphase nphase=foldnv else $nv=nv nv=foldnv endif
+  $lro=lro $lpe=lpe
+  lro=lro*foldnp/$np
+  lpe=lpe*foldnv/$nv
+  go('check')
+  lro=$lro lpe=$lpe 
+  if ($nread>0) then nread=$np else np=$np endif
+  if ($nphase>0) then nphase=$nv else nv=$nv endif
+  
+endif
+
+if ($action='checkreference') then
+
+  "Use nread and nphase rather than np and nv, if they exist"
+  exists('nread','parameter'):$nread exists('nphase','parameter'):$nphase 
+  if ($nread>0) then $np=nread nread=refnp else $np=np np=refnp endif
+  if ($nphase>0) then $nv=nphase nphase=refnv else $nv=nv nv=refnv endif
+  go('check')
+  if ($nread>0) then nread=$np else np=$np endif
+  if ($nphase>0) then nphase=$nv else nv=$nv endif
+  
+endif
+
+if ($action='trim') then
+
+  $fullref=$2
+
+  length($fullref):$len
+  $i=0
+  $ref=''
+  while ($i < $len) do
+    substr($fullref,$i+1,1):$str
+    if ($str = '/') then
+      $ref=''
+    else
+      $ref=$ref+$str
+    endif
+    $i=$i+1
+  endwhile
+  return($ref)
+
+endif
+
+if ($action='parsearray') then
+
+  length(array):$len
+  if ($len = 0) then return(0,'') endif
+  
+  $i=0
+  $npars=1
+  $pars=''
+  while ($i < $len) do
+    substr(array,$i+1,1):$str
+    if ($str <> '(') AND ($str <> ')') AND ($str <> ',') then
+      $pars[$npars] = $pars[$npars]+$str
+    endif
+    if ($str = ',') then $npars=$npars+1 $pars[$npars]='' endif
+    $i=$i+1
+  endwhile
+  return($npars,$pars)
+
+endif
+
+if ($action='genpars') then
+
+  "Use nread and nphase rather than np and nv, if they exist"
+  exists('nread','parameter'):$nread exists('nphase','parameter'):$nphase 
+  $np=0 if ($nread>0) then $np=nread else exists('np','parameter'):$e if ($e=1) then $np=np endif endif
+  $nv=0 if ($nphase>0) then $nv=nphase else exists('nv','parameter'):$e if ($e=1) then $nv=nv endif endif
+
+  aip2Dsmap('genpars')
+
+  "Sense Flags"
+  exists('sense','parameter'):$e if ($e=0) then create('sense','string') sense='n' endif  
+  exists('sensestatus','parameter'):$e if ($e=0) then create('sensestatus','string') sensestatus='vcoilref' endif  
+  exists('vcoil','parameter'):$e if ($e=0) then create('vcoil','string') vcoil='y' endif  
+
+  "Reference Data Matrix Size"
+  exists('refnp','parameter'):$e if ($e=0) then create('refnp','integer') setlimit('refnp',10000000,32,2) refnp=128 endif  
+  exists('refnv','parameter'):$e if ($e=0) then create('refnv','integer') setlimit('refnv',10000000,32,2) refnv=64 endif  
+
+  "SENSE acceleration factors"
+  exists('accelread','parameter'):$e if ($e=0) then create('accelread','real') accelread=1 endif 
+  exists('accelphase','parameter'):$e if ($e=0) then create('accelphase','real') accelphase=1 endif 
+
+  "Folded Data Matrix Size"
+  exists('foldnp','parameter'):$e if ($e=0) then create('foldnp','integer') setlimit('foldnp',10000000,4,4) endif  
+  exists('foldnv','parameter'):$e if ($e=0) then create('foldnv','integer') setlimit('foldnv',10000000,2,2) endif  
+  if ($np>0) then foldnp=$np/accelread endif
+  if ($nv>0) then foldnv=$nv/accelphase endif
+
+  "Reset minimum lro,lpe"
+  exists('lro','parameter'):$e if ($e=1) then setlimit('lro',100,0.2,0) endif
+  exists('lpe','parameter'):$e if ($e=1) then setlimit('lpe',100,0.2,0) endif
+
+  "Reset fn,fn1 stepsize"
+  exists('fn','parameter'):$e if ($e=1) then setlimit('fn',524288,2,2) endif
+  exists('fn1','parameter'):$e if ($e=1) then setlimit('fn1',524288,2,2) endif
+
+endif
