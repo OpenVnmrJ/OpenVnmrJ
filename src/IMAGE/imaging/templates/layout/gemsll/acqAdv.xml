@@ -1,0 +1,597 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="acqAdv" element="pages" type="acquisition" >
+  <group size="800 270"
+    label="Advanced"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="acqAdv"
+    useref="no"
+    subtype="Untitled"
+    expanded="yes"
+    >
+    <group loc="435 0" size="210 230"
+      style="Heading1"
+      label="Profile"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Profile"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="5 45" size="200 25"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <radio loc="110 0" size="90 25"
+          style="PlainText"
+          label="Slice Profile"
+          vq="slprofile"
+          vc="slprofile='y' write('line3','Reduce readout FOV for optimum results')"
+          set="$VALUE=(slprofile='y')"
+          />
+        <radio loc="5 0" size="100 25"
+          style="PlainText"
+          label="Read Profile"
+          vq="slprofile"
+          vc="slprofile='n'"
+          set="$VALUE=(slprofile='n')"
+          />
+      </group>
+      <button loc="5 25" size="105 20"
+        style="Label4"
+        label="Acquire Profile"
+        vc="wdone='' im2D('prep','profile') au"
+        bg="darkGreen"
+        decor1="no"
+        />
+      <textmessage loc="115 25" size="90 20"
+        style="PlainText"
+        label="Axial (Y)"
+        vq="orient"
+        set="if (orient='trans') then $VALUE='Axial (Y)' elseif orient='sag' then $VALUE='Sagittal (Z)' elseif orient='cor' then $VALUE='Coronal (Z)' elseif orient='trans90' then $VALUE='Axial90 (X)' elseif orient='sag90' then $VALUE='Sagittal90 (Y)' elseif orient='cor90' then $VALUE='Coronal90 (X)' else $VALUE='Oblique' endif"
+        />
+      <label loc="70 130" size="55 20"
+        style="Label1"
+        label="Receiver"
+        />
+      <group loc="165 110" size="45 20"
+        vq="seqcon"
+        show="seqcon('slice'):$slice if ($slice='c') then $VALUE=1 else $VALUE=0 endif"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        reference="allslices"
+        useref="no"
+        subtype="Untitled"
+        expanded="yes"
+        >
+        <check loc="5 0" size="40 20"
+          style="PlainText"
+          label="All"
+          vq="slices profile"
+          vc="slices='all' im2Dxrecon('displayprofiles','allslices')"
+          vc2="slices='single' im2Dxrecon('displayprofiles','slice')"
+          set="$VALUE=(slices='all')"
+          show="if (profile&lt;&gt;'y') then $VALUE=-1 else $VALUE=1 endif"
+          />
+      </group>
+      <entry loc="125 130" size="40 20"
+        style="PlainText"
+        vq="rc profile"
+        vc="rc=$VALUE im2Dxrecon('displayprofiles','rcvr')"
+        set="$VALUE=rc"
+        show="if (profile='n') then $VALUE=-1 else im2Dxrecon('nrcvrs'):$nr if ($nr&gt;1) then $VALUE=1 else $VALUE=-1 endif endif"
+        digits="0"
+        />
+      <label loc="30 70" size="60 20"
+        style="Heading3"
+        label="Display"
+        />
+      <scroll loc="30 90" size="35 20"
+        style="PlainText"
+        label="value1"
+        vq="vs profile"
+        vc="vs=$VALUE im2Dxrecon('displayprofiles','scale')"
+        set="$VALUE=vs"
+        show="if (profile='y') then $VALUE=1 else $VALUE=-1 endif"
+        values="vs/1.2 vs*1.2"
+        />
+      <entry loc="125 110" size="40 20"
+        style="PlainText"
+        vq="sl slices profile"
+        vc="sl=$VALUE im2Dxrecon('displayprofiles','slice')"
+        set="$VALUE=sl"
+        show="if (profile='n') then $VALUE=-1 else if (slices='all') then $VALUE=-1 else $VALUE=1 endif endif"
+        digits="0"
+        />
+      <label loc="70 90" size="50 20"
+        style="Label1"
+        label="Scale"
+        />
+      <label loc="70 110" size="40 20"
+        style="Label1"
+        label="Slice"
+        />
+      <scroll loc="30 110" size="35 20"
+        style="PlainText"
+        label="value1"
+        vq="sl slices profile"
+        vc="sl=$VALUE im2Dxrecon('displayprofiles','slice')"
+        set="$VALUE=sl"
+        show="if (profile='n') then $VALUE=-1 else if (slices='all') then $VALUE=-1 else $VALUE=1 endif endif"
+        values="sl-1 sl+1"
+        />
+      <scroll loc="30 130" size="35 20"
+        style="PlainText"
+        label="value1"
+        vq="rc profile"
+        vc="rc=$VALUE im2Dxrecon('displayprofiles','rcvr')"
+        set="$VALUE=rc"
+        show="if (profile='n') then $VALUE=-1 else im2Dxrecon('nrcvrs'):$nr if ($nr&gt;1) then $VALUE=1 else $VALUE=-1 endif endif"
+        values="rc-1 rc+1"
+        />
+    </group>
+    <group loc="650 10" size="90 40"
+      bg="transparent"
+      border="None"
+      tab="no"
+      enable="no"
+      reference="show"
+      useref="no"
+      subtype="Untitled"
+      expanded="yes"
+      >
+      <toggle loc="5 20" size="80 20"
+        style="PlainText"
+        label="Show Grad"
+        vq="show_grad"
+        vc="show_grad = 1"
+        vc2="show_grad = 0"
+        set="$VALUE=show_grad"
+        radiobutton="no"
+        subtype="no"
+        />
+      <toggle loc="5 0" size="80 20"
+        style="PlainText"
+        label="Show RF"
+        vq="show_rf"
+        vc="show_rf = 1"
+        vc2="show_rf = 0"
+        set="$VALUE=show_rf"
+        radiobutton="no"
+        subtype="no"
+        />
+    </group>
+    <group loc="220 0" size="210 230"
+      style="Heading1"
+      label="Sequence"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Other"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="5 140" size="200 40"
+        vq="coil_param"
+        show="$VALUE=(coil_param[20]=3)"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        reference="tmp"
+        useref="no"
+        subtype="Untitled"
+        expanded="yes"
+        >
+        <check loc="0 0" size="190 20"
+          style="PlainText"
+          label="Volume Coil Receive"
+          vq="volumercv rcvrs"
+          vc="create('local_volumercv','flag'):$e local_volumercv=y volumercv=y rcvrs=y"
+          vc2="create('local_volumercv','flag'):$e local_volumercv=n  ldrf"
+          set="$VALUE=(local_volumercv=y)"
+          />
+        <entry loc="85 20" size="80 20"
+          style="PlainText"
+          vq="rcvrs volumercv"
+          vc="rcvrs='$VALUE'"
+          set="$VALUE=rcvrs"
+          />
+        <label loc="18 20" size="70 20"
+          style="Label1"
+          label="Receivers"
+          />
+      </group>
+      <radio loc="175 80" size="30 20"
+        style="PlainText"
+        label="3"
+        vq="trigger"
+        vc="trigger=3"
+        set="$VALUE=(trigger=3)"
+        />
+      <radio loc="145 80" size="30 20"
+        style="PlainText"
+        label="2"
+        vq="trigger"
+        vc="trigger=2"
+        set="$VALUE=(trigger=2)"
+        />
+      <radio loc="115 80" size="30 20"
+        style="PlainText"
+        label="1"
+        vq="trigger"
+        vc="trigger=1"
+        set="$VALUE=(trigger=1)"
+        />
+      <group loc="5 120" size="190 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        reference="grocalc"
+        useref="no"
+        subtype="Untitled"
+        expanded="yes"
+        >
+        <menu loc="110 0" size="60 20"
+          style="PlainText"
+          label="menu"
+          vc="grocalc = '$VALUE' prep go('check')"
+          set="$VALUE = grocalc"
+          bg="VJBackground"
+          editable="No"
+          >
+          <mlabel 
+            label="Auto"
+            chval="auto"
+            />
+          <mlabel 
+            label="SW"
+            chval="sw"
+            />
+          <mlabel 
+            label="GRO"
+            chval="gro"
+            />
+        </menu>
+        <label loc="0 0" size="105 20"
+          style="Label1"
+          label="GRO/SW Priority"
+          justify="Left"
+          />
+      </group>
+      <label loc="175 40" size="30 20"
+        style="PlainText"
+        label="ms"
+        justify="Left"
+        />
+      <label loc="5 20" size="70 20"
+        style="PlainText"
+        label="RF Spoil"
+        justify="Left"
+        />
+      <entry loc="115 20" size="60 20"
+        style="PlainText"
+        vq="rfphase"
+        vc="rfphase=$VALUE"
+        set="$VALUE=rfphase"
+        digits="0"
+        disable="Grayed out"
+        />
+      <label loc="175 20" size="30 20"
+        style="PlainText"
+        label="deg"
+        justify="Left"
+        />
+      <entry loc="115 40" size="60 20"
+        style="PlainText"
+        vq="trimage"
+        vc="trimage=$VALUE/1000.0 go('check')"
+        set="$VALUE=trimage*1000.0"
+        digits="1"
+        disable="Grayed out"
+        />
+      <check loc="115 60" size="90 20"
+        style="PlainText"
+        label="Distributed"
+        vq="trtype"
+        vc="trtype=0 go('check')"
+        vc2="trtype=1 go('check')"
+        set="$VALUE=(trtype=0)"
+        />
+      <entry loc="115 100" size="60 20"
+        style="PlainText"
+        vq="petable"
+        vc="petable='$VALUE'"
+        set="$VALUE=petable"
+        disable="Grayed out"
+        />
+      <label loc="5 100" size="90 20"
+        style="PlainText"
+        label="PE Table"
+        justify="Left"
+        />
+      <label loc="5 80" size="90 20"
+        style="PlainText"
+        label="Trigger Select"
+        justify="Left"
+        />
+      <label loc="5 60" size="90 20"
+        style="PlainText"
+        label="TR Spacing"
+        justify="Left"
+        />
+      <label loc="5 40" size="90 20"
+        style="PlainText"
+        label="Image Delay"
+        justify="Left"
+        />
+    </group>
+    <group loc="5 0" size="210 230"
+      style="Heading1"
+      label="Acquisition"
+      bg="transparent"
+      border="Etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Accquisition_group"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <textmessage loc="115 60" size="60 20"
+        style="PlainText"
+        label="331.1"
+        vq="resto"
+        set="$VALUE=resto"
+        digits="1"
+        />
+      <menu loc="115 140" size="60 20"
+        style="PlainText"
+        label="menu"
+        vc="presig = '$VALUE'"
+        set="$VALUE = presig"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="high"
+          chval="h"
+          />
+        <mlabel 
+          label="low"
+          chval="l"
+          />
+      </menu>
+      <menu loc="115 200" size="75 20"
+        style="PlainText"
+        vc="seqcon='$VALUE' go('check')"
+        set="$VALUE = seqcon"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="ncsnn"
+          chval="ncsnn"
+          />
+        <mlabel 
+          label="nccnn"
+          chval="nccnn"
+          />
+        <mlabel 
+          label="nssnn"
+          chval="nssnn"
+          />
+        <mlabel 
+          label="nscnn"
+          chval="nscnn"
+          />
+      </menu>
+      <label loc="5 200" size="100 20"
+        style="Label1"
+        label="seqcon"
+        justify="Left"
+        />
+      <group loc="5 180" size="195 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <entry loc="110 0" size="60 20"
+          style="PlainText"
+          vq="glimpe"
+          vc="glimpe = $VALUE"
+          set="$VALUE=glimpe"
+          digits="0"
+          disable="Grayed out"
+          />
+        <label loc="170 0" size="25 20"
+          style="Label1"
+          label="%"
+          justify="Left"
+          />
+        <label loc="0 0" size="60 20"
+          style="Label1"
+          label="Glim PE"
+          />
+      </group>
+      <group loc="5 160" size="195 20"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Untitled"
+        >
+        <label loc="170 0" size="25 20"
+          style="Label1"
+          label="%"
+          justify="Left"
+          />
+        <entry loc="110 0" size="60 20"
+          style="PlainText"
+          vq="glim"
+          vc="glim = $VALUE"
+          set="$VALUE=glim"
+          digits="0"
+          disable="Grayed out"
+          />
+        <label loc="0 0" size="60 20"
+          style="Label1"
+          label="Glim"
+          />
+      </group>
+      <entry loc="115 80" size="60 20"
+        style="PlainText"
+        vq="sw gro grocalc"
+        vc="$np=np sw=$VALUE np=$np prep go('check') grocalc='sw'"
+        set="$VALUE=sw"
+        show="$VALUE=(grocalc='sw')"
+        digits="0"
+        statpar="r1"
+        disable="Label"
+        />
+      <label loc="5 140" size="105 20"
+        style="Label1"
+        label="Presig"
+        justify="Left"
+        />
+      <label loc="175 40" size="30 20"
+        style="Label1"
+        label="MHz"
+        justify="Left"
+        />
+      <label loc="175 60" size="30 20"
+        style="Label1"
+        label="Hz"
+        justify="Left"
+        />
+      <label loc="175 80" size="30 20"
+        style="Label1"
+        label="Hz"
+        justify="Left"
+        />
+      <label loc="175 120" size="30 20"
+        style="Label1"
+        label="dB"
+        justify="Left"
+        />
+      <label loc="175 100" size="30 20"
+        style="Label1"
+        label="ms"
+        justify="Left"
+        />
+      <menu loc="115 20" size="75 20"
+        style="PlainText"
+        vq="tn"
+        vc="tn='$VALUE'"
+        set="$VALUE=tn"
+        bg="VJBackground"
+        editable="No"
+        >
+        <mlabel 
+          label="Proton"
+          chval="H1"
+          />
+        <mlabel 
+          label="F19"
+          chval="F19"
+          />
+        <mlabel 
+          label="P31"
+          chval="P31"
+          />
+        <mlabel 
+          label="C13"
+          chval="C13"
+          />
+        <mlabel 
+          label="Na23"
+          chval="Na23"
+          />
+        <mlabel 
+          label="Xe129"
+          chval="Xe129"
+          />
+      </menu>
+      <textmessage loc="115 40" size="60 20"
+        style="PlainText"
+        label="399.416"
+        vq="sfrq"
+        set="$VALUE=sfrq"
+        digits="3"
+        />
+      <entry loc="115 100" size="60 20"
+        style="PlainText"
+        vq="at"
+        vc="at=$VALUE/1000.0"
+        set="$VALUE=at*1000.0"
+        digits="2"
+        disable="Grayed out"
+        />
+      <entry loc="115 120" size="60 20"
+        style="PlainText"
+        vq="gain"
+        vc="gain=$VALUE"
+        set="$VALUE=gain"
+        digits="0"
+        disable="Grayed out"
+        />
+      <label loc="5 20" size="110 20"
+        style="Label1"
+        label="Nucleus"
+        justify="Left"
+        />
+      <label loc="6 120" size="110 20"
+        style="Label1"
+        label="Receiver Gain"
+        justify="Left"
+        />
+      <label loc="6 100" size="110 20"
+        style="Label1"
+        label="Acquisition Time"
+        justify="Left"
+        />
+      <label loc="6 80" size="110 20"
+        style="Label1"
+        label="Spectral Width"
+        justify="Left"
+        />
+      <label loc="6 60" size="110 20"
+        style="Label1"
+        label="Obs Offset"
+        justify="Left"
+        />
+      <label loc="6 40" size="110 20"
+        style="Label1"
+        label="Obs Frequency"
+        justify="Left"
+        />
+    </group>
+  </group>
+</template>

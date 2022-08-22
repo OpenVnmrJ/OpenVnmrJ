@@ -1,0 +1,320 @@
+"macro"
+"*****************************************************************************"
+"
+" aip2Dmask - macro to calculate 2D masks"
+"
+"*****************************************************************************"
+
+$action=''
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action='generate') then
+  aip2Dsmap('genpars')
+  $recon=recon
+  recon='mask'
+  flush
+  aip2Dmask('process')
+  aip2Dmask('display')
+  recon=$recon  
+endif
+
+if ($action='add2mask') then
+  aip2Dsmap('genpars')
+  "Check we have the correct number of FDFs"
+  $cmd='a="" ; for i in '+curexp+'/maskroi/*.fdf ; do a=$a"y" ; done ; echo $a'
+  shell($cmd):$nimages
+  length($nimages):$nfdfs
+  if ($nfdfs <> size('pss')) then
+    write('error','Generate ROIs using ALL slices of ONE type of display')
+    return
+  endif
+  "Add the ROIs to the mask"
+  $recon=recon
+  recon='add2mask'
+  flush
+  aip2Dmask('process')
+  aip2Dmask('display')
+  recon=$recon
+endif
+
+if ($action='genroi') then
+  "Display all the frames"
+  aipAutoLayout=1 
+  if aipLayoutPolicy<0.5 then aipLayoutPolicy=1 endif 
+  if rqsort<0.5 then rqsort=1 endif
+  aipRQcommand('display','selected')
+  "This is a work-around to clear regions outside the ROI"
+  exists(curexp+'/ROIs','file'):$ex
+  if($ex < 0.5) then
+    mkdir(curexp+'/ROIs','file')
+  endif
+  $name = curexp+'/ROIs/pt'
+  rm('-f',$name):$x
+  write('reset',$name)  "create param file"
+  write('file',$name,'Point')
+  write('file',$name,'0.0 0.0')
+  aipSelectFrames('all') 
+  loadROI($name)
+  "Select all the ROIs"
+  aipSelectRois('all')
+  off('aipStatCursMax','global')  "disable segmentation limits"
+  off('aipStatCursMin','global')
+  aipSegment('r')
+  "Write the ROIs"
+  aipWriteFmtConvert = 'FDF'
+  $dir = curexp+'/maskroi'
+  rm('-rf',$dir):$x
+  mkdir($dir) 
+  aipWriteData($dir+'/roi')
+endif
+
+if ($action='process') then
+  $cmd = 'Xrecon -v '+curexp+' >'+curexp+'/Xrecon.txt 2>&1'
+  shell($cmd):$trash
+  clear
+  cat(curexp+'/Xrecon.txt')
+endif
+
+if ($action='display') then
+  aipDeleteData('all')              "clear images"
+  aipRQcommand('set','sort','yes')  "enable sorting"
+  rqsort=1                          "sort by slices"
+  rqsort2=1                         "sort by slices"
+  "Find the number of images and split window accordingly"
+  $cmd='a="" ; for i in '+curexp+'/recon/*.fdf ; do a=$a"y" ; done ; echo $a'
+  shell($cmd):$nimages
+  length($nimages):$nframes
+  aipSplitWindow($nframes,2,1)
+  "Load and display data"
+  $reconflag=1	    
+  aip2Dmask('displaydir','recon','imMG'):$reconflag
+  aip2Dmask('displaydir','mask','imMK'):$reconflag
+  aip2Dmask('displaydir','maskR','imRMK'):$reconflag
+  aipDisplay('all')                 "display"
+endif
+
+if ($action = 'displaydir') then
+  if ($# > 3) OR ($# < 3) then return endif
+  $dir=$2
+  $flag=$3
+  exists($flag,'parameter'):$e
+  if ($e > 0) then
+    if ({$flag} = 'y') then
+      exists(curexp+'/'+$dir,'directory'):$e
+      if ($e < 1) then return endif
+      aipRQcommand('load',curexp+'/'+$dir,-1)
+      return(0)		
+    endif
+  endif
+endif
+
+if ($action='clear') then
+  aipDeleteData('all')              "clear images"
+  aipXrecon('cleardata')
+  $cmd = 'rm -r '+curexp+'/mask*'
+  shell($cmd)
+endif
+
+if ($action='pardir') then
+  aip2Dmask('genpars')
+  $pardir=userdir+'/maskpars'
+  exists($pardir,'directory'):$e
+  if ($e=0) then
+    mkdir($pardir) 
+  endif
+  return($pardir)
+endif
+
+if ($action='loadpars') then
+  aip2Dmask('genpars')
+  $pardir=userdir+'/maskpars'
+  $parfile=userdir+'/maskpars/'+maskparfile
+  exists($parfile,'file'):$e
+  if ($e=1) then 
+    lookup('file',$parfile)
+    lookup('seekcs','maskwlb','read'):maskwlb
+    lookup('seekcs','maskwgf','read'):maskwgf
+    lookup('seekcs','maskwsb','read'):maskwsb
+    lookup('seekcs','masklb','read'):masklb
+    lookup('seekcs','masklb1','read'):masklb1
+    lookup('seekcs','maskgf','read'):maskgf
+    lookup('seekcs','maskgf1','read'):maskgf1
+    lookup('seekcs','masksb','read'):masksb
+    lookup('seekcs','masksb1','read'):masksb1
+    lookup('seekcs','maskfn','read'):maskfn
+    lookup('seekcs','maskfnon','read'):$on
+    if ($on) then maskfn='y' else maskfn='n' endif
+    lookup('seekcs','maskfn1','read'):maskfn1
+    lookup('seekcs','maskfn1on','read'):$on
+    if ($on) then maskfn1='y' else maskfn1='n' endif
+    lookup('seekcs','masklvlmode','read'):masklvlmode
+    lookup('seekcs','masklvlmax','read'):masklvlmax
+    lookup('seekcs','masklvlnoise','read'):masklvlnoise
+    lookup('seekcs','masklvlnoisefrac','read'):masklvlnoisefrac
+    lookup('seekcs','dfill','read'):dfill
+    lookup('seekcs','dfilldim','read'):dfilldim
+    lookup('seekcs','dfillfrac','read'):dfillfrac
+    lookup('seekcs','dfillloops','read'):dfillloops
+    lookup('seekcs','maskrcvrs','read'):maskrcvrs
+    lookup('seekcs','masknoisefrac','read'):masknoisefrac
+    maskallslices='y'
+    aip2Dmask('allslices')
+  endif
+endif
+
+if ($action='savepars') then
+  aip2Dmask('genpars') 
+  if (maskallslices = '') then maskallslices='n' endif
+  if (maskwlb = '') then maskwlb='n' endif
+  if (maskwgf = '') then maskwgf='n' endif
+  if (maskwsb = '') then maskwsb='n' endif
+  if (masklvlmode = '') then masklvlmode='n' endif
+  if (dfill = '') then dfill='n' endif
+  $parfile=userdir+'/maskpars/'+maskparfile
+  exists($parfile,'file'):$e
+  if ($e=1) then shell('rm -f '+$parfile) endif
+  write('reset',$parfile)
+  write('file',$parfile,'Mask Parameter File')
+  write('file',$parfile,'maskwlb %s',maskwlb)  
+  write('file',$parfile,'maskwgf %s',maskwgf)  
+  write('file',$parfile,'maskwsb %s',maskwsb)  
+  write('file',$parfile,'masklb %f',masklb)  
+  write('file',$parfile,'masklb1 %f',masklb1)  
+  write('file',$parfile,'maskgf %f',maskgf)  
+  write('file',$parfile,'maskgf1 %f',maskgf1)  
+  write('file',$parfile,'masksb %f',masksb)  
+  write('file',$parfile,'masksb1 %f',masksb1)  
+  write('file',$parfile,'maskfn %f',maskfn)  
+  on('maskfn'):$on
+  write('file',$parfile,'maskfnon %d',$on)    
+  write('file',$parfile,'maskfn1 %f',maskfn1)  
+  on('maskfn1'):$on
+  write('file',$parfile,'maskfn1on %d',$on)    
+  write('file',$parfile,'masklvlmode %s',masklvlmode)  
+  write('file',$parfile,'masklvlmax %f',masklvlmax)  
+  write('file',$parfile,'masklvlnoise %f',masklvlnoise)  
+  write('file',$parfile,'masklvlnoisefrac %f',masklvlnoisefrac)  
+  write('file',$parfile,'dfill %s',dfill)  
+  write('file',$parfile,'dfilldim %f',dfilldim)  
+  write('file',$parfile,'dfillfrac %f',dfillfrac)  
+  write('file',$parfile,'dfillloops %f',dfillloops)  
+  write('file',$parfile,'maskrcvrs %d',maskrcvrs)  
+  write('file',$parfile,'masknoisefrac %f',masknoisefrac)  
+endif
+
+if ($action='deletepars') then
+  aip2Dmask('genpars')
+  $parfile=userdir+'/maskpars/'+maskparfile
+  exists($parfile,'file'):$e
+  if ($e=1) then shell('rm -f '+$parfile) endif
+  maskparfile=''
+endif
+
+if ($action='allslices') then
+  aip2Dmask('genpars')
+  maskstartslice=1
+  maskendslice=size('pss')
+  aip2Dmask('checkslices')
+endif
+
+if ($action='checkslices') then
+  aip2Dmask('genpars')
+  if (maskstartslice < 1) then maskstartslice = 1 endif
+  if (maskstartslice > size('pss')) then maskstartslice = 1 endif
+  if (maskendslice > size('pss')) then maskendslice = size('pss') endif
+  if (maskendslice < 1) then maskendslice = size('pss') endif
+  if (maskstartslice > maskendslice) then
+    $temp = maskstartslice
+    maskstartslice = maskendslice
+    maskendslice = $temp
+  endif
+  if (maskstartslice > 1) OR (maskendslice < size('pss')) then 
+    maskallslices='n'
+  else
+    maskallslices='y'
+  endif
+endif
+
+if ($action='checkrcvrs') then
+  aip2Dmask('genpars')
+  if (maskrcvrs < 1) then maskrcvrs = 1 endif
+  aipXrecon('nrcvrs'):$max
+  if (maskrcvrs > $max) then maskrcvrs = $max endif
+endif
+
+if ($action='refresh') then
+  aip2Dmask('genpars') 
+  aip2Dsmap('genpars') 
+  maskfn=smapfn 
+  maskfn1=smapfn1
+  on('smapfn'):$on
+  if ($on) then on('maskfn') else off('maskfn') endif
+  on('smapfn1'):$on
+  if ($on) then on('maskfn1') else off('maskfn1') endif
+endif
+
+if ($action='genpars') then
+  
+  "Mask Page"
+  create('maskpage','string','current','n')
+
+  "Masking output types"
+  create('imMK','string','current','n')
+  create('imRMK','string','current','n')
+
+  "All slices flag"
+  create('maskallslices','string','current','')
+  
+  "The start and end slice to process"
+  create('maskstartslice','real','current',1)
+  create('maskendslice','real','current',size('pss'))
+  if (maskstartslice > 1) OR (maskendslice < size('pss')) then 
+    maskallslices='n'
+  else
+    maskallslices='y'
+  endif
+
+  "Weighting Flags"
+  create('maskwlb','string','current','n')
+  create('maskwgf','string','current','y')
+  create('maskwsb','string','current','n')
+
+  "Weighting Parameters"
+  create('masklb','real','current',0)
+  create('masklb1','real','current',0)
+  create('maskgf','real','current',0.03)
+  create('maskgf1','real','current',0.03)
+  create('masksb','real','current',0)
+  create('masksb1','real','current',0)
+
+  "Zero filling Parameters"
+  create('maskfn','integer','current',0)
+  create('maskfn1','integer','current',0)
+
+  "Threshold Parameters"
+  create('masklvlmode','string','current','noise')
+  create('masklvlmax','real','current',0)
+  create('masklvlnoise','real','current',30)
+  create('masklvlnoisefrac','real','current',0.05)
+
+  "Density Filling Parameters"
+  create('dfill','string','current','y')
+  create('dfilldim','real','current',5)
+  create('dfillfrac','real','current',0.55)
+  create('dfillloops','real','current',1)
+
+  "Number of receivers requiring signal for mask"
+  create('maskrcvrs','real','current',2)
+
+  "Noise equalization"
+  create('maskeqnoise','string','current','n')
+
+  "Fraction of k-space FOV to use for noise equalization"
+  create('masknoisefrac','real','current',0.05)
+
+  "File for mask parameters"
+  create('maskparfile','string','current','')
+
+endif

@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<template name="acq2Dsense" element="pages" type="acquisition" >
+  <group size="800 270"
+    style="Heading1"
+    label="Sense"
+    vq="sense"
+    show="$VALUE=(sense='y')"
+    bg="transparent"
+    border="None"
+    side="Top"
+    justify="Left"
+    tab="yes"
+    enable="no"
+    reference="acq2Dsense"
+    useref="no"
+    subtype="Convenience"
+    expanded="yes"
+    >
+    <group loc="5 0" size="210 220"
+      style="Heading1"
+      label="Acquisition"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Other"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <group loc="105 105" size="105 40"
+        vq="sensestatus"
+        show="$VALUE=(sensestatus&lt;&gt;'sense')"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <textmessage loc="60 20" size="40 20"
+          style="PlainText"
+          vq="nv"
+          set="foldnv=nv/accelphase $VALUE=nv"
+          />
+        <textmessage loc="60 0" size="40 20"
+          style="PlainText"
+          vq="foldnv"
+          set="accelphase=nv/foldnv $VALUE=foldnv"
+          />
+        <textmessage loc="5 20" size="40 20"
+          style="PlainText"
+          vq="np"
+          set="foldnp=np/accelread $VALUE=np/2"
+          />
+        <textmessage loc="5 0" size="40 20"
+          style="PlainText"
+          vq="foldnp"
+          set="accelread=np/foldnp $VALUE=foldnp/2"
+          />
+      </group>
+      <group loc="100 105" size="105 40"
+        vq="sensestatus"
+        show="$VALUE=(sensestatus='sense')"
+        bg="transparent"
+        border="None"
+        tab="no"
+        enable="no"
+        useref="no"
+        subtype="Convenience"
+        >
+        <textmessage loc="65 20" size="40 20"
+          style="PlainText"
+          vq="nv"
+          set="$VALUE=nv*accelphase"
+          />
+        <textmessage loc="65 0" size="40 20"
+          style="PlainText"
+          vq="nv"
+          set="$VALUE=nv"
+          />
+        <textmessage loc="10 20" size="40 20"
+          style="PlainText"
+          vq="np"
+          set="$VALUE=np*accelread/2"
+          />
+        <textmessage loc="10 0" size="40 20"
+          style="PlainText"
+          vq="np"
+          set="$VALUE=np/2"
+          />
+      </group>
+      <label loc="5 125" size="95 20"
+        style="Label1"
+        label="Full FOV Matrix"
+        />
+      <label loc="5 105" size="95 20"
+        style="Label1"
+        label="Folded Matrix"
+        />
+      <entry loc="160 80" size="40 20"
+        style="PlainText"
+        vq="accelphase foldnv nv"
+        vc="accelphase=$VALUE if (accelphase&lt;1) then accelphase=1 endif foldnv=nv/accelphase $i = foldnv % etl if ($i &lt; etl/2) then foldnv = foldnv-$i else foldnv = foldnv+etl-$i endif"
+        set="$VALUE=accelphase"
+        digits="2"
+        />
+      <entry loc="105 80" size="40 20"
+        style="PlainText"
+        vq="accelread foldnp np"
+        vc="accelread=$VALUE if (accelread&lt;1) then accelread=1 endif foldnp=np/accelread"
+        set="$VALUE=accelread"
+        digits="2"
+        />
+      <label loc="5 80" size="80 20"
+        style="Label1"
+        label="Reduction"
+        />
+      <scroll loc="165 60" size="35 20"
+        style="PlainText"
+        label="value1"
+        vq="foldnv accelphase"
+        vc="foldnv=$VALUE if (foldnv&gt;nv) then foldnv=nv endif accelphase=nv/foldnv"
+        set="$VALUE=foldnv"
+        values="foldnv+etl foldnv-etl"
+        />
+      <scroll loc="110 60" size="35 20"
+        style="PlainText"
+        label="value1"
+        vq="foldnp accelread"
+        vc="foldnp=$VALUE if (foldnp&gt;np) then foldnp=np endif accelread=np/foldnp"
+        set="$VALUE=foldnp"
+        values="foldnp+4  foldnp-4"
+        />
+      <label loc="160 40" size="40 20"
+        style="Label1"
+        label="Phase"
+        />
+      <label loc="110 40" size="40 20"
+        style="Label1"
+        label="Read"
+        />
+      <button loc="35 190" size="130 20"
+        style="PlainText"
+        label="Check Parameters"
+        vc="acq2Dsense('checkfolded')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <check loc="5 20" size="65 20"
+        style="PlainText"
+        label="SENSE"
+        vq="sense"
+        vc="sense='y' volumercv='n' $i=1 rcvrs='y' while ($i&lt;coil_param[19]) do rcvrs=rcvrs+'y' $i=$i+1 endwhile"
+        vc2="sense='n'"
+        set="$VALUE=(sense='y')"
+        />
+    </group>
+    <group loc="220 0" size="210 220"
+      style="Heading1"
+      label="Reference Data"
+      bg="transparent"
+      border="etched"
+      side="Top"
+      justify="Left"
+      tab="no"
+      enable="no"
+      reference="Accquisition_group"
+      useref="no"
+      subtype="Major"
+      expanded="yes"
+      >
+      <button loc="40 190" size="130 20"
+        style="PlainText"
+        label="Check Parameters"
+        vc="acq2Dsense('checkreference')"
+        bg="transparent"
+        decor1="yes"
+        />
+      <radio loc="5 70" size="200 20"
+        style="PlainText"
+        label="Use Existing Reference Data"
+        vq="acquireref"
+        vc="acquireref='n'"
+        vc2="acquireref='y'"
+        set="$VALUE=(acquireref='n')"
+        />
+      <label loc="5 105" size="195 20"
+        style="PlainText"
+        label="Data Matrix (RO x PE)"
+        justify="Left"
+        />
+      <menu loc="70 125" size="65 20"
+        style="PlainText"
+        label="menu"
+        vq="refnv"
+        vc="refnv=$VALUE go('check')"
+        set="$VALUE=refnv"
+        editable="No"
+        >
+        <mlabel 
+          label="32"
+          chval="32"
+          />
+        <mlabel 
+          label="64"
+          chval="64"
+          />
+        <mlabel 
+          label="96"
+          chval="96"
+          />
+        <mlabel 
+          label="128"
+          chval="128"
+          />
+        <mlabel 
+          label="192"
+          chval="192"
+          />
+        <mlabel 
+          label="256"
+          chval="256"
+          />
+        <mlabel 
+          label="512"
+          chval="512"
+          />
+        <mlabel 
+          label="1024"
+          chval="1024"
+          />
+      </menu>
+      <textmessage loc="70 145" size="65 20"
+        style="PlainText"
+        vq="refnv"
+        set="if refnv&lt;&gt;32 and refnv&lt;&gt;64 and refnv&lt;&gt;128 and refnv&lt;&gt;256 and refnv&lt;&gt;512 and refnv&lt;&gt;1024 then $VALUE=refnv else $VALUE='' endif"
+        />
+      <menu loc="5 125" size="65 20"
+        style="PlainText"
+        label="menu"
+        vq="refnp"
+        vc="refnp=$VALUE*2 go('check')"
+        set="$VALUE=refnp/2"
+        editable="No"
+        >
+        <mlabel 
+          label="32"
+          chval="32"
+          />
+        <mlabel 
+          label="64"
+          chval="64"
+          />
+        <mlabel 
+          label="96"
+          chval="96"
+          />
+        <mlabel 
+          label="128"
+          chval="128"
+          />
+        <mlabel 
+          label="192"
+          chval="192"
+          />
+        <mlabel 
+          label="256"
+          chval="256"
+          />
+        <mlabel 
+          label="512"
+          chval="512"
+          />
+        <mlabel 
+          label="1024"
+          chval="1024"
+          />
+      </menu>
+      <textmessage loc="5 145" size="65 20"
+        style="PlainText"
+        vq="refnp"
+        set="if refnp&lt;&gt;64 and refnp&lt;&gt;128 and refnp&lt;&gt;256 and refnp&lt;&gt;512 and refnp&lt;&gt;1024 and refnp&lt;&gt;2048 then $VALUE=refnp/2 else $VALUE='' endif"
+        />
+      <check loc="20 40" size="180 20"
+        style="PlainText"
+        label="Volume Coil Reference"
+        vq="sensestatus"
+        vc="sensestatus='vcoilref' vcoil='y'"
+        vc2="sensestatus='senseref' vcoil='n'"
+        set="$VALUE=(sensestatus='vcoilref')"
+        />
+      <radio loc="5 20" size="200 20"
+        style="PlainText"
+        label="Aquire Reference Data"
+        vq="acquireref"
+        vc="acquireref='y'"
+        vc2="acquireref='n'"
+        set="$VALUE=(acquireref='y')"
+        />
+    </group>
+  </group>
+</template>

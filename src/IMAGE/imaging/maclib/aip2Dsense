@@ -1,0 +1,84 @@
+"macro"
+"*****************************************************************************"
+"
+" aip2Dsense - macro to calculate 2D sensibility maps"
+"
+"*****************************************************************************"
+
+$action=''
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action='generate') then
+  aip2Dsmap('genpars')
+  $recon=recon
+  recon='sensibility'
+  flush
+  aip2Dsense('process')
+  aip2Dsense('display')
+  recon=$recon  
+endif
+
+if ($action='process') then
+  $cmd = 'Xrecon -v '+curexp+' >'+curexp+'/Xrecon.txt 2>&1'
+  shell($cmd):$trash
+  clear
+  cat(curexp+'/Xrecon.txt')
+endif
+
+if ($action='display') then
+  aipDeleteData('all')              "clear images"
+  aipRQcommand('set','sort','yes')  "enable sorting"
+  rqsort=1                          "sort by slices"
+  rqsort2=1                         "sort by slices"
+  "Find the number of images and split window accordingly"
+  $cmd='a="" ; for i in '+curexp+'/recon/*.fdf ; do a=$a"y" ; done ; echo $a'
+  shell($cmd):$nimages
+  length($nimages):$nframes
+  aipSplitWindow($nframes,2,1)
+  "Load and display data"
+  $reconflag=1	    
+  aip2Dsense('displaydir','gmap','imGF',1):$reconflag
+  aip2Dsense('displaydir','Rsnr','imRS',1):$reconflag
+  aipDisplay('all')                 "display"
+endif
+
+if ($action = 'displaydir') then
+  if ($# > 4) OR ($# < 4) then return endif
+  $dir=$2
+  $flag=$3
+  $nr=$4
+  exists($flag,'parameter'):$e
+  if ($e > 0) then
+    if ({$flag} = 'y') then
+      if ($nr > 1) then
+        $i=1
+	$ext=''
+        while ($i <= $nr) do
+          format($i+1000,4,0):$ext
+          substr($ext,2,4):$ext
+          exists(curexp+'/'+$dir+$ext,'directory'):$e
+	  if ($e < 1) then return endif
+          aipRQcommand('load',curexp+'/'+$dir+$ext,-1)
+          $i=$i+1
+        endwhile
+      else	    
+        exists(curexp+'/'+$dir,'directory'):$e
+	if ($e < 1) then return endif
+        aipRQcommand('load',curexp+'/'+$dir,-1)
+      endif
+      return(0)		
+    endif
+  endif
+endif
+
+if ($action='clear') then
+  aipDeleteData('all')              "clear images"
+  $cmd = 'rm -r '+curexp+'/gmap*'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/Rsnr*'
+  shell($cmd)
+  $cmd = 'rm -r '+curexp+'/recon*'
+  shell($cmd)
+endif

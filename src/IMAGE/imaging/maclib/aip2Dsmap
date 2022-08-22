@@ -1,0 +1,193 @@
+"macro"
+"*****************************************************************************"
+"
+" aip2Dsmap - macro to calculate 2D sensitivity maps"
+"
+"*****************************************************************************"
+
+$action=''
+if ($# > 0) then
+  $action = $1
+endif
+
+if ($action='generate') then
+  aip2Dsmap('genpars')
+  $recon=recon
+  if (recon='sensibility') then
+    accelread=initaread
+    accelphase=initaphase
+  endif
+  recon='smap'
+  aip2Dmask('allslices')
+  flush
+  aip2Dsmap('process')
+  aip2Dsmap('display')
+  recon=$recon  
+endif
+
+if ($action='process') then
+  $cmd = 'Xrecon -v '+curexp+' >'+curexp+'/Xrecon.txt 2>&1'
+  shell($cmd):$trash
+  clear
+  cat(curexp+'/Xrecon.txt')
+endif
+
+if ($action='display') then
+  aipDeleteData('all')              "clear images"
+  aipRQcommand('set','sort','yes')  "enable sorting"
+  rqsort=1                          "sort by slices"
+  rqsort2=1                         "sort by slices"
+  "Find the number of images and split window accordingly"
+  $cmd='a="" ; for i in '+curexp+'/recon/*.fdf ; do a=$a"y" ; done ; echo $a'
+  shell($cmd):$nimages
+  length($nimages):$nframes
+  aipSplitWindow($nframes,2,1)
+  "Load and display data"
+  $reconflag=1	    
+  aipXrecon('nrcvrs'):$nr
+  aip2Dsmap('displaydir','recon','imMG',1):$reconflag
+  aip2Dsmap('displaydir','mask','imMK',1):$reconflag
+  aip2Dsmap('displaydir','maskR','imRMK',1):$reconflag
+  aip2Dsmap('displaydir','smap','imSM',$nr):$reconflag
+  aipDisplay('all')                 "display"
+endif
+
+if ($action = 'displaydir') then
+  if ($# > 4) OR ($# < 4) then return endif
+  $dir=$2
+  $flag=$3
+  $nr=$4
+  exists($flag,'parameter'):$e
+  if ($e > 0) then
+    if ({$flag} = 'y') then
+      if ($nr > 1) then
+        $i=1
+	$ext=''
+        while ($i <= $nr) do
+          format($i+1000,4,0):$ext
+          substr($ext,2,4):$ext
+          exists(curexp+'/'+$dir+$ext,'directory'):$e
+	  if ($e < 1) then return endif
+          aipRQcommand('load',curexp+'/'+$dir+$ext,-1)
+          $i=$i+1
+        endwhile
+      else	    
+        exists(curexp+'/'+$dir,'directory'):$e
+	if ($e < 1) then return endif
+        aipRQcommand('load',curexp+'/'+$dir,-1)
+      endif
+      return(0)		
+    endif
+  endif
+endif
+
+if ($action='clear') then
+  aipDeleteData('all')              "clear images"
+  aipXrecon('cleardata')
+endif
+
+if ($action='refdir') then
+
+  if (file='exp') then
+    saveAs('fid'):$file
+  else
+    $file=file
+  endif
+  length($file):$len
+  $nslash=0
+  $i=1
+  while ($i <= $len) do
+    $str=''
+    substr($file,$i,1):$str
+    if ($str = '/') then $nslash=$nslash+1 endif
+    $i=$i+1
+  endwhile
+  $slash=0
+  $i=1
+  $refdir=''
+  while (($i <= $len) AND ($slash < $nslash)) do
+    $str=''
+    substr($file,$i,1):$str
+    if ($str = '/') then $slash=$slash+1 endif
+    $refdir=$refdir+$str
+    $i=$i+1
+  endwhile
+  vcoilrefdir=$refdir
+  senserefdir=$refdir
+  return($refdir)
+
+endif
+
+if ($action='genpars') then
+
+  aip2Dmask('genpars')
+
+  "Sensitivity Map Page"
+  create('smappage','string','current','n')
+
+  "Sensitivity Map"
+  create('imSM','string','current','n')
+
+  "Sensitivity Map Reference"
+  create('smapref','string','current','')
+
+  "Reference Data"
+  create('acquireref','string','current','y')
+
+  "Volume Coil Reference Data"
+  create('vcoilref','string','current','')
+  create('vcoilrefdir','string','current','')
+  create('vcoilrefselect','string','current','')
+
+  "Noise equalization"
+  create('smapeqnoise','string','current','n')
+
+  "Fraction of k-space FOV to use for noise equalization"
+  create('smapnoisefrac','real','current',0.05)
+
+  "Weighting Flags"
+  create('smapwlb','string','current','n')
+  create('smapwgf','string','current','y')
+  create('smapwsb','string','current','n')
+
+  "Weighting Parameters"
+  create('smaplb','real','current',0)
+  create('smaplb1','real','current',0)
+  create('smapgf','real','current',0.05)
+  create('smapgf1','real','current',0.05)
+  create('smapsb','real','current',0)
+  create('smapsb1','real','current',0)
+
+  "Mask Parameters"
+  create('smapmask','string','current','parameters')
+
+  "SENSE acceleration factors"
+  create('accelread','real','current',1)
+  create('accelphase','real','current',1)
+
+  "Initial SENSE acceleration factors"
+  create('initaread','real','current',1)
+  create('initaphase','real','current',1)
+
+  "Sensitivity Map Reduction factors"
+  create('rmapread','real','current',1)
+  create('rmapphase','real','current',1)
+
+  "SENSE Reference Data"
+  create('senseref','string','current','')
+  create('senserefdir','string','current','')
+  create('senserefselect','string','current','')
+
+  "Geometry Factor"
+  create('imGF','string','current','y')
+
+  "Relative SNR"
+  create('imRS','string','current','y')
+
+  "Noise Matrix"
+  create('noisematrix','string','current','n')
+  
+  "Noise Matrix Print Flag"
+  create('printNM','string','current','n')
+    
+endif
