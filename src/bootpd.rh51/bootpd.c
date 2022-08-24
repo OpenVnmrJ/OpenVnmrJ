@@ -891,6 +891,15 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
 		// homedir = bp->bp_file;
 		homedir = cbp;
 		bootfile = strrchr(homedir, '/');
+		if ( ! strcmp(cbp,"/tftpboot/vxBoot/vxWorks"))
+                {
+                   strcat(cbp,"PPC");
+                   if (debug > 2) {
+                      report(LOG_INFO, "fixed homedir=\"%s\"  bootfile=\"%s\"",
+                             (homedir) ? homedir : "",
+                             (bootfile) ? bootfile : "");
+                   }
+                }
 		if (bootfile) {
 			if (homedir == bootfile)
 				homedir = NULL;
@@ -918,7 +927,7 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
            n=1;
         else
            n = strncmp(homedir,"/tftpboot",9) + strncmp(bootfile,"vxWorks",7);
-        if ((homedir==NULL) && (bootfile!=NULL) && ! strncmp(bootfile,"vxWorksPPC",10) )
+        if (n == 0)
         {
            homedir = "/var/lib/tftpboot/vxBoot";
 	       if (chk_access(homedir, &bootsize) == 0)
