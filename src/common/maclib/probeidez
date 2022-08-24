@@ -932,15 +932,16 @@ elseif ($1='target') then
 elseif ($1='get') then
     $attr='' $id=probeidattr[4]
     if $#>1 then $attr=$2 endif
-    if $#>2 then $id=$3 endif
     
-    if $id='' or $id=' ' then return endif
+    if $id='' or $id=' ' then
+      if ($#>=3) then return($3) else return endif
+    endif
     $probeid_cache=$probeid_probes+'/'+$id
     $probeid_path=$probeid_cache+'/'+$probeid_file
     exists($probeid_cache,'directory'):$d
     if not $d then
-      write('line3','Warning: Probe file '+probe+': probe with ID '+$id+' is not initialized on this system')
-      return(size($3))
+      write('line3','Warning: Probe ID for '+probe+' with ID '+$id+' is not initialized on this system.')
+      if ($#>=3) then return($3) else return endif
     endif
     $pid_attr='' $pid_val=''
     readfile($probeid_path,'$pid_attr','$pid_val','','local'):$pid_sz
@@ -951,7 +952,7 @@ elseif ($1='get') then
       if $##=0 then write('line3',$pid_val[$i]) endif
       if $i then return($pid_val[$i]) endif
     endif
-    return(0)
+    if ($#>=3) then return($3) else return endif
 
 elseif ($1='getTargets') then
     //-- initialize probe calibration target specs.
