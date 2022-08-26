@@ -383,7 +383,7 @@ public class VUpDownButton extends UpDownButton implements VObjIF, VEditIF,
              setLabel(label);
                      break;
           case MIN:
-                 if (limitPar == null) {
+                 if ((limitPar == null) && (c != null)) {
              try {
                  min =  (int)Double.parseDouble(c);
              } catch (NumberFormatException ex) { }
@@ -391,7 +391,7 @@ public class VUpDownButton extends UpDownButton implements VObjIF, VEditIF,
              }
                      break;
           case MAX:
-                 if (limitPar == null) {
+                 if ((limitPar == null) && (c != null)) {
              try {
                  max = (int)Double.parseDouble(c);
              } catch (NumberFormatException ex) { }
@@ -604,7 +604,8 @@ public class VUpDownButton extends UpDownButton implements VObjIF, VEditIF,
         if (rWidth > nWidth)
             rWidth = nWidth;
         fontH2 = (float)curFont.getSize();
-        setFont(curFont);
+	if (((int)fontH2 > (int)fontH+1) || ((int)fontH2 < (int)fontH-1))
+           setFont(curFont);
     }
 
 
