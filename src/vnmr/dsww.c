@@ -817,14 +817,14 @@ int dsww(int argc, char *argv[], int retc, char *retv[])
   integral = 0;
 
 // now set arraystart, arraystop, arraydelta parameters
-  if(!P_getreal(CURRENT,"arraystart",&d,1) && firstindex != (int)d) {
+  if(!P_getreal(CURRENT,"arraystart",&d,1) && firstindex > (int)d) {
   	P_setreal(CURRENT,"arraystart", (double)firstindex, 1);
 #ifdef VNMRJ
         appendJvarlist("arraystart");
   	// writelineToVnmrJ("pnew", "1 arraystart");
 #endif
   }
-  if(!P_getreal(CURRENT,"arraystop",&d,1) && lastindex != (int)d) {
+  if(!P_getreal(CURRENT,"arraystop",&d,1) && lastindex < (int)d) {
   	P_setreal(CURRENT,"arraystop", (double)lastindex, 1);
 #ifdef VNMRJ
         appendJvarlist("arraystop");
