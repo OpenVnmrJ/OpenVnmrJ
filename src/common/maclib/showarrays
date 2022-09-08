@@ -5,7 +5,10 @@ else $arg='redisplay' endif
 getMaxIndex:$maxindex
 //$stop=$maxindex
 
-//if celem=0 then $stop=arraydim else $stop=celem endif
+if (celem<$maxindex) then
+  setvalue('celem',$maxindex,'current')
+  setvalue('celem',$maxindex,'processed')
+endif
 
 exists('showarray','parameter'):$e
 module('add','showarrays','basic')
@@ -104,7 +107,7 @@ elseif $arg='redisplay' then
 
 
   exists('dsSelect','parameter'):$e
-  if($e and ($n2 = 'dss')) then
+  if($e and ($n2 = 'dss') and (appmode='imaging')) then
     $dss=$dcmd+'(`select`)'
     exec($dss)
     if shownumbers='v' or shownumbers='s' then
@@ -126,11 +129,6 @@ elseif $arg='redisplay' then
     endif
   endif
   if arraydscale='y' then
-/*
-      if showcontent='f' then dscale(-vo*arraystop/arraydelta)
-      else dscale
-      endif
-*/
     dscale
   endif
 
