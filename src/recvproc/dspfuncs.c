@@ -8,9 +8,6 @@
  */
 /* dspfuncs.c  DSP functions */
 
-/*
- */
-
 /*----------------------------------------------+
 |						|
 |		    dspfuncs.c			|
@@ -39,6 +36,7 @@
 #include "shrstatinfo.h"
 #include "dspfuncs.h"
 
+void dcrmv(float *buffer, int ncpts, float lvl, float tlt);
 
 /* #include <sys/time.h> */
 
@@ -106,23 +104,18 @@ struct timeval	tp1,
 |               readDFcoefs()/0                 |
 |						|
 +----------------------------------------------*/
-/* static int readDFcoefs(coefs,userpath) */
-static int readDFcoefs(coefs,ExpInfo)
-int coefs;
-SHR_EXP_INFO ExpInfo;
-/* char *userpath; */
+static int readDFcoefs(int coefs, SHR_EXP_INFO ExpInfo)
 {
    char		dfpath[256], jstr[256];
    int		i = 0,
-		j, jval = 0, iskip, itry = 0,
+		j, iskip, itry = 0,
 		notempty = TRUE;
    float	*fptr, fval,
 		tmp;
-   FILE		*fdes,
-		*fopen();
+   FILE		*fdes;
 
 
-/*   fill_dsp = 0;  /* orig algorithm */
+/*   fill_dsp = 0;  orig algorithm */
    fill_dsp = 5;    /* new algorithm */
    fill_ph = 0;
    show_fid = 0;
@@ -423,7 +416,7 @@ SHR_EXP_INFO ExpInfo;
    dspinfo.filtsum = 0.0;
    i = 0;
    while ( notempty )
-     if ( notempty = ( fscanf(fdes, "%f", &tmp) != EOF ) )
+     if ( (notempty = ( fscanf(fdes, "%f", &tmp) != EOF )) )
        i++;
 
    if (i != coefs)
@@ -446,7 +439,7 @@ SHR_EXP_INFO ExpInfo;
      while ( notempty )
      {
        *fptr = 0.0;
-       if ( notempty = ( fscanf(fdes, "%f", fptr) != EOF ) )
+       if ( (notempty = ( fscanf(fdes, "%f", fptr) != EOF )) )
 	 dspinfo.filtsum += *fptr++;
      }
    }
@@ -464,10 +457,8 @@ SHR_EXP_INFO ExpInfo;
 |                 initDSP()/1                   |
 |						|
 +----------------------------------------------*/
-int initDSP(ExpInfo)
-SHR_EXP_INFO ExpInfo;
+int initDSP(SHR_EXP_INFO ExpInfo)
 {
-   char		dspfilt[MAXPATHL];
    int		npdsp;
    int		osfactor = 0,
 		oscoeff = 0;
@@ -476,7 +467,6 @@ SHR_EXP_INFO ExpInfo;
    void		calc_digfilter(),
         	calc_chargeup(),
 		clearDSP();
-   int		readDFcoefs(); 
 
 
 /********************************
@@ -691,10 +681,10 @@ void clearDSP()
 +----------------------------------------------*/
 void calc_chargeup()
 {
-   register int         i,
+   int         i,
                         pts;
-   register float       *tmpfilter;
-   register double      val,
+   float       *tmpfilter;
+   double      val,
    			arg1,
 			argi;
 
@@ -720,15 +710,15 @@ void calc_chargeup()
 +----------------------------------------------*/
 void calc_digfilter()
 {
-   register int         i,
+   int         i,
                         j,
 			nfullpts,
 			max;
-   register float       *tmpfilter,
+   float       *tmpfilter,
 			*tmpfilter2,
 			fsum,
 			fsumi;
-   register double      wc,
+   double      wc,
                         hd,
                         w, 
                         arg1,
@@ -787,23 +777,18 @@ unsigned long  	 np_os,		/* number of oversampled data points */
    int			ctval; 				/* number of transients */
    int			dpf = dpf_state; 		/* FID double precision flag */
 
-   register short 	*sdata;
-   register int		i, j,
+   short 	*sdata;
+   int		i, j,
 			npwords,
-			*ldata,
-			ntaps;
-   register float	*buffer,
-			*fdata,
-			fsum,
-			sscale;
+			*ldata;
+   float	*buffer,
+			*fdata;
    int			ndpts;		/* real points */
    double		ph4=0, ph3=0, ph1=0, ph0=0, ph2=0, radtodeg = 180.0/M_PI,
 			phc, phs;
    void			os_filterfid(),
 			os_filterfid_old(),
 			fill_chargeup(),
-                        sclbuf(),
-			dcrmv(),
 			clearDSP();
 
    int			tmptmp_np;
@@ -992,8 +977,8 @@ else
 *  Initialize variables and pointers.  *
 ***************************************/
 
-   fsum = dspinfo.filtsum;
-   ntaps = dspinfo.oscoeff;
+   // fsum = dspinfo.filtsum;
+   // ntaps = dspinfo.oscoeff;
    ndpts  = npbytes / dpf; 
    buffer = dspinfo.buffer + dspinfo.offset;
 
@@ -1303,12 +1288,9 @@ else
 |		   dcrmv()/4		|
 |					|
 +---------------------------------------*/
-void dcrmv(buffer, ncpts, lvl, tlt)
-register float *buffer;
-register int ncpts;
-register float lvl, tlt;
+void dcrmv(float *buffer, int ncpts, float lvl, float tlt)
 {
-    register int i;
+    int i;
 
     for (i=0;i<ncpts;i++)
     {
@@ -1322,12 +1304,10 @@ register float lvl, tlt;
 |		   sclbuf()/3		|
 |					|
 +---------------------------------------*/
-void sclbuf(buffer, ncpts, scl)
-register float *buffer;
-register int ncpts;
-register float scl;
+#ifdef XXX
+void sclbuf(float *buffer, int ncpts, float scl)
 {
-    register int i;
+    int i;
 
     for (i=0;i<ncpts;i++)
     {
@@ -1335,32 +1315,28 @@ register float scl;
       *buffer++ *= scl;
     }
 }
+#endif
 
 /*---------------------------------------
 |					|
 |	   fill_chargeup()/4		|
 |					|
 +---------------------------------------*/
-void fill_chargeup(buffer, dataskip, ph0, ph1)
-register int    dataskip;
-float  		*buffer;
-double		*ph0, *ph1;
+void fill_chargeup(float *buffer, int dataskip, double *ph0, double *ph1)
 {
-   register int		ntaps,
-			decfact,
-			buffskip;
-   register int         i, j, k;
+   int		ntaps;
+   int         i, j, k;
    int			tshift;
-   register float       *tmpdfilter,
+   float       *tmpdfilter,
 			*tmpbuffer,
 			*tmpbuffer2,
 			sum=0, sumi=0, ftmp;
    float		sumx, sumy,
-			sig, sigx, sigxx, sigy, sigxy, sigd, sigz, sigxz;
+			sig, sigx, sigxx, sigy, sigxy, sigz, sigxz;
    void interp_phase(), interp2_phase(), interp3_phase(), interp4_phase();
 
    ntaps = dspinfo.oscoeff;
-   decfact = dspinfo.osfactor;
+   // decfact = dspinfo.osfactor;
    tmpbuffer = buffer;
    tmpdfilter = dspinfo.chargeup;
    tshift = dspinfo.tshift;
@@ -2370,22 +2346,17 @@ DPRINT(DEBUG0,"dspExec(): WARNING!!!  first data point is zero\n");
 |		   os_filterfid()/6		|
 |						|
 +----------------------------------------------*/
-void os_filterfid(data, buffer, dfilter, dataskip)
-register int    dataskip;
-float  		*data,
-		*buffer,
-		*dfilter;
+void os_filterfid(float *data, float *buffer, float *dfilter, int dataskip)
 {
-   register int		ntaps,
+   int		ntaps,
 			decfact,
 			buffskip;
-   register int         i, j, k;
+   int         i, j, k;
    int			tshift;
-   register float       *tmpdata,
+   float       *tmpdata,
 			*tmpdfilter,
 			*tmpdfilter2,
-			*tmpbuffer,
-			sum;
+			*tmpbuffer;
 
    ntaps = dspinfo.oscoeff;
    decfact = dspinfo.osfactor;
@@ -2468,10 +2439,10 @@ float           *buffer,
    int                  ntaps,
 			ncdatapts = dsp_out_np/2,
                         decfact;
-   register int         i,
+   int         i,
                         j;
-   register float       *tmpdata;
-   register float       *tmpdfilter,
+   float       *tmpdata;
+   float       *tmpdfilter,
                         *tmpbuffer,
                         sum;
 
@@ -2499,7 +2470,6 @@ float           *buffer,
      tmpbuffer += dataskip;
      }
 
-/* i = 0; /* i = ntaps/2-((ntaps/2)/decfact)*decfact; */
    for (i = i; i < ncdatapts; i+=decfact)  {
      tmpdfilter=dfilter;
      tmpdata = data+dataskip*i;
@@ -2551,12 +2521,12 @@ printf("downsamp_par: OLD dspar->lp=%g\n",dspar->lp);
 static void rotate2(float *spdata, int nelems, double lpval, double rpval)
 {
    int			i;
-   register float	*frompntr,
+   float	*frompntr,
 			*topntr,
 			tmp1;
    double		phi,
 			conphi;
-   register double	cosd,
+   double	cosd,
 			sind,
 			coold,
 			siold,
@@ -2599,9 +2569,7 @@ double np,bytes;
    return( (int) npdsp);
 }
 
-void dsp_dcset(lvl, tlt)
-float lvl,
-      tlt;
+void dsp_dcset(float lvl, float tlt)
 {
     dspinfo.lvl = lvl;
     dspinfo.tlt = tlt;
@@ -2612,7 +2580,7 @@ void interp_phase(xpass, ypass)
 float *xpass, *ypass; /* x,y input; x=cos2p,y=sin2p output */
 {
   float sintable[STSIZE]; /* could declare as double or float */
-  float x0, y0, xabs, yabs, xyabs, xyquadrant, xsgn, ysgn, ytmp, flag45, yy, aa;
+  float x0, y0, xabs, yabs, xyabs, xsgn, ysgn, ytmp, flag45;
   int i, px, py;
 
 /*	x0 = (double)(*xpass); y0 = (double)(*ypass); */
@@ -2658,66 +2626,6 @@ DPRINT(DEBUG0,"dspExec(): WARNING!!!  first data point is zero\n");
 	  xabs = -x0; xsgn = -1;
 	}
 
-/*	if (yabs <= (xyabs * sintable[STSIZE/2])) /* test on 22.5, assign 11.25, STSIZE=8 */
-/*	{
-/*	  if (yabs <= (xyabs * sintable[STSIZE/4]))
-/*	  {
-/*	    /* 2p=11.25 */
-/*	    py = STSIZE/4-1;
-/*	  }
-/*	  else
-/*	  {
-/*	    /* 2p=33.75 */
-/*	    py = STSIZE/2-1;
-/*	  }
-/*	}
-/*	else
-/*	{
-/*	  if (yabs <= (xyabs * sintable[3*STSIZE/4]))
-/*	  {
-/*	    /* 2p=56.25 */
-/*	    py = 3*STSIZE/4-1;
-/*	  }
-/*	  else
-/*	  {
-/*	    /* 2p=78.75 */
-/*	    py = STSIZE-1;
-/*	  }
-/*	}    */
-
-/*	if (yabs <= (xyabs * sintable[STSIZE/2-1])) /* test on 11.25, assign on 22.5, STSIZE=8 */
-/*	{
-/*	  if (yabs <= (xyabs * sintable[STSIZE/4-1]))
-/*	  {
-/*	    /* 2p=0 */
-/*	    py = 0;
-/*	  }
-/*	  else
-/*	  {
-/*	    /* 2p=22.5 */
-/*	    py = STSIZE/4;
-/*	  }
-/*	}
-/*	else
-/*	{
-/*	  if (yabs <= (xyabs * sintable[3*STSIZE/4-1]))
-/*	  {
-/*	    /* 2p = 45 */
-/*	    py = 2*STSIZE/4;
-/*	  }
-/*	  else
-/*	    if (yabs <= (xyabs * sintable[4*STSIZE/4-1]))
-/*	    {
-/*	      /* 2p=67.5 */
-/*	      py = 3*STSIZE/4;
-/*	    }
-/*	    else
-/*	    {
-/*	      /* 2p=90 */
-/*	      py = 4*STSIZE/4;
-/*	    }
-/*	}      */
-
 	if (yabs > xabs)
 	{
 	  flag45 = 2;
@@ -2727,6 +2635,7 @@ DPRINT(DEBUG0,"dspExec(): WARNING!!!  first data point is zero\n");
 	else
 	{
 	  flag45 = 0;
+	  ytmp = 0.0;
 	}
 
 	  /* test on 90/64=1.4, assign 90/128, use flag45 to check octant */
@@ -2957,7 +2866,7 @@ DPRINT(DEBUG0,"dspExec(): WARNING!!!  first data point is zero\n");
 	  yabs = ytmp;
 	}
 	px = STSIZE - py;
-	printf("xabs=%g yabs=%g xyabs=%g flag45=%g py=%d px=%d ", xabs,yabs,xyabs,flag45,py,px);
+	// printf("xabs=%g yabs=%g xyabs=%g flag45=%g py=%d px=%d ", xabs,yabs,xyabs,flag45,py,px);
 	xabs = sintable[px];
 	yabs = sintable[py];
 	xabs *= xsgn;
@@ -2973,7 +2882,7 @@ void interp2_phase(xpass, ypass)
 float *xpass, *ypass; /* x,y input; x=cos2p,y=sin2p output */
 {
   float sintable[STSIZE]; /* could declare as double or float */
-  float x0, y0, xabs, yabs, xyabs, xyquadrant, xsgn, ysgn, ytmp, flag45, yy, aa;
+  float x0, y0, xabs, yabs, xyabs, xsgn, ysgn, ytmp, flag45, yy, aa;
   int i, px, py;
 
 /*	x0 = (double)(*xpass); y0 = (double)(*ypass); */
@@ -3110,8 +3019,7 @@ DPRINT(DEBUG0,"dspExec(): WARNING!!!  first data point is zero\n");
 void interp3_phase(xpass, ypass)
 float *xpass, *ypass; /* x,y input; x=cos2p,y=sin2p output */
 {
-  float x0, y0, xabs, yabs, xyabs, xfactor, yy, aa, aa2, aa3;
-  int i, px, py;
+  float x0, y0, xyabs, xfactor, yy, aa;
 
 /*	x0 = (double)(*xpass); y0 = (double)(*ypass); */
 	x0 = *xpass; y0 = *ypass;
@@ -3146,8 +3054,8 @@ DPRINT(DEBUG0,"dspExec(): WARNING!!!  first data point is zero\n");
 	}
 	printf("... reduced aa=%g xfactor=%g\n",aa,xfactor);
 	aa -= 1;
-	aa2 = aa*aa;
-	aa3 = aa*aa*aa;
+	// aa2 = aa*aa;
+	// aa3 = aa*aa*aa;
 	/* yy is approx of 1/(1+aa) */
 /*	yy = 1 - aa + aa2 - aa3 + aa2*aa2 - aa2*aa3 + aa3*aa3 - aa2*aa2*aa3 + aa2*aa3*aa3 - aa3*aa3*aa3;
 	yy += aa2*aa2*aa3*aa3 - aa2*aa3*aa3*aa3 + aa3*aa3*aa3*aa3;
@@ -3178,8 +3086,7 @@ DPRINT(DEBUG0,"dspExec(): WARNING!!!  first data point is zero\n");
 void interp4_phase(xpass, ypass)
 float *xpass, *ypass; /* x,y input; x=cos2p,y=sin2p output */
 {
-  float x0, y0, xabs, yabs, xyabs, xfactor, yy, aa, aa2, aa3;
-  int i, px, py;
+  float x0, y0, xyabs, xfactor, yy, aa;
 
 /*	x0 = (double)(*xpass); y0 = (double)(*ypass); */
 	x0 = *xpass; y0 = *ypass;

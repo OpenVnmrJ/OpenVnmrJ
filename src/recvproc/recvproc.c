@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 
 
@@ -22,23 +23,23 @@
 #include "hostMsgChannels.h"
 #include "msgQLib.h"
 #include "errLogLib.h"
+#include "expQfuncs.h"
 #include "procQfuncs.h"
 #include "eventHandler.h"
 #include "commfuncs.h"
 #include "shrstatinfo.h"
 
+extern void setupexcepthandler();
+extern int initCmdParser();
+extern int parser(char* str);
+
 MSG_Q_ID pRecvMsgQ;
 
 char ProcName[256];
 
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
-   int rtn;
-   char MsgInbuf[RECV_MSG_SIZE];
    sigset_t   blockmask;
-   MSG_Q_ID msgId;
    void processMsge(void*);
 
    strncpy(ProcName,argv[0],256);
@@ -126,7 +127,7 @@ void processMsge(void *notin)
        /* if we got a message then go ahead and parse it */
        if (rtn > 0)
        {
-         DPRINT2(1,"received %d bytes, MsgInbuf len %d bytes\n",rtn,strlen(MsgInbuf));
+         DPRINT2(1,"received %d bytes, MsgInbuf len %zd bytes\n",rtn,strlen(MsgInbuf));
          parser(MsgInbuf);
          MsgInbuf[0] = '\0';
        }
