@@ -10,7 +10,11 @@
 #
 # set -x
 
-ping -W 1 -c 1 $(hostname) > /dev/null 2>&1
+if [ x$(uname -s) = "xDarwin" ]; then
+   ping -W 1 -c 1 $(hostname) > /dev/null 2>&1
+else
+   ping -4 -W 1 -c 1 $(hostname) > /dev/null 2>&1
+fi
 if [[ $? -ne 0 ]]; then
   echo "Unable to ping $(hostname)"
   echo "This hostname should be added to the /etc/hosts file"

@@ -75,7 +75,7 @@ while [ $# -gt 0 ]; do
         -nv|--no-verbose)       OVJ_VECHO=":" ;;
         -t|--test)              OVJ_PIPETEST="$2"; shift    ;;
         -v|--verbose)           OVJ_VECHO="echo" ;;
-        noPing)                 noPing=1; shift ;;
+        noPing)                 noPing=1; ;;
         -vv|--debug)            set -x ;;
         *)
             # unknown option
@@ -225,7 +225,11 @@ checkNetwork() {
 #   local URL="www.ibbr.umd.edu"
     local URL="google.com"
     local pingRecv=0
-    pingRecv=`ping -c 1 -q -W 1 $URL | grep received | awk '{ print $4 }'`
+    if [ x$(uname -s) = "xDarwin" ]; then
+       pingRecv=`ping -c 1 -q -W 1 $URL | grep received | awk '{ print $4 }'`
+    else
+       pingRecv=`ping -4 -c 1 -q -W 1 $URL | grep received | awk '{ print $4 }'`
+    fi
          
     if [[ ${pingRecv} -eq 1 ]] || [[ $noPing -eq 1 ]] ; then
         $OVJ_VECHO "Test for internet access passed"

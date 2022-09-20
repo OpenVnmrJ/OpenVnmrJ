@@ -37,7 +37,7 @@ while [ $# -gt 0 ]; do
     key="$1"
     case $key in
         -h|--help)              ovj_usage                   ;;
-        noPing)                 noPing=1; shift ;;
+        noPing)                 noPing=1; ;;
         -vv|--debug)            set -x ;;
         *)
             # unknown option
@@ -82,7 +82,7 @@ checkNetwork() {
 #   The below seems to have disabled ping. Use google instead
     local URL="google.com"
     local pingRecv=0
-    pingRecv=`ping -c 1 -q -W 1 $URL | grep received | awk '{ print $4 }'`
+    pingRecv=`ping -4 -c 1 -q -W 1 $URL | grep received | awk '{ print $4 }'`
          
     if [[ ${pingRecv} -eq 1 ]] || [[ $noPing -eq 1 ]] ; then
         echo "Test for internet access passed"

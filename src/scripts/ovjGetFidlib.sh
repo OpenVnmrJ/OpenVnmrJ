@@ -73,7 +73,7 @@ while [ $# -gt 0 ]; do
         -l|--log)               OVJ_LOG="$2"; shift     ;;
         -nv|--no-verbose)       OVJ_VECHO=":" ;;
         -v|--verbose)           OVJ_VECHO="echo" ;;
-        noPing)                 noPing=1; shift ;;
+        noPing)                 noPing=1; ;;
         -vv|--debug)            set -x ;;
         *)
             # unknown option
@@ -145,7 +145,11 @@ downloadFiles() {
 
 checkNetwork() {
    local URL="www.dropbox.com"
-   ping -c 1 -q -W 1 $URL > /dev/null 2>&1
+   if [ x$(uname -s) = "xDarwin" ]; then
+      ping -c 1 -q -W 1 $URL > /dev/null 2>&1
+   else
+      ping -4 -c 1 -q -W 1 $URL > /dev/null 2>&1
+   fi
    if [[ $? -eq 0 ]] || [[ $noPing -eq 1 ]] ; then
       $OVJ_VECHO "Test for internet access to $URL passed"
       return 0

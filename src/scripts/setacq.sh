@@ -524,7 +524,7 @@ installConsole() {
    fi
 
 #   ping master1 (once [-c1]), if no answer ask to check and rerun $0
-   ping -c1 -q master1 > /dev/null
+   ping -4 -c1 -q master1 > /dev/null
    if [[ $? -ne 0 ]] ; then
      echo ""
      echo Please check that the console and host are connected

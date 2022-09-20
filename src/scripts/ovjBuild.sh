@@ -60,7 +60,7 @@ do
 done
 
 URL="www.github.com"
-ping -c 1 -q -W 1 $URL > /dev/null 2>&1
+ping -4 -c 1 -q -W 1 $URL > /dev/null 2>&1
 if [[ $? -eq 0 ]] || [[ $noPing -eq 1 ]] ; then
     echo "Test for internet access to $URL passed"
 else
