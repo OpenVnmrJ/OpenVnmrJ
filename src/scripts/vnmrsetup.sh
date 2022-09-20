@@ -366,10 +366,12 @@ rm -f /tmp/reboot
 # loop though the arguments and check for the install option key word
 # noPing, NOTE this must be the first argument
 # Otherwise the user name, group and destination args will be incorrect
+noPing=""
 for arg in "$@"
 do
    if [ "x$arg" = "xnoPing" ]
    then
+      noPing="noPing"
       shift
    fi
 done
@@ -584,9 +586,9 @@ if [ -e /tmp/.ovj_installed ]; then
    if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
       echo "Installing NMRPipe" >> $insLog
       if [ x$distroType = "xdebian" ]; then
-         sudo -i -u $nmr_user /vnmr/bin/ovjGetpipe -l $insLog
+         sudo -i -u $nmr_user /vnmr/bin/ovjGetpipe $noPing -l $insLog
       else
-         su - $nmr_user -c "/vnmr/bin/ovjGetpipe -l $insLog"
+         su - $nmr_user -c "/vnmr/bin/ovjGetpipe $noPing -l $insLog"
       fi
       echo " "
    elif [[ x$oldVnmr != "x" ]] ; then
@@ -616,9 +618,9 @@ if [ -e /tmp/.ovj_installed ]; then
       if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
          echo "Installing VnmrJ manuals" >> $insLog
          if [ x$distroType = "xdebian" ]; then
-            sudo -i -u $nmr_user /vnmr/bin/ovjGetManuals -l $insLog
+            sudo -i -u $nmr_user /vnmr/bin/ovjGetManuals $noPing -l $insLog
          else
-            su - $nmr_user -c "/vnmr/bin/ovjGetManuals -l $insLog"
+            su - $nmr_user -c "/vnmr/bin/ovjGetManuals $noPing -l $insLog"
          fi
          echo " "
       else
@@ -642,9 +644,9 @@ if [ -e /tmp/.ovj_installed ]; then
       if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
          echo "Installing VnmrJ fidlib" >> $insLog
          if [ x$distroType = "xdebian" ]; then
-            sudo -i -u $nmr_user /vnmr/bin/ovjGetFidlib
+            sudo -i -u $nmr_user /vnmr/bin/ovjGetFidlib $noPing
          else
-            su - $nmr_user -c "/vnmr/bin/ovjGetFidlib"
+            su - $nmr_user -c "/vnmr/bin/ovjGetFidlib $noPing"
          fi
          echo " "
       else

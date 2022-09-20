@@ -123,7 +123,7 @@ done
 
 if [[ $ovjRepo -eq 0 ]] && [[ $noPing -eq 0 ]]
 then
-  ping -W 1 -c 1 google.com > /dev/null 2>&1
+  ping -4 -W 1 -c 1 google.com > /dev/null 2>&1
   if [ $? -ne 0 ]
   then
     echo "Must be connected to the internet for $0 to function"
