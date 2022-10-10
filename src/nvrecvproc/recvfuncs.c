@@ -16,11 +16,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pwd.h>
-#include <malloc.h>
-#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <utime.h>
-
-#include <errno.h>
 
 #include "errLogLib.h"
 #include "fileObj.h"
@@ -48,6 +45,7 @@
 #include "barrier.h"
 #include "memorybarrier.h"
 #include "rngBlkLib.h"
+#include "workQObj.h"
 #include "rcvrDesc.h"
 #include "recvthrdfuncs.h"
 #include "flowCntrlObj.h"
@@ -86,6 +84,18 @@ SHR_EXP_INFO expInfo = NULL;   /* start address of shared Exp. Info Structure */
 /* processing thread pipestage object */
 extern PIPE_STAGE_ID pProcThreadPipeStage;
 
+extern int consoleConn(void);
+extern void clearDiscardIssues();
+extern int workQFreeDataBufs(WORKQ_ID pWorkQ);
+extern int numAvailWorkQs(WORKQ_ID pWorkQ);
+extern int send2DDR(NDDS_ID pPub, int cmd, int arg1, int arg2, int arg3);
+extern int send2AllDDRs(int cmd, int arg1, int arg2, int arg3);
+extern int wait4Send2Cmplt(int timeoutsec,int qlevel);
+extern int rngBlkFreeElem (register RINGBLK_ID ringId);
+extern void shutdownComm();
+extern void expStatusRelease();
+
+
 static WORKQ_ENTRY_ID pWorkQEntryCmplt = NULL;  /* for use in main thread to finish Experiment */
 
 static SHR_MEM_ID  ShrExpInfo = NULL;  /* Shared Memory Object */
@@ -94,38 +104,7 @@ static SHR_MEM_ID  ShrExpInfo = NULL;  /* Shared Memory Object */
 static struct datafilehead fidfileheader;
 static struct datablockhead fidblockheader;
 
-/* dummy struct for now */
-typedef struct  {
-			long np;
-			long ct;
-			long bs;
-			long elemid;
-			long v1;
-			long v2;
-			long v4;
-			long v5[10];
-		  } lc;
-
 #ifdef LINUX
-static struct recvProcSwapbyte
-{
-   short s1;
-   short s2;
-   short s3;
-   short s4;
-   long  l1;
-   long  l2;
-   long  l3;
-   long  l4;
-   long  l5;
-};
-                                                                                
-typedef union
-{
-   struct datablockhead *in1;
-   struct recvProcSwapbyte *out;
-} recvProcHeaderUnion;
-
 typedef union
 {
    float *fval;
@@ -155,9 +134,20 @@ static int HardErrorFlag = 0;
 void UpdateStatus(FID_STAT_BLOCK *);
 void rmAcqiFiles(SHR_EXP_INFO);
 
-int sumFloatData( float* dstadr, float* srdadr, unsigned long np);
-int sumLongData( long* dstadr, long* srdadr, unsigned long np);
-int sumShortData( short* dstadr, short* srdadr, unsigned long np);
+int mapIn(char *filename);
+int mapOut(char *str);
+int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo);
+int getUserUid(char *user, int *uid, int *gid);
+int InitialFileHeaders();
+static int sumFloatData( float* dstadr, float* srdadr, unsigned int np);
+static int sumShortData( short* dstadr, short* srdadr, unsigned int np);
+int recvInteract();
+void stopInteract();
+static void initBlockHeader(struct datablockhead *pFidBlockHeader, SHR_EXP_INFO pExpInfo );
+int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk);
+static void processWarning(FID_STAT_BLOCK *pFidStatBlk);
+static void processWNT(FID_STAT_BLOCK *pFidStatBlk);
+static void processBS(FID_STAT_BLOCK *pFidStatBlk);
 
 /*--------------------------------------------------------------------*/
 /*   eos,ct,scan; eob,bs; eof,nt,fid; eoc,il;  # - eos at modulo #    */
@@ -313,7 +303,7 @@ int recvData(char *argstr)
 
   if (expInfo->ExpFlags & VPMODE_BIT)
   {
-     char str[1024];
+     char str[1024*2];
      char addr[1024];
      char node[128];
      procQadd(WERR, ShrExpInfo->MemPath, 0, 0, EXP_STARTED, expInfo->GoFlag |
@@ -393,11 +383,12 @@ int recvData(char *argstr)
      /* get the UID & GID of exp. owner */
      if ( getUserUid(expInfo->UserName,&uid,&gid) == 0) 
      {
+        int ret __attribute__((unused));
         int old_euid = geteuid();
 
-        seteuid( getuid() );
-  	chown(fidpath, uid, gid);
-        seteuid( old_euid );
+        ret = seteuid( getuid() );
+  	ret = chown(fidpath, uid, gid);
+        ret = seteuid( old_euid );
      }
      else
      {
@@ -425,7 +416,6 @@ int recvData(char *argstr)
        {
           sumFunc = (PSTMF) sumShortData;
        }
-       DPRINT3(2,"sumFunc: 0x%lx, sumFloat: 0x%lx, sumShort: 0x%lx\n", sumFunc, sumFloatData, sumShortData);
      }
 
 
@@ -460,8 +450,7 @@ int recvData(char *argstr)
          if (ifile->byteLen < (sizeof(fidfileheader) + sizeof(fidblockheader)))
          {
             errLogRet(ErrLogOp,debugInfo,
-	      "recvData: Existing File Not Large enough for RA usage: %lu bytes\n",
-		ifile->byteLen);
+	      "recvData: Existing File Not Large enough for RA usage\n");
             resetState();
             return(-1);
          }
@@ -792,7 +781,7 @@ int recvFidsCmplt(void)
   processDoneCode(pExpInfo,pStatBlk);
   if (expInfo->ExpFlags & VPMODE_BIT)
   {
-     char str[1024];
+     char str[1024*2];
      char addr[1024];
      char node[128];
      sscanf(expInfo->VpMsgID,"%[^;]; %s",addr,node);
@@ -980,12 +969,12 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
         errLogRet(ErrLogOp,debugInfo, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     }
 #else
-    DPRINT2(+1,"'%s': recvFid:  FidStatBlock: 0x%lx\n",CntlrName,pWorkQEntry->pFidStatBlk);
+    DPRINT2(+1,"'%s': recvFid:  FidStatBlock: %p\n",CntlrName,pWorkQEntry->pFidStatBlk);
 #endif
    /* ---------------------------------------------------------------------------------- */
 
        
-    DPRINT7(1,"'%s': recvFid:  elemId: %ld, DataSize: %ld, CT: %ld, NP: %ld, DoneCode: 0x%x, %d\n",
+    DPRINT7(1,"'%s': recvFid:  elemId: %u, DataSize: %u, CT: %u, NP: %u, DoneCode: %d, %d\n",
                 CntlrName,pStatBlk->elemId, pStatBlk->dataSize, pStatBlk->ct,
                 pStatBlk->np, pStatBlk->doneCode,(pStatBlk->doneCode & 0xFFFF));
  
@@ -1004,17 +993,17 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
     if (Use_FileIO_Flag == 0)
     {
       dataPtr = getWorkQFidPtr(pWorkQEntry->pWorkQObj,pWorkQEntry);
-      DPRINT4(1,"'%s': dataPtr: 0x%lx, buffer: 0x%lx, size bytes: %lu\n", CntlrName, dataPtr, pWorkQEntry->pFidData, pStatBlk->dataSize);
+      DPRINT4(1,"'%s': dataPtr: %p, buffer: %p, size bytes: %u\n", CntlrName, dataPtr, pWorkQEntry->pFidData, pStatBlk->dataSize);
     }
     else
     {
        /* no need for File I/O */
-       DPRINT4(1,"'%s': buffer: 0x%lx, size bytes: %lu\n", CntlrName, dataPtr, pWorkQEntry->pFidData, pStatBlk->dataSize);
+      DPRINT4(1,"'%s': dataPtr: %p, buffer: %p, size bytes: %u\n", CntlrName, dataPtr, pWorkQEntry->pFidData, pStatBlk->dataSize);
     }
 
-    DPRINT3(1,"'%s': recvFid:  elemId: %ld, trueElemId: %lu \n", CntlrName,pStatBlk->elemId, pWorkQEntry->trueElemId);
+    DPRINT3(1,"'%s': recvFid:  elemId: %u, trueElemId: %ld \n", CntlrName,pStatBlk->elemId, pWorkQEntry->trueElemId);
 
-    DPRINT4(+1,"'%s': recvFid:  FidAddr: 0x%lx, given CRC: 0x%lx, calc CRC: 0x%lx\n",
+    DPRINT4(+1,"'%s': recvFid:  FidAddr: %p, given CRC: 0x%lx, calc CRC: 0x%lx\n",
       CntlrName,dataPtr, pWorkQEntry->dataCRC, calcCRC);
 
     /* check the console to Recvproc transfer CRC */
@@ -1058,7 +1047,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
        /* If BS==0 then memcpy (there are no BS) otherwise 
         * if (ct/bs) <= 1 then memcpy (i.e. 1st BS) */
 
-       DPRINT3(+2,"'%s': NumInBS: %ld, ct: %ld\n",CntlrName, pExpInfo->NumInBS,pStatBlk->ct);
+       DPRINT3(+2,"'%s': NumInBS: %u, ct: %u\n",CntlrName, pExpInfo->NumInBS,pStatBlk->ct);
        First_Bs =  (pExpInfo->NumInBS >= 1) ? (((long)pStatBlk->ct <= pExpInfo->NumInBS)) : 1;
 
        /* if Interleave and elements 1st BS then memcpy not add */
@@ -1071,7 +1060,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
       if ( Ra_Ct_Zero || Il_First_Bs )
       {
         /* 1st Block size don't add just copy into file */
-        DPRINT4(+2,"'%s': IL BS 1: memcpy(0x%lx,0x%lx,%lu)\n",CntlrName,dataPtr, pWorkQEntry->pFidData, pStatBlk->dataSize);
+        DPRINT4(+2,"'%s': IL BS 1: memcpy(%p,%p,%u)\n",CntlrName,dataPtr, pWorkQEntry->pFidData, pStatBlk->dataSize);
 
         if (Use_FileIO_Flag == 0)
            memcpy(dataPtr,pWorkQEntry->pFidData,pStatBlk->dataSize);
@@ -1088,13 +1077,13 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
           unsigned long np = pStatBlk->dataSize / expInfo->DataPtSize;
           if (Use_FileIO_Flag == 0)
           {
-             DPRINT4(+2,"'%s': IL Summing: pStmFunc(0x%lx,0x%lx,%lu)\n",CntlrName, dataPtr, pWorkQEntry->pFidData, pStatBlk->np);
+             DPRINT4(+2,"'%s': IL Summing: pStmFunc(%p,%p,%u)\n",CntlrName, dataPtr, pWorkQEntry->pFidData, pStatBlk->np);
        	     // overflow = (pWorkQEntry->pInvar->pStmFunc)((void*) dataPtr, (void*) pWorkQEntry->pFidData, pStatBlk->np );
        	     overflow = (pWorkQEntry->pInvar->pStmFunc)((void*) dataPtr, (void*) pWorkQEntry->pFidData, np );
           }
           else
           {
-             DPRINT2(+2,"'%s': IL Summing: sumWorkQFidData; workQEntry: 0x%lx\n",CntlrName, pWorkQEntry);
+             DPRINT2(+2,"'%s': IL Summing: sumWorkQFidData; workQEntry: %p\n",CntlrName, pWorkQEntry);
              // using stat block np was right for imaging with nfmod set. e.g. np=256 with nfmod=128 np really equals 32768
              // overflow =  sumWorkQFidData(pWorkQEntry->pWorkQObj,pWorkQEntry,pStatBlk->dataSize,pStatBlk->np);
              overflow =  sumWorkQFidData(pWorkQEntry->pWorkQObj,pWorkQEntry,pStatBlk->dataSize,np);
@@ -1126,8 +1115,6 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
     * place into the fid file.  bug# 782
     * this test works since cf fids always come in 1-nf sequence order
     */
-   DPRINT3(+1,"'%s': revFid:  pWorkQEntry->cf+1= %d == pWorkQEntry->pInvar->NumFids=%d \n",
-          CntlrName,pWorkQEntry->cf+1,pWorkQEntry->pInvar->NumFids);
    if (pWorkQEntry->cf+1 == pWorkQEntry->pInvar->NumFids)
    {
 
@@ -1191,7 +1178,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
        maxFidsRecv = pStatBlk->elemId;
    DPRINT2(+1,"'%s': revFid:  Update Max received FIDs (trueElemId) to: %lu\n",CntlrName,maxFidsRecv);
 
-   DPRINT4(+1,"'%s': recvFid:  elemId: %d, blockAddr: 0x%lx, DataAddr: 0x%lx\n",
+   DPRINT4(+1,"'%s': recvFid:  elemId: %u, blockAddr: %p, DataAddr: %p\n",
       CntlrName,pWorkQEntry->pFidStatBlk->elemId, fidblkhdrSpot, dataPtr);
    /* |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| */
    /* |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| */
@@ -1221,7 +1208,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
             //  if ( (pStatBlk->elemId <  maxFidsRecv) &&  ((expInfo->IlFlag == 1) && last interleave cycle)
             // last interleave cycle;  CT == NT  
             // if ( (pStatBlk->elemId <  maxFidsRecv) && (expInfo->IlFlag != 1))
-            DPRINT5(+1,"'%s': recvFid:  elemID: %ld ,  maxFidsRecv: %ld, CT: %ld, NT: %ld \n",
+            DPRINT5(+1,"'%s': recvFid:  elemID: %u ,  maxFidsRecv: %ld, CT: %u, NT: %u \n",
                  CntlrName,pStatBlk->elemId, maxFidsRecv, pStatBlk->ct, pExpInfo->NumTrans);
             div = pStatBlk->elemId / pWorkQEntry->pInvar->numActiveRcvrs;
             mod = pStatBlk->elemId % pWorkQEntry->pInvar->numActiveRcvrs;
@@ -1229,7 +1216,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
             mxElemId = pWorkQEntry->pInvar->numActiveRcvrs * mult;
             // DPRINT7(-51,"elemId(%ld) / ActiveRcvrs(%ld) = %ld, elemId %% ActiveRcvrs = %ld,  ActiveRvcrs(%ld) * mult(%ld) = %ld (mxElemId)\n",
             //       pStatBlk->elemId, pWorkQEntry->pInvar->numActiveRcvrs, div, mod, pWorkQEntry->pInvar->numActiveRcvrs, mult, mxElemId);
-            DPRINT4(+1,"'%s': recvFid: Change elemId: %lu, to max ElemId: %ld, base on number of ActiveRcvrs: %ld, for proper processing \n",
+            DPRINT4(+1,"'%s': recvFid: Change elemId: %u, to max ElemId: %ld, base on number of ActiveRcvrs: %u, for proper processing \n",
                     CntlrName,pStatBlk->elemId, mxElemId, pWorkQEntry->pInvar->numActiveRcvrs); 
             pStatBlk->elemId = mxElemId;
 
@@ -1295,7 +1282,7 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
 
     DPRINT6(+1,"'%s': StatBlk Type: %d, (ERRSTATBLK=%d, WRNSTATBLK=%d, FIDSTATBLK=%d, SU_STOPSTATBLK=%d) \n",CntlrName,
 		pWorkQEntry->statBlkType,ERRSTATBLK,WRNSTATBLK,FIDSTATBLK,SU_STOPSTATBLK);
-    DPRINT7(+1,"'%s': >>>>>>> Fid StatBlk: Fid: %ld, DataSize: %ld, CT: %ld, NP: %ld, DoneCode: 0x%x, %d\n",
+    DPRINT7(+1,"'%s': >>>>>>> Fid StatBlk: Fid: %u, DataSize: %u, CT: %u, NP: %u, DoneCode: 0x%x, %d\n",
                 CntlrName,pStatBlk->elemId, pStatBlk->dataSize, pStatBlk->ct,
                 pStatBlk->np, pStatBlk->doneCode,(pStatBlk->doneCode & 0xFFFF));
 
@@ -1324,7 +1311,7 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
       	*/
       	if ( ((pStatBlk->doneCode & 0xFFFF)  == EXP_FID_CMPLT) && (pWorkQEntry->cf+1 == pWorkQEntry->pInvar->NumFids) )
       	{
-           DPRINT2(+1,"'%s': Set pExpInfo->FidsCmplt = pStatBlk->elemId =  %ld \n",CntlrName,pStatBlk->elemId);
+           DPRINT2(+1,"'%s': Set pExpInfo->FidsCmplt = pStatBlk->elemId =  %u \n",CntlrName,pStatBlk->elemId);
            pExpInfo->FidsCmplt = pStatBlk->elemId;
       	}
 
@@ -1358,7 +1345,7 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
                 // pWorkQEntry->pInvar->numActiveRcvrs
                 if ( pStatBlk->elemId != pExpInfo->ArrayDim)
                 {
-		   procesWNT(pStatBlk);
+		   processWNT(pStatBlk);
                    return_status = -1;
 		}
                 else
@@ -1417,7 +1404,7 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
        DPRINT4(+1,"'%s': processFid:  return_status(%d) != EXP_FID_CMPLT(%d) = %d\n",
 		CntlrName,return_status,EXP_FID_CMPLT,done);
        done = (return_status == EXP_FID_CMPLT) && (pWorkQEntry->cf+1 == pWorkQEntry->pInvar->NumFids);
-       DPRINT6(+1,"'%s': processFid:  return_status(%d) == EXP_FID_CMPLT(%d) && (cf+1 (%d) == nf (%d)) = %d\n",
+       DPRINT6(+1,"'%s': processFid:  return_status(%d) == EXP_FID_CMPLT(%d) && (cf+1 (%ld) == nf (%ld)) = %d\n",
 		CntlrName,return_status,EXP_FID_CMPLT,pWorkQEntry->cf+1, pWorkQEntry->pInvar->NumFids,done);
        /* if ( (return_status != EXP_FID_CMPLT) || ((return_status == EXP_FID_CMPLT) && 
             (pWorkQEntry->cf+1 == pWorkQEntry->pInvar->NumFids)) ) */
@@ -1498,9 +1485,9 @@ static void byteSwap(void *data, register int num, int isShort)
 *   dstadr is the mmap data fid addr, srdadr is the BS Fid
 *   np is the number of data points to be added
 */
-int sumFloatData( float* dstadr, float* srdadr, unsigned long np)
+static int sumFloatData( float* dstadr, float* srdadr, unsigned int np)
 {
-   unsigned long i;
+   unsigned int i;
    // DPRINT3(1,"sumFloatData - dstadr: 0x%lx, srcadr: 0x%lx,  np: %ld\n",dstadr,srdadr,np);
 
 #ifdef LINUX
@@ -1566,46 +1553,17 @@ int sumFloatData( float* dstadr, float* srdadr, unsigned long np)
 
 /***********************************************************
 *
-* sumLongData
-*   Sums the Interleaved BS Fid with the mmap data file fid
-*   dstadr is the mmap data fid addr, srdadr is the BS Fid
-*   np is the number of data points to be added
-*/
-int sumLongData( long* dstadr, long* srdadr, unsigned long np)
-{
-   unsigned long i;
-   long maxval = 0x7FFFFFFF - 0x100000; /* 2^31 - 2^20, imminent overflow */
-   int ovrflow = 0;
-
-   for (i=0;i<np;i++,dstadr++)
-   {
-#ifdef XXX_DEBUG
-     if (i<20)
-     {
-        DPRINT3(1,"sum: %ld = %ld + %ld\n",*dstadr + *srdadr,*dstadr,*srdadr);
-     }
-#endif
-     if ( (*dstadr += *srdadr++) > maxval)
-	ovrflow = 1;
-     if (*dstadr < -maxval)
-	ovrflow = 1;
-   }
-   return(ovrflow);
-}
-
-/***********************************************************
-*
 * sumShortData
 *   Sums the Interleaved BS Fid with the mmap data file fid
 *   dstadr is the mmap data fid addr, srdadr is the BS Fid
 *   np is the number of data points to be added
 */
-int sumShortData( short* dstadr, short* srdadr, unsigned long np)
+static int sumShortData( short* dstadr, short* srdadr, unsigned int np)
 {
-   unsigned long i;
+   unsigned int i;
    short dstval, srcval;
-   long sumval;
-   long maxval =  0x7FFF;  /* 2^15 */
+   int sumval;
+   int maxval =  0x7FFF;  /* 2^15 */
    int ovrflow = 0;
 
    // DPRINT3(1,"sumShortData - dstadr: 0x%lx, srcadr: 0x%lx,  np: %ld\n",dstadr,srdadr,np);
@@ -1635,7 +1593,7 @@ int sumShortData( short* dstadr, short* srdadr, unsigned long np)
    {
       dstval = ntohs( *dstadr );
       srcval = ntohs( *srdadr );
-     if ( (sumval = (long) dstval + (long) srcval) > maxval)
+     if ( (sumval = (int) dstval + (int) srcval) > maxval)
 	     ovrflow = 1;
      if (sumval < -maxval)
 	     ovrflow = 1;
@@ -1770,44 +1728,18 @@ char *createFidBlockHeader()
   return (char*) pFidBlockHeader;
 }
 
-int initBlockHeader(struct datablockhead *pFidBlockHeader, SHR_EXP_INFO pExpInfo )
+static void initBlockHeader(struct datablockhead *pFidBlockHeader, SHR_EXP_INFO pExpInfo )
 {
         /* --------------------  FID Header  ---------------------------- */
         pFidBlockHeader->scale = (short) 0;
-        pFidBlockHeader->status = S_DATA | S_OLD_COMPLEX | S_DDR;/* init status to fid*/
+        pFidBlockHeader->status = fidfileheader.status;
         pFidBlockHeader->index = (short) 0;
         pFidBlockHeader->mode = (short) 0;
-        pFidBlockHeader->ctcount = (long) 0;
+        pFidBlockHeader->ctcount = (int) 0;
         pFidBlockHeader->lpval = (float) 0.0;
         pFidBlockHeader->rpval = (float) 0.0;
         pFidBlockHeader->lvl = (float) 0.0;
         pFidBlockHeader->tlt = (float) 0.0;
-
-        /* for the DDR  dp='y'-> float else it's 16-bit int, (those imagers) */
-        if ( pExpInfo->DataPtSize == 4)  /* dp='y' (4) */
-        {
-           pFidBlockHeader->status |= S_FLOAT;
-        }
-
-#ifdef LINUX
-       {
-          recvProcHeaderUnion hU;
-                                                                                
-          hU.in1 = pFidBlockHeader;
-          hU.out->s1 = htons(hU.out->s1);
-          hU.out->s2 = htons(hU.out->s2);
-          hU.out->s3 = htons(hU.out->s3);
-          hU.out->s4 = htons(hU.out->s4);
-          hU.out->l1 = htonl(hU.out->l1);
-          hU.out->l2 = htonl(hU.out->l2);
-          hU.out->l3 = htonl(hU.out->l3);
-          hU.out->l4 = htonl(hU.out->l4);
-          hU.out->l5 = htonl(hU.out->l5);
-       }
-#endif
-
-    return(0);
-
 }
 
 /**************************************************************
@@ -1855,6 +1787,12 @@ int InitialFileHeaders()
  
         fidfileheader.nbheaders = 1;
         fidfileheader.status    = S_DATA | S_OLD_COMPLEX | S_DDR;/* init status FID */
+        /* for the DDR  dp='y'-> float else it's 16-bit int, (those imagers) */
+        
+        if ( expInfo->DataPtSize == 4)  /* dp='y' (4) */
+        {
+           fidfileheader.status |= S_FLOAT;
+        }
         fidfileheader.vers_id   = 0;
 #ifdef LINUX
         fidfileheader.nblocks   = htonl(fidfileheader.nblocks);
@@ -1864,12 +1802,13 @@ int InitialFileHeaders()
         fidfileheader.tbytes    = htonl(fidfileheader.tbytes);
         fidfileheader.bbytes    = htonl(fidfileheader.bbytes);
         fidfileheader.nbheaders = htonl(fidfileheader.nbheaders);
+        fidfileheader.status    = htons(fidfileheader.status);
         fidfileheader.vers_id   = htons(fidfileheader.vers_id);
 #endif
 
         /* --------------------  FID Header  ---------------------------- */
         fidblockheader.scale = (short) 0;
-        fidblockheader.status = S_DATA | S_OLD_COMPLEX | S_DDR;/* init status to fid*/
+        fidblockheader.status = fidfileheader.status;
         fidblockheader.index = (short) 0;
         fidblockheader.mode = (short) 0;
         fidblockheader.ctcount = (long) 0;
@@ -1877,51 +1816,6 @@ int InitialFileHeaders()
         fidblockheader.rpval = (float) 0.0;
         fidblockheader.lvl = (float) 0.0;
         fidblockheader.tlt = (float) 0.0;
-
-        /* for the DDR  dp='y'-> float else it's 16-bit int, (those imagers) */
-        
-        if ( expInfo->DataPtSize == 4)  /* dp='y' (4) */
-        {
-           fidfileheader.status |= S_FLOAT;
-           fidblockheader.status |= S_FLOAT;
-        }
-
-#ifdef INOVA
-        if ( expInfo->DataPtSize == 4)  /* dp='y' (4) */
-        {                                
-           if (dspflag) 		/* values set to S_FLOAT not S_32 */
-           {
-              fidfileheader.status |= S_FLOAT;
-              fidblockheader.status |= S_FLOAT;
-           }
-           else
-           {
-              fidfileheader.status |= S_32;
-              fidblockheader.status |= S_32;
-           }
-        }
-#endif
-
-      /* fidfileheader.status    = htons(fidfileheader.status); */
-      /* DATABLOCKHEADER_CONVERT_HTON(&fidblockheader); */
-
-#ifdef LINUX
-       {
-          recvProcHeaderUnion hU;
-                                                                                
-          fidfileheader.status    = htons(fidfileheader.status);
-          hU.in1 = &fidblockheader;
-          hU.out->s1 = htons(hU.out->s1);
-          hU.out->s2 = htons(hU.out->s2);
-          hU.out->s3 = htons(hU.out->s3);
-          hU.out->s4 = htons(hU.out->s4);
-          hU.out->l1 = htonl(hU.out->l1);
-          hU.out->l2 = htonl(hU.out->l2);
-          hU.out->l3 = htonl(hU.out->l3);
-          hU.out->l4 = htonl(hU.out->l4);
-          hU.out->l5 = htonl(hU.out->l5);
-       }
-#endif
 
     return(0);
 
@@ -2017,7 +1911,7 @@ void UpdateStatus(FID_STAT_BLOCK *pFidstatblk)
 */
 #define ERROR 0xffffffff
 
-processBS(FID_STAT_BLOCK *pFidStatBlk)
+static void processBS(FID_STAT_BLOCK *pFidStatBlk)
 {
     int stat,qstat;
 
@@ -2025,7 +1919,7 @@ processBS(FID_STAT_BLOCK *pFidStatBlk)
      if ( HardErrorFlag == 1)
      {
         DPRINT(1,"processBS: HardErrorFlag set, just return, no processing\n");
-        return 0; 
+        return; 
      }
      /* test done in calling routine */
      /* if (pExpInfo->NumInBS != 0) */
@@ -2037,21 +1931,20 @@ processBS(FID_STAT_BLOCK *pFidStatBlk)
                              pFidStatBlk->doneCode, pFidStatBlk->ct / expInfo->NumInBS);
         if (qstat != SKIPPED)
         {
-            DPRINT2(1,"processBS: WBS: Queue FID: %ld, CT: %ld\n",
+            DPRINT2(1,"processBS: WBS: Queue FID: %u, CT: %u\n",
 		        pFidStatBlk->elemId, pFidStatBlk->ct);
 	    if ((stat = sendMsgQ(pProcMsgQ,"chkQ",strlen("chkQ"),MSGQ_NORMAL,NO_WAIT)) != 0)
 	    {
        	         errLogRet(ErrLogOp,debugInfo, 
-	               "Process: Procproc is not running. Wbs Process not done for FID %lu, CT: %lu\n",
+	               "Process: Procproc is not running. Wbs Process not done for FID %u, CT: %u\n",
 		           pFidStatBlk->elemId,pFidStatBlk->ct);
-                 return(-1);
+                 return;
 	     }
   	}
      /* } */
-     return 0;
 }
 
-processWarning(FID_STAT_BLOCK *pFidStatBlk)
+static void processWarning(FID_STAT_BLOCK *pFidStatBlk)
 {
     int stat,qstat;
 
@@ -2059,7 +1952,7 @@ processWarning(FID_STAT_BLOCK *pFidStatBlk)
      if ( HardErrorFlag == 1)
      {
         DPRINT(1,"processDoneCode: HardErrorFlag set, just return, no processing\n");
-        return 0; 
+        return; 
      }
      DPRINT(1,"processWarning: WARNING_MSG Werr Processing\n");
      /* wait because we guarantee this processing tobe done*/
@@ -2069,13 +1962,12 @@ processWarning(FID_STAT_BLOCK *pFidStatBlk)
 	          MSGQ_NORMAL,WAIT_FOREVER)) != 0)
      {
           errLogRet(ErrLogOp,debugInfo, 
-   	       "Process: Procproc is not running. Error Process not done for FID %lu, CT: %lu\n",
+   	       "Process: Procproc is not running. Error Process not done for FID %u, CT: %u\n",
 	  pFidStatBlk->elemId,pFidStatBlk->ct);
      }
-     return 0;
 }
 
-procesWNT(FID_STAT_BLOCK *pFidStatBlk)
+static void processWNT(FID_STAT_BLOCK *pFidStatBlk)
 {
     int stat,qstat;
 
@@ -2083,7 +1975,7 @@ procesWNT(FID_STAT_BLOCK *pFidStatBlk)
      if ( HardErrorFlag == 1)
      {
         DPRINT(1,"processDoneCode: HardErrorFlag set, just return, no processing\n");
-        return 0; 
+        return; 
      }
 
      DPRINT(+1,"Wnt Processing\n");
@@ -2092,17 +1984,16 @@ procesWNT(FID_STAT_BLOCK *pFidStatBlk)
                             pFidStatBlk->doneCode, pFidStatBlk->errorCode);
      if (qstat != SKIPPED)
      {
-         DPRINT2(+1,"wNT: Queue FID: %ld, CT: %ld\n",
+         DPRINT2(+1,"wNT: Queue FID: %u, CT: %u\n",
 		            pFidStatBlk->elemId, pFidStatBlk->ct);
 	 if ((stat = sendMsgQ(pProcMsgQ,"chkQ",strlen("chkQ"),MSGQ_NORMAL,NO_WAIT)) != 0)
 	 {
        	     errLogRet(ErrLogOp,debugInfo, 
-	            "Process: Procproc is not running. Wnt Process not done for FID %lu, CT: %lu\n",
+	            "Process: Procproc is not running. Wnt Process not done for FID %u, CT: %u\n",
 		               pFidStatBlk->elemId,pFidStatBlk->ct);
-             return(-1);
+             return; 
 	 }
      }
-    return(0);
 }
 
 int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
@@ -2129,7 +2020,7 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 			          MSGQ_NORMAL,WAIT_FOREVER)) != 0)
 	        {
 	          errLogRet(ErrLogOp,debugInfo, 
-	   	       "Process: Procproc is not running. Error Process not done for FID %lu, CT: %lu\n",
+	   	       "Process: Procproc is not running. Error Process not done for FID %u, CT: %u\n",
 		  pFidStatBlk->elemId,pFidStatBlk->ct);
 	        }
                 return_status = WARNING_MSG; 	/* don't stop just a warning */
@@ -2157,14 +2048,14 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
                 if (pExpInfo->ProcWait > 0)   /* au(wait) or just au */
                 {
                    DPRINT2(1,
-		     "processDoneCode: wExp(wait): Queue FID: %ld, CT: %ld\n",
+		     "processDoneCode: wExp(wait): Queue FID: %u, CT: %u\n",
 		          pFidStatBlk->elemId, pFidStatBlk->ct);
 	           procQadd(WEXP_WAIT, ShrExpInfo->MemPath, pExpInfo->Celem, 
 		      pExpInfo->CurrentTran, pFidStatBlk->doneCode, SA_Type);
                 }
                 else
                 {
-                   DPRINT2(1,"processDoneCode wExp: Queue FID: %ld, CT: %ld\n",
+                   DPRINT2(1,"processDoneCode wExp: Queue FID: %u, CT: %u\n",
 		       pFidStatBlk->elemId, pFidStatBlk->ct);
 	           procQadd(WEXP, ShrExpInfo->MemPath, pExpInfo->Celem, 
 		      pExpInfo->CurrentTran, pFidStatBlk->doneCode, SA_Type);
@@ -2173,7 +2064,7 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 				MSGQ_NORMAL,WAIT_FOREVER)) != 0)
 	        {
        	           errLogRet(ErrLogOp,debugInfo, 
-	           "processDoneCode: Procproc is not running. Wexp Process not done for FID %lu, CT: %lu\n",
+	           "processDoneCode: Procproc is not running. Wexp Process not done for FID %u, CT: %u\n",
 		       pFidStatBlk->elemId,pFidStatBlk->ct);
 	        }
                 return_status = EXP_STOPPED;
@@ -2196,14 +2087,14 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
                 if (pExpInfo->ProcWait > 0)   /* au(wait) or just au */
                 {
                    DPRINT2(1,
-		     "processDoneCode: wExp(wait): Queue FID: %ld, CT: %ld\n",
+		     "processDoneCode: wExp(wait): Queue FID: %u, CT: %u\n",
 		          pFidStatBlk->elemId, pFidStatBlk->ct);
 	           procQadd(WEXP_WAIT, ShrExpInfo->MemPath, pExpInfo->Celem, 
 		      pExpInfo->CurrentTran, pFidStatBlk->doneCode, pFidStatBlk->errorCode);
                 }
                 else
                 {
-                   DPRINT2(1,"processDoneCode wExp: Queue FID: %ld, CT: %ld\n",
+                   DPRINT2(1,"processDoneCode wExp: Queue FID: %u, CT: %u\n",
 		       pFidStatBlk->elemId, pFidStatBlk->ct);
 	           procQadd(WEXP, ShrExpInfo->MemPath, pExpInfo->Celem, 
 		      pExpInfo->CurrentTran, pFidStatBlk->doneCode, pFidStatBlk->errorCode);
@@ -2212,7 +2103,7 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 				MSGQ_NORMAL,WAIT_FOREVER)) != 0)
 	        {
        	           errLogRet(ErrLogOp,debugInfo, 
-	           "processDoneCode: Procproc is not running. Wexp Process not done for FID %lu, CT: %lu\n",
+	           "processDoneCode: Procproc is not running. Wexp Process not done for FID %u, CT: %u\n",
 		       pFidStatBlk->elemId,pFidStatBlk->ct);
 	        }
 	      }
@@ -2234,7 +2125,7 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 				     MSGQ_NORMAL,WAIT_FOREVER)) != 0)
 		   {
 		     errLogRet(ErrLogOp,debugInfo, 
-	    	     "Process: Procproc is not running. Error Process not done for FID %lu, CT: %lu\n",
+	    	     "Process: Procproc is not running. Error Process not done for FID %u, CT: %u\n",
 			pFidStatBlk->elemId,pFidStatBlk->ct);
 		   }
       		}
@@ -2259,7 +2150,7 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 				     MSGQ_NORMAL,WAIT_FOREVER)) != 0)
 		   {
 		     errLogRet(ErrLogOp,debugInfo, 
-	    	     "Process: Procproc is not running. Error Process not done for FID %lu, CT: %lu\n",
+	    	     "Process: Procproc is not running. Error Process not done for FID %u, CT: %u\n",
 			pFidStatBlk->elemId,pFidStatBlk->ct);
 		   }
       		}
@@ -2300,14 +2191,14 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 	             /* msgQ full, wait because we guarantee this processing to be done */
                      if (expInfo->ProcWait > 0)   /* au(wait) or just au */
                      {
-                        DPRINT2(1,"wExp(wait): Queue FID: %ld, CT: %ld\n",
+                        DPRINT2(1,"wExp(wait): Queue FID: %u, CT: %u\n",
 		                pFidStatBlk->elemId, pFidStatBlk->ct);
 	                procQadd(WEXP_WAIT, ShrExpInfo->MemPath, pFidStatBlk->elemId,
 		                 pFidStatBlk->ct, EXP_COMPLETE, pFidStatBlk->errorCode);
                      }
                      else
                      {
-                        DPRINT2(1,"wExp: Queue FID: %ld, CT: %ld\n",
+                        DPRINT2(1,"wExp: Queue FID: %u, CT: %u\n",
 		                pFidStatBlk->elemId, pFidStatBlk->ct);
 	                procQadd(WEXP, ShrExpInfo->MemPath, pFidStatBlk->elemId,
 		                 pFidStatBlk->ct, EXP_COMPLETE, pFidStatBlk->errorCode);
@@ -2315,7 +2206,7 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 	             if ((stat = sendMsgQ(pProcMsgQ,"chkQ",strlen("chkQ"),MSGQ_NORMAL,NO_WAIT)) != 0)
 	             {
        	                errLogRet(ErrLogOp,debugInfo, 
-	                "Process: Procproc is not running. Wexp Process not done for FID %lu, CT: %lu\n",
+	                "Process: Procproc is not running. Wexp Process not done for FID %u, CT: %u\n",
 		            pFidStatBlk->elemId,pFidStatBlk->ct);
                         return(-1);
 	             }
@@ -2333,12 +2224,12 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
                                       pFidStatBlk->doneCode, pFidStatBlk->errorCode);
                      if (qstat != SKIPPED)
                      {
-                        DPRINT2(1,"wNT: Queue FID: %ld, CT: %ld\n",
+                        DPRINT2(1,"wNT: Queue FID: %u, CT: %u\n",
 		            pFidStatBlk->elemId, pFidStatBlk->ct);
 	                if ((stat = sendMsgQ(pProcMsgQ,"chkQ",strlen("chkQ"),MSGQ_NORMAL,NO_WAIT)) != 0)
 	                {
        	                   errLogRet(ErrLogOp,debugInfo, 
-	                   "Process: Procproc is not running. Wnt Process not done for FID %lu, CT: %lu\n",
+	                   "Process: Procproc is not running. Wnt Process not done for FID %u, CT: %u\n",
 		               pFidStatBlk->elemId,pFidStatBlk->ct);
                            return(-1);
 	                }
@@ -2361,12 +2252,12 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
                                     pFidStatBlk->doneCode, pFidStatBlk->ct / expInfo->NumInBS);
                    if (qstat != SKIPPED)
                    {
-                      DPRINT2(1,"wBS: Queue FID: %ld, CT: %ld\n",
+                      DPRINT2(1,"wBS: Queue FID: %u, CT: %u\n",
 		        pFidStatBlk->elemId, pFidStatBlk->ct);
 	              if ((stat = sendMsgQ(pProcMsgQ,"chkQ",strlen("chkQ"),MSGQ_NORMAL,NO_WAIT)) != 0)
 	              {
        	               errLogRet(ErrLogOp,debugInfo, 
-	               "Process: Procproc is not running. Wbs Process not done for FID %lu, CT: %lu\n",
+	               "Process: Procproc is not running. Wbs Process not done for FID %u, CT: %u\n",
 		           pFidStatBlk->elemId,pFidStatBlk->ct);
                        return(-1);
 	              }
@@ -2462,16 +2353,17 @@ int startInteract()
 		return(-1);
 	}
 
-   DPRINT1(1,"offset into mmap file is 0x%x\n", ifile->offsetAddr );
+   DPRINT1(1,"offset into mmap file is %p\n", ifile->offsetAddr );
 
    /* get the UID & GID of exp. owner */
    if (	getUserUid(expInfo->UserName,&uid,&gid) == 0) 
    {
+        int ret __attribute__((unused));
         int old_euid = geteuid();
 
-        seteuid( getuid() );
-	chown(expInfo->DataFile, uid, gid);
-        seteuid( old_euid );
+        ret = seteuid( getuid() );
+	ret = chown(expInfo->DataFile, uid, gid);
+        ret = seteuid( old_euid );
    }
    else
    {
@@ -2486,19 +2378,19 @@ int startInteract()
    return(0);
 }
 
-int stopInteract()
+void stopInteract()
 {
 		DPRINT( 1, "stop interactive starts in recvproc\n" );
 	if ( ! consoleConn() ) {
 		errLogRet(ErrLogOp,debugInfo,
 	   "stop interact: Channel not connected to console yet, stop request Ignored.");
-		return(-1);
+		return;
 	}
 
 	if (mapOut( interactInfoFile ) == -1) {
 		errLogRet(ErrLogOp,debugInfo,
 	   "stop interact: Exp Info Not Present, stop request Ignored.");
-		return(-1);
+		return;
 	}
 
 	mClose(ifile);
@@ -2511,7 +2403,6 @@ int stopInteract()
 	pExpMsgQ = NULL;
 
 	DPRINT( 1, "stop interactive completes in recvproc\n" );
-        return( 0 );
 }
 
 /**********************************************************

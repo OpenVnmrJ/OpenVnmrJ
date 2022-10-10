@@ -131,7 +131,7 @@ extern int createPublisher(NDDS_ID pNDDS_Obj);
 extern int createSubscriber(NDDS_ID pNDDS_Obj);
 
 #ifdef RTI_NDDS_4x
-extern NDDS_Shutdown( NDDS_OBJ *pNddsObj );
+extern void NDDS_Shutdown( NDDS_OBJ *pNddsObj );
 extern DDS_Publisher *PublisherCreate(DDS_DomainParticipant *participant);
 extern DDS_Subscriber *SubscriberCreate(DDS_DomainParticipant *participant);
 extern DDS_Topic *RegisterAndCreateTopic(NDDS_ID pNDDS_Obj);

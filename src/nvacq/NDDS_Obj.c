@@ -558,7 +558,7 @@ static int participant_shutdown( DDS_DomainParticipant *participant)
     return status;
 }
 
-NDDS_Shutdown( NDDS_OBJ *pNddsObj )
+void NDDS_Shutdown( NDDS_OBJ *pNddsObj )
 {
    participant_shutdown(pNddsObj->pParticipant);
 }
