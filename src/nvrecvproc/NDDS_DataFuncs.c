@@ -1039,7 +1039,7 @@ setDiscardIssues()
    /* discardIssues = 1;  */
 }
 
-clearDiscardIssues()
+void clearDiscardIssues()
 {
    SHARED_DATA_ID pSharedData;
    pSharedData = (SHARED_DATA_ID) lockSharedData(&TheMemBarrier);
@@ -1454,7 +1454,7 @@ void initiateDataPub()
 #endif  /* THREADED */
  
 
-shutdownComm()
+void shutdownComm()
 {
 #ifndef RTI_NDDS_4x
    RTINtpTime sleepTime = { 0, 0 };
