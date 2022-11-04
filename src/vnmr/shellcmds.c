@@ -976,30 +976,12 @@ int Cat(int argc, char *argv[], int retc, char *retv[])
       {  Werrprintf("File '%s' not accessible",argv[i]);
          ABORT;
       }
-#ifdef UNIX
+    sync();
     strcpy(cmdstr,"/bin/cat ");
-#else 
-    strcpy(cmdstr,"typ ");
-#endif 
     for (i=1; i<argc; i++)
     {
-#ifdef UNIX
 	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);  /* why??? */
      	strncat(cmdstr,argv[i],MAXSHSTRING - strlen(cmdstr) -1);
-#else 
-        char *tptr2;
-
-	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1); /* why??? */
-     	strncat(cmdstr,argv[i],MAXSHSTRING - strlen(cmdstr) -1);
-        tptr1 = strrchr(argv[i],']');
-	if (tptr1 == NULL)
-	  tptr1 = argv[i];
-	tptr2 = strrchr(tptr1,'.');
-	if (tptr2 == NULL)
-	  strncat(cmdstr,".",MAXSHSTRING - strlen(cmdstr) -1);
-	if (i+1<argc)
-	  strncat(cmdstr,",",MAXSHSTRING - strlen(cmdstr) -1);
-#endif 
     }
     Wsettextdisplay("Cat");
     Wshow_text();
