@@ -542,10 +542,26 @@ set_frq(dim_ *dimen)
                 }
 		break;
 
+     /*  observe freq ppm */
+     case 'p':
+                if (!P_getreal(PROCESSED,"reffrq",&freq,1) && (freq > 1.0))
+                   strcpy(dimen->axis_label,"ppm");
+                else if (P_getreal(PROCESSED,"sfrq",&freq,1) || (freq < 1.0))
+                {
+                   freq = 1.0;
+                   strcpy(dimen->axis_val,"h");
+                   strcpy(dimen->axis_label,"Hz");
+                }
+                else
+                {
+                   strcpy(dimen->axis_label,"ppm");
+                }
+		break;
+
      /*  decoupler freq ppm */
      case '1':
      case 'd':
-                if (!P_getreal(PROCESSED,"dreffrq",&freq,1) && (freq > 1.0))
+                if (!P_getreal(PROCESSED,"reffrq1",&freq,1) && (freq > 1.0))
                    strcpy(dimen->axis_label,"ppm");
                 else if (P_getreal(PROCESSED,"dfrq",&freq,1) || (freq < 1.0))
                 {
@@ -691,6 +707,14 @@ set_frq(dim_ *dimen)
                    strcpy(dimen->axis_label,"sec");
                 }
 		break;
+    }
+    {
+       char tmp[64];
+       char label[16];
+       sprintf(label,"%s_label",dimen->fn_name);
+       strcpy(tmp,"");
+       if ( ! P_getstring(CURRENT,label,tmp,1,15))
+          strcpy(dimen->axis_label,tmp);
     }
   }
   dimen->axis_scaled = FALSE;
