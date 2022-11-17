@@ -263,6 +263,7 @@ const char *msg(const char *m)
 |
 |	This function returns true (non-zero) if the given string can be
 |	converted to a real.  It returns false (zero) otherwise.
+|       The string 'inf' returns true.
 |
 +-----------------------------------------------------------------------------*/
 
@@ -284,6 +285,36 @@ int isReal(char *s)
     }
 
     return(! isnan(tmp));
+}
+
+/*------------------------------------------------------------------------------
+|
+|	isFinite/1
+|
+|	This function returns true (non-zero) if the given string can be
+|	converted to a real.  It returns false (zero) otherwise.
+|       The string 'inf' returns false.
+|
++-----------------------------------------------------------------------------*/
+
+int isFinite(char *s)
+{   double tmp;
+    char *end;
+    register char *end2;
+
+    errno = 0;
+    tmp = strtod(s, &end);
+    if ((end == s) || (errno != 0))
+	return(0);
+    end2 = s + strlen(s);
+    while ((end < end2) && isspace((unsigned char) *end)) {
+        end++;
+    }
+    if (end != end2) {
+	return(0);
+    }
+
+    return(isfinite(tmp));
 }
 
 /****************************************************/
