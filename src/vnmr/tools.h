@@ -36,6 +36,7 @@ extern char   *rtoa(double d, char *buf, int size);
 extern char   *realString(double d);
 extern double  stringReal(char *s);
 extern int     isReal(char *s);
+extern int     isFinite(char *s);
 extern void    space(FILE *f, int n);
 extern int     verify_fname(char *fnptr);
 

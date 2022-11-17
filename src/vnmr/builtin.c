@@ -1530,7 +1530,61 @@ static void vnmrToUpper(char *s)
 
 int format(int argc, char *argv[], int retc, char *retv[])
 {
-    if (argc == 4)
+    if ( (argc >= 3) && (strcmp(argv[argc-1],"isreal") == 0) )
+    {
+       int i = 1;
+       int isRe = 1;
+  
+       if (1 <= retc)
+       {
+          while ( (i < argc-1) && isRe)
+          {
+             isRe = isReal(argv[i]);
+             i++;
+          }
+          retv[0] = intString(isRe);
+       }
+       else
+       {
+          while (i < argc-1)
+          {
+             isRe = isReal(argv[i]);
+             Winfoprintf("%s %s a real number",
+                argv[i],(isRe == 1) ? "is" : "is not");
+             i++;
+          }
+          clearRets(retc,retv);
+       }
+       RETURN;
+    }
+    else if ( (argc >= 3) && (strcmp(argv[argc-1],"isfinite") == 0) )
+    {
+       int i = 1;
+       int isRe = 1;
+  
+       if (1 <= retc)
+       {
+          while ( (i < argc-1) && isRe)
+          {
+             isRe = isFinite(argv[i]);
+             i++;
+          }
+          retv[0] = intString(isRe);
+       }
+       else
+       {
+          while (i < argc-1)
+          {
+             isRe = isFinite(argv[i]);
+             Winfoprintf("%s %s a finite number",
+                argv[i],(isRe == 1) ? "is" : "is not");
+             i++;
+          }
+          clearRets(retc,retv);
+       }
+       RETURN;
+    }
+    else if (argc == 4)
     {   char forstr[32];
         char retstr[66];
         int  length,precision;
@@ -1594,17 +1648,6 @@ int format(int argc, char *argv[], int retc, char *retv[])
        {
           strcpy(retstr,argv[1]);
           vnmrToUpper(retstr);
-       }
-       else if (strcmp(argv[2],"isreal") == 0)
-       {
-          int res = isReal(argv[1]);
-          if (1 <= retc)
-             retv[0] = intString(res);
-          else
-          {  Winfoprintf("%s %s a real number",argv[1],(res == 1) ? "is" : "is not");
-             clearRets(retc,retv);
-          }
-          RETURN;
        }
        else if (strcmp(argv[2],"expand") == 0)
        {
