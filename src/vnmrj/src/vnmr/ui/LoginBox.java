@@ -65,6 +65,11 @@ public class LoginBox extends ModalDialog implements ActionListener , MouseListe
     public static final String TRAYACTIVE = "Sample tray Active";
     protected static Properties pwprops = null;
 
+    static public void NewPassword()
+    {
+       pwprops = null;
+    }
+
     public LoginBox()
     {
         super("VnmrJ Login");

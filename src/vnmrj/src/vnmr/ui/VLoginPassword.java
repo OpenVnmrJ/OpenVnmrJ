@@ -232,7 +232,10 @@ public class VLoginPassword extends ModalDialog implements ActionListener
                                "Username/Password is correct and the new password " +
                                " meets system requirements. ");
         else
+	{
+            LoginBox.NewPassword();
             Messages.postInfo("Password successfully changed");
+	}
 
         return bLogin;
     }
