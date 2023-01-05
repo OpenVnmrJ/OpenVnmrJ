@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include "vnmrsys.h"
 #include "buttons.h"
@@ -87,6 +88,7 @@ static void saveCmdHistory(char *buffer);
 FILE *globalCmdHistory = NULL;
 FILE *localCmdHistory = NULL;
 char localCmdHistoryPath[MAXPATH];
+static char cmdBuffer[2048];
 
 #ifdef VNMRJ
 
@@ -251,6 +253,8 @@ void processChar(char c)
                             newLogCmd(buffer, bp);
                         }
 		// if(okExec(buffer)) {	
+		        if (doCmdHistory)
+                           strcpy(cmdBuffer,buffer);
                         doThisCmdHistory = doCmdHistory;
 			loadAndExec(buffer);
                         if (doThisCmdHistory)
@@ -455,11 +459,13 @@ int cmdHistory(int argc, char *argv[], int retc, char *retv[])
    {
       if (globalCmdHistory)
          sprintf(path,"%s/cmdHistory",userdir);
+      else
+         strcpy(path,"");
       if (retc)
       {
-         retv[0] = (globalCmdHistory) ? newString("") : newString(path);
+         retv[0] = newString(path);
          if (retc > 1)
-            retv[1] = (localCmdHistory) ? newString("") : newString(localCmdHistoryPath);
+            retv[1] = (localCmdHistory) ? newString(localCmdHistoryPath) : newString("");
       }
       else
          Winfoprintf("Global history is %s. Local history is %s",
@@ -478,6 +484,7 @@ int cmdHistory(int argc, char *argv[], int retc, char *retv[])
          {
             sprintf(path,"%s/cmdHistory",userdir);
             globalCmdHistory = fopen(path,"w");
+            strcpy(cmdBuffer,"");
          }
          doCmdHistory = 1;
          doThisCmdHistory = 0;
@@ -488,16 +495,21 @@ int cmdHistory(int argc, char *argv[], int retc, char *retv[])
          {
             sprintf(path,"%s/cmdHistory",userdir);
             globalCmdHistory = fopen(path,"a");
+            strcpy(cmdBuffer,"");
          }
          doCmdHistory = 1;
          doThisCmdHistory = 0;
       }
       else if ( ! strcmp(argv[1],"off") )
       {
+         
          if (globalCmdHistory)
          {
+            if ( doThisCmdHistory && strcmp(cmdBuffer,"") )
+               fprintf(globalCmdHistory,"%s",cmdBuffer);
             fclose(globalCmdHistory);
             globalCmdHistory = NULL;
+            sync();
          }
          if ( ! localCmdHistory)
             doCmdHistory = 0;
@@ -523,6 +535,7 @@ int cmdHistory(int argc, char *argv[], int retc, char *retv[])
          {
             doCmdHistory = 1;
             doThisCmdHistory = 0;
+            strcpy(cmdBuffer,"");
             strcpy(localCmdHistoryPath,argv[2]);
          }
          else
@@ -539,6 +552,7 @@ int cmdHistory(int argc, char *argv[], int retc, char *retv[])
          {
             doCmdHistory = 1;
             doThisCmdHistory = 0;
+            strcpy(cmdBuffer,"");
             strcpy(localCmdHistoryPath,argv[2]);
          }
          else
@@ -549,7 +563,12 @@ int cmdHistory(int argc, char *argv[], int retc, char *retv[])
       else if ( ! strcmp(argv[1],"off") )
       {
          if (localCmdHistory)
+         {
+            if ( doThisCmdHistory && strcmp(cmdBuffer,"") )
+               fprintf(localCmdHistory,"%s",cmdBuffer);
             fclose(localCmdHistory);
+            sync();
+         }
          localCmdHistory = NULL;
          if ( ! globalCmdHistory)
             doCmdHistory = 0;
