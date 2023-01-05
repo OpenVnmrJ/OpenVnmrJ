@@ -301,7 +301,7 @@ static int  cmdLineOK = 1;  /* command line is enabled */
 static char escChar = '\033';
 static char *vjWinInfo = NULL;
 static char evalStr[ MAXPATH ];
-static char showStr[ MAXPATH ];
+static char showStr[ MAXPATH+16 ];
 static char tmpStr[ MAXPATH ];
 static char jexprDummyVar[ MAXPATH ] = "$VALUE";
 
@@ -2388,7 +2388,7 @@ static void jAutoSendIfGlobal(char *param )
 {
         int i, j, k, l, tree = NOTREE;
         int num;
-        char mstr[MAXPATH+1], paramb[MAXPATH+1];
+        char mstr[MAXPATH+16], paramb[MAXPATH+16];
 	char *plist;
         double dval;
         vInfo info;
@@ -2916,7 +2916,7 @@ void jsendParamMaxMin(int num, char *param, char *tree )
 
 static void vnmrj_express_real(char *mstr, char *format, double dval )
 {
-  char rstr[8];
+  char rstr[16];
   int ig;
   if (strcmp(format,"")==0)
     sprintf(mstr, "%g", dval);
@@ -3632,7 +3632,7 @@ static void jExecExpression(char *key, char *exnum, char *express, char *format 
 static void jEvaluateExpression(int exnum, char *express )
 {
 	char jstr[ 8*MAXPATH ];
-	char rstr[ MAXPATH ];
+	char rstr[ MAXPATH+8 ];
 
 	jExpressUse = 1;
 	jExError = 0;
@@ -3817,6 +3817,7 @@ int isimagebrowser(int argc, char *argv[], int retc, char *retv[])
 
    (void) argc;
    (void) argv;
+   doThisCmdHistory = 0;
    aip = (aipOwnsScreen()) ? 1 : 0;
    if (retc)
    {
@@ -3955,7 +3956,7 @@ static int jxFunc(int func, int argc, char *argv[])
        switch (func) {
                case JPNEWLOC:  // 41x
                     if (argc > 2) {
-                         char mstr[MAXPATH], key[6]="vloc";
+                         char mstr[MAXPATH+16], key[6]="vloc";
                          if (argc > 4)
                          {
                             sprintf(mstr, "%s=%s", jexprDummyVar, argv[3]);
@@ -4811,6 +4812,7 @@ int jMove(int argc, char *argv[], int retc, char *retv[])
 {
    (void) retc;
    (void) retv;
+   doThisCmdHistory = 0;
    if (argc > 3) {
       jvnmr_sync(0, 0);
       processJMouse(argc, argv);
@@ -4823,6 +4825,7 @@ int jMove2(int argc, char *argv[], int retc, char *retv[])
 {
    (void) retc;
    (void) retv;
+   doThisCmdHistory = 0;
    if (argc > 3) {
       jvnmr_sync(0, 1);
       process_csi_JMouse(argc, argv);
