@@ -567,7 +567,7 @@ void _pboxsimpulse(PBOXPULSE shp1, PBOXPULSE shp2,int phase1, int phase2)
    if (!strcmp(shp2.ch,"obs")) chnl2 = 1;
    else if (!strcmp(shp2.ch,"dec")) chnl2 = 2;
    else if (!strcmp(shp2.ch,"dec2")) chnl2 = 3;
-   else if (!strcmp(shp2.ch,"dec2")) {
+   else if (!strcmp(shp2.ch,"dec3")) {
       printf("_pboxsimpulse() Error: dec3 is not allowed!\n");
       psg_abort(1);
    }
