@@ -2048,7 +2048,7 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 
    var = getname1("a",cp.seqName,2);
    cp.a2 = getval(var);
-   if ((strcmp(cp.ch,"fr") == 0)) 
+   if ((strcmp(cp.ch,"to") == 0)) 
    cp.array = disarry(var, cp.array);
 
 // dHXsuffix
