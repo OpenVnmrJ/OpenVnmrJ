@@ -5066,6 +5066,8 @@ public class ExpPanel extends JPanel
         String mode = "";
         String xmlfile = "";
         String location = "";
+        String xlocation = "";
+        String ylocation = "";
         String strHelpFile = "";
         String strPnew = "";
         String strCancel = "";
@@ -5102,6 +5104,14 @@ public class ExpPanel extends JPanel
             }
             if(par1.startsWith("location:")) {
                 location = par1.substring(9);
+                continue;
+            }
+            if(par1.startsWith("x:")) {
+                xlocation = par1.substring(2);
+                continue;
+            }
+            if(par1.startsWith("y:")) {
+                ylocation = par1.substring(2);
                 continue;
             }
             if (par1.startsWith(strRebuild)) {
@@ -5221,7 +5231,10 @@ public class ExpPanel extends JPanel
 				bRebuild, strHelpFile,
 				strCancel, strOK, strPnew);
             modalPopup.setOnTop(bOnTop);
-            modalPopup.showDialogAndSetParms(location);
+            if (! xlocation.equals("") && ! ylocation.equals("") )
+               modalPopup.showDialogXYAndSetParms(xlocation,ylocation);
+            else
+               modalPopup.showDialogAndSetParms(location);
         } else if (mode.startsWith("modeless") && xmlfile != null) {
 
             /* stop modal popups from blocking communication with Vnmrbg/Vnmrj */
@@ -5268,7 +5281,10 @@ public class ExpPanel extends JPanel
                    popup = new ModelessPopup(sshare, this, appIf, title,
                               xmlfile, width, height, bRebuild, strHelpFile, strClose);
                 popup.setOnTop(bOnTop);
-                popup.showDialogAndSetParms(location);
+                if (! xlocation.equals("") && ! ylocation.equals("") )
+                    popup.showDialogXYAndSetParms(xlocation,ylocation);
+                else
+                    popup.showDialogAndSetParms(location);
                 modelessPopups.put(xmlfile, popup);
             } else {
                 if (bFrameType)
@@ -5278,7 +5294,10 @@ public class ExpPanel extends JPanel
                    popup = new ModelessPopup(sshare, this, appIf, title,
                               xmlfile, width, height, bRebuild, strHelpFile, strClose);
                 popup.setOnTop(bOnTop);
-                popup.showDialogAndSetParms(location);
+                if (! xlocation.equals("") && ! ylocation.equals("") )
+                    popup.showDialogXYAndSetParms(xlocation,ylocation);
+                else
+                    popup.showDialogAndSetParms(location);
                 modelessPopups.put(xmlfile, popup);
             }
         }
