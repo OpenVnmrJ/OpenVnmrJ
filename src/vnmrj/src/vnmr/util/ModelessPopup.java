@@ -271,6 +271,36 @@ public class ModelessPopup extends ModelessDialog
         transferFocus();
     }
 
+    public void showDialogXYAndSetParms(String xloc, String yloc) {
+        Point location;
+
+        int x;
+        try {
+          x = Integer.parseInt(xloc);
+        }
+        catch (NumberFormatException e) {
+          x = 0;
+        }
+        int y;
+        try {
+          y = Integer.parseInt(yloc);
+        }
+        catch (NumberFormatException e) {
+          y = 0;
+        }
+        location = new Point(x, y);
+        setLocation(location);
+
+        // Show the dialog and wait for the results. (Blocking call)
+        //showDialogWithThread();
+
+        setVisible(true);
+
+        // If I don't do this, and the user hits a 'return' on the keyboard
+        // the dialog comes visible again.
+        transferFocus();
+    }
+
    /**********
     private void updateGrpAllValue (JComponent p) {
         int nums = p.getComponentCount();
