@@ -153,14 +153,14 @@ void pulsesequence() {
 // Define Variables and Modules and Get Parameter Values
      
    CP hy = getcp("HY",0.0,0.0,0,1);
-   strncpy(hy.fr,"dec",3);
-   strncpy(hy.to,"dec2",4);      
+   strcpy(hy.fr,"dec");
+   strcpy(hy.to,"dec2");      
    putCmd("frHY='dec'\n");
    putCmd("toHY='dec2'\n");
    
    CP yx = getcp("YX",0.0,0.0,0,1);
-   strncpy(yx.fr,"dec2",4);
-   strncpy(yx.to,"obs",3);
+   strcpy(yx.fr,"dec2");
+   strcpy(yx.to,"obs");
    putCmd("frYX='dec2'\n");
    putCmd("toYX='obs'\n");
 
@@ -190,10 +190,10 @@ void pulsesequence() {
       getstr("dqfXspc5",dqfXspc5);
       spc5 = getspc5("spc5X",0,0.0,0.0,0,1);
       tXspc5ret = spc5.t;
-      strncpy(spc5.ch,"obs",3);
+      strcpy(spc5.ch,"obs");
       if (!strcmp(dqfXspc5,"y")) {
          spc5ref = getspc5("spc5X",spc5.iSuper,spc5.phAccum,spc5.phInt,1,1); 
-         strncpy(spc5ref.ch,"obs",3);
+         strcpy(spc5ref.ch,"obs");
          tXspc5ret = tXspc5ret + spc5.t;
       }
       putCmd("chXspc5='obs'\n");
@@ -209,10 +209,10 @@ void pulsesequence() {
       getstr("dqfXc7",dqfXc7);
       c7 = getpostc7("c7X",0,0.0,0.0,0,1);
       tXc7ret = c7.t;
-      strncpy(c7.ch,"obs",3);
+      strcpy(c7.ch,"obs");
       if (!strcmp(dqfXc7,"y")) {
          c7ref = getpostc7("c7X",c7.iSuper,c7.phAccum,c7.phInt,1,1);
-         strncpy(c7ref.ch,"obs",3);
+         strcpy(c7ref.ch,"obs");
          tXc7ret = tXc7ret + c7.t;
       }
       putCmd("chXc7='obs'\n");

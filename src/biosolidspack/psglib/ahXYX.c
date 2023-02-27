@@ -125,20 +125,20 @@ void pulsesequence() {
 // Define Variables and Modules and Get Parameter Values
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",4);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n"); 
    putCmd("toHX='obs'\n");
 
    CP xy = getcp("XY",0.0,0.0,0,1);
-   strncpy(xy.fr,"obs",4);
-   strncpy(xy.to,"dec2",3);
+   strcpy(xy.fr,"obs");
+   strcpy(xy.to,"dec2");
    putCmd("frXY='obs'\n");
    putCmd("toXY='dec2'\n");
 
    CP yx = getcp("YX",0.0,0.0,0,1);
-   strncpy(yx.fr,"dec2",4);
-   strncpy(yx.to,"obs",3);
+   strcpy(yx.fr,"dec2");
+   strcpy(yx.to,"obs");
    putCmd("frYX='dec2'\n");
    putCmd("toYX='obs'\n");
 
@@ -158,7 +158,7 @@ void pulsesequence() {
    char mMix[MAXSTR];
    getstr("mMix",mMix);
 
-   strncpy(mMix,"darr",5);
+   strcpy(mMix,"darr");
    putCmd("mMix='darr'\n");
 
 // Get pwX90 and pwY90 to Adjust For Composite and Simpulses
