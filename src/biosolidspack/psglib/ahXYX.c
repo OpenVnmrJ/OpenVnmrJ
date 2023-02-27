@@ -158,7 +158,7 @@ void pulsesequence() {
    char mMix[MAXSTR];
    getstr("mMix",mMix);
 
-   strncpy(mMix,"darr",5);
+   strcpy(mMix,"darr");
    putCmd("mMix='darr'\n");
 
 // Get pwX90 and pwY90 to Adjust For Composite and Simpulses
