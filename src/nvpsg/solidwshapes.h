@@ -81,7 +81,7 @@ WMPSEQ getwdumbogen1(char *seqName, char *coeffName)
 
    //printf("dumbo dur: %f\n",mp.wvsh.mpseq.t);
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumbogen() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -190,7 +190,7 @@ WMPSEQ getwdumbogen2(char *seqName, char *coeffName)
 
    //printf("dumbo dur: %f\n",mp.wvsh.mpseq.t);
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumbogen() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -381,7 +381,7 @@ WMPSEQ getwpmlgxmx1(char *seqName)
    mp.wvsh.mpseq=getpmlg(seqName,0,0,0,0,1);
 
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwpmlg() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -504,7 +504,7 @@ WMPSEQ getwsamn1(char *seqName)
    WMPSEQ mp;
    mp.wvsh.mpseq=getsamn(seqName,0,0,0,0,1);
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwsamn() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }

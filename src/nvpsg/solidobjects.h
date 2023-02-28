@@ -489,7 +489,7 @@ WMPA getbr24(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getbr24() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -574,7 +574,7 @@ WMPA getmrev8(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getmrev8() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -659,7 +659,7 @@ WMPA getswwhh4(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getswwhh4() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -744,7 +744,7 @@ WMPA getxx(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getxx() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -829,7 +829,7 @@ WMPA getxmx(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getxmx() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -914,7 +914,7 @@ WMPA gettoss4(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("gettoss4() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -966,7 +966,7 @@ WMPA gettoss5(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("gettoss5() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1030,7 +1030,7 @@ WMPA getidref(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getidref() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1074,7 +1074,7 @@ WMPA getwpmlg(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwpmlg() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1201,7 +1201,7 @@ GP getinept(char *seqName)
 {
    GP in;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getinept() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1276,7 +1276,7 @@ WMPA getwdumbo(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumbo() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1408,7 +1408,7 @@ WMPA getwdumbot(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumbot() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1547,7 +1547,7 @@ WMPA getcpmg(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getcpmg() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1634,7 +1634,7 @@ GP gethmqc(char *seqName)
 {
    GP hmqc;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("gethmqc() Error: The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -1691,7 +1691,7 @@ WMPA gethssmall(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("gethssmall() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1796,7 +1796,7 @@ WMPA getxmxwpmlg(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwpmlg() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -1933,7 +1933,7 @@ WMPA getwsamn(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwsamn() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -2060,7 +2060,7 @@ WMPA getwpmlgxmx(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwpmlgxmx() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -2193,7 +2193,7 @@ WMPA getwdumboxmx(char *seqName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumboxmx() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
@@ -2334,7 +2334,7 @@ WMPA getwdumbogen(char *seqName, char *coeffName)
 {
    WMPA mp;
    char *var;
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumbogen() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }

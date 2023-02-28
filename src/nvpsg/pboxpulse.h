@@ -263,7 +263,7 @@ PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
    PBOXPULSE shp;
    char *var;
    char cmd[MAXSTR];
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getpboxpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -371,7 +371,7 @@ PBOXPULSE getrefpboxpulse(char *seqName, int iRec, int calc)
    PBOXPULSE shp;
    char *var;
    char cmd[MAXSTR];
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getpsoftpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }

@@ -520,7 +520,7 @@ SHAPE make_shape1(SHAPE s)
 SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
 {
    char *var;
-   if ((strlen(name) > NSUFFIX) || (strlen(name)) < 2) {
+   if ((strlen(name) >= NSUFFIX) || (strlen(name)) < 2) {
       printf("Error in genericInitShape()! The  name %s is invalid !\n",name);
       psg_abort(-1);
    }
@@ -582,7 +582,7 @@ SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
 SHAPE genericInitShape1(SHAPE s, char *name, double p, double phint, int iRec)
 {
    char *var;
-   if ((strlen(name) > NSUFFIX) || (strlen(name)) < 2) {
+   if ((strlen(name) >= NSUFFIX) || (strlen(name)) < 2) {
       printf("Error in genericInitShape()! The  name %s is invalid !\n",name);
       psg_abort(-1);
    }

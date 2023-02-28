@@ -833,7 +833,7 @@ MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getpmlgsuper(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
