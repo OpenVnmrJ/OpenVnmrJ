@@ -36,8 +36,9 @@ class PFGController: public GradientBase
      //  this is the only constructor...
      //PFGController(char *name,char *gradtype):GradientBase(name,0),Xpower(1.0e6,10.0,name),Ypower(1.0e6,10.0,name),Zpower(1.0e6,10.0,name)
      PFGController(const char *name,const char *gradtype):GradientBase(name,0)
-     {  patternDataStore = (int *) malloc(4000*sizeof(int));
+     {
         patternDataStoreSize = 4000;
+        patternDataStore = (int *) malloc(patternDataStoreSize * sizeof(int));
         patternDataStoreUsed = 0;
         usageFlag = 0; 
         if (tolower(gradtype[0] != 'n'))  usageFlag |= XPFGPRESENT;
