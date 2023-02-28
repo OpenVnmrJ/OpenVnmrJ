@@ -396,9 +396,15 @@ void RFController::setUserGate(int which, int state)
 {
   int buffer[2];
   int mask, action;
-  mask = 0;
-  action = 0;
-  if (which > 3)  buffer[0] = 0x28;  // zero all
+
+// BDZ - fixed subtle bug. We must evaluate ramifications.
+// There are places in the code that actually do send which > 3
+// and do state they want to clear all. Notice that the which > 3
+// case was hard to see before due to no use of brackets.
+
+  if (which > 3) {
+	  buffer[0] = 0x28;  // zero all
+  }
   else
   {
     mask = (1 << (which - 1));
@@ -406,8 +412,12 @@ void RFController::setUserGate(int which, int state)
        action = mask;
     else
        action = 0;
+       
+    // this line was pulled up from outside this code block's end bracket
+    
+    buffer[0] = (mask & 7) << 3 | (action & 7);
   }
-  buffer[0] = (mask & 7) << 3 | (action & 7);
+
   outputACode(RFSPARELINE,1,buffer); // out they go..
 }
 
