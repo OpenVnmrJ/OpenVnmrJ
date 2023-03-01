@@ -35,8 +35,8 @@ void pulsesequence() {
 // --------------------------------  
  
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n"); 
    putCmd("toHX='obs'\n");
 
@@ -47,9 +47,9 @@ void pulsesequence() {
    char Hseq[MAXSTR];
    getstr("Hseq",Hseq);
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n"); 
 
 //-----------------
@@ -61,9 +61,9 @@ void pulsesequence() {
    getstr("Xseq",Xseq);
    if (strcmp(Xseq,"pipulse") != 0) {
       obs = getdseq("X");
-      strncpy(obs.t.ch,"obs",3);
+      strcpy(obs.t.ch,"obs");
       putCmd("chXtppm='obs'\n"); 
-      strncpy(obs.s.ch,"obs",3);
+      strcpy(obs.s.ch,"obs");
       putCmd("chXspinal='obs'\n"); 
    }
 
@@ -76,7 +76,7 @@ void pulsesequence() {
 //--------------------------------------------
    
    MPDEC homo1 = getmpdec("hdec1H",0,0.0,0.0,0,1);
-   strncpy(homo1.mps.ch,"dec",3);
+   strcpy(homo1.mps.ch,"dec");
    putCmd("chHhdec1='dec'\n"); 
 
 //----------------------------------

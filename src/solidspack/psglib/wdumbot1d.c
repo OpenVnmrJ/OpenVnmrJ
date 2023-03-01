@@ -29,7 +29,7 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    WMPA wdumbot = getwdumbot("wdumbotX");
-   strncpy(wdumbot.ch,"obs",3);
+   strcpy(wdumbot.ch,"obs");
    putCmd("chXwdumbot='obs'\n");
 
 //--------------------------------------

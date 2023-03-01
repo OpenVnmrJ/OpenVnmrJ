@@ -18,9 +18,9 @@ void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

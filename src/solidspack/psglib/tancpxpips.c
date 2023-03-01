@@ -26,13 +26,13 @@ void pulsesequence() {
    double aHpips = getval("aHpips");
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
    MPSEQ pips = getpipsxy("pipsH",0,0.0,0.0,0,1);
-   strncpy(pips.ch,"dec",3);
+   strcpy(pips.ch,"dec");
    putCmd("chHpips='dec'\n");
 
 //--------------------------------------

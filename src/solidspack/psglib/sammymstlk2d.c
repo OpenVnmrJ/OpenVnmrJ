@@ -53,17 +53,17 @@ void pulsesequence() {
        double tHX3 = (getval("tHX"))/3.0;   //Define MOIST CP in the Sequence
 
    MPSEQ sd = getsammyd("smydH",0,0.0,0.0,0,1);
-   strncpy(sd.ch,"dec",3);
+   strcpy(sd.ch,"dec");
    putCmd("chHsmyd='dec'\n");
 
    MPSEQ so = getsammyo("smyoX",0,0.0,0.0,0,1);
-   strncpy(so.ch,"obs",3);
+   strcpy(so.ch,"obs");
    putCmd("chXsmyo='obs'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
    d2 = sd.nelem*sd.telem; 

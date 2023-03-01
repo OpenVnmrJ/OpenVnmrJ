@@ -62,11 +62,11 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    SHAPE dfsp = getdfspulse("dfspX",0.0,0.0,0,1);
-   strncpy(dfsp.pars.ch,"obs",3);
+   strcpy(dfsp.pars.ch,"obs");
    putCmd("chXdfsp='obs'\n");
 
    SHAPE dfs = getdfspulse("dfsX",0.0,0.0,0,1);
-   strncpy(dfs.pars.ch,"obs",3);
+   strcpy(dfs.pars.ch,"obs");
    putCmd("chXdfs='obs'\n");
 
    putCmd("pw2Xmqmas=pwXdfs");    // Sequence uses pwXdfs and sets pw2Xmqmas
@@ -98,9 +98,9 @@ void pulsesequence() {
    if (tXechsel < 0.0) tXechsel = 0.0;
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 // Set Constant-time Period for d2. 

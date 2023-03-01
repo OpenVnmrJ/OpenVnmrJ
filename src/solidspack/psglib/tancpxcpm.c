@@ -27,15 +27,15 @@ void pulsesequence() {
    int decmode = getval("decmode");
 
    CP hx = getcp("HX",0.0,0.0,0,1); 
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
    SHAPE cpm;
    if (decmode > 1) {
       cpm = getcpm("cpmH",0.0,0.0,0,1);
-      strncpy(cpm.pars.ch,"dec",3);
+      strcpy(cpm.pars.ch,"dec");
       putCmd("chHcpm ='dec'\n");
    }
 

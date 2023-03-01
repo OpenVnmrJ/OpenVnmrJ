@@ -51,13 +51,13 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    SHAPE p1 = getpulse("tilt1H",0.0,0.0,1,0);
-   strncpy(p1.pars.ch,"dec",3);
+   strcpy(p1.pars.ch,"dec");
    putCmd("chHtilt1='dec'\n");
    p1.pars.array = disarry("xx", p1.pars.array);
    p1 = update_shape(p1,0.0,0.0,1);
 
    MPSEQ fh = getfslg("fslgH",0,0.0,0.0,1,0);
-   strncpy(fh.ch,"dec",3);
+   strcpy(fh.ch,"dec");
    putCmd("chHfslg='dec'\n");
    double pwHfslg = getval("pwHfslg");   
    fh.nelem = (int) (d2/(2.0*pwHfslg) + 0.1);
@@ -65,13 +65,13 @@ void pulsesequence() {
    fh = update_mpseq(fh,0,p1.pars.phAccum,p1.pars.phInt,1);   
 
    SHAPE p2 = getpulse("tilt2H",0.0,0.0,1,0);
-   strncpy(p2.pars.ch,"dec",3);
+   strcpy(p2.pars.ch,"dec");
    putCmd("chHtilt2='dec'\n");
    p2.pars.array = disarry("xx", p2.pars.array);
    p2 = update_shape(p2,fh.phAccum,fh.phInt,1);
 
    SHAPE p3 = getpulse("tilt3H",0.0,0.0,1,0);
-   strncpy(p3.pars.ch,"dec",3);
+   strcpy(p3.pars.ch,"dec");
    putCmd("chHtilt3='dec'\n");
    p3.pars.array = disarry("xx", p3.pars.array);
    p3 = update_shape(p3,p2.pars.phAccum,p2.pars.phInt,1); 
@@ -82,15 +82,15 @@ void pulsesequence() {
 // CP hx and DSEQ dec Return to the Reference Phase
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 // Set Constant-time Period for d2. 

@@ -38,17 +38,17 @@ void pulsesequence() {
    if (t2Xecho < 0.0) t2Xecho = 0.0;
 
    MPSEQ r12 = getr1235("r12H",0,0.0,0.0,0,1);
-   strncpy(r12.ch,"dec",3);
+   strcpy(r12.ch,"dec");
    putCmd("chHr12='dec'\n");
 
    SHAPE dfs = getdfspulse("dfsX",0.0,0.0,0,1);
-   strncpy(dfs.pars.ch,"obs",3);
+   strcpy(dfs.pars.ch,"obs");
    putCmd("chXdfs='obs'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 // Set Constant-time Period for d2. 

@@ -26,20 +26,20 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values 
 
    SHAPE xsfm = getsfmpulse("sfmX",0.0,0.0,0,1);
-   strncpy(xsfm.pars.ch,"obs",3);
+   strcpy(xsfm.pars.ch,"obs");
    putCmd("chXsfm = 'obs'\n");
 
    MPSEQ hlg = getlg("lgH",0,0.0,0.0,0,0);
    hlg.pw[0] = xsfm.pars.t; 
    hlg.array = disarry("pwXsfm",hlg.array); 
    hlg = update_mpseq(hlg,0,0.0,0.0,0);
-   strncpy(hlg.ch,"dec",3);
+   strcpy(hlg.ch,"dec");
    putCmd("chHlg = 'dec'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

@@ -37,7 +37,7 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    WMPA mp = getcpmg("cpmgX");
-   strncpy(mp.ch,"obs",3); 
+   strcpy(mp.ch,"obs"); 
    putCmd("chXcpmg='obs'\n");
    int chnl = 1;                      
 
@@ -62,9 +62,9 @@ void pulsesequence() {
    putCmd("dbXshp1 = tpwr");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

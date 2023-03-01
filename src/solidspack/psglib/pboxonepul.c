@@ -30,9 +30,9 @@ void pulsesequence() {
    PBOXPULSE shp3  = getpboxpulse("sft3A",0,1);
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

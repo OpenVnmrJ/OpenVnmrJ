@@ -33,7 +33,7 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    WMPA cpmg = getcpmg("cpmgX");
-   strncpy(cpmg.ch,"obs",3); 
+   strcpy(cpmg.ch,"obs"); 
    putCmd("chXcpmg='obs'\n");
 
    double aXecho = getval("aXecho");  // define the echoX group in the sequence
@@ -46,9 +46,9 @@ void pulsesequence() {
    if (t2Xecho < 0.0) t2Xecho = 0.0;
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

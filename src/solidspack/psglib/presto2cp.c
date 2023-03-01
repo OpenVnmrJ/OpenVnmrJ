@@ -41,14 +41,14 @@ void pulsesequence() {
 
    MPSEQ r18 = getr1825("r18H",0,0.0,0.0,0,1);
    MPSEQ r18ref = getr1825("r18H",r18.iSuper,r18.phAccum,r18.phInt,1,1); 
-   strncpy(r18.ch,"dec",3);
-   strncpy(r18ref.ch,"dec",3);
+   strcpy(r18.ch,"dec");
+   strcpy(r18ref.ch,"dec");
    putCmd("chHr18='dec'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

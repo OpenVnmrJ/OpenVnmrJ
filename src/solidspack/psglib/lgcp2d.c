@@ -38,21 +38,21 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values 
 
    MPSEQ hlg = getlg("lgH",0,0.0,0.0,0,0);
-   strncpy(hlg.ch,"dec",3);
+   strcpy(hlg.ch,"dec");
    putCmd("chHlg = 'dec'\n"); 
    hlg.pw[0] = d2_ + 1.0/sw1;
    hlg = update_mpseq(hlg,0,0.0,0.0,0);
 
    MPSEQ  xlg = getlg("lgX",0,0.0,0.0,0,0);
-   strncpy(xlg.ch,"obs",3);
+   strcpy(xlg.ch,"obs");
    putCmd("chXlg = 'obs'\n");
    xlg.pw[0] = d2_ + 1.0/sw1;
    xlg = update_mpseq(xlg,0,0.0,0.0,0);
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
    printf("hithere\n");

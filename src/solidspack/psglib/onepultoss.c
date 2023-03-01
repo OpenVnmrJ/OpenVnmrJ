@@ -30,13 +30,13 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    WMPA toss = gettoss4("tossX");
-   strncpy(toss.ch,"obs",3);
+   strcpy(toss.ch,"obs");
    putCmd("chXtoss='obs'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

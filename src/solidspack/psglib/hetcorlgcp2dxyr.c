@@ -46,10 +46,10 @@ void pulsesequence() {
    extern int NUMch;
 
    SHAPE p1 = getpulse("tiltH",0.0,0.0,0,1);
-   strncpy(p1.pars.ch,"dec",3);
+   strcpy(p1.pars.ch,"dec");
 
    MPSEQ fh = getfslg("fslgH",0,0.0,0.0,0,1);
-   strncpy(fh.ch,"dec",3);
+   strcpy(fh.ch,"dec");
    putCmd("chHfslg='dec'\n");
    double pwHfslg = getval("pwHfslg");
    fh.nelem = (int) (d2/(2.0*pwHfslg) + 0.1);
@@ -57,7 +57,7 @@ void pulsesequence() {
    fh = update_mpseq(fh,0,p1.pars.phAccum,p1.pars.phInt,1);
 
    SHAPE p2 = getpulse("tiltH",0.0,0.0,0,1);
-   strncpy(p2.pars.ch,"dec",3);
+   strcpy(p2.pars.ch,"dec");
    putCmd("chHtilt='dec'\n");
    p2.pars.hasArray = 1;
    p2 = update_shape(p2,fh.phAccum,fh.phInt,2);
@@ -71,23 +71,23 @@ void pulsesequence() {
 // CP hx RAMP ry and DSEQ dec Return to the Reference Phase
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec2",4);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec2");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec2'\n");
    putCmd("toHX='obs'\n");
 
    RAMP ry = getramp("rampY",0.0,0.0,0,1);
-   strncpy(ry.ch,"dec",3);
+   strcpy(ry.ch,"dec");
    putCmd("chYramp='dec'\n");
-   strncpy(ry.pol,"du",2);
+   strcpy(ry.pol,"du");
    putCmd("chYramp='dec'\n");
    ry.t = getval("tHX");
    putCmd("tYramp = tHX\n");
 
    DSEQ dec2 = getdseq("H");
-   strncpy(dec2.t.ch,"dec2",4);
+   strcpy(dec2.t.ch,"dec2");
    putCmd("chHtppm='dec2'\n"); 
-   strncpy(dec2.s.ch,"dec2",4);
+   strcpy(dec2.s.ch,"dec2");
    putCmd("chHspinal='dec2'\n");
 
 // Set Constant-time Period for d2. 
