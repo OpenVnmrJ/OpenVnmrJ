@@ -265,6 +265,7 @@ SHAPE make_shape(SHAPE s)
    }
    s.pars.phAccum = ph; 
    fclose(fp);                                        
+   free(pstub);
    return s;
 }
 
@@ -510,6 +511,7 @@ SHAPE make_shape1(SHAPE s)
    }
    s.pars.phAccum = ph; 
    fclose(fp);                                        
+   free(pstub);
    return s;
 }
 
@@ -918,6 +920,7 @@ MPSEQ MPchopper(MPSEQ seq)
    }
    seq.phAccum = ph;
    fclose(fp);
+   free(pstub);
    return seq;
 }
 
@@ -1175,5 +1178,6 @@ CP make_cp(CP cp)
    }
    cp.phAccum = ph; 
    fclose(fp);                                        
+   free(pstub);
    return cp;
 }
