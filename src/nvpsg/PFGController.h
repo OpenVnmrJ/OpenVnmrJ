@@ -45,7 +45,9 @@ class PFGController: public GradientBase
         if (tolower(gradtype[1] != 'n'))  usageFlag |= YPFGPRESENT;
 	if (tolower(gradtype[2] != 'n'))  usageFlag |= ZPFGPRESENT;
         kind = PFG_TAG;
-        strncpy(gradType,gradtype,10);
+        strncpy(gradType,gradtype,10);  // why is strncpy() only using 10 of 16 chars?
+        // BDZ: gradType is size 16 and strncpy() might not have null terminated.
+        gradType[10] = 0;
         wait4meExpireTicker = 0L;
         if ( pAcodeBuf == NULL)
         {  cout << "PFGController constr(): pAcodeBuf is NULL \n" ; }
