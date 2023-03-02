@@ -115,9 +115,11 @@ RFController::RFController(char *name,int flags)
           abort_message("psg internal unable to allocate memory for pattern alias list on %s. abort!\n",Name);
        patAliasListIndex= 0;
 
+       strcpy(logicalName,""); // this initialization was missing
        strcpy(coarsePowerName,"NONE");
        strcpy(finePowerName,"NONE");
        strcpy(finePowerName2,"NONE");
+       strcpy(tunePwrName,""); // this initialization was missing
        strcpy(freqName,"NONE");
        strcpy(freqOffsetName,"NONE");
        strcpy(dmName,"NONE");
@@ -126,6 +128,7 @@ RFController::RFController(char *name,int flags)
        strcpy(dseqName,"NONE");
        strcpy(homoName,"NONE");
        strcpy(dresName,"NONE");
+       strcpy(nucleusName,""); // this initialization was missing
        prevStatusDmIndex  = -1;
        prevStatusDmmIndex = -1;
        prevSyncType       = 1;
