@@ -39,8 +39,8 @@ void pulsesequence() {
    double srate = getval("srate");
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strcpy(hx.fr,"dec ");
-   strcpy(hx.to,"obs ");
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
