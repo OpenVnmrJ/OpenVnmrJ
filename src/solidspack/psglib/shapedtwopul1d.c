@@ -23,13 +23,13 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    PBOXPULSE shp1 = getpboxpulse("shp1X",0,1);
-   strncpy(shp1.ch,"obs",3);
+   strcpy(shp1.ch,"obs");
    putCmd("chHshp1 ='obs'\n");
    shp1.t1 = 0.0;
    shp1.t2 = 0.0;    
 
    PBOXPULSE shp2 = getpboxpulse("shp2X",0,1);
-   strncpy(shp2.ch,"obs",3);
+   strcpy(shp2.ch,"obs");
    putCmd("chHshp2 ='obs'\n");
    shp2.t1 = 0.0;
    shp2.t2 = 0.0;  
@@ -39,9 +39,9 @@ void pulsesequence() {
    if (d2 < 0.0) d2 = 0.0; 
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

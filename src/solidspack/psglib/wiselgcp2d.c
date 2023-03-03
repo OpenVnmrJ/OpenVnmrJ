@@ -34,20 +34,20 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
    DSEQ xdec = getdseq("X");
-   strncpy(xdec.t.ch,"obs",3);    // These four statements assure 
-   strncpy(xdec.s.ch,"obs",3);    // that the X decoupling will
+   strcpy(xdec.t.ch,"obs");       // These four statements assure 
+   strcpy(xdec.s.ch,"obs");       // that the X decoupling will
    putCmd("chXtppm='obs'\n");     // be on X for either TPPM or 
    putCmd("chXspinal='obs'\n");   // SPINAL. 
 

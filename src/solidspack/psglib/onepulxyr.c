@@ -29,9 +29,9 @@ void pulsesequence() {
    extern int NUMch;
 
    DSEQ dec2 = getdseq("H");
-   strncpy(dec2.t.ch,"dec2",3);
+   strcpy(dec2.t.ch,"dec2");
    putCmd("chHtppm='dec2'\n"); 
-   strncpy(dec2.s.ch,"dec2",3);
+   strcpy(dec2.s.ch,"dec2");
    putCmd("chHspinal='dec2'\n");
 
 //--------------------------------------

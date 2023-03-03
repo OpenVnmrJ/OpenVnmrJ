@@ -47,21 +47,21 @@ void pulsesequence() {
    double srate = getval("srate");
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
    DSEQ mix = getdseq("Hmix");
-   strncpy(mix.t.ch,"dec",3);
+   strcpy(mix.t.ch,"dec");
    putCmd("chHmixtppm='mix'\n"); 
-   strncpy(mix.s.ch,"dec",3);
+   strcpy(mix.s.ch,"dec");
    putCmd("chHmixspinal='mix'\n");
 
 //--------------------------------------

@@ -30,7 +30,7 @@ void pulsesequence() {
    double phvXprep = getval("phXprep");
 
    WMPA wpmlg = getwpmlgxmx("wpmlgX");
-   strncpy(wpmlg.ch,"obs",3); 
+   strcpy(wpmlg.ch,"obs"); 
    putCmd("chXwpmlg='obs'\n");
 
 //--------------------------------------

@@ -30,7 +30,7 @@ void pulsesequence() {
    double phvXprep = getval("phXprep");
 
    WMPA wdumbo = getwdumboxmx("wdumboX");
-   strncpy(wdumbo.ch,"obs",3);
+   strcpy(wdumbo.ch,"obs");
    putCmd("chXwdumbo='obs'\n");
 
 //--------------------------------------

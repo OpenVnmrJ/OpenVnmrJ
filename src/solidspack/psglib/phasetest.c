@@ -21,11 +21,11 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    SHAPE p1 = getpulse("901X",0.0,0.0,0,1);
-   strncpy(p1.pars.ch,"obs",3);
+   strcpy(p1.pars.ch,"obs");
    putCmd("chX901='obs'\n");
 
    SHAPE p2 = getpulse("902X",0.0,0.0,0,1);
-   strncpy(p1.pars.ch,"obs",3);
+   strcpy(p1.pars.ch,"obs");
    putCmd("chX902='obs'\n");
 
 //--------------------------------------

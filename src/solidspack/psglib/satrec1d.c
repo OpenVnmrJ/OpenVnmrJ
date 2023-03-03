@@ -21,13 +21,13 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    MPSEQ sat = getsat("satX",0.0,0.0,0,1);
-   strncpy(sat.ch,"obs",3);
+   strcpy(sat.ch,"obs");
    putCmd("chXsat='obs'\n"); 
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

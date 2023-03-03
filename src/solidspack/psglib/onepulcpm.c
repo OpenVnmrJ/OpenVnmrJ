@@ -26,7 +26,7 @@ void pulsesequence() {
    SHAPE cpm;
    if (decmode > 1) {
       cpm = getcpm("cpmH",0.0,0.0,0,1);
-      strncpy(cpm.pars.ch,"dec",3);
+      strcpy(cpm.pars.ch,"dec");
       putCmd("chHcpm ='dec'\n");
    }
 

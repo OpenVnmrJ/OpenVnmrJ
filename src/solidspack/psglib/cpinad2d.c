@@ -46,8 +46,8 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values 
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
@@ -65,15 +65,15 @@ void pulsesequence() {
    if (d2 < 0.0) d2 = 0.0; 
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
    DSEQ hr = getdseq("Hmix");
-   strncpy(hr.t.ch,"dec",3);
+   strcpy(hr.t.ch,"dec");
    putCmd("chHmixtppm='dec'\n"); 
-   strncpy(hr.s.ch,"dec",3);
+   strcpy(hr.s.ch,"dec");
    putCmd("chHmixspinal='dec'\n");
 
 // Set Constant-time Period for d2. 

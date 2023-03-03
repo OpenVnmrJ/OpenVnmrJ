@@ -35,19 +35,19 @@ void pulsesequence() {
    int n;
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
    MPSEQ seac7 = getseac7("seac7X",0,0.0,0.0,0,1);
-   strncpy(seac7.ch,"obs",3);
+   strcpy(seac7.ch,"obs");
    putCmd("chXseac7='obs'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 // Set the Gaussian Pulse in n Rotor Periods

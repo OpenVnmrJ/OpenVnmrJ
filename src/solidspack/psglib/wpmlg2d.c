@@ -49,11 +49,11 @@ void pulsesequence() {
    }
 
    MPSEQ pmlg = getpmlg("pmlgX",0,0.0,0.0,0,1);
-   strncpy(pmlg.ch,"obs",3);
+   strcpy(pmlg.ch,"obs");
    putCmd("chXpmlg='obs'\n");
 
    WMPA wpmlg = getwpmlg("wpmlgX");
-   strncpy(wpmlg.ch,"obs",3);
+   strcpy(wpmlg.ch,"obs");
    putCmd("chXwpmlg='obs'\n");
 
 // Set Constant-time Period for d2. 
