@@ -393,34 +393,29 @@ void RFController::setGates(int GatePattern)
    add2Stream(GATEKEY | (GatePattern & 0xffffff));
 }
 
-//
-//
+// BDZ 03-15-2023 - fixed some broken logic
+
 void RFController::setUserGate(int which, int state)
 {
   int buffer[2];
   int mask, action;
+  
+  if (which > 3)  {
 
-// BDZ - fixed subtle bug. We must evaluate ramifications.
-// There are places in the code that actually do send which > 3
-// and do state they want to clear all. Notice that the which > 3
-// case was hard to see before due to no use of brackets.
-
-  if (which > 3) {
-	  buffer[0] = 0x28;  // zero all
+    mask = 7;  // all gates
   }
+  else {
+
+    mask = (1 << (which - 1));  // one gate 
+  }
+
+  if (state)
+    action = mask;
   else
-  {
-    mask = (1 << (which - 1));
-    if (state)
-       action = mask;
-    else
-       action = 0;
-       
-    // this line was pulled up from outside this code block's end bracket
-    
-    buffer[0] = (mask & 7) << 3 | (action & 7);
-  }
+    action = 0;
 
+  buffer[0] = (mask & 7) << 3 | (action & 7);
+  
   outputACode(RFSPARELINE,1,buffer); // out they go..
 }
 
