@@ -33,7 +33,7 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    WMPA swwhh4 = getswwhh4("swwhh4X");
-   strncpy(swwhh4.ch,"obs",3); 
+   strcpy(swwhh4.ch,"obs"); 
    putCmd("chXswwhh4='obs'\n");
 
 //--------------------------------------

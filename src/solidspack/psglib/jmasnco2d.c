@@ -55,33 +55,33 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    CP hy = getcp("HY",0.0,0.0,0,1);
-   strncpy(hy.fr,"dec",3);
-   strncpy(hy.to,"dec2",4);
+   strcpy(hy.fr,"dec");
+   strcpy(hy.to,"dec2");
    putCmd("frHY='dec'\n");
    putCmd("toHY='dec2'\n");
 
    PBOXPULSE shco = getpboxpulse("shcoX",0,1);
-   strncpy(shco.ch,"obs",3);
+   strcpy(shco.ch,"obs");
    putCmd("chXshco ='obs'\n");
 
    PBOXPULSE sh = getpboxpulse("shY",0,1);
-   strncpy(sh.ch,"dec2",4);
+   strcpy(sh.ch,"dec2");
    putCmd("chYsh ='dec2'\n");
 
    PBOXPULSE shca = getpboxpulse("shcaX",0,1);
-   strncpy(shca.ch,"obs",3);
+   strcpy(shca.ch,"obs");
    putCmd("chXshca ='obs'\n");  
  
    DSEQ dec = getdseq("H");  
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
    DSEQ mix = getdseq("Hmix");
-   strncpy(mix.t.ch,"dec",3);
+   strcpy(mix.t.ch,"dec");
    putCmd("chHmixtppm='dec'\n");
-   strncpy(mix.s.ch,"dec",3);
+   strcpy(mix.s.ch,"dec");
    putCmd("chHmixspinal='dec'\n");
 
    double pwsim = getval("pwX90"); 

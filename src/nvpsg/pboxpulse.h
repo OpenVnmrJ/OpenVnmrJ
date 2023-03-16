@@ -27,9 +27,9 @@
 // =============================
 // Structure for PBOXPULSE
 // =============================
-
+#define PB_NSUFFIX 13
 typedef struct {
-   char seqName[13]; // Xc7,Yspc5 etc...
+   char seqName[PB_NSUFFIX]; // Xc7,Yspc5 etc...
    char ch[5];       // channel on which to execute the pulse
    char wv[64];      // type of softpulse, names in wavelib
    double db;        // scaler value - 16 to 63
@@ -263,7 +263,7 @@ PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
    PBOXPULSE shp;
    char *var;
    char cmd[MAXSTR];
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= PB_NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getpboxpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -371,7 +371,7 @@ PBOXPULSE getrefpboxpulse(char *seqName, int iRec, int calc)
    PBOXPULSE shp;
    char *var;
    char cmd[MAXSTR];
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= PB_NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getpsoftpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }

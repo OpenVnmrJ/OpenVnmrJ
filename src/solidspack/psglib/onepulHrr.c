@@ -35,9 +35,9 @@ void pulsesequence() {
    char Hseq[MAXSTR];
    getstr("Hseq",Hseq);
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n"); 
 
 // ---------------------------------------------

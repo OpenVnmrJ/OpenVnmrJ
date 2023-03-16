@@ -45,16 +45,16 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    MPSEQ dumbo = getdumbogen("dumboX","dcf1X",0,0.0,0.0,0,1);
-   strncpy(dumbo.ch,"obs",3); 
+   strcpy(dumbo.ch,"obs"); 
    putCmd("chXdumbo='obs'\n");
 
    MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);  
    MPSEQ c7ref = getpostc7("c7X",c7.iSuper,c7.phAccum,c7.phInt,1,1);
-   strncpy(c7.ch,"obs",3);
+   strcpy(c7.ch,"obs");
    putCmd("chXc7='obs'\n");
 
    WMPA wdumbo = getwdumbogen("wdumboX","dcfX");
-   strncpy(wdumbo.ch,"obs",3);
+   strcpy(wdumbo.ch,"obs");
    putCmd("chXwdumbo='obs'\n");
 
    double tXzfinit = getval("tXzf");            //Define the Z-filter delay in the sequence

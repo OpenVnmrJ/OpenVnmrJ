@@ -30,7 +30,7 @@ void pulsesequence() {
    double phvXprep = getval("phXprep");
 
    WMPA wsam = getwsamn("wsamX");
-   strncpy(wsam.ch,"obs",3); 
+   strcpy(wsam.ch,"obs"); 
    putCmd("chXwsam='obs'\n");
 
 //--------------------------------------

@@ -24,13 +24,13 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    SHAPE dfs = getdfspulse("dfsX",0.0,0.0,0,1);
-   strncpy(dfs.pars.ch,"obs",3);
+   strcpy(dfs.pars.ch,"obs");
    putCmd("chXdfs='obs'\n");
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
    dump_shape(dfs);

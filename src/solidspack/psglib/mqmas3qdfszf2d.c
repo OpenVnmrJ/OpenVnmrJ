@@ -32,7 +32,7 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    SHAPE dfs = getdfspulse("dfsX",0.0,0.0,0,1);
-   strncpy(dfs.pars.ch,"obs",3);
+   strcpy(dfs.pars.ch,"obs");
    putCmd("chXdfs='obs'\n");   // Sequence uses pwXdfs and sets pw2Xmqmas
 
    double tXzfselinit = getval("tXzfsel"); // Adjust the Z-filter Delay for the
@@ -40,9 +40,9 @@ void pulsesequence() {
    if (tXzfsel < 0.0) tXzfsel = 0.0;
 
    DSEQ dec = getdseq("H");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 // Set Constant-time Period for d2. 

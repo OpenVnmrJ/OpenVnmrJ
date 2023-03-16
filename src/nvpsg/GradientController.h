@@ -34,8 +34,8 @@ class GradientController: public GradientBase
    public:
      GradientController(const char *name,int flags):GradientBase(name,flags)
      {  
-        patternDataStore = (int *) malloc(4000*sizeof(int));
         patternDataStoreSize = 4000;
+        patternDataStore = (int *) malloc(patternDataStoreSize * sizeof(int));
         patternDataStoreUsed = 0;
         validControllers = flags & 0xf;
         usageFlag = flags & 0xf0;

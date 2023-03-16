@@ -355,7 +355,7 @@ MPSEQ getr1426(char *seqName, int iph, double p, double phint, int iRec )
    MPSEQ r; 
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;   
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
         printf("Error in makeMPSEQ! The type name %s is invalid !\n",seqName);
         exit(-1);
    } 
@@ -427,7 +427,7 @@ MPSEQ getr1825(char *seqName, int iph, double p, double phint, int iRec )
    MPSEQ r; 
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;   
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
         printf("Error in makeMPSEQ! The type name %s is invalid !\n",seqName);
         exit(-1);
    } 
@@ -498,7 +498,7 @@ MPSEQ getspc5(char *seqName, int iph, double p, double phint, int iRec )
    extern MPSEQ MPchopper(MPSEQ spc5);
    char *var;
    
-    if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
         printf("Error in makeMPSEQ! The type name %s is invalid !\n",seqName);
         exit(-1);
    }   
@@ -581,7 +581,7 @@ MPSEQ getpostc7(char *seqName, int iph, double p, double phint, int iRec)
    extern MPSEQ MPchopper(MPSEQ c7);
    int i;
  
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
         printf("Error in makeMPSEQ! The type name %s is invalid !\n",seqName);
         exit(-1);
    }  
@@ -664,7 +664,7 @@ MPSEQ1 getfslg1(char *seqName, int iph, double p, double phint, int iRec)
    MPSEQ1 f;
    extern MPSEQ1 MPchopper1(MPSEQ1 f);
    
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
         printf("Error in makeMPSEQ1! The type name %s is invalid !\n",seqName);
         exit(-1);
    }  
@@ -746,7 +746,7 @@ MPSEQ getpmlg(char *seqName, int iph,double p, double phint, int iRec)
    char *var; 
    extern MPSEQ MPchopper(MPSEQ pm); 
    
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
       printf("Error in makeMPSEQ! The type name %s is invalid !\n",seqName);
       exit(-1);
    }  
@@ -853,7 +853,7 @@ MPSEQ getblew(char *seqName, int iph,double p, double phint, int iRec)
    char *var; 
    extern MPSEQ MPchopper(MPSEQ pm); 
    
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
       printf("Error in makeMPSEQ! The type name %s is invalid !\n",seqName);
       exit(-1);
    }  
@@ -938,7 +938,7 @@ MPSEQ getdumbo(char *seqName, int iph,double p, double phint, int iRec)
    char *var; 
    extern MPSEQ MPchopper(MPSEQ pm); 
    
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
       printf("Error in makeMPSEQ! The type name %s is invalid !\n",seqName);
       exit(-1);
    }  
@@ -1038,7 +1038,7 @@ WMPSEQ getbaba(char *seqName, int iph, double p, double phint, int iRec)
    WMPSEQ baba;
    extern WMPSEQ WMPchopper(WMPSEQ baba);
    
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
         printf("Error in makeWMPSEQ! The type name %s is invalid !\n",seqName);
         exit(-1);
    }  
@@ -1154,7 +1154,7 @@ WMPSEQ getxy8(char *seqName, int iph, double p, double phint, int iRec)
    WMPSEQ xy8;
    extern WMPSEQ WMPchopper(WMPSEQ xy8);
    
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1){
         printf("Error in makeWMPSEQ! The type name %s is invalid !\n",seqName);
         exit(-1);
    }  
@@ -1252,7 +1252,7 @@ CP getcp(char *seqName, double p, double phint, int iRec)
    cp.phInt = phint;
    cp.nRec = iRec;
    
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 2){
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 2){
       printf("Error in makeCP! The type name %s is invalid !\n",seqName);
       exit(-1);
    }

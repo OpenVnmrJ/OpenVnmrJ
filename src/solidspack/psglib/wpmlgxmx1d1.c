@@ -34,7 +34,7 @@ void pulsesequence() {
    double phvXprep = getval("phXprep");
 
    WMPSEQ wpmlg = getwpmlgxmx1("wpmlgX");
-   strncpy(wpmlg.wvsh.mpseq.ch,"obs",3); 
+   strcpy(wpmlg.wvsh.mpseq.ch,"obs"); 
    putCmd("chXwpmlg='obs'\n");
 
 //--------------------------------------

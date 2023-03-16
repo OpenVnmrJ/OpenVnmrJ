@@ -26,7 +26,7 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    WMPA xmx = getxmx("xmxX");
-   strncpy(xmx.ch,"obs",3); 
+   strcpy(xmx.ch,"obs"); 
    putCmd("chXxmx='obs'\n");
 
 //--------------------------------------

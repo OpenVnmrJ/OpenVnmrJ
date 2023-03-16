@@ -33,9 +33,9 @@ void pulsesequence() {
    char Xseq[MAXSTR];
    getstr("Xseq",Xseq);
    DSEQ dec = getdseq("X");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chXtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chXspinal='dec'\n");
 
 //-------------------------------------
@@ -43,7 +43,7 @@ void pulsesequence() {
 //-------------------------------------
 
    MPDEC homo1 = getmpdec("hdec1H",0,0.0,0.0,0,1);
-   strncpy(homo1.mps.ch,"obs",3);
+   strcpy(homo1.mps.ch,"obs");
    putCmd("chHhdec1='obs'\n"); 
 
 // --------------------

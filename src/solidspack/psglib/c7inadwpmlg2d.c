@@ -50,16 +50,16 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    MPSEQ pmlg = getpmlg("pmlgX",0,0.0,0.0,0,1);
-   strncpy(pmlg.ch,"obs",3);
+   strcpy(pmlg.ch,"obs");
    putCmd("chXpmlg='obs'\n");
 
    MPSEQ c7 = getpostc7("c7X",0,0.0,0.0,0,1);
    MPSEQ c7ref = getpostc7("c7X",c7.iSuper,c7.phAccum,c7.phInt,1,1);
-   strncpy(c7.ch,"obs",3);
+   strcpy(c7.ch,"obs");
    putCmd("chXc7='obs'\n");
 
    WMPA wpmlg = getwpmlg("wpmlgX");
-   strncpy(wpmlg.ch,"obs",3);
+   strcpy(wpmlg.ch,"obs");
    putCmd("chXwpmlg='obs'\n");
 
 // Set Constant-time Period for d2. 

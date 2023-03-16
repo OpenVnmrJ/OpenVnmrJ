@@ -46,9 +46,15 @@ AcodeManager* AcodeManager::getInstance()
 AcodeManager::AcodeManager()
 {
   pArrayAcodeBufs = NULL;
+
+  acodeStage = 0;
   cntrlr = 0;
   numcntrlrs = 0;
   acodesz   = 4096;
+  acodeStageNames[0][0] = 0;
+  acodeStageNames[1][0] = 0;
+  acodeStageNames[2][0] = 0;
+  acodeStageNames[3][0] = 0;
   acodeStageWriteFlag[ACODE_INIT]=0;
   acodeStageWriteFlag[ACODE_PRE] =0;
   acodeStageWriteFlag[ACODE_PS]  =0;

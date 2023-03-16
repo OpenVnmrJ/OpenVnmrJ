@@ -35,23 +35,23 @@ void pulsesequence() {
    extern int NUMch;
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec2",4);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec2");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec2'\n");
    putCmd("toHX='obs'\n");
 
    RAMP ry = getramp("rampY",0.0,0.0,0,1);
-   strncpy(ry.ch,"dec",3);
+   strcpy(ry.ch,"dec");
    putCmd("chYramp='dec'\n");
-   strncpy(ry.pol,"du",2);
+   strcpy(ry.pol,"du");
    putCmd("chYramp='dec'\n");
    ry.t = getval("tHX");
    putCmd("tYramp = tHX\n");
 
    DSEQ dec2 = getdseq("H");
-   strncpy(dec2.t.ch,"dec2",3);
+   strcpy(dec2.t.ch,"dec2");
    putCmd("chHtppm='dec2'\n"); 
-   strncpy(dec2.s.ch,"dec2",3);
+   strcpy(dec2.s.ch,"dec2");
    putCmd("chHspinal='dec2'\n");
 
 //--------------------------------------

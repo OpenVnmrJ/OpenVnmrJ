@@ -22,12 +22,12 @@ void pulsesequence() {
 
 // Define Variables and Objects and Get Parameter Values
    MPSEQ dec = getblew("blewH",0,0.0,0.0,0,1);
-   strncpy(dec.ch,"dec",3);
+   strcpy(dec.ch,"dec");
    putCmd("chHblew='dec'\n");
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"dec",3);
-   strncpy(hx.to,"obs",3);
+   strcpy(hx.fr,"dec");
+   strcpy(hx.to,"obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 

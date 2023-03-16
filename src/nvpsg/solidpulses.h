@@ -28,7 +28,7 @@ SHAPE getpulse(char *seqName, double p, double phint, int iRec, int calc)
    char *var;
    s.get_state = const_state;
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -79,7 +79,7 @@ SHAPE getdfspulse(char *seqName, double p, double phint, int iRec, int calc)
    char *var;
    s.get_state = dfs_state;
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getdfspulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -147,7 +147,7 @@ SHAPE getsfspulse(char *seqName, double p, double phint, int iRec, int calc)
    char *var;
    s.get_state = sfs_state;
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getsfspulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -215,7 +215,7 @@ SHAPE getsfmpulse(char *seqName, double p, double phint, int iRec, int calc)
    char *var;
    s.get_state = sfm_state;
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getsfmpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -269,7 +269,7 @@ SHAPE getsinc(char *seqName, double p, double phint, int iRec, int calc)
    char *var;
    s.get_state = sinc_state;
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getsinc(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -331,7 +331,7 @@ SHAPE gettanramp(char *seqName, double p, double phint, int iRec, int calc)
    char *var;
    s.get_state = tanramp_state;
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getsfmpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -403,7 +403,7 @@ SHAPE getcpm(char *seqName, double p, double phint, int iRec, int calc)
    char *var;
    s.get_state = cpm_state;
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getcpm(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
@@ -464,7 +464,7 @@ SHAPE getdumbogenshp(char *seqName, char *coeffName, double p, double phint, int
    char *var;
    s.get_state = dumbo_state;
 
-   if (strlen(seqName) > NSUFFIX  || strlen(seqName) < 1) {
+   if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("Error in getdumbogenshp(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }

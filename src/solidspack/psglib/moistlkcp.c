@@ -34,9 +34,9 @@ void pulsesequence() {
 
    double tHX3 = (getval("tHX"))/3.0;   //Define MOIST CP in the Sequence
       DSEQ dec = getdseq("H"); 
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chHtppm='dec'\n");
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chHspinal='dec'\n");
 
 //--------------------------------------

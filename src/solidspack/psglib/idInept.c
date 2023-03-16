@@ -58,8 +58,8 @@ void pulsesequence() {
 // --------------------------------
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strncpy(hx.fr,"obs",3);
-   strncpy(hx.to,"dec",3);
+   strcpy(hx.fr,"obs");
+   strcpy(hx.to,"dec");
    putCmd("frHX='obs'\n"); 
    putCmd("toHX='dec'\n");
 
@@ -68,8 +68,8 @@ void pulsesequence() {
 // --------------------------------
 
    GP inept = getinept("ineptXH");
-   strncpy(inept.ch1,"dec",3);
-   strncpy(inept.ch2,"obs",3);
+   strcpy(inept.ch1,"dec");
+   strcpy(inept.ch2,"obs");
    putCmd("ch1XHinept='dec'\n");
    putCmd("ch2XHinept='obs'\n");
 
@@ -83,9 +83,9 @@ void pulsesequence() {
    char Xseq[MAXSTR];
    getstr("Xseq",Xseq);
    DSEQ dec = getdseq("X");
-   strncpy(dec.t.ch,"dec",3);
+   strcpy(dec.t.ch,"dec");
    putCmd("chXtppm='dec'\n"); 
-   strncpy(dec.s.ch,"dec",3);
+   strcpy(dec.s.ch,"dec");
    putCmd("chXspinal='dec'\n"); 
 
 //--------------------
@@ -97,9 +97,9 @@ void pulsesequence() {
    getstr("Hseq",Hseq);
    if (strcmp(Hseq,"pipulse") != 0) {
       obs = getdseq("H");
-      strncpy(obs.t.ch,"obs",3);
+      strcpy(obs.t.ch,"obs");
       putCmd("chHtppm='obs'\n");
-      strncpy(obs.s.ch,"obs",3);
+      strcpy(obs.s.ch,"obs");
       putCmd("chHspinal='obs'\n");
    }
 //-------------------------------------
@@ -107,10 +107,10 @@ void pulsesequence() {
 //-------------------------------------
 
    MPDEC homo1 = getmpdec("hdec1H",0,0.0,0.0,0,1);
-   strncpy(homo1.mps.ch,"obs",3);
+   strcpy(homo1.mps.ch,"obs");
    putCmd("chHhdec1='obs'\n"); 
    MPDEC homo2 = getmpdec("hdec2H",0,0.0,0.0,0,1);
-   strncpy(homo2.mps.ch,"obs",3);
+   strcpy(homo2.mps.ch,"obs");
    putCmd("chHhdec2='obs'\n"); 
 
 // ---------------------------------------------
