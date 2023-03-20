@@ -57,6 +57,7 @@
 //Implement MPSEQ and Misc Waveforms with "get" Functions
 //===========================================================
 
+
 //===============
 // Build a RAMP
 //===============
@@ -84,7 +85,7 @@ RAMP getramp(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getramp(). The sequence name %s is invalid!\n",seqName);
       psg_abort(-1);
    }
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array);
 
@@ -151,12 +152,12 @@ RAMP getramp(char *seqName, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array,lpattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,"");
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = make_ramp(r); 
       }
@@ -179,7 +180,7 @@ MPSEQ getms(char *seqName, int iph, double p, double phint, int iRec, int calc)
       printf("Error in getms(). The sequence name %s is invalid!\n",seqName);
       psg_abort(-1);
    }
-   sprintf(m.seqName,"%s",seqName);
+   OSPRINTF( m.seqName, sizeof(m.seqName), "%s", seqName);
    m.calc = calc;
    m.array = parsearry(m.array);
 
@@ -275,12 +276,12 @@ MPSEQ getms(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",m.seqName,"");
-   sprintf(lpattern,"%s%d",var,m.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, m.nRec);
    m.hasArray = hasarry(m.array, lpattern);
    int lix = arryindex(m.array);
    if (m.calc > 0) {
       var = getname0("",m.seqName,"");
-      sprintf(m.pattern,"%s%d_%d",var,m.nRec,lix);
+      OSPRINTF( m.pattern, sizeof(m.pattern), "%s%d_%d", var, m.nRec, lix);
       if (m.hasArray == 1) {
          m = MPchopper(m);
          m.iSuper = iph + m.nelem%m.nphSuper;
@@ -304,7 +305,7 @@ MPSEQ getpul(char *seqName, int iph, double p, double phint, int iRec, int calc)
       printf("Error in getpuls(). The sequence name %s is invalid!\n",seqName);
       psg_abort(-1);
    }
-   sprintf(pul.seqName,"%s",seqName);
+   OSPRINTF( pul.seqName, sizeof(pul.seqName), "%s", seqName);
    pul.calc = calc;
    pul.array = parsearry(pul.array);
 
@@ -387,12 +388,12 @@ MPSEQ getpul(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",pul.seqName,"");
-   sprintf(lpattern,"%s%d",var,pul.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pul.nRec);
    pul.hasArray = hasarry(pul.array, lpattern);
    int lix = arryindex(pul.array);
    if (pul.calc > 0) {
       var = getname0("",pul.seqName,"");
-      sprintf(pul.pattern,"%s%d_%d",var,pul.nRec,lix);
+      OSPRINTF( pul.pattern, sizeof(pul.pattern), "%s%d_%d", var, pul.nRec, lix);
       if (pul.hasArray == 1) {
          pul = MPchopper(pul); 
          pul.iSuper = iph + pul.nelem%pul.nphSuper;
@@ -419,7 +420,7 @@ MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
       printf("Error in getpuls(). The sequence name %s is invalid!\n",seqName);
       psg_abort(-1);
    }
-   sprintf(f.seqName,"%s",seqName);
+   OSPRINTF( f.seqName, sizeof(f.seqName), "%s", seqName);
    f.calc = calc;
    f.array = parsearry(f.array);
 
@@ -517,12 +518,12 @@ MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",f.seqName,"");
-   sprintf(lpattern,"%s%d",var,f.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, f.nRec);
    f.hasArray = hasarry(f.array, lpattern);
    int lix = arryindex(f.array);
    if (f.calc > 0) {
       var = getname0("",f.seqName,"");
-      sprintf(f.pattern,"%s%d_%d",var,f.nRec,lix);
+      OSPRINTF( f.pattern, sizeof(f.pattern), "%s%d_%d", var, f.nRec, lix);
       if (f.hasArray == 1) {
          f = MPchopper(f); 
          f.iSuper = iph + f.nelem%f.nphSuper;
@@ -549,7 +550,7 @@ MPSEQ getr1235(char *seqName, int iph, double p, double phint, int iRec, int cal
         printf("Error in getr1235(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    } 
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array); 
 
@@ -661,12 +662,12 @@ MPSEQ getr1235(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array, lpattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,"");
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = MPchopper(r); 
          r.iSuper = iph + r.nelem%72;
@@ -689,7 +690,7 @@ MPSEQ getr1426(char *seqName, int iph, double p, double phint, int iRec, int cal
         printf("Error in getr1426(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array); 
 
@@ -778,12 +779,12 @@ MPSEQ getr1426(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array, lpattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,"");
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = MPchopper(r); 
          r.iSuper = iph + r.nelem%r.nphSuper;
@@ -806,7 +807,7 @@ MPSEQ getr1825(char *seqName, int iph, double p, double phint, int iRec, int cal
         printf("Error in getr1825(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array); 
 
@@ -892,12 +893,12 @@ MPSEQ getr1825(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array, r.pattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,""); 
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = MPchopper(r); 
          r.iSuper = iph + r.nelem%r.nphSuper;
@@ -921,7 +922,7 @@ MPSEQ getspc5(char *seqName, int iph, double p, double phint, int iRec, int calc
         printf("Error in getspc5(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(spc5.seqName,"%s",seqName);
+   OSPRINTF( spc5.seqName, sizeof(spc5.seqName), "%s", seqName);
    spc5.calc = calc;
    spc5.array = parsearry(spc5.array);
 
@@ -1018,12 +1019,12 @@ MPSEQ getspc5(char *seqName, int iph, double p, double phint, int iRec, int calc
 
    char lpattern[NPATTERN];
    var = getname0("",spc5.seqName,"");
-   sprintf(lpattern,"%s%d",var,spc5.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, spc5.nRec);
    spc5.hasArray = hasarry(spc5.array, lpattern);
    int lix = arryindex(spc5.array);
    if (spc5.calc > 0) {
       var = getname0("",spc5.seqName,"");
-      sprintf(spc5.pattern,"%s%d_%d",var,spc5.nRec,lix);  
+      OSPRINTF( spc5.pattern, sizeof(spc5.pattern), "%s%d_%d", var, spc5.nRec, lix);  
       if (spc5.hasArray == 1) {
          spc5 = MPchopper(spc5); 
          spc5.iSuper = iph + spc5.nelem%spc5.nphSuper;
@@ -1048,7 +1049,7 @@ MPSEQ getpostc7(char *seqName, int iph, double p, double phint, int iRec, int ca
         printf("Error in getpostc7(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(c7.seqName,"%s",seqName);
+   OSPRINTF( c7.seqName, sizeof(c7.seqName), "%s", seqName);
    c7.calc = calc;
    c7.array = parsearry(c7.array);
 
@@ -1139,12 +1140,12 @@ MPSEQ getpostc7(char *seqName, int iph, double p, double phint, int iRec, int ca
 
    char lpattern[NPATTERN];
    var = getname0("",c7.seqName,"");
-   sprintf(lpattern,"%s%d",var,c7.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, c7.nRec);
    c7.hasArray = hasarry(c7.array, lpattern);
    int lix = arryindex(c7.array);
    if (c7.calc > 0) {
       var = getname0("",c7.seqName,"");
-      sprintf(c7.pattern,"%s%d_%d",var,c7.nRec,lix);
+      OSPRINTF( c7.pattern, sizeof(c7.pattern), "%s%d_%d", var, c7.nRec, lix);
       if (c7.hasArray == 1) {
          c7 = MPchopper(c7); 
          c7.iSuper = iph + c7.nelem%c7.nphSuper;
@@ -1168,7 +1169,7 @@ MPSEQ getfslg(char *seqName, int iph, double p, double phint, int iRec, int calc
         printf("Error in getfslg1(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(f.seqName,"%s",seqName);
+   OSPRINTF( f.seqName, sizeof(f.seqName), "%s", seqName);
    f.calc = calc;
    f.array = parsearry(f.array);
 
@@ -1262,12 +1263,12 @@ MPSEQ getfslg(char *seqName, int iph, double p, double phint, int iRec, int calc
 
    char lpattern[NPATTERN];
    var = getname0("",f.seqName,""); 
-   sprintf(lpattern,"%s%d",var,f.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, f.nRec);
    f.hasArray = hasarry(f.array, lpattern);
    int lix = arryindex(f.array);
    if (f.calc > 0) {
       var = getname0("",f.seqName,""); 
-      sprintf(f.pattern,"%s%d_%d",var,f.nRec,lix);
+      OSPRINTF( f.pattern, sizeof(f.pattern), "%s%d_%d", var, f.nRec, lix);
       if (f.hasArray == 1) {
          f = MPchopper(f);
          f.iSuper = iph + f.nelem%f.nphSuper;
@@ -1292,7 +1293,7 @@ MPSEQ getpmlg(char *seqName, int iph ,double p, double phint, int iRec, int calc
       printf("Error in getpmlg(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(pm.seqName,"%s",seqName);
+   OSPRINTF( pm.seqName, sizeof(pm.seqName), "%s", seqName);
    pm.calc = calc;
    pm.array = parsearry(pm.array);
 
@@ -1409,12 +1410,12 @@ MPSEQ getpmlg(char *seqName, int iph ,double p, double phint, int iRec, int calc
 
    char lpattern[NPATTERN];
    var = getname0("",pm.seqName,"");
-   sprintf(lpattern,"%s%d",var,pm.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pm.nRec);
    pm.hasArray = hasarry(pm.array, lpattern);
    int lix = arryindex(pm.array);
    if (pm.calc > 0) {
       var = getname0("",pm.seqName,"");
-      sprintf(pm.pattern,"%s%d_%d",var,pm.nRec,lix);
+      OSPRINTF( pm.pattern, sizeof(pm.pattern), "%s%d_%d", var, pm.nRec, lix);
       if (pm.hasArray == 1) {
          pm = MPchopper(pm); 
          pm.iSuper = iph + pm.nelem%pm.nphSuper;
@@ -1439,7 +1440,7 @@ MPSEQ getblew(char *seqName, int iph, double p, double phint, int iRec, int calc
       printf("Error in getblew(). The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(pm.seqName,"%s",seqName);
+   OSPRINTF( pm.seqName, sizeof(pm.seqName), "%s", seqName);
    pm.calc = calc;
    pm.array = parsearry(pm.array);
 
@@ -1539,12 +1540,12 @@ MPSEQ getblew(char *seqName, int iph, double p, double phint, int iRec, int calc
 
    char lpattern[NPATTERN];
    var = getname0("",pm.seqName,"");
-   sprintf(lpattern,"%s%d",var,pm.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pm.nRec);
    pm.hasArray = hasarry(pm.array, lpattern);
    int lix = arryindex(pm.array);
    if (pm.calc > 0) {
       var = getname0("",pm.seqName,"");
-      sprintf(pm.pattern,"%s%d_%d",var,pm.nRec,lix);
+      OSPRINTF( pm.pattern, sizeof(pm.pattern), "%s%d_%d", var, pm.nRec, lix);
       if (pm.hasArray == 1) {
          pm = MPchopper(pm);
          pm.iSuper = iph + pm.nelem%pm.nphSuper;
@@ -1568,7 +1569,7 @@ MPSEQ getdumbo(char *seqName, int iph, double p, double phint, int iRec, int cal
       printf("Error in getdumbo(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(pm.seqName,"%s",seqName);
+   OSPRINTF( pm.seqName, sizeof(pm.seqName), "%s", seqName);
    pm.calc = calc;
    pm.array = parsearry(pm.array);
 
@@ -1680,12 +1681,12 @@ MPSEQ getdumbo(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    char lpattern[NPATTERN];
    var = getname0("",pm.seqName,"");
-   sprintf(lpattern,"%s%d",var,pm.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pm.nRec);
    pm.hasArray = hasarry(pm.array, lpattern);
    int lix = arryindex(pm.array);
    if (pm.calc > 0) {
       var = getname0("",pm.seqName,"");
-      sprintf(pm.pattern,"%s%d_%d",var,pm.nRec,lix);
+      OSPRINTF( pm.pattern, sizeof(pm.pattern), "%s%d_%d", var, pm.nRec, lix);
       if (pm.hasArray == 1) {
          pm = MPchopper(pm);
          pm.iSuper = iph + pm.nelem%pm.nphSuper;
@@ -1709,7 +1710,7 @@ MPSEQ getbaba(char *seqName, int iph, double p, double phint, int iRec, int calc
         printf("Error in getbaba(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(baba.seqName,"%s",seqName);
+   OSPRINTF( baba.seqName, sizeof(baba.seqName), "%s", seqName);
    baba.calc = calc;
    baba.array = parsearry(baba.array);
 
@@ -1837,12 +1838,12 @@ MPSEQ getbaba(char *seqName, int iph, double p, double phint, int iRec, int calc
 
    char lpattern[NPATTERN];
    var = getname0("",baba.seqName,"");
-   sprintf(lpattern,"%s%d",var,baba.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, baba.nRec);
    baba.hasArray = hasarry(baba.array, lpattern);
    int lix = arryindex(baba.array);
    if (baba.calc > 0) {
       var = getname0("",baba.seqName,"");
-      sprintf(baba.pattern,"%s%d_%d",var,baba.nRec,lix);
+      OSPRINTF( baba.pattern, sizeof(baba.pattern), "%s%d_%d", var, baba.nRec, lix);
       if (baba.hasArray == 1) {
          baba = MPchopper(baba); 
          baba.iSuper = iph + baba.nelem%baba.nphSuper;
@@ -1866,7 +1867,7 @@ MPSEQ getxy8(char *seqName, int iph, double p, double phint, int iRec, int calc)
         printf("Error in getxy8(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(xy8.seqName,"%s",seqName);
+   OSPRINTF( xy8.seqName, sizeof(xy8.seqName), "%s", seqName);
    xy8.calc = calc;
    xy8.array = parsearry(xy8.array);
 
@@ -1973,12 +1974,12 @@ MPSEQ getxy8(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",xy8.seqName,"");
-   sprintf(lpattern,"%s%d",var,xy8.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, xy8.nRec);
    xy8.hasArray = hasarry(xy8.array, lpattern);
    int lix = arryindex(xy8.array);
    if (xy8.calc > 0) {
       var = getname0("",xy8.seqName,"");
-      sprintf(xy8.pattern,"%s%d_%d",var,xy8.nRec,lix);
+      OSPRINTF( xy8.pattern, sizeof(xy8.pattern), "%s%d_%d", var, xy8.nRec, lix);
       if (xy8.hasArray == 1) {
          xy8 = MPchopper(xy8); 
          xy8.iSuper = iph + xy8.nelem%xy8.nphSuper;
@@ -2002,7 +2003,7 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getcp(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(cp.seqName,"%s",seqName);
+   OSPRINTF( cp.seqName, sizeof(cp.seqName), "%s", seqName);
    cp.calc = calc;
    cp.array = parsearry(cp.array);
 
@@ -2042,14 +2043,14 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
    var = getname1("a",cp.seqName,1);
    cp.a1 = getval(var);
    if ((strcmp(cp.ch,"fr") == 0)) 
-   cp.array = disarry(var, cp.array);
+      cp.array = disarry(var, cp.array);
 
 // aXhxsuffix
 
    var = getname1("a",cp.seqName,2);
    cp.a2 = getval(var);
    if ((strcmp(cp.ch,"to") == 0)) 
-   cp.array = disarry(var, cp.array);
+      cp.array = disarry(var, cp.array);
 
 // dHXsuffix
 
@@ -2105,12 +2106,12 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",cp.seqName,"");
-   sprintf(lpattern,"%s%d",var,cp.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, cp.nRec);
    cp.hasArray = hasarry(cp.array, lpattern);
    int lix = arryindex(cp.array);
    if (cp.calc > 0) {
       var = getname0("",cp.seqName,"");
-      sprintf(cp.pattern,"%s%d_%d",var,cp.nRec,lix);
+      OSPRINTF( cp.pattern, sizeof(cp.pattern), "%s%d_%d", var, cp.nRec, lix);
       if (cp.hasArray == 1) {
          cp = make_cp(cp);
       }
@@ -2133,14 +2134,14 @@ DREAM getdream(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getdream! The sequence name %s is invalid !\n",seqName);
       psg_abort(-1);
    }
-   sprintf(d.seqName,"%s",seqName);
+   OSPRINTF( d.seqName, sizeof(d.seqName), "%s", seqName);
    d.calc = calc;
    d.array = parsearry(d.array);
 
-   sprintf(d.Ruu.seqName,"%s",d.seqName);
-   sprintf(d.Rud.seqName,"%s",d.seqName);
-   sprintf(d.Rdu.seqName,"%s",d.seqName);
-   sprintf(d.Rdd.seqName,"%s",d.seqName);
+   OSPRINTF( d.Ruu.seqName, sizeof(d.Ruu.seqName), "%s", d.seqName);
+   OSPRINTF( d.Rud.seqName, sizeof(d.Rud.seqName), "%s", d.seqName);
+   OSPRINTF( d.Rdu.seqName, sizeof(d.Rdu.seqName), "%s", d.seqName);
+   OSPRINTF( d.Rdd.seqName, sizeof(d.Rdd.seqName), "%s", d.seqName);
 
 // Obtain Phase Arguments
 
@@ -2186,11 +2187,10 @@ DREAM getdream(char *seqName, double p, double phint, int iRec, int calc)
   
    var = getname0("ch",d.seqName,"");
    Getstr(var,d.ch,sizeof(d.ch));
-
-   sprintf(d.Ruu.ch,"%s",d.ch);
-   sprintf(d.Rud.ch,"%s",d.ch);
-   sprintf(d.Rdu.ch,"%s",d.ch);
-   sprintf(d.Rdd.ch,"%s",d.ch);
+   OSPRINTF( d.Ruu.ch, sizeof(d.Ruu.ch), "%s", d.ch);
+   OSPRINTF( d.Rud.ch, sizeof(d.Rud.ch), "%s", d.ch);
+   OSPRINTF( d.Rdu.ch, sizeof(d.Rdu.ch), "%s", d.ch);
+   OSPRINTF( d.Rdd.ch, sizeof(d.Rdd.ch), "%s", d.ch);
 
 //aXdream
 
@@ -2234,34 +2234,34 @@ DREAM getdream(char *seqName, double p, double phint, int iRec, int calc)
 
 //Set a Tangent Shape Only
 
-   sprintf(d.Ruu.sh,"t");
-   sprintf(d.Rud.sh,"t");
-   sprintf(d.Rdu.sh,"t");
-   sprintf(d.Rdd.sh,"t");
+   OSPRINTF( d.Ruu.sh, sizeof(d.Ruu.sh), "t");
+   OSPRINTF( d.Rud.sh, sizeof(d.Rud.sh), "t");
+   OSPRINTF( d.Rdu.sh, sizeof(d.Rdu.sh), "t");
+   OSPRINTF( d.Rdd.sh, sizeof(d.Rdd.sh), "t");
 
 //Set the Polarity of Each Waveform
 
-   sprintf(d.Ruu.pol,"uu");
-   sprintf(d.Rud.pol,"ud");
-   sprintf(d.Rdu.pol,"du");
-   sprintf(d.Rdd.pol,"dd");
+   OSPRINTF( d.Ruu.pol, sizeof(d.Ruu.pol), "uu");
+   OSPRINTF( d.Rud.pol, sizeof(d.Rud.pol), "ud");
+   OSPRINTF( d.Rdu.pol, sizeof(d.Rdu.pol), "du");
+   OSPRINTF( d.Rdd.pol, sizeof(d.Rdd.pol), "dd");
 
 //Set the Pattern Name for Each Waveform
 
    char lpattern[NPATTERN];
    var = getname0("",d.seqName,"");
-   sprintf(lpattern,"%s%d",var,d.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, d.nRec);
    d.hasArray = hasarry(d.array, d.Ruu.pattern);
    int lix = arryindex(d.array);
    if (d.calc > 0) {
       var = getname0("uu",d.seqName,"");
-      sprintf(d.Ruu.pattern,"%s%d_%d",var,d.Ruu.nRec,lix);
+      OSPRINTF( d.Ruu.pattern, sizeof(d.Ruu.pattern), "%s%d_%d", var, d.Ruu.nRec, lix);
       var = getname0("ud",d.seqName,"");
-      sprintf(d.Rud.pattern,"%s%d_%d",var,d.Rud.nRec,lix);
+      OSPRINTF( d.Rud.pattern, sizeof(d.Rud.pattern), "%s%d_%d", var, d.Rud.nRec, lix);
       var = getname0("du",d.seqName,"");
-      sprintf(d.Rdu.pattern,"%s%d_%d",var,d.Rdu.nRec,lix);
+      OSPRINTF( d.Rdu.pattern, sizeof(d.Rdu.pattern), "%s%d_%d", var, d.Rdu.nRec, lix);
       var = getname0("dd",d.seqName,"");
-      sprintf(d.Rdd.pattern,"%s%d_%d",var,d.Rdd.nRec,lix);
+      OSPRINTF( d.Rdd.pattern, sizeof(d.Rdd.pattern), "%s%d_%d", var, d.Rdd.nRec, lix);
       if (d.hasArray == 1) {
          d = make_dream(d);
       }
@@ -2287,7 +2287,7 @@ MPSEQ getdraws(char *seqName, int iph, double p, double phint, int iRec, int cal
         printf("Error in getdraws(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array); 
 
@@ -2401,12 +2401,12 @@ MPSEQ getdraws(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array,lpattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,"");
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = MPchopper(r); 
          r.iSuper = iph + r.nelem%r.nphSuper;
@@ -2430,7 +2430,7 @@ MPSEQ getrapt(char *seqName, double p, double phint, int iRec, int calc)
         printf("Error in getrapt(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array);
 
@@ -2525,12 +2525,12 @@ MPSEQ getrapt(char *seqName, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array, lpattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,"");
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = MPchopper(r);
       }
@@ -2558,7 +2558,7 @@ MPSEQ getgrapt(char *seqName, double p, double phint, int iRec, int calc)
         printf("Error in getgrapt(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array);
 
@@ -2694,12 +2694,12 @@ MPSEQ getgrapt(char *seqName, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array, lpattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,"");
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = MPchopper(r);
       }
@@ -2725,7 +2725,7 @@ MPSEQ getpipsxy(char *seqName, int iph, double p, double phint, int iRec, int ca
         printf("Error in getpips(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(pips.seqName,"%s",seqName);
+   OSPRINTF( pips.seqName, sizeof(pips.seqName), "%s", seqName);
    pips.calc = calc;
    pips.array = parsearry(pips.array);
 
@@ -2835,12 +2835,12 @@ MPSEQ getpipsxy(char *seqName, int iph, double p, double phint, int iRec, int ca
 
    char lpattern[NPATTERN];
    var = getname0("",pips.seqName,"");
-   sprintf(lpattern,"%s%d",var,pips.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pips.nRec);
    pips.hasArray = hasarry(pips.array, lpattern);
    int lix = arryindex(pips.array);
    if (pips.calc > 0) {
       var = getname0("",pips.seqName,"");
-      sprintf(pips.pattern,"%s%d_%d",var,pips.nRec,lix);
+      OSPRINTF( pips.pattern, sizeof(pips.pattern), "%s%d_%d", var, pips.nRec, lix);
       if (pips.hasArray == 1) {
          pips = MPchopper(pips); 
          pips.iSuper = iph + pips.nelem%pips.nphSuper;
@@ -2863,7 +2863,7 @@ MPSEQ getsr4(char *seqName, int iph, double p, double phint, int iRec, int calc)
         printf("Error in getsr4(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array);
 
@@ -2970,12 +2970,12 @@ MPSEQ getsr4(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array, lpattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,"");
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = MPchopper(r); 
          r.iSuper = iph + r.nelem/24;
@@ -2998,7 +2998,7 @@ MPSEQ getsammyd(char *seqName, int iph, double p, double phint, int iRec, int ca
         printf("Error in getsammyd(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(sd.seqName,"%s",seqName);
+   OSPRINTF( sd.seqName, sizeof(sd.seqName), "%s", seqName);
    sd.calc = calc;
    sd.array = parsearry(sd.array);
 
@@ -3127,13 +3127,13 @@ MPSEQ getsammyd(char *seqName, int iph, double p, double phint, int iRec, int ca
 
    char lpattern[NPATTERN];
    var = getname0("",sd.seqName,"");
-   sprintf(lpattern,"%s%d",var,sd.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, sd.nRec);
 
    sd.hasArray = hasarry(sd.array, lpattern);
    int lix = arryindex(sd.array);
    if (sd.calc > 0) {
       var = getname0("",sd.seqName,"");
-      sprintf(sd.pattern,"%s%d_%d",var,sd.nRec,lix);
+      OSPRINTF( sd.pattern, sizeof(sd.pattern), "%s%d_%d", var, sd.nRec, lix);
       if (sd.hasArray == 1) {
          sd = MPchopper(sd); 
          sd.iSuper = iph + sd.nelem%sd.nphSuper;
@@ -3156,7 +3156,7 @@ MPSEQ getsammyo(char *seqName, int iph, double p, double phint, int iRec, int ca
         printf("Error in getsammyo(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(so.seqName,"%s",seqName);
+   OSPRINTF( so.seqName, sizeof(so.seqName), "%s", seqName);
    so.calc = calc;
    so.array = parsearry(so.array);
 
@@ -3262,12 +3262,12 @@ MPSEQ getsammyo(char *seqName, int iph, double p, double phint, int iRec, int ca
 
    char lpattern[NPATTERN];
    var = getname0("",so.seqName,"");
-   sprintf(lpattern,"%s%d",var,so.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, so.nRec);
    so.hasArray = hasarry(so.array, lpattern);
    int lix = arryindex(so.array);
    if (so.calc > 0) {
       var = getname0("",so.seqName,"");
-      sprintf(so.pattern,"%s%d_%d",var,so.nRec,lix);
+      OSPRINTF( so.pattern, sizeof(so.pattern), "%s%d_%d", var, so.nRec, lix);
       if (so.hasArray == 1) {
          so = MPchopper(so); 
          so.iSuper = iph + so.nelem%so.nphSuper;
@@ -3290,7 +3290,7 @@ MPSEQ getlg(char *seqName, int iph, double p, double phint, int iRec, int calc)
         printf("Error in getlg(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(f.seqName,"%s",seqName);
+   OSPRINTF( f.seqName, sizeof(f.seqName), "%s", seqName);
    f.calc = calc;
    f.iSuper = iph;
    f.array = parsearry(f.array);
@@ -3379,12 +3379,12 @@ MPSEQ getlg(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",f.seqName,"");
-   sprintf(lpattern,"%s%d",var,f.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, f.nRec);
    f.hasArray = hasarry(f.array, lpattern);
    int lix = arryindex(f.array);
    if (f.calc > 0) {
       var = getname0("",f.seqName,"");
-      sprintf(f.pattern,"%s%d_%d",var,f.nRec,lix);
+      OSPRINTF( f.pattern, sizeof(f.pattern), "%s%d_%d", var, f.nRec, lix);
       if (f.hasArray == 1) {
          f = MPchopper(f);
          f.iSuper = iph + f.nelem%f.nphSuper;
@@ -3407,7 +3407,7 @@ MPSEQ getrfdrxy8(char *seqName, int iph, double p, double phint, int iRec, int c
         printf("Error in getrfdrxy8(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(xy8.seqName,"%s",seqName);
+   OSPRINTF( xy8.seqName, sizeof(xy8.seqName), "%s", seqName);
    xy8.calc = calc;
    xy8.array = parsearry(xy8.array);
 
@@ -3521,12 +3521,12 @@ MPSEQ getrfdrxy8(char *seqName, int iph, double p, double phint, int iRec, int c
 
    char lpattern[NPATTERN];
    var = getname0("",xy8.seqName,"");
-   sprintf(lpattern,"%s%d",var,xy8.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, xy8.nRec);
    xy8.hasArray = hasarry(xy8.array, lpattern);
    int lix = arryindex(xy8.array);
    if (xy8.calc > 0) {
       var = getname0("",xy8.seqName,"");
-      sprintf(xy8.pattern,"%s%d_%d",var,xy8.nRec,lix);
+      OSPRINTF( xy8.pattern, sizeof(xy8.pattern), "%s%d_%d", var, xy8.nRec, lix);
       if (xy8.hasArray == 1) {
          xy8 = MPchopper(xy8); 
          xy8.iSuper = iph + xy8.nelem%xy8.nphSuper;
@@ -3551,7 +3551,7 @@ MPSEQ getseac7(char *seqName, int iph, double p, double phint, int iRec, int cal
         printf("Error in getseac7(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(seac7.seqName,"%s",seqName);
+   OSPRINTF( seac7.seqName, sizeof(seac7.seqName), "%s", seqName);
    seac7.calc = calc;
    seac7.array = parsearry(seac7.array);
 
@@ -3688,12 +3688,12 @@ MPSEQ getseac7(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    char lpattern[NPATTERN];
    var = getname0("",seac7.seqName,"");
-   sprintf(lpattern,"%s%d",var,seac7.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, seac7.nRec);
    seac7.hasArray = hasarry(seac7.array, lpattern);
    int lix = arryindex(seac7.array);
    if (seac7.calc > 0) {
       var = getname0("",seac7.seqName,"");
-      sprintf(seac7.pattern,"%s%d_%d",var,seac7.nRec,lix);
+      OSPRINTF( seac7.pattern, sizeof(seac7.pattern), "%s%d_%d", var, seac7.nRec, lix);
       if (seac7.hasArray == 1) {
          seac7 = MPchopper(seac7); 
          seac7.iSuper = iph + seac7.nelem%seac7.nphSuper;
@@ -3718,7 +3718,7 @@ MPSEQ getsc14(char *seqName, int iph, double p, double phint, int iRec, int calc
         printf("Error in getsc14(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
     }
-   sprintf(sc14.seqName,"%s",seqName);
+   OSPRINTF( sc14.seqName, sizeof(sc14.seqName), "%s", seqName);
    sc14.calc = calc;
    sc14.array = parsearry(sc14.array);
 
@@ -3802,12 +3802,12 @@ MPSEQ getsc14(char *seqName, int iph, double p, double phint, int iRec, int calc
 
    char lpattern[NPATTERN];
    var = getname0("",sc14.seqName,"");
-   sprintf(lpattern,"%s%d",var,sc14.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, sc14.nRec);
    sc14.hasArray = hasarry(sc14.array, sc14.pattern);
    int lix = arryindex(sc14.array);
    if (sc14.calc > 0) {
       var = getname0("",sc14.seqName,"");
-      sprintf(sc14.pattern,"%s%d_%d",var,sc14.nRec,lix);
+      OSPRINTF( sc14.pattern, sizeof(sc14.pattern), "%s%d_%d", var, sc14.nRec, lix);
       if (sc14.hasArray == 1) {
          sc14 = MPchopper(sc14); 
          sc14.iSuper = iph + sc14.nelem%sc14.nphSuper;
@@ -3831,7 +3831,7 @@ MPSEQ getptrfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
         printf("Error in getptrfdr(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(pt.seqName,"%s",seqName);
+   OSPRINTF( pt.seqName, sizeof(pt.seqName), "%s", seqName);
    pt.calc = calc;
    pt.array = parsearry(pt.array);
    
@@ -3937,12 +3937,12 @@ MPSEQ getptrfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
 
    char lpattern[NPATTERN];
    var = getname0("",pt.seqName,"");
-   sprintf(lpattern,"%s%d",var,pt.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pt.nRec);
    pt.hasArray = hasarry(pt.array, lpattern);
    int lix = arryindex(pt.array);
    if (pt.calc > 0) {
       var = getname0("",pt.seqName,"");
-      sprintf(pt.pattern,"%s%d_%d",var,pt.nRec,lix);
+      OSPRINTF( pt.pattern, sizeof(pt.pattern), "%s%d_%d", var, pt.nRec, lix);
       if (pt.hasArray == 1) {
          pt = MPchopper(pt); 
          pt.iSuper = iph + pt.nelem%pt.nphSuper;
@@ -3966,7 +3966,7 @@ MPSEQ getfprfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
         printf("Error in getfprfdr(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(fp.seqName,"%s",seqName);
+   OSPRINTF( fp.seqName, sizeof(fp.seqName), "%s", seqName);
    fp.calc = calc;
    fp.array = parsearry(fp.array);
 
@@ -4069,12 +4069,12 @@ MPSEQ getfprfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
 
    char lpattern[NPATTERN];
    var = getname0("",fp.seqName,"");
-   sprintf(lpattern,"%s%d",var,fp.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, fp.nRec);
    fp.hasArray = hasarry(fp.array, lpattern);
    int lix = arryindex(fp.array);
    if (fp.calc > 0) {
       var = getname0("",fp.seqName,"");
-      sprintf(fp.pattern,"%s%d_%d",var,fp.nRec,lix);
+      OSPRINTF( fp.pattern, sizeof(fp.pattern), "%s%d_%d", var, fp.nRec, lix);
       if (fp.hasArray == 1) {
          fp = MPchopper(fp);
          fp.iSuper = iph + fp.nelem%fp.nphSuper;
@@ -4099,7 +4099,7 @@ MPSEQ getspnl(char *seqName, int iph, double p, double phint, int iRec, int calc
         printf("Error in getspnl(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(spnl.seqName,"%s",seqName);
+   OSPRINTF( spnl.seqName, sizeof(spnl.seqName), "%s", seqName);
    spnl.calc = calc;
    spnl.array = parsearry(spnl.array); 
 
@@ -4216,12 +4216,12 @@ MPSEQ getspnl(char *seqName, int iph, double p, double phint, int iRec, int calc
 
    char lpattern[NPATTERN];
    var = getname0("",spnl.seqName,"");
-   sprintf(lpattern,"%s%d",var,spnl.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, spnl.nRec);
    spnl.hasArray = hasarry(spnl.array, lpattern);
    int lix = arryindex(spnl.array);
    if (spnl.calc > 0) {
       var = getname0("",spnl.seqName,"");
-      sprintf(spnl.pattern,"%s%d_%d",var,spnl.nRec,lix);
+      OSPRINTF( spnl.pattern, sizeof(spnl.pattern), "%s%d_%d", var, spnl.nRec, lix);
       if (spnl.hasArray == 1) {
          spnl = MPchopper(spnl); 
          spnl.iSuper = iph + spnl.nelem%spnl.nphSuper;
@@ -4244,7 +4244,7 @@ MPSEQ getr1817(char *seqName, int iph, double p, double phint, int iRec, int cal
         printf("Error in getr1817(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(r.seqName,"%s",seqName);
+   OSPRINTF( r.seqName, sizeof(r.seqName), "%s", seqName);
    r.calc = calc;
    r.array = parsearry(r.array); 
 
@@ -4321,12 +4321,12 @@ MPSEQ getr1817(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    char lpattern[NPATTERN];
    var = getname0("",r.seqName,"");
-   sprintf(lpattern,"%s%d",var,r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, r.nRec);
    r.hasArray = hasarry(r.array, lpattern);
    int lix = arryindex(r.array);
    if (r.calc > 0) {
       var = getname0("",r.seqName,"");
-      sprintf(r.pattern,"%s%d_%d",var,r.nRec,lix);
+      OSPRINTF( r.pattern, sizeof(r.pattern), "%s%d_%d", var, r.nRec, lix);
       if (r.hasArray == 1) {
          r = MPchopper(r); 
          r.iSuper = iph + r.nelem%r.nphSuper;
@@ -4349,7 +4349,7 @@ MPSEQ gettmrev5(char *seqName, int iph, double p, double phint, int iRec, int ca
         printf("Error in gettmrev(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(tm.seqName,"%s",seqName);
+   OSPRINTF( tm.seqName, sizeof(tm.seqName), "%s", seqName);
    tm.calc = calc;
    tm.array = parsearry(tm.array); 
 
@@ -4465,12 +4465,12 @@ MPSEQ gettmrev5(char *seqName, int iph, double p, double phint, int iRec, int ca
 
    char lpattern[NPATTERN];
    var = getname0("",tm.seqName,"");
-   sprintf(lpattern,"%s%d",var,tm.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, tm.nRec);
    tm.hasArray = hasarry(tm.array, lpattern);
    int lix = arryindex(tm.array);
    if (tm.calc > 0) {
       var = getname0("",tm.seqName,"");
-      sprintf(tm.pattern,"%s%d_%d",var,tm.nRec,lix);
+      OSPRINTF( tm.pattern, sizeof(tm.pattern), "%s%d_%d", var, tm.nRec, lix);
       if (tm.hasArray == 1) {
          tm = MPchopper(tm); 
          tm.iSuper = iph + tm.nelem%tm.nphSuper;
@@ -4493,7 +4493,7 @@ MPSEQ getpxy(char *seqName, int iph, double p, double phint, int iRec, int calc)
         printf("Error in getpxy(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(pxy.seqName,"%s",seqName);
+   OSPRINTF( pxy.seqName, sizeof(pxy.seqName), "%s", seqName);
    pxy.calc = calc;
    pxy.array = parsearry(pxy.array);
 
@@ -4581,12 +4581,12 @@ MPSEQ getpxy(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",pxy.seqName,"");
-   sprintf(lpattern,"%s%d",var,pxy.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pxy. nRec);
    pxy.hasArray = hasarry(pxy.array, lpattern);
    int lix = arryindex(pxy.array);
    if (pxy.calc > 0) {
       var = getname0("",pxy.seqName,"");
-      sprintf(pxy.pattern,"%s%d_%d",var,pxy.nRec,lix);
+      OSPRINTF( pxy.pattern, sizeof(pxy.pattern), "%s%d_%d", var, pxy.nRec, lix);
       if (pxy.hasArray == 1) {
          pxy = MPchopper(pxy);
          pxy.iSuper = iph + pxy.nelem%pxy.nphSuper;
@@ -4611,7 +4611,7 @@ MPSEQ getsamn(char *seqName, int iph, double p, double phint, int iRec, int calc
       printf("Error in getsamn(). The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(pm.seqName,"%s",seqName);
+   OSPRINTF( pm.seqName, sizeof(pm.seqName), "%s", seqName);
    pm.calc = calc;
    pm.array = parsearry(pm.array);
 
@@ -4715,12 +4715,12 @@ MPSEQ getsamn(char *seqName, int iph, double p, double phint, int iRec, int calc
 
    char lpattern[NPATTERN];
    var = getname0("",pm.seqName,"");
-   sprintf(lpattern,"%s%d",var,pm.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pm.nRec);
    pm.hasArray = hasarry(pm.array, lpattern);
    int lix = arryindex(pm.array);
    if (pm.calc > 0) {
       var = getname0("",pm.seqName,"");
-      sprintf(pm.pattern,"%s%d_%d",var,pm.nRec,lix);
+      OSPRINTF( pm.pattern, sizeof(pm.pattern), "%s%d_%d", var, pm.nRec, lix);
       if (pm.hasArray == 1) {
          pm = MPchopper(pm);
          pm.iSuper = iph + pm.nelem%pm.nphSuper;
@@ -4741,7 +4741,7 @@ MPSEQ getpmlgxmx(char *seqName, int iph ,double p, double phint, int iRec, int c
       printf("Error in getpmlgxmx(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(pm.seqName,"%s",seqName);
+   OSPRINTF( pm.seqName, sizeof(pm.seqName), "%s", seqName);
    pm.calc = calc;
    pm.array = parsearry(pm.array);
 
@@ -4859,12 +4859,12 @@ MPSEQ getpmlgxmx(char *seqName, int iph ,double p, double phint, int iRec, int c
 
    char lpattern[NPATTERN];
    var = getname0("",pm.seqName,"");
-   sprintf(lpattern,"%s%d",var,pm.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pm.nRec);
    pm.hasArray = hasarry(pm.array, lpattern);
    int lix = arryindex(pm.array);
    if (pm.calc > 0) {
       var = getname0("",pm.seqName,"");
-      sprintf(pm.pattern,"%s%d_%d",var,pm.nRec,lix);
+      OSPRINTF( pm.pattern, sizeof(pm.pattern), "%s%d_%d", var, pm.nRec, lix);
       if (pm.hasArray == 1) {
          pm = MPchopper(pm); 
          pm.iSuper = iph + pm.nelem%pm.nphSuper;
@@ -4888,7 +4888,7 @@ MPSEQ getsuper(char *seqName, int iph, double p, double phint, int iRec, int cal
         printf("Error in getsuper(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(super.seqName,"%s",seqName);
+   OSPRINTF( super.seqName, sizeof(super.seqName), "%s", seqName);
    super.calc = calc;
    super.array = parsearry(super.array);
 
@@ -5062,12 +5062,12 @@ MPSEQ getsuper(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    char lpattern[NPATTERN];
    var = getname0("",super.seqName,"");
-   sprintf(lpattern,"%s%d",var,super.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, super.nRec);
    super.hasArray = hasarry(super.array, lpattern);
    int lix = arryindex(super.array);
    if (super.calc > 0) {
       var = getname0("",super.seqName,"");
-      sprintf(super.pattern,"%s%d_%d",var,super.nRec,lix);
+      OSPRINTF( super.pattern, sizeof(super.pattern), "%s%d_%d", var, super.nRec, lix);
       if (super.hasArray == 1) {
          super = MPchopper(super); 
          super.iSuper = iph + super.nelem%super.nphSuper;
@@ -5091,7 +5091,7 @@ MPSEQ getdumboxmx(char *seqName, int iph, double p, double phint, int iRec, int 
       printf("Error in getdumbo(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(pm.seqName,"%s",seqName);
+   OSPRINTF( pm.seqName, sizeof(pm.seqName), "%s", seqName);
    pm.calc = calc;
    pm.array = parsearry(pm.array);
 
@@ -5206,12 +5206,12 @@ MPSEQ getdumboxmx(char *seqName, int iph, double p, double phint, int iRec, int 
 
    char lpattern[NPATTERN];
    var = getname0("",pm.seqName,"");
-   sprintf(lpattern,"%s%d",var,pm.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pm.nRec);
    pm.hasArray = hasarry(pm.array, lpattern);
    int lix = arryindex(pm.array);
    if (pm.calc > 0) {
       var = getname0("",pm.seqName,"");
-      sprintf(pm.pattern,"%s%d_%d",var,pm.nRec,lix);
+      OSPRINTF( pm.pattern, sizeof(pm.pattern), "%s%d_%d", var, pm.nRec, lix);
       if (pm.hasArray == 1) {
          pm = MPchopper(pm);
          pm.iSuper = iph + pm.nelem%pm.nphSuper;
@@ -5242,7 +5242,7 @@ MPSEQ getdumbogen(char *seqName, char *coeffName, int iph, double p, double phin
       printf("Error in getdumbogeneric(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(dumbo.seqName,"%s",seqName);
+   OSPRINTF( dumbo.seqName, sizeof(dumbo.seqName), "%s", seqName);
    
    dumbo.calc = calc;
    dumbo.array = parsearry(dumbo.array);
@@ -5411,12 +5411,12 @@ MPSEQ getdumbogen(char *seqName, char *coeffName, int iph, double p, double phin
 
    char lpattern[NPATTERN];
    var = getname0("",dumbo.seqName,"");
-   sprintf(lpattern,"%s%d",var,dumbo.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, dumbo.nRec);
    dumbo.hasArray = hasarry(dumbo.array, lpattern);
    int lix = arryindex(dumbo.array);
    if (dumbo.calc > 0) {
       var = getname0("",dumbo.seqName,"");
-      sprintf(dumbo.pattern,"%s%d_%d",var,dumbo.nRec,lix);
+      OSPRINTF( dumbo.pattern, sizeof(dumbo.pattern), "%s%d_%d", var, dumbo.nRec, lix);
       if (dumbo.hasArray == 1) {
          dumbo = MPchopper(dumbo); 
          dumbo.iSuper = iph + dumbo.nelem%dumbo.nphSuper;
@@ -5441,7 +5441,7 @@ MPSEQ getsat(char *seqName, double p, double phint, int iRec, int calc)
         printf("Error in getsat(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
-   sprintf(s.seqName,"%s",seqName);
+   OSPRINTF( s.seqName, sizeof(s.seqName), "%s", seqName);
    s.calc = calc;
    s.array = parsearry(s.array);
    extern MPSEQ MPchopper(MPSEQ s);
@@ -5543,12 +5543,12 @@ MPSEQ getsat(char *seqName, double p, double phint, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",s.seqName,"");
-   sprintf(lpattern,"%s%d",var,s.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, s.nRec);
    s.hasArray = hasarry(s.array, lpattern);
    int lix = arryindex(s.array);
    if (s.calc > 0) {
       var = getname0("",s.seqName,"");
-      sprintf(s.pattern,"%s%d_%d",var,s.nRec,lix);
+      OSPRINTF( s.pattern, sizeof(s.pattern), "%s%d_%d", var, s.nRec, lix);
       if (s.hasArray == 1) {
          s = MPchopper(s);
       }
@@ -5573,7 +5573,7 @@ MPSEQ getpostc6(char *seqName, int iph, double p, double phint, int iRec, int ca
         psg_abort(1);
    }
 
-   sprintf(c6.seqName,"%s",seqName);
+   OSPRINTF( c6.seqName, sizeof(c6.seqName), "%s", seqName);
    c6.calc = calc;
    c6.array = parsearry(c6.array);
 
@@ -5653,12 +5653,12 @@ MPSEQ getpostc6(char *seqName, int iph, double p, double phint, int iRec, int ca
 
    char lpattern[NPATTERN];
    var = getname0("",c6.seqName,"");
-   sprintf(lpattern,"%s%d",var,c6.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, c6.nRec);
    c6.hasArray = hasarry(c6.array, lpattern);
    int lix = arryindex(c6.array);
    if (c6.calc > 0) {
       var = getname0("",c6.seqName,"");
-      sprintf(c6.pattern,"%s%d_%d",var,c6.nRec,lix);
+      OSPRINTF( c6.pattern, sizeof(c6.pattern), "%s%d_%d", var, c6.nRec, lix);
       if (c6.hasArray == 1) {
          c6 = MPchopper(c6); 
          c6.iSuper = iph + c6.nelem%c6.nphSuper;

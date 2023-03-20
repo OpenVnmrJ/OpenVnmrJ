@@ -52,6 +52,7 @@ extern "C" {
 #include "tools.h"
 #include "arrayfuncs.h"
 #include "CSfuncs.h"
+#include "safestring.h"
 
 #ifdef __INTERIX    /* for winpath2unix() */
 #include <interix/interix.h>
@@ -910,8 +911,8 @@ sleep(30);
           psg_abort(1);
        }
 
-   strcpy(filepath,filename);  /* /vnmrsystem/acqqueue/exp1.greg.012345 */
-   strcpy(filexpath,filepath); /* save this path for psg_abort() */
+   OSTRCPY( filepath, sizeof(filepath), filename);  /* /vnmrsystem/acqqueue/exp1.greg.012345 */
+   OSTRCPY( filexpath, sizeof(filexpath), filepath); /* save this path for psg_abort() */
    /* strcat(filepath,".Code");   /vnmrsystem/acqqueue/exp1.greg.012345.Code */
 
     A_getnames(GLOBAL,gnames,&ngnames,50);
@@ -1142,7 +1143,7 @@ void PSGGo(double arraydim)
    acodeMgr->incrementAcodeStage();
 
    /* open file to report shapefile names */
-   sprintf(psgFilePath,"%s/PsgFile",curexp);
+   OSPRINTF( psgFilePath, sizeof(psgFilePath), "%s/PsgFile", curexp);
    if ( (shapeListFile = fopen(psgFilePath,"w")) == NULL )
       text_message("advisory: could not open PsgFile in curexp\n");
 
@@ -1198,7 +1199,7 @@ void PSGGo(double arraydim)
 
       if (getparm("array","string",CURRENT,array,MAXSTR))
             psg_abort(1);
-      strcpy(parsestring,array);
+      OSTRCPY( parsestring, sizeof(parsestring), array);
 
         /*----------------------------------------------------------------
         |       test for presence of ni, ni2, and ni3
@@ -1212,7 +1213,7 @@ void PSGGo(double arraydim)
            psg_abort(0);
 
         if (dps_flag)
-           strcpy(arrayStr, parsestring);
+           OSTRCPY( arrayStr, sizeof(arrayStr), parsestring);
 
         /*----------------------------------------------------------------*/
 
@@ -1273,7 +1274,7 @@ static void PSGDps(char *cmd)
    initlpelements();
    if (getparm("array","string",CURRENT,array,MAXSTR))
       psg_abort(1);
-   strcpy(parsestring,array);
+   OSTRCPY( parsestring, sizeof(parsestring), array);
 
    /*----------------------------------------------------------------
    |       test for presence of ni, ni2, and ni3
@@ -1284,7 +1285,7 @@ static void PSGDps(char *cmd)
    P_getreal(CURRENT, "ni3", &ni3, 1);
    if (setup4D(ni3, ni2, ni, parsestring, array))
       psg_abort(0);
-   strcpy(arrayStr, parsestring);
+   OSTRCPY( arrayStr, sizeof(arrayStr), parsestring);
    if (bgflag)
       fprintf(stderr,"parsestring: '%s' \n",parsestring);
    if (parse(parsestring, &narrays))  /* parse 'array' setup looping elements */
@@ -1942,14 +1943,14 @@ static void queue_psg(char *auto_dir,char *fid_name,char *msg)
 
   read_info_file(auto_dir);	/* map enterQ key words */
 
-  strcpy(tfilepath,curexp);
-  strcat(tfilepath,"/psgdone");
+  OSTRCPY( tfilepath, sizeof(tfilepath), curexp);
+  OSTRCAT( tfilepath, sizeof(tfilepath), "/psgdone");
   outfile=fopen(tfilepath,"w");
   if (outfile)
   {
       fprintf(outfile,"%s\n",msg);
-      strcpy(tfilepath,curexp);
-      strcat(tfilepath,"/sampleinfo");
+      OSTRCPY( tfilepath, sizeof(tfilepath), curexp);
+      OSTRCAT( tfilepath, sizeof(tfilepath), "/sampleinfo");
       samplefile=fopen(tfilepath,"r");
       if (samplefile)
       {
@@ -1957,25 +1958,24 @@ static void queue_psg(char *auto_dir,char *fid_name,char *msg)
 
          /* get index to DATA: prompt, then update data text field with data file path */
          get_sample_info(&sampleinfo,"DATA:",val,128,&entryindex);
-         strncpy(sampleinfo.prompt_entry[entryindex].etext,fid_name,MAX_TEXT_LEN);
+         OSTRCPY(sampleinfo.prompt_entry[entryindex].etext, sizeof(sampleinfo.prompt_entry[entryindex].etext), fid_name);
 
          /* update STATUS field to Active */
          get_sample_info(&sampleinfo,"STATUS:",val,128,&entryindex);
          if (option_check("shimming"))
-            strcpy(sampleinfo.prompt_entry[entryindex].etext,"Shimming");
+            OSTRCPY(sampleinfo.prompt_entry[entryindex].etext, sizeof(sampleinfo.prompt_entry[entryindex].etext), "Shimming");
          else
-            strcpy(sampleinfo.prompt_entry[entryindex].etext,"Active");
+            OSTRCPY(sampleinfo.prompt_entry[entryindex].etext, sizeof(sampleinfo.prompt_entry[entryindex].etext), "Active");
 
          write_sample_info(outfile,&sampleinfo);
 
          fclose(samplefile);
-         sprintf(tfilepath,"cat %s/psgdone >> %s/psgQ",curexp, auto_dir);
-
+         OSPRINTF( tfilepath, sizeof(tfilepath), "cat %s/psgdone >> %s/psgQ", curexp, auto_dir);
       }
       else
       {
          text_error("Experiment unable to be queued\n");
-         sprintf(tfilepath,"rm %s/psgdone",curexp);
+         OSPRINTF( tfilepath, sizeof(tfilepath), "rm %s/psgdone", curexp);
       }
       fclose(outfile);
       system(tfilepath);
@@ -2035,12 +2035,7 @@ int QueueExp(char *codefile,int nextflag)
 	return(ERROR);
     if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
 	return(ERROR);
-    sprintf(message,"%d,%s,%d,%lf,%s,%s,%s,%s,%s,%d,%d,%u,%u,",
-		QUEUE,addr,
-		(int)priority,exptime,fidpath,codefile,
-		fileRFpattern, filegrad, filexpan,
-		(int)setupflag,(int)expflags,
-                start_elem, completed_elem);
+    OSPRINTF( message, sizeof(message), "%d,%s,%d,%lf,%s,%s,%s,%s,%s,%d,%d,%u,%u,", QUEUE, addr, (int)priority, exptime, fidpath, codefile, fileRFpattern, filegrad, filexpan, (int)setupflag, (int)expflags, start_elem, completed_elem);
     if (bgflag)
     {
       fprintf(stderr,"fidpath: '%s'\n",fidpath);
@@ -2066,7 +2061,7 @@ int QueueExp(char *codefile,int nextflag)
            char tmpstr[MAXSTR];
 
            P_getstring(CURRENT,"goid",tmpstr,3,255);
-           sprintf(message,"%s %s auto",codefile,tmpstr);
+           OSPRINTF(message, sizeof(message), "%s %s auto", codefile, tmpstr);
         }
 
         /* There is a race condition between writing out the
@@ -2077,9 +2072,9 @@ int QueueExp(char *codefile,int nextflag)
            it waits between 0 and 20 msec.
          */
         if (fidpath[0] == '/')
-           sprintf(commnd,"%s.fid/text",fidpath);
+           OSPRINTF( commnd, sizeof(commnd), "%s.fid/text", fidpath);
         else
-           sprintf(commnd,"%s/%s.fid/text",autodir,fidpath);
+           OSPRINTF( commnd, sizeof(commnd), "%s/%s.fid/text", autodir, fidpath);
         ex = 0;
         while ( access(commnd,R_OK) && (ex < 50) )
         {
@@ -2097,18 +2092,18 @@ int QueueExp(char *codefile,int nextflag)
         if ( shapesWritten )
         {
            if (fidpath[0] == '/')
-              sprintf(commnd,"cp %s/PsgFile %s.fid/PsgFile",curexp,fidpath);
+              OSPRINTF( commnd, sizeof(commnd), "cp %s/PsgFile %s.fid/PsgFile", curexp, fidpath);
            else
-              sprintf(commnd,"cp %s/PsgFile %s/%s.fid/PsgFile",curexp,autodir,fidpath);
+              OSPRINTF( commnd, sizeof(commnd), "cp %s/PsgFile %s/%s.fid/PsgFile", curexp, autodir, fidpath);
            system(commnd);
         }
         if ( getCSnum() )
         {
            char *csname = getCSname();
            if (fidpath[0] == '/')
-              sprintf(commnd,"cp %s/%s %s.fid/%s",curexp,csname,fidpath,csname);
+              OSPRINTF( commnd, sizeof(commnd), "cp %s/%s %s.fid/%s", curexp, csname, fidpath, csname);
            else
-              sprintf(commnd,"cp %s/%s %s/%s.fid/%s",curexp,csname,autodir,fidpath,csname);
+              OSPRINTF( commnd, sizeof(commnd), "cp %s/%s %s/%s.fid/%s", curexp, csname, autodir, fidpath, csname);
            system(commnd);
         }
 
@@ -2117,18 +2112,17 @@ int QueueExp(char *codefile,int nextflag)
         {
 
           /* Temporarily use commnd to hold the filename */
-          sprintf(commnd,"%s/psgQ",autodir);
+          OSPRINTF( commnd, sizeof(commnd), "%s/psgQ", autodir);
           ex = access(commnd,W_OK);
           if (ex == 0)
           {
-             sprintf(commnd,"mv %s/psgQ %s/psgQ.locked",autodir,autodir);
+             OSPRINTF( commnd, sizeof(commnd), "mv %s/psgQ %s/psgQ.locked", autodir, autodir);
              system(commnd);
           }
           queue_psg(autodir,fidpath,message);
           if (ex == 0)
           {
-             sprintf(commnd,"cat %s/psgQ.locked >> %s/psgQ; rm %s/psgQ.locked",
-                           autodir,autodir,autodir);
+             OSPRINTF( commnd, sizeof(commnd), "cat %s/psgQ.locked >> %s/psgQ; rm %s/psgQ.locked", autodir, autodir, autodir);
              system(commnd);
           }
         }
@@ -2145,11 +2139,11 @@ int QueueExp(char *codefile,int nextflag)
        char tmpstr2[MAXSTR];
 
        if (getparm("acqaddr","string",GLOBAL,addr,MAXSTR))
-	 return(ERROR);
+          return(ERROR);
 
        P_getstring(CURRENT,"goid",tmpstr,3,255);
        P_getstring(CURRENT,"goid",tmpstr2,2,255);
-       sprintf(infostr,"%s %s %d",tmpstr,tmpstr2,setupflag);
+       OSPRINTF( infostr, sizeof(infostr), "%s %s %d", tmpstr, tmpstr2, setupflag);
        if (bgflag)
        {
           fprintf(stderr,"addr: '%s', codefile: '%s', infostr: '%s', nextflag: %d\n",
@@ -2160,8 +2154,8 @@ int QueueExp(char *codefile,int nextflag)
           int ex;
           ex = 0;
           P_getstring(CURRENT,"exppath",tmpstr,1,255);
-          strcpy(tmpstr2,tmpstr);
-          strcat(tmpstr,"/text");
+          OSTRCPY( tmpstr2, sizeof(tmpstr2), tmpstr);
+          OSTRCAT( tmpstr, sizeof(tmpstr), "/text");
           while ( access(tmpstr,R_OK) && (ex < 50) )
           {
              struct timespec timer;
@@ -2177,14 +2171,14 @@ int QueueExp(char *codefile,int nextflag)
           }
           if (shapesWritten)
           {
-             sprintf(commnd,"cp %s/PsgFile %s/PsgFile",curexp,tmpstr2);
+             OSPRINTF( commnd, sizeof(commnd), "cp %s/PsgFile %s/PsgFile", curexp, tmpstr2);
              system(commnd);
           }
           if ( getCSnum() )
           {
              char *csname = getCSname();
 
-             sprintf(commnd,"cp %s/%s %s/%s",curexp,csname,tmpstr2,csname);
+             OSPRINTF( commnd, sizeof(commnd), "cp %s/%s %s/%s", curexp, csname, tmpstr2, csname);
              system(commnd);
           }
        }
@@ -2192,7 +2186,7 @@ int QueueExp(char *codefile,int nextflag)
        {
           char *csname = getCSname();
 
-          sprintf(commnd,"cp %s/%s %s/acqfil/%s",curexp,csname,curexp,csname);
+          OSPRINTF( commnd, sizeof(commnd), "cp %s/%s %s/acqfil/%s", curexp, csname, curexp, csname);
           system(commnd);
        }
        if (sendNvExpproc(addr,codefile,infostr,nextflag))
@@ -2231,7 +2225,7 @@ int gradtype_check()
    if (P_getstring(GLOBAL, "gradtype", gradtype, 1, 15) < 0)
       return(0);
    num = 1;
-   strcpy(option,"gradtype");
+   OSTRCPY( option, sizeof(option), "gradtype");
    oplen = strlen(option);
    while (num <= varinfo.size)
    {
@@ -2376,20 +2370,20 @@ static int setGflags()
    {
        int result;
        char interixpath[MAXPATHL];
-       sprintf(interixpath,"%s/acqqueue/psg_abort", systemdir);
+       OSPRINTF( interixpath, sizeof(interixpath), "%s/acqqueue/psg_abort", systemdir);
        // winpath2unix( abortfile, int flags, char *buf, size_t buglen)
        // e.g. /dev/fs/C/SFU/vnmr/acqqueue/psg_abort
        result = winpath2unix( interixpath, 0, abortfile, (size_t) MAXPATHL);
        if (result != 0)
        {
           /* default to standard path */
-          sprintf(abortfile,"/dev/fs/C/%s/acqqueue/psg_abort", systemdir);
+          OSPRINTF( abortfile, sizeof(abortfile), "/dev/fs/C/%s/acqqueue/psg_abort", systemdir);
        }
        // fprintf(stdout,"check_for_abort; '%s'\n",abortfile);
        // fflush(stdout);
    }
 #else
-   sprintf(abortfile,"%s/acqqueue/psg_abort", systemdir);
+   OSPRINTF( abortfile, sizeof(abortfile), "%s/acqqueue/psg_abort", systemdir);
 #endif
 
    if (access( abortfile, W_OK ) == 0)
@@ -2401,14 +2395,14 @@ static int setGflags()
    vttype = (int) tmpval;
    rfwg[0]='\0';
    if (P_getstring(GLOBAL, "rfwg", rfwg, 1, MAXSTR-4) < 0)
-      strcpy(rfwg,"nnnn");
+      OSTRCPY( rfwg, sizeof(rfwg), "nnnn");
    else
-      strcat(rfwg,"nnnn");
+      OSTRCAT( rfwg, sizeof(rfwg), "nnnn");
    gradtype[0]='\0';
    if (P_getstring(GLOBAL, "gradtype", gradtype, 1, MAXSTR-4) < 0)
-      strcpy(gradtype,"nnnn");
+      OSTRCPY( gradtype, sizeof(gradtype), "nnnn");
    else
-      strcat(gradtype,"nnnn");
+      OSTRCAT( gradtype, sizeof(gradtype), "nnnn");
    if (getparmd("h1freq","real",GLOBAL,&tmpval,1))
       return(ERROR);
    H1freq = (int) tmpval;
@@ -2468,7 +2462,7 @@ void checkGradtype()
    {
       if (pfgBoard > 0.5)
       {
-         strcpy(tmpGradtype,"   ");
+         OSTRCPY(tmpGradtype, sizeof(tmpGradtype), "   ");
          P_getstring(GLOBAL,"gradtype",tmpGradtype,1,MAXSTR-1);
          if (tmpGradtype[2] == 'a')
          {

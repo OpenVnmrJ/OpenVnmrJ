@@ -12,6 +12,7 @@
 #include <standard.h>
 #include <Pbox_psg.h> 
 #include "soliddefs.h"      //Structures and Definitions of Constant
+#include "safestring.h"
 #include "solidelements.h"  //Miscellaneous Programs Including getname()
 #ifdef NVPSG
 #include "solidchoppers.h"  // Replacement choppers use userDECShape
@@ -27,5 +28,3 @@
 #include "solidhhdec.h"     //Functions to support Ames contribution.
 
 #endif
-
-

@@ -10,12 +10,17 @@
 #ifndef INC_PFGCONTROLLER_H
 #define INC_PFGCONTROLLER_H
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 #include "GradientBase.h"
 
 #define XPFGPRESENT  1
 #define YPFGPRESENT  2
 #define ZPFGPRESENT  4
-
 
 #define PFGMAXPLUS (32767.0)
 #define PFGUNITYPLUS (0x4000)
@@ -43,15 +48,16 @@ class PFGController: public GradientBase
         usageFlag = 0; 
         if (tolower(gradtype[0] != 'n'))  usageFlag |= XPFGPRESENT;
         if (tolower(gradtype[1] != 'n'))  usageFlag |= YPFGPRESENT;
-	if (tolower(gradtype[2] != 'n'))  usageFlag |= ZPFGPRESENT;
+        if (tolower(gradtype[2] != 'n'))  usageFlag |= ZPFGPRESENT;
         kind = PFG_TAG;
-        strncpy(gradType,gradtype,10);  // why is strncpy() only using 10 of 16 chars?
-        // BDZ: gradType is size 16 and strncpy() might not have null terminated.
-        gradType[10] = 0;
+        // BDZ the following 11 was derived from original code. Ideally
+        // should use sizeof(gradType) instead. why is strcpy() only
+        // using 10 of 16 chars?
+        OSTRCPY(gradType, 11, gradtype);
         wait4meExpireTicker = 0L;
         if ( pAcodeBuf == NULL)
         {  cout << "PFGController constr(): pAcodeBuf is NULL \n" ; }
-     };  
+     };
   
      int isPresent(char x);
      int setEnable(char *cstring);
@@ -73,7 +79,6 @@ class PFGController: public GradientBase
      void showPowerIntegral();
      void showEventPowerIntegral(const char *);
      void getPowerIntegral(double *powerarray);
-
-
 };
+
 #endif

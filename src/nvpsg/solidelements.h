@@ -162,9 +162,8 @@ double roundamp(double par, double res)
 void Getstr(char *parname, char *parval, int arrsize)
 {
    char str[MAXSTR];  //getstr() always returns an char array of size MAXSTR
-   getstr(parname,str);
-   strncpy(parval,str,arrsize);
-   if (strlen(str) >= arrsize) *(parval+arrsize-1) = '\0';
+   getstr(parname, str);
+   OSTRCPY( parval, arrsize, str);
 }
 
 //=======================================
@@ -306,10 +305,10 @@ char* getname0(char *varType, char *varSuffix, char *chXtra)
    chLOW[capCount] = '\0';
 
    if (strlen(chXtra) == 0) {
-      sprintf(varName,"%s%s%s%s",varType,chUP,chSeqType,chDescr);
+      OSPRINTF(varName,sizeof(varName),"%s%s%s%s",varType,chUP,chSeqType,chDescr);
       return varName;
    }
-   sprintf(varName,"%s%s%s%s%s",varType,chXtra,chSeqType,chLOW,chDescr);
+   OSPRINTF(varName,sizeof(varName),"%s%s%s%s%s",varType,chXtra,chSeqType,chLOW,chDescr);
    return varName;
 }
 
@@ -358,10 +357,10 @@ char* getname1(char *varType, char *varSuffix, int chnl)
    }
 
    if (chnl > 0) {
-      sprintf(varName,"%s%s%s%s%s",varType,chID,chLOW,chSeqType,chDescr);
+      OSPRINTF(varName,sizeof(varName),"%s%s%s%s%s",varType,chID,chLOW,chSeqType,chDescr);
    }
    else {
-      sprintf(varName,"%s%s%s%s",varType,chUP,chSeqType,chDescr);
+      OSPRINTF(varName,sizeof(varName),"%s%s%s%s",varType,chUP,chSeqType,chDescr);
    }
    return varName;
 }
@@ -395,7 +394,7 @@ AR parsearry(AR params)
    while(i < j) {
       while((i < j) && (array[i] >= '0')) {
          params.a[q] = array[i];
-	 name[p] = array[i];
+         name[p] = array[i];
          k = 0;
          i++; q++; p++;
       }
@@ -500,8 +499,11 @@ int hasarry(AR params, char *pattern)
    int arrindex = 0;
    int arrindexm = 0;
    int prod = 1;
-   int i = 0; int test; int k; int currentmod;
-   
+   int i = 0;
+   int test;
+   int k;
+   int currentmod;
+
    if (ix == 1) {
       k = 0;
       test = 1;
@@ -510,7 +512,7 @@ int hasarry(AR params, char *pattern)
          k++;
       }
       currentmod = k - 1;
-      strcpy(mod[currentmod].pattern,pattern);
+      OSTRCPY( mod[currentmod].pattern, sizeof(mod[currentmod].pattern), pattern);
       mod[currentmod].arrayindex = -1;
       mod[currentmod].filled = 1;
    }
@@ -584,6 +586,7 @@ double gett(int lix, char *pattern)
 {
    double time = 0.0;
    int k = 0; int test;
+
    test = 1;
    while ((k < 64) && (test > 0)) {
       if ((mod[k].filled < 1) || ((strcmp(mod[k].pattern,pattern) == 0))) test = 0;
@@ -604,7 +607,7 @@ AR combine_array(AR a, AR b)
    AR c;
    int i;  
    if (strcmp(a.a,b.a) == 0) {
-      strcpy(c.a,a.a);
+      OSTRCPY( c.a, sizeof(c.a), a.a);
       c.c = a.c;
       c.d = a.d;
       for (i = 0; i < a.c; i++) c.b[i] = a.b[i];
@@ -625,5 +628,3 @@ AR combine_array(AR a, AR b)
    }
 }
 #endif
-
-

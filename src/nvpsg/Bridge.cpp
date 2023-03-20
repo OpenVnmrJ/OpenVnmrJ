@@ -22,6 +22,12 @@
 #include "cpsg.h"
 #include "RFController.h"
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 extern unsigned int ix;
 extern int dps_flag;
 extern int statusindx;
@@ -1868,7 +1874,7 @@ void sharedChannelWfgHDec()
   if (P_getstring(CURRENT, (char*) "dseq", hdseq, 1, 256) == 0 )
     getstr("dseq",hdseq);
   else
-    strcpy(hdseq,"garp1");
+    OSTRCPY( hdseq, sizeof(hdseq), "garp1");
   //-- should just use dmf or fetch from object
   hdmf = getval("dmf");
   if ( (hdmf > 50000.0) && !nomessageflag )
@@ -2071,7 +2077,7 @@ void ShapedXmtNAcquire(char *aname, double pw, int phase, double rof1,int chan)
   int startWord,stopWord,divs,i;
   cPatternEntry *patDes;
   char tname[200];
-  strcpy(tname,aname);
+  OSTRCPY( tname, sizeof(tname), aname);
   RFController *observeCh = (RFController *) P2TheConsole->getRFControllerByLogicalIndex(chan);
   freq = observeCh->getBaseFrequency();
   if (freq > 150.0)
@@ -2566,7 +2572,10 @@ void genRFShapedPulse(double pw, char *name, int rtvar, double rof1, double rof2
    P2TheConsole->newEvent();
    RFController *ShapedChan = (RFController *) P2TheConsole->getRFControllerByLogicalIndex(rfch);
 
-   if (strcmp(name,"") == 0) strcpy(pname,"hard"); else strcpy(pname,name);
+   if (strcmp(name,"") == 0)
+     OSTRCPY( pname, sizeof(pname), "hard");
+   else
+     OSTRCPY( pname, sizeof(pname), name);
 
    tmp = ShapedChan->resolveRFPattern(pname,1,"genRFShapedPulse",1);
    // this element allows the ShapedChan to time independently...
@@ -2624,7 +2633,10 @@ void genRFShapedPulseWithOffset(double pw, char *name, int rtvar, double rof1, d
    P2TheConsole->newEvent();
    RFController *ShapedChan = (RFController *) P2TheConsole->getRFControllerByLogicalIndex(rfch);
 
-   if (strcmp(name,"") == 0) strcpy(pname,"hard"); else strcpy(pname,name);
+   if (strcmp(name,"") == 0)
+     OSTRCPY( pname, sizeof(pname), "hard");
+   else
+     OSTRCPY( pname, sizeof(pname), name);
    //
    refPat = ShapedChan->resolveRFPattern(pname,1,"genRFSpecific_Reference",1);
    //
@@ -2740,7 +2752,10 @@ double gen_shapelistpw(char  *baseshape, double pw, int rfch)
      return 0.0;
 
    RFController *ShapedChan = (RFController *) P2TheConsole->getRFControllerByLogicalIndex(rfch);
-   if (strcmp(baseshape,"") == 0) strcpy(pname,"hard"); else strcpy(pname,baseshape);
+   if (strcmp(baseshape,"") == 0)
+     OSTRCPY( pname, sizeof(pname), "hard");
+   else
+     OSTRCPY( pname, sizeof(pname), baseshape);
 
    numberStates = ShapedChan->analyzeRFPattern(pname,1,"gen_shapelistpw",1);
    if (numberStates <= 0)
@@ -2826,7 +2841,10 @@ void gen_shapedpulseoffset(char *name, double pw, int rtvar, double rof1, double
 
    P2TheConsole->newEvent();
 
-   if (strcmp(name,"") == 0) strcpy(pname,"hard"); else strcpy(pname,name);
+   if (strcmp(name,"") == 0)
+     OSTRCPY( pname, sizeof(pname), "hard");
+   else
+     OSTRCPY( pname, sizeof(pname), name);
 
    refPat = ShapedChan->resolveRFPattern(pname,1,"gen_shapedpulseoffset",1);
    if (refPat == NULL)
@@ -3650,14 +3668,13 @@ void gensim2shaped_pulse(char *name1, char *name2, double width1, double width2,
 
    // if shape name blank, use hard.RF
    if (strcmp(name1,""))
-     strcpy(shp1,name1);
+     OSTRCPY( shp1, sizeof(shp1), name1);
    else
-     strcpy(shp1,"hard");
+     OSTRCPY( shp1, sizeof(shp1), "hard");
    if (strcmp(name2,""))
-     strcpy(shp2,name2);
+     OSTRCPY( shp2, sizeof(shp2), name2);
    else
-     strcpy(shp2,"hard");
-
+     OSTRCPY( shp2, sizeof(shp2), "hard");
 
    // sort out the active rf channels
    // rf1Active = 1 means rf1 participates in event
@@ -3869,17 +3886,17 @@ void gensim3shaped_pulse(char *name1, char *name2, char *name3, double width1, d
 
    // if shape name blank, use hard.RF
    if (strcmp(name1,""))
-     strcpy(shp1,name1);
+     OSTRCPY( shp1, sizeof(shp1), name1);
    else
-     strcpy(shp1,"hard");
+     OSTRCPY( shp1, sizeof(shp1), "hard");
    if (strcmp(name2,""))
-     strcpy(shp2,name2);
+     OSTRCPY( shp2, sizeof(shp2), name2);
    else
-     strcpy(shp2,"hard");
+     OSTRCPY( shp2, sizeof(shp2), "hard");
    if (strcmp(name3,""))
-     strcpy(shp3,name3);
+     OSTRCPY( shp3, sizeof(shp3), name3);
    else
-     strcpy(shp3,"hard");
+     OSTRCPY( shp3, sizeof(shp3), "hard");
 
 
    // sort out the active rf channels
@@ -4304,13 +4321,13 @@ void zgradpulse(double amp, double duration)
   if (duration < 2.4e-6) return;  // won't work - used as skip .. no error
 
   if ( P_getstring(GLOBAL,(char*) "gradientdisable",gstr,1,2) != 0)
-    strcpy(gstr,"n");
+    OSTRCPY( gstr, sizeof(gstr), "n");
 
   if (strcmp(gstr,"y") == 0)
     amp = 0.0;
 
   if ( P_getstring(GLOBAL,(char*) "gradientshaping",gstr,1,2) != 0 )
-    strcpy(gstr,"s");
+    OSTRCPY( gstr, sizeof(gstr), "s");
   if (gstr[0]!='y')
     {
       rgradient('z',amp);
@@ -4909,7 +4926,7 @@ void splineonoff(int whichone,int state)
     abort_message("sp line #%d invalid\n",whichone);
   ch = (whichone - 1) / 3 + 1;
   l = (whichone - 1) % 3 + 1;
-  sprintf(stub,"rf%d",ch);
+  OSPRINTF( stub, sizeof(stub), "rf%d", ch);
   //cout << "stub = " << stub << endl;
   rfC = (RFController *)(P2TheConsole->getControllerByID(stub));
   if (rfC->isAsync())
@@ -5371,7 +5388,7 @@ int parmToRcvrMask(const char *parName, int calltype)
         if (calltype == 1)
            P_getstring(CURRENT, parName, rcvrStr, 1, MAXSTR) ;
         else
-           strcpy(rcvrStr,parName);
+           OSTRCPY( rcvrStr, sizeof(rcvrStr), parName);
 
         int c;
         int n;
@@ -5396,11 +5413,11 @@ int isRcvrActive(int n)
     rtn = (parmToRcvrMask("rcvrs",1) >> n) & 1;
     return rtn;
 }
-//
-//
-//
+
 char *RcvrMapStr(const char *parmname, char *mapstr)
 {
+  // BDZ: note that parmname is never referenced: bug?
+  
   int mrMask;
   int i,nRcvrs,fstflag;
   char tmpstr[256];
@@ -5414,7 +5431,11 @@ char *RcvrMapStr(const char *parmname, char *mapstr)
   {
      nRcvrs = (int)tmp;
   }
-
+  
+  // BDZ: maybe parmname is supposed to be passed into this next method
+  //   instead of "rcvrs"? That is what usage in the rest of the program
+  //   kind of implies. Or parname param should just go away.
+  
   mrMask = parmToRcvrMask((char*) "rcvrs", 1);
   fstflag = 1;
   for (i=0;i < nRcvrs; i++)
@@ -5422,10 +5443,13 @@ char *RcvrMapStr(const char *parmname, char *mapstr)
      if ( (mrMask >> i) & 1 )
      {
        if (fstflag)
-         sprintf(tmpstr,"ddr%d",i+1);
+         OSPRINTF( tmpstr, sizeof(tmpstr), "ddr%d", i+1);
        else
-         sprintf(tmpstr,",ddr%d",i+1);
-       strcat(mapstr,tmpstr);
+         OSPRINTF( tmpstr, sizeof(tmpstr), ",ddr%d", i+1);
+                    
+       // BDZ - UNSAFE - could fix if this routine took mapstr's size as a param
+       strcat( mapstr, tmpstr);
+       
        fstflag = 0;
      }
   }
@@ -5592,7 +5616,7 @@ void modifyRFGroupName(int list, int gnum, char *newName)
   // get Controller Data is 1 to MAXINGROUP
   p2s = p2g->getControllerData(gnum);
   if (p2s == NULL) abort_message("Group Pulse: Controller not found");
-  strcpy(p2s->shapeName,newName);
+  OSTRCPY( p2s->shapeName, sizeof(p2s->shapeName), newName);
 }
 
 // - tested

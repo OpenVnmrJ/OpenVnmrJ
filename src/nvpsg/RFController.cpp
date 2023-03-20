@@ -21,6 +21,12 @@
 
 #include <arpa/inet.h>
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 #define WriteWord( x )  pAcodeBuf->putCode( x )
 #define putPattern( x ) pWaveformBuf->putCode( x )
 #define OFFSETPULSE_TIMESLICE (0.00000020L)
@@ -115,20 +121,20 @@ RFController::RFController(char *name,int flags)
           abort_message("psg internal unable to allocate memory for pattern alias list on %s. abort!\n",Name);
        patAliasListIndex= 0;
 
-       strcpy(logicalName,""); // this initialization was missing
-       strcpy(coarsePowerName,"NONE");
-       strcpy(finePowerName,"NONE");
-       strcpy(finePowerName2,"NONE");
-       strcpy(tunePwrName,""); // this initialization was missing
-       strcpy(freqName,"NONE");
-       strcpy(freqOffsetName,"NONE");
-       strcpy(dmName,"NONE");
-       strcpy(dmmName,"NONE");
-       strcpy(dmfName,"NONE");
-       strcpy(dseqName,"NONE");
-       strcpy(homoName,"NONE");
-       strcpy(dresName,"NONE");
-       strcpy(nucleusName,""); // this initialization was missing
+       logicalName[0] = 0; // this initialization was missing
+       OSTRCPY( coarsePowerName, sizeof(coarsePowerName), "NONE");
+       OSTRCPY( finePowerName, sizeof(finePowerName), "NONE");
+       OSTRCPY( finePowerName2, sizeof(finePowerName2), "NONE");
+       tunePwrName[0] = 0; // this initialization was missing
+       OSTRCPY( freqName, sizeof(freqName), "NONE");
+       OSTRCPY( freqOffsetName, sizeof(freqOffsetName), "NONE");
+       OSTRCPY( dmName, sizeof(dmName), "NONE");
+       OSTRCPY( dmmName, sizeof(dmmName), "NONE");
+       OSTRCPY( dmfName, sizeof(dmfName), "NONE");
+       OSTRCPY( dseqName, sizeof(dseqName), "NONE");
+       OSTRCPY( homoName, sizeof(homoName), "NONE");
+       OSTRCPY( dresName, sizeof(dresName), "NONE");
+       nucleusName[0]= 0; // this initialization was missing
        prevStatusDmIndex  = -1;
        prevStatusDmmIndex = -1;
        prevSyncType       = 1;
@@ -183,20 +189,20 @@ void RFController::setLogicalNames(int id, char rfNames[][8])
    //rfNames[][] = {"obs","tof","tpwr","tpwrf","xm","xmm","xmf","xseq","xhomo","sfrq","dres","xpwrt","tpwrm","tn"};
 
    logicalID = id;
-   strcpy(logicalName,     rfNames[0]);
-   strcpy(freqOffsetName,  rfNames[1]);
-   strcpy(coarsePowerName, rfNames[2]);
-   strcpy(finePowerName,   rfNames[3]);
-   strcpy(dmName,          rfNames[4]);
-   strcpy(dmmName,         rfNames[5]);
-   strcpy(dmfName,         rfNames[6]);
-   strcpy(dseqName,        rfNames[7]);
-   strcpy(homoName,        rfNames[8]);
-   strcpy(freqName,        rfNames[9]);
-   strcpy(dresName,        rfNames[10]);
-   strcpy(tunePwrName,     rfNames[11]);
-   strcpy(finePowerName2,  rfNames[12]);
-   strcpy(nucleusName,     rfNames[13]);
+   OSTRCPY( logicalName,     sizeof(logicalName),     rfNames[0]);
+   OSTRCPY( freqOffsetName,  sizeof(freqOffsetName),  rfNames[1]);
+   OSTRCPY( coarsePowerName, sizeof(coarsePowerName), rfNames[2]);
+   OSTRCPY( finePowerName,   sizeof(finePowerName),   rfNames[3]);
+   OSTRCPY( dmName,          sizeof(dmName),          rfNames[4]);
+   OSTRCPY( dmmName,         sizeof(dmmName),         rfNames[5]);
+   OSTRCPY( dmfName,         sizeof(dmfName),         rfNames[6]);
+   OSTRCPY( dseqName,        sizeof(dseqName),        rfNames[7]);
+   OSTRCPY( homoName,        sizeof(homoName),        rfNames[8]);
+   OSTRCPY( freqName,        sizeof(freqName),        rfNames[9]);
+   OSTRCPY( dresName,        sizeof(dresName),        rfNames[10]);
+   OSTRCPY( tunePwrName,     sizeof(tunePwrName),     rfNames[11]);
+   OSTRCPY( finePowerName2,  sizeof(finePowerName2),  rfNames[12]);
+   OSTRCPY( nucleusName,     sizeof(nucleusName),     rfNames[13]);
 
 // sfrq, dfrq, etc, need to be know early on ( before initializeExpStates() )
 // so let's look it up now.
@@ -895,7 +901,7 @@ void RFController::writePatternAlias(void)
           putPattern(patAliasList[i]);
        }
        char nm[32];
-       strcpy(nm,"pattern_alias_list");
+       OSTRCPY( nm, sizeof(nm), "pattern_alias_list");
 
        cPatternEntry *tmp = new cPatternEntry(nm,1,patAliasID,patAliasListIndex,patAliasListIndex);
        addPattern(tmp);
@@ -928,8 +934,8 @@ cPatternEntry *RFController::resolveRFPattern(char *nm, int flag, const char *em
     pwrf = 0.0;
     if (tmp != NULL)
       return(tmp);
-    strcpy(tname,nm);
-    strcat(tname,".RF");
+    OSTRCPY( tname, sizeof(tname), nm);
+    OSTRCAT( tname, sizeof(tname), ".RF");
     wcount = 0; eventcount = 0;
        i = findPatternFile(tname);
        if (i != 1)
@@ -1029,9 +1035,9 @@ cPatternEntry *RFController::resolveDecPattern(char *nm, int flag, double pw_90,
     int lastGateWord, lastAmpWord, lastPhaseWord;
     char tname[200],uname[200];
     double ampScale = 1023.0;
-    strcpy(tname,nm);
-    strcat(tname,".DEC");
-    sprintf(uname,"%s_%d",nm,mode);
+    OSTRCPY( tname, sizeof(tname), nm);
+    OSTRCAT( tname, sizeof(tname), ".DEC");
+    OSPRINTF( uname, sizeof(uname), "%s_%d", nm, mode);
     // do we already know the pattern??
     // disambiguate synchronous/async mode 
     cPatternEntry *tmp = find(uname, flag);
@@ -1199,13 +1205,13 @@ cPatternEntry *RFController::resolveDecOffsetPattern(char *nm, int flag, double 
     char tname[200],bname[200];
     double ampScale = 1023.0;
     //if (pw_90 > 0.002) text_error("driver needs an added memory");
-    sprintf(tname,"%s_%6.2f_%d",nm,offset,flag); //generate a unique name
+    OSPRINTF( tname, sizeof(tname), "%s_%6.2f_%d", nm, offset, flag); //generate a unique name
     // do we already know the pattern??
     cPatternEntry *tmp = find(tname, flag);
     if (tmp != NULL)
       return(tmp);
-    strcat(tname,".DEC");
-    sprintf(bname,"%s.DEC",nm);
+    OSTRCAT( tname, sizeof(tname), ".DEC");
+    OSPRINTF( bname, sizeof(bname), "%s.DEC", nm);
     scalef = 4095.0/1023.0;
     if (flag < 1)   // safety..
       flag = 1;
@@ -1328,7 +1334,7 @@ cPatternEntry *RFController::resolveFreqList(int lnum, double *offsetArray, int 
 	char nbuff[256];
 	int j,index,nsize,tstore[64];
         int wordcount,eventcount;
-	sprintf(nbuff,"__freqList_%d",lnum);
+	OSPRINTF( nbuff, sizeof(nbuff), "__freqList_%d", lnum);
 	cPatternEntry *tmp = find(nbuff, 8);
 	// already defined??
 	if (tmp != NULL)
@@ -1360,7 +1366,7 @@ int RFController::useRTFreq(int lnum,int vvar)
    char nbuff[256];
    int num, evntc, wordc;
    int abuff[4];
-   sprintf(nbuff,"__freqList_%d",lnum);
+   OSPRINTF( nbuff, sizeof(nbuff), "__freqList_%d", lnum);
    cPatternEntry *tmp = find(nbuff, 8);
    if (tmp == NULL)
      text_error("did not find frequency list");
@@ -1480,12 +1486,13 @@ cPatternEntry *RFController::resolveHomoDecPattern(char *nm, int flag, double pw
 
     ampScale = 1023.0;
     rawwfgsize = 262144;
-    strcpy(tname,nm);
-    strcat(tname,".DEC");
+    OSTRCPY( tname, sizeof(tname), nm);
+    OSTRCAT( tname, sizeof(tname), ".DEC");
     scalef = 4095.0/1023.0;
     if (flag < 1)   // safety..
       flag = 1;
-    sprintf(dbname,"%s_hd %g-%d",nm,pw_90,dwTicks); // construct a pattern id
+    // construct a pattern id
+    OSPRINTF( dbname, sizeof(dbname), "%s_hd %g-%d", nm, pw_90, dwTicks);
     // see if we can find dbname if so return it...
     // else construct,  and enter into database...
     tmp = find(dbname, flag);
@@ -1763,8 +1770,8 @@ cPatternEntry *RFController::resolveSWIFTpattern(char *nm, int dwTicks, int rfon
       abort_message("waveform shape name not defined for swift_acquire. abort!\n");
    }
 
-   strcpy(pname, nm);
-   strcat(pname,".RF");
+   OSTRCPY( pname, sizeof(pname), nm);
+   OSTRCAT( pname, sizeof(pname), ".RF");
    i = findPatternFile(pname);
    if (i != 1)
    {
@@ -2138,9 +2145,9 @@ int RFController::initializeExpStates(int setupflag)
 
   if ( P_getstring(CURRENT,"ampmode",ampModeStr,1,16) < 0)
   {
-     strcpy(ampModeStr,"dddddddddddddddddddddddd");
+     OSTRCPY( ampModeStr, sizeof(ampModeStr), "dddddddddddddddddddddddd");
   }
-  strcpy(nucStr,"none");
+  OSTRCPY( nucStr, sizeof(nucStr), "none");
   if (strcmp(logicalName,"obs")==0)  P_getstring(CURRENT,"tn",nucStr,1,256);
   if (strcmp(logicalName,"dec")==0)  P_getstring(CURRENT,"dn",nucStr,1,256);
   if (strcmp(logicalName,"dec2")==0)  P_getstring(CURRENT,"dn2",nucStr,1,256);
@@ -2426,31 +2433,31 @@ void RFController::initAmpLinearization(char *nucStr)
 
     index = 0;
 
-    strcpy(ampdir,nucStr);
+    OSTRCPY( ampdir, sizeof(ampdir), nucStr);
     if (P_getstring(GLOBAL, "hipwrampenable", strbuff, 1, 32) >= 0) {
        int i=Name[2]-'0'; // rf1=1 rf2=2 ..
        if(i>0 && strbuff[i-1]=='y')
-           strcat(ampdir,"-HP");
+           OSTRCAT( ampdir, sizeof(ampdir), "-HP");
     }
 
     // search user and system directories for tpwr map file
     if(use_tpwr>0){
-        sprintf(dirpath, "%s/amptables/%s/%s", userdir,Name,ampdir);
-        sprintf(path, "%s/tpwr.map",dirpath);
+        OSPRINTF( dirpath, sizeof(dirpath), "%s/amptables/%s/%s", userdir, Name, ampdir);
+        OSPRINTF( path, sizeof(path), "%s/tpwr.map",dirpath);
         FILE *fp = fopen(path, "r");
         if (fp == NULL){
-            sprintf(dirpath, "%s/amptables/%s/%s", systemdir,Name,ampdir);
-            sprintf(path, "%s/tpwr.map",dirpath);
+            OSPRINTF( dirpath, sizeof(dirpath), "%s/amptables/%s/%s", systemdir, Name, ampdir);
+            OSPRINTF( path, sizeof(path), "%s/tpwr.map", dirpath);
             fp = fopen(path, "r");
         }
         if (fp == NULL){
-            sprintf(dirpath, "%s/amptables/%s", userdir,Name);
-            sprintf(path, "%s/tpwr.map",dirpath);
+            OSPRINTF( dirpath, sizeof(dirpath), "%s/amptables/%s", userdir, Name);
+            OSPRINTF( path, sizeof(path), "%s/tpwr.map", dirpath);
             fp = fopen(path, "r");
         }
         if (fp == NULL){
-            sprintf(dirpath, "%s/amptables/%s", systemdir,Name);
-            sprintf(path, "%s/tpwr.map",dirpath);
+            OSPRINTF( dirpath, sizeof(dirpath), "%s/amptables/%s", systemdir, Name);
+            OSPRINTF( path, sizeof(path), "%s/tpwr.map", dirpath);
             fp = fopen(path, "r");
         }
         if (fp == NULL){
@@ -2495,12 +2502,12 @@ void RFController::initAmpLinearization(char *nucStr)
     }
 
     // search user and system directories for table info file
-    sprintf(dirpath, "%s/amptables/%s/%s", userdir,Name,ampdir);
-    sprintf(path, "%s/tables.map",dirpath);
+    OSPRINTF( dirpath, sizeof(dirpath), "%s/amptables/%s/%s", userdir, Name, ampdir);
+    OSPRINTF( path, sizeof(path), "%s/tables.map", dirpath);
     FILE *fp = fopen(path, "r");
     if (fp == NULL){
-        sprintf(dirpath, "%s/amptables/%s/%s", systemdir,Name,ampdir);
-        sprintf(path, "%s/tables.map",dirpath);
+        OSPRINTF( dirpath, sizeof(dirpath), "%s/amptables/%s/%s", systemdir, Name, ampdir);
+        OSPRINTF( path, sizeof(path), "%s/tables.map", dirpath);
         fp = fopen(path, "r");
     }
     if (fp == NULL){
@@ -2578,7 +2585,7 @@ void RFController::initAmpLinearization(char *nucStr)
         bool bintables=false;
         if(strcmp(tblfile,"inline")!=0){
             fclose(fp);
-            sprintf(path, "%s/%s", dirpath,tblfile);
+            OSPRINTF( path, sizeof(path), "%s/%s", dirpath, tblfile);
             fp = fopen(path, "rb");
             if(fp==NULL){
                 use_tbls=0;
@@ -3215,7 +3222,7 @@ cPatternEntry *RFController::makeOffsetPattern(char *nm, int nInc, double phss, 
   int wcount, eventcount, repeats,trepeats;
   char qname[200],tname[200];
   pInc = degrees2Binary(phss); //  --- rounding .....
-  sprintf(qname,"ols_%s:%d,%g_%5.3f_%s",nm,nInc,phss,pacc,tag);
+  OSPRINTF( qname, sizeof(qname), "ols_%s:%d,%g_%5.3f_%s", nm, nInc, phss, pacc, tag);
 
   cPatternEntry *tmp;
 
@@ -3238,8 +3245,8 @@ cPatternEntry *RFController::makeOffsetPattern(char *nm, int nInc, double phss, 
   pDinc = phss*((double) nInc);
   wcount = 0;
   eventcount = 0;
-  strcpy(tname,nm);
-  strcat(tname,".RF");
+  OSTRCPY( tname, sizeof(tname), nm);
+  OSTRCAT( tname, sizeof(tname), ".RF");
   //
   i = findPatternFile(tname);
   if (i != 1)
@@ -3325,8 +3332,8 @@ int RFController::analyzeRFPattern(char *nm, int flag, const char *emsg, int act
     {
       return tmp->getNumberStates();
     }
-    strcpy(tname,nm);
-    strcat(tname,".RF");
+    OSTRCPY( tname, sizeof(tname), nm);
+    OSTRCAT( tname, sizeof(tname), ".RF");
     wcount = 0; eventcount = 0;
 
        i = findPatternFile(tname);
@@ -3386,20 +3393,23 @@ int RFController::rRFOffsetShapeList(char *baseshape, double pw, double *offsetL
 
    int numEntries = (int)num;
 
-   if (strcmp(baseshape,"") == 0) strcpy(pname,"hard"); else strcpy(pname,baseshape);
+   if (strcmp(baseshape,"") == 0)
+       OSTRCPY( pname, sizeof(pname), "hard");
+   else
+       OSTRCPY( pname, sizeof(pname), baseshape);
 
    refPat = resolveRFPattern(pname,1,"RFoffset_shapelist",1);
    if (refPat == NULL)
        abort_message("unable to find %s shape file. abort!\n",pname);
    rmspower = refPat->getPowerFraction(); // everyone's got the same power.. 
-   strcpy(tagname,"");
+   OSTRCPY( tagname, sizeof(tagname), "");
    // generates a signature of the offset list ..
    if (numEntries > 1)
    {
 	   tsum = 0.0;
 	   for (i=1; i < numEntries; i++)
 		   tsum += *(offsetList+i);
-	   sprintf(tagname,"%7.1f",tsum);
+	   OSPRINTF( tagname, sizeof(tagname), "%7.1f", tsum);
    }
    numberStates = refPat->getNumberStates();
    listId = -1;
@@ -3597,7 +3607,7 @@ int RFController::registerUserDECShape(char *name, struct _DECpattern *pa, doubl
     int pcntrl;
     // do we already know the pattern??
     if (dps_flag) return(0);
-    sprintf(lname,"%s_%d",name,mode); 
+    OSPRINTF( lname, sizeof(lname), "%s_%d", name, mode);
     cPatternEntry *tmp = find(lname, 2);  /* flag?? */
     if (tmp != NULL)
       return(0);
@@ -3767,7 +3777,7 @@ RFSpecificPulse::RFSpecificPulse(int RFChanNum, int onOff, char cmode, char *nam
   rfChanID = RFChanNum;
   p2rfc = P2TheConsole->getRFControllerByLogicalIndex(rfChanID);
   onFlag = onOff;
-  strncpy(shapeName,name,256);
+  OSTRCPY( shapeName, sizeof(shapeName), name);
   pw = pwidth;
   mode[0] = cmode;
   tpwr = cpwr;

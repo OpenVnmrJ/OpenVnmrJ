@@ -434,7 +434,7 @@ CP make_cp(CP cp)
    double at;
    double t;
    double ph,dph,aLast,aCurrent;
-   sprintf(shapepath,"%s/shapelib/%s.DEC",userdir,cp.pattern);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s/shapelib/%s.DEC", userdir, cp.pattern);
 
 // Set the waveform on the designated channel
    chnl = 0;
@@ -474,7 +474,7 @@ CP make_cp(CP cp)
 
    char lpattern[NPATTERN];
    int lix = arryindex(cp.array);
-   sprintf(lpattern,"%s%d",getname0("",cp.seqName,""),cp.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", getname0("",cp.seqName,""), cp.nRec);
    savet(cp.t, lix, lpattern); //Save the total duration to the MODULE structure. 
 
    if((fp = fopen(shapepath,"w"))==NULL) {
@@ -1214,8 +1214,8 @@ MPSEQ MPchopper(MPSEQ seq)
 
 // Open the output file
 
-   sprintf(str,"%s/shapelib/",userdir);
-   sprintf(shapepath,"%s%s.DEC",str,seq.pattern);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/", userdir);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s%s.DEC", str, seq.pattern);
    if ( (fp = fopen(shapepath,"w")) == NULL) {
       printf("Error in open of %s \n",shapepath);
       psg_abort(1);
@@ -1240,7 +1240,7 @@ MPSEQ MPchopper(MPSEQ seq)
    seq.t = seq.telem*seq.nelem;
 
    char lpattern[NPATTERN];
-   sprintf(lpattern,"%s%d",getname0("",seq.seqName,""),seq.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", getname0("",seq.seqName,""), seq.nRec);
    int lix = arryindex(seq.array);
    savet(seq.t, lix, lpattern);  //Save the total duration to the MODULE structure.
    npuls = seq.nphBase*seq.nelem;
@@ -1380,8 +1380,8 @@ RAMP make_ramp(RAMP r)
    double ph,dph,aLast,aCurrent=0.0,phase;
    enum polarity {NORMAL, UP_UP, DOWN_DOWN, DOWN_UP, UP_DOWN};
    enum polarity POL = NORMAL;
-   sprintf(str,"%s/shapelib/",userdir);
-   sprintf(shapepath,"%s%s.DEC",str,r.pattern);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/", userdir);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s%s.DEC", str, r.pattern);
    if ((fp = fopen(shapepath,"w")) == NULL) {
       printf("Error in open of %s \n",shapepath);
       psg_abort(1);
@@ -1427,7 +1427,7 @@ RAMP make_ramp(RAMP r)
 
    char lpattern[NPATTERN];
    int lix = arryindex(r.array);
-   sprintf(lpattern,"%s%d",getname0("",r.seqName,""),r.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", getname0("",r.seqName,""), r.nRec);
    savet(r.t, lix, lpattern); //Save the total duration to a MODULE structure. 
 
    ph = r.phAccum;
@@ -1593,11 +1593,11 @@ RAMP update_ramp(RAMP seq, double p, double phint, int iRec)
 
    char lpattern[NPATTERN];
    var = getname0("",seq.seqName,"");
-   sprintf(lpattern,"%s%d",var,seq.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, seq.nRec);
    seq.hasArray = hasarry(seq.array, lpattern);
    int lix = arryindex(seq.array);
    var = getname0("",seq.seqName,"");
-   sprintf(seq.pattern,"%s%d_%d",var,seq.nRec,lix);
+   OSPRINTF( seq.pattern, sizeof(seq.pattern), "%s%d_%d", var, seq.nRec, lix);
    if (seq.hasArray == 1) {
       seq = make_ramp(seq);
    }
@@ -1621,11 +1621,11 @@ SHAPE update_shape(SHAPE seq, double p, double phint, int iRec)
 
    char lpattern[NPATTERN];
    var = getname0("",seq.pars.seqName,"");
-   sprintf(lpattern,"%s%d",var,seq.pars.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, seq.pars.nRec);
    seq.pars.hasArray = hasarry(seq.pars.array, lpattern);
    int lix = arryindex(seq.pars.array);
    var = getname0("",seq.pars.seqName,"");
-   sprintf(seq.pars.pattern,"%s%d_%d",var,seq.pars.nRec,lix);
+   OSPRINTF( seq.pars.pattern, sizeof(seq.pars.pattern), "%s%d_%d", var, seq.pars.nRec, lix);
    if (seq.pars.hasArray == 1) {
       seq = make_shape(seq);
    }  
@@ -1649,11 +1649,11 @@ CP update_cp(CP seq, double p, double phint, int iRec)
 
    char lpattern[NPATTERN];
    var = getname0("",seq.seqName,"");
-   sprintf(lpattern,"%s%d",var,seq.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, seq.nRec);
    seq.hasArray = hasarry(seq.array, lpattern);
    int lix = arryindex(seq.array);
    var = getname0("",seq.seqName,"");
-   sprintf(seq.pattern,"%s%d_%d",var,seq.nRec,lix);
+   OSPRINTF( seq.pattern, sizeof(seq.pattern), "%s%d_%d", var, seq.nRec, lix);
    if (seq.hasArray == 1) {
       seq = make_cp(seq);
    }  
@@ -1678,11 +1678,11 @@ MPSEQ update_mpseq(MPSEQ seq, int iph, double p, double phint, int iRec)
 
    char lpattern[NPATTERN];
    var = getname0("",seq.seqName,"");
-   sprintf(lpattern,"%s%d",var,seq.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, seq.nRec);
    seq.hasArray = hasarry(seq.array, lpattern);
    int lix = arryindex(seq.array);
    var = getname0("",seq.seqName,"");
-   sprintf(seq.pattern,"%s%d_%d",var,seq.nRec,lix);
+   OSPRINTF( seq.pattern, sizeof(seq.pattern), "%s%d_%d", var, seq.nRec, lix);
    if (seq.hasArray == 1) {
       seq = MPchopper(seq);
       seq.iSuper = iph + seq.nelem%seq.nphSuper;
@@ -1711,8 +1711,8 @@ SHAPE make_shape(SHAPE s)
 
 // Open the output file
 
-   sprintf(str,"%s/shapelib/",userdir);
-   sprintf(shapepath,"%s%s.DEC",str,s.pars.pattern);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/", userdir);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s%s.DEC", str, s.pars.pattern);
    if ((fp = fopen(shapepath,"w")) == NULL) {
       printf("Error in open of %s \n",shapepath);
       psg_abort(1);
@@ -1725,7 +1725,7 @@ SHAPE make_shape(SHAPE s)
 
    char lpattern[NPATTERN];
    int lix = arryindex(s.pars.array);
-   sprintf(lpattern,"%s%d",getname0("",s.pars.seqName,""),s.pars.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d",getname0("",s.pars.seqName,""), s.pars.nRec);
    savet(s.pars.t, lix, lpattern); //  Save the total duration to the MODULE structure
 
 // Initialize the phase, the time and the ticks
@@ -1841,7 +1841,7 @@ SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
       printf("Error in genericInitShape! The  name %s is invalid !\n",name);
       psg_abort(-1);
    }
-   sprintf(s.pars.seqName,"%s",name);
+   OSPRINTF( s.pars.seqName, sizeof(s.pars.seqName), "%s", name);
 
 // Obtain Phase Arguments
 
@@ -1880,12 +1880,12 @@ SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
 
    char lpattern[NPATTERN];
    var = getname0("",s.pars.seqName,"");
-   sprintf(lpattern,"%s%d",var,s.pars.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, s.pars.nRec);
    s.pars.hasArray = hasarry(s.pars.array, lpattern);
    int lix = arryindex(s.pars.array);
    var = getname0("",s.pars.seqName,"");
    if (s.pars.calc > 0) {
-      sprintf(s.pars.pattern,"%s%d_%d",var,s.pars.nRec,lix);
+      OSPRINTF( s.pars.pattern, sizeof(s.pars.pattern), "%s%d_%d", var, s.pars.nRec, lix);
       if (s.pars.hasArray == 1) {
          s = make_shape(s);
       }
@@ -3435,7 +3435,7 @@ void adj_initcp_(CP a, double *b)
    char str[MAXSTR];
    FILE *fp;
    extern char userdir[];
-   sprintf(str,"%s/shapelib/PRESET.DEC",userdir);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/PRESET.DEC", userdir);
 
    if((fp = fopen(str,"w"))==NULL) {
       printf("Error in adj_initcp(): can not create file PRESET.DEC!\n");
@@ -3509,7 +3509,7 @@ void adj_initmpseq(MPSEQ a, double *b)
    char str[MAXSTR];
    FILE *fp;
    extern char userdir[];
-   sprintf(str,"%s/shapelib/PRESET.DEC",userdir);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/PRESET.DEC", userdir);
 
    if((fp = fopen(str,"w"))==NULL) {
       printf("Error in adj_initcp(): can not create file PRESET.DEC!\n");
@@ -3564,7 +3564,7 @@ void adj_initramp(RAMP a, double *b)
    char str[MAXSTR];
    FILE *fp;
    extern char userdir[];
-   sprintf(str,"%s/shapelib/PRESET.DEC",userdir);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/PRESET.DEC", userdir);
 
    if((fp = fopen(str,"w"))==NULL) {
       printf("Error in adj_initcp(): can not create file PRESET.DEC!\n");
@@ -3630,7 +3630,7 @@ void adj_initshape(SHAPE a, double *b)
    char str[MAXSTR];
    FILE *fp;
    extern char userdir[];
-   sprintf(str,"%s/shapelib/PRESET.DEC",userdir);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/PRESET.DEC", userdir);
 
    if((fp = fopen(str,"w"))==NULL) {
       printf("Error in adj_initcp(): can not create file PRESET.DEC!\n");

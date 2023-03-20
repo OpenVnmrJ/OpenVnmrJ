@@ -15,6 +15,13 @@
 #include "Console.h"
 #include "cpsg.h"
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
+
 extern int bgflag;
 
 bool          AcodeManager::instanceAMflag = false;
@@ -46,7 +53,6 @@ AcodeManager* AcodeManager::getInstance()
 AcodeManager::AcodeManager()
 {
   pArrayAcodeBufs = NULL;
-
   acodeStage = 0;
   cntrlr = 0;
   numcntrlrs = 0;
@@ -73,10 +79,10 @@ AcodeManager::AcodeManager(int numcntrls)
   cntrlr=0;
   numcntrlrs = numcntrls;
   acodesz   = 4096;
-  strcpy(acodeStageNames[0],"init");
-  strcpy(acodeStageNames[1],"pre");
-  strcpy(acodeStageNames[2],"ps");
-  strcpy(acodeStageNames[3],"post");
+  OSTRCPY( acodeStageNames[0], sizeof(acodeStageNames[0]), "init");
+  OSTRCPY( acodeStageNames[1], sizeof(acodeStageNames[1]), "pre");
+  OSTRCPY( acodeStageNames[2], sizeof(acodeStageNames[2]), "ps");
+  OSTRCPY( acodeStageNames[3], sizeof(acodeStageNames[3]), "post");
   acodeStageWriteFlag[ACODE_INIT]=0;
   acodeStageWriteFlag[ACODE_PRE] =0;
   acodeStageWriteFlag[ACODE_PS]  =0;

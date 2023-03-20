@@ -44,6 +44,8 @@
                      for relatively latge J-couplings and relatively small sw. 
 */
 
+#include "safestring.h"
+
 static shape hidec, lodec;
 
 void make_bilev(double BLorder, double pwhi, double pwlo, double dbw, double rpw90, double rpwr)
@@ -55,16 +57,13 @@ void make_bilev(double BLorder, double pwhi, double pwlo, double dbw, double rpw
   {
     abort_message("Unsafe BLxpwr level. Aborting");
   }
-    
-  sprintf(cmd,"Pbox hilev.DEC -u %s -w \"wurst2i %.1f/%.7f\" -sucyc t5 -s 1.0 -p %.0f -l %.1f",
-               userdir, dbw, pwhi, rpwr, rpw90*1.0e6);
+
+  OSPRINTF( cmd, sizeof(cmd), "Pbox hilev.DEC -u %s -w \"wurst2i %.1f/%.7f\" -sucyc t5 -s 1.0 -p %.0f -l %.1f", userdir, dbw, pwhi, rpwr, rpw90*1.0e6);
   system(cmd);  
   if(BLorder == 16.0)             
-    sprintf(cmd,"Pbox lolev.DEC -u %s -w \"WURST2 %.1f/%.7f\" -sucyc m16 -s 1.0 -p %.0f -l %.1f",
-                 userdir, dbw, pwlo, rpwr, rpw90*1.0e6);
+    OSPRINTF( cmd, sizeof(cmd), "Pbox lolev.DEC -u %s -w \"WURST2 %.1f/%.7f\" -sucyc m16 -s 1.0 -p %.0f -l %.1f", userdir, dbw, pwlo, rpwr, rpw90*1.0e6);
   else
-    sprintf(cmd,"Pbox lolev.DEC -u %s -w \"WURST2 %.1f/%.7f\" -sucyc t5,m4 -s 1.0 -p %.0f -l %.1f",
-                 userdir, dbw, pwlo, rpwr, rpw90*1.0e6);
+    OSPRINTF( cmd, sizeof(cmd), "Pbox lolev.DEC -u %s -w \"WURST2 %.1f/%.7f\" -sucyc t5,m4 -s 1.0 -p %.0f -l %.1f", userdir, dbw, pwlo, rpwr, rpw90*1.0e6);
   system(cmd);               
   hidec = getDsh("hilev");
   lodec = getDsh("lolev");

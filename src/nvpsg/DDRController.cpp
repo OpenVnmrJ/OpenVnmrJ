@@ -31,6 +31,12 @@
 #include "stdio.h"
 #include "acqparms.h"
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 #define WriteWord( x ) pAcodeBuf->putCode( x )
 
 //#define USE_AQTM   // undefine to disable filter reflection at end of fid

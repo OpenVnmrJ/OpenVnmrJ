@@ -225,11 +225,11 @@ TPPM gettppm(char *name)
    int nRec = 0;
    char lpattern[NPATTERN];
    var = getname0("","TPPM",name);
-   sprintf(lpattern,"%s%d",var,nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, nRec);
    dec.hasArray = hasarry(dec.array, lpattern);
    int lix = arryindex(dec.array);
    var = getname0("","TPPM",name);
-   sprintf(dec.pattern,"%s%d_%d",var,nRec,lix);
+   OSPRINTF( dec.pattern, sizeof(dec.pattern), "%s%d_%d", var, nRec, lix);
    if (dec.hasArray == 1) {
       make_tppm(dec);
    }
@@ -282,11 +282,11 @@ SPINAL getspinal(char *name)
    int nRec = 0;  
    char lpattern[NPATTERN];
    var = getname0("","SPINAL",name);
-   sprintf(lpattern,"%s%d",var,nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, nRec);
    dec.hasArray = hasarry(dec.array, lpattern);
    int lix = arryindex(dec.array);
    var = getname0("","SPINAL",name);
-   sprintf(dec.pattern,"%s%d_%d",var,nRec,lix);
+   OSPRINTF( dec.pattern, sizeof(dec.pattern), "%s%d_%d", var, nRec, lix);
    if (dec.hasArray == 1) {
       make_spinal(dec);
    }
@@ -345,11 +345,11 @@ SPINAL2 getspinal2(char *name)
    int nRec = 0;  
    char lpattern[NPATTERN];
    var = getname0("","SPINAL2",name);
-   sprintf(lpattern,"%s%d",var,nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, nRec);
    dec.hasArray = hasarry(dec.array, lpattern);
    int lix = arryindex(dec.array);
    var = getname0("","SPINAL2",name);
-   sprintf(dec.pattern,"%s%d_%d",var,nRec,lix);
+   OSPRINTF( dec.pattern, sizeof(dec.pattern), "%s%d_%d", var, nRec, lix);
    if (dec.hasArray == 1) {
       make_spinal2(dec);
    }
@@ -408,11 +408,11 @@ SPINAL2 getspinal2s(char *name)
    int nRec = 0;  
    char lpattern[NPATTERN];
    var = getname0("","SPINAL",name);
-   sprintf(lpattern,"%s%d",var,nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, nRec);
    dec.hasArray = hasarry(dec.array, lpattern);
    int lix = arryindex(dec.array);
    var = getname0("","SPINAL",name);
-   sprintf(dec.pattern,"%s%d_%d",var,nRec,lix);
+   OSPRINTF( dec.pattern, sizeof(dec.pattern), "%s%d_%d", var, nRec, lix);
    if (dec.hasArray == 1) {
       make_spinal2(dec);
    }
@@ -459,11 +459,11 @@ WALTZ getwaltz(char *name)
    int nRec = 0;  
    char lpattern[NPATTERN];
    var = getname0("","WALTZ",name);
-   sprintf(lpattern,"%s%d",var,nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, nRec);
    dec.hasArray = hasarry(dec.array, lpattern);
    int lix = arryindex(dec.array);
    var = getname0("","WALTZ",name);
-   sprintf(dec.pattern,"%s%d_%d",var,nRec,lix);
+   OSPRINTF( dec.pattern, sizeof(dec.pattern), "%s%d_%d", var, nRec, lix);
    if (dec.hasArray == 1) {
       make_waltz(dec);
    }
@@ -512,11 +512,11 @@ PARIS getparis(char *name)
    int nRec = 0;
    char lpattern[NPATTERN];
    var = getname0("","PARIS",name);
-   sprintf(lpattern,"%s%d",var,nRec);   
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, nRec);   
    dec.hasArray = hasarry(dec.array, lpattern);
    int lix = arryindex(dec.array);
    var = getname0("","PARIS",name);
-   sprintf(dec.pattern,"%s%d_%d",var,nRec,lix);
+   OSPRINTF( dec.pattern, sizeof(dec.pattern), "%s%d_%d", var, nRec, lix);
    if (dec.hasArray == 1) {
       make_paris(dec);
    }
@@ -533,8 +533,8 @@ void make_tppm(TPPM dec)
    FILE *fp;
    int i;
    extern char userdir[];
-   sprintf(shapepath,"%s/shapelib/",userdir);
-   sprintf(str,"%s%s.DEC",shapepath,dec.pattern);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s/shapelib/", userdir);
+   OSPRINTF( str, sizeof(str), "%s%s.DEC", shapepath, dec.pattern);
 
    if((fp = fopen(str,"w"))==NULL) {
       abort_message("Error in make_tppm(): can not create file %s!\n", str);
@@ -632,8 +632,8 @@ void make_spinal(SPINAL dec)
    extern char userdir[];
    int n,i;
    int sign[8] = {1,-1,-1,1,-1,1,1,-1};
-   sprintf(shapepath,"%s/shapelib/",userdir);
-   sprintf(str,"%s%s.DEC",shapepath,dec.pattern);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s/shapelib/", userdir);
+   OSPRINTF( str, sizeof(str), "%s%s.DEC", shapepath, dec.pattern);
 
    if((fp = fopen(str,"w"))==NULL) {
       abort_message("Error in make_spinal(): can not create file %s!\n", str);
@@ -731,8 +731,8 @@ void make_spinal2(SPINAL2 dec)
    extern char userdir[];
    int n,i;
    int sign[8] = {1,-1,-1,1,-1,1,1,-1};
-   sprintf(shapepath,"%s/shapelib/",userdir);
-   sprintf(str,"%s%s.DEC",shapepath,dec.pattern);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s/shapelib/", userdir);
+   OSPRINTF( str, sizeof(str), "%s%s.DEC", shapepath, dec.pattern);
 
    if((fp = fopen(str,"w"))==NULL) {
       abort_message("Error in make_spinal2(): can not create file %s!\n", str);
@@ -829,8 +829,8 @@ void make_waltz(WALTZ dec)
    FILE *fp;
    extern char userdir[];
    int i;
-   sprintf(shapepath,"%s/shapelib/",userdir);
-   sprintf(str,"%s%s.DEC",shapepath,dec.pattern);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s/shapelib/", userdir);
+   OSPRINTF( str, sizeof(str), "%s%s.DEC", shapepath, dec.pattern);
 
    if((fp = fopen(str,"w"))==NULL) {
       abort_message("Error in make_waltz(): can not create file %s!\n", str);
@@ -928,8 +928,8 @@ void make_paris(PARIS p)
    FILE *fp;
    extern char userdir[];
    int i;
-   sprintf(shapepath,"%s/shapelib/",userdir);
-   sprintf(str,"%s%s.DEC",shapepath,p.pattern);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s/shapelib/", userdir);
+   OSPRINTF( str, sizeof(str), "%s%s.DEC", shapepath, p.pattern);
 
    if((fp = fopen(str,"w"))==NULL) {
       abort_message("Error in make_paris(): can not create file %s!\n", str);
@@ -1025,8 +1025,8 @@ DSEQ getdseq(char *name)
 {
    DSEQ d;
    char var[13];
-   sprintf(var,"%s",name);
-   strcat(var,"seq");
+   OSPRINTF( var, sizeof(var), "%s", name);
+   OSTRCAT( var, sizeof(var), "seq");
    Getstr(var,d.seq,sizeof(d.seq));
 
    if (!strcmp(d.seq,"tppm")) {
@@ -1070,7 +1070,7 @@ DSEQ getdseq2(char *name)
 DSEQ setdseq(char *name, char *seq)
 {
    DSEQ d;
-   sprintf(d.seq,"%s",seq);
+   OSPRINTF( d.seq, sizeof(d.seq), "%s", seq);
 
    if (!strcmp(d.seq,"tppm")) {
       d.t = gettppm(name);

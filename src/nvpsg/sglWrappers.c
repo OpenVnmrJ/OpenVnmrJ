@@ -10,8 +10,12 @@
 *   HISTORY:
 *
 ***************************************************************************/
+
 #include "sglCommon.h"
 #include "sglWrappers.h"
+
+#include "safestring.h"
+
 extern int checkflag;
 extern int option_check(const char *);
 
@@ -87,7 +91,7 @@ void init_slice(SLICE_SELECT_GRADIENT_T *grad, char name[],double thk)
    initSliceSelect(grad);                     /* initialize slice select gradient with defaults*/
    grad->thickness  = thk;		      /* assign slice thickness */
    grad->maxGrad    = gmax;                   /* assign maximum allowed gradient */
-   strcpy(grad->name,name);                   /* assign waveform name */
+   OSTRCPY( grad->name, sizeof(grad->name), name); /* assign waveform name */
    }
 
 void init_slice_butterfly(SLICE_SELECT_GRADIENT_T *grad, char name[], 
@@ -97,7 +101,7 @@ void init_slice_butterfly(SLICE_SELECT_GRADIENT_T *grad, char name[],
    initSliceSelect(grad);                        /* initialize slice select gradient with defaults*/
    grad->thickness  = thk;                       /* assign slice thickness */
    grad->maxGrad    = gmax;                      /* assign maximum allowed gradient */     
-   strcpy(grad->name,name);                      /* assign waveform name */
+   OSTRCPY( grad->name, sizeof(grad->name), name); /* assign waveform name */
    grad->enableButterfly   = TRUE;               /* enable butterfly gradients */
    grad->cr1amp            = grad->cr2amp            = gcrush;       /* assign crusher amplitude */
    grad->crusher1Duration  = grad->crusher2Duration  = tcrush;       /* assign crusher duration */
@@ -138,7 +142,7 @@ void init_slice_refocus(REFOCUS_GRADIENT_T *refgrad, char name[])
    if ((ix > 1) && !sglarray) return;
    initRefocus(refgrad);                          /* initialize refocus gradient with defaults */
    refgrad->maxGrad = glim*gmax;                  /* assign maximum allowed gradient */     
-   strcpy(refgrad->name,name);                    /* assign waveform name */
+   OSTRCPY( refgrad->name, sizeof(refgrad->name), name); /* assign waveform name */
    }
 
 
@@ -148,7 +152,7 @@ void calc_slice_refocus(REFOCUS_GRADIENT_T *refgrad, SLICE_SELECT_GRADIENT_T *gr
    
    if ((ix > 1) && !sglarray) return;
    refgrad->balancingMoment0 = grad->m0ref * refgrad->gmult;  /* assign refocusing moment */
-   strcpy(refgrad->param1,VJparam_g);                         /* assign VNMRJ parameter 1 */
+   OSTRCPY( refgrad->param1, sizeof(refgrad->param1), VJparam_g); /* assign VNMRJ parameter 1 */
    refgrad->writeToDisk      = write_flag;                    /* set writeToDisk flag */
    calcRefocus(refgrad);                                      /* calculate slice refocusign gradient */
 
@@ -167,7 +171,7 @@ void calc_slice_dephase(REFOCUS_GRADIENT_T *refgrad, SLICE_SELECT_GRADIENT_T *gr
    
    if ((ix > 1) && !sglarray) return;
    refgrad->balancingMoment0 = grad->m0def * refgrad->gmult;  /* assign dephasing moment */
-   strcpy(refgrad->param1,VJparam_g);                         /* assign VNMRJ parameter 1 */
+   OSTRCPY( refgrad->param1, sizeof(refgrad->param1), VJparam_g); /* assign VNMRJ parameter 1 */
    refgrad->writeToDisk      = write_flag;                    /* set writeToDisk flag */
    calcRefocus(refgrad);                                      /* calculate slice refocusign gradient */
 
@@ -192,7 +196,7 @@ void init_readout(READOUT_GRADIENT_T *grad, char name[],
    grad->acqTime       = np/(2*sw);   	            /* set acquisition time */
    grad->maxGrad       = gmax;                      /* assign maximum allowed gradient */
    grad->fov           = lro*10;                    /* set field of view [cm] */
-   strcpy(grad->name,name);                         /* assign waveform name */
+   OSTRCPY( grad->name, sizeof(grad->name), name); /* assign waveform name */
    }
 
 void init_readout_butterfly(READOUT_GRADIENT_T *grad, char name[], 
@@ -205,7 +209,7 @@ void init_readout_butterfly(READOUT_GRADIENT_T *grad, char name[],
    grad->acqTime       = np/2/sw;   	            /* set acquisition time */
    grad->maxGrad       = gmax;                      /* assign maximum allowed gradient */
    grad->fov           = lro*10;                    /* set field of view [cm] */
-   strcpy(grad->name,name);                         /* assign waveform name */
+   OSTRCPY( grad->name, sizeof(grad->name), name); /* assign waveform name */
 
    grad->enableButterfly   = TRUE;                   /* enable butterfly gradients */
    grad->cr1amp            = grad->cr2amp            = gcrush;           /* assign crusher amplitude */
@@ -248,7 +252,7 @@ void init_readout_refocus(REFOCUS_GRADIENT_T *refgrad, char name[])
    if ((ix > 1) && !sglarray) return;
    initDephase(refgrad);                          /* initialize dephase gradient with defaults */
    refgrad->maxGrad = glim*gmax;                  /* assign maximum allowed gradient */     
-   strcpy(refgrad->name,name);                    /* assign waveform name */
+   OSTRCPY( refgrad->name, sizeof(refgrad->name), name); /* assign waveform name */
    }
 
 void calc_readout_refocus(REFOCUS_GRADIENT_T *refgrad, READOUT_GRADIENT_T *grad,
@@ -257,7 +261,7 @@ void calc_readout_refocus(REFOCUS_GRADIENT_T *refgrad, READOUT_GRADIENT_T *grad,
    if ((ix > 1) && !sglarray) return;
    refgrad->balancingMoment0 = grad->m0ref * refgrad->gmult;                    /* Assign dephase moment */
    refgrad->writeToDisk      = write_flag;                     /* Set writeToDisk flag */
-   strcpy(refgrad->param1,VJparam_g);                          /* assign VNMRJ parameter 1 */
+   OSTRCPY( refgrad->param1, sizeof(refgrad->param1), VJparam_g); /* assign VNMRJ parameter 1 */
    calcRefocus(refgrad);                                       /* calculate dephase gradient */
    
    /* return dephase gradient parameter to VnmrJ space */   
@@ -271,7 +275,7 @@ void calc_readout_rephase(REFOCUS_GRADIENT_T *refgrad, READOUT_GRADIENT_T *grad,
    if ((ix > 1) && !sglarray) return;
    refgrad->balancingMoment0 = grad->m0def * refgrad->gmult;   /* Assign dephase moment */
    refgrad->writeToDisk      = write_flag;                     /* Set writeToDisk flag */
-   strcpy(refgrad->param1,VJparam_g);                          /* assign VNMRJ parameter 1 */
+   OSTRCPY( refgrad->param1, sizeof(refgrad->param1), VJparam_g); /* assign VNMRJ parameter 1 */
    calcRefocus(refgrad);                                       /* calculate dephase gradient */
    
    /* return dephase gradient parameter to VnmrJ space */   
@@ -291,15 +295,15 @@ void init_phase(PHASE_ENCODE_GRADIENT_T *grad, char name[], double lpe, double n
    grad->steps    = nv;                         /* number of phase encode steps */
    grad->maxGrad  = gmax*glimpe;                /* maximum allowed gradient */   
    grad->calcFlag = SHORTEST_DURATION_FROM_MOMENT;  
-   strcpy(grad->name,name);                     /* assign waveform name */
+   OSTRCPY( grad->name, sizeof(grad->name), name); /* assign waveform name */
    }
 
 void calc_phase(PHASE_ENCODE_GRADIENT_T *grad, int write_flag, char VJparam_g[], char VJparam_t[]) 
    {
    if ((ix > 1) && !sglarray) return;
    grad->writeToDisk = write_flag;          /* set writeToDiskFlag */
-   strcpy(grad->param1,VJparam_g);          /* assign VNMRJ parameter 1 */
-   strcpy(grad->param2,VJparam_t);          /* assign VNMRJ parameter 2 */
+   OSTRCPY( grad->param1, sizeof(grad->param1), VJparam_g); /* assign VNMRJ parameter 1 */
+   OSTRCPY( grad->param2, sizeof(grad->param2), VJparam_t); /* assign VNMRJ parameter 2 */
    calcPhase(grad);                         /* calculate and create phase encode grdient */
    /* return phase encode gradient parameters to VnmrJ space */   
    if (strcmp(VJparam_g, ""))
@@ -318,7 +322,7 @@ void init_dephase( GENERIC_GRADIENT_T *grad, char name[] )
 	if( (ix > 1) && !sglarray ) return;
 	initDephase( grad );
 	grad->maxGrad = glim*gmax;
-	strcpy(grad->name, name);	
+    OSTRCPY( grad->name, sizeof(grad->name), name);
 }
 
 void calc_dephase( GENERIC_GRADIENT_T *grad, int write_flag, double moment0,
@@ -327,8 +331,8 @@ void calc_dephase( GENERIC_GRADIENT_T *grad, int write_flag, double moment0,
 	if( (ix > 1) && !sglarray ) return;
 	grad->balancingMoment0 = moment0 * grad->gmult;
 	grad->writeToDisk = write_flag;
-	strcpy( grad->param1, VJparam_g );
-	strcpy( grad->param2, VJparam_t );
+    OSTRCPY( grad->param1, sizeof(grad->param1), VJparam_g);
+    OSTRCPY( grad->param2, sizeof(grad->param2), VJparam_t);
 	calcRefocus( grad );
 	if( strcmp( VJparam_g, "" ) )
 		putvalue( VJparam_g, grad->amp );
@@ -347,7 +351,7 @@ void init_generic(GENERIC_GRADIENT_T *grad, char name[], double amp, double time
    grad->amp = amp;                              /* assign gradient amplitude */
    grad->duration  = time;                       /* assign gradient duration */
    grad->maxGrad   = gmax;                       /* assign maximum allowed gradient */               
-   strcpy(grad->name,name);                      /* assign waveform name */
+   OSTRCPY( grad->name, sizeof(grad->name), name); /* assign waveform name */
    }
 
 
@@ -357,8 +361,8 @@ void calc_generic(GENERIC_GRADIENT_T *grad, int write_flag, char VJparam_g[], ch
 
    if ((ix > 1) && !sglarray) return;
    grad->writeToDisk = write_flag;        /* assign writeToDisk flag */
-   strcpy(grad->param1,VJparam_g);        /* Assign VNMRJ paramter 1 */
-   strcpy(grad->param2,VJparam_t);        /* Assign VNMRJ paramter 2 */
+   OSTRCPY( grad->param1, sizeof(grad->param1), VJparam_g); /* Assign VNMRJ paramter 1 */
+   OSTRCPY( grad->param2, sizeof(grad->param2), VJparam_t);/* Assign VNMRJ paramter w */
 
    if (grad->amp > grad->maxGrad) {
      sgl_abort_message("ERROR gradient %s: Crusher amplitude (%.2f) exceeds maximum (%.2f)",
@@ -412,7 +416,7 @@ void trapezoid(GENERIC_GRADIENT_T *grad, char name[], double amp, double time, d
    grad->m0        = moment;                     /* assign moment0 */
    grad->maxGrad   = gmax;                       /* assign maximum allowed gradient */               
    grad->writeToDisk = write_flag;               /* set writeToDisk flag */
-   strcpy(grad->name,name);                      /* assign waveform name */
+   OSTRCPY( grad->name, sizeof(grad->name), name); /* assign waveform name */
 
    /* check amplitude */
    if (amp > glim*gmax) {
@@ -612,7 +616,7 @@ double calc_zfill_gradient(FLOWCOMP_T *grad0, GENERIC_GRADIENT_T  *grad1,
 
     initZeroFillGradient(&zf_grad0); /* initialize zerofill structure for pe grad */
    // strcpy(zf_grad0.name,"zfgrad0");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
-     strcpy(zf_grad0.name,"zfgrad0");  //Don't explode!!!
+    OSTRCPY( zf_grad0.name, sizeof(zf_grad0.name), "zfgrad0");
     text_message("grad0 name is %s", grad0->name);
 
     zf_grad0.numPoints= grad0->numPoints ;/* assign number of waveform points */
@@ -628,9 +632,8 @@ double calc_zfill_gradient(FLOWCOMP_T *grad0, GENERIC_GRADIENT_T  *grad1,
     writeToDisk(grad0->dataPoints, grad0->numPoints, 0, grad0->resolution,
 				     TRUE /*rolout*/, grad0->name); 
     initZeroFillGradient(&zf_grad1); /* initialize zerofill structure for pe grad */
-    strcpy(zf_grad1.name,"zfgrad1");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
+    OSTRCPY( zf_grad1.name, sizeof(zf_grad1.name), "zfgrad1");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
     
-
     zf_grad1.numPoints= grad1->numPoints ;/* assign number of waveform points */
     zf_grad1.dataPoints = grad1->dataPoints; /* assign waveform to be zero-filled */
     zf_grad1.newDuration= time; /* duration of the fc grad for readout */
@@ -645,9 +648,8 @@ double calc_zfill_gradient(FLOWCOMP_T *grad0, GENERIC_GRADIENT_T  *grad1,
 				     grad1->rollOut, grad1->name); 
 
     initZeroFillGradient(&zf_grad2); /* initialize zerofill structure for pe grad */
-    strcpy(zf_grad2.name,"zfgrad2");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
+    OSTRCPY( zf_grad2.name, sizeof(zf_grad2.name), "zfgrad2");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
     
-
     zf_grad2.numPoints= grad2->numPoints ;/* assign number of waveform points */
     zf_grad2.dataPoints = grad2->dataPoints; /* assign waveform to be zero-filled */
     zf_grad2.newDuration= time; /* duration of the fc grad for readout */
@@ -692,9 +694,8 @@ double calc_zfill_gradient2(FLOWCOMP_T *grad0, FLOWCOMP_T  *grad1,
 
     initZeroFillGradient(&zf_grad0); /* initialize zerofill structure for pe grad */
    // strcpy(zf_grad0.name,"zfgrad0");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
-     strcpy(zf_grad0.name,"zfgrad0");  
+    OSTRCPY(zf_grad0.name, sizeof(zf_grad0.name), "zfgrad0");  
    
-
     zf_grad0.numPoints= grad0->numPoints ;/* assign number of waveform points */
     zf_grad0.dataPoints = grad0->dataPoints; /* assign waveform to be zero-filled */
     zf_grad0.newDuration= time; /* duration of the fc grad for readout */
@@ -708,9 +709,8 @@ double calc_zfill_gradient2(FLOWCOMP_T *grad0, FLOWCOMP_T  *grad1,
     writeToDisk(grad0->dataPoints, grad0->numPoints, 0, grad0->resolution,
 				     TRUE /*rolout*/, grad0->name); 
     initZeroFillGradient(&zf_grad1); /* initialize zerofill structure for pe grad */
-    strcpy(zf_grad1.name,"zfgrad1");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
+    OSTRCPY( zf_grad1.name, sizeof(zf_grad1.name), "zfgrad1");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
    
-
     zf_grad1.numPoints= grad1->numPoints ;/* assign number of waveform points */
     zf_grad1.dataPoints = grad1->dataPoints; /* assign waveform to be zero-filled */
     zf_grad1.newDuration= time; /* duration of the fc grad for readout */
@@ -725,9 +725,8 @@ double calc_zfill_gradient2(FLOWCOMP_T *grad0, FLOWCOMP_T  *grad1,
 				     grad1->rollOut, grad1->name); 
 
     initZeroFillGradient(&zf_grad2); /* initialize zerofill structure for pe grad */
-    strcpy(zf_grad2.name,"zfgrad2");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
+    OSTRCPY( zf_grad2.name, sizeof(zf_grad2.name), "zfgrad2");   /*fill in the unique name, otherwise the name will be repeated for each zerofill pattern*/
     
-
     zf_grad2.numPoints= grad2->numPoints ;/* assign number of waveform points */
     zf_grad2.dataPoints = grad2->dataPoints; /* assign waveform to be zero-filled */
     zf_grad2.newDuration= time; /* duration of the fc grad for readout */
@@ -751,7 +750,7 @@ double calc_zfill_gradient2(FLOWCOMP_T *grad0, FLOWCOMP_T  *grad1,
 /**************************************************************************/
 /*** RF pulse *************************************************************/
 /**************************************************************************/
-void init_rf (RF_PULSE_T *rf, char rfName[], double pw, double flip,
+void init_rf (RF_PULSE_T *rf, char rfName[MAX_STR], double pw, double flip,
               double rof1, double rof2)
    {
    if ((ix > 1) && !sglarray) {
@@ -759,8 +758,8 @@ void init_rf (RF_PULSE_T *rf, char rfName[], double pw, double flip,
      return;
    }
    initRf(rf);
-   strcpy(rf->pulseName,rfName);
-   strcpy(rf->rfcoil,rfcoil);
+   OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rfName);
+   OSTRCPY( rf->rfcoil, sizeof(rf->rfcoil), rfcoil);
    rf->rfDuration = shapelistpw(rfName,pw);  /* Round to 200ns resolution*/
    rf->flip = flip;
    rf->flipmult = 1.0;   /* default to 1, programmer can reassign in sequence */
@@ -782,7 +781,7 @@ void init_rf (RF_PULSE_T *rf, char rfName[], double pw, double flip,
      sgl_abort_message("ERROR rf shape '%s': RF Fraction must be between 0 and 1",rfName);
    }
 
-void shape_rf (RF_PULSE_T *rf, char rfBase[], char rfName[], double pw, double flip,
+void shape_rf (RF_PULSE_T *rf, char rfBase[MAX_STR], char rfName[MAX_STR], double pw, double flip,
               double rof1, double rof2)
    {
    if ((ix > 1) && !sglarray) {
@@ -790,9 +789,9 @@ void shape_rf (RF_PULSE_T *rf, char rfBase[], char rfName[], double pw, double f
      return;
    }
    initRf(rf);
-   strcpy(rf->pulseBase,rfBase);
-   strcpy(rf->pulseName,rfName);
-   strcpy(rf->rfcoil,rfcoil);
+   OSTRCPY( rf->pulseBase, sizeof(rf->pulseBase), rfBase);
+   OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rfName);
+   OSTRCPY( rf->rfcoil, sizeof(rf->rfcoil), rfcoil);
    rf->rfDuration = pw;
    rf->flip = flip;
    rf->flipmult = 1.0;
@@ -843,8 +842,8 @@ void calc_rf (RF_PULSE_T *rf, char VJparam_tpwr[], char VJparam_tpwrf[])
    {
    
    //if ((ix > 1) && !sglarray) return;
-   strcpy(rf->param1,VJparam_tpwr);
-   strcpy(rf->param2,VJparam_tpwrf);
+   OSTRCPY( rf->param1, sizeof(rf->param1), VJparam_tpwr);
+   OSTRCPY( rf->param2, sizeof(rf->param2), VJparam_tpwrf);
    calcPower(rf, rf->rfcoil);
    switch (rf->error) {
      case ERR_RF_CALIBRATION_FILE_MISSING:

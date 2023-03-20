@@ -141,11 +141,11 @@ STATE tanramp_state(double t, SHAPE_PARS p)
    enum polarity POL = NORMAL;
    STATE s;
 
-   if(strcmp(p.flag2,"n") == 0 ) POL = NORMAL;
-   if(strcmp(p.flag2,"uu") == 0 )POL = UP_UP;
-   if(strcmp(p.flag2,"dd") == 0 )POL = DOWN_DOWN;
-   if(strcmp(p.flag2,"du") == 0 ) POL = DOWN_UP;
-   if(strcmp(p.flag2,"ud") == 0 )POL = UP_DOWN;
+   if ( strcmp(p.flag2,"n" ) == 0 ) POL = NORMAL;
+   if ( strcmp(p.flag2,"uu") == 0 ) POL = UP_UP;
+   if ( strcmp(p.flag2,"dd") == 0 ) POL = DOWN_DOWN;
+   if ( strcmp(p.flag2,"du") == 0 ) POL = DOWN_UP;
+   if ( strcmp(p.flag2,"ud") == 0 ) POL = UP_DOWN;
 
    mean = p.a;
    norm = 1023.0/(mean + fabs(p.dp[0]));
@@ -232,4 +232,3 @@ STATE dumbo_state(double t, SHAPE_PARS p)
 }
 
 #endif
-

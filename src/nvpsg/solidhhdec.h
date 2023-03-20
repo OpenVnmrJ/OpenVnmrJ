@@ -62,7 +62,9 @@ MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
 {
    MPDEC d;
    char *var;
-   strcpy(d.seqName,name);
+   char n[2];
+   
+   OSTRCPY( d.seqName, sizeof(d.seqName), name);
    var = getname0("seq",d.seqName,"");
    Getstr(var,d.seq,sizeof(d.seq));
 
@@ -74,9 +76,11 @@ MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
 // mpsName - seqName for mpseq
 
    var = getname0(d.seq,d.seqName,"");
-   strcpy(d.mpsName,d.seq);
+   OSTRCPY( d.mpsName, sizeof(d.mpsName), d.seq);
    var = getname0("",d.seqName,"");
-   strncat(d.mpsName,var,1);
+   n[0] = *var;
+   n[1] = (char) 0;
+   OSTRCAT( d.mpsName, sizeof(d.mpsName), n);
 
    if (!strcmp(d.seq,"tppm") || !strcmp(d.seq,"spinal")) {
       d.mps = getspnl(name,iph,p,phint,iRec,calc);
@@ -110,7 +114,8 @@ MPDEC setmpdec(char *name, int iph, double p, double phint, int iRec, int calc)
 {
    MPDEC d;
    char *var;
-   strcpy(d.seqName,name);
+
+   OSTRCPY( d.seqName, sizeof(d.seqName), name);
    var = getname0("seq",d.seqName,"");
    Getstr(var,d.seq,sizeof(d.seq));
 
@@ -837,7 +842,7 @@ MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int
       printf("Error in getpmlgsuper(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   strcpy(pm.seqName,seqName);
+   OSTRCPY( pm.seqName, sizeof(pm.seqName), seqName);
    pm.calc = calc;
    pm.array = parsearry(pm.array);
 
@@ -978,12 +983,12 @@ MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int
 
    char lpattern[NPATTERN];
    var = getname0("",pm.seqName,"");
-   sprintf(lpattern,"%s%d",var,pm.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, pm.nRec);
    pm.hasArray = hasarry(pm.array, lpattern);
    int lix = arryindex(pm.array);
    if (pm.calc > 0) {
       var = getname0("",pm.seqName,"");
-      sprintf(pm.pattern,"%s%d_%d",var,pm.nRec,lix);
+      OSPRINTF( pm.pattern, sizeof(pm.pattern), "%s%d_%d", var, pm.nRec, lix);
       if (pm.hasArray == 1) {
          pm = MPchopper(pm); 
          pm.iSuper = iph + pm.nelem%pm.nphSuper;
@@ -992,8 +997,3 @@ MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int
    }
    return pm;
 }
-
-
-
-
-

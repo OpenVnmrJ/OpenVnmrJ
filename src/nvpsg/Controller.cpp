@@ -23,6 +23,7 @@
 extern "C" {
 #include "vnmrsys.h"
 #include "vfilesys.h"
+#include "safestring.h"
 extern char curexp[];
 extern int dps_flag;
 }
@@ -45,7 +46,7 @@ int cPatternEntry::patID = 1;
 
 cPatternEntry::cPatternEntry()
 {
-   strcpy(name,"none");
+   OSTRCPY( name, sizeof(name), "none");
    keys=0; numberWords = 0;
    numberStates = 0;
    durationWord = 0L;
@@ -63,7 +64,7 @@ cPatternEntry::cPatternEntry()
 //
 cPatternEntry::cPatternEntry(const char *nm, int ky, int nstates, int nW)
 {
-   strcpy(name,nm);
+   OSTRCPY( name, sizeof(name), nm);
    keys = ky;
    numberWords = nW;
    numberStates = nstates;
@@ -82,7 +83,7 @@ cPatternEntry::cPatternEntry(const char *nm, int ky, int nstates, int nW)
 //
 cPatternEntry::cPatternEntry(const char *nm, int ky, int refID, int nstates, int nW)
 {
-   strcpy(name,nm);
+   OSTRCPY( name, sizeof(name), nm);
    keys = ky;
    numberWords = nW;
    numberStates = nstates;
@@ -97,7 +98,7 @@ cPatternEntry::cPatternEntry(const char *nm, int ky, int refID, int nstates, int
 
 cPatternEntry::cPatternEntry(cPatternEntry *orig)
 {
-   strcpy(name,orig->name);
+   OSTRCPY( name, sizeof(name), orig->name);
    keys = orig->keys;
    numberWords = orig->numberWords;
    numberStates = orig->numberStates;
@@ -239,8 +240,8 @@ int cPatternEntry::getLastElement()
 
 PowerMonitor::PowerMonitor(double tc, double al, const char *msg)
 {
-   strncpy(message,msg,256);
-   strncpy(message2,msg,256);
+   OSTRCPY( message, sizeof(message), msg);
+   OSTRCPY( message2, sizeof(message2), msg);
    energyMax = 0.0;   // largest recorded value..
    energyAccumulated = 0.0;
    eventStartEnergyAccumulated = energyAccumulated;
@@ -398,7 +399,7 @@ void PowerMonitor::setAlarmLevel(double threshold,int action, const char *emsg)
 {
   alarmLevel = threshold;
   trip_action = action;
-  strncpy(message2,emsg,256);
+  OSTRCPY( message2, sizeof(message2), emsg);
 }
 
 void PowerMonitor::setTimeConstant(double tc)
@@ -526,7 +527,7 @@ int Controller::SeqID= 0;
 //
 Controller::Controller()
 {
-    strcpy(Name,"generic");
+    OSTRCPY( Name, sizeof(Name), "generic");
     kind = GENERIC_TAG;
     usage = SYNCHRONOUS;  // default to SYNCHRONOUS
     dataWordCount = 0;
@@ -560,7 +561,7 @@ Controller::Controller()
 
 Controller::Controller(const char *nm, int num)
 {
-    strcpy(Name,nm);
+    OSTRCPY( Name, sizeof(Name), nm);
     kind = GENERIC_TAG;
     dataWordCount = 0;
     bigTicker = 0;
@@ -617,9 +618,9 @@ void Controller::setWaveformBuffer()
 AcodeBuffer* Controller::setAcodeBuffer(const char *type)
 {
   char fileName[64];
-  strcpy(fileName,type);
-  strcat(fileName,".");
-  strcat(fileName,Name);
+  OSTRCPY( fileName, sizeof(fileName), type);
+  OSTRCAT( fileName, sizeof(fileName), ".");
+  OSTRCAT( fileName, sizeof(fileName), Name);
   AcodeBuffer *pSpecialBuf = pAcodeMgr->setAcodeBuffer(fileName,UniqueID);
   pSpecialBuf->cHeader.comboID_and_Number = UNDEFINEDHEADER;
   return pSpecialBuf;

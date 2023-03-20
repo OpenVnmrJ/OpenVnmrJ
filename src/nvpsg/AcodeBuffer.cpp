@@ -20,6 +20,12 @@ using namespace std;
 #include "ACode32.h"
 #include "AcodeBuffer.h"
 
+extern "C" {
+
+#include "safestring.h"
+
+};
+
 extern int bgflag;
 extern int checkflag;
 
@@ -48,8 +54,8 @@ AcodeBuffer::AcodeBuffer(size_t array_size, char *array_name, char *stage, int u
   ssWind  = 0;
   ssIndex = 0;
   subSectionInUse=false;
-  strcpy(acodeName, array_name);
-  strcpy(acodeStage,stage);
+  OSTRCPY( acodeName, sizeof(acodeName), array_name);
+  OSTRCPY( acodeStage, sizeof(acodeStage), stage);
   acodeUniqueID = uID;
   cHeader.comboID_and_Number = UNDEFINEDHEADER;
   cHeader.sizeInBytes = 0;
@@ -236,7 +242,7 @@ int AcodeBuffer::openAcodeFile(int option)
   }
   else
   {
-     sprintf(buffer,"%s.%s.%s",infopath,acodeStage,acodeName);
+     OSPRINTF( buffer, sizeof(buffer), "%s.%s.%s", infopath, acodeStage, acodeName);
      ofs.open(buffer,ios::out|ios::binary);
   }
 
