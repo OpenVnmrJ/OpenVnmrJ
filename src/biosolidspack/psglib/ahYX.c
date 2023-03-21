@@ -102,14 +102,14 @@ void pulsesequence() {
 // Define Variables and Modules and Get Parameter Values
 
    CP hy = getcp("HY",0.0,0.0,0,1);
-   strcpy(hy.fr,"dec");
-   strcpy(hy.to,"dec2");
+   OSTRCPY( hy.fr, sizeof(hy.fr), "dec");
+   OSTRCPY( hy.to, sizeof(hy.to), "dec2");
    putCmd("frHY='dec'\n");
    putCmd("toHY='dec2'\n");
     
    CP yx = getcp("YX",0.0,0.0,0,1);
-   strcpy(yx.fr,"dec2");
-   strcpy(yx.to,"obs");
+   OSTRCPY( xy.fr, sizeof(xy.fr), "dec2");
+   OSTRCPY( xy.to, sizeof(xy.to), "obs");
    putCmd("frYX='dec2'\n");
    putCmd("toYX='obs'\n");
 
@@ -128,7 +128,7 @@ void pulsesequence() {
    char mMix[MAXSTR];
    getstr("mMix",mMix);
 
-   strcpy(mMix,"darr");
+   OSTRCPY( mMix, sizeof(mMix), "darr");
    putCmd("mMix='darr'\n");
 
 // Determine taur, One Rotor Cycle

@@ -116,8 +116,8 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strcpy(hx.fr,"dec");
-   strcpy(hx.to,"obs");
+   OSTRCPY(hx.fr, sizeof(hx.fr), "dec");
+   OSTRCPY(hx.to, sizeof(hx.to), "obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
@@ -133,32 +133,46 @@ void pulsesequence() {
 
 // Choose the Experiment
 
-   char cp[MAXSTR]; 
-   char flip[MAXSTR]; 
-   char echo[MAXSTR];
+   char cp[10]; 
+   char flip[10]; 
+   char echo[10];
    char pseq[MAXSTR];
    getstr("pseq",pseq);
 
    if (!strcmp(pseq,"one")) {              // Cross Polarization
-      strcpy(cp,"y"); strcpy(echo,"n"); strcpy(flip,"n");
+      OSTRCPY( cp,   sizeof(cp),   "y");
+      OSTRCPY( echo, sizeof(echo), "n");
+      OSTRCPY( flip, sizeof(flip), "n");
    }
    else if (!strcmp(pseq,"two")) {         // Direct Polarization
-      strcpy(cp,"n"); strcpy(echo,"n"); strcpy(flip,"n");
+      OSTRCPY( cp,   sizeof(cp),   "n");
+      OSTRCPY( echo, sizeof(echo), "n");
+      OSTRCPY( flip, sizeof(flip), "n");
    }
    else if (!strcmp(pseq,"three")) {       // Cross Poarization with Flipback
-      strcpy(cp,"y"); strcpy(echo,"n"); strcpy(flip,"y");
+      OSTRCPY( cp,   sizeof(cp),   "y");
+      OSTRCPY( echo, sizeof(echo), "n");
+      OSTRCPY( flip, sizeof(flip), "y");
    }
    else if (!strcmp(pseq,"four")) {        // Cross Polarization with Hard Echo
-      strcpy(cp,"y"); strcpy(echo,"hard"); strcpy(flip,"n");
+      OSTRCPY( cp,   sizeof(cp),   "y");
+      OSTRCPY( echo, sizeof(echo), "hard");
+      OSTRCPY( flip, sizeof(flip), "n");
    }
    else if (!strcmp(pseq,"five")) {        // Cross Polarization with Soft Echo
-      strcpy(cp,"y"); strcpy(echo,"soft"); strcpy(flip,"n");
+      OSTRCPY( cp,   sizeof(cp),   "y");
+      OSTRCPY( echo, sizeof(echo), "soft");
+      OSTRCPY( flip, sizeof(flip), "n");
    } 
    else if (!strcmp(pseq,"six")) {         // Direct Polarization with Hard Echo
-      strcpy(cp,"n"); strcpy(echo,"hard"); strcpy(flip,"n");
+      OSTRCPY( cp,   sizeof(cp),   "n");
+      OSTRCPY( echo, sizeof(echo), "hard");
+      OSTRCPY( flip, sizeof(flip), "n");
    }
    else if (!strcmp(pseq,"seven")) {       // Direct Polarization with Soft Echo
-      strcpy(cp,"n"); strcpy(echo,"soft"); strcpy(flip,"n");
+      OSTRCPY( cp,   sizeof(cp),   "n");
+      OSTRCPY( echo, sizeof(echo), "soft");
+      OSTRCPY( flip, sizeof(flip), "n");
    }
    else {
       printf("ABORT: Experiment Not Found ");
