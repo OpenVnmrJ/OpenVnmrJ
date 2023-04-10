@@ -69,8 +69,8 @@ RFController::RFController(char *name,int flags)
  , mySynthesizer(name,flags)
  , powerWatch(1.0,10.0,name)
  {
-   patternDataStore = new int[4000]; // (int *) malloc(4000*sizeof(int));
         patternDataStoreSize = 4000;
+        patternDataStore = new int[patternDataStoreSize];
         patternDataStoreUsed = 0;
 
         progDecInterLock = 0;
@@ -217,7 +217,7 @@ int RFController::degrees2Binary(double xx)
    int tmp;
    while (xx < 0.0)
       xx += 360.0;
-   tmp = (int) (fmod(xx,360.0)*65536.0/360.0 + 0.49);
+   tmp = (int) (fmod(xx,360.0)*65536.0/360.0 + 0.499999999999999999999999);
    tmp &= 0xffff;
    return(tmp);
 }
@@ -228,7 +228,7 @@ int RFController::degrees2XBinary(double xx)
    while (xx < 0.0)
       xx += 360.0;
    // 2^31 precision rt math down shifts by 15!
-   tmp = (int) (fmod(xx,360.0)*32768.0*65536.0/360.0 + 0.49);
+   tmp = (int) (fmod(xx,360.0)*32768.0*65536.0/360.0 + 0.499999999999999999999999);
    return((int) tmp);
 }
 // 4095.0 is the fine power standard
