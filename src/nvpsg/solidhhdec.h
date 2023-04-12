@@ -62,8 +62,16 @@ MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
 {
    MPDEC d;
    char *var;
+
+   if (strlen(name) >= sizeof(d.seqName)) {
+     printf("getmpdec() Error: name string is too long!%s \n",name);
+     psg_abort(1);
+   }
+  
    strcpy(d.seqName,name);
+   
    var = getname0("seq",d.seqName,"");
+   
    Getstr(var,d.seq,sizeof(d.seq));
 
 // dmXmpdec
@@ -110,8 +118,16 @@ MPDEC setmpdec(char *name, int iph, double p, double phint, int iRec, int calc)
 {
    MPDEC d;
    char *var;
+
+   if (strlen(name) >= sizeof(d.seqName)) {
+     printf("setmpdec() Error: name string is too long!%s \n",name);
+     psg_abort(1);
+   }
+
    strcpy(d.seqName,name);
+   
    var = getname0("seq",d.seqName,"");
+   
    Getstr(var,d.seq,sizeof(d.seq));
 
 // dmXmpdec
