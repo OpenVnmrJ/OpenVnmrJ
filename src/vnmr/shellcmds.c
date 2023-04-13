@@ -2176,6 +2176,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             lineCount = 0;
             headCount = 0;
             skipCount = 0;
+            wordCount = 0;
          }
       }
       len = strlen(inLine);          /* get buf length */
