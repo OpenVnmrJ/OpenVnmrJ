@@ -64,8 +64,7 @@ MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
    char *var;
 
    if (strlen(name) >= sizeof(d.seqName)) {
-     printf("getmpdec() Error: name string is too long!%s \n",name);
-     psg_abort(1);
+     abort_message("getmpdec() Error: name string is too long! %s",name);
    }
   
    strcpy(d.seqName,name);
@@ -106,8 +105,7 @@ MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
       d.mps = getsamn(name,iph,p,phint,iRec,calc);
       return d;
    }
-   printf("getmpdec() Error: Undefined Decoupling Sequence!%s \n",name);
-   psg_abort(1);
+   abort_message("getmpdec() Error: Undefined Decoupling Sequence! %s",name);
 }
 
 //========================================
@@ -120,8 +118,7 @@ MPDEC setmpdec(char *name, int iph, double p, double phint, int iRec, int calc)
    char *var;
 
    if (strlen(name) >= sizeof(d.seqName)) {
-     printf("setmpdec() Error: name string is too long!%s \n",name);
-     psg_abort(1);
+     abort_message("setmpdec() Error: name string is too long! %s",name);
    }
 
    strcpy(d.seqName,name);
@@ -155,8 +152,7 @@ MPDEC setmpdec(char *name, int iph, double p, double phint, int iRec, int calc)
       d.mps = getsamn(name,iph,p,phint,iRec,calc);
       return d;
    }
-   printf("setmpdec() Error: Undefined Decoupling Sequence!%s \n",name);
-   psg_abort(1);
+   abort_message("setmpdec() Error: Undefined Decoupling Sequence! %s",name);
 }
 
 // ---------------------------------------
