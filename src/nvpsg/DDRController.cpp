@@ -71,6 +71,19 @@ DDRController::DDRController(char *name,int flags,int id):Controller(name,flags)
     ddrActive4Exp = flags;
     reset_all();
     debug=0;
+    // these following were missing
+    tc = 0;
+    np = 0;
+    al = 0;
+    dl = 0;
+    nfids = 0;
+    amax = 0;
+    bmax = 0;
+    nmax = 0;
+    tp1 = 0;
+    tp2 = 0;
+    nblks = 0;
+    RF_LO_source = 0;
 }
 
 //=========================================================================
@@ -723,7 +736,7 @@ int DDRController::initializeExpStates(int setupflag)
 
     ns=(int) (bs?bs:nt);
 
-    dl = al = xp =(int) (np / 2.0); // make all the same for the time being
+    dl = al = (int) (np / 2.0); // make all the same for the time being
 
     // evaluate expargs string
 

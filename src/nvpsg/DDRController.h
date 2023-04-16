@@ -40,15 +40,14 @@ class DDRController: public Controller
     double sw2,os2,xs2,fw2;
     double cor,maxcr;
     double sr,sd;
-    double cp, cf, ca, tc,cp1;
+    double cp, cf, ca, tc;
     unsigned int mode;
     unsigned int np;
-    unsigned int al,dl,xp,ns,nf,nfmod,nacms,nacqs,dbytes,ascale;
+    unsigned int al,dl,ns,nf,nfmod,nacms,nacqs,dbytes,ascale;
     unsigned int n1,m1,b1,n2,m2,b2,ny1,nx1,stages;
     unsigned int bkpts,nfids,bmax,nmax,amax;
     unsigned int acycles,tp1,tp2,nblks;
     long long acqTicks,scanTicks,sampleTicks;
-    int avar,pvar;
     double pstep;
     int RF_LO_source;
     
