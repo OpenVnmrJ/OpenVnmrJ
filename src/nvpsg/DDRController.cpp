@@ -71,6 +71,8 @@ DDRController::DDRController(char *name,int flags,int id):Controller(name,flags)
     ddrActive4Exp = flags;
     reset_all();
     debug=0;
+    // the follwoing were missing
+    RF_LO_source = 0;
 }
 
 //=========================================================================
@@ -208,8 +210,7 @@ void DDRController::reset_all()
     simpeaks=6;
     // These following were missing and added by BDZ on 4-16-23.
     // Apparently they all are set by intializeExpStates() as many of
-    // above are too. Besides RF_LO_source they are not referenced
-    // elsewhere.
+    // above are too.
     tc = 0;
     np = 0;
     al = 0;
@@ -221,7 +222,6 @@ void DDRController::reset_all()
     tp1 = 0;
     tp2 = 0;
     nblks = 0;
-    RF_LO_source = 0;
 }
 
 //=========================================================================
