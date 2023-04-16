@@ -21,6 +21,10 @@ LockController::LockController(const char *name, int flags):Controller(name,flag
 {
   setOff();
   kind = LOCK_TAG;
+  lockGain = 0;
+  lockPower = 0;
+  lockPhase = 0;
+  lockOffsetFreq = 0; 
 }
 
 
