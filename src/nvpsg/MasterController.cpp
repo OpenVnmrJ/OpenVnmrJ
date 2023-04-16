@@ -914,6 +914,7 @@ MasterController::MasterController(const char *name, int flags):Controller(name,
   XYZgradflag = 0;  // this was missing
   shimset = -1;
   blafMode = 0;
+  memset(codes, 0, sizeof(codes));
 }
 
 //
