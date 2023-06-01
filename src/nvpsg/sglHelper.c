@@ -710,14 +710,11 @@ void calc_bvalues(DIFFUSION_T *diffusion,char *ropar,char *pepar,char *slpar)
   int i;
   
   /* get and check the size of the diffusion gradient scale arrays (usually dro,dpe,dsl) */
-  P_getVarInfo(CURRENT,ropar,&dvarinfo); 
-  diffusion->nbro = (int)dvarinfo.size; 
+  diffusion->nbro = P_getsize(CURRENT,ropar,NULL);
   diffusion->nbval = diffusion->nbro;
-  P_getVarInfo(CURRENT,pepar,&dvarinfo); 
-  diffusion->nbpe = (int)dvarinfo.size; 
+  diffusion->nbpe = P_getsize(CURRENT,pepar,NULL);
   if (diffusion->nbpe > diffusion->nbval) diffusion->nbval = diffusion->nbpe;
-  P_getVarInfo(CURRENT,slpar,&dvarinfo); 
-  diffusion->nbsl = (int)dvarinfo.size; 
+  diffusion->nbsl = P_getsize(CURRENT,slpar,NULL);
   if (diffusion->nbsl > diffusion->nbval) diffusion->nbval = diffusion->nbsl;
   if ((diffusion->nbro != diffusion->nbval) && (diffusion->nbro != 1))
     abort_message("%s: Number of directions/b-values must be the same for all axes (readout)",seqfil);
@@ -1122,8 +1119,7 @@ void parse_array(ARRAYPARS_T *apars)
   apars->par[j][k]=0; /* NULL terminate */
   /* Fill apars->nvals with the number of values for each parameter */
   for (i=0;i<apars->npars;i++) {
-    P_getVarInfo(CURRENT,apars->par[i],&dvarinfo); 
-    apars->nvals[i] = (int)dvarinfo.size;
+    apars->nvals[i] = P_getsize(CURRENT,apars->par[i],NULL); 
   }
   /* Allocate for npars 'cycles' */
   if ((cycles = (int *)malloc(apars->npars*sizeof(int))) == NULL) abort_message("Insufficient memory");
