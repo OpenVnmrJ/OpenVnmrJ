@@ -55,11 +55,11 @@ makefile="$vnmrsystem"/psg/seqgenmake
 if [ -d "$vnmruser"/psg ]; then
    # If USER does not have the appropriate PSG library, the PSG
    # directory is set to the SYSTEM PSG directory (/VNMR/PSG).
-   if [ x$osname="xLinux" ] && [ -r "$vnmruser"/psg/libpsglib.so.6.0 ]; then
+   if [ x$osname = "xLinux" ] && [ -r "$vnmruser"/psg/libpsglib.so.6.0 ]; then
       rpath="-Wl,-rpath $vnmruser/psg -Wl,-rpath $vnmrsystem/lib"
       psdir="$vnmruser"/psg
    fi
-   if [ x$osname="xDarwin" ] && [ -r "$vnmruser"/psg/libpsglib.a ]; then
+   if [ x$osname = "xDarwin" ] && [ -r "$vnmruser"/psg/libpsglib.a ]; then
       rpath="-Wl,-rpath $vnmruser/psg -Wl,-rpath $vnmrsystem/lib"
       psdir="$vnmruser"/psg
    fi
