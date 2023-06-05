@@ -109,13 +109,6 @@ else
 fi
 
 
-if [ x$LD_LIBRARY_PATH = "x" ]
-then
-    LD_LIBRARY_PATH=$vnmrsystem/java:$vnmruser/psg:$vnmrsystem/lib
-    export LD_LIBRARY_PATH
-fi
-
-
 # Set the name of the host where the Database is located.
 # Default to "localhost".
 if [ x$PGHOST = "x" ]
