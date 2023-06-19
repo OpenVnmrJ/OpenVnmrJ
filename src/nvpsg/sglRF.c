@@ -20,6 +20,7 @@
 
 #include "sglRF.h"
 
+#include "safestring.h"
 
 /*----------------------------------------------------------*/
 /*---- cosine and sine coefficients for Mao pulses      ----*/
@@ -165,13 +166,13 @@ void sincRf(RF_PULSE_T *rf)
   }
 
   /* Set modulation type */
-  strcpy(rf->header.modulation,"amplitude");
+  OSTRCPY( rf->header.modulation, sizeof(rf->header.modulation), "amplitude");
 
   /* Set rf fraction */
   rf->header.rfFraction = 0.5;
 
   /* Set pulse type */
-  strcpy(rf->header.type,"selective");
+  OSTRCPY( rf->header.type, sizeof(rf->header.type), "selective");
 
   /* Set actual bandwidth of pulse */
   if ((FP_LT(rf->flip,FLIPLIMIT_LOW)) || (FP_GT(rf->flip,FLIPLIMIT_HIGH)))
@@ -214,7 +215,7 @@ void sincRf(RF_PULSE_T *rf)
   putparsRf(rf);  
 
   /* Update pulseName with new shape name */
-  strcpy(rf->pulseName,rf->shapeName);
+  OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rf->shapeName);
 
   /* Free memory */
   free(rf->amp);
@@ -278,13 +279,13 @@ void gaussRf(RF_PULSE_T *rf)
   }
 
   /* Set modulation type */
-  strcpy(rf->header.modulation,"amplitude");
+  OSTRCPY( rf->header.modulation, sizeof(rf->header.modulation), "amplitude");
 
   /* Set rf fraction */
   rf->header.rfFraction = 0.5;
 
   /* Set pulse type */
-  strcpy(rf->header.type,"selective");
+  OSTRCPY( rf->header.type, sizeof(rf->header.type), "selective");
 
   /* Set actual bandwidth of pulse */
   if ((FP_LT(rf->flip,FLIPLIMIT_LOW)) || (FP_GT(rf->flip,FLIPLIMIT_HIGH)))
@@ -323,7 +324,7 @@ void gaussRf(RF_PULSE_T *rf)
   putparsRf(rf);  
 
   /* Update pulseName with new shape name */
-  strcpy(rf->pulseName,rf->shapeName);
+  OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rf->shapeName);
 
   /* Free memory */
   free(rf->amp);
@@ -381,13 +382,13 @@ void maoRf(RF_PULSE_T *rf)
   }
 
   /* Set modulation type */
-  strcpy(rf->header.modulation,"amplitude");
+  OSTRCPY( rf->header.modulation, sizeof(rf->header.modulation), "amplitude");
 
   /* Set rf fraction */
   rf->header.rfFraction = 0.5;
 
   /* Set pulse type */
-  strcpy(rf->header.type,"selective");
+  OSTRCPY( rf->header.type, sizeof(rf->header.type), "selective");
 
   /* Set actual bandwidth of pulse */
   rf->bandwidth = rf->header.inversionBw/rf->rfDuration;
@@ -458,7 +459,7 @@ void maoRf(RF_PULSE_T *rf)
   putparsRf(rf);  
 
   /* Update pulseName with new shape name */
-  strcpy(rf->pulseName,rf->shapeName);
+  OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rf->shapeName);
 
   /* Free memory */
   free(rf->amp);
@@ -503,13 +504,13 @@ void hsafpRf(RF_PULSE_T *rf)
   rf->header.inversionBw = rf->rfDuration*rf->bandwidth;
 
   /* Set modulation type */
-  strcpy(rf->header.modulation,"adiabatic");
+  OSTRCPY( rf->header.modulation, sizeof(rf->header.modulation), "adiabatic");
 
   /* Set rf fraction */
   rf->header.rfFraction = 0.5;
 
   /* Set pulse type */
-  strcpy(rf->header.type,"selective");
+  OSTRCPY( rf->header.type, sizeof(rf->header.type), "selective");
 
   /* Set SPL version */
   rf->header.version = SPLVERSION;
@@ -570,7 +571,7 @@ void hsafpRf(RF_PULSE_T *rf)
   putparsRf(rf);  
 
   /* Update pulseName with new shape name */
-  strcpy(rf->pulseName,rf->shapeName);
+  OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rf->shapeName);
 
   /* Free memory */
   free(rf->amp);
@@ -617,13 +618,13 @@ void hsRf(RF_PULSE_T *rf)
   rf->header.inversionBw = rf->rfDuration*rf->bandwidth;
 
   /* Set modulation type */
-  strcpy(rf->header.modulation,"amplitude");
+  OSTRCPY( rf->header.modulation, sizeof(rf->header.modulation), "amplitude");
 
   /* Set rf fraction */
   rf->header.rfFraction = 0.5;
 
   /* Set pulse type */
-  strcpy(rf->header.type,"selective");
+  OSTRCPY( rf->header.type, sizeof(rf->header.type), "selective");
 
   /* Set SPL version */
   rf->header.version = SPLVERSION;
@@ -686,7 +687,7 @@ void hsRf(RF_PULSE_T *rf)
   putparsRf(rf);  
 
   /* Update pulseName with new shape name */
-  strcpy(rf->pulseName,rf->shapeName);
+  OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rf->shapeName);
 
   /* Free memory */
   free(rf->amp);
@@ -731,13 +732,13 @@ void htahpRf(RF_PULSE_T *rf)
   rf->header.inversionBw = -1.0;
 
   /* Set modulation type */
-  strcpy(rf->header.modulation,"adiabatic");
+  OSTRCPY( rf->header.modulation, sizeof(rf->header.modulation), "adiabatic");
 
   /* Set rf fraction */
   rf->header.rfFraction = 0.0;
 
   /* Set pulse type */
-  strcpy(rf->header.type,"nonselective");
+  OSTRCPY( rf->header.type, sizeof(rf->header.type), "nonselective");
 
   /* Set SPL version */
   rf->header.version = SPLVERSION;
@@ -772,7 +773,7 @@ void htahpRf(RF_PULSE_T *rf)
   putparsRf(rf);  
 
   /* Update pulseName with new shape name */
-  strcpy(rf->pulseName,rf->shapeName);
+  OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rf->shapeName);
 
   /* Free memory */
   free(rf->amp);
@@ -817,13 +818,13 @@ void htbir4Rf(RF_PULSE_T *rf)
   rf->header.inversionBw = -1.0;
 
   /* Set modulation type */
-  strcpy(rf->header.modulation,"adiabatic");
+  OSTRCPY( rf->header.modulation, sizeof(rf->header.modulation), "adiabatic");
 
   /* Set rf fraction */
   rf->header.rfFraction = 0.0;
 
   /* Set pulse type */
-  strcpy(rf->header.type,"nonselective");
+  OSTRCPY( rf->header.type, sizeof(rf->header.type), "nonselective");
 
   /* Set SPL version */
   rf->header.version = SPLVERSION;
@@ -885,7 +886,7 @@ void htbir4Rf(RF_PULSE_T *rf)
   putparsRf(rf);  
 
   /* Update pulseName with new shape name */
-  strcpy(rf->pulseName,rf->shapeName);
+  OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rf->shapeName);
 
   /* Free memory */
   free(rf->amp);
@@ -925,13 +926,13 @@ void sineRf(RF_PULSE_T *rf)
   rf->header.inversionBw = -1.0;
 
   /* Set modulation type */
-  strcpy(rf->header.modulation,"amplitude");
+  OSTRCPY( rf->header.modulation, sizeof(rf->header.modulation), "amplitude");
 
   /* Set rf fraction */
   rf->header.rfFraction = 0.5;
 
   /* Set pulse type */
-  strcpy(rf->header.type,"selective");
+  OSTRCPY( rf->header.type, sizeof(rf->header.type), "selective");
 
   /* Set SPL version */
   rf->header.version = SPLVERSION;
@@ -964,7 +965,7 @@ void sineRf(RF_PULSE_T *rf)
   putparsRf(rf);  
 
   /* Update pulseName with new shape name */
-  strcpy(rf->pulseName,rf->shapeName);
+  OSTRCPY( rf->pulseName, sizeof(rf->pulseName), rf->shapeName);
 
   /* Free memory */
   free(rf->amp);
@@ -1087,10 +1088,10 @@ void simAFPintRf(RF_PULSE_T *rf)
   step=rf->pts/1000;
 
   /* Generate filename */
-  strcpy(simfile,userdir);
-  strcat(simfile,"/shapelib/");
-  strcat(simfile,rf->shapeName);
-  strcat(simfile,".sim");
+  OSTRCPY( simfile, sizeof(simfile), userdir);
+  OSTRCAT( simfile, sizeof(simfile), "/shapelib/");
+  OSTRCAT( simfile, sizeof(simfile), rf->shapeName);
+  OSTRCAT( simfile, sizeof(simfile), ".sim");
 
   /* Open simfile */
   if ((fp=fopen(simfile,"w")) == NULL) 
@@ -1164,10 +1165,10 @@ void simintRf(RF_PULSE_T *rf,double targetmz)
   step=rf->pts/1000;
 
   /* Generate filename */
-  strcpy(simfile,userdir);
-  strcat(simfile,"/shapelib/");
-  strcat(simfile,rf->shapeName);
-  strcat(simfile,".sim");
+  OSTRCPY( simfile, sizeof(simfile), userdir);
+  OSTRCAT( simfile, sizeof(simfile), "/shapelib/");
+  OSTRCAT( simfile, sizeof(simfile), rf->shapeName);
+  OSTRCAT( simfile, sizeof(simfile), ".sim");
 
   /* Open simfile */
   if ((fp=fopen(simfile,"w")) == NULL) 
@@ -1241,10 +1242,10 @@ void writeRf(RF_PULSE_T *rf)
   int i;
 
   /* Generate filename */
-  strcpy(shapefile,userdir);
-  strcat(shapefile,"/shapelib/");
-  strcat(shapefile,rf->shapeName);
-  strcat(shapefile,".RF");
+  OSTRCPY( simfile, sizeof(simfile), userdir);
+  OSTRCAT( simfile, sizeof(simfile), "/shapelib/");
+  OSTRCAT( simfile, sizeof(simfile), rf->shapeName);
+  OSTRCAT( simfile, sizeof(simfile), ".RF");
   
   /* Open shapefile */
   if ((fp=fopen(shapefile,"w")) == NULL) 
@@ -1366,9 +1367,9 @@ void writeRf(RF_PULSE_T *rf)
 void setshapeRf(RF_PULSE_T *rf)
 {
   /* Generate new shape name */
-  strcpy(rf->shapeName,rf->pulseName);
-  strcat(rf->shapeName,"_");
-  strcat(rf->shapeName,rf->pulseBase);
+  OSTRCPY( rf->shapeName, sizeof(rf->shapeName), rf->pulseName);
+  OSTRCAT( rf->shapeName, sizeof(rf->shapeName), "_");
+  OSTRCAT( rf->shapeName, sizeof(rf->shapeName), rf->pulseBase);
 }
 
 
@@ -1384,8 +1385,8 @@ void getparsRf(RF_PULSE_T *rf)
   for (i=0;i<MAXRFPARS;i++) rf->pars[i]=0.0;
 
   /* Generate "*pars" name from the base name */  
-  strcpy(parname,rf->pulseBase);
-  strcat(parname,"pars");
+  OSTRCPY( parname, sizeof(parname), rf->pulseBase);
+  OSTRCAT( parname, sizeof(parname), "pars");
 
   /* This will report a suitable error if the "*pars" parameter does not exist */
   rf->npars=(int)getarray(parname,rf->pars);
@@ -1448,8 +1449,8 @@ void putparsRf(RF_PULSE_T *rf)
   char str[MAX_STR];
    
   /* Generate "*pars" name from the base name */  
-  strcpy(str,rf->pulseBase);
-  strcat(str,"pars");
+  OSTRCPY( str, rf->pulseBase);
+  OSTRCAT( str, "pars");
 
   /* Write the shape parameters back to "*pars" */
   putCmd("%s[1] = %f\n",str,rf->res*1.0e6);

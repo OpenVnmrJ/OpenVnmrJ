@@ -13,6 +13,13 @@
 #include "FFKEYS.h"
 #include "ACode32.h"
 #include "cpsg.h"
+
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 //
 #define WriteWord( x ) pAcodeBuf->putCode( x )
 #define putPattern( x ) pWaveformBuf->putCode( x )
@@ -330,8 +337,8 @@ cPatternEntry *GradientController::resolveOblShpGrdPattern(char *nm, int flag, c
     scalef = GRADMAXPLUS;
     if (tmp != NULL)
       return(tmp);
-    strcpy(tname,nm);
-    strcat(tname,".GRD");
+    OSTRCPY( tname, sizeof(tname), nm);
+    OSTRCAT( tname, sizeof(tname), ".GRD");
     wcount = 0; eventcount = 0;
     grad_rms_value = 0.0;
 

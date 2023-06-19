@@ -14,6 +14,8 @@
 #include "Pbox_psg.h"
 #endif
 
+#include "safestring.h"
+
 /*
   Four functions:
   shaped_satpulse(shapename,satduration,frequencyparameter)
@@ -35,12 +37,12 @@ void shaped_satpulse(const char *shn, double saturation1, codeint sphse1)
   extern char userdir[];
   int nlf, i;
 
-  sprintf(shname, "%s_%s",seqfil,shn);
+  OSPRINTF( shname, sizeof(shname), "%s_%s", seqfil,shn);
   if (FIRST_FID)
   {
-        int ret __attribute__((unused));
+    int ret __attribute__((unused));
   	uspw90 = (getval("pw90"))*1e6*(getval("tpwr_cf"));
-  	sprintf(str, "%s/shapelib/Pbox.inp" , userdir);
+  	OSPRINTF( str, sizeof(str), "%s/shapelib/Pbox.inp" , userdir);
   	inpf = fopen(str, "w");
   	nlf = getArrayparval("pstof",&ofq);
   	for (i=0; i<nlf; i++)
@@ -48,7 +50,7 @@ void shaped_satpulse(const char *shn, double saturation1, codeint sphse1)
   	fprintf(inpf, " attn = e \n");
   	fclose(inpf);
 
-  	sprintf(cmd, "Pbox %s.RF -u %s -%.0f -l %.2f -p %.0f \n", shname,userdir,reps,uspw90,tpwr);
+  	OSPRINTF( cmd, sizeof(cmd), "Pbox %s.RF -u %s -%.0f -l %.2f -p %.0f \n", shname, userdir, reps, uspw90, tpwr);
   	ret = system(cmd);
   }
   obspower(satpwr);
@@ -65,12 +67,12 @@ void shaped_saturate(const char *shn2, double saturation2, codeint sphse2)
   extern char userdir[];
   int nlf, i;
 
-  sprintf(shname, "%s_%s",seqfil,shn2);
+  OSPRINTF( shname, sizeof(shname), "%s_%s", seqfil, shn2);
   if (FIRST_FID)
   {
-        int ret __attribute__((unused));
+    int ret __attribute__((unused));
   	uspw90 = (getval("pw90"))*1e6*(getval("tpwr_cf"));
-  	sprintf(str, "%s/shapelib/Pbox.inp" , userdir);
+  	OSPRINTF( str, sizeof(str), "%s/shapelib/Pbox.inp", userdir);
   	inpf = fopen(str, "w");
   	nlf = getArrayparval("pstof",&ofq);
   	for (i=0; i<nlf; i++)
@@ -78,7 +80,7 @@ void shaped_saturate(const char *shn2, double saturation2, codeint sphse2)
   	fprintf(inpf, " attn = e \n");
   	fclose(inpf);
 
-  	sprintf(cmd, "Pbox %s.DEC -u %s -%.0f -l %.2f -p %.0f \n", shname,userdir,reps,uspw90,tpwr);
+  	OSPRINTF( cmd, sizeof(cmd), "Pbox %s.DEC -u %s -%.0f -l %.2f -p %.0f \n", shname, userdir, reps, uspw90, tpwr);
   	ret = system(cmd);
   }
 

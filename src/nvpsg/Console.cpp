@@ -20,6 +20,12 @@
 #include "MasterController.h"
 #include "Bridge.h"
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 extern int bgflag;
 extern int ptsval[];
 extern char gradtype[];
@@ -229,21 +235,21 @@ void Console::build(const char *nm)
   RFController* rfc ;
   for (i = 0; i < (int)numrfchan; i++)
   {
-    sprintf(tbuff,"rf%d",i+1);
+    OSPRINTF( tbuff, sizeof(tbuff), "rf%d", i+1);
     rfc = new RFController(tbuff,ptsval[i]);
-    sprintf(tmpStr,"maxattench%d",i+1);
+    OSPRINTF( tmpStr, sizeof(tmpStr), "maxattench%d", i+1);
     PhysicalTable[nValid++] = (Controller *)   rfc;
     RFUserTable[i]     = (RFController *) rfc;
     if ( P_getreal(GLOBAL,tmpStr,&rfpwr,1) == 0)
       rfc->setMaxUserLevel(rfpwr);
 //  power additions  rf1pop, rf1elimit, rf1pcal etc.
-    sprintf(tmpStr,"%spop",tbuff);
+    OSPRINTF( tmpStr, sizeof(tmpStr), "%spop", tbuff);
     getRealSetDefault(GLOBAL, tmpStr, &pop,3.0);
-    sprintf(tmpStr,"%selimit",tbuff);
+    OSPRINTF( tmpStr, sizeof(tmpStr), "%selimit", tbuff);
     getRealSetDefault(GLOBAL, tmpStr, &alvl,15.0);
-    sprintf(tmpStr,"%spcal",tbuff);
+    OSPRINTF( tmpStr, sizeof(tmpStr), "%spcal", tbuff);
     getRealSetDefault(GLOBAL, tmpStr, &pcal, 2.0);
-    sprintf(tmpStr,"%sptc",tbuff);
+    OSPRINTF( tmpStr, sizeof(tmpStr), "%sptc", tbuff);
     getRealSetDefault(GLOBAL, tmpStr, &ptc, 10.0);
     // set the no safe request 
     if (safetyoff) pop = 0.0; //
@@ -266,7 +272,7 @@ void Console::build(const char *nm)
   numActiveRcvrs = 0;
   for (i = 0; i < (int)numddrchan; i++)
     {
-      sprintf(tbuff,"ddr%d",i+1);
+      OSPRINTF( tbuff, sizeof(tbuff), "ddr%d", i+1);
       rcvrActive = isRcvrActive(i);
       if (rcvrActive)
       {
@@ -326,7 +332,7 @@ void Console::build(const char *nm)
 
   nActive = nValid;
 
-  strncpy(configName,nm,400);
+  OSTRCPY( configName, sizeof(configName), nm);
 
   setLogicalParamNames();
 
@@ -407,80 +413,80 @@ void Console::getChannelBits(int *channelbits)
 
 void Console::setLogicalParamNames()
 {
-  strcpy(obsStr[0],"obs");
-  strcpy(obsStr[1],"tof");
-  strcpy(obsStr[2],"tpwr");
-  strcpy(obsStr[3],"tpwrf");
-  strcpy(obsStr[4],"xm");
-  strcpy(obsStr[5],"xmm");
-  strcpy(obsStr[6],"xmf");
-  strcpy(obsStr[7],"xseq");
-  strcpy(obsStr[8],"xhomo");
-  strcpy(obsStr[9],"sfrq");
-  strcpy(obsStr[10],"xres");
-  strcpy(obsStr[11],"tpwrt");
-  strcpy(obsStr[12],"tpwrm");
-  strcpy(obsStr[13],"tn");
+  OSTRCPY( obsStr[0],  sizeof(obsStr[0]),  "obs"   );
+  OSTRCPY( obsStr[1],  sizeof(obsStr[1]),  "tof"   );
+  OSTRCPY( obsStr[2],  sizeof(obsStr[2]),  "tpwr"  );
+  OSTRCPY( obsStr[3],  sizeof(obsStr[3]),  "tpwrf" );
+  OSTRCPY( obsStr[4],  sizeof(obsStr[4]),  "xm"    );
+  OSTRCPY( obsStr[5],  sizeof(obsStr[5]),  "xmm"   );
+  OSTRCPY( obsStr[6],  sizeof(obsStr[6]),  "xmf"   );
+  OSTRCPY( obsStr[7],  sizeof(obsStr[7]),  "xseq"  );
+  OSTRCPY( obsStr[8],  sizeof(obsStr[8]),  "xhomo" );
+  OSTRCPY( obsStr[9],  sizeof(obsStr[9]),  "sfrq"  );
+  OSTRCPY( obsStr[10], sizeof(obsStr[10]), "xres"  );
+  OSTRCPY( obsStr[11], sizeof(obsStr[11]), "tpwrt" );
+  OSTRCPY( obsStr[12], sizeof(obsStr[12]), "tpwrm" );
+  OSTRCPY( obsStr[13], sizeof(obsStr[13]), "tn"    );
 
-  strcpy(decStr[0],"dec");
-  strcpy(decStr[1],"dof");
-  strcpy(decStr[2],"dpwr");
-  strcpy(decStr[3],"dpwrf");
-  strcpy(decStr[4],"dm");
-  strcpy(decStr[5],"dmm");
-  strcpy(decStr[6],"dmf");
-  strcpy(decStr[7],"dseq");
-  strcpy(decStr[8],"homo");
-  strcpy(decStr[9],"dfrq");
-  strcpy(decStr[10],"dres");
-  strcpy(decStr[11],"dpwrt");
-  strcpy(decStr[12],"dpwrm");
-  strcpy(decStr[13],"dn");
+  OSTRCPY( decStr[0],  sizeof(decStr[0]),  "dec"   );
+  OSTRCPY( decStr[1],  sizeof(decStr[1]),  "dof"   );
+  OSTRCPY( decStr[2],  sizeof(decStr[2]),  "dpwr"  );
+  OSTRCPY( decStr[3],  sizeof(decStr[3]),  "dpwrf" );
+  OSTRCPY( decStr[4],  sizeof(decStr[4]),  "dm"    );
+  OSTRCPY( decStr[5],  sizeof(decStr[5]),  "dmm"   );
+  OSTRCPY( decStr[6],  sizeof(decStr[6]),  "dmf"   );
+  OSTRCPY( decStr[7],  sizeof(decStr[7]),  "dseq"  );
+  OSTRCPY( decStr[8],  sizeof(decStr[8]),  "homo"  );
+  OSTRCPY( decStr[9],  sizeof(decStr[9]),  "dfrq"  );
+  OSTRCPY( decStr[10], sizeof(decStr[10]), "dres"  );
+  OSTRCPY( decStr[11], sizeof(decStr[11]), "dpwrt" );
+  OSTRCPY( decStr[12], sizeof(decStr[12]), "dpwrm" );
+  OSTRCPY( decStr[13], sizeof(decStr[13]), "dn"    );
 
-  strcpy(dec2Str[0],"dec2");
-  strcpy(dec2Str[1],"dof2");
-  strcpy(dec2Str[2],"dpwr2");
-  strcpy(dec2Str[3],"dpwrf2");
-  strcpy(dec2Str[4],"dm2");
-  strcpy(dec2Str[5],"dmm2");
-  strcpy(dec2Str[6],"dmf2");
-  strcpy(dec2Str[7],"dseq2");
-  strcpy(dec2Str[8],"homo2");
-  strcpy(dec2Str[9],"dfrq2");
-  strcpy(dec2Str[10],"dres2");
-  strcpy(dec2Str[11],"dpwrt2");
-  strcpy(dec2Str[12],"dpwrm2");
-  strcpy(dec2Str[13],"dn2");
+  OSTRCPY( dec2Str[0],  sizeof(dec2Str[0]),  "dec2"   );
+  OSTRCPY( dec2Str[1],  sizeof(dec2Str[1]),  "dof2"   );
+  OSTRCPY( dec2Str[2],  sizeof(dec2Str[2]),  "dpwr2"  );
+  OSTRCPY( dec2Str[3],  sizeof(dec2Str[3]),  "dpwrf2" );
+  OSTRCPY( dec2Str[4],  sizeof(dec2Str[4]),  "dm2"    );
+  OSTRCPY( dec2Str[5],  sizeof(dec2Str[5]),  "dmm2"   );
+  OSTRCPY( dec2Str[6],  sizeof(dec2Str[6]),  "dmf2"   );
+  OSTRCPY( dec2Str[7],  sizeof(dec2Str[7]),  "dseq2"  );
+  OSTRCPY( dec2Str[8],  sizeof(dec2Str[8]),  "homo2"  );
+  OSTRCPY( dec2Str[9],  sizeof(dec2Str[9]),  "dfrq2"  );
+  OSTRCPY( dec2Str[10], sizeof(dec2Str[10]), "dres2"  );
+  OSTRCPY( dec2Str[11], sizeof(dec2Str[11]), "dpwrt2" );
+  OSTRCPY( dec2Str[12], sizeof(dec2Str[12]), "dpwrm2" );
+  OSTRCPY( dec2Str[13], sizeof(dec2Str[13]), "dn2"    );
 
-  strcpy(dec3Str[0],"dec3");
-  strcpy(dec3Str[1],"dof3");
-  strcpy(dec3Str[2],"dpwr3");
-  strcpy(dec3Str[3],"dpwrf3");
-  strcpy(dec3Str[4],"dm3");
-  strcpy(dec3Str[5],"dmm3");
-  strcpy(dec3Str[6],"dmf3");
-  strcpy(dec3Str[7],"dseq3");
-  strcpy(dec3Str[8],"homo3");
-  strcpy(dec3Str[9],"dfrq3");
-  strcpy(dec3Str[10],"dres3");
-  strcpy(dec3Str[11],"dpwrt3");
-  strcpy(dec3Str[12],"dpwrm3");
-  strcpy(dec3Str[13],"dn3");
+  OSTRCPY( dec3Str[0],  sizeof(dec3Str[0]),  "dec3"   );
+  OSTRCPY( dec3Str[1],  sizeof(dec3Str[1]),  "dof3"   );
+  OSTRCPY( dec3Str[2],  sizeof(dec3Str[2]),  "dpwr3"  );
+  OSTRCPY( dec3Str[3],  sizeof(dec3Str[3]),  "dpwrf3" );
+  OSTRCPY( dec3Str[4],  sizeof(dec3Str[4]),  "dm3"    );
+  OSTRCPY( dec3Str[5],  sizeof(dec3Str[5]),  "dmm3"   );
+  OSTRCPY( dec3Str[6],  sizeof(dec3Str[6]),  "dmf3"   );
+  OSTRCPY( dec3Str[7],  sizeof(dec3Str[7]),  "dseq3"  );
+  OSTRCPY( dec3Str[8],  sizeof(dec3Str[8]),  "homo3"  );
+  OSTRCPY( dec3Str[9],  sizeof(dec3Str[9]),  "dfrq3"  );
+  OSTRCPY( dec3Str[10], sizeof(dec3Str[10]), "dres3"  );
+  OSTRCPY( dec3Str[11], sizeof(dec3Str[11]), "dpwrt3" );
+  OSTRCPY( dec3Str[12], sizeof(dec3Str[12]), "dpwrm3" );
+  OSTRCPY( dec3Str[13], sizeof(dec3Str[13]), "dn3"    );
 
-  strcpy(dec4Str[0],"dec4");
-  strcpy(dec4Str[1],"dof4");
-  strcpy(dec4Str[2],"dpwr4");
-  strcpy(dec4Str[3],"dpwrf4");
-  strcpy(dec4Str[4],"dm4");
-  strcpy(dec4Str[5],"dmm4");
-  strcpy(dec4Str[6],"dmf4");
-  strcpy(dec4Str[7],"dseq4");
-  strcpy(dec4Str[8],"homo4");
-  strcpy(dec4Str[9],"dfrq4");
-  strcpy(dec4Str[10],"dres4");
-  strcpy(dec4Str[11],"dpwrt4");
-  strcpy(dec4Str[12],"dpwrm4");
-  strcpy(dec4Str[13],"dn4");
+  OSTRCPY( dec4Str[0],  sizeof(dec4Str[0]),  "dec4"   );
+  OSTRCPY( dec4Str[1],  sizeof(dec4Str[1]),  "dof4"   );
+  OSTRCPY( dec4Str[2],  sizeof(dec4Str[2]),  "dpwr4"  );
+  OSTRCPY( dec4Str[3],  sizeof(dec4Str[3]),  "dpwrf4" );
+  OSTRCPY( dec4Str[4],  sizeof(dec4Str[4]),  "dm4"    );
+  OSTRCPY( dec4Str[5],  sizeof(dec4Str[5]),  "dmm4"   );
+  OSTRCPY( dec4Str[6],  sizeof(dec4Str[6]),  "dmf4"   );
+  OSTRCPY( dec4Str[7],  sizeof(dec4Str[7]),  "dseq4"  );
+  OSTRCPY( dec4Str[8],  sizeof(dec4Str[8]),  "homo4"  );
+  OSTRCPY( dec4Str[9],  sizeof(dec4Str[9]),  "dfrq4"  );
+  OSTRCPY( dec4Str[10], sizeof(dec4Str[10]), "dres4"  );
+  OSTRCPY( dec4Str[11], sizeof(dec4Str[11]), "dpwrt4" );
+  OSTRCPY( dec4Str[12], sizeof(dec4Str[12]), "dpwrm4" );
+  OSTRCPY( dec4Str[13], sizeof(dec4Str[13]), "dn4"    );
 }
 
 
@@ -620,12 +626,12 @@ int Console::RFConfigMap()
      return(1);  //
   if (strlen(probeConnect) < 3) return(1);
   if(P_getstring(GLOBAL,"preAmpConfig",preAmpConfig,1,MAXSTR) < 0)
-     strcpy(preAmpConfig,"HLXXX"); // system default
+     OSTRCPY( preAmpConfig, sizeof(preAmpConfig), "HLXXX"); // system default
   // makes the readily assigned associations
   for (i = 0; i < numRFChan; i++)  // actually iterates tn,dn,dn2...
   {
       if (P_getstring(CURRENT,use[i],tmpstr,1,MAXSTR))
-        strcpy(tmpstr,"");
+        OSTRCPY( tmpstr, sizeof(tmpstr), "");
       index = posIndex(probeConnect,tmpstr);
       if ((!strcmp(tmpstr,"H1") || !strcmp("F19",tmpstr)))
       {
@@ -691,7 +697,7 @@ void Console::setRcvrsConfigMap()
   char rcvrsString[MAXSTR], rcvrsTypeStr[MAXSTR], tempCh[MAXSTR];
 
   getStringSetDefault(CURRENT,"rcvrs",rcvrsString,"ynnnn");
-//  strcpy(trInterconnect.rcvrS,rcvrStr);
+//  OSTRCPY(trInterconnect.rcvrS, sizeof(trInterconnect.rcvrS), rcvrStr);
   int charnum = countSpecificChars(rcvrsString, 'y');
   if (charnum == 0)
     abort_message("error in receiver configuration variable rcvrs. abort!\n");
@@ -736,7 +742,7 @@ void Console::setRcvrsConfigMap()
   tempCh[0]=rfChannelStr[0]; tempCh[1]='\0';
   if ( (receiverConfig == MULTNUCRCVR_SINGACQ)  && (atoi(tempCh) == RCVR2_RF_LO_CHANNEL) )
   {
-     strcpy(rcvrsString,"ny");
+     OSTRCPY( rcvrsString, sizeof(rcvrsString), "ny");
      P_setstring(CURRENT, "rcvrs", rcvrsString, 1);
      // cout << "setRvcrsConfigMap(): setting rcvrs to ny\n" << endl;
   }
@@ -787,23 +793,23 @@ void Console::setChannelMapping()
   if (ans == 0)
   {
      //fprintf(stdout,"rf chan equivalent => %1d%1d%1d%1d%1d\n",OBSch,DECch,DEC2ch,DEC3ch,DEC4ch);
-     sprintf(rfChannelStr,"%1d%1d%1d%1d%1d",OBSch,DECch,DEC2ch,DEC3ch,DEC4ch);
+     OSPRINTF( rfChannelStr, sizeof(rfChannelStr), "%1d%1d%1d%1d%1d", OBSch, DECch, DEC2ch, DEC3ch, DEC4ch);
   }
   else
   {
     /* brute force rfchannels */
 
     if (P_getstring(CURRENT,"rfchannel",rfChannelStr,1,(numRFChan+1)))
-       strcpy(rfChannelStr,"");
+       OSTRCPY( rfChannelStr, sizeof(rfChannelStr), "");
     if (strcmp(rfChannelStr, "") == 0)
     {
-      strcpy(rfChannelStr,"123456789");
+      OSTRCPY( rfChannelStr, sizeof(rfChannelStr), "123456789");
       OBSch = 1; DECch =2;  DEC2ch = 3; DEC3ch = 4; DEC4ch = 5;
       // fix the low band observe and tn = lk case..
       if ((sfrq < bandsw) && (numRFChan >1))
       {
-	    strcpy(rfChannelStr,"213456789");
-            OBSch = 2; DECch =1;
+        OSTRCPY( rfChannelStr, sizeof(rfChannelStr), "213456789");
+        OBSch = 2; DECch = 1;
       }
     }
     else
@@ -817,7 +823,7 @@ void Console::setChannelMapping()
   //  rf grouped pulse support.
   if((P_getstring(GLOBAL,"rfGroupMap",tmp,1,MAXSTR) < 0) || (strlen(tmp) < 2))
     {
-      strcpy(tmp,"000000000000000000000000000000000000000000");
+      OSTRCPY( tmp, sizeof(tmp), "000000000000000000000000000000000000000000");
   }
   else
   {
@@ -961,20 +967,20 @@ void Console::setChannelMapping()
 
     // get nucleus names into an array to set rfchnuclei parameter
     char nucleiNameStr[MAXSTR], nucname[MAXSTR];
-    strcpy(nucleiNameStr,"'");
+    OSTRCPY( nucleiNameStr, sizeof(nucleiNameStr), "'");
     ((RFController *)RFUserTable[0])->getNucleusName(nucname);
     if (strcmp(nucname,"") == 0)
-       strcpy(nucname,"-");
-    strcat(nucleiNameStr, nucname);
+       OSTRCPY( nucname, sizeof(nucname), "-");
+    OSTRCAT( nucleiNameStr, sizeof(nucleiNameStr), nucname);
     for (int i=1; i<numRFChan; i++)
     {
-      strcat(nucleiNameStr, " ");
+      OSTRCAT( nucleiNameStr, sizeof(nucleiNameStr), " ");
       ((RFController *)RFUserTable[i])->getNucleusName(nucname);
       if (strcmp(nucname,"") == 0)
-         strcpy(nucname,"-");
-      strcat(nucleiNameStr, nucname);
+         OSTRCPY( nucname, sizeof(nucname), "-");
+      OSTRCAT( nucleiNameStr, sizeof(nucleiNameStr), nucname);
     }
-    strcat(nucleiNameStr,"'");
+    OSTRCAT( nucleiNameStr, sizeof(nucleiNameStr), "'");
     if (P_getstring(CURRENT, "rfchnuclei", nucname, 1, 255) >= 0)
     {
        putCmd("rfchnuclei = %s",nucleiNameStr);
@@ -984,12 +990,12 @@ void Console::setChannelMapping()
     RollCallString[0] = '\0';
     for (k=0; k < nValid; k++)
     {
-      strcpy(tmp, PhysicalTable[k]->getName());
+      OSTRCPY( tmp, sizeof(tmp), PhysicalTable[k]->getName());
       // don't add master1 or lock1 to the list.
       if ((strcmp(tmp,"master1")!=0) && (strcmp(tmp,"lock1")!=0))
       {
-        strcat(RollCallString,tmp);
-        strcat(RollCallString," ");
+        OSTRCAT( RollCallString, sizeof(RollCallString), tmp);
+        OSTRCAT( RollCallString, sizeof(RollCallString), " ");
       }
     }
 
@@ -1478,7 +1484,7 @@ void Console::printSyncStatus()
     {
       if ( !PhysicalTable[i]->isOff() )
         {
-          strcpy(id,PhysicalTable[i]->getName());
+          OSTRCPY( id, sizeof(id), PhysicalTable[i]->getName());
           tks = PhysicalTable[i]->getBigTicker();
 #ifndef __INTERIX
           cout << setiosflags(ios::left) << setw(10) <<  id << setiosflags(ios::right) << setw(12) << tks << endl;
@@ -1765,16 +1771,17 @@ int Console::turnOffRFDuplicates()
    const char *parN[] = {"dn","dn2","dn3","dn4","dn5"};
    int i;
    if ((numRFChan < 2) || (numRFChan > 5)) return(1);
-   strcpy(baseStr,"");  // matches are errors
+   // matches are errors
+   OSTRCPY( baseStr, sizeof(baseStr), "");
    P_getstring(CURRENT,"tn",tmpstr,1,MAXSTR);
    if (strcmp(tmpstr,"none"))
-     strcpy(baseStr,tmpstr);
+     OSTRCPY( baseStr, sizeof(baseStr), tmpstr);
    for (i = 0; i < numRFChan-1; i++)
    {
      getStringSetDefault(CURRENT,parN[i],tmpstr,"none");
      if ((strlen(tmpstr)) && (strcmp(tmpstr,"none")))
      {
-       strcat(baseStr," ");
+       OSTRCAT( baseStr, sizeof(baseStr), " ");
        if (strstr(baseStr,tmpstr) != 0)
        {
          if ( ! dps_flag)
@@ -1782,7 +1789,7 @@ int Console::turnOffRFDuplicates()
          P_setstring(CURRENT, parN[i], "none", 1);
        }
        else  // no duplicate -
-         strcat(baseStr,tmpstr);
+         OSTRCAT( baseStr, sizeof(baseStr), tmpstr);
      }
    }
    return(2);

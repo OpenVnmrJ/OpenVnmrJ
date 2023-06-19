@@ -24,6 +24,7 @@
 
 #include "lc.h"
 
+#include "safestring.h"
 
 /*************************
 *  Constant Definitions  *
@@ -445,7 +446,7 @@ int loadtable(char *infilename)
    else
    {
       parsetable = TRUE;
-      strcpy(tablelimits[loadtablecall].previnfilename, infilename);
+      OSTRCPY( tablelimits[loadtablecall].previnfilename, sizeof(tablelimits[loadtablecall].previnfilename), infilename);
    }
 
 /**********************************************************
@@ -1792,9 +1793,9 @@ static FILE *open_table(const char *basename, const char *concatname,
    char	tblfilename[MAXSTR];
    FILE	*tablefile;
 
-   strcpy(tblfilename, basename);
-   strcat(tblfilename, concatname);
-   strcat(tblfilename, inputname);
+   OSTRCPY( tblfilename, sizeof(tblfilename), basename);
+   OSTRCAT( tblfilename, sizeof(tblfilename), concatname);
+   OSTRCAT( tblfilename, sizeof(tblfilename), inputname);
    tablefile = fopen(tblfilename, permission);
 
    return(tablefile);

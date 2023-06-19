@@ -50,6 +50,8 @@
 #include "sglCommon.h"
 #include "sglEPI.h"
 
+#include "safestring.h"
+
 /**************************************************************************/
 /*** EPI WRAPPERS *********************************************************/
 /**************************************************************************/
@@ -654,20 +656,20 @@ void calc_epi(EPI_GRADIENT_T          *epi_grad,
 
   /* Print table t1 to file in tablib */
   switch(ky_order[0]) {
-    case 'l': sprintf(order_str,"lin"); break;
-    case 'c': sprintf(order_str,"cen"); break;
+    case 'l': OSPRINTF( order_str, sizeof(order_str), "lin");
+      break;
+    case 'c': OSPRINTF( order_str, sizeof(order_str), "cen");
+      break;
     default:  
       abort_message("%s: ky_order %s not recognized, use 'l' (linear) or 'c' (centric)\n",
                      seqfil,ky_order);
   } 
 
   if (ky_order[1] == 'r')  /* not reversed */
-    sprintf(gpe_tab,"%s_nv%d_f%d_%s%d_rev",seqfil,
-       (int)pe_grad->steps,(int)fract_ky,order_str,(int)nseg);
+    OSPRINTF( gpe_tab, sizeof(gpe_tab), "%s_nv%d_f%d_%s%d_rev", seqfil, int)pe_grad->steps, (int)fract_ky, r, (int)nseg);
   else
-    sprintf(gpe_tab,"%s_nv%d_f%d_%s%d",seqfil,
-       (int)pe_grad->steps,(int)fract_ky,order_str,(int)nseg);
-  sprintf(tab_file,"%s/tablib/%s",userdir,gpe_tab);
+    OSPRINTF( gpe_tab, sizeof(gpe_tab), "%s_nv%d_f%d_%s%d", seqfil, (int)pe_grad->steps, (int)fract_ky, order_str, (int)nseg);
+  OSPRINTF( tab_file, sizeof(tab_file), "%s/tablib/%s", userdir, gpe_tab);
 
   if ((fp = fopen(tab_file,"w")) == NULL) {
     abort_message("Error opening file %s\n",gpe_tab);
@@ -682,7 +684,7 @@ void calc_epi(EPI_GRADIENT_T          *epi_grad,
   }
   fprintf(fp,"\n"); 
   fclose(fp);
-  strcpy(petable,gpe_tab);
+  strcpy(petable,gpe_tab);  // BDZ: can't easily be made safe
   putstring("petable",gpe_tab);
 
   /* Return values in VnmrJ parameter pe_table */

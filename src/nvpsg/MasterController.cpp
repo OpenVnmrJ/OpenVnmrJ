@@ -24,6 +24,12 @@
 #include "cpsg.h"
 #include "spinner.h"
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 #ifndef MAXSTR
 #define MAXSTR	256
 #endif
@@ -1033,7 +1039,7 @@ int MasterController::initializeExpStates(int setupflag)
     exit(-1);
   }
   NSRModeFlag = 0;
-  strcpy(estring,"   ");
+  OSTRCPY( estring, sizeof(estring), "   ");
   // Do this first, avoid race condition
   if ( P_getstring(GLOBAL, "gradtype", estring, 1, MAXSTR) < 0)
      abort_message("PSG: Cannot find gradtype");
@@ -1453,7 +1459,7 @@ int MasterController::initializeExpStates(int setupflag)
       }
      if (blafMode > 0)
      { 
-        strcpy( estring, "" );
+        OSTRCPY( estring, sizeof(estring), "" );
         k = 0;
         if (P_getstring(GLOBAL, "hdwshimlist",estring, 1, MAXSTR) == 0) 
         {
@@ -1593,7 +1599,7 @@ void MasterController::RollCall(char *configString)
   i = strlen(configString);
   if (i > MAX_ROLLCALL_STRLEN )
     exit(-1);  // string too large 
-  strcpy((char *)&(buffer[1]),configString);
+  OSTRCPY( (char *)&(buffer[1]), sizeof(buffer) - sizeof(int), configString);
   j = (i/4 + 1);  //  integers..
 #ifdef LINUX
   for (i=0; i <= j; i++)
@@ -2091,7 +2097,7 @@ void MasterController::setConsoleMap(int kind, int obschannel, int decchannel, i
   trInterconnect.usageFlag = kind;
   trInterconnect.numRcvrs = nRcvrs;
   getStringSetDefault(CURRENT,"rcvrs",rcvrStr,"ynnnn");
-  strcpy(trInterconnect.rcvrS,rcvrStr);
+  OSTRCPY( trInterconnect.rcvrS, sizeof(trInterconnect.rcvrS), rcvrStr);
   getStringSetDefault(CURRENT,"presig",presigStr,"nnnn");
   if (strncmp(presigStr, "h",1) == 0)
      NSRModeFlag |= PRESIGBIT;

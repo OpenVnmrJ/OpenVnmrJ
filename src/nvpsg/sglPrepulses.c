@@ -45,6 +45,7 @@
 #include "sglCommon.h"
 #include "sglPrepulses.h"
 
+#include "safestring.h"
 
 /***********************************************************************
 *  Function Name: create_fatsat
@@ -701,11 +702,11 @@ fpwrscale=1.0;
           /* The sine modulated control may not be required for a dedicated tag coil */
           if (asltagcoil[0] == 'y') {
             if (!strcmp(caslctrl,"")) {
-              strcpy(caslctrl,"sinemod");
+              OSTRCPY( caslctrl, sizeof(caslctrl), "sinemod");
               putCmd("caslctrl = '%s'",caslctrl);
             }
           } else {
-            strcpy(caslctrl,"sinemod");
+            OSTRCPY( caslctrl, sizeof(caslctrl), "sinemod");
             putCmd("caslctrl = '%s'",caslctrl);
           }
         }
@@ -713,7 +714,7 @@ fpwrscale=1.0;
         break;
       case STAR:
         if (seqcon[1]=='c' && ns>1) {
-          strcpy(starctrl,"doubletag");
+          OSTRCPY( starctrl, sizeof(starctrl), "doubletag");
           putCmd("starctrl = '%s'",starctrl);
         }
         if (!strcmp(starctrl,"doubletag")) stardoubletag=TRUE;
@@ -958,7 +959,7 @@ fpwrscale=1.0;
     trise=trisesave;
 
     /* Initialize asl test string and parameter */
-    strcpy(aslteststring,"");
+    OSTRCPY( aslteststring, sizeof(alsteststring), "");
     putCmd("asltestpars = ''");
     putCmd("asltesttag = 0");
 
@@ -1010,7 +1011,7 @@ fpwrscale=1.0;
       psTime = nps*ps_grad.duration+GRADIENT_RES;
       if (tspoilps > 0.0) psTime +=nps*psspoil_grad.duration;
       putvalue("pstime",psTime);
-      strcat(aslteststring,"PS");
+      OSTRCAT( aslteststring, sizeof(aslteststring), "PS");
       putCmd("asltestpars[%d] = 'PS'",asltestval);
       putCmd("asltesttag[%d] = 1",asltestval++);
       /* Hijack IR's virblock (vnps=virblock) for number of PS pulses */
@@ -1018,8 +1019,9 @@ fpwrscale=1.0;
     }
 
     /* Update asl test string and parameter (tag and control are always in test string) */
-    if (strlen(aslteststring)>1) strcat(aslteststring,"/");
-    strcat(aslteststring,"Tag/Ctrl");
+    if (strlen(aslteststring)>1)
+      OSTRCAT( aslteststring, sizeof(aslteststring), "/");
+    OSTRCAT( aslteststring, sizeof(alsteststring), "Tag/Ctrl");
     putCmd("asltestpars[%d] = 'Tag'",asltestval);
     putCmd("asltesttag[%d] = 1",asltestval++);
     putCmd("asltestpars[%d] = 'Ctrl'",asltestval);
@@ -1096,7 +1098,7 @@ fpwrscale=1.0;
       ipsTime = nips*ips_grad.duration+GRADIENT_RES;
       if (tspoilips > 0.0) ipsTime +=nips*ipsspoil_grad.duration;
       putvalue("ipstime",ipsTime);
-      strcat(aslteststring,"/IPS");
+      OSTRCAT( aslteststring, sizeof(aslteststring), "/IPS");
       putCmd("asltestpars[%d] = 'IPS'",asltestval);
       putCmd("asltesttag[%d] = 1",asltestval++);
       /* Hijack IR's vnirpulses (vnips=vnirpulses) for number of IPS pulses */
@@ -1154,7 +1156,7 @@ fpwrscale=1.0;
       q2Time = nq2*q2_grad.duration+GRADIENT_RES;
       if (tspoilq2 > 0.0) q2Time += nq2*q2spoil_grad.duration;
       putvalue("q2time",q2Time);
-      strcat(aslteststring,"/TagQ/CtrlQ");
+      OSTRCAT( aslteststring, sizeof(aslteststring), "/TagQ/CtrlQ");
       putCmd("asltestpars[%d] = 'TagQ'",asltestval);
       putCmd("asltesttag[%d] = 1",asltestval++);
       putCmd("asltestpars[%d] = 'CtrlQ'",asltestval);
@@ -1320,8 +1322,8 @@ double calc_aslTime(double asladd,double trepmin,int *treptype)
         if (FP_EQ(mirt1[i],0.0))
           abort_message("calc_aslTime MIR error: mirt1[%d] is 0.0. Reset T1 values and add appropriate T1 values\n",i+1);
       /* Check that the aslmirtime binary is present */
-      sprintf(timefile,"/tmp/aslmirtimestatus_%s",getenv("USER"));
-      sprintf(timecmd,"which aslmirtime > %s",timefile);
+      OSPRINTF( timefile, sizeof(timefile), "/tmp/aslmirtimestatus_%s", getenv("USER"));
+      OSPRINTF( timecmd, sizeof(timecmd), "which aslmirtime > %s", timefile);
       ret = system(timecmd);
       if (stat(timefile,&buf) == -1)
         abort_message("calc_aslTime MIR error: Unable to access file /tmp/aslmirtimestatus\n");
@@ -1329,17 +1331,17 @@ double calc_aslTime(double asladd,double trepmin,int *treptype)
         abort_message("calc_aslTime MIR error: aslmirtime binary appears to be missing\n");
       /* If there's no abort_message the aslmirtime binary is present */
       /* Set system call to calculate MIR times */
-      sprintf(timecmd,"aslmirtime -n %d -d %f -t %d",nmir,mirTime,(int)dvarinfo.size);
+      OSPRINTF( timecmd, sizeof(timecmd), "aslmirtime -n %d -d %f -t %d", nmir, mirTime, (int)dvarinfo.size);
       for (i=0;i<(int)dvarinfo.size;i++)
       {
          char tmp[32];
 
-         sprintf(tmp," %f",mirt1[i]);
-         strcat(timecmd,tmp);
+         OSPRINTF( tmp, sizeof(tmp), " %f", mirt1[i]);
+         OSTRCAT( timecmd, sizeof(timecmd), tmp);
       }
       /* Execute the system call */
       ret = system(timecmd);
-      sprintf(timefile,"/tmp/aslmirtime_%s.txt",getenv("USER"));
+      OSPRINTF( timefile, sizeof(timefile), "/tmp/aslmirtime_%s.txt", getenv("USER"));
       /* Open timefile for reading */
       if ((fp=fopen(timefile,"r")) == NULL)
         abort_message("calc_aslTime MIR error: Unable to open %s\n",timefile);
@@ -1921,7 +1923,7 @@ void create_tag()
 		/* Calculate Taggign RF power ************************/
 		tag_rf.flip = fliptag;                 /* assign flip angle for RF tagging pulse */
 		tag_rf.rfDuration = pw;                /* assign duration for RF tagging pulse */
-		strcpy(tag_rf.pulseName,tagpat);       /* assign RF pulse name for RF tagging pulse */
+		OSTRCPY( tag_rf.pulseName, sizeof(tag_rf.pulseName), tagpat); /* assign RF pulse name for RF tagging pulse */
 		calcPower(&tag_rf,rfcoil);             /* calculate MTC RF power */
 		if (sgldisplay) 
 		{

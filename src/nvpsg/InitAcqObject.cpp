@@ -21,14 +21,18 @@
 
 
 extern "C" {
+
   int * init_acodes(Acqparams *);
   void initautostruct(void);
+
+#include "safestring.h"
+
 }
 
 
 InitAcqObject::InitAcqObject()
 {
-  strcpy(Name,"InitAcqObject");
+  OSTRCPY( Name, sizeof(Name), "InitAcqObject");
   UniqueID = 9;
   pAcodeMgr = NULL;
   pAcodeBuf = NULL;
@@ -36,7 +40,7 @@ InitAcqObject::InitAcqObject()
 
 InitAcqObject::InitAcqObject(const char *nm)
 {
-  strcpy(Name, nm);
+  OSTRCPY( Name, sizeof(Name), nm);
   UniqueID = 9;
   pAcodeMgr = AcodeManager::getInstance();
   setAcodeBuffer();

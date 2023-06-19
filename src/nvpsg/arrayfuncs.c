@@ -25,6 +25,8 @@
 
 #include "PSGFileHeader.h"
 
+#include "safestring.h"
+
 #define DPRTLEVEL 1
 #define MAXGLOBALS 136
 #define MAXGVARLEN 40
@@ -1058,7 +1060,7 @@ static void initglblstruc(const char *name, double *glbladdr, int (*function)() 
       fprintf(stdout, "initglblstruc: index: %d beyond limit %d\n", index, MAXGLOBALS);
       psg_abort(1);
    }
-   strcpy(glblvars[index].gnam, name);
+   OSTRCPY( glblvars[index].gnam, sizeof(glblvars[index].gnam), name);
    glblvars[index].glblvalue = glbladdr;
    glblvars[index].funcptr = function;
    glblCount++;

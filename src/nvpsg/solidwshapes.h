@@ -385,7 +385,7 @@ WMPSEQ getwpmlgxmx1(char *seqName)
       printf("getwpmlg() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.wvsh.mpseq.seqName,"%s",seqName);
+   OSTRCPY( mp.wvsh.mpseq.seqName, sizeof(mp.wvsh.mpseq.seqName), seqName);
 
 // chXsuffix
 
@@ -508,7 +508,7 @@ WMPSEQ getwsamn1(char *seqName)
       printf("getwsamn() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.wvsh.mpseq.seqName,"%s",seqName);
+   OSTRCPY( mp.wvsh.mpseq.seqName, sizeof(mp.wvsh.mpseq.seqName), seqName);
 
 // chXsuffix
 

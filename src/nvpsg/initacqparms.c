@@ -28,6 +28,7 @@
 #include "ACode32.h"
 #include "acqparms.h"
 #include "cps.h"
+#include "safestring.h"
 
 /*  PSG_LC  conditional compiles lc.h properly for PSG */
 #ifndef  PSG_LC
@@ -741,23 +742,23 @@ int setup_parfile(int suflag)
     {   text_error("initacqqueue(): cannot get userdir");
 	psg_abort(1);
     }
-    strcpy(ExpInfo.UsrDirFile,tmpstr);
+    OSTRCPY( ExpInfo.UsrDirFile, sizeof(ExpInfo.UsrDirFile), tmpstr);
 
     if (P_getstring(GLOBAL,"systemdir",tmpstr,1,255) < 0)
     {   text_error("initacqqueue(): cannot get systemdir");
 	psg_abort(1);
     }
-    strcpy(ExpInfo.SysDirFile,tmpstr);
+    OSTRCPY( ExpInfo.SysDirFile, sizeof(ExpInfo.SysDirFile), tmpstr);
 
     if (P_getstring(GLOBAL,"curexp",tmpstr,1,255) < 0)
     {   text_error("initacqqueue(): cannot get curexp");
 	psg_abort(1);
     }
-    strcpy(ExpInfo.CurExpFile,tmpstr);
+    OSTRCPY( ExpInfo.CurExpFile, sizeof(ExpInfo.CurExpFile), tmpstr);
 
     /* multiple reciever mapping for recvproc */
     ExpInfo.RvcrMapping[0] = (char) 0;
-    RcvrMapStr("rcvrs",ExpInfo.RvcrMapping);
+    RcvrMapStr("rcvrs", ExpInfo.RvcrMapping);
     if (bgflag) fprintf(stdout," [[[[[[[[[-->>  RcvrMapStr: '%s'\n",ExpInfo.RvcrMapping);
 
     /* --- suflag					*/
@@ -775,28 +776,28 @@ int setup_parfile(int suflag)
     {   text_error("initacqqueue(): cannot get goid");
 	psg_abort(1);
     }
-    strcpy(ExpInfo.InitCodefile,infopath);
-    strcat(ExpInfo.InitCodefile,".init");
-    strcpy(ExpInfo.PreCodefile,infopath);
-    strcat(ExpInfo.PreCodefile,".pre");
-    strcpy(ExpInfo.PSCodefile,infopath);
-    strcat(ExpInfo.PSCodefile,".ps");
-    strcpy(ExpInfo.PostCodefile,infopath);
-    strcat(ExpInfo.PostCodefile,".post");
+    OSTRCPY( ExpInfo.InitCodefile, sizeof(ExpInfo.InitCodefile), infopath);
+    OSTRCAT( ExpInfo.InitCodefile, sizeof(ExpInfo.InitCodefile), ".init");
+    OSTRCPY( ExpInfo.PreCodefile, sizeof(ExpInfo.PreCodefile), infopath);
+    OSTRCAT( ExpInfo.PreCodefile, sizeof(ExpInfo.PreCodefile), ".pre");
+    OSTRCPY( ExpInfo.PSCodefile, sizeof(ExpInfo.PSCodefile), infopath);
+    OSTRCAT( ExpInfo.PSCodefile, sizeof(ExpInfo.PSCodefile), ".ps");
+    OSTRCPY( ExpInfo.PostCodefile, sizeof(ExpInfo.PostCodefile), infopath);
+    OSTRCAT( ExpInfo.PostCodefile, sizeof(ExpInfo.PostCodefile), ".post");
 
-    strcpy(ExpInfo.RTParmFile,infopath);
-    strcat(ExpInfo.RTParmFile,".RTpars");
-    strcpy(ExpInfo.AcqRTTablefile,infopath);
-    strcat(ExpInfo.AcqRTTablefile,".init.InitAcqObject");
-    strcpy(ExpInfo.WaveFormFile,infopath);
-    strcat(ExpInfo.WaveFormFile,".pat");
+    OSTRCPY( ExpInfo.RTParmFile, sizeof(ExpInfo.RTParmFile), infopath);
+    OSTRCAT( ExpInfo.RTParmFile, sizeof(ExpInfo.RTParmFile), ".RTpars");
+    OSTRCPY( ExpInfo.AcqRTTablefile, sizeof(ExpInfo.AcqRTTablefile), infopath);
+    OSTRCAT( ExpInfo.AcqRTTablefile, sizeof(ExpInfo.AcqRTTablefile), ".init.InitAcqObject");
+    OSTRCPY( ExpInfo.WaveFormFile, sizeof(ExpInfo.WaveFormFile), infopath);
+    OSTRCAT( ExpInfo.WaveFormFile, sizeof(ExpInfo.WaveFormFile), ".pat");
 
     /* Beware that infopath gets accessed again
        if acqiflag is set, for the data file path */
 
     /* --- file path to named acqfile or exp# acqfile  'file' --- */
 
-    strcpy(ExpInfo.VpMsgID,"");
+    OSTRCPY( ExpInfo.VpMsgID, sizeof(ExpInfo.VpMsgID), "");
     if (!acqiflag)
     {
       int autoflag;
@@ -806,7 +807,7 @@ int setup_parfile(int suflag)
       {   text_error("initacqqueue(): cannot get exppath");
 	  psg_abort(1);
       }
-      strcpy(ExpInfo.DataFile,tmpstr);
+      OSTRCPY( ExpInfo.DataFile, sizeof(ExpInfo.DataFile), tmpstr);
       ExpInfo.InteractiveFlag = 0;
       if (getparm("auto","string",GLOBAL,autopar,12))
           autoflag = 0;
@@ -815,14 +816,14 @@ int setup_parfile(int suflag)
       ExpInfo.ExpFlags = 0;
       if (autoflag)
       {
-         strcat(ExpInfo.DataFile,".fid");
+         OSTRCAT( ExpInfo.DataFile, sizeof(ExpInfo.DataFile), ".fid");
 	 ExpInfo.ExpFlags |= AUTOMODE_BIT;  /* set automode bit */
       }
       if ( ! P_getstring(CURRENT,"vpmode",autopar,1,12) && (autopar[0] == 'y') )
       {
          ExpInfo.ExpFlags |= VPMODE_BIT;  /* set vpmode bit */
          if (P_getstring(CURRENT,"VPaddr",tmpstr,1,255) >= 0)
-           strcpy(ExpInfo.VpMsgID,tmpstr);
+           OSTRCPY( ExpInfo.VpMsgID, sizeof(ExpInfo.VpMsgID), tmpstr);
       }
       if (ra_flag)
          ExpInfo.ExpFlags |=  RESUME_ACQ_BIT;  /* set RA bit */
@@ -831,8 +832,8 @@ int setup_parfile(int suflag)
     }
     else
     {
-      strcpy(ExpInfo.DataFile,infopath);
-      strcat(ExpInfo.DataFile,".Data");
+      OSTRCPY( ExpInfo.DataFile, sizeof(ExpInfo.DataFile), infopath);
+      OSTRCAT( ExpInfo.DataFile, sizeof(ExpInfo.DataFile), ".Data");
       ExpInfo.InteractiveFlag = 1;
       ExpInfo.ExpFlags = 0;
     }
@@ -841,7 +842,7 @@ int setup_parfile(int suflag)
     {   text_error("initacqqueue(): cannot get goid: user");
 	psg_abort(1);
     }
-    strcpy(ExpInfo.UserName,tmpstr);
+    OSTRCPY( ExpInfo.UserName, sizeof(ExpInfo.UserName), tmpstr);
 
     if (P_getstring(CURRENT,"goid",tmpstr,3,255) < 0)
     {   text_error("initacqqueue(): cannot get goid: exp number");
@@ -853,13 +854,13 @@ int setup_parfile(int suflag)
     {   text_error("initacqqueue(): cannot get goid: exp");
 	psg_abort(1);
     }
-    strcpy(ExpInfo.AcqBaseBufName,tmpstr);
+    OSTRCPY( ExpInfo.AcqBaseBufName, sizeof(ExpInfo.AcqBaseBufName), tmpstr);
 
     if (P_getstring(GLOBAL,"vnmraddr",tmpstr,1,255) < 0)
     {   text_error("initacqqueue(): cannot get vnmraddr");
 	psg_abort(1);
     }
-    strcpy(ExpInfo.MachineID,tmpstr);
+    OSTRCPY( ExpInfo.MachineID, sizeof(ExpInfo.MachineID), tmpstr);
 
     /* --- interleave parameter 'il' --- */
 
@@ -939,8 +940,8 @@ int setup_parfile(int suflag)
     umask( ExpInfo.UserUmask );		/* make sure the process umask does not change */
 
     /* fill in the account info */
-    strcpy(tmpstr,ExpInfo.SysDirFile);
-    strcat(tmpstr,"/adm/accounting/acctLog.xml");
+    OSTRCPY( tmpstr, sizeof(tmpstr), ExpInfo.SysDirFile);
+    OSTRCAT( tmpstr, sizeof(tmpstr), "/adm/accounting/acctLog.xml");
     if ( access(tmpstr,F_OK) != 0)
     {
        ExpInfo.Billing.enabled = 0;
@@ -956,20 +957,24 @@ int setup_parfile(int suflag)
         if (P_getstring(GLOBAL, "operator", tmpstr, 1, 255) < 0)
            ExpInfo.Billing.Operator[0]='\000';
         else
-           strncpy(ExpInfo.Billing.Operator,tmpstr,200);
+           // BDZ: 200 should be sizeof(ExpInfo.Billing.Operator)
+           OSTRCPY(ExpInfo.Billing.Operator, 200, tmpstr);
         if (P_getstring(CURRENT, "account", tmpstr, 1, 255) < 0)
            ExpInfo.Billing.account[0]='\000';
         else
-           strncpy(ExpInfo.Billing.account,tmpstr,200);
+           // BDZ 200 should be sizeof(ExpInfo.Billing.account)
+           OSTRCPY(ExpInfo.Billing.account, 200, tmpstr);
         if (P_getstring(CURRENT, "pslabel", tmpstr, 1, 255) < 0)
            ExpInfo.Billing.seqfil[0]='\000';
         else
-           strncpy(ExpInfo.Billing.seqfil,tmpstr,200);
+           // BDZ 200 should be sizeof(ExpInfo.Billing.seqfil)
+           OSTRCPY(ExpInfo.Billing.seqfil, 200, tmpstr);
         ptr = strrchr(infopath,'/');
         if ( ptr )
         {
            ptr++;
-           strncpy(ExpInfo.Billing.goID, ptr ,200);
+           // BDZ 200 should be sizeof(ExpInfo.Billing.goID)
+           OSTRCPY(ExpInfo.Billing.goID, 200, ptr);
         }
         else
         {
@@ -983,7 +988,7 @@ void set_rcvrs_info()
 {
     /* multiple reciever mapping for recvproc */
     ExpInfo.RvcrMapping[0] = (char) 0;
-    RcvrMapStr("rcvrs",ExpInfo.RvcrMapping);
+    RcvrMapStr("rcvrs", ExpInfo.RvcrMapping);
     if (bgflag) fprintf(stdout," [[[[[[[[[-->>  RcvrMapStr: '%s'\n",ExpInfo.RvcrMapping);
 }
 
@@ -1030,16 +1035,21 @@ void write_shr_info(double exp_time)
        ExpInfo.NumTables = num_tables;
     */
 
-    if ( ! AcodeManager_getAcodeStageWriteFlag(0) ) strcpy(ExpInfo.InitCodefile,"\0");
-    if ( ! AcodeManager_getAcodeStageWriteFlag(1) ) strcpy(ExpInfo.PreCodefile,"\0");
-    if ( ! AcodeManager_getAcodeStageWriteFlag(2) ) strcpy(ExpInfo.PSCodefile,"\0");
-    if ( ! AcodeManager_getAcodeStageWriteFlag(3) ) strcpy(ExpInfo.PostCodefile,"\0");
-    if ( ! AcodeManager_getAcodeStageWriteFlag(4) ) strcpy(ExpInfo.WaveFormFile,"\0");
+    if ( ! AcodeManager_getAcodeStageWriteFlag(0) )
+      OSTRCPY( ExpInfo.InitCodefile, sizeof(ExpInfo.InitCodefile), "\0");
+    if ( ! AcodeManager_getAcodeStageWriteFlag(1) )
+      OSTRCPY( ExpInfo.PreCodefile,  sizeof(ExpInfo.PreCodefile), "\0");
+    if ( ! AcodeManager_getAcodeStageWriteFlag(2) )
+      OSTRCPY( ExpInfo.PSCodefile,   sizeof(ExpInfo.PSCodefile), "\0");
+    if ( ! AcodeManager_getAcodeStageWriteFlag(3) )
+      OSTRCPY( ExpInfo.PostCodefile, sizeof(ExpInfo.PostCodefile), "\0");
+    if ( ! AcodeManager_getAcodeStageWriteFlag(4) )
+      OSTRCPY( ExpInfo.WaveFormFile, sizeof(ExpInfo.WaveFormFile), "\0");
 
     if (ExpInfo.InteractiveFlag)
     {
        char tmppath[256];
-       sprintf(tmppath,"%s.new",infopath);
+       OSPRINTF( tmppath, sizeof(tmppath), "%s.new", infopath);
        unlink(tmppath);
        Infofd = open(tmppath,O_EXCL | O_WRONLY | O_CREAT,0666);
     }
@@ -1066,14 +1076,14 @@ void ra_inovaacqparms(unsigned int fidn)
    char fidpath[512];
    int curct;
 
-   sprintf(fidpath,"%s/fid",ExpInfo.DataFile);
+   OSPRINTF( fidpath, sizeof(fidpath), "%s/fid", ExpInfo.DataFile);
    if (fidn == 1)
    {
      ifile = mOpen(fidpath,ExpInfo.DataSize,O_RDONLY );
      if (ifile == NULL)
      {
-	text_error("Cannot open data file: '%s', RA aborted.\n",
-		ExpInfo.DataFile);
+       text_error("Cannot open data file: '%s', RA aborted.\n",
+               ExpInfo.DataFile);
        psg_abort(1);
      }
      /* read in file header */
@@ -1081,20 +1091,20 @@ void ra_inovaacqparms(unsigned int fidn)
 					sizeof(acqfileheader));
      if (acqfileheader.np != ExpInfo.NumDataPts)
      {
-	text_error("FidFile np: %d not equal NumDataPts: %d, RA aborted.\n",
-		acqfileheader.np,ExpInfo.NumDataPts);
+       text_error("FidFile np: %d not equal NumDataPts: %d, RA aborted.\n",
+               acqfileheader.np,ExpInfo.NumDataPts);
        psg_abort(1);
      }
      if (acqfileheader.ebytes != ExpInfo.DataPtSize)
      {
-	text_error("FidFile dp: %d not equal DataPtSize: %d, RA aborted.\n",
-		acqfileheader.ebytes,ExpInfo.DataPtSize);
+       text_error("FidFile dp: %d not equal DataPtSize: %d, RA aborted.\n",
+               acqfileheader.ebytes,ExpInfo.DataPtSize);
        psg_abort(1);
      }
      if (acqfileheader.ntraces != ExpInfo.NumFids)
      {
-	text_error("FidFile nf: %d not equal NumFids: %d, RA aborted.\n",
-		acqfileheader.ntraces,ExpInfo.NumFids);
+       text_error("FidFile nf: %d not equal NumFids: %d, RA aborted.\n",
+               acqfileheader.ntraces,ExpInfo.NumFids);
        psg_abort(1);
      }
      ifile->offsetAddr += sizeof(acqfileheader);  /* move my file pointers */
@@ -1115,14 +1125,14 @@ void ra_inovaacqparms(unsigned int fidn)
 	   {
 	      if (curct != (((ExpInfo.CurrentTran/ExpInfo.NumInBS)+1) *
 							ExpInfo.NumInBS))
-	    text_error("Warning: File_ct(%d): %d not equal ct+bs: %d\n",
-		fidn,curct,ExpInfo.CurrentTran+ExpInfo.NumInBS);
+             text_error("Warning: File_ct(%d): %d not equal ct+bs: %d\n",
+                        fidn, curct, ExpInfo.CurrentTran + ExpInfo.NumInBS);
 	   }
 	   else
 	   {
 	      if (curct != ExpInfo.CurrentTran)
-	    text_error("Warning: File_ct(%d): %d not equal ct: %d\n",
-		fidn,curct,ExpInfo.CurrentTran);
+             text_error("Warning: File_ct(%d): %d not equal ct: %d\n",
+                        fidn, curct, ExpInfo.CurrentTran);
 	   }
 	}
 	else
@@ -1130,14 +1140,14 @@ void ra_inovaacqparms(unsigned int fidn)
 	   if (fidn < getStartFidNum())
 	   {
 	      if (curct != ExpInfo.NumTrans)
-	    text_error("Warning: File_ct(%d): %d not equal nt: %d\n",
-		fidn,curct,ExpInfo.NumTrans);
+             text_error("Warning: File_ct(%d): %d not equal nt: %d\n",
+                        fidn, curct, ExpInfo.NumTrans);
 	   }
 	   else
 	   {
 	      if (curct != ExpInfo.CurrentTran)
-	    text_error("Warning: File_ct(%d): %d not equal ct: %d\n",
-		fidn,curct,ExpInfo.CurrentTran);
+             text_error("Warning: File_ct(%d): %d not equal ct: %d\n",
+                        fidn, curct, ExpInfo.CurrentTran);
 	   }
 	}
 
@@ -1153,8 +1163,8 @@ void ra_inovaacqparms(unsigned int fidn)
 					sizeof(acqblockheader));
 	curct = acqblockheader.ctcount;
 	if (curct != ExpInfo.CurrentTran)
-	  text_error("Warning: File_ct(%d): %d not equal CurrentTran: %d\n",
-		fidn,curct,ExpInfo.CurrentTran);
+       text_error("Warning: File_ct(%d): %d not equal CurrentTran: %d\n",
+                  fidn, curct, ExpInfo.CurrentTran);
    }
    else curct = 0;
 

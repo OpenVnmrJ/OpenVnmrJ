@@ -99,8 +99,8 @@ void pulsesequence() {
 // Define Variables and Objects and Get Parameter Values
 
    CP hx = getcp("HX",0.0,0.0,0,1);
-   strcpy(hx.fr,"dec");
-   strcpy(hx.to,"obs");
+   OSTRCPY( hx.fr, sizeof(hx.fr), "dec");
+   OSTRCPY( hx.to, sizeof(hx.to), "obs");
    putCmd("frHX='dec'\n");
    putCmd("toHX='obs'\n");
 
@@ -130,10 +130,10 @@ void pulsesequence() {
       getstr("dqfXspc5",dqfXspc5);
       spc5 = getspc5("spc5X",0,0.0,0.0,0,1);
       tXspc5ret = spc5.t;
-      strcpy(spc5.ch,"obs");
+      OSTRCPY( spc5.ch, sizeof(spc5.ch), "obs");
       if (!strcmp(dqfXspc5,"y")) {
          spc5ref = getspc5("spc5X",spc5.iSuper,spc5.phAccum,spc5.phInt,1,1); 
-         strcpy(spc5ref.ch,"obs");
+         OSTRCPY( spc5ref.ch, sizeof(spc5ref.ch), "obs");
          tXspc5ret = tXspc5ret + spc5.t;
       }
       putCmd("chXspc5='obs'\n");
@@ -149,10 +149,10 @@ void pulsesequence() {
       getstr("dqfXc7",dqfXc7);
       c7 = getpostc7("c7X",0,0.0,0.0,0,1);
       tXc7ret = c7.t;
-      strcpy(c7.ch,"obs");
+      OSTRCPY( c7.ch, sizeof(c7.ch), "obs");
       if (!strcmp(dqfXc7,"y")) {
          c7ref = getpostc7("c7X",c7.iSuper,c7.phAccum,c7.phInt,1,1);
-         strcpy(c7ref.ch,"obs");
+         OSTRCPY( c7ref.ch, sizeof(c7ref.ch), "obs");
          tXc7ret = tXc7ret + c7.t;
       }
       putCmd("chXc7='obs'\n");
@@ -168,10 +168,10 @@ void pulsesequence() {
       getstr("dqfXc6",dqfXc6);
       c6 = getpostc6("c6X",0,0.0,0.0,0,1);
       tXc6ret = c6.t;
-      strcpy(c6.ch,"obs");
+      OSTRCPY( c6.ch, sizeof(c6.ch), "obs");
       if (!strcmp(dqfXc6,"y")) {
          c6ref = getpostc6("c6X",c6.iSuper,c6.phAccum,c6.phInt,1,1);
-         strcpy(c6ref.ch,"obs");
+         OSTRCPY( c6ref.ch, sizeof(c6ref.ch), "obs");
          tXc6ret = tXc6ret + c6.t;
       }
       putCmd("chXc6='obs'\n");
@@ -184,7 +184,7 @@ void pulsesequence() {
    if (!strcmp(mMix,"rfdr")) {
       rfdr = getrfdrxy8("rfdrX",0,0.0,0.0,0,1);
       tXrfdrret = rfdr.t;
-      strcpy(rfdr.ch,"obs");
+      OSTRCPY( rfdr.ch, sizeof(rfdr.ch), "obs");
       putCmd("chXrfdr='obs'\n");
       putCmd("tXrfdrret = %f\n",tXrfdrret*1.0e6);
    }

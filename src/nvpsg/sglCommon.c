@@ -28,6 +28,11 @@
 #include "sgl.h"
 #include "vfilesys.h"
 
+#include "safestring.h"
+
+// BDZ NOTE - without some redesign some strcpy/strcat/sprintf code
+//   can't be made safe because destination memory has unpredictable
+//   sizes.
 
 /*----------------------------------------------------------------------*/
 /*----------------------------------------------------------------------*/
@@ -1920,7 +1925,7 @@ void doubleToScientificString (double value, char *string)
    if (fabs(a) < 1e-12)
    {
      	a=0.0;
-						sprintf(string, "%s%1.8f", sign, a);
+        sprintf(string, "%s%1.8f", sign, a);
    }
 
    /* pico */
@@ -3319,11 +3324,20 @@ void checkForFilename (char *name, char *path)
    /* check if file exists */
    do
    {
-      strcpy(path, USER_DIR);      /* add user directory to path */
-      strcat(path, SHAPE_LIB_DIR); /* add shapelib directory to path */
-      sprintf(wavefile, "%s%li", name, counter); /* add number to name */
-      strcat(path, wavefile);      /* add path and waveform name */
-      strcat(path, ".GRD");        /* add suffix to complete path */
+      /* add user directory to path */
+      strcpy(path, USER_DIR);
+      
+      /* add shapelib directory to path */
+      strcat(path, SHAPE_LIB_DIR);
+      
+      /* add number to name */
+      OSPRINTF( wavefile, sizeof(wavefile), "%s%li", name, counter);
+      
+      /* add path and waveform name */
+      strcat(path, wavefile);
+      
+      /* add suffix to complete path */
+      strcat(path, ".GRD");
 
       /* check if file already exists */
       if ((fpout = fopen(path, "r")) == NULL)
@@ -3512,7 +3526,7 @@ int gradShapeWritten (char *basename, char *params, char *filename)
       while(match)
 	        {
       	  counter++;
-      	  sprintf(fname, "%s%li", basename, counter);   /* append number */
+      	  OSPRINTF( fname, sizeof(fname), "%s%li", basename, counter);   /* append number */
       	  tP=gradWListP;
       	  match=FALSE;
          while((tP)&&(tP!=tempP))
@@ -3765,9 +3779,12 @@ void readRfPulse (RF_PULSE_T *rfPulse)
    strcpy(seekString[RF_FRACTION], "RF_FRACTION");
    
    /* check if file exists */
-   strcpy(rfFile, rfPulse->pulseName); /* assign waveform name */
-   strcpy(shapename, rfFile);   /* add path and waveform name */
-   strcat(shapename, ".RF");    /* add suffix to complete path */
+   /* assign waveform name */
+   OSTRCPY( rfFile, sizeof(rfFile), rfPulse->pulseName);
+   /* add path and waveform name */
+   OSTRCPY( shapename, sizeof(shapename), rfFile);
+   /* add suffix to complete path */
+   OSTRCAT( shapename, sizeof(shapename), ".RF");
    if (appdirFind(shapename,"shapelib",path,"",R_OK))
    {
       if ((fpin = fopen(path, "r")) == NULL)
@@ -6641,10 +6658,10 @@ int mergeGradient (char *waveform1, char *waveform2,
    }
 
    /* check if file exists */
-   strcpy(wavefile1, USER_DIR);      /* add user directory to path */
-   strcat(wavefile1, SHAPE_LIB_DIR); /* add shapelib directory to path */
-   strcat(wavefile1, waveform1);     /* add path and waveform name */
-   strcat(wavefile1, ".GRD");        /* add suffix to complete path */
+   OSTRCPY( wavefile1, sizeof(wavefile1), USER_DIR);      /* add user directory to path */
+   OSTRCAT( wavefile1, sizeof(wavefile1), SHAPE_LIB_DIR); /* add shapelib directory to path */
+   OSTRCAT( wavefile1, sizeof(wavefile1), waveform1);     /* add path and waveform name */
+   OSTRCAT( wavefile1, sizeof(wavefile1), ".GRD");        /* add suffix to complete path */
 
    /* check if input file exists */
    if ((fpin1 = fopen(wavefile1, "r")) == NULL)
@@ -6658,10 +6675,10 @@ int mergeGradient (char *waveform1, char *waveform2,
    points1 = header1.points;
    fclose(fpin1);
 
-   strcpy(wavefile2, USER_DIR);      /* add user directory to path*/
-   strcat(wavefile2, SHAPE_LIB_DIR); /* add shapelib directory to path */
-   strcat(wavefile2, waveform2);     /* add path and waveform name */
-   strcat(wavefile2, ".GRD");        /* add suffix to complete path */
+   OSTRCPY( wavefile2, sizeof(wavefile2), USER_DIR);      /* add user directory to path*/
+   OSTRCAT( wavefile2, sizeof(wavefile2), SHAPE_LIB_DIR); /* add shapelib directory to path */
+   OSTRCAT( wavefile2, sizeof(wavefile2), waveform2);     /* add path and waveform name */
+   OSTRCAT( wavefile2, sizeof(wavefile2), ".GRD");        /* add suffix to complete path */
 
    /* check if input file exists */
    if ((fpin2 = fopen(wavefile2, "r")) == NULL)
@@ -10356,10 +10373,10 @@ ERROR_NUM_T writeToDisk (double * dataPoints, long numPoints,
    }
 
 /*  checkForFilename(name, path);*/ 
-   strcpy(path, USER_DIR);      /* add user directory to path*/
-   strcat(path, SHAPE_LIB_DIR); /* add shapelib directory to path */
-   strcat(path, name);      /* add path and waveform name */
-   strcat(path, ".GRD");        /* add suffix to complete path */
+   OSTRCPY( path, sizeof(path), USER_DIR);      /* add user directory to path*/
+   OSTRCAT( path, sizeof(path), SHAPE_LIB_DIR); /* add shapelib directory to path */
+   OSTRCAT( path, sizeof(path), name);      /* add path and waveform name */
+   OSTRCAT( path, sizeof(path), ".GRD");        /* add suffix to complete path */
 
    /* open the file for read/write operations */
    if ((fpout = fopen(path, "w+")) == NULL)
@@ -10594,15 +10611,15 @@ void calcPower (RF_PULSE_T *rf_pulse, char rfcoil[MAX_STR])
    readRfPulse(rf_pulse);   
    
    /* assemble path and name to RF calibration file */
-   strcpy(calPath,USER_DIR);                 /* add userdir to path */
-   strcat(calPath,RF_CAL_FILE);             /* add file name to pathh */
+   OSTRCPY( calPath, sizeof(calPath), USER_DIR);                 /* add userdir to path */
+   OSTRCAT( calPath, sizeof(calPath), RF_CAL_FILE);             /* add file name to pathh */
 
    /* check if RF calibration file is in user directory */
    /* if file is not in user directory look in system directory */
    if ((fpin = fopen(calPath, "r")) == NULL)
    {
-      strcpy(calPath, SYSTEMDIR);     /* add system directory to path*/
-      strcat(calPath, RF_CAL_FILE);   /* add file name to path */
+      OSTRCPY( calPath, sizeof(calPath), SYSTEMDIR);     /* add system directory to path*/
+      OSTRCAT( calPath, sizeof(calPath), RF_CAL_FILE);   /* add file name to path */
 
       /* check if RF pulse file is in user directory */
       if ((fpin = fopen(calPath, "r")) == NULL)

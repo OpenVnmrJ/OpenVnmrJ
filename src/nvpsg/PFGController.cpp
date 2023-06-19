@@ -13,6 +13,13 @@
 #include "FFKEYS.h"
 #include "ACode32.h"
 #include "cpsg.h"
+
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 //
 #define WriteWord( x )  pAcodeBuf->putCode( x )
 #define putPattern( x ) pWaveformBuf->putCode( x )
@@ -87,22 +94,25 @@ int PFGController::setEnable(char *key)
 {
   int buffer[4];
   char errorstring[128];
-  strcpy(errorstring,"");
+  OSTRCPY( errorstring, sizeof(errorstring), "");
   
   buffer[0] = 0;  /* everyone off */
   if (tolower(key[0]) == 'y') 
     {
-      if (!isPresent('x')) strcat(errorstring,"no X gradient ");
+      if (!isPresent('x'))
+        OSTRCAT( errorstring, sizeof(errorstring), "no X gradient ");
 	 buffer[0] |= XPFGPRESENT;
     }
   if (tolower(key[1]) == 'y') 
     {
-      if  (!isPresent('y')) strcat(errorstring,"no Y gradient ");
+      if  (!isPresent('y'))
+        OSTRCAT( errorstring, sizeof(errorstring), "no Y gradient ");
 	 buffer[0] |= YPFGPRESENT;
     }
   if (tolower(key[2]) == 'y') 
     {
-      if  (!isPresent('z')) strcat(errorstring,"no Z gradient ");
+      if  (!isPresent('z'))
+        OSTRCAT( errorstring, sizeof(errorstring), "no Z gradient ");
 	 buffer[0] |= ZPFGPRESENT;
     }
   if (strlen(errorstring) > 1) 
@@ -284,8 +294,8 @@ cPatternEntry *PFGController::resolveGrad1Pattern(char *nm, int flag, char *emsg
     scalef = PFGMAXPLUS;
     if (tmp != NULL)
       return(tmp);
-    strcpy(tname,nm);
-    strcat(tname,".GRD");
+    OSTRCPY( tname, sizeof(tname), nm);
+    OSTRCAT( tname, sizeof(tname), ".GRD");
     wcount = 0; eventcount = 0;
 
     i = findPatternFile(tname);
@@ -357,8 +367,8 @@ cPatternEntry *PFGController::resolveOblShpGrdPattern(char *nm, int flag, const 
     scalef = PFGMAXPLUS;
     if (tmp != NULL)
       return(tmp);
-    strcpy(tname,nm);
-    strcat(tname,".GRD");
+    OSTRCPY( tname, sizeof(tname), nm);
+    OSTRCAT( tname, sizeof(tname), ".GRD");
     wcount = 0; eventcount = 0;
     grad_rms_value = 0.0;
 

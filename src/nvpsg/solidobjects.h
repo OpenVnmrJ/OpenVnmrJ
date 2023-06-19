@@ -493,7 +493,7 @@ WMPA getbr24(char *seqName)
       printf("getbr24() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -578,7 +578,7 @@ WMPA getmrev8(char *seqName)
       printf("getmrev8() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -663,7 +663,7 @@ WMPA getswwhh4(char *seqName)
       printf("getswwhh4() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -749,7 +749,7 @@ WMPA getxx(char *seqName)
       psg_abort(1);
    }
 
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -834,7 +834,7 @@ WMPA getxmx(char *seqName)
       psg_abort(1);
    }
 
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -918,7 +918,7 @@ WMPA gettoss4(char *seqName)
       printf("gettoss4() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // INOVA ap bus delay
 
@@ -970,7 +970,7 @@ WMPA gettoss5(char *seqName)
       printf("gettoss5() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -1034,7 +1034,7 @@ WMPA getidref(char *seqName)
       printf("getidref() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -1078,7 +1078,7 @@ WMPA getwpmlg(char *seqName)
       printf("getwpmlg() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -1205,7 +1205,7 @@ GP getinept(char *seqName)
       printf("getinept() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(in.seqName,"%s",seqName);
+   OSTRCPY( in.seqName, sizeof(in.seqName), seqName);
 
 // ch1YXsuffix
 
@@ -1280,7 +1280,7 @@ WMPA getwdumbo(char *seqName)
       printf("getwdumbo() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -1412,7 +1412,7 @@ WMPA getwdumbot(char *seqName)
       printf("getwdumbot() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -1552,7 +1552,7 @@ WMPA getcpmg(char *seqName)
       psg_abort(1);
    }
 
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXcpmg
 
@@ -1638,7 +1638,7 @@ GP gethmqc(char *seqName)
       printf("gethmqc() Error: The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(hmqc.seqName,"%s",seqName);
+   OSTRCPY( hmqc.seqName, sizeof(hmqc.seqName), seqName);
 
 // ch1YXhmqc
 
@@ -1695,7 +1695,7 @@ WMPA gethssmall(char *seqName)
       printf("gethssmall() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXhssmall
 
@@ -1800,7 +1800,7 @@ WMPA getxmxwpmlg(char *seqName)
       printf("getwpmlg() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -1937,7 +1937,7 @@ WMPA getwsamn(char *seqName)
       printf("getwsamn() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -2064,7 +2064,7 @@ WMPA getwpmlgxmx(char *seqName)
       printf("getwpmlgxmx() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -2197,7 +2197,7 @@ WMPA getwdumboxmx(char *seqName)
       printf("getwdumboxmx() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -2338,7 +2338,7 @@ WMPA getwdumbogen(char *seqName, char *coeffName)
       printf("getwdumbogen() Error: The type name %s is invalid !\n",seqName);
       psg_abort(1);
    }
-   sprintf(mp.seqName,"%s",seqName);
+   OSTRCPY( mp.seqName, sizeof(mp.seqName), seqName);
 
 // chXsuffix
 
@@ -3078,11 +3078,14 @@ void _idref(WMPA mp, DSEQ d, int phase)
    }
 
    char ch2[NCH];
+
+   ch2[0] = (char) 0;  // BDZ: initialize to empty string!
+
    if (!strcmp(d.seq,"tppm")) {
-      sprintf(ch2,"%s",d.t.ch);
+      OSTRCPY( ch2, sizeof(ch2), d.t.ch);
    }
    if (!strcmp(d.seq,"spinal")) {
-      sprintf(ch2,"%s",d.s.ch);
+      OSTRCPY( ch2, sizeof(ch2), d.s.ch);
    }
 
    int chnl2 = 0;

@@ -16,6 +16,12 @@
 #include "cpsg.h"
 #include "FFKEYS.h"
 
+extern "C" {
+    
+#include "safestring.h"
+
+}
+
 #define OFFSETPULSE_TIMESLICE (0.00000020L)
 
 extern int bgflag;
@@ -41,7 +47,7 @@ cPatternEntry *WaveformUtility::readRFWaveform(char *name, RFController *rf1, un
   wcount = 0; eventcount = 0;
   scalef = 4095.0/1023.0;
 
-  strcpy(tname,name);
+  OSTRCPY( tname, sizeof(tname), name);
      i = rf1->findPatternFile(tname);
      if (i != 1)
        {

@@ -32,7 +32,7 @@ SHAPE getpulse(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(s.pars.seqName,"%s",seqName);
+   OSTRCPY( s.pars.seqName, sizeof(s.pars.seqName), seqName);
    s.pars.calc = calc;
    s.pars.array = parsearry(s.pars.array);
 
@@ -83,7 +83,7 @@ SHAPE getdfspulse(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getdfspulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(s.pars.seqName,"%s",seqName);
+   OSTRCPY( s.pars.seqName, sizeof(s.pars.seqName), seqName);
    s.pars.calc = calc;
    s.pars.array = parsearry(s.pars.array);
 
@@ -151,7 +151,7 @@ SHAPE getsfspulse(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getsfspulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(s.pars.seqName,"%s",seqName);
+   OSTRCPY( s.pars.seqName, sizeof(s.pars.seqName), seqName);
    s.pars.calc = calc;
    s.pars.array = parsearry(s.pars.array);
 
@@ -219,7 +219,7 @@ SHAPE getsfmpulse(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getsfmpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(s.pars.seqName,"%s",seqName);
+   OSTRCPY( s.pars.seqName, sizeof(s.pars.seqName), seqName);
    s.pars.calc = calc;
    s.pars.array = parsearry(s.pars.array);
 
@@ -273,7 +273,7 @@ SHAPE getsinc(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getsinc(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(s.pars.seqName,"%s",seqName);
+   OSTRCPY( s.pars.seqName, sizeof(s.pars.seqName), seqName);
    s.pars.calc = calc;
    s.pars.array = parsearry(s.pars.array);
 
@@ -335,7 +335,7 @@ SHAPE gettanramp(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getsfmpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(s.pars.seqName,"%s",seqName);
+   OSTRCPY( s.pars.seqName, sizeof(s.pars.seqName), seqName);
    s.pars.calc = calc;
    s.pars.array = parsearry(s.pars.array);
 
@@ -407,7 +407,7 @@ SHAPE getcpm(char *seqName, double p, double phint, int iRec, int calc)
       printf("Error in getcpm(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(s.pars.seqName,"%s",seqName);
+   OSTRCPY( s.pars.seqName, sizeof(s.pars.seqName), seqName);
    s.pars.calc = calc;
    s.pars.array = parsearry(s.pars.array);
 
@@ -468,7 +468,7 @@ SHAPE getdumbogenshp(char *seqName, char *coeffName, double p, double phint, int
       printf("Error in getdumbogenshp(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(s.pars.seqName,"%s",seqName);
+   OSTRCPY( s.pars.seqName, sizeof(s.pars.seqName), seqName);
    s.pars.calc = calc;
    s.pars.array = parsearry(s.pars.array);
 

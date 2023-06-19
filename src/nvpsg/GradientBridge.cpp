@@ -19,6 +19,12 @@
 #include "GradientBridge.h"
 #include "cpsg.h"
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 extern unsigned int ix;
 extern int bgflag;
 extern "C" char gradtype[];
@@ -461,32 +467,32 @@ void phase_encode3_oblshapedgradient(char *pat1, char *pat2, char *pat3, double 
    int tempType=0;
 
    char gradPwrId[512], swidth[256];
-   strcpy(gradPwrId,"OblPEShp ");
+   OSTRCPY( gradPwrId, sizeof(gradPwrId), "OblPEShp ");
 
    // if shape name blank, that logical axis has no gradient
 
    if (strcmp(pat1,"") != 0)
    {
      tempType |= 0x1;
-     strcat(gradPwrId,pat1);
-     strcat(gradPwrId," ");
+     OSTRCAT( gradPwrId, sizeof(gradPwrId), pat1);
+     OSTRCAT( gradPwrId, sizeof(gradPwrId), " ");
    }
 
    if (strcmp(pat2,"") != 0)
    {
      tempType |= 0x2;
-     strcat(gradPwrId,pat2);
-     strcat(gradPwrId," ");
+     OSTRCAT( gradPwrId, sizeof(gradPwrId), pat2);
+     OSTRCAT( gradPwrId, sizeof(gradPwrId), " ");
    }
 
    if (strcmp(pat3,"") != 0)
    {
      tempType |= 0x4;
-     strcat(gradPwrId,pat3);
-     strcat(gradPwrId," ");
+     OSTRCAT( gradPwrId, sizeof(gradPwrId), pat3);
+     OSTRCAT( gradPwrId, sizeof(gradPwrId), " ");
    }
-   sprintf(swidth,"%5.4f",width);
-   strcat(gradPwrId,swidth);
+   OSPRINTF( swidth, sizeof(swidth), "%5.4f", width);
+   OSTRCAT( gradPwrId, sizeof(gradPwrId), swidth);
 
     P2TheConsole->newEvent();
     gC->clearSmallTicker();
@@ -1006,7 +1012,7 @@ void settmpgradtype(char *tmpgradname)
          {
             if (pfgBoard > 0.5)
             {
-               strcpy(tmpGradtype,"   ");
+               OSTRCPY( tmpGradtype, sizeof(tmpGradtype), "   ");
                P_getstring(GLOBAL,"gradtype",tmpGradtype,1,MAXSTR-1);
                if (tmpGradtype[2] == 'a')
                {

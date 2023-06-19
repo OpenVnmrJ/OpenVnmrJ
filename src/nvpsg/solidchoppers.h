@@ -53,8 +53,8 @@ SHAPE make_shape(SHAPE s)
 
 // Open the output file for print.
 
-   sprintf(str,"%s/shapelib/",userdir);
-   sprintf(shapepath,"%s%s.DEC",str,s.pars.pattern);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/", userdir);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s%s.DEC", str, s.pars.pattern);
    if ((fp = fopen(shapepath,"w")) == NULL) {
       printf("Error in open of %s \n",shapepath);
       psg_abort(1);
@@ -75,7 +75,7 @@ SHAPE make_shape(SHAPE s)
 
    char lpattern[NPATTERN];
    int lix = arryindex(s.pars.array);
-   sprintf(lpattern,"%s%d",getname0("",s.pars.seqName,""),s.pars.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", getname0("",s.pars.seqName,""), s.pars.nRec);
    savet(s.pars.t, lix, lpattern);
 
 // Initialize the time, phase and steps
@@ -298,8 +298,8 @@ SHAPE make_shape1(SHAPE s)
 
 // Open the output file for print.
 
-   sprintf(str,"%s/shapelib/",userdir);
-   sprintf(shapepath,"%s%s.DEC",str,s.pars.pattern);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/", userdir);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s%s.DEC", str, s.pars.pattern);
    if ((fp = fopen(shapepath,"w")) == NULL) {
       printf("Error in open of %s \n",shapepath);
       psg_abort(1);
@@ -320,7 +320,7 @@ SHAPE make_shape1(SHAPE s)
 
    char lpattern[NPATTERN];
    int lix = arryindex(s.pars.array);
-   sprintf(lpattern,"%s%d",getname0("",s.pars.seqName,""),s.pars.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", getname0("",s.pars.seqName,""), s.pars.nRec);
    savet(s.pars.t, lix, lpattern);
 
 // Initialize the time, phase and steps
@@ -526,7 +526,7 @@ SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
       printf("Error in genericInitShape()! The  name %s is invalid !\n",name);
       psg_abort(-1);
    }
-   sprintf(s.pars.seqName,"%s",name);
+   OSPRINTF( s.pars.seqName, sizeof(s.pars.seqName), "%s", name);
 
 // Obtain Phase Arguments
 
@@ -563,16 +563,16 @@ SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
 
    char lpattern[NPATTERN];
    var = getname0("",s.pars.seqName,"");
-   sprintf(lpattern,"%s%d",var,s.pars.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, s.pars.nRec);
    s.pars.hasArray = hasarry(s.pars.array, lpattern);
    int lix = arryindex(s.pars.array);
    var = getname0("",s.pars.seqName,"");
    if (s.pars.calc > 0) {
-      sprintf(s.pars.pattern,"%s%d_%d",var,s.pars.nRec,lix);
+      OSPRINTF( s.pars.pattern, sizeof(s.pars.pattern), "%s%d_%d", var, s.pars.nRec, lix);
       if (s.pars.hasArray == 1) {
          s = make_shape(s);
       }
-       s.pars.t = gett(lix, lpattern);
+      s.pars.t = gett(lix, lpattern);
    }
    return s;
 }
@@ -588,7 +588,7 @@ SHAPE genericInitShape1(SHAPE s, char *name, double p, double phint, int iRec)
       printf("Error in genericInitShape()! The  name %s is invalid !\n",name);
       psg_abort(-1);
    }
-   sprintf(s.pars.seqName,"%s",name);
+   OSPRINTF( s.pars.seqName, sizeof(s.pars.seqName), "%s", name);
 
 // Obtain Phase Arguments
 
@@ -625,16 +625,16 @@ SHAPE genericInitShape1(SHAPE s, char *name, double p, double phint, int iRec)
 
    char lpattern[NPATTERN];
    var = getname0("",s.pars.seqName,"");
-   sprintf(lpattern,"%s%d",var,s.pars.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, s.pars.nRec);
    s.pars.hasArray = hasarry(s.pars.array, lpattern);
    int lix = arryindex(s.pars.array);
    var = getname0("",s.pars.seqName,"");
    if (s.pars.calc > 0) {
-      sprintf(s.pars.pattern,"%s%d_%d",var,s.pars.nRec,lix);
+      OSPRINTF( s.pars.pattern, sizeof(s.pars.pattern), "%s%d_%d", var, s.pars.nRec, lix);
       if (s.pars.hasArray == 1) {
          s = make_shape1(s);
       }
-       s.pars.t = gett(lix, lpattern);
+      s.pars.t = gett(lix, lpattern);
    }
    return s;
 }
@@ -678,8 +678,8 @@ MPSEQ MPchopper(MPSEQ seq)
 
 // Open the output file
 
-   sprintf(str,"%s/shapelib/",userdir);
-   sprintf(shapepath,"%s%s.DEC",str,seq.pattern);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/", userdir);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s%s.DEC", str, seq.pattern);
    if ( (fp = fopen(shapepath,"w")) == NULL) {
       printf("Error in open of %s \n",shapepath);
       psg_abort(1);
@@ -712,7 +712,7 @@ MPSEQ MPchopper(MPSEQ seq)
 //Save the total duration to the MODULE structure.
 
    char lpattern[NPATTERN];
-   sprintf(lpattern,"%s%d",getname0("",seq.seqName,""),seq.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", getname0("",seq.seqName,""), seq.nRec);
    int lix = arryindex(seq.array);
    savet(seq.t, lix, lpattern);
 
@@ -967,8 +967,8 @@ CP make_cp(CP cp)
 
 // Open the output file for print.
 
-   sprintf(str,"%s/shapelib/",userdir);
-   sprintf(shapepath,"%s%s.DEC",str,cp.pattern);
+   OSPRINTF( str, sizeof(str), "%s/shapelib/", userdir);
+   OSPRINTF( shapepath, sizeof(shapepath), "%s%s.DEC", str, cp.pattern);
    if ((fp = fopen(shapepath,"w")) == NULL) {
       printf("Error in open of %s \n",shapepath);
       psg_abort(1);
@@ -988,7 +988,7 @@ CP make_cp(CP cp)
 
    char lpattern[NPATTERN];
    int lix = arryindex(cp.array);
-   sprintf(lpattern,"%s%d",getname0("",cp.seqName,""),cp.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", getname0("",cp.seqName,""), cp.nRec);
    savet(cp.t, lix, lpattern);
 
 // Initialize the time, phase and steps

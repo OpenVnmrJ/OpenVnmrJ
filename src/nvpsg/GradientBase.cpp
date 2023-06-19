@@ -16,6 +16,12 @@
 #include "cpsg.h"
 #include "acqparms.h"
 
+extern "C" {
+
+#include "safestring.h"
+
+}
+
 //
 #define WriteWord( x ) pAcodeBuf->putCode( x )
 #define putPattern( x ) pWaveformBuf->putCode( x )
@@ -220,8 +226,8 @@ int GradientBase::create_rotation_list(char *nm, double* angle_set, int num_sets
       abort_message("number of gradient rotation angle sets in create_rotation_list command too large. abort!\n");
   
    char listName[MAXSTR];
-   strcpy(listName, nm);
-   strcat(listName,"_vrot");
+   OSTRCPY( listName, sizeof(listName), nm);
+   OSTRCAT( listName, sizeof(listName), "_vrot");
 
    cPatternEntry *tmp = find(listName, 0);
    if (tmp !=  NULL)
@@ -338,8 +344,8 @@ int GradientBase::create_angle_list(char *name, double *angle_set, int num_sets)
  
    char listName[MAXSTR];
    /* CHECK the size of name string */
-   strcpy(listName, name);
-   strcat(listName,"_vangle");
+   OSTRCPY( listName, sizeof(listName), name);
+   OSTRCAT( listName, sizeof(listName), "_vangle");
 
    cPatternEntry *tmp = find(listName, 0);
    if (tmp !=  NULL)

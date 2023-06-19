@@ -28,8 +28,11 @@
 // Structure for PBOXPULSE
 // =============================
 #define PB_NSUFFIX 13
+
 typedef struct {
+   
    char seqName[PB_NSUFFIX]; // Xc7,Yspc5 etc...
+   
    char ch[5];       // channel on which to execute the pulse
    char wv[64];      // type of softpulse, names in wavelib
    double db;        // scaler value - 16 to 63
@@ -123,16 +126,15 @@ PBOXPULSE update_PBOXPULSE(PBOXPULSE shp, int iRec)
 
    char lpattern[NPATTERN];
    var = getname0("",shp.seqName,"");
-   sprintf(lpattern,"%s%d",var,shp.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, shp.nRec);
    shp.hasArray = hasarry(shp.array, lpattern);
    int lix = arryindex(shp.array);
    if (shp.calc > 0) {
       var = getname0("",shp.seqName,"");
-      sprintf(shp.pattern,"%s%d_%d",var,shp.nRec,lix);
+      OSPRINTF( shp.pattern, sizeof(shp.pattern), "%s%d_%d", var, shp.nRec, lix);
       if (shp.hasArray == 1) {
          int ret __attribute__((unused));
-	 sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n",
-                shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,shp.fla);
+         OSPRINTF( cmd, sizeof(cmd), "Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n", shp.pattern, shp.wv, shp.pw, shp.of, shp.st, shp.ph, shp.fla);
          ret = system(cmd);
          pboxshp = getRsh(shp.pattern); 
          shp.B1max = pboxshp.B1max; 
@@ -161,7 +163,7 @@ PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
 // The two Shapes must be on the same channel
 
    if (strcmp(shp1.ch,shp2.ch) == 0) { 
-      strcpy(shp.ch,shp1.ch); 
+      OSTRCPY( shp.ch, sizeof(shp.ch), shp1.ch); 
 
 // Set the larger power for shp
 
@@ -204,13 +206,13 @@ PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
 
 // Concatenate the wave names for shp (not used)
 
-      strcpy(shp.wv, shp1.wv);           
-      strcat(shp.wv,shp2.wv);
+      OSTRCPY( shp.wv, sizeof(shp.wv), shp1.wv);
+      OSTRCAT( shp.wv, sizeof(shp.wv), shp2.wv);
 
 // Concatenate the seqName's for shp (not used)
 
-      strcpy(shp.seqName, shp1.seqName);
-      strcat(shp.seqName,shp2.seqName);
+      OSTRCPY( shp.seqName, sizeof(shp.seqName), shp1.seqName);
+      OSTRCAT( shp.seqName, sizeof(shp.seqName), shp2.seqName);
 
 // Set other defaults for shp
 
@@ -223,23 +225,21 @@ PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
 
       char lpattern[10*NPATTERN];
       var1 = getname0("",shp1.seqName,"");
-      strcpy(bar1,var1); 
+      OSTRCPY( bar1, sizeof(bar1), var1); 
       var2 = getname0("",shp2.seqName,"");
-      strcpy(bar2,var2);
-      sprintf(lpattern,"%s%d_%s%d",bar1,shp1.nRec,bar2,shp2.nRec);
+      OSTRCPY( bar2, sizeof(bar2), var2);
+      OSPRINTF( lpattern, sizeof(lpattern), "%s%d_%s%d", bar1, shp1.nRec, bar2, shp2.nRec);
       shp.hasArray = hasarry(shp.array, lpattern);
       int lix = arryindex(shp.array);
       if (shp.calc > 0) {
          var1 = getname0("",shp1.seqName,"");
-         strcpy(bar1,var1); 
+         OSTRCPY( bar1, sizeof(bar1), var1);
          var2 = getname0("",shp2.seqName,"");
-         strcpy(bar2,var2);  
-         sprintf(shp.pattern,"%s%d_%s%d_%d",bar1,shp1.nRec,bar2,shp2.nRec,lix);
+         OSTRCPY( bar2, sizeof(bar2), var2);
+         OSPRINTF( shp.pattern, sizeof(shp.pattern), "%s%d_%s%d_%d", bar1, shp1.nRec, bar2, shp2.nRec, lix);
          if (shp.hasArray == 1) {
             int ret __attribute__((unused));
-            sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2" ,
-               shp.pattern,shp1.wv,shp1.pw,shp1.of,shp1.st,shp1.ph,shp1.fla, 
-                           shp2.wv,shp2.pw,shp2.of,shp2.st,shp2.ph,shp2.fla);
+            OSPRINTF( cmd, sizeof(cmd), "Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2" , shp.pattern, shp1.wv, shp1.pw, shp1.of, shp1.st, shp1.ph, shp1.fla, shp2.wv, shp2.pw, shp2.of, shp2.st, shp2.ph, shp2.fla);
             ret = system(cmd);
             pboxshp = getRsh(shp.pattern); 
             shp.B1max = pboxshp.B1max; 
@@ -267,7 +267,7 @@ PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
       printf("Error in getpboxpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(shp.seqName,"%s",seqName);
+   OSTRCPY( shp.seqName, sizeof(shp.seqName), seqName);
    shp.calc = calc;
    shp.array = parsearry(shp.array);
    shp.nRec = iRec;
@@ -343,16 +343,15 @@ PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",shp.seqName,"");
-   sprintf(lpattern,"%s%d",var,shp.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, shp.nRec);
    shp.hasArray = hasarry(shp.array, lpattern);
    int lix = arryindex(shp.array);
    if (shp.calc > 0) {
       var = getname0("",shp.seqName,"");
-      sprintf(shp.pattern,"%s%d_%d",var,shp.nRec,lix);
+      OSPRINTF( shp.pattern, sizeof(shp.pattern), "%s%d_%d", var, shp.nRec, lix);
       if (shp.hasArray == 1) {
          int ret __attribute__((unused));
-	 sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n",
-                shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,shp.fla);
+         OSPRINTF( cmd, sizeof(cmd), "Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n", shp.pattern, shp.wv, shp.pw, shp.of, shp.st, shp.ph, shp.fla);
          ret = system(cmd);
          pboxshp = getRsh(shp.pattern); 
          shp.B1max = pboxshp.B1max; 
@@ -375,7 +374,7 @@ PBOXPULSE getrefpboxpulse(char *seqName, int iRec, int calc)
       printf("Error in getpsoftpulse(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
-   sprintf(shp.seqName,"%s",seqName);
+   OSTRCPY( shp.seqName, sizeof(shp.seqName), seqName);
    shp.calc = calc;
    shp.array = parsearry(shp.array);
    shp.nRec = iRec;
@@ -448,16 +447,15 @@ PBOXPULSE getrefpboxpulse(char *seqName, int iRec, int calc)
 
    char lpattern[NPATTERN];
    var = getname0("",shp.seqName,"");
-   sprintf(lpattern,"%s%d",var,shp.nRec);
+   OSPRINTF( lpattern, sizeof(lpattern), "%s%d", var, shp.nRec);
    shp.hasArray = hasarry(shp.array, lpattern);
    int lix = arryindex(shp.array);
    if (shp.calc > 0) {
       var = getname0("",shp.seqName,"");
-      sprintf(shp.pattern,"%s%d_%d",var,shp.nRec,lix);
+      OSPRINTF( shp.pattern, sizeof(shp.pattern), "%s%d_%d", var, shp.nRec, lix);
       if (shp.hasArray == 1) {
          int ret __attribute__((unused));
-         sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f\" -stepsize 0.2 -p %2.0f -l %f -attn e\n",
-                shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,ref_db,ref_pw);
+         OSPRINTF( cmd, sizeof(cmd), "Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f\" -stepsize 0.2 -p %2.0f -l %f -attn e\n", shp.pattern, shp.wv, shp.pw, shp.of, shp.st, shp.ph, ref_db, ref_pw);
          ret = system(cmd);
       }
    }

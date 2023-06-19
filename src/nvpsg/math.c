@@ -11,6 +11,10 @@
 
 extern void broadcastCodes(int, int, int*);
 
+#include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
+
 /*--------------------------------------------------------------
 |	incr(a)
 |	 a++;, where a is a real time variables

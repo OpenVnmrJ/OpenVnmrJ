@@ -791,6 +791,7 @@ void write_bvalues(DIFFUSION_T *diffusion,char *basepar,char *tracepar,char *max
   /* write the values */
   if (strlen(basepar)>0) {
     if ((par=(char *)malloc((strlen(basepar)+3)*sizeof(char))) == NULL) nomem();
+    // BDZ note that all these strcpy/strcat calls are safe
     strcpy(par,basepar); strcat(par,"rr");
     putarray(par,diffusion->bro,diffusion->nbval); 
     strcpy(par,basepar); strcat(par,"pp");
