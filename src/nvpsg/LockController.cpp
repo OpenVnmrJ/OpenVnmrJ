@@ -98,7 +98,7 @@ void LockController::setLockOffsetFrequency(double xx)
   int k;
 
   k = (int) floor(xx+0.5);
-  lockGain = k;
+  lockOffsetFreq = k;
   outputACode(LOCKFREQ,1, &k);
 }
    
