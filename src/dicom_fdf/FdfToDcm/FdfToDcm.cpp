@@ -999,7 +999,7 @@ static void makesha1uid(char *filepath, char *filename, char *uidbuf)
   FILE *fsha;
 
   // get its sha1sum to use for UID
-  (void)strcpy(sha1Path,filepath);
+  (void)strcpy(sha1Path,"/vnmr/tmp");
   (void)strcat(sha1Path,"/sha1.txt");
 
   (void)strcpy(fpath,filepath);
@@ -1014,6 +1014,7 @@ static void makesha1uid(char *filepath, char *filename, char *uidbuf)
   if(!fsha)printf("Could not open sha1 for %s \n",fpath);
   fscanf(fsha,"%10s",sha1);
   (void)fclose(fsha);
+  unlink(sha1Path);
 
 
   // clean up

@@ -9,6 +9,7 @@
 # For more information, see the LICENSE file.
 # 
 #
+# set -x
 
 # Set action
 if [ $# -lt 1 ] ; then
@@ -43,7 +44,7 @@ if [[ $action = fdf2nifti ]] || [[ $action = fdf2avw ]]; then
   fi
 
   # Set data test
-  test="[^:punct:]fdf"
+  test="fdf"
 
   # Set input extension
   inext="*.img"
@@ -153,7 +154,7 @@ if [[ $action = FdfToDcm ]] || [[ $action = FdfToDcmToServer ]]; then
   # Set fid directory extension, data test and input extension according to type (fdf or fid)
   if [[ $type = -fdf ]] ; then
     fid=""
-    test="[^:punct:]fdf"
+    test=".fdf$"
     inext="*.img"
   else
     fid=".fid"
