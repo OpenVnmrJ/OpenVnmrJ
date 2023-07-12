@@ -174,6 +174,7 @@ unsigned short valid_mask[NUM_SHIMSET][4] = {
 
 Shim::Shim()
 {
+   memset(codes, 0, sizeof(codes));  // this was missing
    shimset = 1;
    init_shimnames(GLOBAL);
 }
