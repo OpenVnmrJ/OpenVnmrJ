@@ -1182,7 +1182,7 @@ int nmr_write(int argc, char *argv[], int retc, char *retv[])
     }
   if (device==TFILE || device==RESET)
         {
-            if (verify_fname( argv[ argnum ] )) {
+            if (verify_fname2( argv[ argnum ] )) {
                Werrprintf( "file path '%s' not valid", argv[ argnum ] );
                ABORT;
             }

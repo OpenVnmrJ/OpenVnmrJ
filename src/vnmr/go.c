@@ -4527,12 +4527,17 @@ char    recDir[MAXPATH];
          {
             *ptr++ = '_';
             aptr++;
-	    dlen--;
+	         dlen--;
+         }
+         else if ((*aptr == ' ') && (replaceSpaceFlag == FALSE))
+         {
+            *ptr++ = *aptr++;
+	         dlen--;
          }
          else if (verify_fnameChar( *aptr )==0)
          {
             *ptr++ = *aptr++;
-	    dlen--;
+	         dlen--;
          }
          else
          {
@@ -4690,7 +4695,8 @@ char    recDir[MAXPATH];
    }
    if (replaceSpaceFlag == TRUE)
       replaceSpace(dirname);
-   if (verify_fname(dirname))
+   if (((replaceSpaceFlag == TRUE) && verify_fname(dirname)) ||
+       ((replaceSpaceFlag == FALSE) && verify_fname2(dirname)))
    {  Werrprintf( "file path '%s%s' not valid", dirname, suffix );
       ABORT;
    }
