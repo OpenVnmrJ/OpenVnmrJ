@@ -618,6 +618,31 @@ int verify_fname(char *fnptr )
 	return( 0 );
 }
 
+/* Same as verify_fname except it allows the space ' ' character */
+int verify_fname2(char *fnptr )
+{
+	char lchar;
+        unsigned int tchar;
+	int  iter, jter, len;
+
+	len = strlen( fnptr );
+	if (len < 0 || len > MAXPATH) return( -1 );
+
+	for (iter = 0; iter < len; iter++) {
+		tchar = *(fnptr+iter);
+		if (tchar < 32 )
+		  return( -1 );
+      if (tchar != ' ')
+      {
+		   jter = 0;
+		   while ((lchar = illegal_fchars[ jter++ ]) != '\0')
+		     if (lchar == tchar)
+		       return( -1 );
+      }
+	}
+	return( 0 );
+}
+
 /*
  * Alternative to strtok and strtok_r
  * s is string to search
