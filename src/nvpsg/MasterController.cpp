@@ -911,8 +911,10 @@ MasterController::MasterController(const char *name, int flags):Controller(name,
   //cout << "new master Controller" << endl;
   LKMode = 0;
   Extra = 0;
+  XYZgradflag = 0;  // this was missing
   shimset = -1;
   blafMode = 0;
+  memset(codes, 0, sizeof(codes));
 }
 
 //

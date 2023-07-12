@@ -142,12 +142,12 @@ class MasterController:public Controller
 {
    private:
      // there probably should be some duty cycle 
-   double ReceiverGainDefault;
-   int numberReceivers;
-   double spinRate;
-   int spinFlag;
-   double Temp;
-   int tempFlag;
+   //double ReceiverGainDefault;
+   //int numberReceivers;
+   //double spinRate;
+   //int spinFlag;
+   //double Temp;
+   //int tempFlag;
    int   codes[54];	// 48 shims + 1 count + extra
    //int TRSelectCode;
    //int LOSelectCode;
