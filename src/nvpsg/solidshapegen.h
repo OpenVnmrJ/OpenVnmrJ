@@ -837,8 +837,8 @@ void _cp_(CP cp, int phase1, int phase2)
       case 4:
          dec3unblank();
          if (p1 == 0) {
-            dec2phase(cphase);
-            dec2on();
+            dec3phase(cphase);
+            dec3on();
          }
          break;
       default:
