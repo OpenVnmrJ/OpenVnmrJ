@@ -3728,7 +3728,7 @@ void dump_mpseq(MPSEQ a)
 void dump_mpseq_array(MPSEQ a)
 {
    int i,j,m,k,l;
-   char temp[MAXSTR]; 
+   char temp[PAR_NAME_SZ]; 
    printf("MPSEQ WAVEFORM ARRAY INFORMATION\n"); 
    printf("pattern = %10s : Filename for Shape\n",a.pattern); 
    printf("array.c = %10d : Number of Parameters\n", a.array.c);
@@ -3792,7 +3792,7 @@ void dump_cp(CP a)
 void dump_cp_array(CP a)
 {
    int i,j,m,k,l;
-   char temp[MAXSTR]; 
+   char temp[PAR_NAME_SZ]; 
    printf("CP WAVEFORM ARRAY INFORMATION\n"); 
    printf("pattern = %10s : Filename for Shape\n",a.pattern); 
    printf("array.c = %10d : Number of Parameters\n", a.array.c);
@@ -3852,7 +3852,7 @@ void dump_ramp(RAMP a)
 void dump_ramp_array(RAMP a)
 {
    int i,j,m,k,l;
-   char temp[MAXSTR]; 
+   char temp[PAR_NAME_SZ]; 
    printf("RAMP WAVEFORM ARRAY INFORMATION\n"); 
    printf("pattern = %10s : Filename for Shape\n",a.pattern); 
    printf("array.c = %10d : Number of Parameters\n", a.array.c);
@@ -3917,7 +3917,7 @@ void dump_shape(SHAPE a)
 void dump_shape_array(SHAPE a)
 {
    int i,j,m,k,l;
-   char temp[MAXSTR]; 
+   char temp[PAR_NAME_SZ]; 
    printf("SHAPE WAVEFORM ARRAY INFORMATION\n"); 
    printf("pattern = %10s : Filename for Shape\n",a.pars.pattern); 
    printf("array.c = %10d : Number of Parameters\n", a.pars.array.c);

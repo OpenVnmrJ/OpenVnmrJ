@@ -80,7 +80,7 @@ void dump_pboxpulse(PBOXPULSE a)
 void dump_pboxpulse_array(PBOXPULSE a)
 {
    int i,j,m,k,l;
-   char temp[MAXSTR]; 
+   char temp[PAR_NAME_SZ]; 
    printf("PBOXPULSE WAVEFORM ARRAY INFORMATION\n"); 
    printf("pattern = %10s : Filename for Pulse\n",a.pattern); 
    printf("array.c = %10d : Number of Parameters\n", a.array.c);
