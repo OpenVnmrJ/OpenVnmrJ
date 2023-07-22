@@ -2816,7 +2816,7 @@ void _shapeon(SHAPE s, codeint phase)
          dec2unblank();
          if (p1 == 0) {
             dec2phase(phase);
-            decon();
+            dec2on();
          }
          if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec2pwrf(ampl);
 	 if (s.pars.t > 0.0) {
@@ -3318,7 +3318,7 @@ void _rampon(RAMP r, codeint phase)
          }
          if (p1 != 0) {
             dec3phase(phase);
-            decon();
+            dec3on();
          }
          break;
       default:
