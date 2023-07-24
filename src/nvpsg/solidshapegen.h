@@ -3288,7 +3288,7 @@ void _rampon(RAMP r, codeint phase)
          }
          break;
       case 3:
-         decunblank();
+         dec2unblank();
          if (p1 == 0) {
             dec2phase(phase);
             dec2on();
