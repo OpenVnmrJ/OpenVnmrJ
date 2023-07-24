@@ -161,7 +161,16 @@ double roundamp(double par, double res)
 
 void Getstr(char *parname, char *parval, int arrsize)
 {
-   char str[MAXSTR];  //getstr() always returns an char array of size MAXSTR
+   // BDZ 7-24-23
+   //
+   // str size used to be based upon MAXSTR. But that constant varies from
+   //   file to file. Compiler messages were used to show it was 256 or 512
+   //   where this method was called and who knows if it was some other
+   //   calue. But if you go to the declaration of getstr() in cps.c you
+   //   can see MAXSTR there is 256. So set the local string to that same
+   //   size.
+   
+   char str[256];  //getstr() always returns a char array of size 256
    getstr(parname,str);
    strncpy(parval,str,arrsize);
    if (strlen(str) >= arrsize) *(parval+arrsize-1) = '\0';
