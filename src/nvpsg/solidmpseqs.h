@@ -1998,6 +1998,10 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
    char *var;
    extern CP make_cp(CP cp);
 
+   // super thorough preinitialization
+   
+   memset(&cp, 0, sizeof(cp));
+   
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 2) {
       printf("Error in getcp(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
@@ -2028,6 +2032,7 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 
    cp.preset1 = 0;
    cp.preset2 = 0;
+   cp.preset3 = 0; // BDZ until 7-25-23 this one was not initialized.
    cp.strtdelay = WFG_START_DELAY - WFG_OFFSET_DELAY;
    cp.offstdelay = WFG_OFFSET_DELAY;
    cp.apdelay = PWRF_DELAY;
