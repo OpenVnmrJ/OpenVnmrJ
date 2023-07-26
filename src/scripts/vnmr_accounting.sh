@@ -25,5 +25,6 @@ then
    javabin="java"
 fi
 
+LANG=en_US.UTF8
 $javabin -jar $vnmrsystem/java/account.jar "$@"
 exit 0
