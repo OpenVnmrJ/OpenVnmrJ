@@ -1994,7 +1994,7 @@ MPSEQ getxy8(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 {
-   CP cp;
+   CP cp = {};
    char *var;
    extern CP make_cp(CP cp);
 
@@ -2028,6 +2028,7 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 
    cp.preset1 = 0;
    cp.preset2 = 0;
+   cp.preset3 = 0; // BDZ until 7-25-23 this one was not initialized.
    cp.strtdelay = WFG_START_DELAY - WFG_OFFSET_DELAY;
    cp.offstdelay = WFG_OFFSET_DELAY;
    cp.apdelay = PWRF_DELAY;
