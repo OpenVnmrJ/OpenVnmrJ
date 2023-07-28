@@ -1994,14 +1994,10 @@ MPSEQ getxy8(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 {
-   CP cp;
+   CP cp = {};
    char *var;
    extern CP make_cp(CP cp);
 
-   // super thorough preinitialization
-   
-   memset(&cp, 0, sizeof(cp));
-   
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 2) {
       printf("Error in getcp(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
