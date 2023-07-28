@@ -232,7 +232,8 @@ char lpattern[MAXSTR];
 }
 
 void clearobswfg()
-{  if (PWRF_DELAY > 0.0) {
+{
+   if (PWRF_DELAY > 0.0) {
       obsprgoff();
    }
 }
@@ -333,20 +334,27 @@ double lstep,ldres,lpredelay;
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
          obsprgon(lpattern,lstep,ldres);
-      else obswfgHSon();
-      dps_off(); delay(lpredelay); dps_on();
+      else
+         obswfgHSon();
+      dps_off();
+      delay(lpredelay);
+      dps_on();
    }
-   else obsprgon(lpattern,lstep,ldres);
+   else
+      obsprgon(lpattern,lstep,ldres);
 }
 
 void obswfgoff(lpreset)
 int lpreset;
 {
    if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0) obsprgoff();
-      else obswfgHSoff();
+      if (lpreset == 0)
+         obsprgoff();
+      else
+         obswfgHSoff();
    }
-   else obsprgoff(); 
+   else
+      obsprgoff(); 
 }
 
 void decwfgon(lpattern,lstep,ldres,lpreset,lpredelay)
@@ -355,9 +363,13 @@ int lpreset;
 double lstep,ldres,lpredelay;
 {
    if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0) decprgon(lpattern,lstep,ldres);
-      else decwfgHSon();
-      dps_off(); delay(lpredelay); dps_on();
+      if (lpreset == 0)
+         decprgon(lpattern,lstep,ldres);
+      else
+         decwfgHSon();
+      dps_off();
+      delay(lpredelay);
+      dps_on();
    }
    else decprgon(lpattern,lstep,ldres);
 }
@@ -366,10 +378,13 @@ void decwfgoff(lpreset)
 int lpreset;
 {   
    if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0) decprgoff();
-      else decwfgHSoff();
+      if (lpreset == 0)
+         decprgoff();
+      else
+         decwfgHSoff();
    }
-   else decprgoff(); 
+   else
+      decprgoff(); 
 }
 
 void dec2wfgon(lpattern,lstep,ldres,lpreset,lpredelay)
@@ -378,21 +393,29 @@ int lpreset;
 double lstep,ldres,lpredelay;
 {   
    if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0) dec2prgon(lpattern,lstep,ldres);
-      else dec2wfgHSon();
-      dps_off(); delay(lpredelay); dps_on();
+      if (lpreset == 0)
+         dec2prgon(lpattern,lstep,ldres);
+      else
+         dec2wfgHSon();
+      dps_off();
+      delay(lpredelay);
+      dps_on();
    }
-   else dec2prgon(lpattern,lstep,ldres);
+   else
+      dec2prgon(lpattern,lstep,ldres);
 }
 
 void dec2wfgoff(lpreset)
 int lpreset;
 {   
    if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0) dec2prgoff();
-      else dec2wfgHSoff();
+      if (lpreset == 0)
+         dec2prgoff();
+      else
+         dec2wfgHSoff();
    }   
-   else dec2prgoff(); 
+   else
+      dec2prgoff(); 
 }
 
 void dec3wfgon(lpattern,lstep,ldres,lpreset,lpredelay)
@@ -401,21 +424,29 @@ int lpreset;
 double lstep,ldres,lpredelay;
 {   
    if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0) dec3prgon(lpattern,lstep,ldres);
-      else dec3wfgHSon();
-      dps_off(); delay(lpredelay); dps_on();
+      if (lpreset == 0)
+         dec3prgon(lpattern,lstep,ldres);
+      else
+         dec3wfgHSon();
+      dps_off();
+      delay(lpredelay);
+      dps_on();
    }
-   else dec3prgon(lpattern,lstep,ldres); 
+   else
+      dec3prgon(lpattern,lstep,ldres); 
 }
 
 void dec3wfgoff(lpreset)
 int lpreset;
 {   
    if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0) dec3prgoff();
-      else dec3wfgHSoff();
+      if (lpreset == 0)
+         dec3prgoff();
+      else
+         dec3wfgHSoff();
    }   
-   else dec3prgoff(); 
+   else
+      dec3prgoff(); 
 }
 
 //===============================================
@@ -579,7 +610,7 @@ void _initcp_(CP cp, double lamplitude)
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                initobswfg("PRESET",5.0e-6,90.0,lamplitude);
             }
-	 }
+         }
          break;
       case 2:
          decunblank();
@@ -587,23 +618,23 @@ void _initcp_(CP cp, double lamplitude)
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                initdecwfg("PRESET",5.0e-6,90.0,lamplitude);
             }
-	 }
+         }
          break;
       case 3:
          dec2unblank();
-	 if (cp.t > 0.0) {
+         if (cp.t > 0.0) {
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                initdec2wfg("PRESET",5.0e-6,90.0,lamplitude);
             }
-	 }
+         }
          break;
       case 4:
          dec3unblank();
-	 if (cp.t > 0.0) {
+         if (cp.t > 0.0) {
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                initdec3wfg("PRESET",5.0e-6,90.0,lamplitude);
             }
-	 }
+         }
          break;
       default:
          printf("Error from _initcp_(): Invalid Ramp Channel!\n");
@@ -708,7 +739,7 @@ void _setcp_(CP cp)
       default:
          printf("Error from _setcp_(): Invalid Const Channel!\n");
          psg_abort(1);
-      break;
+         break;
    }
 
    switch(nchRamp) {
@@ -734,7 +765,7 @@ void _setcp_(CP cp)
          }
          else {
             dec2pwrf(aRamp);
-	 }
+         }
          break;
       case 4:
          if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
@@ -822,7 +853,7 @@ void _cp_(CP cp, int phase1, int phase2)
          break;
       case 2:
          decunblank();
-            if (p1 == 0) {
+         if (p1 == 0) {
             decphase(cphase);
             decon();
          }
@@ -920,7 +951,7 @@ void _cp_(CP cp, int phase1, int phase2)
          default:
             printf("Error from _cp_(): Invalid Const Channel!\n");
             psg_abort(1);
-         break;
+            break;
       }
    }
 
@@ -930,7 +961,7 @@ void _cp_(CP cp, int phase1, int phase2)
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                obswfgon(cp.pattern,cp.n90*12.5e-9,90.0,p2,cp.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             txphase(rphase);
             xmtron();
@@ -941,7 +972,7 @@ void _cp_(CP cp, int phase1, int phase2)
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                decwfgon(cp.pattern,cp.n90*12.5e-9,90.0,p2,cp.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             decphase(rphase);
             decon();
@@ -952,7 +983,7 @@ void _cp_(CP cp, int phase1, int phase2)
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                dec2wfgon(cp.pattern,cp.n90*12.5e-9,90.0,p2,cp.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             dec2phase(rphase);
             dec2on();
@@ -963,7 +994,7 @@ void _cp_(CP cp, int phase1, int phase2)
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                dec3wfgon(cp.pattern,cp.n90*12.5e-9,90.0,p2,cp.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             dec3phase(rphase);
             dec3on();
@@ -980,19 +1011,19 @@ void _cp_(CP cp, int phase1, int phase2)
          case 1:
             txphase(cphase);
             xmtron();
-	    break;
+            break;
          case 2:
             decphase(cphase);
             decon();
-	    break;
+            break;
          case 3:
             dec2phase(cphase);
             dec2on();
             break;
          case 4:
             dec3phase(cphase);
-	    dec3on();
-	    break;
+            dec3on();
+            break;
          default:
             printf("Error from _cp_(): Invalid Const Channel!\n");
             psg_abort(1);
@@ -1007,19 +1038,19 @@ void _cp_(CP cp, int phase1, int phase2)
          case 1:
             xmtroff();
             obsunblank();
-	    break;
+            break;
          case 2:
             decoff();
             decunblank();
-	    break;
+            break;
          case 3:
             dec2off();
             dec2unblank();
             break;
          case 4:
-	    dec3off();
+            dec3off();
             dec3unblank();
-	    break;
+            break;
          default:
             printf("Error from _cp_(): Invalid Const Channel!\n");
             psg_abort(1);
@@ -1029,43 +1060,51 @@ void _cp_(CP cp, int phase1, int phase2)
 
    switch(nchRamp) {
       case 1:
-         if (p3 != 0) xmtroff();
-	 if (cp.t > 0.0) {
+         if (p3 != 0)
+            xmtroff();
+         if (cp.t > 0.0) {
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                obswfgoff(p4);
             }
-	 }
-         if (p3 == 0) xmtroff();
+         }
+         if (p3 == 0)
+            xmtroff();
          obsunblank();
          break;
       case 2:
-         if (p3 != 0) decoff();
-	 if (cp.t > 0.0) {
+         if (p3 != 0)
+            decoff();
+         if (cp.t > 0.0) {
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                decwfgoff(p4);
             }
-	 }
-         if (p3 == 0)  decoff();
+         }
+         if (p3 == 0)
+            decoff();
          decunblank();
          break;
       case 3:
-         if (p3 != 0) dec2off();
-	 if (cp.t > 0.0) {
+         if (p3 != 0)
+            dec2off();
+         if (cp.t > 0.0) {
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {             
               dec2wfgoff(p4);             
             }
-	 }
-         if (p3 == 0) dec2off();
+         }
+         if (p3 == 0)
+            dec2off();
          dec2unblank();
          break;
       case 4:
-         if (p3 != 0) dec3off();
-	 if (cp.t > 0.0) {
+         if (p3 != 0)
+            dec3off();
+         if (cp.t > 0.0) {
             if ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0)) {
                dec3wfgoff(p4);
-	    }
+            }
          }
-         if (p3 == 0) dec3off();
+         if (p3 == 0)
+            dec3off();
          dec3unblank();
          break;
       default:
@@ -1079,19 +1118,19 @@ void _cp_(CP cp, int phase1, int phase2)
          case 1:
             xmtroff();
             obsunblank();
-	    break;
+            break;
          case 2:
             decoff();
             decunblank();
-	    break;
+            break;
          case 3:
             dec2off();
             dec2unblank();
             break;
          case 4:
-	    dec3off();
+            dec3off();
             dec3unblank();
-	    break;
+            break;
          default:
             printf("Error from _cp_(): Invalid Const Channel!\n");
             psg_abort(1);
@@ -1123,29 +1162,29 @@ void _clearcp_(CP cp)
    dps_off();
    switch(nchRamp) {
       case 1:
-      	 if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
+         if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
             clearobswfg();
-	 }
+         }
          obsunblank();
-	 break;
+         break;
       case 2:
-      	 if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
+         if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
             cleardecwfg();
-	 }
+         }
          decunblank();
-	 break;
+         break;
       case 3:
-      	 if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
+         if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
             cleardec2wfg();
-	 }
+         }
          dec2unblank();
          break;
       case 4:
-      	 if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
-	    cleardec3wfg();
-	 }
+         if ((cp.t > 0.0) && ((strcmp(cp.sh,"c") != 0) || (fabs(cp.of) >= 1.0))) {
+            cleardec3wfg();
+         }
          dec3unblank();
-	 break;
+         break;
       default:
          printf("Error from _clearcp_(): Invalid Ramp Channel!\n");
          psg_abort(1);
@@ -1176,8 +1215,10 @@ void MPinitializer(MPSEQ *mp,int npw,int nph,int no,int na,int ng,int nBase,int 
    mp->na = na;
    mp->ng = ng;
 
-   if (PWRF_DELAY > 0.0) mp->n90 = 16; 
-   else mp->n90 = 8;   
+   if (PWRF_DELAY > 0.0)
+      mp->n90 = 16; 
+   else
+      mp->n90 = 8;   
    mp->preset1 = 0;
    mp->preset2 = 0;
    mp->strtdelay = WFG_START_DELAY - WFG_OFFSET_DELAY;
@@ -1329,7 +1370,7 @@ MPSEQ MPchopper(MPSEQ seq)
                if (printmode == 2)
                   fprintf(fp,"%10.1f %10.3f %6.1f\n",(90.0/nmin)*naccumpuls,phase,seq.aBase[i%seq.na]);
                if (printmode == 3)
-		  fprintf(fp,"%10.1f %10.3f\n",(90.0/nmin)*naccumpuls,phase);
+                  fprintf(fp,"%10.1f %10.3f\n",(90.0/nmin)*naccumpuls,phase);
                seq.phInt += nmin*dph;
                naccumpuls = 0;
                break;
@@ -1390,7 +1431,8 @@ RAMP make_ramp(RAMP r)
       r.b = 1.0e12;
       r.d = 0;
    }
-   else if (strcmp(r.sh,"l") == 0) r.b = 1.0e12;
+   else if (strcmp(r.sh,"l") == 0)
+      r.b = 1.0e12;
    if (strcmp(r.pol,"n") == 0 ) {
       POL = NORMAL;
       mean = r.a;
@@ -1467,6 +1509,7 @@ RAMP make_ramp(RAMP r)
          default:
             printf("Error in make_ramp. Cannot determine RAMP polarity!\n");
             psg_abort(1);
+            break;
       }
       aCurrent = (double)((int)(aCurrent + 0.5));
       if (aCurrent > 1023) aCurrent = 1023.0;
@@ -1851,8 +1894,10 @@ SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
 
 // Supply INOVA Start Delays
 
-   if (PWRF_DELAY > 0.0) s.pars.n90 = 16;
-   else s.pars.n90 = 8;
+   if (PWRF_DELAY > 0.0)
+      s.pars.n90 = 16;
+   else
+      s.pars.n90 = 8;
    s.pars.preset1 = 0;
    s.pars.preset2 = 0;
    s.pars.strtdelay = WFG_START_DELAY;
@@ -1889,7 +1934,7 @@ SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
       if (s.pars.hasArray == 1) {
          s = make_shape(s);
       }
-       s.pars.t = gett(lix, lpattern);
+      s.pars.t = gett(lix, lpattern);
    }
    return s;
 }
@@ -1918,13 +1963,13 @@ void _initmpseq(MPSEQ seq, double lamplitude)
         obsunblank();
         if (seq.nelem > 0) {
            initobswfg("PRESET",5.0e-6,90.0,lamplitude);
-	}
+        }
         break;
      case 2:
         decunblank();
         if (seq.nelem > 0) {
            initdecwfg("PRESET",5.0e-6,90.0,lamplitude);
-	}
+        }
         break;
      case 3:
         dec2unblank();
@@ -2048,7 +2093,8 @@ void _mpseq(MPSEQ seq, int phase)
             txphase(phase);
             xmtron();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) obspwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            obspwrf(seq.a);
          if (seq.nelem > 0) {
             obswfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
          }
@@ -2057,34 +2103,39 @@ void _mpseq(MPSEQ seq, int phase)
             xmtron();
          }
          delay(seq.t);
-         if (p3 != 0) xmtroff();
+         if (p3 != 0)
+            xmtroff();
          if (seq.nelem > 0) {
-	    obswfgoff(p4);
+            obswfgoff(p4);
          }
-	 if (p3 == 0) xmtroff();
-	 obsunblank();
-	 break;
+         if (p3 == 0)
+            xmtroff();
+         obsunblank();
+         break;
       case 2:
          decunblank();
          if ((p1 == 0) && (m1 == 0)) {
             decphase(phase);
             decon();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) decpwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            decpwrf(seq.a);
          if (seq.nelem > 0) {
             decwfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
          }
-          if ((p1 != 0) && (m1 == 0)) {
+         if ((p1 != 0) && (m1 == 0)) {
             decphase(phase);
             decon();
          }
          delay(seq.t);
-         if (p3 != 0) decoff();
+         if (p3 != 0)
+            decoff();
          if (seq.nelem > 0) {
-	    decwfgoff(p4);
+            decwfgoff(p4);
          }
-	 if (p3 != 0) decoff();
-	 decunblank();
+         if (p3 != 0)
+            decoff();
+         decunblank();
          break;
       case 3:
          dec2unblank();
@@ -2092,7 +2143,8 @@ void _mpseq(MPSEQ seq, int phase)
             dec2phase(phase);
             dec2on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec2pwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec2pwrf(seq.a);
          if (seq.nelem > 0) {
             dec2wfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
          }
@@ -2101,20 +2153,23 @@ void _mpseq(MPSEQ seq, int phase)
             dec2on();
          }
          delay(seq.t);
-         if (p3 != 0) dec2off();
+         if (p3 != 0)
+            dec2off();
          if (seq.nelem > 0) {
-	    dec2wfgoff(p4);
+            dec2wfgoff(p4);
          }
-	 if (p3 == 0) dec2off();
-	 dec2unblank();
-	 break;
+         if (p3 == 0)
+            dec2off();
+         dec2unblank();
+         break;
       case 4:
          dec3unblank();
          if (p1 == 0) {
             dec3phase(phase);
             dec3on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0))  dec3pwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec3pwrf(seq.a);
          if (seq.nelem > 0) {
             dec3wfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
          }
@@ -2123,12 +2178,14 @@ void _mpseq(MPSEQ seq, int phase)
             dec3on();
          }
          delay(seq.t);
-         if (p3 != 0) dec3off();
+         if (p3 != 0)
+            dec3off();
          if (seq.nelem > 0) {
-	    dec3wfgoff(p4);
+            dec3wfgoff(p4);
          }
-	 if (p3 == 0) dec3off();
-	 dec3unblank();
+         if (p3 == 0)
+            dec3off();
+         dec3unblank();
          break;
       default:
          printf("_mpseq() Error: Undefined Channel! < 0!\n");
@@ -2143,16 +2200,16 @@ void _mpseq(MPSEQ seq, int phase)
 
 void _clearmpseq(MPSEQ seq)
 {
-   int chnl;
-   chnl = 0;
-   if (!strcmp(seq.ch,"obs")) chnl = 1;
-   else if (!strcmp(seq.ch,"dec")) chnl = 2;
-   else if (!strcmp(seq.ch,"dec2")) chnl = 3;
-   else if (!strcmp(seq.ch,"dec3")) chnl = 4;
-   else {
-      printf("_mpseq() Error: Undefined Channel! < 0!\n");
-      psg_abort(1);
-   }
+    int chnl;
+    chnl = 0;
+    if (!strcmp(seq.ch,"obs")) chnl = 1;
+    else if (!strcmp(seq.ch,"dec")) chnl = 2;
+    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
+    else if (!strcmp(seq.ch,"dec3")) chnl = 4;
+    else {
+       printf("_mpseq() Error: Undefined Channel! < 0!\n");
+       psg_abort(1);
+    }
 
     dps_off();
     switch (chnl) {
@@ -2161,7 +2218,7 @@ void _clearmpseq(MPSEQ seq)
             clearobswfg();
          }
          obsunblank();
-	 break;
+         break;
       case 2:
          if (seq.nelem > 0) {
             cleardecwfg();
@@ -2173,7 +2230,7 @@ void _clearmpseq(MPSEQ seq)
             cleardec2wfg();
          }
          dec2unblank();
-	 break;
+         break;
       case 4:
          if (seq.nelem > 0) {
             cleardec3wfg();
@@ -2223,7 +2280,8 @@ void _mpseqT(MPSEQ seq, double t, int phase)
             txphase(phase);
             xmtron();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) obspwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            obspwrf(seq.a);
          if (seq.nelem > 0) {
             obswfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
          }
@@ -2232,20 +2290,23 @@ void _mpseqT(MPSEQ seq, double t, int phase)
             xmtron();
          }
          delay(t);
-         if (p3 != 0) xmtroff();
+         if (p3 != 0)
+            xmtroff();
          if (seq.nelem > 0) {
-	    obswfgoff(p4);
+            obswfgoff(p4);
          }
-	 if (p3 == 0) xmtroff();
-	 obsunblank();
-	 break;
+         if (p3 == 0)
+            xmtroff();
+         obsunblank();
+         break;
       case 2:
          decunblank();
          if ((p1 == 0) && (m1 == 0)) {
             decphase(phase);
             decon();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) decpwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            decpwrf(seq.a);
          if (seq.nelem > 0) {
             decwfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
          }
@@ -2254,12 +2315,14 @@ void _mpseqT(MPSEQ seq, double t, int phase)
             decon();
          }
          delay(t);
-         if (p3 != 0) decoff();
+         if (p3 != 0)
+            decoff();
          if (seq.nelem > 0) {
-	    decwfgoff(p4);
-	 }
-	 if (p3 != 0) decoff();
-	 decunblank();
+            decwfgoff(p4);
+         }
+         if (p3 != 0)
+            decoff();
+         decunblank();
          break;
       case 3:
          dec2unblank();
@@ -2267,7 +2330,8 @@ void _mpseqT(MPSEQ seq, double t, int phase)
             dec2phase(phase);
             dec2on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec2pwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec2pwrf(seq.a);
          if (seq.nelem > 0) {
             dec2wfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
          }
@@ -2276,34 +2340,39 @@ void _mpseqT(MPSEQ seq, double t, int phase)
             dec2on();
          }
          delay(t);
-         if (p3 != 0) dec2off();
+         if (p3 != 0)
+            dec2off();
          if (seq.nelem > 0) {
-	    dec2wfgoff(p4);
+            dec2wfgoff(p4);
          }
-	 if (p3 == 0) dec2off();
-	 dec2unblank();
-	 break;
+         if (p3 == 0)
+            dec2off();
+         dec2unblank();
+         break;
       case 4:
          dec3unblank();
          if ((p1 == 0) && (m1 == 0)) {
             dec3phase(phase);
             dec3on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec3pwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec3pwrf(seq.a);
          if (seq.nelem > 0) {
             dec3wfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
-	 }
+         }
          if ((p1 != 0) && (m1 == 0)) {
             dec3phase(phase);
             dec3on();
          }
          delay(t);
-         if (p3 != 0) dec3off();
+         if (p3 != 0)
+            dec3off();
          if (seq.nelem > 0) {
-	    dec3wfgoff(p4);
-	 }
-	 if (p3 == 0) dec3off();
-	 dec3unblank();
+            dec3wfgoff(p4);
+         }
+         if (p3 == 0)
+            dec3off();
+         dec3unblank();
          break;
       default:
          printf("_mpseqT() Error: Undefined Channel! < 0!\n");
@@ -2330,7 +2399,8 @@ void _mpseqon(MPSEQ seq, int phase)
    }
 
    int m1 = 0;
-   if ((seq.ng > 1) && (seq.gateBase[0] == 0.0)) m1 = 1;
+   if ((seq.ng > 1) && (seq.gateBase[0] == 0.0))
+      m1 = 1;
 
    int p1 = 0;
    int p2 = 0;
@@ -2346,25 +2416,27 @@ void _mpseqon(MPSEQ seq, int phase)
             txphase(phase);
             xmtron();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) obspwrf(seq.a);
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            obspwrf(seq.a);
          if (seq.nelem > 0) {
             obswfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
-	 }
+         }
          if ((p1 != 0) && (m1 == 0)) {
             txphase(phase);
             xmtron();
          }
-	 break;
+         break;
       case 2:
          decunblank();
          if ((p1 == 0) && (m1 == 0)) {
             decphase(phase);
             decon();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) decpwrf(seq.a);
-	 if (seq.nelem > 0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            decpwrf(seq.a);
+         if (seq.nelem > 0) {
             decwfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
-	 }
+         }
          if ((p1 != 0) && (m1 == 0)) {
             decphase(phase);
             decon();
@@ -2376,30 +2448,32 @@ void _mpseqon(MPSEQ seq, int phase)
             dec2phase(phase);
             dec2on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec2pwrf(seq.a);
-	 if (seq.nelem > 0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec2pwrf(seq.a);
+         if (seq.nelem > 0) {
             dec2wfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
-	 }
+         }
          if ((p1 != 0) && (m1 == 0)) {
             dec2phase(phase);
             dec2on();
          }
-	 break;
+         break;
       case 4:
          dec3unblank();
          if ((p1 == 0) && (m1 == 0)) {
             dec3phase(phase);
             dec3on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec3pwrf(seq.a);
-	 if (seq.nelem > 0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec3pwrf(seq.a);
+         if (seq.nelem > 0) {
             dec3wfgon(seq.pattern,seq.n90*12.5e-9,90.0,p2,seq.offstdelay);
-	 }
+         }
          if ((p1 != 0) && (m1 == 0)) {
             dec3phase(phase);
             dec3on();
          }
-	 break;
+         break;
       default:
          printf("_mpseqon() Error: Undefined Channel! < 0!\n");
          psg_abort(1);
@@ -2429,39 +2503,48 @@ void _mpseqoff(MPSEQ seq)
 
    switch (chnl) {
       case 1:
-         if (p3 != 0) xmtroff();
+         if (p3 != 0)
+            xmtroff();
          if (seq.nelem > 0) {
             obswfgoff(p4);
-	 }
-         if (p3 == 0) xmtroff();
+         }
+         if (p3 == 0)
+            xmtroff();
          obsunblank();
-	 break;
+         break;
       case 2:
-         if (p3 != 0) decoff();
-	 if (seq.nelem > 0) {
+         if (p3 != 0)
+            decoff();
+         if (seq.nelem > 0) {
             decwfgoff(p4);
-	 }
-         if (p3 == 0) decoff();
-	 decunblank();
+         }
+         if (p3 == 0)
+            decoff();
+         decunblank();
          break;
       case 3:
-         if (p3 != 0) dec2off();
-	 if (seq.nelem > 0) {
+         if (p3 != 0)
+            dec2off();
+         if (seq.nelem > 0) {
             dec2wfgoff(p4);
-	 }
-         if (p3 == 0) dec2off();
-	 dec2unblank();
-	 break;
+         }
+         if (p3 == 0)
+            dec2off();
+         dec2unblank();
+         break;
       case 4:
-         if (p3 != 0) dec3off();
-	 if (seq.nelem > 0) {
+         if (p3 != 0)
+            dec3off();
+         if (seq.nelem > 0) {
             dec3wfgoff(p4);
-	 }
-         if (p3 == 0) dec3off();
-	 dec3unblank();
+         }
+         if (p3 == 0)
+            dec3off();
+         dec3unblank();
          break;
       default:
          printf("_mpseqoff() Error: Undefined Channel! < 0!\n");
+         break;
    }
 }
 
@@ -2485,27 +2568,27 @@ void _initshape(SHAPE s, double lamplitude)
    switch (chnl) {
      case 1:
         obsunblank();
-	if (s.pars.t > 0.0) {
+        if (s.pars.t > 0.0) {
            initobswfg("PRESET",5.0e-6,90.0,lamplitude);
-	}
+        }
         break;
      case 2:
         decunblank();
-	if (s.pars.t > 0.0) {
+        if (s.pars.t > 0.0) {
            initdecwfg("PRESET",5.0e-6,90.0,lamplitude);
-	}
+        }
         break;
      case 3:
         dec2unblank();
-	if (s.pars.t > 0.0) {
+        if (s.pars.t > 0.0) {
            initdec2wfg("PRESET",5.0e-6,90.0,lamplitude);
-	}
+        }
         break;
      case 4:
         dec3unblank();
-	if (s.pars.t > 0.0) {
+        if (s.pars.t > 0.0) {
            initdec3wfg("PRESET",5.0e-6,90.0,lamplitude);
-	}
+        }
         break;
      default:
         printf("_initshape() Error: Undefined Channel! < 0!\n");
@@ -2536,36 +2619,36 @@ void _setshape(SHAPE s)
    switch (chnl) {
      case 1:
         obsunblank();
-	if (s.pars.t > 0.0) {
+        if (s.pars.t > 0.0) {
            setobswfg(s.pars.pattern,s.pars.n90*12.5e-9,90.0,s.pars.a);
-	}
+        }
         else { 
            obspwrf(s.pars.a);
         }
         break;
      case 2:
         decunblank();
-	if (s.pars.t > 0.0) {
+        if (s.pars.t > 0.0) {
            setdecwfg(s.pars.pattern,s.pars.n90*12.5e-9,90.0,s.pars.a);
-	}        
+        }        
         else { 
            decpwrf(s.pars.a);
         }
         break;
      case 3:
         dec2unblank();
-	if (s.pars.t > 0.0) {
+        if (s.pars.t > 0.0) {
            setdec2wfg(s.pars.pattern,s.pars.n90*12.5e-9,90.0,s.pars.a);
-	}        
+        }        
         else { 
            dec2pwrf(s.pars.a);
         }
         break;
      case 4:
         dec3unblank();
-	if (s.pars.t > 0.0) {
+        if (s.pars.t > 0.0) {
            setdec3wfg(s.pars.pattern,s.pars.n90*12.5e-9,90.0,s.pars.a);
-	}
+        }
         else { 
            dec3pwrf(s.pars.a);
         }
@@ -2584,18 +2667,18 @@ void _setshape(SHAPE s)
 
 void _shape(SHAPE s, codeint phase)
 {
-  int chnl;
-  chnl = 0;
-  if (!strcmp(s.pars.ch,"obs")) chnl = 1;
-  else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
-  else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
-  else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
-  else {
+   int chnl;
+   chnl = 0;
+   if (!strcmp(s.pars.ch,"obs")) chnl = 1;
+   else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
+   else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
+   else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
+   else {
         printf("_shape() Error: Undefined Channel! < 0!\n");
         psg_abort(1);
-  }
+   }
 
-  double ampl = s.pars.a;
+   double ampl = s.pars.a;
 
    int p1 = 0;
    int p2 = 0;
@@ -2615,20 +2698,23 @@ void _shape(SHAPE s, codeint phase)
             txphase(phase);
             xmtron();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) obspwrf(ampl);
-	 if (s.pars.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            obspwrf(ampl);
+         if (s.pars.t > 0.0) {
             obswfgon(s.pars.pattern,s.pars.n90*12.5e-9,90.0,p2,s.pars.offstdelay);
-	 }
+         }
          if (p1 != 0) {
             txphase(phase);
             xmtron();
          }
          delay(s.pars.t);
-         if (p3 != 0) xmtroff();
-	 if (s.pars.t > 0.0) {
+         if (p3 != 0)
+            xmtroff();
+         if (s.pars.t > 0.0) {
             obswfgoff(p4);
-	 }
-         if (p3 == 0) xmtroff();
+         }
+         if (p3 == 0)
+            xmtroff();
          obsunblank();
          break;
       case 2:
@@ -2637,20 +2723,23 @@ void _shape(SHAPE s, codeint phase)
             decphase(phase);
             decon();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) decpwrf(ampl);
-	 if (s.pars.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            decpwrf(ampl);
+         if (s.pars.t > 0.0) {
             decwfgon(s.pars.pattern,s.pars.n90*12.5e-9,90.0,p2,s.pars.offstdelay);
-	 }
+         }
          if (p1 != 0) {
             decphase(phase);
             decon();
          }
          delay(s.pars.t);
-         if (p3 != 0) decoff();
-	 if (s.pars.t > 0.0) {
+         if (p3 != 0)
+            decoff();
+         if (s.pars.t > 0.0) {
             decwfgoff(p4);
-	 }
-         if (p3 == 0) decoff();
+         }
+         if (p3 == 0)
+            decoff();
          decunblank();
          break;
       case 3:
@@ -2659,42 +2748,48 @@ void _shape(SHAPE s, codeint phase)
             dec2phase(phase);
             dec2on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec2pwrf(ampl);
-	 if (s.pars.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec2pwrf(ampl);
+         if (s.pars.t > 0.0) {
             dec2wfgon(s.pars.pattern,s.pars.n90*12.5e-9,90.0,p2,s.pars.offstdelay);
-	 }
+         }
          if (p1 != 0) {
             dec2phase(phase);
             dec2on();
          }
          delay(s.pars.t);
-         if (p3 != 0) dec2off();
-	 if (s.pars.t > 0.0) {
+         if (p3 != 0)
+            dec2off();
+         if (s.pars.t > 0.0) {
             dec2wfgoff(p4);
-	 }
-         if (p3 == 0) dec2off();
+         }
+         if (p3 == 0)
+            dec2off();
          dec2unblank();
-	 break;
+         break;
       case 4:
          dec3unblank();
          if (p1 == 0) {
             dec3phase(phase);
             dec3on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec3pwrf(ampl);
-	 if (s.pars.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec3pwrf(ampl);
+         if (s.pars.t > 0.0) {
             dec3wfgon(s.pars.pattern,s.pars.n90*12.5e-9,90.0,p2,s.pars.offstdelay);
-	 }
+         }
          if (p1 != 0) {
             dec3phase(phase);
             dec3on();
          }
          delay(s.pars.t);
-         if (p3 != 0) dec3off();
-	 if (s.pars.t > 0.0) {
+         if (p3 != 0)
+            dec3off();
+         if (s.pars.t > 0.0) {
             dec3wfgoff(p4);
-	 }
-         if (p3 == 0) dec3off();
+         }
+         if (p3 == 0)
+            dec3off();
          dec3unblank();
          break;
       default:
@@ -2710,41 +2805,41 @@ void _shape(SHAPE s, codeint phase)
 
 void _clearshape(SHAPE s)
 {
-   int chnl;
-   chnl = 0;
-   if (!strcmp(s.pars.ch,"obs")) chnl = 1;
-   else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
-   else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
-   else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
-   else {
-      printf("_clearshape() Error: Undefined Channel! < 0!\n");
-      psg_abort(1);
-   }
+    int chnl;
+    chnl = 0;
+    if (!strcmp(s.pars.ch,"obs")) chnl = 1;
+    else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
+    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
+    else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
+    else {
+       printf("_clearshape() Error: Undefined Channel! < 0!\n");
+       psg_abort(1);
+    }
   
     dps_off();
     switch (chnl) {
       case 1:
-      	 if (s.pars.t > 0.0) {
+         if (s.pars.t > 0.0) {
             clearobswfg();
-	 }
+         }
          obsunblank();
-	 break;
+         break;
       case 2:
-       	 if (s.pars.t > 0.0) {
+         if (s.pars.t > 0.0) {
             cleardecwfg();
-	 }
+         }
          decunblank();
          break;
       case 3:
-       	 if (s.pars.t > 0.0) {
+         if (s.pars.t > 0.0) {
             cleardec2wfg();
-	 }
+         }
          dec2unblank();
-	 break;
+         break;
       case 4:
-      	 if (s.pars.t > 0.0) {
+         if (s.pars.t > 0.0) {
             cleardec3wfg();
-	 }
+         }
          dec3unblank();
          break;
       default:
@@ -2788,10 +2883,11 @@ void _shapeon(SHAPE s, codeint phase)
             txphase(phase);
             xmtron();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) obspwrf(ampl);
-	 if (s.pars.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            obspwrf(ampl);
+         if (s.pars.t > 0.0) {
             obswfgon(s.pars.pattern,s.pars.n90*12.5e-9,90.0,p2,s.pars.offstdelay);
-	 }
+         }
          if (p1 != 0) {
             txphase(phase);
             xmtron();
@@ -2803,10 +2899,11 @@ void _shapeon(SHAPE s, codeint phase)
             decphase(phase);
             decon();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) decpwrf(ampl);
-	 if (s.pars.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            decpwrf(ampl);
+         if (s.pars.t > 0.0) {
             decwfgon(s.pars.pattern,s.pars.n90*12.5e-9,90.0,p2,s.pars.offstdelay);
-	 }
+         }
          if (p1 != 0) {
             decphase(phase);
             decon();
@@ -2818,10 +2915,11 @@ void _shapeon(SHAPE s, codeint phase)
             dec2phase(phase);
             dec2on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec2pwrf(ampl);
-	 if (s.pars.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec2pwrf(ampl);
+         if (s.pars.t > 0.0) {
             dec2wfgon(s.pars.pattern,s.pars.n90*12.5e-9,90.0,p2,s.pars.offstdelay);
-	 }
+         }
          if (p1 != 0) {
             dec2phase(phase);
             dec2on();
@@ -2833,10 +2931,11 @@ void _shapeon(SHAPE s, codeint phase)
             dec3phase(phase);
             dec3on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0)) dec3pwrf(ampl);
-	 if (s.pars.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0))
+            dec3pwrf(ampl);
+         if (s.pars.t > 0.0) {
             dec3wfgon(s.pars.pattern,s.pars.n90*12.5e-9,90.0,p2,s.pars.offstdelay);
-	 }
+         }
          if (p1 != 0) {
             dec3phase(phase);
             dec3on();
@@ -2871,35 +2970,43 @@ void _shapeoff(SHAPE s)
 
    switch (chnl) {
       case 1:
-         if (p3 != 0) xmtroff();
-	 if (s.pars.t > 0.0) {
+         if (p3 != 0)
+            xmtroff();
+         if (s.pars.t > 0.0) {
             obswfgoff(p4);
-	 }
-         if (p3 == 0) xmtroff();
+         }
+         if (p3 == 0)
+            xmtroff();
          obsunblank();
          break;
       case 2:
-         if (p3 != 0) decoff();
-	 if (s.pars.t > 0.0) {
+         if (p3 != 0)
+            decoff();
+         if (s.pars.t > 0.0) {
             decwfgoff(p4);
-	 }
-         if (p3 == 0) decoff();
+         }
+         if (p3 == 0)
+            decoff();
          decunblank();
          break;
       case 3:
-         if (p3 != 0) dec2off();
-	 if (s.pars.t > 0.0) {
+         if (p3 != 0)
+            dec2off();
+         if (s.pars.t > 0.0) {
             dec2wfgoff(p4);
-	 }
-         if (p3 == 0) dec2off();
+         }
+         if (p3 == 0)
+            dec2off();
          dec2unblank();
          break;
       case 4:
-         if (p3 != 0) dec3off();
-	 if (s.pars.t > 0.0) {
+         if (p3 != 0)
+            dec3off();
+         if (s.pars.t > 0.0) {
             dec3wfgoff(p4);
-	 }
-         if (p3 == 0) dec3off();
+         }
+         if (p3 == 0)
+            dec3off();
          dec3unblank();
          break;
       default:
@@ -2929,35 +3036,35 @@ void _initramp(RAMP r, double lamplitude)
    switch (chnl) {
       case 1:
          obsunblank();
-	 if (r.t > 0.0) {
+         if (r.t > 0.0) {
             if ( strcmp(r.sh,"c") != 0 || (fabs(r.of) >= 1.0)) {
               initobswfg("PRESET",5.0e-6,90.0,lamplitude);
             }
-	 }
+         }
          break;
       case 2:
          decunblank();
-	 if (r.t > 0.0) {
+         if (r.t > 0.0) {
             if ( strcmp(r.sh,"c") != 0 || (fabs(r.of) >= 1.0)) {
                initdecwfg("PRESET",5.0e-6,90.0,lamplitude);
             }
-	 }
+         }
          break;
       case 3:
          dec2unblank();
-	 if (r.t > 0.0) {
+         if (r.t > 0.0) {
             if ( strcmp(r.sh,"c") != 0 || (fabs(r.of) >= 1.0)) {
                initdec2wfg("PRESET",5.0e-6,90.0,lamplitude);
             }
-	 }
+         }
          break;
       case 4:
          dec3unblank();
-	 if (r.t > 0.0) {
+         if (r.t > 0.0) {
             if ( strcmp(r.sh,"c") != 0 || (fabs(r.of) >= 1.0)) {
                initdec3wfg("PRESET",5.0e-6,90.0,lamplitude);
             }
-	 }
+         }
          break;
       default:
          printf("_initramp() Error: Undefined Channel! < 0!\n");
@@ -3047,9 +3154,9 @@ void _ramp(RAMP r, codeint phase)
    else {
       printf("_ramp() Error: Undefined Channel! < 0!\n");
       psg_abort(1);
-  }
+   }
 
-  double ampl = r.a + fabs(r.d);
+   double ampl = r.a + fabs(r.d);
 
    int p1 = 0;
    int p2 = 0;
@@ -3070,24 +3177,27 @@ void _ramp(RAMP r, codeint phase)
             txphase(phase);
             xmtron();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0))) obspwrf(ampl);
-	 if (r.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0)))
+            obspwrf(ampl);
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                obswfgon(r.pattern,r.n90*12.5e-9,90.0,p2,r.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             txphase(phase);
             xmtron();
          }
          delay(r.t);
-         if (p3 != 0) xmtroff();
-	 if (r.t > 0.0) {
+         if (p3 != 0)
+            xmtroff();
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                obswfgoff(p4);
             }
-	 }
-         if (p3 == 0) xmtroff();
+         }
+         if (p3 == 0)
+            xmtroff();
          obsunblank();
          break;
       case 2:
@@ -3096,24 +3206,27 @@ void _ramp(RAMP r, codeint phase)
             decphase(phase);
             decon();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0))) decpwrf(ampl);
-	 if (r.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0)))
+            decpwrf(ampl);
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                decwfgon(r.pattern,r.n90*12.5e-9,90.0,p2,r.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             decphase(phase);
             decon();
          }
          delay(r.t);
-         if (p3 != 0) decoff();
-	 if (r.t > 0.0) {
+         if (p3 != 0)
+            decoff();
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                decwfgoff(p4);
             }
-	 }
-         if (p3 == 0) decoff();
+         }
+         if (p3 == 0)
+            decoff();
          decunblank();
          break;
       case 3:
@@ -3122,50 +3235,56 @@ void _ramp(RAMP r, codeint phase)
             dec2phase(phase);
             dec2on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0))) dec2pwrf(ampl);
-	 if (r.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0)))
+            dec2pwrf(ampl);
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                dec2wfgon(r.pattern,r.n90*12.5e-9,90.0,p2,r.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             dec2phase(phase);
             dec2on();
          }
          delay(r.t);
-         if (p3 != 0) dec2off();
-	 if (r.t > 0.0) {
+         if (p3 != 0)
+            dec2off();
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                dec2wfgoff(p4);
             }
-	 }
-         if (p3 == 0) dec2off();
+         }
+         if (p3 == 0)
+            dec2off();
          dec2unblank();
-	 break;
+         break;
       case 4:
          dec3unblank();
          if (p1 == 0) {
             dec3phase(phase);
             dec3on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0))) dec3pwrf(ampl);
-	 if (r.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0)))
+            dec3pwrf(ampl);
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                dec3wfgon(r.pattern,r.n90*12.5e-9,90.0,p2,r.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             dec3phase(phase);
             dec3on();
          }
          delay(r.t);
-         if (p3 != 0) dec3off();
-	 if (r.t > 0.0) {
+         if (p3 != 0)
+            dec3off();
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                dec3wfgoff(p4);
             }
-	 }
-         if (p3 == 0) dec3off();
+         }
+         if (p3 == 0)
+            dec3off();
          dec3unblank();
          break;
       default:
@@ -3181,37 +3300,37 @@ void _ramp(RAMP r, codeint phase)
 
 void _clearramp(RAMP r)
 {
-   int chnl;
-   chnl = 0;
-   if (!strcmp(r.ch,"obs")) chnl = 1;
-   else if (!strcmp(r.ch,"dec")) chnl = 2;
-   else if (!strcmp(r.ch,"dec2")) chnl = 3;
-   else if (!strcmp(r.ch,"dec3")) chnl = 4;
-   else {
-      printf("_ramp() Error: Undefined Channel! < 0!\n");
-      psg_abort(1);
-   }
+    int chnl;
+    chnl = 0;
+    if (!strcmp(r.ch,"obs")) chnl = 1;
+    else if (!strcmp(r.ch,"dec")) chnl = 2;
+    else if (!strcmp(r.ch,"dec2")) chnl = 3;
+    else if (!strcmp(r.ch,"dec3")) chnl = 4;
+    else {
+       printf("_ramp() Error: Undefined Channel! < 0!\n");
+       psg_abort(1);
+    }
 
     dps_off();
     switch (chnl) {
       case 1:
          if ((r.t > 0.0) && ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0))) {
             clearobswfg();
-	 }
+         }
          obsunblank();
-	 break;
+         break;
       case 2:
          if ((r.t > 0.0) && ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0))) {
             cleardecwfg();
-	 }
+         }
          decunblank();
          break;
       case 3:
-          if ((r.t > 0.0) && ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0))) {
+         if ((r.t > 0.0) && ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0))) {
             cleardec2wfg();
          }
          dec2unblank();
-	 break;
+         break;
       case 4:
          if ((r.t > 0.0) && ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0))) {
             cleardec3wfg();
@@ -3232,18 +3351,18 @@ void _clearramp(RAMP r)
 
 void _rampon(RAMP r, codeint phase)
 {
-  int chnl;
-  chnl = 0;
-  if (!strcmp(r.ch,"obs")) chnl = 1;
-  else if (!strcmp(r.ch,"dec")) chnl = 2;
-  else if (!strcmp(r.ch,"dec2")) chnl = 3;
-  else if (!strcmp(r.ch,"dec3")) chnl = 4;
-  else {
+   int chnl;
+   chnl = 0;
+   if (!strcmp(r.ch,"obs")) chnl = 1;
+   else if (!strcmp(r.ch,"dec")) chnl = 2;
+   else if (!strcmp(r.ch,"dec2")) chnl = 3;
+   else if (!strcmp(r.ch,"dec3")) chnl = 4;
+   else {
         printf("_rampon() Error: Undefined Channel! < 0!\n");
         psg_abort(1);
-  }
+   }
 
-  double ampl = r.a + fabs(r.d);
+   double ampl = r.a + fabs(r.d);
 
    int p1 = 0;
    int p2 = 0;
@@ -3259,12 +3378,13 @@ void _rampon(RAMP r, codeint phase)
             txphase(phase);
             xmtron();
          }         
-         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0))) obspwrf(ampl);
-	 if (r.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0)))
+            obspwrf(ampl);
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                obswfgon(r.pattern,r.n90*12.5e-9,90.0,p2,r.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             txphase(phase);
             xmtron();
@@ -3276,12 +3396,13 @@ void _rampon(RAMP r, codeint phase)
             decphase(phase);
             decon();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0))) decpwrf(ampl);
-	 if (r.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0)))
+            decpwrf(ampl);
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                decwfgon(r.pattern,r.n90*12.5e-9,90.0,p2,r.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             decphase(phase);
             decon();
@@ -3293,12 +3414,13 @@ void _rampon(RAMP r, codeint phase)
             dec2phase(phase);
             dec2on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0))) dec2pwrf(ampl);
-	 if (r.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0)))
+            dec2pwrf(ampl);
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                dec2wfgon(r.pattern,r.n90*12.5e-9,90.0,p2,r.offstdelay);
             }
-	 }
+         }
          if (p1 != 0) {
             dec2phase(phase);
             dec2on();
@@ -3310,8 +3432,9 @@ void _rampon(RAMP r, codeint phase)
             dec3phase(phase);
             dec3on();
          }
-         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0))) dec3pwrf(ampl);
-	 if (r.t > 0.0) {
+         if ((PWRF_DELAY == 0.0) || (p2 == 0) || ((strcmp(r.sh,"c") == 0) && (fabs(r.of) < 1.0)))
+            dec3pwrf(ampl);
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                dec3wfgon(r.pattern,r.n90*12.5e-9,90.0,p2,r.offstdelay);
             }
@@ -3339,7 +3462,7 @@ void _rampoff(RAMP r)
    else {
       printf("_rampoff() Error: Undefined Channel! < 0!\n");
       psg_abort(1);
-  }
+   }
 
    int p3 = 0;
    int p4 = 0;
@@ -3350,43 +3473,51 @@ void _rampoff(RAMP r)
 
    switch (chnl) {
       case 1:
-         if (p3 != 0) xmtroff();
-	 if (r.t > 0.0) {
+         if (p3 != 0)
+            xmtroff();
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                obswfgoff(p4);
             }
-	 }
-         if (p3 == 0) xmtroff();
+         }
+         if (p3 == 0)
+            xmtroff();
          obsunblank();
          break;
       case 2:
-         if (p3 != 0) decoff();
-	 if (r.t > 0.0) {
+         if (p3 != 0)
+            decoff();
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                decwfgoff(p4);
             }
          }
-         if (p3 == 0) decoff();
+         if (p3 == 0)
+            decoff();
          decunblank();
          break;
       case 3:
-         if (p3 != 0) dec2off();
-	 if (r.t > 0.0) {
+         if (p3 != 0)
+            dec2off();
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                dec2wfgoff(p4);
             }
          }
-         if (p3 == 0) dec2off();
+         if (p3 == 0)
+            dec2off();
          dec2unblank();
          break;
       case 4:
-         if (p3 != 0) dec3off();
-	 if (r.t > 0.0) {
+         if (p3 != 0)
+            dec3off();
+         if (r.t > 0.0) {
             if ((strcmp(r.sh,"c") != 0) || (fabs(r.of) >= 1.0)) {
                dec3wfgoff(p4);
             }
-	 }
-         if (p3 == 0) dec3off();
+         }
+         if (p3 == 0)
+            dec3off();
          dec3unblank();
          break;
       default:
