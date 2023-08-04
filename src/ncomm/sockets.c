@@ -675,8 +675,9 @@ connectSocket( Socket *pSocket, char *hostName, int portAddr )
 
         if ((status = getaddrinfo(hostName, portName, &hints, &res)) != 0)
         {
-           fprintf(stderr,"getaddrinfo error '%s'\n",gai_strerror(status));
-           return(-1);
+	   // errLogSysRet(ErrLogOp,debugInfo,"getaddrinfo error '%s'",
+           //              gai_strerror(status));
+           return(-2);
         }
         while ( (connect(pSocket->sd, res->ai_addr, res->ai_addrlen) == -1)
                  && (errno != EISCONN) )
