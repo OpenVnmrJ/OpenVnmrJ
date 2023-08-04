@@ -688,7 +688,12 @@ int net_write(char *netAddr, char *netPort, char *message)
          k = connectSocket(&sVnmrNet,addr,port);
          if (k == 0)
              break;
-         if (bNew > 4)
+         if (k == -2)
+         {
+            Werrprintf("write('net',..) host %s not found", addr);
+            return(-6);
+         }
+         if ( (bNew > 1) || (k != ETIMEDOUT) )
              return(-4);
          bNew++;
          sleep(1);
