@@ -381,6 +381,10 @@ int getitem(char *dirname, int index, char *filename, char *fileCmp, int recurse
    argv2[0] = dirname;
    argv2[1] = NULL;
 
+#ifdef MACOS
+   if ( dirname[strlen(dirname)-1] == '/')
+      dirname[strlen(dirname)-1] = '\0';
+#endif
    if (recurse)
    {
       len = strlen(dirname);
