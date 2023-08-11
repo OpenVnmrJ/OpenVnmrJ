@@ -20,6 +20,7 @@ int P_Esetstring(int tree, const char *name, char *strptr, int index);
 int P_setlimits(int tree, const char *name, double max, double min, double step);
 int P_setgroup(int tree, const char *name, int group);
 int P_getstring(int tree, const char *name, char *buf, int index, int maxbuf);
+int P_isString(int tree, const char *name);
 int P_getreal(int tree, const char *name, double *value, int index) ;
 int P_creatvar(int tree, const char *name, int type);
 int P_setdgroup(int tree, const char *name, int value);

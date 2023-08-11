@@ -1324,6 +1324,35 @@ double P_getval(const char *name)
 
 /*------------------------------------------------------------------------------
 |
+|	P_isString/2
+|
+|	This function returns whether a parameter exists and whether
+|	it is a string paramter
+|
++-----------------------------------------------------------------------------*/
+
+int P_isString(int tree, const char *name)
+{   symbol **root;
+
+    if ( (root = getTreeRoot(getRoot(tree))) )
+    {	varInfo *v;
+
+     	if ( (v = rfindVar(name,root)) )  /* if variable exists */
+	{
+          if (v->T.basicType == T_STRING)
+	     return(0);
+          else
+	     return(-5); /* parameter not a string */
+	}
+	else
+	    return(-2); /* variable doesn't exist */
+    }
+    else
+	return(-1); /* tree doesn't exist */
+}
+
+/*------------------------------------------------------------------------------
+|
 |	P_getstring/5
 |
 |	This function returns a string value of a variable based on
