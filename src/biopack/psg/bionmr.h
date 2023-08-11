@@ -33,9 +33,16 @@
 #include "Pbox_psg.h"
 #define F_OK 0
 
-#ifndef PWRF_DELAY
-#define PWRF_DELAY 0.5e-6
-#endif
+// BDZ 7-28-23
+//
+// This code looks dangerous. PWRF_DELAY is defined elsewhere very carefully.
+// If this can't compile without PWRF_DELAY we could make sure it is included
+// correctly from elsewhwere. Or this code needs a local constant like
+// OUR_PWRF_DELAY if it actually means something different.
+//
+//#ifndef PWRF_DELAY
+//#define PWRF_DELAY 0.5e-6
+//#endif
 
 /* xxxxxxxxxxxxx  GLOBAL PARAMETERS FOR USE IN BIOPACK  xxxxxxxxxxxxxxxx */
 
