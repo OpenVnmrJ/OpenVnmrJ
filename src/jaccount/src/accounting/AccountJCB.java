@@ -95,6 +95,8 @@ public class AccountJCB extends JComboBox{
         re = new RateEntry();
         st = new StringTokenizer(str);
         re.day = st.nextToken();
+        if (re.day.endsWith("."))
+           re.day = re.day.substring(0,3);
         re.time = st.nextToken();
         re.login = st.nextToken();
         re.loginhr = st.nextToken();
