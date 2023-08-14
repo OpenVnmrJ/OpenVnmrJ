@@ -3788,7 +3788,7 @@ int observe;
 #include <math.h>
 #define M_2PI	(6.2831853)
 #define M_PI	(3.1415927)
-#define RAD2DEG (57.2958)
+#define RAD2DEG (57.29577951308232087679)
 
 /* lk_anlyz takes a lock fid and returns an analysis of the lock
 

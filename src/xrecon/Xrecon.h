@@ -281,7 +281,7 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846 /* pi */
 #endif
-#define DEG2RAD 0.017453292         /* convert degrees to radians */
+#define DEG2RAD (0.0174532925199432957692) /* convert degrees to radians */
 #define MAXRCVRS 2048               /* maximum number of receivers */
 
 

@@ -48,7 +48,7 @@
 #define RFDELAY 100e-6     /* group delay - rf vs gradients in us*/
 #define RFSPOILDELAY 50e-6 /* fixed delay for rf spoiling */
 #define MAXNSAT 6          /* maximum number of sat bands */
-#define DEG2RAD .01745     /* constant to convert degrees to radians */
+#define DEG2RAD (0.0174532925199432957692) /* constant to convert degrees to radians */
 #define TRES 1.0e-5        /* time granularity for te and tr */
 #define PRECISION 1.0e-9   /* smallest expected numeric precision */
 #define MS 1e-3            /* constant for 1 millisecond */

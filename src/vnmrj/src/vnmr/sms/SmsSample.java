@@ -397,7 +397,7 @@ public class SmsSample
        double dx = x - centerX; 
        double dy = centerY - y; 
        dx = Math.atan2(dy, dx);
-       int deg = (int) (dx * 57.2958);
+       int deg = (int) (dx * 57.29577951308232087679);
        if (deg < 0)
            deg = 360 + deg;
        if (deg >= 90)
