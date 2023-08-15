@@ -22,7 +22,8 @@ class Synthesizer
  public:
   
  private:
-  int *fliststore;
+  // UNUSED
+  int *fliststore;  // this member never referred to anywhere
   int calcFTW1(double freq);
   int calcFTW2(double freq);
   long long getFTW(double freq);
