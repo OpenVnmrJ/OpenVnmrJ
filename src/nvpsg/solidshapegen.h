@@ -183,13 +183,13 @@ void obswfgHSoff()
 
 void decwfgHSoff()
 {
-   if (PWRF_DELAY > 0.0) {
-      if (DECch == 1) HSgate(CH1WG,FALSE);
-      if (DECch == 2) HSgate(CH2WG,FALSE);
-      if (DECch == 3) HSgate(CH3WG,FALSE);
-      if (DECch == 4) HSgate(CH4WG,FALSE);
-   }
-   else decprgoff();   
+   // this one changed substantially by just matching other cases.
+   // BDZ 8-15-23
+
+   if (DECch == 1) HSgate(CH1WG,FALSE);
+   if (DECch == 2) HSgate(CH2WG,FALSE);
+   if (DECch == 3) HSgate(CH3WG,FALSE);
+   if (DECch == 4) HSgate(CH4WG,FALSE);
 }
 
 void dec2wfgHSoff()
@@ -212,8 +212,10 @@ void initobswfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 { 
+   // this was moved up out of if statement so that it matched decoupler
+   // behavior. is that correct? BDZ 8-15-23
+   obspwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
-      obspwrf(lamplitude);
       obsprgon(lpattern,lstep,ldres);
       delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
       obsprgoff();
@@ -260,8 +262,10 @@ void setobswfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 {  
+   // this was moved up out of if statement so that it matched decoupler
+   // behavior. is that correct? BDZ 8-15-23
+   obspwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
-      obspwrf(lamplitude);
       obsprgon(lpattern, lstep, ldres); 
       obswfgHSoff();
    }
@@ -323,7 +327,10 @@ void cleardec2wfg()
 
 void cleardec3wfg()
 {
-   dec3prgoff();
+   // this one changed to match the other decoupler clear methods
+   if (PWRF_DELAY > 0.0) {
+      dec3prgoff();
+   }
 }
 
 void obswfgon(lpattern,lstep,ldres,lpreset,lpredelay)
