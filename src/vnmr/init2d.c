@@ -698,6 +698,7 @@ int init2d_getfidparms(int dis_setup)
   }
 
   set_fid_display();
+  set_fid_proc(HORIZ,SW0_DIM,NORMDIR, VERT,SW1_DIM,REVDIR);
   get_sfrq(HORIZ,&sfrq);
   get_scale_axis(HORIZ,&axisHoriz);
   axisVert = '\0';
