@@ -3555,7 +3555,7 @@ void _rampoff(RAMP r)
          dec3unblank();
          break;
       default:
-         printf("_rampoff() Error: Undefined Channel! %s\n", chnl);
+         printf("_rampoff() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
