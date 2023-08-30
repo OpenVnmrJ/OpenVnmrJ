@@ -476,20 +476,24 @@ CP make_cp(CP cp)
       else if (!strcmp(cp.fr,"dec2")) chnl = DEC2ch;
       else if (!strcmp(cp.fr,"dec3")) chnl = DEC3ch;
       else {
-        printf("make_cp() Error: Undefined Channel! < 0!\n");
+        printf("make_cp() Error: Undefined Channel! %s\n", cp.fr);
         psg_abort(1);
       }
    }
-   else {
+   else if (!strcmp(cp.ch,"to")) {
       mean=cp.a2;
       if (!strcmp(cp.to,"obs")) chnl = OBSch;
       else if (!strcmp(cp.to,"dec")) chnl = DECch;
       else if (!strcmp(cp.to,"dec2")) chnl = DEC2ch;
       else if (!strcmp(cp.to,"dec3")) chnl = DEC3ch;
       else {
-        printf("make_cp() Error: Undefined Channel! < 0!\n");
+        printf("make_cp() Error: Undefined Channel! %s\n", cp.to);
         psg_abort(1);
       }
+   }
+   else {
+      printf("make_cp() Error: Undefined Direction! %s\n", cp.ch);
+      psg_abort(1);
    }
 
    norm = 1023.0/(mean + fabs(cp.d));
@@ -591,14 +595,19 @@ void _initcp_(CP cp, double lamplitude)
 
    if (strcmp(cp.ch,"fr") == 0)
       chRamp = cp.fr;
-   else chRamp = cp.to;
+   else if (strcmp(cp.ch,"to") == 0)
+      chRamp = cp.to;
+   else {
+      printf("Error from _initcp_(): Unknown Direction! %s\n", cp.ch);
+      psg_abort(1);
+   }
 
    if (strcmp(chRamp,"obs") == 0)       nchRamp = 1;
    else if (strcmp(chRamp,"dec") == 0)  nchRamp = 2;
    else if (strcmp(chRamp,"dec2") == 0) nchRamp = 3;
    else if (strcmp(chRamp,"dec3") == 0) nchRamp = 4;
    else {
-      printf("Error from _initcp_(): Invalid Ramp Channel!\n");
+      printf("Error from _initcp_(): Invalid Ramp Channel! %s\n", chRamp);
       psg_abort(1);
    }
 
@@ -659,19 +668,25 @@ void _setcp_(CP cp)
       chRamp = cp.fr;
       chConst = cp.to;
    }
-   else {
+   else if (strcmp(cp.ch,"to") == 0) {
       aRamp = cp.a2 + fabs(cp.d);
       aConst = cp.a1;
       chRamp = cp.to;
       chConst = cp.fr;
    }
+   else {
+
+      printf("Error from _setcp_(): Invalid Direction! %s\n", cp.ch);
+      psg_abort(1);
+   }
+   
    if (strcmp(chRamp,"obs") == 0)       nchRamp = 1;
    else if (strcmp(chRamp,"dec") == 0)  nchRamp = 2;
    else if (strcmp(chRamp,"dec2") == 0) nchRamp = 3;
    else if (strcmp(chRamp,"dec3") == 0) nchRamp = 4;
    else {
 
-      printf("Error from _setcp_(): Invalid Ramp Channel!\n");
+      printf("Error from _setcp_(): Invalid Ramp Channel! %s\n", chRamp);
       psg_abort(1);
    }
 
@@ -680,7 +695,7 @@ void _setcp_(CP cp)
    else if (strcmp(chConst,"dec2") == 0) nchConst = 3;
    else if (strcmp(chConst,"dec3") == 0) nchConst = 4;
    else {
-      printf("Error from _setcp_(): Invalid Const Channel!\n");
+      printf("Error from _setcp_(): Invalid Const Channel! %s\n", chConst);
       psg_abort(1);
    }
 
@@ -801,7 +816,7 @@ void _cp_(CP cp, int phase1, int phase2)
       rphase = phase1;
       cphase = phase2;
    }
-   else {
+   else if (strcmp(cp.ch,"to") == 0) {
       aRamp = cp.a2 + fabs(cp.d);
       aConst = cp.a1;
       chRamp = cp.to;
@@ -809,14 +824,19 @@ void _cp_(CP cp, int phase1, int phase2)
       rphase = phase2;
       cphase = phase1;
    }
+   else {
 
+      printf("Error from _cp_(): Invalid Direction! %s\n", cp.ch);
+      psg_abort(1);
+   }
+   
    if (strcmp(chRamp,"obs") == 0)       nchRamp = 1;
    else if (strcmp(chRamp,"dec") == 0)  nchRamp = 2;
    else if (strcmp(chRamp,"dec2") == 0) nchRamp = 3;
    else if (strcmp(chRamp,"dec3") == 0) nchRamp = 4;
    else {
 
-      printf("Error from _cp_(): Invalid Ramp Channel!\n");
+      printf("Error from _cp_(): Invalid Ramp Channel! %s\n", chRamp);
       psg_abort(1);
    }
 
@@ -825,7 +845,7 @@ void _cp_(CP cp, int phase1, int phase2)
    else if (strcmp(chConst,"dec2") == 0) nchConst = 3;
    else if (strcmp(chConst,"dec3") == 0) nchConst = 4;
    else {
-      printf("Error from _cp_(): Invalid Const Channel!\n");
+      printf("Error from _cp_(): Invalid Const Channel! %s\n", chConst);
       psg_abort(1);
    }
 
@@ -1147,15 +1167,19 @@ void _clearcp_(CP cp)
 {
    char  *chRamp;
    int  nchRamp = 0;
-   if (strcmp(cp.ch,"fr") == 0) chRamp = cp.fr;
-   else chRamp = cp.to;
+   if (strcmp(cp.ch,"fr") == 0)      chRamp = cp.fr;
+   else if (strcmp(cp.ch,"to") == 0) chRamp = cp.to;
+   else {
+      printf("Error from _clearcp_(): Invalid Direction! %s\n", cp.ch);
+      psg_abort(1);
+   }
 
    if (strcmp(chRamp,"obs") == 0)       nchRamp = 1;
    else if (strcmp(chRamp,"dec") == 0)  nchRamp = 2;
    else if (strcmp(chRamp,"dec2") == 0) nchRamp = 3;
    else if (strcmp(chRamp,"dec3") == 0) nchRamp = 4;
    else {
-      printf("Error from _clearcp_(): Invalid Ramp Channel!\n");
+      printf("Error from _clearcp_(): Invalid Ramp Channel! %s\n", chRamp);
       psg_abort(1);
    }
 
@@ -1953,7 +1977,7 @@ void _initmpseq(MPSEQ seq, double lamplitude)
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
    else if (!strcmp(seq.ch,"dec3")) chnl = 4;
    else {
-      printf("_initmpseq() Error: Undefined Channel! < 0!\n");
+      printf("_initmpseq() Error: Undefined Channel! %s!\n", seq.ch);
       psg_abort(1);
    }
 
@@ -1984,7 +2008,7 @@ void _initmpseq(MPSEQ seq, double lamplitude)
         }
         break;
      default:
-        printf("_initmpseq() Error: Undefined Channel! < 0!\n");
+        printf("_initmpseq() Error: Undefined Channel! %d\n", chnl);
         psg_abort(1);
         break;
    }
@@ -2004,7 +2028,7 @@ void _setmpseq(MPSEQ seq)
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
    else if (!strcmp(seq.ch,"dec3")) chnl = 4;
    else {
-      printf("_setmpseq() Error: Undefined Channel! < 0!\n");
+      printf("_setmpseq() Error: Undefined Channel! %d\n", chnl);
       psg_abort(1);
    }
 
@@ -2047,7 +2071,7 @@ void _setmpseq(MPSEQ seq)
         }
         break;
      default:
-        printf("_setmpseq() Error: Undefined Channel! < 0!\n");
+        printf("_setmpseq() Error: Undefined Channel! %d\n", chnl);
         psg_abort(1);
         break;
    }
@@ -2067,7 +2091,7 @@ void _mpseq(MPSEQ seq, int phase)
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
    else if (!strcmp(seq.ch,"dec3")) chnl = 4;
    else {
-      printf("_mpseq() Error: Undefined Channel! < 0!\n");
+      printf("_mpseq() Error: Undefined Channel! %s\n", seq.ch);
       psg_abort(1);
    }
 
@@ -2188,7 +2212,7 @@ void _mpseq(MPSEQ seq, int phase)
          dec3unblank();
          break;
       default:
-         printf("_mpseq() Error: Undefined Channel! < 0!\n");
+         printf("_mpseq() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -2207,7 +2231,7 @@ void _clearmpseq(MPSEQ seq)
     else if (!strcmp(seq.ch,"dec2")) chnl = 3;
     else if (!strcmp(seq.ch,"dec3")) chnl = 4;
     else {
-       printf("_mpseq() Error: Undefined Channel! < 0!\n");
+       printf("_mpseq() Error: Undefined Channel! %s\n", seq.ch);
        psg_abort(1);
     }
 
@@ -2238,7 +2262,7 @@ void _clearmpseq(MPSEQ seq)
          dec3unblank();
          break;
       default:
-         printf("_clearmpseq() Error: Undefined Channel! < 0!\n");
+         printf("_clearmpseq() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -2254,7 +2278,7 @@ void _mpseqT(MPSEQ seq, double t, int phase)
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
    else if (!strcmp(seq.ch,"dec3")) chnl = 4;
    else {
-      printf("_mpseqT() Error: Undefined Channel! < 0!\n");
+      printf("_mpseqT() Error: Undefined Channel! %s\n", seq.ch);
       psg_abort(1);
    }
 
@@ -2375,7 +2399,7 @@ void _mpseqT(MPSEQ seq, double t, int phase)
          dec3unblank();
          break;
       default:
-         printf("_mpseqT() Error: Undefined Channel! < 0!\n");
+         printf("_mpseqT() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -2394,7 +2418,7 @@ void _mpseqon(MPSEQ seq, int phase)
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
    else if (!strcmp(seq.ch,"dec3")) chnl = 4;
    else {
-      printf("_mpseqon() Error: Undefined Channel! < 0!\n");
+      printf("_mpseqon() Error: Undefined Channel! %s\n", seq.ch);
       psg_abort(1);
    }
 
@@ -2475,7 +2499,7 @@ void _mpseqon(MPSEQ seq, int phase)
          }
          break;
       default:
-         printf("_mpseqon() Error: Undefined Channel! < 0!\n");
+         printf("_mpseqon() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -2490,7 +2514,7 @@ void _mpseqoff(MPSEQ seq)
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
    else if (!strcmp(seq.ch,"dec3")) chnl = 4;
    else {
-      printf("_mpseqoff() Error: Undefined Channel! < 0!\n");
+      printf("_mpseqoff() Error: Undefined Channel! %s\n", seq.ch);
       psg_abort(1);
    }
 
@@ -2543,7 +2567,7 @@ void _mpseqoff(MPSEQ seq)
          dec3unblank();
          break;
       default:
-         printf("_mpseqoff() Error: Undefined Channel! < 0!\n");
+         printf("_mpseqoff() Error: Undefined Channel! %d\n", chnl);
          break;
    }
 }
@@ -2561,7 +2585,7 @@ void _initshape(SHAPE s, double lamplitude)
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
    else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
    else {
-      printf("_initshape() Error: Undefined Channel! < 0!\n");
+      printf("_initshape() Error: Undefined Channel! %s\n", s.pars.ch);
       psg_abort(1);
    }
    dps_off();
@@ -2591,7 +2615,7 @@ void _initshape(SHAPE s, double lamplitude)
         }
         break;
      default:
-        printf("_initshape() Error: Undefined Channel! < 0!\n");
+        printf("_initshape() Error: Undefined Channel! %d\n", chnl);
         psg_abort(1);
         break;
    }
@@ -2611,7 +2635,7 @@ void _setshape(SHAPE s)
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
    else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
    else {
-      printf("_setshape() Error: Undefined Channel! < 0!\n");
+      printf("_setshape() Error: Undefined Channel! %s\n", s.pars.ch);
       psg_abort(1);
    }
 
@@ -2654,7 +2678,7 @@ void _setshape(SHAPE s)
         }
         break;
      default:
-        printf("_setshape() Error: Undefined Channel! < 0!\n");
+        printf("_setshape() Error: Undefined Channel! %d\n", chnl);
         psg_abort(1);
         break;
    }
@@ -2674,7 +2698,7 @@ void _shape(SHAPE s, codeint phase)
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
    else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
    else {
-        printf("_shape() Error: Undefined Channel! < 0!\n");
+        printf("_shape() Error: Undefined Channel! %s\n", s.pars.ch);
         psg_abort(1);
    }
 
@@ -2793,7 +2817,7 @@ void _shape(SHAPE s, codeint phase)
          dec3unblank();
          break;
       default:
-         printf("_shape() Error: Undefined Channel! < 0!\n");
+         printf("_shape() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -2812,7 +2836,7 @@ void _clearshape(SHAPE s)
     else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
     else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
     else {
-       printf("_clearshape() Error: Undefined Channel! < 0!\n");
+       printf("_clearshape() Error: Undefined Channel! %s\n", s.pars.ch);
        psg_abort(1);
     }
   
@@ -2843,7 +2867,7 @@ void _clearshape(SHAPE s)
          dec3unblank();
          break;
       default:
-         printf("_clearshape() Error: Undefined Channel! < 0!\n");
+         printf("_clearshape() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -2863,7 +2887,7 @@ void _shapeon(SHAPE s, codeint phase)
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
    else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
    else {
-      printf("_shapeon() Error: Undefined Channel! < 0!\n");
+      printf("_shapeon() Error: Undefined Channel! %s\n", s.pars.ch);
       psg_abort(1);
    }
 
@@ -2942,7 +2966,7 @@ void _shapeon(SHAPE s, codeint phase)
          }
          break;
       default:
-         printf("_shapeon() Error: Undefined Channel! < 0!\n");
+         printf("_shapeon() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -2957,7 +2981,7 @@ void _shapeoff(SHAPE s)
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
    else if (!strcmp(s.pars.ch,"dec3")) chnl = 4;
    else {
-      printf("_shapeoff() Error: Undefined Channel! < 0!\n");
+      printf("_shapeoff() Error: Undefined Channel! %s\n", s.pars.ch);
       psg_abort(1);
    }
 
@@ -3010,7 +3034,7 @@ void _shapeoff(SHAPE s)
          dec3unblank();
          break;
       default:
-         printf("_shapeoff() Error: Undefined Channel! < 0!\n");
+         printf("_shapeoff() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -3029,7 +3053,7 @@ void _initramp(RAMP r, double lamplitude)
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
    else if (!strcmp(r.ch,"dec3")) chnl = 4;
    else {
-      printf("_initramp() Error: Undefined Channel! < 0!\n");
+      printf("_initramp() Error: Undefined Channel! %s\n", r.ch);
       psg_abort(1);
    }
    dps_off();
@@ -3067,7 +3091,7 @@ void _initramp(RAMP r, double lamplitude)
          }
          break;
       default:
-         printf("_initramp() Error: Undefined Channel! < 0!\n");
+         printf("_initramp() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -3087,7 +3111,7 @@ void _setramp(RAMP r)
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
    else if (!strcmp(r.ch,"dec3")) chnl = 4;
    else {
-      printf("_setramp() Error: Undefined Channel! < 0!\n");
+      printf("_setramp() Error: Undefined Channel! %s\n", r.ch);
       psg_abort(1);
    }
 
@@ -3132,7 +3156,7 @@ void _setramp(RAMP r)
          }
          break;
       default:
-         printf("_setramp() Error: Undefined Channel! < 0!\n");
+         printf("_setramp() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -3152,7 +3176,7 @@ void _ramp(RAMP r, codeint phase)
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
    else if (!strcmp(r.ch,"dec3")) chnl = 4;
    else {
-      printf("_ramp() Error: Undefined Channel! < 0!\n");
+      printf("_ramp() Error: Undefined Channel! %s\n", r.ch);
       psg_abort(1);
    }
 
@@ -3288,7 +3312,7 @@ void _ramp(RAMP r, codeint phase)
          dec3unblank();
          break;
       default:
-         printf("_ramp() Error: Undefined Channel! < 0!\n");
+         printf("_ramp() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -3307,7 +3331,7 @@ void _clearramp(RAMP r)
     else if (!strcmp(r.ch,"dec2")) chnl = 3;
     else if (!strcmp(r.ch,"dec3")) chnl = 4;
     else {
-       printf("_ramp() Error: Undefined Channel! < 0!\n");
+       printf("_ramp() Error: Undefined Channel! %s\n", r.ch);
        psg_abort(1);
     }
 
@@ -3338,7 +3362,7 @@ void _clearramp(RAMP r)
          dec3unblank();
          break;
       default:
-         printf("_clearramp() Error: Undefined Channel! < 0!\n");
+         printf("_clearramp() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -3358,7 +3382,7 @@ void _rampon(RAMP r, codeint phase)
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
    else if (!strcmp(r.ch,"dec3")) chnl = 4;
    else {
-        printf("_rampon() Error: Undefined Channel! < 0!\n");
+        printf("_rampon() Error: Undefined Channel! %s\n", r.ch);
         psg_abort(1);
    }
 
@@ -3445,7 +3469,7 @@ void _rampon(RAMP r, codeint phase)
          }
          break;
       default:
-         printf("_rampon() Error: Undefined Channel! < 0!\n");
+         printf("_rampon() Error: Undefined Channel! %d\n", chnl);
          psg_abort(1);
          break;
    }
@@ -3460,7 +3484,7 @@ void _rampoff(RAMP r)
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
    else if (!strcmp(r.ch,"dec3")) chnl = 4;
    else {
-      printf("_rampoff() Error: Undefined Channel! < 0!\n");
+      printf("_rampoff() Error: Undefined Channel! %s\n", r.ch);
       psg_abort(1);
    }
 
@@ -3521,7 +3545,7 @@ void _rampoff(RAMP r)
          dec3unblank();
          break;
       default:
-         printf("_rampoff() Error: Undefined Channel! < 0!\n");
+         printf("_rampoff() Error: Undefined Channel! %s\n", chnl);
          psg_abort(1);
          break;
    }
