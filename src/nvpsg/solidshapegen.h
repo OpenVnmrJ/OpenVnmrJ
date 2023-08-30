@@ -699,6 +699,11 @@ void _setcp_(CP cp)
       psg_abort(1);
    }
 
+   if (nchRamp == nchConst) {
+      printf("Error from _setcp_(): const channel and ramp channel should not match!");
+      psg_abort(1);
+   }
+   
    dps_off();
    switch(nchConst) {
       case 1:
@@ -846,6 +851,11 @@ void _cp_(CP cp, int phase1, int phase2)
    else if (strcmp(chConst,"dec3") == 0) nchConst = 4;
    else {
       printf("Error from _cp_(): Invalid Const Channel! %s\n", chConst);
+      psg_abort(1);
+   }
+
+   if (nchRamp == nchConst) {
+      printf("Error from _cp_(): const channel and ramp channel should not match!");
       psg_abort(1);
    }
 
