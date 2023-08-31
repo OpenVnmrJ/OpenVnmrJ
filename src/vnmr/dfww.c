@@ -523,7 +523,7 @@ int dfww(int argc, char *argv[], int retc, char *retv[])
   int redoDscale;
   int color_traces;
   int index=1;
-  int maxindex=nblocks * specperblock;
+  int maxindex;
   double save_sc, save_wc, save_sc2, save_wc2;
 
   (void) retc;
@@ -540,12 +540,13 @@ int dfww(int argc, char *argv[], int retc, char *retv[])
   if (init_vars2()) return(ERROR);
   clearMspec();
 
+  maxindex=nblocks * specperblock;
   checkinput(argc,argv,&firstindex,&lastindex,&step,&imag_on,&color_traces);
   if (!plot)
     setwindows(argv);
   if ((firstindex < 1) || (firstindex > maxindex))
   {
-    Werrprintf("spectrum %d does not exist",firstindex);
+    Werrprintf("FID %d does not exist",firstindex);
     return(ERROR);
   }
 
