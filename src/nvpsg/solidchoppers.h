@@ -47,7 +47,7 @@ SHAPE make_shape(SHAPE s)
   else if (!strcmp(s.pars.ch,"dec2")) chnl = DEC2ch;
   else if (!strcmp(s.pars.ch,"dec3")) chnl = DEC3ch;
   else {
-        printf("make_shape() Error: Undefined Channel! < 0!\n");
+        printf("make_shape() Error: Undefined Channel! %s\n", s.pars.ch);
         psg_abort(1);
   }
 
@@ -292,7 +292,7 @@ SHAPE make_shape1(SHAPE s)
   else if (!strcmp(s.pars.ch,"dec2")) chnl = DEC2ch;
   else if (!strcmp(s.pars.ch,"dec3")) chnl = DEC3ch;
   else {
-        printf("make_shape() Error: Undefined Channel! < 0!\n");
+        printf("make_shape() Error: Undefined Channel! %s\n", s.pars.ch);
         psg_abort(1);
   }
 
@@ -662,7 +662,7 @@ MPSEQ MPchopper(MPSEQ seq)
   else if (!strcmp(seq.ch,"dec2")) chnl = DEC2ch;
   else if (!strcmp(seq.ch,"dec3")) chnl = DEC3ch;
   else {
-        printf("MPchopper() Error: Undefined Channel! < 0!\n");
+        printf("MPchopper() Error: Undefined Channel! %s\n", seq.ch);
         psg_abort(1);
   }
 
@@ -946,20 +946,24 @@ CP make_cp(CP cp)
       else if (!strcmp(cp.fr,"dec2")) chnl = DEC2ch;
       else if (!strcmp(cp.fr,"dec3")) chnl = DEC3ch;
       else {
-        printf("make_cp() Error: Undefined Channel! < 0!\n");
+        printf("make_cp() Error: Undefined Channel! %s\n", cp.fr);
         psg_abort(1);
       }
    }
-   else {
+   else if (!strcmp(cp.ch,"to")) {
       mean=cp.a2;
       if (!strcmp(cp.to,"obs")) chnl = OBSch;
       else if (!strcmp(cp.to,"dec")) chnl = DECch;
       else if (!strcmp(cp.to,"dec2")) chnl = DEC2ch;
       else if (!strcmp(cp.to,"dec3")) chnl = DEC3ch;
       else {
-        printf("make_cp() Error: Undefined Channel! < 0!\n");
+        printf("make_cp() Error: Undefined Channel! %s!\n", cp.to);
         psg_abort(1);
       }
+   }
+   else {
+      printf("make_cp() Error: Undefined Direction! %s!\n", cp.ch);
+      psg_abort(1);
    }
 
    norm = 1023.0/(mean + fabs(cp.d));
