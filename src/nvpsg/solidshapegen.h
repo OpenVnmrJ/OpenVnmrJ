@@ -2038,7 +2038,7 @@ void _setmpseq(MPSEQ seq)
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
    else if (!strcmp(seq.ch,"dec3")) chnl = 4;
    else {
-      printf("_setmpseq() Error: Undefined Channel! %d\n", chnl);
+      printf("_setmpseq() Error: Undefined Channel! %s\n", seq.ch);
       psg_abort(1);
    }
 
@@ -3341,7 +3341,7 @@ void _clearramp(RAMP r)
     else if (!strcmp(r.ch,"dec2")) chnl = 3;
     else if (!strcmp(r.ch,"dec3")) chnl = 4;
     else {
-       printf("_ramp() Error: Undefined Channel! %s\n", r.ch);
+       printf("_clearramp() Error: Undefined Channel! %s\n", r.ch);
        psg_abort(1);
     }
 
