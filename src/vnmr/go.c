@@ -3547,7 +3547,7 @@ int initacqqueue(int argc, char *argv[])
                 // Param location global, current etc
                 word = strtok(NULL, " \t\r\n");
                 if(word == NULL) {
-                    Werrprintf("Syntax error: %s", word);
+                    Werrprintf("Syntax error in loggingParamList");
                     continue;
                 }
                 strcpy(optParams[i].tree,word);
@@ -4265,6 +4265,7 @@ int	replaceSpaceFlag = TRUE;
 
    strcpy(result,"");
    notsuffix = suffix;
+   bad = 0;
 
    switch (argc)
    {
@@ -4288,8 +4289,11 @@ int	replaceSpaceFlag = TRUE;
             break;
       case 2:
             /* use argv[1] for parameter name */
-            strcpy(a_name,argv[1]);
-            break;
+       if (strlen(argv[1]) >= MAXPATH-32)
+          bad = 1;
+       else
+          strcpy(a_name,argv[1]);
+       break;
       case 5:
 	    if (strcmp(argv[4],"keepspaces") == 0)
 		replaceSpaceFlag = FALSE;
@@ -4304,7 +4308,10 @@ int	replaceSpaceFlag = TRUE;
 		notsuffix = argv[3];
       case 3:
             /* use argv[1] for parameter name */
-	    strcpy(a_name,argv[1]);
+       if (strlen(argv[1]) >= MAXPATH-32)
+          bad = 1;
+       else
+	       strcpy(a_name,argv[1]);
             /* use argv[2] as sample name */
             if (strcmp(argv[0],"autoname")==0)
                strcpy(sif_name,argv[2]);
@@ -4319,7 +4326,9 @@ int	replaceSpaceFlag = TRUE;
             return(1);
             break;
    }
-   bad = makeautoname(argv[0],a_name,sif_name,result,FALSE,replaceSpaceFlag,suffix,notsuffix);
+   if (! bad)
+      bad = makeautoname(argv[0],a_name,sif_name,result,FALSE,
+                         replaceSpaceFlag,suffix,notsuffix);
    if ( bad)
    {  
       if (retc)
@@ -4395,6 +4404,8 @@ FILE	*fd;
 char    recDir[MAXPATH];
 
     strcpy(recDir, dirname);
+    len = strlen(dirname);
+    dlen = MAXPATH - 32 - len;  // limit imposed by the rt command
     fd = NULL;
 
 /* try to get time variable */
@@ -4409,7 +4420,6 @@ char    recDir[MAXPATH];
 
    R_offset = -1;
    R_start=1; R_width=2;
-   dlen=MAXPATH;
 
 /*---------------------------------------------------------
 |  check autoname for %string%
@@ -4421,7 +4431,7 @@ char    recDir[MAXPATH];
    {  
       if (*aptr == '%')
       {  aptr++;			/* Skip %-sign */
-	 sptr = search_str;
+	      sptr = search_str;
          len=0;
          while ( (*aptr != '%') && (*aptr != '\000') && (len < MAXSTR) )
          {  *sptr++ = *aptr++;
@@ -4453,6 +4463,7 @@ char    recDir[MAXPATH];
                while (len < R_width)
                {
                   *ptr++ = '0';
+                  dlen--;
                   len++;
                }
                if (search_str[2] == ':')
@@ -4511,11 +4522,12 @@ char    recDir[MAXPATH];
          }
 
          sptr = tmp2Str;
-         while(*sptr != '\000')
+         while( (*sptr != '\000') && (dlen > 0) )
          {
             if ((*sptr == ' ') && (replaceSpaceFlag == TRUE))
 		*sptr = '_';
             *ptr++ = *sptr++;
+            dlen--;
          }
       }
 
@@ -4527,12 +4539,17 @@ char    recDir[MAXPATH];
          {
             *ptr++ = '_';
             aptr++;
-	    dlen--;
+	         dlen--;
+         }
+         else if ((*aptr == ' ') && (replaceSpaceFlag == FALSE))
+         {
+            *ptr++ = *aptr++;
+	         dlen--;
          }
          else if (verify_fnameChar( *aptr )==0)
          {
             *ptr++ = *aptr++;
-	    dlen--;
+	         dlen--;
          }
          else
          {
@@ -4548,7 +4565,11 @@ char    recDir[MAXPATH];
 /*---------------------------------------------------------
 |  does dirname start with a '/'? If not pre-pend autodir 
 +--------------------------------------------------------*/
-
+   if (dlen <= 0)
+   {
+      Werrprintf("auto pathname is too long");
+      ABORT;
+   }
    if ( dirname[0] !=  '/' )
    {
       if (strcmp(cmdname,"autoname")==0) 
@@ -4567,15 +4588,15 @@ char    recDir[MAXPATH];
          /* default indexing */
          R_offset = strlen(dirname);
          len = 0;
-         while (len < R_width)
+         while ( (len < R_width) && (dlen > 0) )
          {
             *ptr++ = '0';
+            dlen--;
             len++;
          }
          *ptr='\000';
          R_offsetTmp = R_offset + strlen(tmp);
       }
-      strcat(tmp,dirname);
    }
    else
    {
@@ -4588,15 +4609,21 @@ char    recDir[MAXPATH];
          /* default indexing */
          R_offsetTmp = R_offset = strlen(dirname);
          len = 0;
-         while (len < R_width)
+         while ( (len < R_width) && (dlen > 0) )
          {
             *ptr++ = '0';
+            dlen--;
             len++;
          }
          *ptr='\000';
       }
-      strcpy(tmp,dirname);
    }
+   if (dlen <= 0)
+   {
+      Werrprintf("auto pathname is too long");
+      ABORT;
+   }
+   strcat(tmp,dirname);
 
 /* append a run sequence, in case the fid-filename exists */
    if (R_width != 0)
@@ -4690,7 +4717,8 @@ char    recDir[MAXPATH];
    }
    if (replaceSpaceFlag == TRUE)
       replaceSpace(dirname);
-   if (verify_fname(dirname))
+   if (((replaceSpaceFlag == TRUE) && verify_fname(dirname)) ||
+       ((replaceSpaceFlag == FALSE) && verify_fname2(dirname)))
    {  Werrprintf( "file path '%s%s' not valid", dirname, suffix );
       ABORT;
    }

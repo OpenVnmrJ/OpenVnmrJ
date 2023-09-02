@@ -63,7 +63,7 @@
 
 RAMP getramp(char *seqName, double p, double phint, int iRec, int calc)
 {
-   RAMP r;
+   RAMP r = {};
    extern RAMP make_ramp(RAMP r);
    char *var;
    r.phAccum = p;
@@ -72,8 +72,12 @@ RAMP getramp(char *seqName, double p, double phint, int iRec, int calc)
 
 // Supply INOVA Start Delays
 
-   if (PWRF_DELAY > 0.0) r.n90 = 8;
-   else r.n90 = 8;
+   // BDZ 7-28-23: this looks wrong as it doesn't match conventions elsewhere
+   // and it is overwritten a few lines below. Commenting out for now.
+   //
+   //if (PWRF_DELAY > 0.0) r.n90 = 8;
+   //else r.n90 = 8;
+   
    r.preset1 = 0;
    r.preset2 = 0;
    r.strtdelay = WFG_START_DELAY - WFG_OFFSET_DELAY;
@@ -171,7 +175,7 @@ RAMP getramp(char *seqName, double p, double phint, int iRec, int calc)
 
 MPSEQ getms(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ m;
+   MPSEQ m = {};
    extern MPSEQ MPchopper(MPSEQ m);
    char *var;
 
@@ -296,7 +300,7 @@ MPSEQ getms(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 MPSEQ getpul(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ pul;
+   MPSEQ pul = {};
    extern MPSEQ MPchopper(MPSEQ pul);
    char *var;
 
@@ -408,7 +412,7 @@ MPSEQ getpul(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
 { 
-   MPSEQ f;
+   MPSEQ f = {};
    extern MPSEQ MPchopper(MPSEQ f); 
    char *var;
    f.phAccum = p;
@@ -538,7 +542,7 @@ MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
 
 MPSEQ getr1235(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ r;
+   MPSEQ r = {};
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;
    r.phAccum = p;
@@ -682,7 +686,7 @@ MPSEQ getr1235(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 MPSEQ getr1426(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ r;
+   MPSEQ r = {};
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -799,7 +803,7 @@ MPSEQ getr1426(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 MPSEQ getr1825(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ r;
+   MPSEQ r = {};
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -913,7 +917,7 @@ MPSEQ getr1825(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 MPSEQ getspc5(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ spc5; 
+   MPSEQ spc5 = {}; 
    extern MPSEQ MPchopper(MPSEQ spc5);
    char *var;
 
@@ -1039,7 +1043,7 @@ MPSEQ getspc5(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 MPSEQ getpostc7(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ c7;
+   MPSEQ c7 = {};
    char *var;
    extern MPSEQ MPchopper(MPSEQ c7);
    int i;
@@ -1161,7 +1165,7 @@ MPSEQ getpostc7(char *seqName, int iph, double p, double phint, int iRec, int ca
 MPSEQ getfslg(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ f;
+   MPSEQ f = {};
    extern MPSEQ MPchopper(MPSEQ f);
 
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -1283,7 +1287,7 @@ MPSEQ getfslg(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 MPSEQ getpmlg(char *seqName, int iph ,double p, double phint, int iRec, int calc)
 {
-   MPSEQ pm;
+   MPSEQ pm = {};
    int i;
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
@@ -1430,7 +1434,7 @@ MPSEQ getpmlg(char *seqName, int iph ,double p, double phint, int iRec, int calc
 
 MPSEQ getblew(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ pm;
+   MPSEQ pm = {};
    int i;
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
@@ -1560,7 +1564,7 @@ MPSEQ getblew(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 MPSEQ getdumbo(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ pm;
+   MPSEQ pm = {};
    int i;
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
@@ -1702,7 +1706,7 @@ MPSEQ getdumbo(char *seqName, int iph, double p, double phint, int iRec, int cal
 MPSEQ getbaba(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ baba;
+   MPSEQ baba = {};
    extern MPSEQ MPchopper(MPSEQ baba);
 
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -1859,7 +1863,7 @@ MPSEQ getbaba(char *seqName, int iph, double p, double phint, int iRec, int calc
 MPSEQ getxy8(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ xy8;
+   MPSEQ xy8 = {};
    extern MPSEQ MPchopper(MPSEQ xy8);
    
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -1994,7 +1998,7 @@ MPSEQ getxy8(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 {
-   CP cp;
+   CP cp = {};
    char *var;
    extern CP make_cp(CP cp);
 
@@ -2028,6 +2032,7 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 
    cp.preset1 = 0;
    cp.preset2 = 0;
+   cp.preset3 = 0; // BDZ until 7-25-23 this one was not initialized.
    cp.strtdelay = WFG_START_DELAY - WFG_OFFSET_DELAY;
    cp.offstdelay = WFG_OFFSET_DELAY;
    cp.apdelay = PWRF_DELAY;
@@ -2042,14 +2047,14 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
    var = getname1("a",cp.seqName,1);
    cp.a1 = getval(var);
    if ((strcmp(cp.ch,"fr") == 0)) 
-   cp.array = disarry(var, cp.array);
+      cp.array = disarry(var, cp.array);
 
 // aXhxsuffix
 
    var = getname1("a",cp.seqName,2);
    cp.a2 = getval(var);
    if ((strcmp(cp.ch,"to") == 0)) 
-   cp.array = disarry(var, cp.array);
+      cp.array = disarry(var, cp.array);
 
 // dHXsuffix
 
@@ -2125,7 +2130,7 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 
 DREAM getdream(char *seqName, double p, double phint, int iRec, int calc)
 {
-   DREAM d;
+   DREAM d = {};
    char *var;
    extern DREAM make_dream(DREAM d);
 
@@ -2279,7 +2284,7 @@ DREAM getdream(char *seqName, double p, double phint, int iRec, int calc)
 
 MPSEQ getdraws(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ r;
+   MPSEQ r = {};
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;
 
@@ -2422,7 +2427,7 @@ MPSEQ getdraws(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 MPSEQ getrapt(char *seqName, double p, double phint, int iRec, int calc)
 {
-   MPSEQ r;
+   MPSEQ r = {};
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;
 
@@ -2549,7 +2554,7 @@ MPSEQ getrapt(char *seqName, double p, double phint, int iRec, int calc)
 
 MPSEQ getgrapt(char *seqName, double p, double phint, int iRec, int calc)
 {
-   MPSEQ r;
+   MPSEQ r = {};
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;
    int i;
@@ -2719,7 +2724,7 @@ MPSEQ getgrapt(char *seqName, double p, double phint, int iRec, int calc)
 MPSEQ getpipsxy(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ pips;
+   MPSEQ pips = {};
    extern MPSEQ MPchopper(MPSEQ pips);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
         printf("Error in getpips(). The type name %s is invalid!\n",seqName);
@@ -2856,7 +2861,7 @@ MPSEQ getpipsxy(char *seqName, int iph, double p, double phint, int iRec, int ca
 
 MPSEQ getsr4(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ r;
+   MPSEQ r = {};
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;   
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -2992,7 +2997,7 @@ MPSEQ getsr4(char *seqName, int iph, double p, double phint, int iRec, int calc)
 MPSEQ getsammyd(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ sd;
+   MPSEQ sd = {};
    extern MPSEQ MPchopper(MPSEQ sd);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
         printf("Error in getsammyd(). The type name %s is invalid!\n",seqName);
@@ -3150,7 +3155,7 @@ MPSEQ getsammyd(char *seqName, int iph, double p, double phint, int iRec, int ca
 MPSEQ getsammyo(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ so;
+   MPSEQ so = {};
    extern MPSEQ MPchopper(MPSEQ so);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
         printf("Error in getsammyo(). The type name %s is invalid!\n",seqName);
@@ -3284,7 +3289,7 @@ MPSEQ getsammyo(char *seqName, int iph, double p, double phint, int iRec, int ca
 MPSEQ getlg(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ f;
+   MPSEQ f = {};
    extern MPSEQ MPchopper(MPSEQ f);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
         printf("Error in getlg(). The type name %s is invalid!\n",seqName);
@@ -3401,7 +3406,7 @@ MPSEQ getlg(char *seqName, int iph, double p, double phint, int iRec, int calc)
 MPSEQ getrfdrxy8(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ xy8;
+   MPSEQ xy8 = {};
    extern MPSEQ MPchopper(MPSEQ xy8);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
         printf("Error in getrfdrxy8(). The type name %s is invalid!\n",seqName);
@@ -3543,7 +3548,7 @@ MPSEQ getrfdrxy8(char *seqName, int iph, double p, double phint, int iRec, int c
 MPSEQ getseac7(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
 
-   MPSEQ seac7;
+   MPSEQ seac7 = {};
    char *var;
    extern MPSEQ MPchopper(MPSEQ seac7);
    int i,j,k;
@@ -3710,7 +3715,7 @@ MPSEQ getseac7(char *seqName, int iph, double p, double phint, int iRec, int cal
 MPSEQ getsc14(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
 
-   MPSEQ sc14;
+   MPSEQ sc14 = {};
    extern MPSEQ MPchopper(MPSEQ sc14);
    char *var;
    int i;
@@ -3824,7 +3829,7 @@ MPSEQ getsc14(char *seqName, int iph, double p, double phint, int iRec, int calc
 MPSEQ getptrfdr(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ pt;
+   MPSEQ pt = {};
    extern MPSEQ MPchopper(MPSEQ pt);
    int index;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -3959,7 +3964,7 @@ MPSEQ getptrfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
 MPSEQ getfprfdr(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ fp;
+   MPSEQ fp = {};
    extern MPSEQ MPchopper(MPSEQ fp);
    int index;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -4092,7 +4097,7 @@ MPSEQ getfprfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
 
 MPSEQ getspnl(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ spnl;
+   MPSEQ spnl = {};
    extern MPSEQ MPchopper(MPSEQ spnl);
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -4237,7 +4242,7 @@ MPSEQ getspnl(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 MPSEQ getr1817(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ r;
+   MPSEQ r = {};
    extern MPSEQ MPchopper(MPSEQ r);
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -4343,7 +4348,7 @@ MPSEQ getr1817(char *seqName, int iph, double p, double phint, int iRec, int cal
 MPSEQ gettmrev5(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ tm;
+   MPSEQ tm = {};
    extern MPSEQ MPchopper(MPSEQ tm);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
         printf("Error in gettmrev(). The type name %s is invalid!\n",seqName);
@@ -4487,7 +4492,7 @@ MPSEQ gettmrev5(char *seqName, int iph, double p, double phint, int iRec, int ca
 MPSEQ getpxy(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ pxy;
+   MPSEQ pxy = {};
    extern MPSEQ MPchopper(MPSEQ pxy);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
         printf("Error in getpxy(). The type name %s is invalid!\n",seqName);
@@ -4602,7 +4607,7 @@ MPSEQ getpxy(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 MPSEQ getsamn(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ pm;
+   MPSEQ pm = {};
    int i;
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
@@ -4732,7 +4737,7 @@ MPSEQ getsamn(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 MPSEQ getpmlgxmx(char *seqName, int iph ,double p, double phint, int iRec, int calc)
 {
-   MPSEQ pm;
+   MPSEQ pm = {};
    int i;
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
@@ -4881,7 +4886,7 @@ MPSEQ getpmlgxmx(char *seqName, int iph ,double p, double phint, int iRec, int c
 MPSEQ getsuper(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
    char *var;
-   MPSEQ super;
+   MPSEQ super = {};
    extern MPSEQ MPchopper(MPSEQ super);
 
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -5083,7 +5088,7 @@ MPSEQ getsuper(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 MPSEQ getdumboxmx(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ pm;
+   MPSEQ pm = {};
    int i;
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
@@ -5233,7 +5238,7 @@ MPSEQ getdumbogen(char *seqName, char *coeffName, int iph, double p, double phin
   The supercycled version: M.Leskes, Chem. Phys. Lett., 466 (2008) 95 */
 
 {
-   MPSEQ dumbo;
+   MPSEQ dumbo = {};
    int i;
    char *var;
    extern MPSEQ MPchopper(MPSEQ dumbo);
@@ -5434,7 +5439,7 @@ MPSEQ getdumbogen(char *seqName, char *coeffName, int iph, double p, double phin
 
 MPSEQ getsat(char *seqName, double p, double phint, int iRec, int calc)
 {
-   MPSEQ s;
+   MPSEQ s = {};
    char *var;
 
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -5563,7 +5568,7 @@ MPSEQ getsat(char *seqName, double p, double phint, int iRec, int calc)
 
 MPSEQ getpostc6(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-   MPSEQ c6;
+   MPSEQ c6 = {};
    char *var;
    extern MPSEQ MPchopper(MPSEQ c6);
    int i;

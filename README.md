@@ -36,6 +36,8 @@ The latest binary releases for OpenVnmrJ are available from [Releases](https://g
 
 For more information on the OpenVnmrJ project, visit [openvnmrj.org](http://openvnmrj.org).
 
+Note that there is a community of users named IVAN-SpinSights on Zulip that is [here](https://ivan-spinsights.zulipchat.com/). Instructions for signing up can be found on the [IVAN website](https://ivanmr.com/).
+
 ## Help us
 
 We are looking for anyone to help with this projects. Coding is not necessary! Translations, pulse sequences, macros, beta testing and bug reporting are
@@ -43,6 +45,7 @@ very helpful. See [Contributing](http://openvnmrj.org/Contributing/) for more in
 
 ## Contributors
  * Timothy Burrow
+ * Barry DeZonia
  * Dan Iverson
  * Gareth Morris  
  * Michael Tesch

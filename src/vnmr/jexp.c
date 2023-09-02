@@ -1570,6 +1570,7 @@ int svf(int argc, char *argv[], int retc, char *retv[])
   int doDB;
   static int onDB = 1;
   int force;
+  int replace;
   int opt;
   vInfo info;
   char *ptmp;
@@ -1589,6 +1590,7 @@ int svf(int argc, char *argv[], int retc, char *retv[])
   no_arch = TRUE;
   doDB = TRUE;
   force = FALSE;
+  replace = FALSE;
   opt = FALSE;
   if ( !strcmp(argv[0],"SVF") )
   {  for (i = 1; i<argc; i++)
@@ -1601,13 +1603,17 @@ int svf(int argc, char *argv[], int retc, char *retv[])
   {
      if (!strcmp(argv[i],"nodb") ) doDB = FALSE;
      if (!strcmp(argv[i],"force") ) force = TRUE;
+     if (!strcmp(argv[i],"replace") ) replace = TRUE;
      if (!strcmp(argv[i],"opt") ) opt = TRUE;
   }
   if (nolog) argc--;
   if (!no_arch) argc--;
   if (!doDB) argc--;
   if (force) argc--;
+  if (replace) argc--;
   if (opt) argc--;
+  if (force)
+     replace = FALSE;
 
   if (onDB == 1)
   {
@@ -1689,7 +1695,7 @@ int svf(int argc, char *argv[], int retc, char *retv[])
           {
             rmDir = TRUE;
           }
-          else
+          else if ( ! replace)
           {
              char answer[16];
              W_getInput("File exists, overwrite (enter y or n <return>)? "
@@ -1697,7 +1703,7 @@ int svf(int argc, char *argv[], int retc, char *retv[])
              if ((strcmp(answer,"y")==0) || (strcmp(answer,"yes")==0))
                rmDir = TRUE;
           }
-          if (rmDir)
+          if (rmDir && ! replace)
 	  {
 
 	/*
@@ -1725,7 +1731,7 @@ int svf(int argc, char *argv[], int retc, char *retv[])
 	    else
 	      svf_nofid = 1;
 	  }
-	  else
+	  else if ( ! replace )
 	  {
             disp_status("        ");
             ABORT;

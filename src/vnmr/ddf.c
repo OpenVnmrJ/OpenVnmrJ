@@ -76,7 +76,8 @@ static int count_lines(char *fn_addr );
 static void make_std_bhead(dblockhead *bh_ref, short b_status, short b_index );
 static void make_empty_fhead(dfilehead *fh_ref );
 static int makefid_args(int argc, char *argv[], int *element_addr, int *format_addr,
-                    int *addFlag, int *phaseInvert, int *revFlag, int *indexOffset );
+                    int *addFlag, int *phaseInvert, int *revFlag, int *indexOffset,
+                    double *fidFreq, double *fidAmp, double *fidPhase );
 static int report_data_format_inconsistent(char *cmd_name, int old_format );
 static int makefid_getfhead(char *cmd_name, dfilehead *fh_ref, int *update_fh_ref, int force );
 static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
@@ -1826,7 +1827,8 @@ static int mergeData(void *mem_buffer, dblockhead *this_bh, int element_number, 
 }
 
 static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
-                              int npnts, double dwell, int fromFile, int phInvert )
+                              int npnts, double dwell, int fromFile, int phInvert,
+                              double fidFreq, double fidAmp, double fidPhase)
 {
         char     cur_line[ 122 ];
         int      index, len, this_line;
@@ -1842,6 +1844,9 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
                             cmd_name, fn_addr);
                         return( -1 );
            }
+           freq += fidFreq;
+           amp *= fidAmp;
+           phase += fidPhase;
            if (phInvert)
               phase += 180.0;
            calc_FID(mem_buffer, freq, amp, decay, phase, dwell, npnts);
@@ -1914,6 +1919,9 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
                         return( -1 );
                    }
                 }
+                freq += fidFreq;
+                amp *= fidAmp;
+                phase += fidPhase;
                 if (phInvert)
                    phase += 180.0;
                 calc_FID(mem_buffer, freq, amp, decay, phase, dwell, npnts);
@@ -1925,6 +1933,7 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
 
 static int calc_indexed_fid(char *cmd_name, char *fn_addr, void *mem_buffer,
                               int npnts, double dwell, int fid_format, int phInvert,
+                              double fidFreq, double fidAmp, double fidPhase,
                               int indexOffset, int *replaced, dfilehead *fid_fhead )
 {
         char     cur_line[ 122 ];
@@ -1991,6 +2000,9 @@ static int calc_indexed_fid(char *cmd_name, char *fn_addr, void *mem_buffer,
                    fclose( tfile );
                    return( -1 );
                 }
+                freq += fidFreq;
+                amp *= fidAmp;
+                phase += fidPhase;
                 if (phInvert)
                    phase += 180.0;
                 fidIndex += indexOffset;
@@ -2083,6 +2095,9 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
    int              phaseInvert = 0;
    int              revFlag = 0;  /* Flag for spectral reverse */
    int              indexOffset = 0;
+   double fidFreq = 0.0;
+   double fidAmp = 1.0;
+   double fidPhase = 0.0;
 
    cmd_name = argv[ 0 ];
    if (argc < COUNT_REQUIRED_ARGS) {
@@ -2094,7 +2109,8 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
    element_number = -1;             /* default values */
    new_fid_format = UNDEFINED;
    if (makefid_args( argc, argv, &element_number, &new_fid_format,
-                    &addFlag, &phaseInvert, &revFlag, &indexOffset ) != 0)
+                    &addFlag, &phaseInvert, &revFlag, &indexOffset,
+                    &fidFreq, &fidAmp, &fidPhase ) != 0)
       ABORT;                        /* `makefid_args' reports error */
 //fprintf(stderr,"element_number:%d new_fid_format:%d addFlag:%d phaseInvert:%d revFlag:%d indexOffset:%d\n",
 //                element_number, new_fid_format, addFlag, phaseInvert, revFlag, indexOffset);
@@ -2225,6 +2241,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
       }
       np_makefid = calc_indexed_fid(cmd_name, fn_addr, mem_buffer,
                                (int) npnts, 1.0/swval, new_fid_format, phaseInvert,
+                               fidFreq, fidAmp, fidPhase,
                                indexOffset, replaceList, &fid_fhead );
       if (replaceList)
          release(replaceList);
@@ -2242,7 +2259,8 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
       P_setreal(PROCESSED,"sw",swval,1);
       mem_buffer = allocateWithId( npnts*sizeof(float), "makefid" );
       np_makefid = calc_fid_from_values(cmd_name, fn_addr, mem_buffer,
-                               (int) npnts, 1.0/swval, calcFID, phaseInvert );
+                               (int) npnts, 1.0/swval, calcFID, phaseInvert,
+                               fidFreq, fidAmp, fidPhase );
       if (new_fid_format != REAL_NUMBERS)
          cvrtReal(np_makefid, (new_fid_format == SINGLE_PREC), mem_buffer);
 
@@ -2412,7 +2430,8 @@ static struct format_table_entry {
 };
 
 static int makefid_args(int argc, char *argv[], int *element_addr, int *format_addr,
-                    int *addFlag, int *phaseInvert, int *revFlag, int *indexOffset )
+                    int *addFlag, int *phaseInvert, int *revFlag, int *indexOffset,
+                    double *fidFreq, double *fidAmp, double *fidPhase )
 {
         int     iter, ival, jter;
         int     size_of_table;
@@ -2472,6 +2491,45 @@ static int makefid_args(int argc, char *argv[], int *element_addr, int *format_a
                    else
                    {
                       Werrprintf("indexOffset option for makefid requires a numeric index\n");
+                      return(-1);
+                   }
+           }
+           else if (strcasecmp(argv[ iter ], "fidFreq")  == 0)
+           {
+                   if ( (iter + 1 < argc) && isReal( argv[iter+1] ))
+                   {
+                      iter++;
+                      *fidFreq = stringReal( argv[iter] );
+                   }
+                   else
+                   {
+                      Werrprintf("fidFreq option for makefid requires a frequency shift (Hz)\n");
+                      return(-1);
+                   }
+           }
+           else if (strcasecmp(argv[ iter ], "fidAmp")  == 0)
+           {
+                   if ( (iter + 1 < argc) && isReal( argv[iter+1] ))
+                   {
+                      iter++;
+                      *fidAmp = stringReal( argv[iter] );
+                   }
+                   else
+                   {
+                      Werrprintf("fidAmp option for makefid requires an amplitude multplier\n");
+                      return(-1);
+                   }
+           }
+           else if (strcasecmp(argv[ iter ], "fidPhase")  == 0)
+           {
+                   if ( (iter + 1 < argc) && isReal( argv[iter+1] ))
+                   {
+                      iter++;
+                      *fidPhase = stringReal( argv[iter] );
+                   }
+                   else
+                   {
+                      Werrprintf("fidPhase option for makefid requires a phase angle (deg)\n");
                       return(-1);
                    }
            }

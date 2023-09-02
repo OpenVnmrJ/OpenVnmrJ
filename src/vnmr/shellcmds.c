@@ -1275,7 +1275,7 @@ int mk_dir(int argc, char *argv[], int retc, char *retv[])
     {
 	int	ival=0;
 
-	if (verify_fname( argv[ i ] ) != 0)
+	if (verify_fname2( argv[ i ] ) != 0)
 	{
 	    Werrprintf(
 		"%s:  cannot use '%s' as a directory name", argv[ 0 ], argv[ i ]
@@ -2176,6 +2176,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             lineCount = 0;
             headCount = 0;
             skipCount = 0;
+            wordCount = 0;
          }
       }
       len = strlen(inLine);          /* get buf length */

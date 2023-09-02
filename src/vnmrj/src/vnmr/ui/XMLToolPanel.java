@@ -88,6 +88,22 @@ public class XMLToolPanel extends JPanel implements VObjDef, ExpListenerIF,
         paramsLayout.setReferenceSize(w, h);
     }
 
+    private void buildNoScrollPanel() {
+        setLayout(new BorderLayout());
+
+        String path = FileUtil.getLayoutPath(layoutDir, fname);
+
+        try {
+            if(path != null)
+                LayoutBuilder.build(this, vnmrIf, path);
+        } catch(Exception e) {
+            String strError = "Error building file: " + path;
+            Messages.postError(strError);
+            Messages.writeStackTrace(e);
+            return;
+        }
+    }
+
     public void buildPanel() {
         String path = FileUtil.getLayoutPath(layoutDir, fname);
         if(path == null){
@@ -95,6 +111,13 @@ public class XMLToolPanel extends JPanel implements VObjDef, ExpListenerIF,
             return;
         }
         removeAll();
+
+        if (!bScrollBar) {
+            buildNoScrollPanel();
+            return;
+        }
+
+        pane.setLayout(paramsLayout);
         try {
             LayoutBuilder.build(pane, vnmrIf, path);
         } catch(Exception e) {
@@ -104,15 +127,9 @@ public class XMLToolPanel extends JPanel implements VObjDef, ExpListenerIF,
             return;
         }
 
-        if(bScrollBar){
             spane = new JScrollPane(pane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             add(spane);
-        }
-        else{
-            spane=null;
-            add(pane);
-        }
         paramsLayout.preferredLayoutSize(pane);
     }
 

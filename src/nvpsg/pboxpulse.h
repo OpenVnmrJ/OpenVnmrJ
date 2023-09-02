@@ -80,7 +80,7 @@ void dump_pboxpulse(PBOXPULSE a)
 void dump_pboxpulse_array(PBOXPULSE a)
 {
    int i,j,m,k,l;
-   char temp[MAXSTR]; 
+   char temp[PAR_NAME_SZ]; 
    printf("PBOXPULSE WAVEFORM ARRAY INFORMATION\n"); 
    printf("pattern = %10s : Filename for Pulse\n",a.pattern); 
    printf("array.c = %10d : Number of Parameters\n", a.array.c);
@@ -131,8 +131,8 @@ PBOXPULSE update_PBOXPULSE(PBOXPULSE shp, int iRec)
       sprintf(shp.pattern,"%s%d_%d",var,shp.nRec,lix);
       if (shp.hasArray == 1) {
          int ret __attribute__((unused));
-	 sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n",
-                shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,shp.fla);
+         sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n",
+                 shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,shp.fla);
          ret = system(cmd);
          pboxshp = getRsh(shp.pattern); 
          shp.B1max = pboxshp.B1max; 
@@ -351,8 +351,8 @@ PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
       sprintf(shp.pattern,"%s%d_%d",var,shp.nRec,lix);
       if (shp.hasArray == 1) {
          int ret __attribute__((unused));
-	 sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n",
-                shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,shp.fla);
+         sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2\n",
+                 shp.pattern,shp.wv,shp.pw,shp.of,shp.st,shp.ph,shp.fla);
          ret = system(cmd);
          pboxshp = getRsh(shp.pattern); 
          shp.B1max = pboxshp.B1max; 
@@ -493,12 +493,12 @@ void _pboxpulse(PBOXPULSE shp, codeint phase)
          txphase(phase);
          delay(3.0e-6);
          obsunblank();
-	 delay(shp.t1);
+         delay(shp.t1);
          delay(2.0e-6);
          shaped_pulse(shp.pattern,shp.pw,phase,0.0,0.0);
          delay(shp.t2);
-	 obsunblank();
-	 break;
+         obsunblank();
+         break;
       case 2:
          decblank();
          decpower(shp.db);
@@ -506,11 +506,11 @@ void _pboxpulse(PBOXPULSE shp, codeint phase)
          decphase(phase);
          delay(3.0e-6);
          decunblank();
-	 delay(shp.t1);
+         delay(shp.t1);
          delay(2.0e-6);
          decshaped_pulse(shp.pattern,shp.pw,phase,0.0,0.0);
          delay(shp.t2);
-	 decunblank();
+         decunblank();
          break;
       case 3:
          dec2blank();
@@ -520,10 +520,10 @@ void _pboxpulse(PBOXPULSE shp, codeint phase)
          delay(3.0e-6);
          dec2unblank();
          delay(2.0e-6);
-	 dec2shaped_pulse(shp.pattern,shp.pw,phase,0.0,0.0);
+         dec2shaped_pulse(shp.pattern,shp.pw,phase,0.0,0.0);
          delay(shp.t2);
-	 dec2unblank();
-	 break;
+         dec2unblank();
+         break;
       case 4:
          dec3blank();
          dec3power(shp.db);
@@ -535,7 +535,7 @@ void _pboxpulse(PBOXPULSE shp, codeint phase)
          delay(2.0e-6);
          dec3shaped_pulse(shp.pattern,shp.pw,phase,0.0,0.0);
          delay(shp.t2);
-	 dec3unblank();
+         dec3unblank();
          break;
       default:
          printf("_pboxpulse() Error: Undefined Channel! < 0!\n");
@@ -581,32 +581,50 @@ void _pboxsimpulse(PBOXPULSE shp1, PBOXPULSE shp2,int phase1, int phase2)
       psg_abort(1);
    }
    if ((chnl1 == 1) && (chnl2 == 2)) {
-      obsblank(); decblank();
-      obspower(shp1.db); decpower(shp2.db);
-      obspwrf(shp1.a); decpwrf(shp2.a);
-      txphase(phase1); decphase(phase2);
+      obsblank();
+      decblank();
+      obspower(shp1.db);
+      decpower(shp2.db);
+      obspwrf(shp1.a);
+      decpwrf(shp2.a);
+      txphase(phase1);
+      decphase(phase2);
       delay(3.0e-6);
-      obsunblank(); decunblank();
+      obsunblank();
+      decunblank();
       delay(shp1.t1);
       delay(2.0e-6);
       simshaped_pulse(shp1.pattern,shp2.pattern,shp1.pw,shp2.pw,
-         phase1,phase2,0.0,0.0);
-      obsunblank(); decunblank();
+                      phase1,phase2,0.0,0.0);
+      obsunblank();
+      decunblank();
       delay(shp1.t2);
    }
    else if ((chnl1 == 1) && (chnl2 == 3)) {
-      obsblank(); if (NUMch > 2) dec2blank();
-      obspower(shp1.db); if (NUMch > 2) dec2power(shp2.db);
-      obspwrf(shp1.a); if (NUMch > 2) dec2pwrf(shp2.a);
-      txphase(phase1); if (NUMch > 2) dec2phase(phase2);
+      obsblank();
+      if (NUMch > 2)
+         dec2blank();
+      obspower(shp1.db);
+      if (NUMch > 2)
+         dec2power(shp2.db);
+      obspwrf(shp1.a);
+      if (NUMch > 2)
+         dec2pwrf(shp2.a);
+      txphase(phase1);
+      if (NUMch > 2)
+         dec2phase(phase2);
       delay(3.0e-6);
-      obsunblank(); if (NUMch > 2) dec2unblank();
+      obsunblank();
+      if (NUMch > 2)
+         dec2unblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse(shp1.pattern,"",shp2.pattern,shp1.pw,0.0,shp2.pw,
-            phase1,zero,phase2,0.0,0.0);
-	 obsunblank(); decunblank(); dec2unblank();
+                          phase1,zero,phase2,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
@@ -616,79 +634,121 @@ void _pboxsimpulse(PBOXPULSE shp1, PBOXPULSE shp2,int phase1, int phase2)
       }
    }
    else if ((chnl1 == 2) && (chnl2 == 1)) {
-      decblank(); obsblank();
-      decpower(shp1.db); obspower(shp2.db);
-      decpwrf(shp1.a); obspwrf(shp2.a);
-      decphase(phase1); txphase(phase2);
+      decblank();
+      obsblank();
+      decpower(shp1.db);
+      obspower(shp2.db);
+      decpwrf(shp1.a);
+      obspwrf(shp2.a);
+      decphase(phase1);
+      txphase(phase2);
       delay(3.0e-6);
-      decunblank(); obsunblank();
+      decunblank();
+      obsunblank();
       delay(shp1.t1);
       delay(2.0e-6);
       simshaped_pulse(shp2.pattern,shp1.pattern,shp2.pw,shp1.pw,
-         phase2,phase1,0.0,0.0);
-      decunblank(); obsunblank();
+                      phase2,phase1,0.0,0.0);
+      decunblank();
+      obsunblank();
       delay(shp1.t2);
    }
    else if ((chnl1 == 2) && (chnl2 == 3)) {
-      decblank(); if (NUMch > 2) dec2blank();
-      decpower(shp1.db); if (NUMch > 2) dec2power(shp2.db);
-      decpwrf(shp1.a); if (NUMch > 2) dec2pwrf(shp2.a);
-      decphase(phase1); if (NUMch > 2) dec2phase(phase2);
+      decblank();
+      if (NUMch > 2)
+         dec2blank();
+      decpower(shp1.db);
+      if (NUMch > 2)
+         dec2power(shp2.db);
+      decpwrf(shp1.a);
+      if (NUMch > 2)
+         dec2pwrf(shp2.a);
+      decphase(phase1);
+      if (NUMch > 2)
+         dec2phase(phase2);
       delay(3.0e-6);
-      decunblank(); if (NUMch > 2) dec2unblank();
+      decunblank();
+      if (NUMch > 2)
+         dec2unblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse("",shp1.pattern,shp2.pattern,0.0,shp1.pw,shp2.pw,
-            zero,phase1,phase2,0.0,0.0);
-         obsunblank(); decunblank(); dec2unblank();
+                          zero,phase1,phase2,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          decshaped_pulse(shp1.pattern,shp1.pw,phase1,0.0,0.0);
-	 decunblank();
+         decunblank();
          delay(shp1.t2);
       }
    }
    else if ((chnl1 == 3) && (chnl2 == 1)) {
-      if (NUMch > 2) dec2blank(); obsblank();
-      if (NUMch > 2) dec2power(shp1.db); obspower(shp2.db);
-      if (NUMch > 2) dec2pwrf(shp1.a); obspwrf(shp2.a);
-      if (NUMch > 2) dec2phase(phase1); txphase(phase2);
+      if (NUMch > 2)
+         dec2blank();
+      obsblank();
+      if (NUMch > 2)
+         dec2power(shp1.db);
+      obspower(shp2.db);
+      if (NUMch > 2)
+         dec2pwrf(shp1.a);
+      obspwrf(shp2.a);
+      if (NUMch > 2)
+         dec2phase(phase1);
+      txphase(phase2);
       delay(3.0e-6);
-      if (NUMch > 2) dec2unblank(); obsunblank();
+      if (NUMch > 2)
+         dec2unblank();
+      obsunblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse(shp2.pattern,"",shp1.pattern,shp2.pw,0.0,shp1.pw,
-            phase2,zero,phase1,0.0,0.0);
-	 obsunblank(); decunblank(); dec2unblank();
+                          phase2,zero,phase1,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          shaped_pulse(shp2.pattern,shp2.pw,phase2,0.0,0.0);
-	 obsunblank();
+         obsunblank();
          delay(shp1.t2);
       }
    }
    else if ((chnl1 == 3) && (chnl2 == 2)) {
-      if (NUMch > 2) dec2blank(); decblank();
-      if (NUMch > 2) dec2power(shp1.db); decpower(shp2.db);
-      if (NUMch > 2) dec2pwrf(shp1.a); decpwrf(shp2.a);
-      if (NUMch > 2) dec2phase(phase1); decphase(phase2);
+      if (NUMch > 2)
+         dec2blank();
+      decblank();
+      if (NUMch > 2)
+         dec2power(shp1.db);
+      decpower(shp2.db);
+      if (NUMch > 2)
+         dec2pwrf(shp1.a);
+      decpwrf(shp2.a);
+      if (NUMch > 2)
+         dec2phase(phase1);
+      decphase(phase2);
       delay(3.0e-6);
-      if (NUMch > 2) dec2unblank(); decunblank();
+      if (NUMch > 2)
+         dec2unblank();
+      decunblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse("",shp2.pattern,shp1.pattern,0.0,shp2.pw,shp1.pw,
-            zero,phase2,phase1,0.0,0.0);
-	 obsunblank(); decunblank(); dec2unblank();
+                          zero,phase2,phase1,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          decshaped_pulse(shp2.pattern,shp2.pw,phase2,0.0,0.0);
-	 decunblank();
+         decunblank();
          delay(shp1.t2);
       }
    }
@@ -750,135 +810,243 @@ void _pboxsim3pulse(PBOXPULSE shp1, PBOXPULSE shp2, PBOXPULSE shp3,
       psg_abort(1);
    }
    if ((chnl1 == 1) && (chnl2 == 2) && (chnl3 == 3)) {
-      obsblank(); decblank(); if (NUMch > 2) dec2blank();
-      obspower(shp1.db); decpower(shp2.db); if (NUMch > 2) dec2power(shp3.db);
-      obspwrf(shp1.a); decpwrf(shp2.a); if (NUMch > 2) dec2pwrf(shp3.a);
-      txphase(phase1); decphase(phase2); if (NUMch > 2) dec2phase(phase3);
+      obsblank();
+      decblank();
+      if (NUMch > 2)
+         dec2blank();
+      obspower(shp1.db);
+      decpower(shp2.db);
+      if (NUMch > 2)
+         dec2power(shp3.db);
+      obspwrf(shp1.a);
+      decpwrf(shp2.a);
+      if (NUMch > 2)
+         dec2pwrf(shp3.a);
+      txphase(phase1);
+      decphase(phase2);
+      if (NUMch > 2)
+         dec2phase(phase3);
       delay(3.0e-6);
-      obsunblank(); decunblank(); if (NUMch > 2) dec2unblank();
+      obsunblank();
+      decunblank();
+      if (NUMch > 2)
+         dec2unblank();
       delay(shp1.t1);
       delay(2.0e-6);
       delay(rof1);
       if (NUMch > 2) {
          sim3shaped_pulse(shp1.pattern,shp2.pattern,shp3.pattern,shp1.pw,
-	    shp2.pw,shp3.pw,phase1,phase2,phase3,0.0,0.0);
-         obsunblank(); decunblank(); dec2unblank();
+                          shp2.pw,shp3.pw,phase1,phase2,phase3,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          simshaped_pulse(shp1.pattern,shp2.pattern,shp1.pw,shp2.pw,
-	    phase1,phase2,0.0,0.0);
-	 obsunblank(); decunblank();
+                         phase1,phase2,0.0,0.0);
+         obsunblank();
+         decunblank();
          delay(shp1.t2);
       }
    }
    else if ((chnl1 == 1) && (chnl2 == 3) && (chnl3 == 2)) {
-      obsblank(); if (NUMch > 2) dec2blank(); decblank();
-      obspower(shp1.db); if (NUMch > 2) dec2power(shp2.db); decpower(shp3.db);
-      obspwrf(shp1.a); if (NUMch > 2) dec2pwrf(shp2.a); decpwrf(shp3.a);
-      txphase(phase1); if (NUMch > 2) dec2phase(phase2); decphase(phase3);
+      obsblank();
+      if (NUMch > 2)
+         dec2blank();
+      decblank();
+      obspower(shp1.db);
+      if (NUMch > 2)
+         dec2power(shp2.db);
+      decpower(shp3.db);
+      obspwrf(shp1.a);
+      if (NUMch > 2)
+         dec2pwrf(shp2.a);
+      decpwrf(shp3.a);
+      txphase(phase1);
+      if (NUMch > 2)
+         dec2phase(phase2);
+      decphase(phase3);
       delay(3.0e-6);
-      obsunblank(); if (NUMch > 2) dec2unblank(); decunblank();
+      obsunblank();
+      if (NUMch > 2)
+         dec2unblank();
+      decunblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse(shp1.pattern,shp3.pattern,shp2.pattern,shp1.pw,shp3.pw,
-	    shp2.pw,phase1,phase3,phase2,0.0,0.0);
-	 obsunblank(); decunblank(); dec2unblank();
+                          shp2.pw,phase1,phase3,phase2,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          simshaped_pulse(shp1.pattern,shp3.pattern,shp1.pw,shp3.pw,
-	    phase1,phase3,0.0,0.0);
-	 obsunblank(); decunblank();
+                         phase1,phase3,0.0,0.0);
+         obsunblank();
+         decunblank();
          delay(shp1.t2);
       }
    }
    else if ((chnl1 == 2) && (chnl2 == 1) && (chnl3 == 3)) {
-      decblank(); obsblank(); if (NUMch > 2) dec2blank();
-      decpower(shp1.db); obspower(shp2.db); if (NUMch > 2) dec2power(shp3.db);
-      decpwrf(shp1.a); obspwrf(shp2.a); if (NUMch > 2) dec2pwrf(shp3.a);
-      decphase(phase1); txphase(phase2); if (NUMch > 2) dec2phase(phase3);
+      decblank();
+      obsblank();
+      if (NUMch > 2)
+         dec2blank();
+      decpower(shp1.db);
+      obspower(shp2.db);
+      if (NUMch > 2)
+         dec2power(shp3.db);
+      decpwrf(shp1.a);
+      obspwrf(shp2.a);
+      if (NUMch > 2)
+         dec2pwrf(shp3.a);
+      decphase(phase1);
+      txphase(phase2);
+      if (NUMch > 2)
+         dec2phase(phase3);
       delay(3.0e-6);
-      decunblank(); obsunblank(); if (NUMch > 2) dec2unblank();
+      decunblank();
+      obsunblank();
+      if (NUMch > 2)
+         dec2unblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse(shp2.pattern,shp1.pattern,shp3.pattern,shp2.pw,
-	    shp1.pw,shp3.pw,phase2,phase1,phase3,0.0,0.0);
-	 obsunblank(); decunblank(); dec2unblank();
+                          shp1.pw,shp3.pw,phase2,phase1,phase3,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          simshaped_pulse(shp2.pattern,shp1.pattern,shp2.pw,shp1.pw,
-            phase2,phase1,0.0,0.0);
-         decunblank(); obsunblank();
+                         phase2,phase1,0.0,0.0);
+         decunblank();
+         obsunblank();
          delay(shp1.t2);
       }
    }
    else if ((chnl1 == 2) && (chnl2 == 3) && (chnl3 == 1)) {
-      decblank(); if (NUMch > 2) dec2blank(); obsblank();
-      decpower(shp1.db); if (NUMch > 2) dec2power(shp2.db); obspower(shp3.db);
-      decpwrf(shp1.a); if (NUMch > 2) dec2pwrf(shp2.a); obspwrf(shp3.a);
-      decphase(phase1); if (NUMch > 2) dec2phase(phase2); txphase(phase3);
+      decblank();
+      if (NUMch > 2)
+         dec2blank();
+      obsblank();
+      decpower(shp1.db);
+      if (NUMch > 2)
+         dec2power(shp2.db);
+      obspower(shp3.db);
+      decpwrf(shp1.a);
+      if (NUMch > 2)
+         dec2pwrf(shp2.a);
+      obspwrf(shp3.a);
+      decphase(phase1);
+      if (NUMch > 2)
+         dec2phase(phase2);
+      txphase(phase3);
       delay(3.0e-6);
-      decunblank(); if (NUMch > 2) dec2unblank(); obsunblank();
+      decunblank();
+      if (NUMch > 2)
+         dec2unblank();
+      obsunblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse(shp3.pattern,shp1.pattern,shp2.pattern,shp3.pw,
-	    shp1.pw,shp2.pw,phase3,phase1,phase2,0.0,0.0);
-	 obsunblank(); decunblank(); dec2unblank();
+                          shp1.pw,shp2.pw,phase3,phase1,phase2,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          simshaped_pulse(shp3.pattern,shp1.pattern,shp3.pw,shp1.pw,
-	    phase3,phase1,0.0,0.0);
-	 obsunblank(); decunblank();
+                         phase3,phase1,0.0,0.0);
+         obsunblank();
+         decunblank();
          delay(shp1.t2);
       }
    }
    else if ((chnl1 == 3) && (chnl2 == 1) && (chnl3 == 2)) {
-      if (NUMch > 2) dec2blank(); obsblank(); decblank();
-      if (NUMch > 2) dec2power(shp1.db); obspower(shp2.db); decpower(shp3.db);
-      if (NUMch > 2) dec2pwrf(shp1.a); obspwrf(shp2.a); decpwrf(shp3.a);
-      if (NUMch > 2) dec2phase(phase1); txphase(phase2); decphase(phase3);
+      if (NUMch > 2)
+         dec2blank();
+      obsblank();
+      decblank();
+      if (NUMch > 2)
+         dec2power(shp1.db);
+      obspower(shp2.db);
+      decpower(shp3.db);
+      if (NUMch > 2)
+         dec2pwrf(shp1.a);
+      obspwrf(shp2.a);
+      decpwrf(shp3.a);
+      if (NUMch > 2)
+         dec2phase(phase1);
+      txphase(phase2);
+      decphase(phase3);
       delay(3.0e-6);
-      if (NUMch > 2) dec2unblank(); obsunblank(); decunblank();
+      if (NUMch > 2)
+         dec2unblank();
+      obsunblank();
+      decunblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse(shp2.pattern,shp3.pattern,shp1.pattern,shp2.pw,
-	    shp3.pw,shp1.pw,phase2,phase3,phase1,0.0,0.0);
-	 obsunblank(); decunblank(); dec2unblank();
+                          shp3.pw,shp1.pw,phase2,phase3,phase1,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          simshaped_pulse(shp2.pattern,shp3.pattern,shp2.pw,shp3.pw,
-	    phase2,phase3,0.0,0.0);
-	 obsunblank(); decunblank();
+                         phase2,phase3,0.0,0.0);
+         obsunblank();
+         decunblank();
          delay(shp1.t2);
       }
    }
    else if ((chnl1 == 3) && (chnl2 == 2) && (chnl3 == 1)) {
-      if (NUMch > 2) dec2blank(); decblank(); obsblank();
-      if (NUMch > 2) dec2power(shp1.db); decpower(shp2.db); obspower(shp3.db);
-      if (NUMch > 2) dec2pwrf(shp1.a); decpwrf(shp2.a); obspwrf(shp3.a);
-      if (NUMch > 2) dec2phase(phase1); decphase(phase2); txphase(phase3);
+      if (NUMch > 2)
+         dec2blank();
+      decblank();
+      obsblank();
+      if (NUMch > 2)
+         dec2power(shp1.db);
+      decpower(shp2.db);
+      obspower(shp3.db);
+      if (NUMch > 2)
+         dec2pwrf(shp1.a);
+      decpwrf(shp2.a);
+      obspwrf(shp3.a);
+      if (NUMch > 2)
+         dec2phase(phase1);
+      decphase(phase2);
+      txphase(phase3);
       delay(3.0e-6);
-      if (NUMch > 2) dec2unblank(); decunblank(); obsunblank();
+      if (NUMch > 2)
+         dec2unblank();
+      decunblank();
+      obsunblank();
       delay(shp1.t1);
       delay(2.0e-6);
       if (NUMch > 2) {
          sim3shaped_pulse(shp3.pattern,shp2.pattern,shp1.pattern,shp3.pw,
-	    shp2.pw,shp1.pw,phase3,phase2,phase1,0.0,0.0);
-	 obsunblank(); decunblank(); dec2unblank();
+                          shp2.pw,shp1.pw,phase3,phase2,phase1,0.0,0.0);
+         obsunblank();
+         decunblank();
+         dec2unblank();
          delay(shp1.t2);
       }
       else {
          simshaped_pulse(shp3.pattern,shp2.pattern,shp3.pw,shp2.pw,
-	    phase3,phase2,0.0,0.0);
-	 obsunblank(); decunblank();
+                         phase3,phase2,0.0,0.0);
+         obsunblank();
+         decunblank();
          delay(shp1.t2);
       }
    }

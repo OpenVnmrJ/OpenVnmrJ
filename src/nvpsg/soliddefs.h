@@ -61,7 +61,8 @@
 // Common character array sizes
 //======================================
 
-#define NSUFFIX MAXSTR
+#define NSUFFIX 256
+#define PAR_NAME_SZ 256
 
 //Contents:
 
@@ -77,7 +78,7 @@
 //=======================
 
 typedef struct {
-    char a[20*MAXSTR]; // A string with the arrayed parameter names
+    char a[20*PAR_NAME_SZ]; // A string with the arrayed parameter names
     int  b[20];        // Number of characters in each name
     int  c;            // Number of parameters
     int  d;            // Number of indicies

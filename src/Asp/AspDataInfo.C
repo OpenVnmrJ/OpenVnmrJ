@@ -142,10 +142,17 @@ void AspDataInfo::getYminmax(string nucleus, double &ymin, double &ymax) {
      float maxy=-0.1*FLT_MAX, miny=FLT_MAX;
      float y, *data;
      int i;
+     char str[20];
+     Wgetgraphicsdisplay(str, 20);
+     string type;
+     if (!strcmp(str,"df"))
+        type = string("FID");
+     else
+        type = string("SPEC");
      for(i=0;i<npts;i++) {
 
 
-        data = SpecDataMgr::get()->getTrace("SPEC", i, 1.0, haxis.npts);
+        data = SpecDataMgr::get()->getTrace(type, i, 1.0, haxis.npts);
         if(!data) continue;
 
 // should be getDataMinMax
