@@ -128,6 +128,49 @@
 // dump_shape() - void         List the contents of SHAPE
 // dump_shape_array() - void   List the "array" structure of SHAPE
 
+
+/* debugging helper util */
+
+void check_channel_consistency() {
+    
+  int error = 0;
+    
+  if (OBSch == DECch)
+    error = 12;
+    
+  else if (OBSch == DEC2ch)
+    error = 13;
+    
+  else if (OBSch == DEC3ch)
+    error = 14;
+    
+  else if (OBSch == DEC4ch)
+    error = 15;
+    
+  else if (DECch == DEC2ch)
+    error = 23;
+    
+  else if (DECch == DEC3ch)
+    error = 24;
+    
+  else if (DECch == DEC4ch)
+    error = 25;
+    
+  else if (DEC2ch == DEC3ch)
+    error = 34;
+    
+  else if (DEC2ch == DEC4ch)
+    error = 35;
+    
+  else if (DEC3ch == DEC4ch)
+    error = 45;
+
+  if (error > 0) {
+    printf("Redirected channels are colliding: case %d\n", error);
+    psg_abort(1);
+  }
+}
+
 //=================================
 // Wavegen Functions used by INOVA
 //=================================
@@ -592,6 +635,8 @@ void _initcp_(CP cp, double lamplitude)
 {
    char *chRamp;
    int  nchRamp = 0;
+   
+   check_channel_consistency();
 
    if (strcmp(cp.ch,"fr") == 0)
       chRamp = cp.fr;
@@ -662,6 +707,9 @@ void _setcp_(CP cp)
    double aRamp,aConst;
    char  *chRamp, *chConst;
    int  nchRamp = 0, nchConst = 0;
+   
+   check_channel_consistency();
+
    if (strcmp(cp.ch,"fr") == 0) {
       aRamp = cp.a1 + fabs(cp.d);
       aConst = cp.a2;
@@ -813,6 +861,9 @@ void _cp_(CP cp, int phase1, int phase2)
    char  *chRamp, *chConst;
    int cphase, rphase;
    int  nchRamp = 0, nchConst = 0;
+   
+   check_channel_consistency();
+   
    if (strcmp(cp.ch,"fr") == 0) {
       aRamp = cp.a1 + fabs(cp.d);
       aConst = cp.a2;
@@ -1177,6 +1228,9 @@ void _clearcp_(CP cp)
 {
    char  *chRamp;
    int  nchRamp = 0;
+   
+   check_channel_consistency();
+
    if (strcmp(cp.ch,"fr") == 0)      chRamp = cp.fr;
    else if (strcmp(cp.ch,"to") == 0) chRamp = cp.to;
    else {
@@ -1980,8 +2034,10 @@ SHAPE genericInitShape(SHAPE s, char *name, double p, double phint, int iRec)
 
 void _initmpseq(MPSEQ seq, double lamplitude)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+   
    if (!strcmp(seq.ch,"obs")) chnl = 1;
    else if (!strcmp(seq.ch,"dec")) chnl = 2;
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
@@ -2031,8 +2087,10 @@ void _initmpseq(MPSEQ seq, double lamplitude)
 
 void _setmpseq(MPSEQ seq)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(seq.ch,"obs")) chnl = 1;
    else if (!strcmp(seq.ch,"dec")) chnl = 2;
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
@@ -2094,8 +2152,10 @@ void _setmpseq(MPSEQ seq)
 
 void _mpseq(MPSEQ seq, int phase)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(seq.ch,"obs")) chnl = 1;
    else if (!strcmp(seq.ch,"dec")) chnl = 2;
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
@@ -2234,8 +2294,10 @@ void _mpseq(MPSEQ seq, int phase)
 
 void _clearmpseq(MPSEQ seq)
 {
-    int chnl;
-    chnl = 0;
+    int chnl = 0;
+   
+    check_channel_consistency();
+
     if (!strcmp(seq.ch,"obs")) chnl = 1;
     else if (!strcmp(seq.ch,"dec")) chnl = 2;
     else if (!strcmp(seq.ch,"dec2")) chnl = 3;
@@ -2281,8 +2343,10 @@ void _clearmpseq(MPSEQ seq)
 
 void _mpseqT(MPSEQ seq, double t, int phase)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(seq.ch,"obs")) chnl = 1;
    else if (!strcmp(seq.ch,"dec")) chnl = 2;
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
@@ -2421,8 +2485,10 @@ void _mpseqT(MPSEQ seq, double t, int phase)
 
 void _mpseqon(MPSEQ seq, int phase)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(seq.ch,"obs")) chnl = 1;
    else if (!strcmp(seq.ch,"dec")) chnl = 2;
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
@@ -2517,8 +2583,10 @@ void _mpseqon(MPSEQ seq, int phase)
 
 void _mpseqoff(MPSEQ seq)
 {
-   int chnl; 
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(seq.ch,"obs")) chnl = 1;
    else if (!strcmp(seq.ch,"dec")) chnl = 2;
    else if (!strcmp(seq.ch,"dec2")) chnl = 3;
@@ -2588,8 +2656,10 @@ void _mpseqoff(MPSEQ seq)
 
 void _initshape(SHAPE s, double lamplitude)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(s.pars.ch,"obs")) chnl = 1;
    else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
@@ -2638,8 +2708,10 @@ void _initshape(SHAPE s, double lamplitude)
 
 void _setshape(SHAPE s)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(s.pars.ch,"obs")) chnl = 1;
    else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
@@ -2701,8 +2773,10 @@ void _setshape(SHAPE s)
 
 void _shape(SHAPE s, codeint phase)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(s.pars.ch,"obs")) chnl = 1;
    else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
@@ -2839,8 +2913,10 @@ void _shape(SHAPE s, codeint phase)
 
 void _clearshape(SHAPE s)
 {
-    int chnl;
-    chnl = 0;
+    int chnl = 0;
+   
+    check_channel_consistency();
+
     if (!strcmp(s.pars.ch,"obs")) chnl = 1;
     else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
     else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
@@ -2890,8 +2966,10 @@ void _clearshape(SHAPE s)
 
 void _shapeon(SHAPE s, codeint phase)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(s.pars.ch,"obs")) chnl = 1;
    else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
@@ -2984,8 +3062,10 @@ void _shapeon(SHAPE s, codeint phase)
 
 void _shapeoff(SHAPE s)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(s.pars.ch,"obs")) chnl = 1;
    else if (!strcmp(s.pars.ch,"dec")) chnl = 2;
    else if (!strcmp(s.pars.ch,"dec2")) chnl = 3;
@@ -3056,8 +3136,10 @@ void _shapeoff(SHAPE s)
 
 void _initramp(RAMP r, double lamplitude)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(r.ch,"obs")) chnl = 1;
    else if (!strcmp(r.ch,"dec")) chnl = 2;
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
@@ -3114,8 +3196,10 @@ void _initramp(RAMP r, double lamplitude)
 
 void _setramp(RAMP r)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(r.ch,"obs")) chnl = 1;
    else if (!strcmp(r.ch,"dec")) chnl = 2;
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
@@ -3179,8 +3263,10 @@ void _setramp(RAMP r)
 
 void _ramp(RAMP r, codeint phase)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(r.ch,"obs")) chnl = 1;
    else if (!strcmp(r.ch,"dec")) chnl = 2;
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
@@ -3334,8 +3420,10 @@ void _ramp(RAMP r, codeint phase)
 
 void _clearramp(RAMP r)
 {
-    int chnl;
-    chnl = 0;
+    int chnl = 0;
+   
+    check_channel_consistency();
+
     if (!strcmp(r.ch,"obs")) chnl = 1;
     else if (!strcmp(r.ch,"dec")) chnl = 2;
     else if (!strcmp(r.ch,"dec2")) chnl = 3;
@@ -3385,8 +3473,10 @@ void _clearramp(RAMP r)
 
 void _rampon(RAMP r, codeint phase)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(r.ch,"obs")) chnl = 1;
    else if (!strcmp(r.ch,"dec")) chnl = 2;
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
@@ -3487,8 +3577,10 @@ void _rampon(RAMP r, codeint phase)
 
 void _rampoff(RAMP r)
 {
-   int chnl;
-   chnl = 0;
+   int chnl = 0;
+   
+   check_channel_consistency();
+
    if (!strcmp(r.ch,"obs")) chnl = 1;
    else if (!strcmp(r.ch,"dec")) chnl = 2;
    else if (!strcmp(r.ch,"dec2")) chnl = 3;
