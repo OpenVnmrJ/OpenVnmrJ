@@ -25,7 +25,7 @@
 #define sqrt6 2.449489742783
 #define sqrt3h 1.224744871392
 #define pi 3.14159265358979
-#define rad 0.00174532923847  /* 2.0*pi/3600.0*/
+#define rad (0.0174532925199432957692 / 10.0) /* pi / 180.0 / 10 */
 #define thetamag 0.955316618  /* acos(sqrt(1.0/3.0)) =  the magic angle */
 #define parmax 26
 #define FALSE 0

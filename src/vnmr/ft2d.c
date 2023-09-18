@@ -67,7 +67,7 @@ extern int      debug1;
 #define MAXSTR		256
 #define DISPSIZE	1024		/* maxsize for no Index Display */
 #define DISPMOD		255		/* Modulo for Index Display	*/
-#define CONV_TO_RAD	0.01745329252
+#define CONV_TO_RAD	(0.0174532925199432957692)
 #define SMALL_VALUE	1.0e-20
 
 #define zerofill(data_pntr, npoints_to_fill)			\

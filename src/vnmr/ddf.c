@@ -1639,10 +1639,10 @@ int quadtt(int argc, char *argv[], int retc, char *retv[])
    isquare -= 2.0 * ioffset * isum;
    ramp = 2.0 * sqrt(rsquare / length);
    iamp = 2.0 * sqrt(isquare / length);
-   phi = -57.2958 * phi / rsquare;
+   phi = -57.29577951308232087679 * phi / rsquare;
    /* Wscrprintf("length=%g, phi = %g\n",length,phi); */
    /* Make correction for offsets in the channels. */
-   phi += 57.2958 * 2.0 * roffset * ioffset / ramp / iamp;
+   phi += 57.29577951308232087679 * 2.0 * roffset * ioffset / ramp / iamp;
    // amplitude = ramp;
    unbalance = 100.0 * (iamp / ramp - 1.0);
    Wclear_text();

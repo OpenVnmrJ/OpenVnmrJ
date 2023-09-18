@@ -430,8 +430,8 @@ Oval::setup_create(short x, short y)
    // Normalize (to 0 degree) of rectangle.  We just need to compute
    // only one point and we get the other one by inverse value
    // Note that a rectangle is also shifted to origin (0,0)
-   cost = (float)cos(-((double)theta_degree/57.29577951));
-   sint = (float)sin(-((double)theta_degree/57.29577951));
+   cost = (float)cos(-((double)theta_degree/57.29577951308232087679);
+   sint = (float)sin(-((double)theta_degree/57.29577951308232087679);
    ovnorm1.x = rot_x((float)(basex-x_ctr),(float)(basey-y_ctr),cost,sint);
    ovnorm1.y = rot_y((float)(basex-x_ctr),(float)(basey-y_ctr),cost,sint);
    ovnorm2.x = -ovnorm1.x;
@@ -479,8 +479,8 @@ Oval::edges_create(void)
       return;
 
    // Calculate the theta value in radian, and its cos and sin
-   cost = (float)cos((double)theta_degree/57.29577951);
-   sint = (float)sin((double)theta_degree/57.29577951);
+   cost = (float)cos((double)theta_degree/57.29577951308232087679);
+   sint = (float)sin((double)theta_degree/57.29577951308232087679);
 
    if (lhead == NULL)
       prev = ovptr = lhead = new Ovalpnt;
@@ -819,8 +819,8 @@ Oval::compute_normalized_rect(void)
 
    // Rotate the rectangle to current angle and shift it to (x_ctr, y_ctr)
    // Its position (values) will be used for resizing and "marking"
-   cost = (float)cos((double)theta_degree/57.29577951);
-   sint = (float)sin((double)theta_degree/57.29577951);
+   cost = (float)cos((double)theta_degree/57.29577951308232087679);
+   sint = (float)sin((double)theta_degree/57.29577951308232087679);
    tempval = IRINT(rot_x(ovnorm1.x,ovnorm1.y,cost,sint));
    rcorn[0].x = x_ctr + tempval;
    rcorn[2].x = x_ctr - tempval + 1;
@@ -1012,7 +1012,7 @@ Oval::update_screen_coords()
     ty = (side_on_data[0].y - center_on_data.y) * img->yscale;
     rx = (int)sqrt(tx * tx + ty * ty + 0.5);
 
-    theta_degree = IRINT(57.29577951 * atan2(ty, tx));
+    theta_degree = IRINT(57.29577951308232087679 * atan2(ty, tx));
     if (theta_degree < 0.0) theta_degree += 360;
 
     ovnorm1.x = rx;
@@ -1039,8 +1039,8 @@ void
 Oval::update_data_coords()
 {
     Imginfo *img = owner_frame->imginfo;
-    float cost = cos(theta_degree / 57.29577951);
-    float sint = sin(theta_degree / 57.29577951);
+    float cost = cos(theta_degree / 57.29577951308232087679);
+    float sint = sin(theta_degree / 57.29577951308232087679);
 
     center_on_data.x = xpix_to_data(x_ctr);
     center_on_data.y = ypix_to_data(y_ctr);
