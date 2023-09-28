@@ -63,7 +63,7 @@ REF: T. Yamazaki, J. D. Forman-Kay and L. E. Kay
 #include <standard.h>
 #include "Pbox_bio.h"
 /* #include "delays.h" */
-/* #define PI 3.1416  */
+/* #define PI 3.14159265358979323846  */
 
 
 #define SEL90   "square90n 90p"                  /* square 90 on-resonance, null 90 ppm away  */

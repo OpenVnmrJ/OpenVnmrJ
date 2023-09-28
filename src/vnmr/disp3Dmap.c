@@ -43,7 +43,7 @@
 #include "wjunk.h"
 #include "shims.h"
 
-#define Pi 3.14159265359
+#define Pi 3.14159265358979323846
 #define twoPi 2.0*Pi
 #define MAX 256
 

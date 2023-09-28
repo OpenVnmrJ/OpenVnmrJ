@@ -67,7 +67,7 @@ STATE dfs_state(double t, SHAPE_PARS p)
    double offset1 = p.dp[0];    //initial offset
    double sweeprate = p.dp[1];  //sweeprate
    double time = t;
-   //double phase1 = 2.0*3.14159*(offset1*time + sweeprate*time*time/2.0);
+   //double phase1 = 2.0*3.14159265358979323846*(offset1*time + sweeprate*time*time/2.0);
    double phase1 = 2.0*M_PI*(offset1*time + sweeprate*time*time/2.0);
    double phase = 0.0;
    double amp = 1023.0*cos(phase1);

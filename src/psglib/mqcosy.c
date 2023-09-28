@@ -149,7 +149,7 @@ void pulsesequence()
       if (newtrans)
          xmtrphase(v10);      /* hardware digital phaseshift */
       rgpulse(pw, v1, rof1, 1.0e-6);
-      corr = 1.0e-6 + rof1 + 4.0*pw/3.1416;
+      corr = 1.0e-6 + rof1 + 4.0*pw/3.14159265358979323846;
       if (d2  > corr)
         delay(d2-corr); 
       rgpulse(pw, v2, rof1, 0.0);

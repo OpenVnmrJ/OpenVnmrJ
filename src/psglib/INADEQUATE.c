@@ -126,7 +126,7 @@ void pulsesequence()
       delay(jtau - rof1 - rof2 - 3*pw/2);
    status(C);
       rgpulse(pw, v9, rof1, 0.2e-6);
-      corr = 0.2e-6 + 1.0e-6 + 4.0*pw/3.1416;
+      corr = 0.2e-6 + 1.0e-6 + 4.0*pw/3.14159265358979323846;
       if (newtrans)
       {
          xmtrphase(zero);

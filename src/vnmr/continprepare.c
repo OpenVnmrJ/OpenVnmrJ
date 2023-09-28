@@ -340,7 +340,7 @@ int continprepare(int argc, char *argv[], int retc, char *retv[])
 		fprintf(continin," NINTT    %d    %1.4E\n",0,0.0);	
 		fprintf(continin," RUSER    %d    %1.4E\n",16,1.0);	
 		fprintf(continin," RUSER    %d    %1.4E\n",17,180.0);
-		fprintf(continin," RUSER    %d    %1.4E\n",15,sqrt( (dosyconstant/DC_SCALE) )/(4.0e7*3.1415927) );
+		fprintf(continin," RUSER    %d    %1.4E\n",15,sqrt( (dosyconstant/DC_SCALE) )/(4.0e7*3.14159265358979323846) );
 		fprintf(continin," IUSER    %d    %1.1f\n",10,2.0);	
 		fprintf(continin," IPLFIT    %d    %1.1f\n",1,0.0);	
 		fprintf(continin," IPLFIT    %d    %1.1f\n",2,0.0);	

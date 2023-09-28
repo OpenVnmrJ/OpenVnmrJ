@@ -205,15 +205,15 @@ void pulsesequence()
  
      if (trim_flg[0] == 'y')
        {
-        if (d2-2.0*pw/3.14 - 4.0e-6 - SAPS_DELAY - 2.0*POWER_DELAY> 0)
-                   delay(d2-2.0*pw/3.14-4.0e-6-SAPS_DELAY - 2.0*POWER_DELAY);
+        if (d2-2.0*pw/3.14159265358979323846 - 4.0e-6 - SAPS_DELAY - 2.0*POWER_DELAY> 0)
+                   delay(d2-2.0*pw/3.14159265358979323846-4.0e-6-SAPS_DELAY - 2.0*POWER_DELAY);
         else
           delay(0.0);
        }
      else
        {
-        if (d2-4.0*pw/3.14 - 4.0e-6 - SAPS_DELAY> 0)
-                   delay(d2-4.0*pw/3.14-4.0e-6-SAPS_DELAY);
+        if (d2-4.0*pw/3.14159265358979323846 - 4.0e-6 - SAPS_DELAY> 0)
+                   delay(d2-4.0*pw/3.14159265358979323846-4.0e-6-SAPS_DELAY);
         else
           delay(0.0);
        }

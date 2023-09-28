@@ -118,7 +118,7 @@ int	icosel;
       delay(gt1 + grise + grise + 24.4e-6 - 1.0e-6 - rof1);
       rgpulse(pw*2.0, v1, rof1, 1.0e-6);
       if (d2 > 0.0)
-         delay(d2 - 1.0e-6 - rof1 - (4.0*pw/3.14159));
+         delay(d2 - 1.0e-6 - rof1 - (4.0*pw/3.14159265358979323846));
       zgradpulse(gzlvl1,gt1+grise);
       delay(grise);
       rgpulse(pw, v2, rof1, 1.0e-6);

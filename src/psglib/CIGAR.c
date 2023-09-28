@@ -309,7 +309,7 @@ void pulsesequence()
         decrgpulse(81.2*pwxS6/90,zero,2.0e-6,2.0e-6);
         decrgpulse(85.3*pwxS6/90,two,2.0e-6,rof1);
 
-     delay(2*pw + 2*POWER_DELAY + 4*rof1 + (4*pwx/3.1416));
+     delay(2*pw + 2*POWER_DELAY + 4*rof1 + (4*pwx/3.14159265358979323846));
 
      zgradpulse(icosel*grad1,gtE);
      delay(gstab);

@@ -196,12 +196,12 @@ void pulsesequence()
       {
         obspower(satpwr);
         if (d2>0.0)
-          rgpulse(d2 +d2corr -9.4e-6 -rof1 -(4*p1/3.1416),zero,0.0,0.0);
+          rgpulse(d2 +d2corr -9.4e-6 -rof1 -(4*p1/3.14159265358979323846),zero,0.0,0.0);
         obspower(p1lvl);
        }
       else
        {
-        if (d2 >0.0)  delay(d2 +d2corr -1.0e-6 -rof1 -(4*p1/3.1416));
+        if (d2 >0.0)  delay(d2 +d2corr -1.0e-6 -rof1 -(4*p1/3.14159265358979323846));
        }
       rgpulse(p1,v2,rof1,0.0);
       obspower(tpwr);
@@ -213,13 +213,13 @@ void pulsesequence()
       {
        obspower(satpwr);
        if (d2>0.0)
-        rgpulse(d2 + d2corr -14.4e-6 -(2*p1/3.1416),zero,0.0,0.0);
+        rgpulse(d2 + d2corr -14.4e-6 -(2*p1/3.14159265358979323846),zero,0.0,0.0);
        obspower(tpwr);
        delay(5.0e-6);
       }
      else
       {
-       if (d2 >0.0) delay(d2 + d2corr -1.0e-6 -(2*p1/3.1416));
+       if (d2 >0.0) delay(d2 + d2corr -1.0e-6 -(2*p1/3.14159265358979323846));
       }
     }
      rgradient('z',gzlvl1);

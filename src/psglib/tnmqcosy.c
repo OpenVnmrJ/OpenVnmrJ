@@ -132,12 +132,12 @@ void pulsesequence()
       if (satmode[B] == 'y')
        {
          obspower(satpwr);
-         if (d2>0.0) rgpulse(d2 -9.4e-6 -rof1 -(4*pw)/3.1416,zero,0.0,0.0);
+         if (d2>0.0) rgpulse(d2 -9.4e-6 -rof1 -(4*pw)/3.14159265358979323846,zero,0.0,0.0);
          obspower(tpwr);
        }
       else
        {
-        if (d2>0.0) delay(d2 -1.0e-6 -rof1 -(4*pw)/3.1416);
+        if (d2>0.0) delay(d2 -1.0e-6 -rof1 -(4*pw)/3.14159265358979323846);
        }
       rcvroff();
       rgpulse(pw, v2, rof1, 0.0);

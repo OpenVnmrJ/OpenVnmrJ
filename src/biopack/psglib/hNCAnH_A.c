@@ -445,7 +445,7 @@ status(A);
         delay(timeTN - CA180.pw   -gt4-gstab -pwHs-3.0*rof1
              -4.0*POWER_DELAY -2.0*WFG_STOP_DELAY-2.0*WFG_START_DELAY
              -2.0*GRADIENT_DELAY
-             +4.0*pwN/3.1415-pw);
+             +4.0*pwN/3.14159265358979323846-pw);
        zgradpulse(gzlvl4, gt4);
        delay(gstab);	  
     
@@ -480,7 +480,7 @@ status(A);
    delay(gstab);      
    sim3pulse(0.0,0.0, pwN, one, zero, t22, 0.0, 0.0);  
    zgradpulse(-(1.0-g6bal)*gzlvl6*icosel, gt6);                 /* 2.0*GRADIENT_DELAY */
-   delay( gstab   -pwN*0.5 +pw*(2.0/3.1415-0.5) );
+   delay( gstab   -pwN*0.5 +pw*(2.0/3.14159265358979323846-0.5) );
    rgpulse(2.0*pw, zero, rof1, rof1);
    dec2power(dpwr2); decpower(dpwr);			      
    zgradpulse(g6bal*gzlvl6*icosel, gt6);		        /* 2.0*GRADIENT_DELAY */

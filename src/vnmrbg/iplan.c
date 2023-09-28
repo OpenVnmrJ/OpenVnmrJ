@@ -40,7 +40,7 @@ float defaultThk = 0.4;
 /* eps. eps = 1.0e-4 corresponds to an error of 0.2 degree. */ 
 const float eps = 1.0e-6; 
 const float pixeps = 1.0; 
-const float pi = 3.14159;
+const float pi = 3.14159265358979323846;
 
 /* 0 parallel, 1 compressed, 2 standard */
 int compressMode = 1;

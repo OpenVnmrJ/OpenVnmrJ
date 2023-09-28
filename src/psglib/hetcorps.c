@@ -193,7 +193,7 @@ void pulsesequence()
          simpulse(pw, pp, zero, zero, rof1, 0.0);
          simpulse(2.67*pw, 2.0*pp, one, one, 0.0, 0.0);
          simpulse(pw, pp, zero, zero, 0.0, rof1);
-         delay(dly3/2.0 - 2.0*rof1 - 2*pp - (2*pp/3.1416));
+         delay(dly3/2.0 - 2.0*rof1 - 2*pp - (2*pp/3.14159265358979323846));
         }
          simpulse(pw, pp, v7, v4, rof1, rof2);
          delay(dly4/2.0 - 2.33*pp -(2*pp/PI) - rof2 - rof1);

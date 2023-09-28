@@ -367,7 +367,7 @@ void pulsesequence()
 
    tau1 = d2;
    if(f1180[A] == 'y') 
-     tau1 += ( 1.0 / (2.0*sw1) - (pw + pwN*2.0/3.1415));
+     tau1 += ( 1.0 / (2.0*sw1) - (pw + pwN*2.0/3.14159265358979323846));
    else
      tau1 = tau1 - pw; 
 

@@ -170,12 +170,12 @@ void pulsesequence()
 
  status(B);
    decrgpulse(pwx,v1,rof1,0.0);
-   if (d2/2.0-pw-rof1-2.0*pwx/3.14>0.0)
-        delay(d2/2.0-pw-rof1-2.0*pwx/3.14); 
+   if (d2/2.0-pw-rof1-2.0*pwx/3.14159265358979323846>0.0)
+        delay(d2/2.0-pw-rof1-2.0*pwx/3.14159265358979323846); 
         else delay(d2/2.0);
    rgpulse(2.0*pw,v2,rof1,rof1);
-   if (d2/2.0-pw-rof1-2.0*pwx/3.14>0.0)
-        delay(d2/2.0-pw-rof1-2.0*pwx/3.14);
+   if (d2/2.0-pw-rof1-2.0*pwx/3.14159265358979323846>0.0)
+        delay(d2/2.0-pw-rof1-2.0*pwx/3.14159265358979323846);
         else delay(d2/2.0);
 
   if (grad_sel[A]=='y')

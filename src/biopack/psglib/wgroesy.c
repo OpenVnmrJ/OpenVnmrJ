@@ -115,7 +115,7 @@ void pulsesequence()
    xmtrphase(v4);
    rgpulse(p1,v1,rof1,1.0e-6);
    xmtrphase(zero);   
-   d2corr = rof1 + 1.0e-6 + SAPS_DELAY + 2*p1/3.1416;
+   d2corr = rof1 + 1.0e-6 + SAPS_DELAY + 2*p1/3.14159265358979323846;
    if (d2 > d2corr) delay(d2 - d2corr); else delay(0.0);
    status(A);
    if ((T_flg[0] == 'y')&&(cycles > 1.5))

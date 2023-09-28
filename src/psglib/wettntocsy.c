@@ -219,13 +219,13 @@ rlpower(p1lvl, TODEV);
         if (d2 > 0.0)
          {
            rlpower(satpwr,TODEV);
-           rgpulse(d2 - (2*POWER_DELAY) - 1.0e-6 - (2*p1/3.1416),zero,0.0,0.0);
+           rgpulse(d2 - (2*POWER_DELAY) - 1.0e-6 - (2*p1/3.14159265358979323846),zero,0.0,0.0);
          }
        }
       else
        {
         if (d2 > 0.0)
-          delay(d2 - POWER_DELAY - 1.0e-6  - (2*p1/3.1416));
+          delay(d2 - POWER_DELAY - 1.0e-6  - (2*p1/3.14159265358979323846));
        } 
       rcvroff();
       rlpower(tpwr,TODEV); 

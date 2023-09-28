@@ -2004,7 +2004,7 @@ WMPA getwsamn(char *seqName)
 
    int i;  
    for (i = 0; i < totalsteps; i++) {
-      double a = mp.a*cos(2.0*3.14159*(i + 0.5)*rfcycles/totalsteps);
+      double a = mp.a*cos(2.0*3.14159265358979323846*(i + 0.5)*rfcycles/totalsteps);
       if (a < 0) {
          a = -a;
          mp.aBase[i] = (int) roundoff(a,1.0);

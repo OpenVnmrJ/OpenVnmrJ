@@ -212,7 +212,7 @@ if ((getval("arraydim") < 1.5) || (ix==1))
        }
    status(C);
       rgpulse(pw, v9, rof1, rof1);
-      corr = 2.0*rof1 + 4.0*pw/3.1416;
+      corr = 2.0*rof1 + 4.0*pw/3.14159265358979323846;
       xmtrphase(zero);
       corr += SAPS_DELAY;
       if (d2 > corr)
