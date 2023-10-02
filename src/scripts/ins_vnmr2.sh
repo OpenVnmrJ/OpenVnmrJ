@@ -958,6 +958,10 @@ echo "-------------------------"
 echo "ALL REQUESTED SOFTWARE EXTRACTED"
 
 ################################################################
+sysdDir=""
+if [[ ! -z $(type -t systemctl) ]] ; then
+   sysdDir=$(pkg-config systemd --variable=systemdsystemunitdir)
+fi
 #fix some things, depending on what system we are
 if [ x$did_vnmr = "xy" ]
 then
@@ -1718,49 +1722,15 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
    fi
 
    #To have the Postgres postmaster started at system boot up
-   if [ x$os_version != "xwin" ] 
-   then
      if [ x$lflvr != "xdebian" ]
      then
-        cp -p "$dest_dir"/bin/S99pgsql /etc/init.d/pgsql
-     fi
-     
-     r_levl="rc3.d"
-     r_levl0="rc0.d"
-   fi
-
-   if [ x$os_version = "xrht" ]
-   then
-     if [ x$lflvr = "xsuse" ]
-     then
-       r_levl="init.d/rc5.d"
-       r_levl0="init.d/rc0.d"
-     else
-       r_levl="rc5.d"
-       r_levl0="rc0.d"
-     fi
-   fi
-
-   if [ x$os_version != "xwin" ] 
-   then
-     if [ x$lflvr != "xdebian" ]
-     then
-        (cd /etc/${r_levl}; if [ ! -f S99pgsql ]; then \
-        ln -s ../init.d/pgsql S99pgsql ; fi)
-        (cd /etc/${r_levl0}; if [ ! -f K99pgsql ]; then \
-        ln -s ../init.d/pgsql K99pgsql ; fi)
-        #Remove old versions
-        rm -f /etc/init.d/S99pgsql
-        rm -f /etc/rc2.d/S99pgsql
-
-        # if a non Vnmr postgres install disable it from start at boot,
-        # most likely they use the same port number
-        if [ -f /etc/init.d/postgresql ];then
-           /etc/init.d/postgresql stop
-           mv /etc/init.d/postgresql /etc/init.d/postgresql.moveAside
-        fi
+	if [[ ! -z $sysdDir ]] ; then
+           cp $dest_dir/pgsql/postgres.service $sysdDir/.
+	   systemctl enable --quiet postgres.service
+	   systemctl start --quiet postgres.service
+	fi
         # Use older version. New version has problem with client server protocol
-        if [ $distmajor -eq 8 ] && [ -d "$dest_dir"/pgsql/bin_ver9 ] ; then
+        if [ $distmajor -ge 8 ] && [ -d "$dest_dir"/pgsql/bin_ver9 ] ; then
            mv "$dest_dir"/pgsql/bin_ver9 "$dest_dir"/pgsql/bin
         fi
 
@@ -1788,7 +1758,6 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
         sudo chown root:root /etc/init.d/pgsql
         sudo /usr/sbin/update-rc.d pgsql defaults > /dev/null 2>&1;
      fi
-   fi
 
    if [ x$os_version = "xrht" ]
    then
@@ -2050,11 +2019,9 @@ if [ x$os_version = "xrht" ]
 then
 #   if [ x$lflvr != "xsuse" -a x$lflvr != "xdebian" ]
 #  kudzu is a RedHat hardware checker, Debian (Ubuntu) does not use Kudzu
-   if [ x$lflvr = "xrhat" ]
+   if [ x$lflvr = "xrhat" ] && [ -f /etc/init.d/kudzu ]
    then
       cd /etc/init.d
-      if [ -f ./kudzu ]
-      then
          if [ ! -f ./Varian_kudzu.safe-mode ]
          then
            logmsg "modify RHEL Kudzu to not interogate serial ports"
@@ -2062,46 +2029,23 @@ then
            mv kudzu kudzu.orig
            cp Varian_kudzu.safe-mode kudzu
          fi
-      fi
    fi
 fi
 
 
 # no doubt for some of these command under debian will require sudo  GMB
 # just incase the wrong password was given to P11 and the files weren't installed
-# test to see if one of them exists, if not skipp the whole p11    GMB  5/01/2009
+# test to see if one of them exists, if not skip the whole p11    GMB  5/01/2009
 if [ x$configP11 = "xyes" -a -e ${sbindir} ]
 then
    (
 
      "$sbindir"/setupscanlog
 
-     # Have the scanlog started at system boot up.  We want this to run
-     # at level 1 (single user), level 3 (text login) and level 5 (graphical)
-     # Thus, put a link in all three places
-
-     cp -p ${sbindir}/S99scanlog /etc/init.d
-     ( cd /etc/rc1.d
-       if [ -f S99scanlog ]
-       then
-         rm -f S99scanlog
-       fi
-       ln -s /etc/init.d/S99scanlog
-     )
-     ( cd /etc/rc3.d
-       if [ -f S99scanlog ]
-       then
-         rm -f S99scanlog
-       fi
-       ln -s /etc/init.d/S99scanlog
-     )
-     ( cd /etc/rc5.d
-       if [ -f S99scanlog ]
-       then
-         rm -f S99scanlog
-       fi
-       ln -s /etc/init.d/S99scanlog
-     )
+     # Have the scanlog started at system boot up.
+     cp -p $dest_dir/p11/scanlog.service $sysdDir/.
+     systemctl enable --quiet scanlog.service
+     systemctl start --quiet scanlog.service
    )
    #Need to reboot the computer for this to work
     

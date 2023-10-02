@@ -28,28 +28,30 @@ if [ ! -x /usr/bin/dpkg ]; then
  # remove all characters from end including first dot
    version=${version%%.*}
 
-   packagecommonlist='make gcc gcc-c++ gdb libtool binutils automake strace autoconf glibc-devel expect rsh-server tftp-server mutt k3b ghostscript ImageMagick'
-   if [[ $version -eq 7 ]] || [[ $version -eq 8 ]]
+   packagecommonlist='make gcc gcc-c++ gdb libtool binutils automake strace autoconf glibc-devel expect tftp-server mutt ghostscript ImageMagick'
+   if [[ $version -eq 7 ]] || [[ $version -ge 8 ]]
    then
 #     for RHEL 7.X must list 32-bit packages, since these are no longer installed with the 64-bit versions
-      package71list='libgfortran motif java-1.8.0-openjdk'
+      javalist='openjdk'
+      package71list='libgfortran motif'
       package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686 mesa-libGL-devel mesa-libGL mesa-libGLU'
-      package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686'
+      package32Bitlist='libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686'
       packagelist="$packagecommonlist $package71list $package32Bitlist"
       if [[ $version -eq 8 ]]; then
-        packagelist="$packagelist tcsh compat-openssl10"
+        packagelist="$packagelist tcsh compat-openssl10 rsh rsh-server"
       fi
    elif [ $version -eq 6 ]
    then
+      javalist=''
 #     for RHEL 6.X must list 32-bit packages, since these are no longer installed with the 64-bit versions
       package61list='libgfortran openmotif gnome-power-manager'
       package32Bitlist='rsh libstdc++.i686 libstdc++-devel.i686 glibc.i686 glibc-devel.i686 mesa-libGL-devel mesa-libGL mesa-libGLU'
       packagelist="$packagecommonlist $package61list $package32Bitlist"
    else
-      packagecommonlist='compat-libf2c-34 compat-gcc-34-g77 openmotif22 gnome-power-manager'
-   # for RHEL 5.X  separate since these are no longer on the 6.x Installation DVD.
-      package5xlist='sharutils rarpd hwbrowser'
-      packagelist="$packagecommonlist $package5xlist";
+      echo "OpenVnmrJ requires RHEL / CentOS version 6 or newer"
+      javalist=''
+      packagelist=''
+      status=1 
    fi
 
 else
@@ -72,6 +74,13 @@ if [ ! -x /usr/bin/dpkg ]; then
       if [ "$(rpm -q $xpack | grep 'not installed' > /dev/null;echo $?)" = "0" ]
       then
         echo "OpenVnmrJ required RHEL / CentOS package \"$xpack\" not installed"
+        status=1 
+      fi
+   done
+   for xpack in $javalist
+   do
+      if [ "$(rpm -qa | grep $xpack  > /dev/null;echo $?)" != "0" ]; then
+        echo "$xpack java package not installed"
         status=1 
       fi
    done
