@@ -217,11 +217,6 @@ if [ ! -x /usr/bin/dpkg ]; then
   mutt
   ghostscript
  '
-  if [ $version -lt 8 ]; then
-    commonList="$commonList rsh rsh-server"
-  else
-    commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
-  fi
 
 # Must list 32-bit packages, since these are no longer
 # installed along with the 64-bit versions
@@ -355,10 +350,8 @@ if [ ! -x /usr/bin/dpkg ]; then
   tftp-server
   dos2unix
   gitk
-  gnuplot
   gsl
   tftp
-  xinetd
   xterm
   createrepo
   perl-Compress-Raw-Bzip2
@@ -385,19 +378,27 @@ if [ ! -x /usr/bin/dpkg ]; then
   epelList='
   ntfsprogs
   fuse-ntfs-3g
-  kdiff3
  '
-  if [ $version -lt 8 ]; then
-    epelList="$epelList scons meld x11vnc"
-  else
+  if [[ $version -ge 9 ]] &&
+     [[ -z $(type -t subscription-manager) ]]; then
+    epelList="python3-scons ImageMagick kdiff3"
+    packageList="$item68List $commonList $pipeList libnsl tcsh"
+    if [[ -z $(rpm -qa | grep java | grep openjdk | grep -v headless) ]]; then
+       jdk=$(rpm -qa | grep java | grep openjdk | grep headless)
+       if [[ ! -z $jdk ]]; then
+          yum remove -y $jdk &>> $logfile
+       fi
+       packageList="$packageList java-17-openjdk"
+    fi
+  elif [ $version -ge 8 ]; then
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
+    commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
     package68List="$package68List libtirpc-devel"
-  fi
-  if [ $version -lt 7 ]; then
-#  Add older motif package
-    packageList="openmotif $item68List $commonList $bit32List $pipeList"
+    packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
   else
-    packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl"
+    epelList="$epelList scons meld x11vnc"
+    commonList="$commonList rsh rsh-server"
+    packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
   fi
 
 
@@ -509,20 +510,25 @@ if [ ! -x /usr/bin/dpkg ]; then
     fi
     yum -y install --disablerepo="*" --enablerepo="openvnmrj" $yum68List &>> $logfile
   else
-    if [[ $version -eq 8 ]] &&
-       [[ $rel  = "redhat-release" ]]; then
+    if [[ $version -ge 8 ]] &&
+       [[ ! -z $(type -t subscription-manager) ]]; then
 	    if [[ $(subscription-manager repos --list-enabled |
 	 	     grep -i codeready > /dev/null; echo $?) != 0 ]]; then
           ARCH=$(/bin/arch)
           subscription-manager repos --enable "codeready-builder-for-rhel-8-${ARCH}-rpms" &>> $logfile
         fi
         yumList="$yumList sharutils"
+    elif [[ $version -ge 8 ]]; then
+      if [ "$(rpm -q libtirpc-devel.i686 |
+	    grep 'not installed' > /dev/null;echo $?)" == "0" ]; then
+          yum -y install --enablerepo="crb" libtirpc-devel.i686 &>> $logfile
+      fi
     fi
     if [ "x$yumList" != "x" ]; then
       yum -y install $yumList &>> $logfile
     fi
     if [[ $version -eq 8 ]] &&
-       [[ $rel  = "centos-release" ]]; then
+       [[ ! -z $(type -t subscription-manager) ]]; then
       if [ "$(rpm -q sharutils | grep 'not installed' > /dev/null;echo $?)" == "0" ]
       then
         # Capitalization of PowerTools causes problems with 8.3
@@ -546,7 +552,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   fi
   if [ $epelInstalled -eq 0 ]
   then
-    if [[ $rel  = "centos-release" ]]; then
+    if [[ -z $(type -t subscription-manager) ]]; then
         yum -y install epel-release &>> $logfile
     else
         yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm &>> $logfile
@@ -577,7 +583,10 @@ if [ ! -x /usr/bin/dpkg ]; then
   then
     yum -y erase epel-release &>> $logfile
   fi
-  if [ "$(rpm -q turbovnc | grep 'not installed' > /dev/null;echo $?)" == "0" ]
+#  Do not install turbovnc but leave process in case someone wants to install
+#  it on their own.
+#  if [ "$(rpm -q turbovnc | grep 'not installed' > /dev/null;echo $?)" == "0" ]
+  if [ "1" == "0" ]
   then
     if [ $turbovncFileInstalled -eq 0 ]
     then
@@ -601,13 +610,6 @@ if [ ! -x /usr/bin/dpkg ]; then
   fi
 
   dir=$(dirname $0)
-  if [ "$(rpm -q gftp | grep 'not installed' > /dev/null;echo $?)" == "0" ]
-  then
-    if [ -f $dir/linux/gftp-2.0.19-4.el6.rf.x86_64.rpm ]
-    then
-      yum -y install --disablerepo="*" $dir/linux/gftp-2.0.19-4.el6.rf.x86_64.rpm &>> $logfile
-    fi
-  fi
   if [ "$(rpm -q numlockx | grep 'not installed' > /dev/null;echo $?)" == "0" ]
   then
     if [ -f $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm ]
