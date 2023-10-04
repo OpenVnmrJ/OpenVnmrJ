@@ -166,8 +166,7 @@ void check_channel_consistency() {
     error = 45;
 
   if (error > 0) {
-    printf("Redirected channels are colliding: case %d\n", error);
-    psg_abort(1);
+    abort_message("Redirected channels are colliding: case %d\n", error);
   }
 }
 
