@@ -905,6 +905,8 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
           if ( ! moreToDo )
              break;
           ret = sscanf(line, "%lg %lg %lg %lg %lg\n", &(val[0]), &(val[1]), &(val[2]), &(val[3]), &(val[4]));
+          if (fitType == 2)
+             val[col[1]] = log(val[col[1]]);
        }
        else
        {

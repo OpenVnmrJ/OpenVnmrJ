@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import sys
+import glob
 
 #get current working directory
 cwd = os.getcwd()
@@ -53,7 +54,6 @@ for i in textList:
 # RPMS not available from standard yum repos.
 # sharutils is available for CentOS 7 but not CentOS 6.
 rpmList = [
-            'gftp-2.0.19-4.el6.rf.x86_64.rpm',
             'numlockx-1.2-6.el7.nux.x86_64.rpm',
             'sharutils-4.7-6.1.el6.x86_64.rpm',
           ]
@@ -70,18 +70,16 @@ for i in rpmList:
    Execute(Copy(dest,src))
    Execute(Chmod(dest,0o644))
 
-# rarpd is only needed for acquisition systems.
-# It will be installed, if needed, by setacq
-acqList = [ 'rarpd-ss981107-22.2.2.x86_64.rpm',
-          ]
+# rarpd and rsh are only needed for acquisition systems.
+# They will be installed, if needed, by setacq
+acqList = glob.glob(os.path.join(ovjtools,'linux','r*.rpm'))
 
 acqPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,'vnmr','adm','acq')
 if not os.path.exists(acqPath) :
     os.makedirs(acqPath)
 
 for i in acqList:
-   dest = os.path.join(acqPath,i)
-   src = os.path.join(srcPath,i)
-   Execute(Copy(dest,src))
+   dest = os.path.join(acqPath,os.path.basename(i))
+   Execute(Copy(dest,i))
    Execute(Chmod(dest,0o644))
 
