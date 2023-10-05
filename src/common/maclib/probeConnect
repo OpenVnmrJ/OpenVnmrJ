@@ -1,0 +1,362 @@
+// NMRFAM macro, BDZ, 10-3-23
+//
+// probeConnect
+//
+// check that tn, dn, d2, d3, and d4 are all different
+//
+//  these will equal 'H1', 'C13', 'P31' etc.
+//  
+// check that probeConnect has the right nuclei
+//  i.e. all of tn/etc is present in probeconnect string
+//  and no nucleus is repeated.
+//  
+//  probeConnect is a string that may not exist
+//  if it does it looks like this: 'H1 C13 X P31 etc'
+//    this says channel 1 is H1 and channel 2 is C13
+//    and channel 4 is P31 and channel 3 is unassigned.
+//
+//  If an argument is given, the probeConnect parameter is
+//    set to that argument. The probeConnect parameter will
+//    be created if needed.
+
+
+if ($# = 1) then
+  create('probeConnect','string','global',''):$e
+  probeConnect=$1
+endif
+
+// check for existence of parameters
+
+exists('probeConnect', 'parameter', 'global'):$pcExists
+exists('tn' , 'parameter'):$tnExists
+exists('dn' , 'parameter'):$dnExists
+exists('dn2', 'parameter'):$dn2Exists
+exists('dn3', 'parameter'):$dn3Exists
+exists('dn4', 'parameter'):$dn4Exists
+
+if ($pcExists = 0)
+then
+
+  write('line3','probeConnect does not exist! - quit.')
+  return(-1)
+  
+endif
+
+// init all the test variables
+
+getvalue('probeConnect', 'global'):$pc
+
+if ($pc = '')
+then
+
+  write('line3','probeConnect is empty! - quit.')
+  return(-1)
+
+endif
+
+$numFound = 0
+
+$i = 1
+  
+wc($pc):$wordCount
+  
+while ($i < $wordCount) do
+
+  substr($pc, $i):$nucleus
+
+  if ($nucleus <> 'X') then
+    
+    $j = $i + 1
+  
+    while ($j <= $wordCount) do
+
+      substr($pc, $j):$nucleus2
+
+      if ($nucleus2 = $nucleus) then
+
+        write('line3',$nuclueus + 'is present more than once in probeConnect - quit.')
+        return(-1)
+
+      endif
+    
+      $j = $j + 1
+  
+    endwhile
+  
+  endif
+    
+  $i = $i + 1
+  
+endwhile
+  
+if ($tnExists)
+then
+  getvalue('tn'):$tn
+else
+  $tn = ''
+endif
+
+if ($dnExists)
+then
+  getvalue('dn'):$dn
+else
+  $dn = ''
+endif
+
+if ($dn2Exists)
+then
+  getvalue('dn2'):$dn2
+else
+  $dn2 = ''
+endif
+
+if ($dn3Exists)
+then
+  getvalue('dn3'):$dn3
+else
+  $dn3 = ''
+endif
+
+if ($dn4Exists)
+then
+  getvalue('dn4'):$dn4
+else
+  $dn4 = ''
+endif
+
+if ($tn <> '')
+then
+  if ($dn  <> '' and $tn = $dn ) or
+      ($dn2 <> '' and $tn = $dn2) or
+      ($dn3 <> '' and $tn = $dn3) or
+      ($dn4 <> '' and $tn = $dn4)
+  then
+
+    write('line3','tn matches some decoupler channel - quit.')
+    return(-1)
+
+  endif
+
+  // and check that the channel value is specified exactly once in probeConnect  
+
+  $numFound = 0
+
+  $i = 1
+  
+  wc($pc):$wordCount
+  
+  while ($i <= $wordCount) do
+
+    substr($pc, $i):$nucleus
+
+    if ($tn = $nucleus)
+    then
+
+      $numFound = $numFound + 1
+
+    endif
+
+    $i = $i + 1
+
+  endwhile
+
+  if ($numFound <> 1)
+  then
+
+    write('line3','tn NOT MENTIONED EXACTLY ONCE in probeConnect - quit.')
+    return(-1)
+    
+  else
+  
+    write('line3','tn found once in probeConnect - quit.')
+  
+  endif
+  
+endif
+
+if ($dn <> '')
+then
+  if ($dn2 <> '' and $dn = $dn2) or
+      ($dn3 <> '' and $dn = $dn3) or
+      ($dn4 <> '' and $dn = $dn4)
+  then
+
+    write('line3','dn matches dn2 or dn3 or dn4 - quit.')
+    return(-1)
+
+  endif
+  
+  // and check that the channel value is specified exactly once in probeConnect  
+
+  $numFound = 0
+
+  $i = 1
+  
+  wc($pc):$wordCount
+  
+  while ($i <= $wordCount) do
+
+    substr($pc, $i):$nucleus
+
+    if ($dn = $nucleus)
+    then
+  
+      $numFound = $numFound + 1
+  
+    endif
+
+    $i = $i + 1
+
+  endwhile
+
+  if ($numFound <> 1)
+  then
+
+    write('line3','dn NOT MENTIONED EXACTLY ONCE in probeConnect - quit.')
+    return(-1)
+  
+  else
+  
+    write('line3','dn found once in probeConnect - quit.')
+
+  endif
+
+endif
+
+if ($dn2 <> '')
+then
+  if ($dn3 <> '' and $dn2 = $dn3) or
+      ($dn4 <> '' and $dn2 = $dn4)
+  then
+
+    write('line3','dn2 matches dn3 or dn4 - quit.')
+    return(-1)
+
+  endif
+  
+  // and check that the channel value is specified exactly once in probeConnect  
+
+  $numFound = 0
+
+  $i = 1
+  
+  wc($pc):$wordCount
+  
+  while ($i <= $wordCount) do
+
+    substr($pc, $i):$nucleus
+
+    if ($dn2 = $nucleus)
+    then
+
+      $numFound = $numFound + 1
+
+    endif
+
+    $i = $i + 1
+
+  endwhile
+
+  if ($numFound <> 1)
+  then
+
+    write('line3','dn2 NOT MENTIONED EXACTLY ONCE in probeConnect - quit.')
+    return(-1)
+  
+  else
+  
+    write('line3','dn2 found once in probeConnect - quit.')
+
+  endif
+
+endif
+
+if ($dn3 <> '')
+then
+
+  if ($dn4 <> '' and $dn3 = $dn4)
+  then
+
+    write('line3','dn3 matches dn4 - quit.')
+    return(-1)
+
+  endif
+  
+  // and check that the channel value is specified exactly once in probeConnect  
+
+  $numFound = 0
+
+  $i = 1
+  
+  wc($pc):$wordCount
+  
+  while ($i <= $wordCount) do
+
+    substr($pc, $i):$nucleus
+
+    if ($dn3 = $nucleus)
+    then
+
+      $numFound = $numFound + 1
+
+    endif
+
+    $i = $i + 1
+
+  endwhile
+
+  if ($numFound <> 1)
+  then
+
+    write('line3','dn3 NOT MENTIONED EXACTLY ONCE in probeConnect - quit.')
+    return(-1)
+  
+  else
+  
+    write('line3','dn3 found once in probeConnect - quit.')
+
+  endif
+  
+endif
+
+if ($dn4 <> '')
+then
+
+  // check that the channel value is specified exactly once in probeConnect  
+
+  $numFound = 0
+
+  $i = 1
+  
+  wc($pc):$wordCount
+  
+  while ($i <= $wordCount) do
+
+    substr($pc, $i):$nucleus
+
+    if ($dn4 = $nucleus)
+    then
+
+      $numFound = $numFound + 1
+
+    endif
+
+    $i = $i + 1
+
+  endwhile
+
+  if ($numFound <> 1)
+  then
+
+    write('line3','dn4 NOT MENTIONED EXACTLY ONCE in probeConnect - quit.')
+    return(-1)
+
+  else
+
+    write('line3','dn4 found once in probeConnect - quit.')
+
+  endif
+  
+endif
+
+return(0)
