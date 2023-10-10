@@ -1286,7 +1286,7 @@ static void submitpavco(double *alpha, double *beta, double *delta, int regions)
   *alpha = -angle(s + *delta * ss, c + *delta * cc);
 }
 
-#define DEG 57.29578
+#define DEG 57.29577951308232087679
 
 
 /**************************/

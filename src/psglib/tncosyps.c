@@ -110,12 +110,12 @@ void pulsesequence()
        if (d2>0)
        {
         obspower(satpwr);
-        rgpulse(d2-3.0*rof1-9.4e-6-4*pw/3.1414,zero,rof1,rof1);
+        rgpulse(d2-3.0*rof1-9.4e-6-4*pw/3.14159265358979323846,zero,rof1,rof1);
         obspower(tpwr);
        }
      }
      else
-       delay(d2 - rof1 - 1.0e-6 - 4*pw/3.1414);
+       delay(d2 - rof1 - 1.0e-6 - 4*pw/3.14159265358979323846);
      rgpulse(pw, v2, rof1, rof2);
    status(C);
 }

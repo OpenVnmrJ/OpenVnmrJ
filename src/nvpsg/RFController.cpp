@@ -69,6 +69,15 @@ RFController::RFController(char *name,int flags)
  , mySynthesizer(name,flags)
  , powerWatch(1.0,10.0,name)
  {
+    // these were missing and added by BDZ on 8-14-23
+
+    decTicks = 0;
+    baseTpwrF = 0;
+    currentOffset = 0;
+    logicalID = -1;
+
+    // done adding the missing ones
+	 
         patternDataStoreSize = 4000;
         patternDataStore = new int[patternDataStoreSize];
         patternDataStoreUsed = 0;

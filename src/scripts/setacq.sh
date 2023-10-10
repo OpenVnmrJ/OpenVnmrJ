@@ -23,9 +23,6 @@ stop_program () {
   do
     kill -2 $prog_pid
     sleep 5             # give time for kill message to show up.
-    if [[ x$1 = "nddsManager" ]] ; then
-      sleep 10
-    fi
   done
   # test to be sure the program died, if still running try kill -9
   npids=$(ps -e  | grep $1 | awk '{ printf("%d ",$1) }')
@@ -142,7 +139,7 @@ modEtcPamdRsh() {
 disableSelinux() {
 #  if [ -x /usr/sbin/setsebool ] ; then
    if [ -f /etc/selinux/config ] ; then
-      selinux=$(grep SELINUX /etc/selinux/config | grep -i disabled)
+      selinux=$(grep ^SELINUX /etc/selinux/config | grep -i disabled)
       # echo "str: $str"
       if [ -z "$selinux" ] ; then
          echo ""
@@ -217,13 +214,21 @@ installRarp() {
  if [ ! -f /etc/debian_version ]; then
    rarp=$(rpm -qa | grep rarpd)
    if [[ -z $rarp ]] ; then
-      file=${vnmrsystem}/adm/acq/rarpd-ss981107-22.2.2.x86_64.rpm
+      if [[ -x /sbin/chkconfig ]]; then
+         file=${vnmrsystem}/adm/acq/rarpd-ss981107-22.2.2.x86_64.rpm
+      else
+         file=${vnmrsystem}/adm/acq/rarpd-ss981107-61.fc37.x86_64.rpm
+      fi
       if [[ -e ${file} ]] ; then
          echo "Installing console network identification tool (rarp)..."
          yum -y --disablerepo=* install ${file} &> ${vnmrsystem}/adm/log/rarp.log
       fi
    else
-      stop_program rarpd
+      if [[ -x /sbin/chkconfig ]]; then
+         stop_program rarpd
+      else
+         systemctl stop rarpd.service
+      fi
    fi
  else
    if [ "$(dpkg --get-selections rarpd 2>&1 | grep -w 'install' > /dev/null;echo $?)" != "0" ] 
@@ -285,6 +290,12 @@ configureRarp() {
             (cd /etc/rc0.d; if [ ! -f K98rarpd ]; then \
                 ln -s ../init.d/rarpd K98rarpd; fi)
          fi
+      fi
+   elif [[ -f $sysdDir/rarpd.service ]]; then
+      if [[ -d /etc/sysconfig ]] &&
+         [[ ! -f /etc/syconfig/rarpd ]]; then
+         echo 'OPTIONS="-e"' > /etc/sysconfig/rarpd
+         systemctl enable rarpd.service
       fi
    else
       echo "rarp package is not available. Exit"
@@ -454,8 +465,6 @@ setupServices() {
                chmod -w $timeconf
                pkill -HUP xinetd
             fi
-         else
-            echo "${timeconf} file is not available."
          fi
       fi
 
@@ -478,8 +487,6 @@ setupServices() {
                chmod -w $rshconf
                pkill -HUP xinetd
             fi
-         else
-            echo "rsh package is not available."
          fi
       fi
    
@@ -487,7 +494,11 @@ setupServices() {
 }
 
 installConsole() {
-   /usr/sbin/rarpd -e
+   if [[ -f $sysdDir/rarpd.service ]]; then
+      systemctl start rarpd.service
+   else
+      /usr/sbin/rarpd -e
+   fi
 
    PATH=${vnmrsystem}/bin:$PATH
    export PATH
@@ -534,43 +545,23 @@ installConsole() {
    fi
 
    echo "Testing console software version, will try up to 20 seconds"
-#   $vnmrsystem/acqbin/testconf42x
-#   query the master for ndds version
-   stop_program nddsManager
+#  query the master for ndds version
    $vnmrsystem/acqbin/testconf42x -querynddsver
    if [[ $? -eq 1 ]] ; then    
-      $vnmrsystem/acqbin/testconf3x
-      if [[ $? -eq 1 ]] ; then
-         $vnmrsystem/acqbin/consoledownload3x -dwnld3x
-         nofile=1
-         count=0
-         if [[ -f $vnmrsystem/acq/download3x/loadhistory ]] ; then
-            owner=$(ls -l $vnmrsystem/vnmrrev | awk '{ printf($3) }')
-            group=$(ls -l $vnmrsystem/vnmrrev | awk '{ printf($4) }')
-            chown $owner:$group $vnmrsystem/acq/download/load* 2> /dev/null
-            count=$(grep successful $vnmrsystem/acq/download3x/loadhistory | wc -l)
-         fi
-         if [[ $count -lt 9 ]] ; then
-            echo ""
-            echo "Console software download failed"
-            echo "Reboot the NMR console"
-            echo "Then rerun setacq"
-            echo ""
+         echo "Old version of console software is present"
+         echo "Updating requires use of the verifyCntrlsFlash script,"
+         echo "which will take a couple of minutes"
+         echo "Do you wish to proceed (y/n) [y]? "
+         read ans
+         if [[ "x$ans" != "xn" ]] ; then
+            $vnmrsystem/adm/acq/verifyCntrlsFlash -r -y
+         else
             exit 0
          fi
-         rmTFTPBootFiles 
-         rm -f ${vnmrsystem}/acq/download3x/load*
-         echo pausing for 25 seconds
-         sleep 25
-         $vnmrsystem/acqbin/consoledownload3x -tftpdir "$tftpdir"
-      else
-         $vnmrsystem/acqbin/consoledownload3x -tftpdir "$tftpdir"
-      fi
-      stop_program nddsManager
-      sleep 25
-   else    
-      $vnmrsystem/acqbin/consoledownload42x -tftpdir "$tftpdir"
+         sleep 10
+         echo "Updating complete. Confirming console software."
    fi      
+   $vnmrsystem/acqbin/consoledownload42x -tftpdir "$tftpdir"
     
    nofile=1
    count=0
@@ -764,6 +755,9 @@ fi
 #-----------------------------------------------------------------
 installTftp
 getTFTPBootDir
+if [[ ! -x /usr/bin/rsh ]] && [[ ! -f /etc/debian_version ]]; then
+   yum -y '--disablerepo=*' install ${vnmrsystem}/adm/acq/rsh-0.17-80.el7.x86_64.rpm
+fi
 
 if [[ x${cons} = "xinova" ]] || [[ x${cons} = "xmerc"* ]] ; then
    doingMI=1

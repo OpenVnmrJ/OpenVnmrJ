@@ -138,7 +138,7 @@ disableSelinux() {
 
  if [ x$distroType  != "xdebian" ] ; then
     #   SELINUX=disabled   (possible values: enforcing, permissive, disabled)
-   selinux=$(grep SELINUX /etc/selinux/config | grep -i disabled)
+   selinux=$(grep ^SELINUX /etc/selinux/config | grep -i disabled)
    # echo "str: $str"
    if [ -z "$selinux" ] ; then
        echo ""
