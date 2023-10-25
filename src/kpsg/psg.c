@@ -75,6 +75,7 @@ void checkGradtype();
 void first_done();
 void reset();
 void check_for_abort();
+void write_shr_info(double exp_time);
 /****************************************/
 /*		EXTERNALS		*/
 /****************************************/
@@ -121,6 +122,7 @@ extern int	v14;		/* offset in code to v14 */
 extern int	v15;		/* offset in code to v15 */
 extern int	v16;		/* offset in code to v16 */
 
+extern int loc;
 extern long	rt_tab[];
 
 extern unsigned long 	ix;	/* FID currently in Acode generation */
@@ -2241,8 +2243,7 @@ double getExpTime()
   return(usertime);
 }
 
-write_shr_info(exp_time)
-double	exp_time;
+void write_shr_info(double exp_time)
 {
     int Infofd;	/* file discriptor Code disk file */
     int bytes;
@@ -2254,6 +2255,7 @@ double	exp_time;
     else
        ExpInfo.ExpDur = usertime;
 
+    ExpInfo.SampleLoc = loc;
     if (newacq)
     {
        ExpInfo.NumTables = num_tables; /* set number of tables */

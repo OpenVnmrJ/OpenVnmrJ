@@ -1025,6 +1025,7 @@ void write_shr_info(double exp_time)
     else
        ExpInfo.ExpDur = usertime;
 
+    ExpInfo.SampleLoc = loc;
     /*
        BKJ: CAUTION: need to check ExpInfo.NumTables
        ExpInfo.NumTables = num_tables;
