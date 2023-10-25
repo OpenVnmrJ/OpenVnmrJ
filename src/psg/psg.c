@@ -151,11 +151,12 @@ extern char *newString();
 extern char *realString();
 extern symbol **getTreeRoot();
 extern varInfo *rfindVar();
-extern char *getenv();
 extern int createPS();		/* create Pulse Sequence routine */
 extern double getval();
 extern double sign_add();
 extern codeint *init_acodes();
+extern void write_shr_info(double exp_time);
+extern void write_exp_info();
 
 static void checkGradAlt();
 void checkGradtype();

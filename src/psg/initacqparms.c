@@ -1339,8 +1339,7 @@ double getExpTime()
   return(usertime);
 }
 
-write_shr_info(exp_time)
-double exp_time;
+void write_shr_info(double exp_time)
 {
     int Infofd;	/* file discriptor Code disk file */
     int bytes;
@@ -1352,6 +1351,7 @@ double exp_time;
     else
        ExpInfo.ExpDur = usertime;
 
+    ExpInfo.SampleLoc = loc;
     if (newacq)
     {
        ExpInfo.NumTables = num_tables; /* set number of tables */
@@ -1378,7 +1378,7 @@ double exp_time;
     close(Infofd);
 }
 
-write_exp_info()
+void write_exp_info()
 {
     int Infofd;	/* file discriptor Code disk file */
     int bytes;
