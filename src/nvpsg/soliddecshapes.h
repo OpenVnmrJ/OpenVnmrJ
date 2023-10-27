@@ -1138,18 +1138,28 @@ void adjust_bc(double a, double pw, double ph, double *b, double *c, double strt
 DSEQ adj_dseq(DSEQ a, double *b, double *c, int lp1, int lp2)
 {
    if (!strcmp(a.seq,"paris")) {
+      a.p.preset1 = lp1;
+      a.p.preset2 = lp2;
       adjust_bc(a.p.a, a.p.pw, 0.0, b, c, a.p.strtdelay, a.p.offstdelay, a.p.apdelay, lp1, lp2);
    }
    else if (!strcmp(a.seq,"spinal")) {
+      a.s.preset1 = lp1;
+      a.s.preset2 = lp2;
       adjust_bc(a.s.a, a.s.pw, a.s.ph, b, c, a.s.strtdelay, a.s.offstdelay, a.s.apdelay, lp1, lp2);
    }
    else if (!strcmp(a.seq,"spinal2")) {
+      a.r.preset1 = lp1;
+      a.r.preset2 = lp2;
       adjust_bc(a.r.a, a.r.pw, a.r.ph, b, c, a.r.strtdelay, a.r.offstdelay, a.r.apdelay, lp1, lp2);
    }
    else if (!strcmp(a.seq,"tppm")) {
+      a.t.preset1 = lp1;
+      a.t.preset2 = lp2;
       adjust_bc(a.t.a, a.t.pw, a.t.ph, b, c, a.t.strtdelay, a.t.offstdelay, a.t.apdelay, lp1, lp2);
    }
    else if (!strcmp(a.seq,"waltz")) {
+      a.w.preset1 = lp1;
+      a.w.preset2 = lp2;
       adjust_bc(a.w.a, a.w.pw, a.w.ph, b, c, a.w.strtdelay, a.w.offstdelay, a.w.apdelay, lp1, lp2);
    }
    else {
