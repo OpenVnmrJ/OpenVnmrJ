@@ -3059,13 +3059,13 @@ void _toss5(WMPA mp, int phase)
 void _idref(WMPA mp, DSEQ d, int phase)
 {
 
-// Adjust del and mp.t1 assumming _desqon with preset1 = 0
+// Adjust del and mp.t1 assuming _desqon with preset1 = 0
 // preceeds _idref.  Use both presets of 1 for the internal
 // DSEQ module. 
 
    double adj = PWRF_DELAY + WFG_START_DELAY;
    double del = mp.rtau - mp.pw/2.0 - mp.t1 - adj;
-   d = adj_dseq(d,&(mp.t1),&(mp.t1),1,1);  
+   d = adj_dseq(d,&(mp.t1),&(mp.t2),1,1);  // BDZ fixed a bug here: was t1 twice
    int chnl = 0;
 
    if (!strcmp(mp.ch,"obs")) chnl = 1;
@@ -3078,11 +3078,21 @@ void _idref(WMPA mp, DSEQ d, int phase)
    }
 
    char ch2[NCH];
+   ch2[0] = 0;
    if (!strcmp(d.seq,"tppm")) {
       sprintf(ch2,"%s",d.t.ch);
    }
    if (!strcmp(d.seq,"spinal")) {
       sprintf(ch2,"%s",d.s.ch);
+   }
+   if (!strcmp(d.seq,"spinal2")) {
+      sprintf(ch2,"%s",d.r.ch);
+   }
+   if (!strcmp(d.seq,"paris")) {
+      sprintf(ch2,"%s",d.p.ch);
+   }
+   if (!strcmp(d.seq,"waltz")) {
+      sprintf(ch2,"%s",d.w.ch);
    }
 
    int chnl2 = 0;
