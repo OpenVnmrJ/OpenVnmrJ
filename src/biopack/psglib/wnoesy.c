@@ -250,8 +250,8 @@ void pulsesequence()
 
    status(B);
       rgpulse(pw, v2, rof1, 1.0e-6);
-      corr = 1.0e-6 + rof1 +2.0*GRADIENT_DELAY+ 4.0*pw/3.1416;
-      corr1 = 1.0e-6 + rof1 +4.0*pw/3.1416;
+      corr = 1.0e-6 + rof1 +2.0*GRADIENT_DELAY+ 4.0*pw/3.14159265358979323846;
+      corr1 = 1.0e-6 + rof1 +4.0*pw/3.14159265358979323846;
        if (gzlvl1>0) 
        {
          if (d2>0.001)          /*suppress radiation damping after 4th dwell time in t1*/

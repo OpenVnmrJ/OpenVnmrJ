@@ -72,8 +72,8 @@ void pulsesequence()
 
 	rgpulse(pw,v1,rof1,rof2);
      status(B);
-        if (d2 > rof1 + 4.0*pw/3.1416)
-           delay(d2 - rof1 - 4.0*pw/3.1416);
+        if (d2 > rof1 + 4.0*pw/3.14159265358979323846)
+           delay(d2 - rof1 - 4.0*pw/3.14159265358979323846);
      status(C);
         rgpulse(pw,v2,rof1,rof2);
       

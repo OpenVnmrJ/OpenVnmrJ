@@ -170,9 +170,9 @@ void pulsesequence()
       if (d2 > 0.0)
         {
          if (antiz_flg[0] == 'n') 
-           delay(d2-1.0e-6-rof1-SAPS_DELAY-(2.0*pw/3.14159)*(flip1+flip2)/90.0);
+           delay(d2-1.0e-6-rof1-SAPS_DELAY-(2.0*pw/3.14159265358979323846)*(flip1+flip2)/90.0);
          else
-           delay(d2-1.0e-6-rof1-SAPS_DELAY-(2.0*pw/3.14159)*(flip1+flip2)/90.0+4.0*pw); 
+           delay(d2-1.0e-6-rof1-SAPS_DELAY-(2.0*pw/3.14159265358979323846)*(flip1+flip2)/90.0+4.0*pw); 
         }
         else delay(0.0);
       if (antiz_flg[0] == 'n') rgpulse(flip2*pw/90.0,v2,rof1,1.0e-6);

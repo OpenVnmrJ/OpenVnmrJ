@@ -1129,7 +1129,7 @@ static int phaseangledisp()
 {
    int npts = fn/2;
    int i;
-   float r = 180/3.14159;
+   float r = 180/3.14159265358979323846;
    int vmin = 1;
    int vmax = mnumypnts - 3;
    getVLimit(&vmin, &vmax);

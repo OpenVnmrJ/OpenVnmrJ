@@ -140,12 +140,12 @@ void pulsesequence()
    {
       obspower(satpwr);
       if (d2>100.0e-6)
-         rgpulse(d2-(2*POWER_DELAY)-1.0e-6-rof1-(4*pw)/3.14159,zero,0.0,0.0);
+         rgpulse(d2-(2*POWER_DELAY)-1.0e-6-rof1-(4*pw)/3.14159265358979323846,zero,0.0,0.0);
       obspower(tpwr);
    }
    else if (d2>0.0)
    {
-      delay(d2 - rof1 - 1.0e-6 -(4*pw)/3.1416);
+      delay(d2 - rof1 - 1.0e-6 -(4*pw)/3.14159265358979323846);
    }
    rgpulse(pw, v2, rof1, 0.0);
    rgpulse(pw, v3, 1.0e-6, rof2);

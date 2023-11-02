@@ -192,7 +192,7 @@ void pulsesequence()
     delay(d2 / 2.0);
     decpower(pwxlvl180);
     decshaped_pulse(pwx180ad, pwx180, zero, rof1, rof1);
-    delay(2 * pw + 2*POWER_DELAY + 4 * rof1 + (4 * pwx / 3.1416));
+    delay(2 * pw + 2*POWER_DELAY + 4 * rof1 + (4 * pwx / 3.14159265358979323846));
     zgradpulse(icosel * grad1, gtE);
     delay(gstab);
     decshaped_pulse(pwx180ad, pwx180, zero, rof1, rof1);

@@ -72,7 +72,7 @@ modification history
 	 not perfect but much better.
 */
 
-#define M_PI 3.1415926535897932384
+#define M_PI 3.14159265358979323846
 
 #ifdef NEW_TRAY_ROUTINES
 

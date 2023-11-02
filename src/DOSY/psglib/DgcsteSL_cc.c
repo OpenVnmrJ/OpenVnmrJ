@@ -384,7 +384,7 @@ char	delflag[MAXSTR],prg_flg[MAXSTR],satmode[MAXSTR],lkgate_flg[MAXSTR],
            endif(v11);
          }
         else zgradpulse(gzlvl1,gt1);
-        delay(gstab-2.0*pw/3.14);
+        delay(gstab-2.0*pw/3.14159265358979323846);
         if (prg_flg[0] == 'y')
             {   obspower(prgpwr);
                 rgpulse(prgtime, v6, rof1, 0.0); }

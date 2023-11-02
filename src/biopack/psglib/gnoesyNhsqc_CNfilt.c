@@ -73,7 +73,7 @@ int
 	phase2	= getval("phase2");
 
 double
-	pi	= 3.1415926,
+	pi	= 3.14159265358979323846,
 	rg1	= 2.0e-6,
 	rg2	= 2.0e-6,
 	d0	= getval("d0"),

@@ -162,7 +162,7 @@ void pulsesequence()
      rgradient('z',0.0);
      delay(grise);
    if (d2 > 0);   
-     delay(d2/2 + (2.0*pwx/3.14159) - pw + D2_FUDGEFACTOR);
+     delay(d2/2 + (2.0*pwx/3.14159265358979323846) - pw + D2_FUDGEFACTOR);
 
  rgpulse(pw*2.0,t6,rof1,rof2);
 
@@ -172,7 +172,7 @@ void pulsesequence()
      rgradient('z',0.0);
      delay(grise);
    if (d2 > 0);   
-     delay(d2/2 + (2.0*pwx/3.14159) - pw + D2_FUDGEFACTOR);
+     delay(d2/2 + (2.0*pwx/3.14159265358979323846) - pw + D2_FUDGEFACTOR);
      decrgpulse(pwx*2.0,t9,rof1,rof2);
      decphase(t9);
      delay(gt2 + (grise*2.0) + (2.0*GRADIENT_DELAY));

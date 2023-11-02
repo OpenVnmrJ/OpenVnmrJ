@@ -156,8 +156,8 @@ char	sspul[MAXSTR],sspulX[MAXSTR],lkgate_flg[MAXSTR],alt_grd[MAXSTR];
 
 	decrgpulse(pp, v1, rof1, rof1);
                 /* to be corrected */
-	if (pw > 2.0*pp) delay(jtau - pw/2 - 2*rof1 - 2*pp/3.14);
-	else delay(jtau - pp - 2*rof1 - 2*pp/3.14);
+	if (pw > 2.0*pp) delay(jtau - pw/2 - 2*rof1 - 2*pp/3.14159265358979323846);
+	else delay(jtau - pp - 2*rof1 - 2*pp/3.14159265358979323846);
 
 	simpulse(pw, 2.0 * pp, v4, v3, rof1, 0.0);
                 

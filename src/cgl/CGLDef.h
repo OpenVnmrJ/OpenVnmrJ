@@ -21,7 +21,7 @@
 #ifndef NULL
 #define NULL 	0
 #endif
-#define PI		3.14159265359
+#define PI		3.14159265358979323846
 #define RPD		(2.0*PI/360.0)
 #define MALLOC(a,b,c)   if((c=(b*)malloc((a)*sizeof(b)))==NULL)\
   							{printf("malloc error\n");}

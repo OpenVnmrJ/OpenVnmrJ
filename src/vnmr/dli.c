@@ -45,8 +45,8 @@
 #define MAXSAV          200
 #define MAXPHASE        3600.0
 #define MINPHASE        0.1
-#define PI              3.14159
-#define DEG 57.29577951308232087679
+#define PI              3.14159265358979323846
+#define DEG             (180.0 / PI) 
 #define EPSILON 1e-15
 
 #ifdef  DEBUG
@@ -1285,9 +1285,6 @@ static void submitpavco(double *alpha, double *beta, double *delta, int regions)
     *delta = 0.0;
   *alpha = -angle(s + *delta * ss, c + *delta * cc);
 }
-
-#define DEG 57.29577951308232087679
-
 
 /**************************/
 static int minimize(int regions, double *new_rp, double *new_lp, double *thlp)

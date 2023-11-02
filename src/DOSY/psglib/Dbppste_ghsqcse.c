@@ -273,7 +273,7 @@ status(B);
   delay(gstab);
   decrgpulse(pwx,v2,0.0,0.0);
   txphase(zero); decphase(v3); 
-  d2corr=pw+2.0*pwx/3.1416;
+  d2corr=pw+2.0*pwx/3.14159265358979323846;
   if (tau1 > d2corr) delay(tau1-d2corr);  /* delay=t1/2 */
   else delay(tau1);  /* just to dps the evolution period */
   rgpulse(2*pw,zero,0.0,0.0);
@@ -285,14 +285,14 @@ status(B);
      zgradpulse(icosel*gzlvlE,gtE);
      delay(gstab);
      simpulse(2.0*pw,2.0*pwx,zero,v3,0.0,0.0);
-     delay(2.0*tauxh - 2.0*GRADIENT_DELAY-2.0*pwx/3.1416);
+     delay(2.0*tauxh - 2.0*GRADIENT_DELAY-2.0*pwx/3.14159265358979323846);
    }
   else
    {
      zgradpulse(icosel*gzlvlE,gtE);
      delay(gstab );
      decrgpulse(2*pwx,v3,0.0,0.0);
-     delay(gtE+gstab-2.0*pwx/3.1416);
+     delay(gtE+gstab-2.0*pwx/3.14159265358979323846);
    }
   decphase(v4); 
   simpulse(pw,pwx,zero,v4,0.0,0.0); /*  X read pulse */

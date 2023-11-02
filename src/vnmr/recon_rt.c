@@ -112,7 +112,7 @@ static void four1(data, nn, isign)
     mmax=2;
     while (n > mmax) {
 	istep=mmax << 1;
-	theta=isign*(6.28318530717959/mmax);
+	theta=isign*((2.0 * 3.14159265358979323846)/mmax);
 	wtemp=sin(0.5*theta);
 	wpr = -2.0*wtemp*wtemp;
 	wpi=sin(theta);

@@ -51,7 +51,7 @@
 */
 
 #include <standard.h>
-/* #define PI 3.1416 */
+/* #define PI 3.14159265358979323846 */
 
 static int  phi2[2] = {0,2},
             phi13[4] = {0,0,2,2},

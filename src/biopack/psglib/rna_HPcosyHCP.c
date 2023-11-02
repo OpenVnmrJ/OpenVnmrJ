@@ -117,7 +117,7 @@ void pulsesequence()
   status(B);
     dec2rgpulse(pwP,v2,rof1,1e-6);
     if (d2 > 0.0)
-     delay(d2 - 2e-6 - (4*pwP/3.1416));
+     delay(d2 - 2e-6 - (4*pwP/3.14159265358979323846));
     else
      delay(d2);
     sim3pulse(pw,0.0,pwP,v1,zero,v1,1e-6,rof2);

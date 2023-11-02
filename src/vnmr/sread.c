@@ -2109,14 +2109,14 @@ void setdgparms(int d2flag)
   if ((reval > 0.0) && (P_getVarInfo(CURRENT,"lb",&dummy)==0))
     if (dummy.active == ACT_OFF)
     {
-      pres=P_setreal(CURRENT,"lb",-reval*3.14159,0);
+      pres=P_setreal(CURRENT,"lb",-reval*3.14159265358979323846,0);
       checkresult(pres,"setreal");
       pres=P_setactive(CURRENT,"lb",ACT_ON);
     }
   if ((re2val > 0.0) && (P_getVarInfo(CURRENT,"lb1",&dummy)==0))
     if (dummy.active == ACT_OFF)
     {
-      pres=P_setreal(CURRENT,"lb1",-re2val*3.14159,0);
+      pres=P_setreal(CURRENT,"lb1",-re2val*3.14159265358979323846,0);
       checkresult(pres,"setreal");
       pres=P_setactive(CURRENT,"lb1",ACT_ON);
     }
