@@ -12,7 +12,7 @@
 //=====================================
 // Spectrometer constants
 //=====================================
-#define TWOPI 6.28318531
+#define TWOPI (2.0 * 3.14159265358979323846) 
 #define DTCK 12.50e-9
 #define NMIN 16.0                   //  Time Step - Usually Overridden By s.n90. 
 

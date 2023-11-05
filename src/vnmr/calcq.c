@@ -28,7 +28,7 @@
 #define debug  1
 #define debug2  1
 #define debug3  1
-#define Pi 3.14159265359
+#define Pi 3.14159265358979323846 
 #define twoPi 2.0*Pi
 #define phtol Pi
 #define MAX 80

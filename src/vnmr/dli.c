@@ -45,7 +45,7 @@
 #define MAXSAV          200
 #define MAXPHASE        3600.0
 #define MINPHASE        0.1
-#define PI              3.14159
+#define PI              3.14159265358979323846 
 #define DEG 57.29577951308232087679
 #define EPSILON 1e-15
 
