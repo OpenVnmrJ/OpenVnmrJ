@@ -183,7 +183,7 @@ typedef struct {
 
 TPPM gettppm(char *name)
 {
-   TPPM dec;
+   TPPM dec = {};
    char *var;
    extern void make_tppm(TPPM dec);
 
@@ -242,7 +242,7 @@ TPPM gettppm(char *name)
 
 SPINAL getspinal(char *name)
 {
-   SPINAL dec;
+   SPINAL dec = {};
    char *var;
    extern void make_spinal(SPINAL dec);
 
@@ -299,7 +299,7 @@ SPINAL getspinal(char *name)
 
 SPINAL2 getspinal2(char *name)
 {
-   SPINAL2 dec;
+   SPINAL2 dec = {};
    char *var;
    extern void make_spinal2(SPINAL2 dec);
 
@@ -362,7 +362,7 @@ SPINAL2 getspinal2(char *name)
 
 SPINAL2 getspinal2s(char *name)
 {
-   SPINAL2 dec;
+   SPINAL2 dec = {};
    char *var;
    extern void make_spinal2(SPINAL2 dec);
 
@@ -425,7 +425,7 @@ SPINAL2 getspinal2s(char *name)
 
 WALTZ getwaltz(char *name)
 {
-   WALTZ dec;
+   WALTZ dec = {};
    char *var;
    extern void make_waltz(WALTZ dec);
 
@@ -476,7 +476,7 @@ WALTZ getwaltz(char *name)
 
 PARIS getparis(char *name)
 {
-   PARIS dec;
+   PARIS dec = {};
    char *var;
    extern void make_paris(PARIS dec);
 
@@ -1023,7 +1023,7 @@ void _paris(PARIS dec)
 
 DSEQ getdseq(char *name)
 {
-   DSEQ d;
+   DSEQ d = {};
    char var[13];
    sprintf(var,"%s",name);
    strcat(var,"seq");
@@ -1069,7 +1069,7 @@ DSEQ getdseq2(char *name)
 
 DSEQ setdseq(char *name, char *seq)
 {
-   DSEQ d;
+   DSEQ d = {};
    sprintf(d.seq,"%s",seq);
 
    if (!strcmp(d.seq,"tppm")) {

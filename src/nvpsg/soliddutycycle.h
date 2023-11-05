@@ -38,7 +38,7 @@ typedef struct {
 DUTY init_dutycycle()
 {
 
-   DUTY d; 
+   DUTY d = {}; 
      
    d.c1 = -1;
    d.c2 = -1;
@@ -61,6 +61,7 @@ DUTY init_dutycycle()
    d.duty = 105.0;
    d.dutyon = 0.0;
    d.dutyoff = 0.0;
+   
    return d;
 }
 
@@ -108,5 +109,3 @@ double abort_dutycycle(DUTY d, double percent)
    }
    return d.duty; 
 }
-
-

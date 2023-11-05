@@ -610,7 +610,7 @@ double gett(int lix, char *pattern)
 
 AR combine_array(AR a, AR b)
 {
-   AR c;
+   AR c = {};
    int i;  
    if (strcmp(a.a,b.a) == 0) {
       strcpy(c.a,a.a);
@@ -634,5 +634,3 @@ AR combine_array(AR a, AR b)
    }
 }
 #endif
-
-

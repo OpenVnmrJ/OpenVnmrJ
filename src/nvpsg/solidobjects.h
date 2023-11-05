@@ -487,7 +487,7 @@ void OBinitializer(WMPA *mp, int npw, int nph, int na, int ng, int nphBase)
 
 WMPA getbr24(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getbr24() Error: The type name %s is invalid !\n",seqName);
@@ -572,7 +572,7 @@ WMPA getbr24(char *seqName)
 
 WMPA getmrev8(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getmrev8() Error: The type name %s is invalid !\n",seqName);
@@ -657,7 +657,7 @@ WMPA getmrev8(char *seqName)
 
 WMPA getswwhh4(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getswwhh4() Error: The type name %s is invalid !\n",seqName);
@@ -742,7 +742,7 @@ WMPA getswwhh4(char *seqName)
 
 WMPA getxx(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getxx() Error: The type name %s is invalid !\n",seqName);
@@ -827,7 +827,7 @@ WMPA getxx(char *seqName)
 
 WMPA getxmx(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getxmx() Error: The type name %s is invalid !\n",seqName);
@@ -912,7 +912,7 @@ WMPA getxmx(char *seqName)
 
 WMPA gettoss4(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("gettoss4() Error: The type name %s is invalid !\n",seqName);
@@ -964,7 +964,7 @@ WMPA gettoss4(char *seqName)
 
 WMPA gettoss5(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("gettoss5() Error: The type name %s is invalid !\n",seqName);
@@ -1028,7 +1028,7 @@ WMPA gettoss5(char *seqName)
 
 WMPA getidref(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getidref() Error: The type name %s is invalid !\n",seqName);
@@ -1072,7 +1072,7 @@ WMPA getidref(char *seqName)
 
 WMPA getwpmlg(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwpmlg() Error: The type name %s is invalid !\n",seqName);
@@ -1199,7 +1199,7 @@ WMPA getwpmlg(char *seqName)
 
 GP getinept(char *seqName)
 {
-   GP in;
+   GP in = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getinept() Error: The type name %s is invalid !\n",seqName);
@@ -1274,7 +1274,7 @@ GP getinept(char *seqName)
 
 WMPA getwdumbo(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumbo() Error: The type name %s is invalid !\n",seqName);
@@ -1406,7 +1406,7 @@ WMPA getwdumbo(char *seqName)
 
 WMPA getwdumbot(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumbot() Error: The type name %s is invalid !\n",seqName);
@@ -1545,7 +1545,7 @@ WMPA getwdumbot(char *seqName)
 
 WMPA getcpmg(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getcpmg() Error: The type name %s is invalid !\n",seqName);
@@ -1632,7 +1632,7 @@ WMPA getcpmg(char *seqName)
 
 GP gethmqc(char *seqName)
 {
-   GP hmqc;
+   GP hmqc = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("gethmqc() Error: The type name %s is invalid!\n",seqName);
@@ -1689,7 +1689,7 @@ GP gethmqc(char *seqName)
 
 WMPA gethssmall(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("gethssmall() Error: The type name %s is invalid !\n",seqName);
@@ -1794,7 +1794,7 @@ WMPA gethssmall(char *seqName)
 
 WMPA getxmxwpmlg(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwpmlg() Error: The type name %s is invalid !\n",seqName);
@@ -1931,7 +1931,7 @@ WMPA getxmxwpmlg(char *seqName)
 
 WMPA getwsamn(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwsamn() Error: The type name %s is invalid !\n",seqName);
@@ -2058,7 +2058,7 @@ WMPA getwsamn(char *seqName)
 
 WMPA getwpmlgxmx(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwpmlgxmx() Error: The type name %s is invalid !\n",seqName);
@@ -2191,7 +2191,7 @@ WMPA getwpmlgxmx(char *seqName)
 
 WMPA getwdumboxmx(char *seqName)
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumboxmx() Error: The type name %s is invalid !\n",seqName);
@@ -2332,7 +2332,7 @@ WMPA getwdumbogen(char *seqName, char *coeffName)
 //  Z-Rotation Supercycle: M.Leskes, Chem. Phys. Lett., 466 (2008) 95
 
 {
-   WMPA mp;
+   WMPA mp = {};
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
       printf("getwdumbogen() Error: The type name %s is invalid !\n",seqName);
@@ -3558,4 +3558,3 @@ void _hssmall(WMPA mp, int phase)
    gen_RFunblank(chnl);
  }
 #endif 
-

@@ -75,7 +75,7 @@ WMPSEQ getwdumbogen1(char *seqName, char *coeffName)
 //  Z-Rotation Supercycle: M.Leskes, Chem. Phys. Lett., 466 (2008) 95
 
 {
-   WMPSEQ mp;
+   WMPSEQ mp = {};
    mp.wvsh.mpseq.nelem=1; //waveform should have a single PMLG element
    mp.wvsh.mpseq=getdumbogen(seqName, coeffName,0,0,0,0,1);
 
@@ -184,7 +184,7 @@ WMPSEQ getwdumbogen2(char *seqName, char *coeffName)
 //  Z-Rotation Supercycle: M.Leskes, Chem. Phys. Lett., 466 (2008) 95
 
 {
-   WMPSEQ mp;
+   WMPSEQ mp = {};
    mp.wvsh.shape.pars.nelem=1; //waveform should have a single DUMBO element
    mp.wvsh.shape=getdumbogenshp(seqName, coeffName, 0.0,0.0,0,1);
 
@@ -376,7 +376,7 @@ void _wdumbo2(WMPSEQ mp, int phase)
 
 WMPSEQ getwpmlgxmx1(char *seqName)
 {
-   WMPSEQ mp;
+   WMPSEQ mp = {};
    mp.wvsh.mpseq.nelem=1; //waveform should have a single PMLG element
    mp.wvsh.mpseq=getpmlg(seqName,0,0,0,0,1);
 
@@ -501,7 +501,7 @@ void _wpmlg1(WMPSEQ mp, int phase)
 
 WMPSEQ getwsamn1(char *seqName)
 {
-   WMPSEQ mp;
+   WMPSEQ mp = {};
    mp.wvsh.mpseq=getsamn(seqName,0,0,0,0,1);
    char *var;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
@@ -610,4 +610,3 @@ void _wsamn1(WMPSEQ mp, int phase)
 }
 
 #endif
-

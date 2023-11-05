@@ -24,7 +24,7 @@
 
 SHAPE getpulse(char *seqName, double p, double phint, int iRec, int calc)
 {
-   SHAPE s;
+   SHAPE s = {};
    char *var;
    s.get_state = const_state;
 
@@ -75,7 +75,7 @@ SHAPE getpulse(char *seqName, double p, double phint, int iRec, int calc)
 
 SHAPE getdfspulse(char *seqName, double p, double phint, int iRec, int calc)
 {
-   SHAPE s;
+   SHAPE s = {};
    char *var;
    s.get_state = dfs_state;
 
@@ -143,7 +143,7 @@ SHAPE getdfspulse(char *seqName, double p, double phint, int iRec, int calc)
 
 SHAPE getsfspulse(char *seqName, double p, double phint, int iRec, int calc)
 {
-   SHAPE s;
+   SHAPE s = {};
    char *var;
    s.get_state = sfs_state;
 
@@ -211,7 +211,7 @@ SHAPE getsfspulse(char *seqName, double p, double phint, int iRec, int calc)
 
 SHAPE getsfmpulse(char *seqName, double p, double phint, int iRec, int calc)
 {
-   SHAPE s;
+   SHAPE s = {};
    char *var;
    s.get_state = sfm_state;
 
@@ -265,7 +265,7 @@ SHAPE getsfmpulse(char *seqName, double p, double phint, int iRec, int calc)
 
 SHAPE getsinc(char *seqName, double p, double phint, int iRec, int calc)
 {
-   SHAPE s;
+   SHAPE s = {};
    char *var;
    s.get_state = sinc_state;
 
@@ -327,7 +327,7 @@ SHAPE getsinc(char *seqName, double p, double phint, int iRec, int calc)
 
 SHAPE gettanramp(char *seqName, double p, double phint, int iRec, int calc)
 {
-   SHAPE s;
+   SHAPE s = {};
    char *var;
    s.get_state = tanramp_state;
 
@@ -399,7 +399,7 @@ SHAPE gettanramp(char *seqName, double p, double phint, int iRec, int calc)
 
 SHAPE getcpm(char *seqName, double p, double phint, int iRec, int calc)
 {
-   SHAPE s;
+   SHAPE s = {};
    char *var;
    s.get_state = cpm_state;
 
@@ -460,7 +460,7 @@ SHAPE getcpm(char *seqName, double p, double phint, int iRec, int calc)
 
 SHAPE getdumbogenshp(char *seqName, char *coeffName, double p, double phint, int iRec, int calc)
 {
-   SHAPE s;
+   SHAPE s = {};
    char *var;
    s.get_state = dumbo_state;
 
@@ -530,4 +530,3 @@ SHAPE getdumbogenshp(char *seqName, char *coeffName, double p, double phint, int
 
 
 #endif
-

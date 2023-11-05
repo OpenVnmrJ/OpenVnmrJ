@@ -60,7 +60,7 @@ typedef struct {
 
 MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
 {
-   MPDEC d;
+   MPDEC d = {};
    char *var;
 
    if (strlen(name) >= sizeof(d.seqName)) {
@@ -114,7 +114,7 @@ MPDEC getmpdec(char *name, int iph , double p, double phint, int iRec, int calc)
 
 MPDEC setmpdec(char *name, int iph, double p, double phint, int iRec, int calc)
 {
-   MPDEC d;
+   MPDEC d = {};
    char *var;
 
    if (strlen(name) >= sizeof(d.seqName)) {
@@ -840,7 +840,7 @@ void _hsqcdec2(GP in, int ph3, int ph4, int ph5, int ph6, MPDEC d2,
 
 MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int calc)
 {
-   MPSEQ pm;
+   MPSEQ pm = {};
    int i,j,k;
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
@@ -1004,8 +1004,3 @@ MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int
    }
    return pm;
 }
-
-
-
-
-
