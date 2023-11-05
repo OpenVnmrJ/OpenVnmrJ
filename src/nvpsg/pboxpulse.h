@@ -149,7 +149,7 @@ PBOXPULSE update_PBOXPULSE(PBOXPULSE shp, int iRec)
 PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
 {
    shape pboxshp;
-   PBOXPULSE shp;
+   PBOXPULSE shp = {};
    shp.calc = calc;
 //   shp.array = parsearry(shp.array);
    shp.nRec = iRec;
@@ -260,7 +260,7 @@ PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
 PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
 {
    shape pboxshp; 
-   PBOXPULSE shp;
+   PBOXPULSE shp = {};
    char *var;
    char cmd[MAXSTR];
    if (strlen(seqName) >= PB_NSUFFIX  || strlen(seqName) < 1) {
@@ -368,7 +368,7 @@ PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
 
 PBOXPULSE getrefpboxpulse(char *seqName, int iRec, int calc) 
 {
-   PBOXPULSE shp;
+   PBOXPULSE shp = {};
    char *var;
    char cmd[MAXSTR];
    if (strlen(seqName) >= PB_NSUFFIX  || strlen(seqName) < 1) {
