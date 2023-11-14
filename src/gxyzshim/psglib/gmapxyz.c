@@ -101,9 +101,9 @@ void pulsesequence()
         settable(t2, 4, ph2);
         settable(t3, 16, ph3);  
 
-    	ginc=200000.0*3.1416/(gamma*d5*fov); /* in G/cm */
-	gylvl=(index2-((ni2-1)/2.0))*ginc/(gcaly*cos(gcalang*3.14159/180.0));
-	gxlvl=((index1-((ni-1)/2.0))*ginc/gcalx)-(index2-((ni2-1)/2.0))*ginc*tan(gcalang*3.14159/180.0)/gcalx;
+    	ginc=200000.0*3.14159265358979323846/(gamma*d5*fov); /* in G/cm */
+	gylvl=(index2-((ni2-1)/2.0))*ginc/(gcaly*cos(gcalang*3.14159265358979323846/180.0));
+	gxlvl=((index1-((ni-1)/2.0))*ginc/gcalx)-(index2-((ni2-1)/2.0))*ginc*tan(gcalang*3.14159265358979323846/180.0)/gcalx;
         
 if ((ni==0)||(ni==1))
 {

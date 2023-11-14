@@ -297,7 +297,7 @@ char	satmode[MAXSTR],sspul[MAXSTR],wrefshape[MAXSTR];
        { ifzero(v10); zgradpulse(1.2*gzlvl2,gt2);
               elsenz(v10); zgradpulse(-1.2*gzlvl2,gt2); endif(v10); }
      else zgradpulse(1.2*gzlvl2,gt2);
-       delay(gstab+2.0*pw/3.14);
+       delay(gstab+2.0*pw/3.14159265358979323846);
       if (lkgate_flg[0] == 'y') lk_sample(); /* turn lock sampling on */
 
       /* purge pulse to scramble any magnetisation that 

@@ -42,8 +42,8 @@ AUTHOR: S. Sukumar
 #include	<math.h>
 #include	"util.h"
 
-#define		TWOPI		6.28318531
-#define 	PI		3.14159265
+#define 	PI              3.14159265358979323846
+#define		TWOPI           (2*PI)
 
 /* indexing macro */
 #define rmapindex(z,y,x) (z*yres*xres+y*xres+x)

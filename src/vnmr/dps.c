@@ -11954,8 +11954,8 @@ int	   dlink;
 	amove(x - 1, y);
 	rdraw(spW + 3, 0);
 	h = spH * 0.7;
-	incD = 6.28 * 1.25 / (double) spW;
-	deg = 6.28 - 3.14 * 0.25;
+	incD = (2*3.14159265358979323846) * 1.25 / (double) spW;
+	deg = (2*3.14159265358979323846) - 3.14159265358979323846 * 0.25;
 	amove(x, y);
 	x1 = x+1;
         for (w = 0; w < spW; w++) {
@@ -12363,7 +12363,7 @@ int sx, sy, sh, sw, solid;
 	double  deg, step;
 	int     y2, x2, i;
 
-	step = 3.14 / sw;
+	step = 3.14159265358979323846 / sw;
 	deg = 0;
 	x2 = sx;
 	y2 = sy;
@@ -12753,11 +12753,11 @@ acquireWave(node, show_label, sx, dx)
 	for(m = 0; m < k; m++) 
             h2 = h2 * rate;
 	amove(x1, y1);
-	dr = 6.28 / 4.0;
+	dr = (2*3.14159265358979323846) / 4.0;
         for (i = 0; i < width / 2; i++)
         {
 	   deg = deg + dr;
-           if (deg >= 6.28)
+           if (deg >= (2*3.14159265358979323846))
            {   deg = 0.0;
 	       k--;
 	       h2 = h1;
@@ -12778,7 +12778,7 @@ acquireWave(node, show_label, sx, dx)
         for (i = 0; i < width / 2; i++)
         {
 	   deg = deg + dr;
-           if (deg >= 6.28)
+           if (deg >= (2*3.14159265358979323846))
            {   deg = 0.0;
                h1 = h1 * rate;
                y2 = y1;
@@ -12847,14 +12847,14 @@ int num;
          sh = (double) pulseHeight * 0.7;
       if (step < 2)
          sh = (double) pulseHeight * 0.5;
-      roff = 3.14 / 6.0;
+      roff = 3.14159265358979323846 / 6.0;
       roff2 = roff * 0.5;
       x = sx;
       ws = w / 4;
       if (num == 3) {
 	  if (ws < 1)
 	     ws = 1;
-          incD = (3.14 - roff) / (double) ws;
+          incD = (3.14159265358979323846 - roff) / (double) ws;
           x2 = sx + ws;
           rh = sh * 0.5;
 	  y = rh * sin(roff);
@@ -12866,7 +12866,7 @@ int num;
 	  }
       }
       else {
-          incD = 3.14 / (double) w;
+          incD = 3.14159265358979323846 / (double) w;
           x2 = dx;
           rh = sh;
       }
@@ -12894,7 +12894,7 @@ int num;
 	  if (num <= 1)
 	      break;
 	  if (loop == 0) {
-              incD = (3.14 - roff2 * 2.0) / (double) (ws * 2);
+              incD = (3.14159265358979323846 - roff2 * 2.0) / (double) (ws * 2);
 	      deg = roff2 + incD * (x - x2);
 	      x2 = x2 + ws * 2;
 	      if (x2 > dx)
@@ -12902,7 +12902,7 @@ int num;
               rh = sh;
 	  }
 	  else {
-              incD = (3.14 - roff) / (double) ws;
+              incD = (3.14159265358979323846 - roff) / (double) ws;
 	      deg = roff + incD * (x - x2);
 	      x2 = dx - 1;
               rh = sh * 0.5;
@@ -12989,13 +12989,13 @@ spAcquire(node, show_label, sx, dx)
 	else {
 	   h = pulseHeight * 9 / 10;
 	   step = w * 2 / 3;
-	   deg = 3.14 * 0.35;
+	   deg = 3.14159265358979323846 * 0.35;
 	}
 	if (step < 2)
 	   step = 2;
-	incD = (3.14 - deg) / (double) step;
+	incD = (3.14159265358979323846 - deg) / (double) step;
 	k = 0;
-	deg = 3.14;
+	deg = 3.14159265358979323846;
 	while (k < step) {
 	   y =  (int)(h * sin(deg));
 	   if (y >= h2) {
@@ -13009,7 +13009,7 @@ spAcquire(node, show_label, sx, dx)
 	if (up) 
 	   deg = 0.0;
 	else
-	   deg = 3.14 * 0.35;
+	   deg = 3.14159265358979323846 * 0.35;
 	x2 = x1 + step;
 	if (step < 0)
 	   step = 0;
@@ -13037,7 +13037,7 @@ spAcquire(node, show_label, sx, dx)
 	y1 = y;
 	if (up) {
 	   h = pulseHeight * 9 / 10;
-	   deg = 3.14 * 0.35;
+	   deg = 3.14159265358979323846 * 0.35;
 	}
 	else {
 	   h = pulseHeight * 4 / 10;
@@ -13046,7 +13046,7 @@ spAcquire(node, show_label, sx, dx)
 	step = node->x2 + xDiff - x1;
 	if (step < 2)
 	   step = 2;
-	incD = (3.14 - deg) / (double) step;
+	incD = (3.14159265358979323846 - deg) / (double) step;
 	deg = 0.0;
 	k = 0;
 	while (k < step) {
@@ -13059,9 +13059,9 @@ spAcquire(node, show_label, sx, dx)
 	   k++;
 	}
         if (up)
-	   incD = (3.14 - deg - 3.14 * 0.35) / (double) step;
+	   incD = (3.14159265358979323846 - deg - 3.14159265358979323846 * 0.35) / (double) step;
 	else
-	   incD = (3.14 - deg) / (double) step;
+	   incD = (3.14159265358979323846 - deg) / (double) step;
 	if (x1 < x_margin) {
 	   k = x_margin - x1;
 	   x1 = x_margin;
@@ -13235,8 +13235,8 @@ draw_tune(node, show_label, sx, dx)
 	if (h > pulseHeight)
            h = pulseHeight;
 	steps = w * 2;
-        incr = 3.14 / steps;
-        deg = 3.14;
+        incr = 3.14159265358979323846 / steps;
+        deg = 3.14159265358979323846;
         if (x < x_margin)
         {
              i = x_margin - x;
@@ -13264,8 +13264,8 @@ draw_tune(node, show_label, sx, dx)
              }
         }
 	steps = 4;
-        incr = 3.14 / 4.0;
-        deg = 3.14;
+        incr = 3.14159265358979323846 / 4.0;
+        deg = 3.14159265358979323846;
         fw2 = fw - spW / 4;
 	if (fw2 < 4.0)
 	   fw2 = fw;
@@ -14780,8 +14780,8 @@ sub_shaped(sx, sy, sh, sw, solid)
 
 	if (sx+sw <= x_margin)
              return;
-	step = 3.14 / sw;
-	deg = 3.14;
+	step = 3.14159265358979323846 / sw;
+	deg = 3.14159265358979323846;
 	x2 = sx;
 	y2 = sy;
 	if (sx < x_margin)
@@ -14972,13 +14972,13 @@ draw_origin_grpshaped(SRC_NODE *snode)
         main_shaped(x1, y1, hx, wx, 1);
         ws =  wx / 6;
         x1 = x1 + ws;
-        deg = (double)ws * 3.14 / (double)wx;
+        deg = (double)ws * 3.14159265358979323846 / (double)wx;
         y1 = y1 + (double)hx * sin(deg);
         hx = pulseHeight / 3;
         wx =  wx - ws;
         main_shaped(x1, y1, hx, wx, 1);
         x1 = x1 + ws;
-        deg = (double)ws * 3.14 / (double)wx;
+        deg = (double)ws * 3.14159265358979323846 / (double)wx;
         y1 = y1 + (double)hx * sin(deg);
         hx = pulseHeight / 4;
         main_shaped(x1, y1, hx, wx - ws, 1);
@@ -15071,13 +15071,13 @@ int	  flag;
 	   x = x + 2;
 	   adraw(x, y);
 	}
-	step = (6.28 * 3.0) / (double) w;
-	if (step < 0.314)
-	    step = 0.314;
+	step = ((2*3.14159265358979323846) * 3.0) / (double) w;
+	if (step < 3.14159265358979323846/10)
+	    step = 3.14159265358979323846/10;
         for (i = 0; i < w; i++)
         {
 	   deg = deg + step;
-           if (deg > 6.28)
+           if (deg > (2*3.14159265358979323846))
            {   deg = 0.0;
                high = high * 0.6;
                // y2 = y;
@@ -15259,7 +15259,7 @@ main_shaped(sx, sy, sh, sw, solid)
              return;
 	if (sw <= 2)
              return;
-	step = 3.14 / (double)sw;
+	step = 3.14159265358979323846 / (double)sw;
 	deg = 0.0;
 	x2 = sx;
 	y2 = sy;

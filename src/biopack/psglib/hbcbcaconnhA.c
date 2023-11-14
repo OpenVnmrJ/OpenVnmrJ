@@ -97,7 +97,7 @@
 */
 
 #include <standard.h>
-/* #define PI 3.1416 */
+/* #define PI 3.14159265358979323846 */
 #include "Pbox_bio.h"
 
 #define CA90    "square90n 133p"      /* square 90 on Cab at 43 ppm, null at C', 133 ppm away */

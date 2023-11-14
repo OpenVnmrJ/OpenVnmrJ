@@ -1058,7 +1058,7 @@ int ernst(int argc, char *argv[], int retc, char *retv[])
         {
             double u = exp(-t/t1);
             tangent = sqrt(1.0 -u*u)/u;
-            degrees = 180*atan(tangent)/3.141592;
+            degrees = 180*atan(tangent)/3.14159265358979323846;
             if (debug1) Wscrprintf("u=%f, tangent=%5.1f\n",u,tangent); 
         }
         pw = pw90 * degrees/90.0;

@@ -4657,7 +4657,7 @@ MPSEQ getsamn(char *seqName, int iph, double p, double phint, int iRec, int calc
 // Set the Base Phase and Amplitude and Duration Lists
    
    for (i = 0; i < totalsteps; i++) {
-      double a = 1023.0*cos(2.0*3.14159*(i + 0.5)*cycles/totalsteps);
+      double a = 1023.0*cos(2.0*3.14159265358979323846*(i + 0.5)*cycles/totalsteps);
       if (a < 0) {
          pm.aBase[i] = -a;
          pm.phBase[i] = 180.0;

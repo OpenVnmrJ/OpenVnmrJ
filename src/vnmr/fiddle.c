@@ -192,7 +192,7 @@ static char  writename[MAXPATH],writecfname[MAXPATH],readcfname[MAXPATH];
 static FILE  *fidout = NULL,*writecffile,*readcffile;
 static float odat[4]={
 	180.0,-90.0,-180.0,90.0};
-static double omega1,omega2,t1,t2,ph2,pi=3.141592654;
+static double omega1,omega2,t1,t2,ph2,pi=3.14159265358979323846;
 static float 	finalph,degtorad;
 /* moved up from fiddle	*/
 static	float   *inp,*p,*pp;
@@ -256,7 +256,7 @@ int fiddle(int argc, char *argv[], int retc, char *retv[])
 	count=0;
 	firstrefint=0.0;
 	phasetweek=0.0;
-	degtorad=3.141592654/180.0;
+	degtorad=3.14159265358979323846/180.0;
 	ocount=0;
 	ntval = 1;
 	if (!P_getreal(PROCESSED, "nt", &tmp, 1))

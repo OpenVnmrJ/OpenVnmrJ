@@ -28,8 +28,8 @@
 #include	<math.h>
 #include	"util.h"
 
-#define		TWOPI		6.28318531
-#define 	PI		3.1415926
+#define 	PI              3.14159265358979323846	
+#define		TWOPI		(2*PI)
 #define 	index(s,p,r) (s*psize*rsize+p*rsize+r)
 
 /* I/O string */

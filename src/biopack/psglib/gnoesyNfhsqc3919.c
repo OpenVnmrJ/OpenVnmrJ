@@ -286,7 +286,7 @@ void pulsesequence()
      zgradpulse(gzlvl3,gt3);   
   
      dec2power(dpwr2);
-     delay(gstab+2.0/3.1415*pw);
+     delay(gstab+2.0/3.14159265358979323846*pw);
 
    status(C);
      setreceiver(t11);   

@@ -16,7 +16,7 @@
 #include	"nr.h"
 #include	"util.h"
 
-#define		TWOPI		6.28318531
+#define		TWOPI		(2.0 * 3.14159265358979323846)
 #define		ZWIDTH		15		/* minimum z to use z3 */
 #define		TOTALSHIMS	50		/* max number of shims in varian shimsets */
 

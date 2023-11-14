@@ -49,10 +49,10 @@ void obl_matrix(float ang1,float ang2,float ang3,
 /* indexing calculations */
 #define 	refindex(xx,yy,zz) (xx*ymapsize*zmapsize+yy*zmapsize+zz)
 
-#define		TWOPI		6.28318531
-#define 	PI		3.14159265
-#define D2R(x)		x*3.14159/180.0
-#define EPS	1.0e-12
+#define 	PI              3.14159265358979323846
+#define		TWOPI           (2*PI)
+#define         D2R(x)          (x*PI)/180.0
+#define         EPS             1.0e-12
     
 /* I/O string */
 char		str[80];

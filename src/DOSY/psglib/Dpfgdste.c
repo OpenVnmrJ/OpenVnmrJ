@@ -327,7 +327,7 @@ double dosytimecubed,dosyfrq,CORR,del2check,del2max;
             endif(v10);
          }
          else zgradpulse(gzlvl1,gt1);
-   	delay(gstab-2.0*pw/3.14); 
+   	delay(gstab-2.0*pw/3.14159265358979323846); 
         if (lkgate_flg[0] == 'y') lk_sample(); /* turn lock sampling on */
    	} 
    else 

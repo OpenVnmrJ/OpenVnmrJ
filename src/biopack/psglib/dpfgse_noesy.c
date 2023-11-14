@@ -179,15 +179,15 @@ status(B);
    xmtrphase(zero);
    if (trim_flg[0] == 'y')
      {
-      if (d2-2.0*pw/3.14 - 2.0*rof1 - SAPS_DELAY - POWER_DELAY> 0)
-                 delay(d2-2.0*pw/3.14-2.0*rof1-SAPS_DELAY - POWER_DELAY);
+      if (d2-2.0*pw/3.14159265358979323846 - 2.0*rof1 - SAPS_DELAY - POWER_DELAY> 0)
+                 delay(d2-2.0*pw/3.14159265358979323846-2.0*rof1-SAPS_DELAY - POWER_DELAY);
       else
         delay(0.0);
      }
    else
      {
-      if (d2-4.0*pw/3.14 - 2.0*rof1 - SAPS_DELAY> 0)
-                 delay(d2-4.0*pw/3.14-2.0*rof1-SAPS_DELAY);
+      if (d2-4.0*pw/3.14159265358979323846 - 2.0*rof1 - SAPS_DELAY> 0)
+                 delay(d2-4.0*pw/3.14159265358979323846-2.0*rof1-SAPS_DELAY);
       else
         delay(0.0);
      }     

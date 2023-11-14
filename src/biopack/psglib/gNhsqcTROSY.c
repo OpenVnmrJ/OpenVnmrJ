@@ -273,7 +273,7 @@ status(A);
          dec2rgpulse(2.0*pwN, zero, 0.0, 0.0);
          if (x>0.0) delay(x);
         }
-        delay(4.0*pwN/3.1415-pw -rof1);
+        delay(4.0*pwN/3.14159265358979323846-pw -rof1);
         if (Cdec[A]=='y')  delay(pwCshp+2.0*POWER_DELAY +WFG_STOP_DELAY +WFG_START_DELAY); 
         obspower(tpwrs); obspwrf(tpwrsf_d);
  	shaped_pulse("H2Osinc",pwHs,three,rof1,rof1);
@@ -297,7 +297,7 @@ status(A);
         delay(gstab);
         sim3pulse(0.0,0.0, pwN, one, zero, t22, 0.0, 0.0);  
 	zgradpulse(-(1.0-g6bal)*gzlvl6*icosel, gt6);             /* 2.0*GRADIENT_DELAY */
-        delay( gstab  -pwN*0.5 +pw*(2.0/3.1415-0.5) );
+        delay( gstab  -pwN*0.5 +pw*(2.0/3.14159265358979323846-0.5) );
         rgpulse(2.0*pw, zero, rof1, rof1);
 	dec2power(dpwr2); decpower(dpwr);	
         zgradpulse(g6bal*gzlvl6*icosel, gt6);		         /* 2.0*GRADIENT_DELAY */

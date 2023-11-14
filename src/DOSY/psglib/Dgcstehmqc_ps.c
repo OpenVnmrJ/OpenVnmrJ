@@ -229,17 +229,17 @@ char	c180[MAXSTR],satmode[MAXSTR],alt_grd[MAXSTR],
       }
     else zgradpulse(gzlvl1,gt1);
    if (c180[0] == 'y')
-      delay(jtau/2.0-gt1-(2*pwx+rof1)-2.0*pw/3.1416);
+      delay(jtau/2.0-gt1-(2*pwx+rof1)-2.0*pw/3.14159265358979323846);
    else
-      delay(jtau/2.0-gt1-(pwx+rof1)-2.0*pw/3.1416);
+      delay(jtau/2.0-gt1-(pwx+rof1)-2.0*pw/3.14159265358979323846);
    if (lkgate_flg[0] == 'y') lk_sample();     /* turn lock sampling on */
    decrgpulse(pwx, v5,rof1,rof1);	/* X 90 */
-   if (d2/2 > pw + 2*rof1 + 2*pwx/3.1416) 
-      delay(d2/2.0 - pw - 2*rof1 - 2*pwx/3.1416);
+   if (d2/2 > pw + 2*rof1 + 2*pwx/3.14159265358979323846) 
+      delay(d2/2.0 - pw - 2*rof1 - 2*pwx/3.14159265358979323846);
    else delay(0.0);
       rgpulse(pw*2.0, v6,rof1,rof1);	/* H 180 */
-   if (d2/2 > pw + 2*rof1 + 2*pwx/3.1416) 
-      delay(d2/2.0 - pw - 2*rof1 - 2*pwx/3.1416);
+   if (d2/2 > pw + 2*rof1 + 2*pwx/3.14159265358979323846) 
+      delay(d2/2.0 - pw - 2*rof1 - 2*pwx/3.14159265358979323846);
    else delay(0.0);
    decrgpulse(pwx, v7,rof1,rof1);	/* X 90 */
 

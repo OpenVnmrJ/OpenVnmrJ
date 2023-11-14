@@ -272,7 +272,7 @@ void pulsesequence()
    decshaped_pulse(csweep,csw180,v14,rof1,rof2);
    zgradpulse(-gzlvl1*(double)icosel,gtime1);
    delay(gdel);    
-   delay(hsw180+(4.0*cpw/3.1416)+(4.0e-6)+WFG_START_DELAY+WFG_STOP_DELAY);
+   delay(hsw180+(4.0*cpw/3.14159265358979323846)+(4.0e-6)+WFG_START_DELAY+WFG_STOP_DELAY);
    zgradpulse(-gzlvl2*(double)icosel,gtime2);
    delay(gdel);    
    decshaped_pulse(csweep,csw180,v14,rof1,rof2);

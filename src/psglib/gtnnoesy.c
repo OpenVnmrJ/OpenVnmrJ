@@ -184,14 +184,14 @@ void pulsesequence()
         if (d2 > 0.0) 
          { 
           obspower(satpwr);
-          rgpulse(d2 - 9.4e-6 - rof1 - 10.0e-6 - (4.0*pw/3.14159),zero,5.0e-6,5.0e-6);
+          rgpulse(d2 - 9.4e-6 - rof1 - 10.0e-6 - (4.0*pw/3.14159265358979323846),zero,5.0e-6,5.0e-6);
           obspower(tpwr);
          }
        }
       else
        {
         if (d2 > 0.0)
-         delay(d2 - 1.0e-6 - rof1 - (4.0*pw/3.14159));
+         delay(d2 - 1.0e-6 - rof1 - (4.0*pw/3.14159265358979323846));
        }
      rgradient('z',gzlvl1);
      delay(gt1+grise);

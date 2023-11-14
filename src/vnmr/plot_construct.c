@@ -918,7 +918,7 @@ draw_garrow(int argc, char **argv)
         dy = y - y2;
         if ((dx == 0) && (dy == 0))
              return;
-	pi = 3.1416;
+	pi = 3.14159265358979323846;
         angle = 0.0;
         len = sqrt((double)(dx * dx) + (double)(dy * dy));
         if (dx == 0)

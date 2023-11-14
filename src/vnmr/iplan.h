@@ -31,8 +31,8 @@
 #include "init2d.h"
 //#include "wjunk.h"
 
-#define R2D 180.0/3.14159
-#define D2R 3.14159/180.0
+#define R2D 180.0/3.14159265358979323846
+#define D2R 3.14159265358979323846/180.0
 
 #define D0    0
 #define D30    30

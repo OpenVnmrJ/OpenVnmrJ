@@ -1846,7 +1846,7 @@ set_orientation()
             }
         }
     }
-    rad_per_deg = 3.1416/180.0;
+    rad_per_deg = 3.14159265358979323846/180.0;
     cospsi = cos(psi*rad_per_deg);
     sinpsi = sin(psi*rad_per_deg);
     cosphi = cos(phi*rad_per_deg);

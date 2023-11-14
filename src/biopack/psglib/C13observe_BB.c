@@ -69,7 +69,7 @@ getstr("shape",shape);
         {
       	 delay(10.0e-6);
      	 shaped_pulse(shape,shp_pw,zero,rof1,rof1);
-      	 delay(10.0e-6+2.0/3.1415*pw+rof1);
+      	 delay(10.0e-6+2.0/3.14159265358979323846*pw+rof1);
         }
 
      if(gpurge[B]=='y')
@@ -87,7 +87,7 @@ getstr("shape",shape);
 
       delay(gstab);
 
-      if(phase_roll_comp[A]!='y') {delay(2.0/3.1415*pw+rof1);} 
+      if(phase_roll_comp[A]!='y') {delay(2.0/3.14159265358979323846*pw+rof1);} 
 
       setreceiver(t12);
    status(C);

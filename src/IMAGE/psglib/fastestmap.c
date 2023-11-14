@@ -158,8 +158,8 @@ void pulsesequence()
   tozs = tof + GAMMA * gsl * Z0;
 
   /*REPHASING GRADIENTS */
-  grr = -kread*gread * (tramp/2.0 + tgsettle + at/2.0) / (2.0*tror/3.1416);
-  gsr = kslice*gsl * (tramp + 2.0*tgsettle) / (2.0*tssr/3.1416);
+  grr = -kread*gread * (tramp/2.0 + tgsettle + at/2.0) / (2.0*tror/3.14159265358979323846);
+  gsr = kslice*gsl * (tramp + 2.0*tgsettle) / (2.0*tssr/3.14159265358979323846);
   grew = -krew_epi * 2.0*gread*(tramp + tgsettle + at)/trew;
 
   /*PRINTOUT OF CALCULATED PARAMETERS */

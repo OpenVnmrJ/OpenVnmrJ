@@ -385,17 +385,17 @@ status(A);
    decphase(zero);
 
 
-   if((tau1 - 2.0*pwC6/3.14 - WFG3_START_DELAY - 0.5*pwZ - POWER_DELAY) > SAPS_DELAY)
+   if((tau1 - 2.0*pwC6/3.14159265358979323846 - WFG3_START_DELAY - 0.5*pwZ - POWER_DELAY) > SAPS_DELAY)
    {
       decpwrf(rf3);
-      delay(tau1 - 2.0*pwC6/3.14 - WFG3_START_DELAY - 0.5*pwZ - POWER_DELAY);
+      delay(tau1 - 2.0*pwC6/3.14159265358979323846 - WFG3_START_DELAY - 0.5*pwZ - POWER_DELAY);
       sim3shaped_pulse("", "offC3", "", 0.0, pwC3a, 2.0*pwN, zero, zero, zero,0.0,0.0);
       initval(phshift3, v3);
       decstepsize(1.0);
       dcplrphase(v3);  				        /* SAPS_DELAY */
       decpwrf(rf6);
       decphase(t5);
-      delay(tau1 - 2.0*pwC6/3.14 - SAPS_DELAY - 0.5*pwZ- WFG3_START_DELAY - POWER_DELAY);
+      delay(tau1 - 2.0*pwC6/3.14159265358979323846 - SAPS_DELAY - 0.5*pwZ- WFG3_START_DELAY - POWER_DELAY);
    }
    else
    {

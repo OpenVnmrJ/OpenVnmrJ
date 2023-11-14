@@ -1297,14 +1297,14 @@ int d2flag;
   if ((reval > 0.0) && (P_getVarInfo(TEMPORARY,"lb",&dummy)==0))
     if (dummy.active == ACT_OFF)
     {
-      pres=P_setreal(TEMPORARY,"lb",-1.0 /(3.14159 * reval),0);
+      pres=P_setreal(TEMPORARY,"lb",-1.0 /(3.14159265358979323846 * reval),0);
       checkresult(pres,"setreal");
       pres=P_setactive(TEMPORARY,"lb",ACT_ON);
     }
   if ((re2val > 0.0) && (P_getVarInfo(TEMPORARY,"lb1",&dummy)==0))
     if (dummy.active == ACT_OFF)
     {
-      pres=P_setreal(TEMPORARY,"lb1",-1.0 /(3.14159 * re2val),0);
+      pres=P_setreal(TEMPORARY,"lb1",-1.0 /(3.14159265358979323846 * re2val),0);
       checkresult(pres,"setreal");
       pres=P_setactive(TEMPORARY,"lb1",ACT_ON);
     }
