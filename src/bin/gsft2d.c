@@ -36,7 +36,7 @@
 #define rmapindex(Z,Y,X) ((Z)*xres*yres+(Y)*xres+(X))
 
 #define PI 3.14159265358979323846 
-#define TWOPI (2*PI)
+#define TWOPI (2.0 * PI) 
 
 #define MSLICE 1
 

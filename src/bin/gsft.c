@@ -41,8 +41,8 @@
 #define cmapindex(Z,Y,X) (2*((Z)*xres*yres+(Y)*xres+(X)))
 #define rmapindex(Z,Y,X) ((Z)*xres*yres+(Y)*xres+(X))
 
-#define PI  3.14159265358979323846 
-#define TWOPI  (2*PI)
+#define PI 3.14159265358979323846 
+#define TWOPI (2.0 * PI) 
 
 /* I/O string */
 char		s[80];
