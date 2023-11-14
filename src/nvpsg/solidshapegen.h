@@ -1784,7 +1784,7 @@ SHAPE make_shape(SHAPE s)
    char shapepath[MAXSTR*4],str[MAXSTR+16];
    int ntick,nrpuls,naccumpuls;
    double t,ph,dph,phShapeCurrent,phShapeLast,aLast,aCurrent,phase,gate;
-   STATE state;
+   STATE state = {};
 
 // Open the output file
 

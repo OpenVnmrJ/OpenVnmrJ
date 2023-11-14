@@ -3547,7 +3547,6 @@ MPSEQ getrfdrxy8(char *seqName, int iph, double p, double phint, int iRec, int c
 
 MPSEQ getseac7(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-
    MPSEQ seac7 = {};
    char *var;
    extern MPSEQ MPchopper(MPSEQ seac7);
@@ -3714,7 +3713,6 @@ MPSEQ getseac7(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 MPSEQ getsc14(char *seqName, int iph, double p, double phint, int iRec, int calc)
 {
-
    MPSEQ sc14 = {};
    extern MPSEQ MPchopper(MPSEQ sc14);
    char *var;
@@ -5674,5 +5672,3 @@ MPSEQ getpostc6(char *seqName, int iph, double p, double phint, int iRec, int ca
 }
 
 #endif
-
-
