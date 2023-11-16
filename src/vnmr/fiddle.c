@@ -140,9 +140,11 @@ References:
 #include "fft.h"
 #include "ftpar.h"
 #include "displayops.h"
+#include "allocate.h"
 
 #include <math.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #define ERROR 1
@@ -157,13 +159,10 @@ static int np0,fn0;
 static dfilehead phasehead,fidhead,writehead,cfhead,swaphead;
 static dblockhead writebhead,cfbhead,swapbhead;
 extern char *get_cwd();
-extern int init_wt1(struct wtparams *wtpar, int fdimname);
-extern int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
-             register int n, int rftflag, int fdimname, double fpmult, int 
-rdwtflag);
 extern int fnpower(int fni);
 extern void weightfid(float *wtfunc, float *outp, int n, int rftflag, int 
 dtype);
+extern int Rmdir(char *dirname, int rmParent);
 
 
 extern int interuption;
@@ -201,16 +200,16 @@ static	float   scale,max,phasetweek;
 static	float   x;
 static	double   tmp;
 /* moved up from i_fiddle	*/
-static	char path[MAXPATH],satname[MAXPATH],sysstr[2*MAXPATH];
+static	char path[MAXPATH+32],satname[MAXPATH],sysstr[2*MAXPATH];
 static int r;
 typedef	int	Boolean;	/* This is for the string comparison */
 typedef char	*String;	/* This is for the string comparison */
 
-Boolean equal ();		/* This is for the string comparison */
+Boolean equal(String stringa, String stringb); /* This is for string comparison */
 static int i_fiddle(int argc, char *argv[]);
 int setupreadcf();
 int getfidblockheadforwrite();
-int getfidblockheadforcf();
+int getfidblockheadforcf(int fromFiddle);
 int freall(int flag);
 void readincf();
 void setupwritefile();
@@ -240,7 +239,7 @@ int fiddle(int argc, char *argv[], int retc, char *retv[])
 {
 //	int    pwr,cblock,res,dc_correct=TRUE;
 	int    pwr,cblock,res;
-	register int i,ntval;
+	int i,ntval;
 	dpointers  inblock;
 	float   a,b,c,d,denom;
 	int    ocount;
@@ -617,14 +616,14 @@ int freall(int flag)
 
 void submem(float *t, float *f, int n)
 {
-	register int i;
+	int i;
 	for (i=0;i<n;i++)
 		*t++ -= *f++;
 }
 
 void invertmem(float *t, int n)
 {
-	register int i;
+	int i;
 	for (i=0;i<n;i++)
 		*t++*= -1;
 }
@@ -1115,7 +1114,7 @@ static int i_fiddle(int argc, char *argv[])
 	}
 
 	if(writefg) getfidblockheadforwrite();
-	if(writecfflg) getfidblockheadforcf();
+	if(writecfflg) getfidblockheadforcf(1);
 
 	/* Set PHASFILE status to !S_DATA - this is required to
 	 force a recalculation of the display from the new data
@@ -1255,8 +1254,7 @@ static int i_fiddle(int argc, char *argv[])
 
 
 
-Boolean equal (stringa, stringb)	/* This is for string comparison */
-String stringa, stringb;
+Boolean equal(String stringa, String stringb)	/* This is for string comparison */
 {
 	while (*stringa == *stringb && *stringa != '\0')
 		stringa++, stringb++;
@@ -1482,7 +1480,7 @@ void setupwritecf()
 
 void writeoutresult()
 {
-   register int i;
+   int i;
    union u_tag {
       float fval;
       int   ival;
@@ -1542,7 +1540,7 @@ void writeoutresult()
 void writeoutcf()
 
 {
-	register int i;
+	int i;
    union u_tag {
       float fval;
       int   ival;
@@ -1599,7 +1597,7 @@ void incrementrp()
 
 void solventextract()
 {
-	register int i,j;
+	int i,j;
 	disp_status("SPLINE");
 	movmem((char *)(&inp[leftpos]),(char
 	*)data2,sizeof(float)*(rightpos-leftpos+2),1,4);
@@ -1649,7 +1647,7 @@ void solventextract()
 
 void extrapolate()
 {
-	register int i;
+	int i;
 	x=inp[rightpos+1]*(rightpos-refpos);
 	for (i=(rightpos-refpos);i<(np0-refpos);i+=2)
 	{
@@ -1664,7 +1662,7 @@ void extrapolate()
 
 void fiddle_zeroimag()
 {
-	register int i;
+	int i;
 	disp_status("ZERO ");
 	if (verbose) Wscrprintf("zeroing all imag.\n");
 	for (i=1;i<np0;i+=2)
@@ -1673,7 +1671,7 @@ void fiddle_zeroimag()
 
 void makeideal()
 {
-	register int i,j;
+	int i,j;
 	disp_status("IDEAL ");
 	/* calculate reference centreband signal ... */
 	refintegral=sqrt(data2[0]*data2[0]+data2[1]*data2[1]);
@@ -1790,7 +1788,11 @@ int getfidblockheadforwrite()
 	return(COMPLETE);
 }
 
-int getfidblockheadforcf()
+/*
+ * if fromFiddle == 1, function is being called from fiddle.
+ * if fromFiddle == 0, function is being called from fiddlecf
+ */
+int getfidblockheadforcf(int fromFiddle)
 {
 	/* get fid blockhead for writecf option */
 	if ( (r = D_gethead(D_USERFILE,&cfhead)) )
@@ -1809,8 +1811,9 @@ int getfidblockheadforcf()
 			return(ERROR);
 		}
 	}
-	sprintf(sysstr,"cp %s/text \"%s\"",curexpdir,writecfname); /* GAM/DI 10viii21 */
-	if (system(sysstr))
+	sprintf(sysstr,"%s/text",curexpdir);
+	sprintf(path,"%s/text",writecfname);
+	if (copyFile(sysstr, path,0))
 	{
 		Werrprintf("could not copy text from file?\n");
 	}
@@ -1820,25 +1823,33 @@ int getfidblockheadforcf()
 		Wscrprintf("P_copy error\n");
 		return(ERROR);
 	}
-	if ( (r = P_setreal(TEMPORARY,"np",(double)np0w,0)) )
+        if (fromFiddle)
+        {
+	   if ( (r = P_setreal(TEMPORARY,"np",(double)np0w,0)) )
 		Wscrprintf("P_setreal error\n");
-	P_setreal(TEMPORARY,"lp",0.0,1);
-	P_setstring(TEMPORARY,"dp","y",1);
-	/* adjust arraydim if writing less fids */
-	if (difffg)
-	{
+	   P_setreal(TEMPORARY,"lp",0.0,1);
+	   P_setstring(TEMPORARY,"dp","y",1);
+	   /* adjust arraydim if writing less fids */
+	   if (difffg)
+	   {
 		P_getreal(CURRENT,"arraydim",&arraydim,1);
 		if (udifffg) P_setreal(TEMPORARY,"arraydim",arraydim-1.0,1);
 		else P_setreal(TEMPORARY,"arraydim",arraydim/2.0,1);
-	}
+	   }
+        }
+        else
+        {
+	   P_setreal(TEMPORARY,"arraydim",1.0,1);
+        }
 	if ( (r = P_save(TEMPORARY,sysstr)) ) Wscrprintf("P_save error %s\n",sysstr);
-	strcat(writecfname,"/fid"); /* set name to fid! */
+        if (fromFiddle)
+	   strcat(writecfname,"/fid"); /* set name to fid! */
 	return(COMPLETE);
 }
 
 void readincf()
 {
-	register int i;
+	int i;
 /* GAM 30vii21 */
    union u_tag {
       float fval;
@@ -1885,3 +1896,226 @@ int setupreadcf()
         return(COMPLETE);
 }
 
+static int writeCfFid()
+{
+   int i;
+   union u_tag {
+      float fval;
+      int   ival;
+   } uval;
+
+   if ((writecffile=fopen(writecfname,"w+"))==0)
+   {
+      Werrprintf("cannot open correction function file\n");
+      return(ERROR);
+   }
+   /* tweak file header */
+   cfhead.nblocks=1;
+   cfhead.ebytes=4;
+   cfhead.tbytes=cfhead.ebytes*cfhead.np;
+   cfhead.bbytes=cfhead.tbytes+sizeof(dblockhead);
+   /* ntraces and nbheaders should be 1 */
+   cfhead.ntraces=1;
+   cfhead.nbheaders=1;
+   cfhead.status= S_DATA | S_FLOAT | S_COMPLEX; /* see ebytes ! */
+#ifdef LINUX
+        movmem((char *)(&cfhead), (char *) (&swaphead),
+                        sizeof(dfilehead), 1, 1);
+        DATAFILEHEADER_CONVERT_HTON(&swaphead);
+        fwrite((char *)&(swaphead),sizeof(dfilehead),1,writecffile);
+#else
+	fwrite((char *)&(cfhead),sizeof(dfilehead),1,writecffile);
+#endif
+   cfbhead.index=1;
+   cfbhead.scale=(short)0;
+   cfbhead.status=S_DATA | S_FLOAT | S_COMPLEX;
+   cfbhead.mode=(short)0;
+   cfbhead.lpval=0.0;
+   cfbhead.rpval=0.0;
+   cfbhead.lvl=0.0;
+   cfbhead.tlt=0.0;
+   cfbhead.ctcount=1;
+#ifdef LINUX
+   movmem((char *)(&cfbhead), (char *) (&swapbhead),
+          sizeof(dblockhead), 1, 1);
+   DATABLOCKHEADER_CONVERT_HTON(&swapbhead);
+   fwrite((char *)&(swapbhead),sizeof(dblockhead),1,writecffile);
+#else
+   fwrite((char *)&(cfbhead),sizeof(dblockhead),1,writecffile);
+#endif
+   scale=1000000.0;
+   for (i=0;i<cfhead.np;i++)
+   {
+#ifdef LINUX
+      uval.fval = data1[i]*scale;
+      intbuf[i]=ntohl(uval.ival);
+#else
+      intbuf[i]=(int)(scale*data1[i]);
+#endif
+   }
+   fwrite(intbuf,4,cfhead.np,writecffile); 
+   fclose(writecffile);
+   return(COMPLETE);
+}
+
+static int getCfFid(int curfid, float *outp, dfilehead *fidhead)
+{
+   int i;
+   int shift,
+       res;
+   float *inpfloat,
+         rmult;
+   float *tmp;
+   dpointers inblock;
+
+   if ( (res = D_getbuf(D_USERFILE, fidhead->nblocks,  curfid, &inblock)) )
+   {
+      Werrprintf("cannot get FID %d\n",curfid+1);
+      return(ERROR);
+   }
+   rmult = 1.0;
+   if ( (inblock.head->ctcount > 1) ||
+                  (inblock.head->scale) )
+   {     
+      shift = 1 << abs(inblock.head->scale);
+      if (inblock.head->scale < 0)
+         rmult = 1.0/(float)(shift);
+      else
+         rmult = (float) shift;
+      if (inblock.head->ctcount)
+         rmult /= (float)(inblock.head->ctcount);
+   }
+   inpfloat = (float *) (inblock.data);
+   tmp = outp; 
+   if ( rmult != 1.0 )
+   {     
+      for (i = 0; i < fidhead->np; i++)
+         *tmp++ = *inpfloat++ * rmult;
+   }     
+   else
+   {
+      for (i = 0; i < fidhead->np; i++)
+         *tmp++ = *inpfloat++;
+   }     
+   return(COMPLETE);
+}
+
+int fiddlecf(int argc, char *argv[], int retc, char *retv[])
+{
+   int i;
+   int force = FALSE;
+   float   a,b,c,d,denom;
+
+   verbose = FALSE;
+   sprintf(writecfname,"%s/fiddlecf.fid",curexpdir);
+
+   if (argc>1)             /* This is to check for the options used */
+   {
+      for (i=1;i<argc;i++)
+      {
+         if ( ! strcmp(argv[i],"verbose") )
+         {
+            verbose=TRUE;
+            Wscrprintf("%s: displaying debug information.\n",argv[0]);
+         }
+         else if ( ! strcmp(argv[i],"force") )
+         {
+            force=TRUE;
+            if (verbose)
+               Wscrprintf("%s: using 'force' option.\n",argv[0]);
+         }
+         else if ( ! strcmp(argv[i],"file") )
+         {
+            i++;
+            if ((argc-1)<i)
+            {
+               Werrprintf("%s: Destination filename not specified\n",argv[0]);
+               ABORT;
+            }
+            strcpy(writecfname,argv[i]);
+            if (argv[i][0]!='/')
+            {
+               strcpy(writecfname,get_cwd());
+               strcat(writecfname,"/");
+               strcat(writecfname,argv[i]);
+            }
+            if ((strlen(writecfname)<5)||
+                (strcmp(&writecfname[strlen(writecfname)-4],".fid")))   
+               strcat(writecfname,".fid");
+         }
+      }
+   }
+   if (verbose)
+      Wscrprintf("%s: Writing correction function to file: %s\n",
+                 argv[0],writecfname);
+   if ( ! access(writecfname,F_OK))
+   {
+      if (force)
+      {
+         Rmdir(writecfname,1);
+      }
+      else
+      {
+         Werrprintf("%s: directory %s already exists. Aborting",argv[0],writecfname);
+         ABORT;
+      }
+   }
+   i = mkdir(writecfname,0777);
+   if (i)
+   {
+      Werrprintf("%s: cannot create directory %s",argv[0],writecfname);
+      ABORT;
+   }
+   if (getfidblockheadforcf(0))
+   {
+      Rmdir(writecfname,1);
+      ABORT;
+   }
+   if (cfhead.nblocks < 2)
+   {
+      Werrprintf("%s: must be at least 2 FIDS in current experiment",
+                 argv[0]);
+      Rmdir(writecfname,1);
+      ABORT;
+   }
+   strcat(writecfname,"/fid"); /* set name to fid! */
+   data1 = (float *)allocateWithId(sizeof(float)*cfhead.np, "fiddlecf");
+   if (getCfFid(0, data1, &cfhead))
+   {
+      Rmdir(writecfname,1);
+      releaseAllWithId("fiddlecf");
+      D_close( D_USERFILE );
+      ABORT;
+   }
+   D_release( D_USERFILE, 0 );
+   data2 = (float *)allocateWithId(sizeof(float)*cfhead.np, "fiddlecf");
+   if (getCfFid(1, data2, &cfhead))
+   {
+      Rmdir(writecfname,1);
+      releaseAllWithId("fiddlecf");
+      D_close( D_USERFILE );
+      ABORT;
+   }
+   D_release( D_USERFILE, 1 );
+   D_close( D_USERFILE );
+   // Perform complex divide
+   for (i=0;i<cfhead.np;i+=2)
+   {
+      a=data2[i];
+      b=data2[i+1];
+      c=data1[i];
+      d=data1[i+1];
+      denom=c*c+d*d;
+      data1[i]=(a*c+b*d)/denom;
+      data1[i+1]=(b*c-a*d)/denom;
+   }
+   intbuf = (int *)allocateWithId(sizeof(int)*cfhead.np, "fiddlecf");
+   if (writeCfFid())
+   {
+      Rmdir(writecfname,1);
+      releaseAllWithId("fiddlecf");
+      ABORT;
+   }
+   releaseAllWithId("fiddlecf");
+   RETURN;
+}

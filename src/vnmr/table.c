@@ -210,7 +210,8 @@ extern int export_files();			/* magnetom */
 extern int expl_cmd();
 extern int f_cmd();
 extern int fidarea();
-extern int fiddle();
+extern int fiddle(int argc, char *argv[], int retc, char *retv[]);
+extern int fiddlecf(int argc, char *argv[], int retc, char *retv[]);
 extern int fidmax();
 extern int fidproc(int argc, char *argv[], int retc, char *retv[]);
 #ifndef VNMRJ
@@ -762,6 +763,7 @@ static cmd_t vnmr_table[] = {
 	{"fiddle2D"   , fiddle,		NO_REEXEC, 5},
 	{"fiddle2Dd"  , fiddle,		NO_REEXEC, 5},
 	{"fiddle2dd"  , fiddle,		NO_REEXEC, 5},
+	{"fiddlecf"   , fiddlecf,	NO_REEXEC, 5},
 	{"fidmax"     , fidmax,		NO_REEXEC, 10},
 	{"fidproc"    , fidproc,	NO_REEXEC, 10},
 	{"wfidproc"   , fidproc,	NO_REEXEC, 10},
