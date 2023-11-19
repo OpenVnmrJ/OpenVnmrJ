@@ -3065,7 +3065,17 @@ void _idref(WMPA mp, DSEQ d, int phase)
 
    double adj = PWRF_DELAY + WFG_START_DELAY;
    double del = mp.rtau - mp.pw/2.0 - mp.t1 - adj;
-   d = adj_dseq(d,&(mp.t1),&(mp.t2),1,1);  // BDZ fixed a bug here: was t1 twice
+   
+   // BDZ this looks like a bug. should not use t1 twice I think.
+   //   The adj_dseq() method takes two pointers and it looks like
+   //   it wants them to be different. It should probably pass t2
+   //   with t1. The adj_dseq() code increments them both and if
+   //   you pass t1 twice it gets incremented twice. In general
+   //   this bug should be investigated more. I've just made sure
+   //   it behaves now like it always did.
+   
+   d = adj_dseq(d,&(mp.t1),&(mp.t1),1,1);
+   
    int chnl = 0;
 
    if (!strcmp(mp.ch,"obs")) chnl = 1;
