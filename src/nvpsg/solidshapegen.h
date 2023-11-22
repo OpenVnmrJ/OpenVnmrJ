@@ -525,6 +525,8 @@ CP make_cp(CP cp)
    nrpuls = cp.n;
    aCurrent = norm*(mean - cp.d);
    aCurrent = (double)( (int)(aCurrent + 0.5));
+   if (aCurrent > 1023) aCurrent = 1023.0;
+   if (aCurrent < 0) aCurrent = 0.0;
    aLast = aCurrent;
    ph = 0;
    t = 0;
@@ -545,6 +547,8 @@ CP make_cp(CP cp)
          aLast = aCurrent;
          aCurrent = norm*(mean - cp.b*tan(at*(1.0 - 2.0*t/cp.t)));
          aCurrent = (double)( (int) (aCurrent + 0.5) );
+         if (aCurrent > 1023) aCurrent = 1023.0;
+         if (aCurrent < 0) aCurrent = 0.0;
          continue;
       }
       ntick++;
@@ -554,6 +558,8 @@ CP make_cp(CP cp)
       cp.phInt += dph;
       aCurrent = norm*(mean - cp.b*tan(at*(1.0 - 2.0*t/cp.t)));
       aCurrent = (double)( (int) (aCurrent + 0.5) );
+      if (aCurrent > 1023) aCurrent = 1023.0;
+      if (aCurrent < 0) aCurrent = 0.0;
       if (ntick == nmin) {
          ntick = 0;
          if (nrpuls == nmin) {
@@ -1853,6 +1859,7 @@ SHAPE make_shape(SHAPE s)
          aLast = aCurrent; //Save the phase and amplitude and get the next state
          phShapeLast = phShapeCurrent;
          state =  s.get_state(t,s.pars);
+         // NOTE BDZ 11-22-23 THIS ONE NOT CLAMPED TO [0,1023]. Is that wrong?
          aCurrent = (double)((int)(state.a + 0.5));
          phShapeCurrent = state.p;
          gate = state.g;
