@@ -153,10 +153,9 @@ class RFController: public Controller
      void setStatus(char ch);
      //  decoupler stuff...
      //  probably explicit status functions...
-     void progDecOn(char *nn, double deg_res, double pw, int mode, const char *emsg);
-     void progDecOnWithOffset(char *nn, double deg_res, double pw, double foff, int mode, const char *emsg);
-     void progDecOff(int policy, const char *emsg, int syncType, int asyncScheme);
-     void progDecOffWithOffeset(int policy, char *emsg, int syncType, int asyncScheme);
+     void progDecOn(char *name, double pw_90, double deg_res, int mode, const char *emsg);
+     void progDecOnWithOffset(char *name, double pw_90, double deg_res, double foff, int mode, const char *emsg);
+     void progDecOff(int decPolicy, const char *emsg, int syncType, int asyncScheme);
      cPatternEntry *resolveRFPattern( char *nm, int flag, const char *emsg, int action);
      cPatternEntry *resolveDecPattern(char *nm, int flag, double pw90, int wfgdup, int mode, const char *emsg);
      cPatternEntry *resolveHomoDecPattern(char *nm, int hdres, double pw_90, int dwTicks, int rfonTicks, long long acqtimeticks, int rof1Ticks, int rof2Ticks, int rof3Ticks);
