@@ -38,8 +38,8 @@ static char *Sid(){
 *     rectangle corners.  Then hold down the LEFT button and drag.      *
 *  4. An oval can be moved by holding down the LEFT button while the  	*
 *     mouse cursor position is inside an oval.                        	*
-*  5. An oval can be rotated by holding down the 'CTRL' keyborad and	*
-*     draging the curosr (at any position) left to right or right to	*
+*  5. An oval can be rotated by holding down the 'CTRL' keyboard and	*
+*     dragging the cursor (at any position) left to right or right to	*
 *     left.  Each pixel which the cursor has moved (to the left or 	*
 *     right) corresponds to the rotation of 1 degree.			*
 *									*
@@ -501,16 +501,16 @@ Oval::edges_create(void)
       if ((prev_y - y) > 1)
 	 break;
 
-      tempval = (int)(rot_x(fx,fy,cost,sint)+0.4999);
+      tempval = (int)(rot_x(fx,fy,cost,sint)+0.499999999999999999999999);
       ovptr->x1 = x_ctr + tempval;
       ovptr->x3 = x_ctr - tempval + 1;
-      tempval = (int)(rot_y(fx,fy,cost,sint)+0.4999);
+      tempval = (int)(rot_y(fx,fy,cost,sint)+0.499999999999999999999999);
       ovptr->y1 = y_ctr + tempval;
       ovptr->y3 = y_ctr - tempval + 1;
-      tempval = (int)(rot_x(-fx,fy,cost,sint)+0.4999);
+      tempval = (int)(rot_x(-fx,fy,cost,sint)+0.499999999999999999999999);
       ovptr->x2 = x_ctr + tempval;
       ovptr->x4 = x_ctr - tempval + 1;
-      tempval = (int)(rot_y(-fx,fy,cost,sint)+0.4999);
+      tempval = (int)(rot_y(-fx,fy,cost,sint)+0.499999999999999999999999);
       ovptr->y2 = y_ctr + tempval;
       ovptr->y4 = y_ctr - tempval + 1;
 
@@ -532,17 +532,17 @@ Oval::edges_create(void)
       fx = (float)rx * (float)sqrt(1.0 - (double)(y*y)/r2_f);  // Eq. 3
       fy = (float)y;
 
-      tempval = (int)(rot_x(fx,fy,cost,sint)+0.4999);
+      tempval = (int)(rot_x(fx,fy,cost,sint)+0.499999999999999999999999);
       ovptr->x1 = x_ctr + tempval;
       ovptr->x3 = x_ctr - tempval + 1;
-      tempval = (int)(rot_y(fx,fy,cost,sint)+0.4999);
+      tempval = (int)(rot_y(fx,fy,cost,sint)+0.499999999999999999999999);
       ovptr->y1 = y_ctr + tempval;
       ovptr->y3 = y_ctr - tempval + 1;
-      tempval = (int)(rot_x(-fx,fy,cost,sint)+0.4999);
+      tempval = (int)(rot_x(-fx,fy,cost,sint)+0.499999999999999999999999);
       ovptr->x2 = x_ctr + tempval;
       ovptr->x4 = x_ctr - tempval + 1;
-      tempval = (int)(rot_y(-fx,fy,cost,sint)+0.4999);
-      ovptr->y2 = y_ctr + tempval ;
+      tempval = (int)(rot_y(-fx,fy,cost,sint)+0.499999999999999999999999);
+      ovptr->y2 = y_ctr + tempval;
       ovptr->y4 = y_ctr - tempval + 1;
 
       // If no previous list available, create a new list for next item

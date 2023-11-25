@@ -1662,9 +1662,9 @@ static void interpolate_cg(double *pointbuffer, double *point, double *inten)
     sum = l_diff + r_diff;
     *point = (l_diff - r_diff)/(2.0*sum);
     if (*point < -0.5)		/* make sure interpolated point is less than */
-      *point = -0.499999;	/* 0.5 away from real point so that it will */
+      *point = -0.499999999999999999999999;	/* 0.5 away from real point so that it will */
     if (*point > 0.5)		/* round back to correct point */
-      *point = 0.499999;
+      *point = 0.499999999999999999999999;
     if (pointbuffer[1] > 0.0)
       *inten = pointbuffer[INTERP_PTS/2]+fabs(*point)*((l_diff>r_diff) ? l_diff : r_diff);
     else
