@@ -17,9 +17,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.text.SimpleDateFormat;
 import java.util.*;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import javax.swing.*;
 import javax.xml.parsers.FactoryConfigurationError;
 import javax.xml.parsers.ParserConfigurationException;
@@ -242,6 +241,7 @@ public class LogToCSVPanel extends JDialog implements ActionListener {
         boolean success;
         String param;
         String value;
+        // SimpleDateFormat sdf;
         FileWriter fWriter;
         BufferedWriter bufWriter=null;
         String date;
@@ -250,16 +250,16 @@ public class LogToCSVPanel extends JDialog implements ActionListener {
         // needed for the conversion, then call xml2csv.convertXmlToCsv()
         XmlToCsvUtil xml2csv = new XmlToCsvUtil();
 
+        // sdf = new SimpleDateFormat("EEE MMM d HH:mm:ss zzz yyyy");
+        
         // Fill list of params selected to write out
         if (!fillSelectedParamList())
             return false;
         xml2csv.outputParamList = selectedParamList;
 
         // Get dates
-        xml2csv.startDateRange = LocalDateTime.ofInstant(startDateCal.getDate().toInstant(),
-			ZoneId.systemDefault());
-        xml2csv.endDateRange = LocalDateTime.ofInstant(endDateCal.getEndDate().toInstant(),
-			ZoneId.systemDefault());
+        xml2csv.startDateRange = startDateCal.getDate();
+        xml2csv.endDateRange = endDateCal.getEndDate();
         
         // Get acq/login selection
         xml2csv.acquisitionSelected = acqRecordBtn.isSelected();
