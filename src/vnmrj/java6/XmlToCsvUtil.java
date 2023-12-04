@@ -12,10 +12,9 @@ package vnmr.ui;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.text.SimpleDateFormat;
+import java.text.ParsePosition;
 import java.util.*;
-import java.time.*;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import javax.swing.JOptionPane;
 import javax.xml.parsers.FactoryConfigurationError;
 import javax.xml.parsers.ParserConfigurationException;
@@ -78,8 +77,8 @@ import vnmr.util.UNFile;
 public class XmlToCsvUtil {
     // The following need to be filled before calling createCSVFile
     public ArrayList<String> outputParamList = new ArrayList<String>();
-    public LocalDateTime startDateRange = null;
-    public LocalDateTime endDateRange = null;
+    public Date startDateRange = new Date();
+    public Date endDateRange = new Date();
     public boolean acquisitionSelected;
     public boolean loginSelected;
     public String outputFilePath;
@@ -103,21 +102,21 @@ public class XmlToCsvUtil {
         boolean bNoTimeZone;
         String param;
         String value;
-        DateTimeFormatter sdf;
-        DateTimeFormatter sdfNoZone;
+        SimpleDateFormat sdf;
+        SimpleDateFormat sdfNoZone;
         FileWriter fWriter;
         BufferedWriter bufWriter=null;
         String date;
-        LocalDateTime entryStartDate;
+        Date entryStartDate;
 
-	sdf = new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("EEE MMM dd HH:mm:ss zzz yyyy").toFormatter(Locale.ENGLISH);
+        sdf = new SimpleDateFormat("EEE MMM d HH:mm:ss zzz yyyy");
         
         success = parseLogFile();
         if(!success) {
             return;
         }
                 
-	sdfNoZone = new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("EEE MMM dd HH:mm:ss yyyy").toFormatter(Locale.ENGLISH);
+        sdfNoZone = new SimpleDateFormat("EEE MMM d HH:mm:ss yyyy");
 
         if(acquisitionSelected)
             logType = "gorecord";
@@ -210,7 +209,6 @@ public class XmlToCsvUtil {
 
             // Loop through logEntryList taking only items in outputParamList
             // and write to file/stream.  Skip if type is not as selected.
-
             for(int i=0; i < logEntryList.size(); i++) {
                 Hashtable<String, String> entry = logEntryList.get(i);
                 String type = entry.get("type");
@@ -225,20 +223,18 @@ public class XmlToCsvUtil {
                     goodEntry = true;
                     // Skip all entries not within the selected date range.
                     if (bNoTimeZone)
-                        entryStartDate = LocalDateTime.parse(date, sdfNoZone);
-		    else
-                        entryStartDate = LocalDateTime.parse(date, sdf);
-
+                        entryStartDate = sdfNoZone.parse(date, new ParsePosition(0));
+                    else
+                        entryStartDate = sdf.parse(date, new ParsePosition(0));
                     // If endDateRange and/or startDateRange are null, in means
                     // use all dates for that range
                     try {
-
                         if (endDateRange != null) {
-                             if (!entryStartDate.isBefore(endDateRange))
+                             if (!entryStartDate.before(endDateRange))
                                  goodEntry = false;
                         }
                         if (startDateRange != null) {
-                             if (!entryStartDate.isAfter(startDateRange))
+                             if (!entryStartDate.after(startDateRange))
                                  goodEntry = false;
                         }
                     }
@@ -248,16 +244,16 @@ public class XmlToCsvUtil {
                     if(!success) {
                         bNoTimeZone = !bNoTimeZone;
                         if (bNoTimeZone)
-                            entryStartDate = LocalDateTime.parse(date, sdfNoZone);
+                            entryStartDate = sdfNoZone.parse(date, new ParsePosition(0));
                         else
-                            entryStartDate = LocalDateTime.parse(date, sdf);
+                            entryStartDate = sdf.parse(date, new ParsePosition(0));
                         try {
                             if (endDateRange != null) {
-                                 if (!entryStartDate.isBefore(endDateRange))
+                                 if (!entryStartDate.before(endDateRange))
                                      goodEntry = false;
                             }
                             if (startDateRange != null) {
-                                 if (!entryStartDate.isAfter(startDateRange))
+                                 if (!entryStartDate.after(startDateRange))
                                      goodEntry = false;
                             }
                         }
@@ -428,8 +424,7 @@ public class XmlToCsvUtil {
         boolean debugSet = false;
 
         bNoUI = true;
-        DateTimeFormatter sdf = DateTimeFormatter.ofPattern("MMMM d yyyy");
-	sdf = sdf.withLocale( Locale.US );
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM d yyyy");
 
         // Create an instance of XmlToCsvUtil.  Fill in all of the information
         // needed for the conversion, then call xml2csv.convertXmlToCsv()
@@ -479,7 +474,7 @@ public class XmlToCsvUtil {
             else if(args[i].equals("-startdate") && args.length >= i+1) {
                 i++;
                 try {
-                    LocalDateTime entryStartDate = LocalDate.parse(args[i], sdf).atTime(0,0,0);
+                    Date entryStartDate = sdf.parse(args[i]);
                     if(entryStartDate != null) {
                         xml2csv.startDateRange = entryStartDate;
                         startSet = true;
@@ -498,7 +493,7 @@ public class XmlToCsvUtil {
             else if(args[i].equals("-enddate") && args.length >= i+1) {
                 i++;
                 try {
-                    LocalDateTime entryEndDate = LocalDate.parse(args[i], sdf).atTime(23,59,59);
+                    Date entryEndDate = sdf.parse(args[i]);
                     if(entryEndDate != null) {
                         xml2csv.endDateRange = entryEndDate;
                         endSet = true;
