@@ -1,0 +1,35 @@
+/* macro */
+if ($# = 0) then
+  destroy('aCqCoMm'):$res
+  create('aCqCoMm','string')
+  setgroup('aCqCoMm','display')
+  readhw('status'):$res
+  if ($res < 0) then
+    aCqCoMm='off'
+  else
+    aCqCoMm='on'
+  endif
+  vnmrjcmd('popup','mode:modeless','file:Acqcomm.xml',
+     'title:Start Stop Console','close:acqcomm(`exit`)')
+else
+  if ($1 = 'start') then
+     aCqCoMm='on'
+     shell('acqcomm start'):$e
+  elseif ($1 = 'startsu') then
+     aCqCoMm='on'
+     shell('acqcomm start'):$e
+     readhw('status'):$stat
+     $c = 0
+     while ($stat < 0) and ($c < 10) do
+       sleep(1)
+       $c = $c + 1
+       readhw('status'):$stat
+     endwhile
+     su
+  elseif ($1 = 'stop') then
+     aCqCoMm='off'
+     shell('acqcomm stop'):$e
+  else
+     destroy('aCqCoMm'):$res
+  endif
+endif
