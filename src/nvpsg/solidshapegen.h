@@ -149,31 +149,12 @@ void obswfgHSon()
    if (OBSch == 4) HSgate(CH4WG,TRUE);
 }
 
-void obswfgHSoff()
-{
-   if (OBSch == 1) HSgate(CH1WG,FALSE);
-   if (OBSch == 2) HSgate(CH2WG,FALSE);
-   if (OBSch == 3) HSgate(CH3WG,FALSE);
-   if (OBSch == 4) HSgate(CH4WG,FALSE);
-}
-
 void decwfgHSon()
 {
    if (DECch == 1) HSgate(CH1WG,TRUE);
    if (DECch == 2) HSgate(CH2WG,TRUE);
    if (DECch == 3) HSgate(CH3WG,TRUE);
    if (DECch == 4) HSgate(CH4WG,TRUE);
-}
-
-void decwfgHSoff()
-{
-   if (PWRF_DELAY > 0.0) {
-      if (DECch == 1) HSgate(CH1WG,FALSE);
-      if (DECch == 2) HSgate(CH2WG,FALSE);
-      if (DECch == 3) HSgate(CH3WG,FALSE);
-      if (DECch == 4) HSgate(CH4WG,FALSE);
-   }
-   else decprgoff();   
 }
 
 void dec2wfgHSon()
@@ -184,20 +165,39 @@ void dec2wfgHSon()
    if (DEC2ch == 4) HSgate(CH4WG,TRUE);
 }
 
-void dec2wfgHSoff()
-{
-   if (DEC2ch == 1) HSgate(CH1WG,FALSE);
-   if (DEC2ch == 2) HSgate(CH2WG,FALSE);
-   if (DEC2ch == 3) HSgate(CH3WG,FALSE);
-   if (DEC2ch == 4) HSgate(CH4WG,FALSE);
-}
-
 void dec3wfgHSon()
 {
    if (DEC3ch == 1) HSgate(CH1WG,TRUE);
    if (DEC3ch == 2) HSgate(CH2WG,TRUE);
    if (DEC3ch == 3) HSgate(CH3WG,TRUE);
    if (DEC3ch == 4) HSgate(CH4WG,TRUE);
+}
+
+void obswfgHSoff()
+{
+   if (OBSch == 1) HSgate(CH1WG,FALSE);
+   if (OBSch == 2) HSgate(CH2WG,FALSE);
+   if (OBSch == 3) HSgate(CH3WG,FALSE);
+   if (OBSch == 4) HSgate(CH4WG,FALSE);
+}
+
+void decwfgHSoff()
+{
+   // this one changed substantially by just matching other cases.
+   // BDZ 1-9-24
+
+   if (DECch == 1) HSgate(CH1WG,FALSE);
+   if (DECch == 2) HSgate(CH2WG,FALSE);
+   if (DECch == 3) HSgate(CH3WG,FALSE);
+   if (DECch == 4) HSgate(CH4WG,FALSE);
+}
+
+void dec2wfgHSoff()
+{
+   if (DEC2ch == 1) HSgate(CH1WG,FALSE);
+   if (DEC2ch == 2) HSgate(CH2WG,FALSE);
+   if (DEC2ch == 3) HSgate(CH3WG,FALSE);
+   if (DEC2ch == 4) HSgate(CH4WG,FALSE);
 }
 
 void dec3wfgHSoff()
@@ -220,6 +220,42 @@ char lpattern[MAXSTR];
    }
 }
 
+void initdecwfg(lpattern,lstep,ldres,lamplitude)
+double lstep,ldres,lamplitude;
+char lpattern[MAXSTR];
+{        
+   if (PWRF_DELAY > 0.0) {
+      decpwrf(lamplitude);
+      decprgon(lpattern,lstep,ldres);
+      delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
+      decprgoff();
+   }
+}
+
+void initdec2wfg(lpattern,lstep,ldres,lamplitude)
+double lstep,ldres,lamplitude;
+char lpattern[MAXSTR];
+{         
+   if (PWRF_DELAY > 0.0) {
+      dec2pwrf(lamplitude);
+      dec2prgon(lpattern,lstep,ldres);
+      delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
+      dec2prgoff();
+   }
+}
+
+void initdec3wfg(lpattern,lstep,ldres,lamplitude)
+double lstep,ldres,lamplitude;
+char lpattern[MAXSTR];
+{        
+   if (PWRF_DELAY > 0.0) {
+      dec3pwrf(lamplitude); 
+      dec3prgon(lpattern,lstep,ldres);
+      delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
+      dec3prgoff();
+   }
+}
+
 void setobswfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
@@ -231,6 +267,39 @@ char lpattern[MAXSTR];
    }
 }
 
+void setdecwfg(lpattern,lstep,ldres,lamplitude)
+double lstep,ldres,lamplitude;
+char lpattern[MAXSTR];
+{      
+   if (PWRF_DELAY > 0.0) {
+      decpwrf(lamplitude);
+      decprgon(lpattern, lstep, ldres);
+      decwfgHSoff();
+   } 
+}
+
+void setdec2wfg(lpattern,lstep,ldres,lamplitude)
+double lstep,ldres,lamplitude;
+char lpattern[MAXSTR];
+{        
+   if (PWRF_DELAY > 0.0) {
+      dec2pwrf(lamplitude);
+      dec2prgon(lpattern, lstep, ldres); 
+      dec2wfgHSoff();
+   }
+}
+
+void setdec3wfg(lpattern,lstep,ldres,lamplitude)
+double lstep,ldres,lamplitude;
+char lpattern[MAXSTR];
+{        
+   if (PWRF_DELAY > 0.0) {
+      dec3pwrf(lamplitude);
+      dec3prgon(lpattern, lstep, ldres);
+      dec3wfgHSoff();
+   }
+}
+
 void clearobswfg()
 {
    if (PWRF_DELAY > 0.0) {
@@ -238,56 +307,10 @@ void clearobswfg()
    }
 }
 
-void initdecwfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
-{        
-   decpwrf(lamplitude);
-   if (PWRF_DELAY > 0.0) {
-      decprgon(lpattern,lstep,ldres);
-      delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
-      decprgoff();
-   }
-}
-
-void setdecwfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
-{      
-   decpwrf(lamplitude);
-   if (PWRF_DELAY > 0.0) {
-      decprgon(lpattern, lstep, ldres);
-      decwfgHSoff();
-   } 
-}
-
 void cleardecwfg()
 {   
    if (PWRF_DELAY > 0.0) {
       decprgoff();
-   }
-}
-
-void initdec2wfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
-{         
-   dec2pwrf(lamplitude);
-   if (PWRF_DELAY > 0.0) {
-      dec2prgon(lpattern,lstep,ldres);
-      delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
-      dec2prgoff();
-   }
-}
-
-void setdec2wfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
-{        
-   dec2pwrf(lamplitude);
-   if (PWRF_DELAY > 0.0) {
-      dec2prgon(lpattern, lstep, ldres); 
-      dec2wfgHSoff();
    }
 }
 
@@ -298,32 +321,13 @@ void cleardec2wfg()
    }
 }
 
-void initdec3wfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
-{        
-   dec3pwrf(lamplitude); 
-   if (PWRF_DELAY > 0.0) {
-      dec3prgon(lpattern,lstep,ldres);
-      delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
-      dec3prgoff();
-   }
-}
-
-void setdec3wfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
-{        
-   dec3pwrf(lamplitude);
-   if (PWRF_DELAY > 0.0) {
-      dec3prgon(lpattern, lstep, ldres);
-      dec3wfgHSoff();
-   }
-}
-
 void cleardec3wfg()
 {
-   dec3prgoff();
+   // BDZ added this if test on 1-9-24 to match similar methods
+   
+   if (PWRF_DELAY > 0.0) {
+      dec3prgoff();
+   }
 }
 
 void obswfgon(lpattern,lstep,ldres,lpreset,lpredelay)
@@ -344,19 +348,6 @@ double lstep,ldres,lpredelay;
       obsprgon(lpattern,lstep,ldres);
 }
 
-void obswfgoff(lpreset)
-int lpreset;
-{
-   if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0)
-         obsprgoff();
-      else
-         obswfgHSoff();
-   }
-   else
-      obsprgoff(); 
-}
-
 void decwfgon(lpattern,lstep,ldres,lpreset,lpredelay)
 char lpattern[MAXSTR];
 int lpreset;
@@ -372,19 +363,6 @@ double lstep,ldres,lpredelay;
       dps_on();
    }
    else decprgon(lpattern,lstep,ldres);
-}
-
-void decwfgoff(lpreset)
-int lpreset;
-{   
-   if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0)
-         decprgoff();
-      else
-         decwfgHSoff();
-   }
-   else
-      decprgoff(); 
 }
 
 void dec2wfgon(lpattern,lstep,ldres,lpreset,lpredelay)
@@ -405,19 +383,6 @@ double lstep,ldres,lpredelay;
       dec2prgon(lpattern,lstep,ldres);
 }
 
-void dec2wfgoff(lpreset)
-int lpreset;
-{   
-   if (PWRF_DELAY > 0.0) {
-      if (lpreset == 0)
-         dec2prgoff();
-      else
-         dec2wfgHSoff();
-   }   
-   else
-      dec2prgoff(); 
-}
-
 void dec3wfgon(lpattern,lstep,ldres,lpreset,lpredelay)
 char lpattern[MAXSTR];
 int lpreset;
@@ -434,6 +399,45 @@ double lstep,ldres,lpredelay;
    }
    else
       dec3prgon(lpattern,lstep,ldres); 
+}
+
+void obswfgoff(lpreset)
+int lpreset;
+{
+   if (PWRF_DELAY > 0.0) {
+      if (lpreset == 0)
+         obsprgoff();
+      else
+         obswfgHSoff();
+   }
+   else
+      obsprgoff(); 
+}
+
+void decwfgoff(lpreset)
+int lpreset;
+{   
+   if (PWRF_DELAY > 0.0) {
+      if (lpreset == 0)
+         decprgoff();
+      else
+         decwfgHSoff();
+   }
+   else
+      decprgoff(); 
+}
+
+void dec2wfgoff(lpreset)
+int lpreset;
+{   
+   if (PWRF_DELAY > 0.0) {
+      if (lpreset == 0)
+         dec2prgoff();
+      else
+         dec2wfgHSoff();
+   }   
+   else
+      dec2prgoff(); 
 }
 
 void dec3wfgoff(lpreset)
