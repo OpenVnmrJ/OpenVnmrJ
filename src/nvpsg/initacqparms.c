@@ -493,7 +493,16 @@ int ra_initacqparms(unsigned int fidn)
    lc->v30 = ra_lc->v30;
    lc->v31 = ra_lc->v31;
    lc->v32 = ra_lc->v32;
-
+   lc->v33 = ra_lc->v33;  // 11-22-23 BDZ added v33 through v42
+   lc->v34 = ra_lc->v34;
+   lc->v35 = ra_lc->v35;
+   lc->v36 = ra_lc->v36;
+   lc->v37 = ra_lc->v37;
+   lc->v38 = ra_lc->v38;
+   lc->v39 = ra_lc->v39;
+   lc->v40 = ra_lc->v40;
+   lc->v41 = ra_lc->v41;
+   lc->v42 = ra_lc->v42;
 
    return(1); /* data found and lc updated */
 }
