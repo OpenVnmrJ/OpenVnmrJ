@@ -184,7 +184,7 @@ void obswfgHSoff()
 void decwfgHSoff()
 {
    // this one changed substantially by just matching other cases.
-   // BDZ 8-15-23
+   // BDZ 1-9-24
 
    if (DECch == 1) HSgate(CH1WG,FALSE);
    if (DECch == 2) HSgate(CH2WG,FALSE);
@@ -212,10 +212,8 @@ void initobswfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 { 
-   // this was moved up out of if statement so that it matched decoupler
-   // behavior. is that correct? BDZ 8-15-23
-   obspwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
+      obspwrf(lamplitude);
       obsprgon(lpattern,lstep,ldres);
       delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
       obsprgoff();
@@ -226,8 +224,8 @@ void initdecwfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 {        
-   decpwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
+      decpwrf(lamplitude);
       decprgon(lpattern,lstep,ldres);
       delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
       decprgoff();
@@ -238,8 +236,8 @@ void initdec2wfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 {         
-   dec2pwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
+      dec2pwrf(lamplitude);
       dec2prgon(lpattern,lstep,ldres);
       delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
       dec2prgoff();
@@ -250,8 +248,8 @@ void initdec3wfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 {        
-   dec3pwrf(lamplitude); 
    if (PWRF_DELAY > 0.0) {
+      dec3pwrf(lamplitude); 
       dec3prgon(lpattern,lstep,ldres);
       delay(WFG_START_DELAY - WFG_OFFSET_DELAY);
       dec3prgoff();
@@ -262,10 +260,8 @@ void setobswfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 {  
-   // this was moved up out of if statement so that it matched decoupler
-   // behavior. is that correct? BDZ 8-15-23
-   obspwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
+      obspwrf(lamplitude);
       obsprgon(lpattern, lstep, ldres); 
       obswfgHSoff();
    }
@@ -275,8 +271,8 @@ void setdecwfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 {      
-   decpwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
+      decpwrf(lamplitude);
       decprgon(lpattern, lstep, ldres);
       decwfgHSoff();
    } 
@@ -286,8 +282,8 @@ void setdec2wfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 {        
-   dec2pwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
+      dec2pwrf(lamplitude);
       dec2prgon(lpattern, lstep, ldres); 
       dec2wfgHSoff();
    }
@@ -297,8 +293,8 @@ void setdec3wfg(lpattern,lstep,ldres,lamplitude)
 double lstep,ldres,lamplitude;
 char lpattern[MAXSTR];
 {        
-   dec3pwrf(lamplitude);
    if (PWRF_DELAY > 0.0) {
+      dec3pwrf(lamplitude);
       dec3prgon(lpattern, lstep, ldres);
       dec3wfgHSoff();
    }
@@ -327,7 +323,8 @@ void cleardec2wfg()
 
 void cleardec3wfg()
 {
-   // this one changed to match the other decoupler clear methods
+   // BDZ added this if test on 1-9-24 to match similar methods
+   
    if (PWRF_DELAY > 0.0) {
       dec3prgoff();
    }
