@@ -970,7 +970,7 @@ int Controller::closeWaveformFile(int option)
 
 long long Controller::calcTicks(double xx)
 {
-  return( (long long) ((xx * 80000000.0L)+0.49999) );
+  return( (long long) ((xx * 80000000.0L)+0.499999999999999999999999) );
 }
 
 

@@ -34,7 +34,7 @@
 #include <fcntl.h>
 #include "data.h" 
 
-#define NRND(x)	((x) >= 0 ? ((int)((x)+0.5)) : (-(int)(-(x)+0.49999999999)))
+#define NRND(x)	((x) >= 0 ? ((int)((x)+0.5)) : (-(int)(-(x)+0.499999999999999999999999)))
 
 struct datafilehead main_header1, main_header2;
 
