@@ -13,6 +13,20 @@
 # check for the packages required for installation of OpenVnmrJ
 status=0
 
+setDistMajor() {
+   distmajor=16
+   if [[ -f /etc/lsb-release ]]; then
+      . /etc/lsb-release
+      distmajor=${DISTRIB_RELEASE:0:2}
+   elif [[ -f /etc/os-release ]]; then
+      . /etc/os-release
+      distmajor=${VERSION_ID:0:2}
+   elif [[ ! -z $(type -t hostnamectl) ]]; then
+      ver=$(hostnamectl | grep "Operating" | cut -d " " -f 4)
+      distmajor=${ver:0:2}
+   fi
+}
+
 #
 # rpm (RedHat and CentOS) vs dpkg (Debian)
 #
@@ -56,8 +70,7 @@ if [ ! -x /usr/bin/dpkg ]; then
 
 else
    echo "Checking for Ubuntu / Debian packages required by OpenVnmrJ"
-   . /etc/lsb-release
-   distmajor=${DISTRIB_RELEASE:0:2}
+   setDistMajor
    packagecommonlist='tcsh make gcc gfortran expect openssh-server mutt sharutils sendmail-cf gnome-power-manager kdiff3 ghostscript imagemagick xterm'
    if [ $distmajor -ge 22 ] ; then
      packageXlist='default-jre bc libmotif-dev'

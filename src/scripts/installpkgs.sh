@@ -57,6 +57,20 @@ exclude=turbovnc-*.*.9[0-9]-*
 EOF
 }
 
+setDistMajor() {
+   distmajor=16
+   if [[ -f /etc/lsb-release ]]; then
+      . /etc/lsb-release
+      distmajor=${DISTRIB_RELEASE:0:2}
+   elif [[ -f /etc/os-release ]]; then
+      . /etc/os-release
+      distmajor=${VERSION_ID:0:2}
+   elif [[ ! -z $(type -t hostnamectl) ]]; then
+      ver=$(hostnamectl | grep "Operating" | cut -d " " -f 4)
+      distmajor=${ver:0:2}
+   fi
+}
+
 if [ -x /usr/bin/dpkg ]; then
    if [[ -f /etc/apt/sources.ovj ]]; then
      ovjRepo=1
@@ -638,8 +652,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   fi
   echo " "
 else
-  . /etc/lsb-release
-  distmajor=${DISTRIB_RELEASE:0:2}
+  setDistMajor
   if [ $distmajor -lt 18 ] ; then
     echo "Only Ubuntu 18 or newer is supported"
     echo " "

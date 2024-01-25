@@ -34,10 +34,13 @@ usage:
 
 options:
     -h|--help                 Display this help information
+    -c|--cloneonly            Only clone the repositories
 
 EOF
     exit 1
 }
+
+cloneOnly=0
 
 if [[ $(uname -s) != "Linux" ]]; then
     echo "$SCRIPT can only be used on Linux systems"
@@ -53,6 +56,10 @@ do
       ovj_usage
   elif [[ "x$arg" = "x--help" ]]; then
       ovj_usage
+  elif [[ "x$arg" = "x-c" ]]; then
+      cloneOnly=1
+  elif [[ "x$arg" = "x--cloneonly" ]]; then
+      cloneOnly=1
   else
       echo "unrecognized argument: $arg"
       ovj_usage
@@ -75,6 +82,25 @@ else
 fi
 
 runToolChain=0
+
+if [[ $HOME = "/root" ]]; then
+   echo "$0 cannot be executed as root"
+   echo "rerun as OpenVnmrJ user (e.g., vnmr1)"
+   exit 1
+fi
+
+# if git does not exist
+if [[ -z $(type -t git) ]] ; then
+   echo "git command not installed but is required"
+   if [[ -x /usr/bin/dpkg ]]; then
+      echo "If requested, enter the admin (sudo) password"
+      sudo apt update
+      sudo apt install -y git
+   else
+      echo "Please enter this system's root user password"
+      (su root -c "yum -y install git";)
+   fi
+fi
 
 if [[ ! -d $HOME/ovjbuild ]]; then
     mkdir $HOME/ovjbuild
@@ -108,6 +134,12 @@ else
     rm -rf src
     git checkout src
     cd ..
+fi
+
+if [[ $cloneOnly -eq 1 ]]; then
+    echo "Finished cloning repositories"
+    echo "Exiting"
+    exit 1
 fi
 
 cd bin
