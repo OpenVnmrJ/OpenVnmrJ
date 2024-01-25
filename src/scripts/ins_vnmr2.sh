@@ -52,6 +52,20 @@ logmsg() {
       # echo $1 >> $logfile 2>&1
 }
 
+setDistMajor() {
+   distmajor=16
+   if [[ -f /etc/lsb-release ]]; then
+      . /etc/lsb-release
+      distmajor=${DISTRIB_RELEASE:0:2}
+   elif [[ -f /etc/os-release ]]; then
+      . /etc/os-release
+      distmajor=${VERSION_ID:0:2}
+   elif [[ ! -z $(type -t hostnamectl) ]]; then
+      ver=$(hostnamectl | grep "Operating" | cut -d " " -f 4)
+      distmajor=${ver:0:2}
+   fi
+}
+
 #-----------------------------------------------
 update_user_group() {
    # Just make the group. groupadd will fail if it
@@ -432,8 +446,7 @@ case x$os_version in
             lflvr="suse"
         elif [  -r /etc/debian_version ]
         then
-            . /etc/lsb-release
-            distmajor=${DISTRIB_RELEASE:0:2}
+            setDistMajor
             lflvr="debian"
                  # Ubuntu has awk
                  NAWK="awk"
