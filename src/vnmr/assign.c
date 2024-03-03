@@ -543,6 +543,7 @@ void setmaxminstep(varInfo *v, double *value, char *name )
   else if (stepv != 0.0)
   {
     double minval;
+    double sgn = 1.0;
     /*  This section needs to handle the following cases:
         Case 1:
         setlimit('val',1,-1,2) val=0 => val=1 and val=-1 => val=-1
@@ -570,11 +571,14 @@ void setmaxminstep(varInfo *v, double *value, char *name )
        minval = 0.0;      /* Case 4 */
     round = stepv / 2.0;
     if ( *value < 0.0)
-       temp = ( (*value-minval) - round) / stepv;
-    else
-       temp = ( (*value-minval) + round) / stepv;
-    if (fabs(temp) < MAXINT)
+    {
+       sgn = -1.0;
+       *value = - *value;
+    }
+    temp = ( (*value-minval) + round) / stepv;
+    if (temp < MAXINT)
       *value = stepv * (double) ((int) temp) + minval;
+    *value *= sgn;
     if (*value > maxv) *value -= stepv;
     else if (*value < minv) *value += stepv;
     if ( fabs(*value)  < round )  /* handle Case 2 */
