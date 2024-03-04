@@ -519,6 +519,7 @@ void _pboxpulse(PBOXPULSE shp, codeint phase)
          dec2phase(phase);
          delay(3.0e-6);
          dec2unblank();
+         delay(shp.t1); // BDZ found this one was missing on 2-8-24
          delay(2.0e-6);
          dec2shaped_pulse(shp.pattern,shp.pw,phase,0.0,0.0);
          delay(shp.t2);
