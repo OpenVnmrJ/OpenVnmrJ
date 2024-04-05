@@ -629,7 +629,7 @@ if (platform=="darwin"):
     ccflags_32_64 = compileFlag +' -Os -Wall -Wno-format-security ' + compileOption
     linkflags_32_64 = compileFlag +' -O '
 else:
-    ccflags_32_64 = compileFlag +' -O2 -Wall -Wno-format-security ' + compileOption
+    ccflags_32_64 = compileFlag +' -Wall ' + compileOption
     linkflags_32_64 = compileFlag +' -O -rdynamic'
 
 # build environment
@@ -661,8 +661,11 @@ if not os.path.exists("/etc/redhat-release"):
 else:
 # This is for CentOS 7
     if os.path.exists("/usr/bin/systemctl"):
-        vnmrBgCppEnv.Append(CCFLAGS = ' -std=c++11 ')
+        vnmrBgCppEnv.Append(CCFLAGS = ' -O2 -Wno-format-security -std=c++11 ')
         vnmrBgCppEnv.Append(CPPDEFINES = 'boost=std')
+
+if (platform!="darwin"):
+    vnmrBgCEnv.Append(CCFLAGS = ' -O2 -Wno-format-security ')
 
 if (opensource=="true"):
     if (gplsource=="true"):
