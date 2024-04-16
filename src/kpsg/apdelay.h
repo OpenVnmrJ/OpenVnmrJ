@@ -88,7 +88,7 @@
 #define OBLIQUEGRADIENT_EVENT	29
 #define PWRF_EVENT		30
 
-extern double eventovrhead();
+extern double eventovrhead(int event_type);
 
 
 #define POWER_DELAY  		( eventovrhead(POWER_EVENT) )
