@@ -53,6 +53,29 @@ else
   $prog='pstopdf'
 endif
 getbinpath($prog,'bin'):$ps2pdfex,$ps2pdfwr
+if ($ps2pdfex = 0) then
+  if ($uname = 'Darwin') then
+    $prog='ps2pdf'
+    getbinpath($prog,'bin'):$ps2pdfex,$ps2pdfwr
+    if ($ps2pdfex = 0) then
+      // check two places where brew may put ps2pdf
+      $ps2pdfwr='/usr/local/bin/'+$prog
+      exists($ps2pdfwr,'file'):$ps2pdfex
+      if ($ps2pdfex = 0) then
+        $ps2pdfwr='/opt/homebrew/bin/'+$prog
+        exists($ps2pdfwr,'file'):$ps2pdfex
+      endif
+    endif
+    if ($ps2pdfex = 0) then
+      write('error','Postscript to PDF conversion tool not installed. From a terminal, run ovjGetps2pdf')
+      return
+    endif
+    $ps2pdfex=2
+  else
+    write('error','Postscript to PDF conversion tool ( %s ) not installed.',$prog)
+    return
+  endif
+endif
 
 "************************************************************"
 if ($1='setup') then
@@ -197,7 +220,11 @@ if ($1='review') then
   if ($uname <> 'Darwin') then
     shell('('+$ps2pdfwr+' '+$tmpplot+'2 '+$tmpplot+'.pdf)'):$dum
   else
-    shell('('+$ps2pdfwr+' '+$tmpplot+'2  -o '+$tmpplot+'.pdf)'):$dum
+    if ($ps2pdfex = 2) then
+      shell('('+$ps2pdfwr+' '+$tmpplot+'2 '+$tmpplot+'.pdf)'):$dum
+    else
+      shell('('+$ps2pdfwr+' '+$tmpplot+'2  -o '+$tmpplot+'.pdf)'):$dum
+    endif
   endif
   exists($tmpplot+'.pdf','file'):$isok
   if ($isok<>0) then
