@@ -84,7 +84,7 @@ endif
 set vjclasspath="$vnmrsystem/java/managedb.jar"
 set sysdir="$vnmrsystem"
 
-$javacmd -mx256m -classpath $vjclasspath -Dsysdir="$sysdir" -Duserdir="$tmpdir" -Ddbhost=$dbhost -Ddbport=$dbport -Ddbnet_server=$dbnet_server  -Djava.compiler=sunwjit  -Dsfudirwindows="$sfudir" -Dsfudirinterix="$sfudir_interix" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Ddebug="$debugargs" -Duser.name=$id vnmr.ui.shuf.FillDBManager $argv[*]
+$javacmd -mx256m -classpath $vjclasspath -Dsysdir="$sysdir" -Duserdir="$tmpdir" -Ddbhost=$dbhost -Ddbport=$dbport -Ddbnet_server=$dbnet_server  -Dsfudirwindows="$sfudir" -Dsfudirinterix="$sfudir_interix" -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Ddebug="$debugargs" -Duser.name=$id vnmr.ui.shuf.FillDBManager $argv[*]
 
 if ( "$tmpdir" == "$vnmrsystem/tmp" ) then
    chmod 666 "$tmpdir"/ManagedbMsgLog

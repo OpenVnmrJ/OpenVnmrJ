@@ -702,7 +702,12 @@ else
   else
       dpkg --add-architecture i386
       if [[ $ddrAcq -eq 1 ]]; then
-          acqInstall="rarpd rsh-client rsh-server tftp-hpa tftpd-hpa"
+          acqInstall="rarpd tftp-hpa tftpd-hpa"
+          if [ $distmajor -lt 24 ] ; then
+              acqInstall="$acqInstall rsh-client rsh-server"
+          else
+              acqInstall="$acqInstall rsh-redone-client rsh-redone-server"
+          fi
       fi
       if [[ $miAcq -eq 1 ]]; then
           acqInstall="$acqInstall tftp-hpa tftpd-hpa"
