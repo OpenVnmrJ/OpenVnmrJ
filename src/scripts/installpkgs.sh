@@ -57,6 +57,20 @@ exclude=turbovnc-*.*.9[0-9]-*
 EOF
 }
 
+setDistMajor() {
+   distmajor=16
+   if [[ -f /etc/lsb-release ]]; then
+      . /etc/lsb-release
+      distmajor=${DISTRIB_RELEASE:0:2}
+   elif [[ -f /etc/os-release ]]; then
+      . /etc/os-release
+      distmajor=${VERSION_ID:0:2}
+   elif [[ ! -z $(type -t hostnamectl) ]]; then
+      ver=$(hostnamectl | grep "Operating" | cut -d " " -f 4)
+      distmajor=${ver:0:2}
+   fi
+}
+
 if [ -x /usr/bin/dpkg ]; then
    if [[ -f /etc/apt/sources.ovj ]]; then
      ovjRepo=1
@@ -638,8 +652,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   fi
   echo " "
 else
-  . /etc/lsb-release
-  distmajor=${DISTRIB_RELEASE:0:2}
+  setDistMajor
   if [ $distmajor -lt 18 ] ; then
     echo "Only Ubuntu 18 or newer is supported"
     echo " "
@@ -689,7 +702,12 @@ else
   else
       dpkg --add-architecture i386
       if [[ $ddrAcq -eq 1 ]]; then
-          acqInstall="rarpd rsh-client rsh-server tftp-hpa tftpd-hpa"
+          acqInstall="rarpd tftp-hpa tftpd-hpa"
+          if [ $distmajor -lt 24 ] ; then
+              acqInstall="$acqInstall rsh-client rsh-server"
+          else
+              acqInstall="$acqInstall rsh-redone-client rsh-redone-server"
+          fi
       fi
       if [[ $miAcq -eq 1 ]]; then
           acqInstall="$acqInstall tftp-hpa tftpd-hpa"
