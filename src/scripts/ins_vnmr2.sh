@@ -487,6 +487,19 @@ echo "NMR Destination directory= $dest_dir"
 echo "NMR host='$(/bin/hostname)' domain='$domainname'"
 
 source_dir=$(dirname "$src_code_dir")
+if [ x$lflvr != "xdebian" ]
+then
+   (su $nmr_adm -fc "ls $source_dir > /dev/null 2>&1 ")
+else
+   (sudo -u $nmr_adm ls $source_dir > /dev/null 2>&1)
+fi
+if [ $? -ne 0 ]
+then
+   echo ""
+   echo "$nmr_adm does not have permission to access $source_dir"
+   echo "Updating permissions with: chmod 775 $(dirname $source_dir)"
+   chmod 775 $(dirname $source_dir)
+fi
 acq_pid=-1
  
 chown_cmd="chown "
