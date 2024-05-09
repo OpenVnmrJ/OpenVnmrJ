@@ -208,9 +208,7 @@ void dec3wfgHSoff()
    if (DEC3ch == 4) HSgate(CH4WG,FALSE);
 }
 
-void initobswfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
+void initobswfg(char lpattern[], double lstep, double ldres, double lamplitude)
 { 
    if (PWRF_DELAY > 0.0) {
       obspwrf(lamplitude);
@@ -220,9 +218,7 @@ char lpattern[MAXSTR];
    }
 }
 
-void initdecwfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
+void initdecwfg(char lpattern[], double lstep, double ldres, double lamplitude)
 {        
    if (PWRF_DELAY > 0.0) {
       decpwrf(lamplitude);
@@ -232,9 +228,7 @@ char lpattern[MAXSTR];
    }
 }
 
-void initdec2wfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
+void initdec2wfg(char lpattern[], double lstep, double ldres, double lamplitude)
 {         
    if (PWRF_DELAY > 0.0) {
       dec2pwrf(lamplitude);
@@ -244,9 +238,7 @@ char lpattern[MAXSTR];
    }
 }
 
-void initdec3wfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
+void initdec3wfg(char lpattern[], double lstep, double ldres, double lamplitude)
 {        
    if (PWRF_DELAY > 0.0) {
       dec3pwrf(lamplitude); 
@@ -256,9 +248,7 @@ char lpattern[MAXSTR];
    }
 }
 
-void setobswfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
+void setobswfg(char lpattern[], double lstep, double ldres, double lamplitude)
 {  
    if (PWRF_DELAY > 0.0) {
       obspwrf(lamplitude);
@@ -267,9 +257,7 @@ char lpattern[MAXSTR];
    }
 }
 
-void setdecwfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
+void setdecwfg(char lpattern[], double lstep, double ldres, double lamplitude)
 {      
    if (PWRF_DELAY > 0.0) {
       decpwrf(lamplitude);
@@ -278,9 +266,7 @@ char lpattern[MAXSTR];
    } 
 }
 
-void setdec2wfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
+void setdec2wfg(char lpattern[], double lstep, double ldres, double lamplitude)
 {        
    if (PWRF_DELAY > 0.0) {
       dec2pwrf(lamplitude);
@@ -289,9 +275,7 @@ char lpattern[MAXSTR];
    }
 }
 
-void setdec3wfg(lpattern,lstep,ldres,lamplitude)
-double lstep,ldres,lamplitude;
-char lpattern[MAXSTR];
+void setdec3wfg(char lpattern[], double lstep, double ldres, double lamplitude)
 {        
    if (PWRF_DELAY > 0.0) {
       dec3pwrf(lamplitude);
@@ -330,10 +314,8 @@ void cleardec3wfg()
    }
 }
 
-void obswfgon(lpattern,lstep,ldres,lpreset,lpredelay)
-char lpattern[MAXSTR]; 
-int lpreset;
-double lstep,ldres,lpredelay;
+void obswfgon(char lpattern[], int lstep,
+              double ldres, double lpreset, double lpredelay)
 {  
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
@@ -348,10 +330,8 @@ double lstep,ldres,lpredelay;
       obsprgon(lpattern,lstep,ldres);
 }
 
-void decwfgon(lpattern,lstep,ldres,lpreset,lpredelay)
-char lpattern[MAXSTR];
-int lpreset;
-double lstep,ldres,lpredelay;
+void decwfgon(char lpattern[], int lstep,
+              double ldres, double lpreset, double lpredelay)
 {
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
@@ -365,10 +345,8 @@ double lstep,ldres,lpredelay;
    else decprgon(lpattern,lstep,ldres);
 }
 
-void dec2wfgon(lpattern,lstep,ldres,lpreset,lpredelay)
-char lpattern[MAXSTR];
-int lpreset;
-double lstep,ldres,lpredelay;
+void dec2wfgon(char lpattern[], int lstep,
+              double ldres, double lpreset, double lpredelay)
 {   
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
@@ -383,10 +361,8 @@ double lstep,ldres,lpredelay;
       dec2prgon(lpattern,lstep,ldres);
 }
 
-void dec3wfgon(lpattern,lstep,ldres,lpreset,lpredelay)
-char lpattern[MAXSTR];
-int lpreset;
-double lstep,ldres,lpredelay;
+void dec3wfgon(char lpattern[], int lstep,
+              double ldres, double lpreset, double lpredelay)
 {   
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
@@ -401,8 +377,7 @@ double lstep,ldres,lpredelay;
       dec3prgon(lpattern,lstep,ldres); 
 }
 
-void obswfgoff(lpreset)
-int lpreset;
+void obswfgoff(int lpreset)
 {
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
@@ -414,8 +389,7 @@ int lpreset;
       obsprgoff(); 
 }
 
-void decwfgoff(lpreset)
-int lpreset;
+void decwfgoff(int lpreset)
 {   
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
@@ -427,8 +401,7 @@ int lpreset;
       decprgoff(); 
 }
 
-void dec2wfgoff(lpreset)
-int lpreset;
+void dec2wfgoff(int lpreset)
 {   
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
@@ -440,8 +413,7 @@ int lpreset;
       dec2prgoff(); 
 }
 
-void dec3wfgoff(lpreset)
-int lpreset;
+void dec3wfgoff(int lpreset)
 {   
    if (PWRF_DELAY > 0.0) {
       if (lpreset == 0)
