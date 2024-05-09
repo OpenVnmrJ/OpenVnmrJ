@@ -41,15 +41,13 @@ diffEnv = Environment(CCFLAGS    = '-O -Wall -m64',
                       LINKFLAGS  = '-m64',
                       CPPPATH    = [cwd])
 
-if ('interix' in platform):    # Interix
-   interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
-   diffEnv.Replace( CC=interixgcc )
-   diffEnv.Replace(  LINKFLAGS='-O -m64' )
-   diffEnv.AppendUnique(  CPPDEFINES=[ '_ALL_SOURCE','__INTERIX','LINUX']  )
-   diffEnv.Append(  LIBPATH=[ os.path.join(os.sep, 'usr','lib','x86'), os.path.join(os.sep, 'usr','lib')
- ]  )
-   #print("CC is:", diffEnv['CC'])
-   #print("C++ is:", diffEnv['CXX'])
+if ('darwin' in platform):
+    diffEnv.Replace(CC = 'clang')
+    diffEnv.Replace(CCFLAGS = '-Os -Wall -arch x86_64 -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       diffEnv.Append(CCFLAGS = os.getenv('osxflags'))
+    diffEnv.Replace(LINKFLAGS = ' -arch x86_64')
 
 
 buildMethods.makeSymLinks(diffEnv, diffparamsTarget, cwd, vnmrDiffParamsPath, vnmrDiffParamsFileList)
