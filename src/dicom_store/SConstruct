@@ -29,6 +29,8 @@ dicomStoreTargetList = ['byte_swap',
 # we need to specify an absolute path so this SConstruct file
 # can be called from any other SConstruct file
 cwd = os.getcwd()
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
 
 
 # source files
@@ -36,6 +38,14 @@ cwd = os.getcwd()
 dicom_storeEnv = Environment(CCFLAGS   = '-m64 -O -DHAVE_CONFIG_H -D_REENTRANT -DNDEBUG',
                              LINKFLAGS = '-m64 ',
                              CPPPATH   = [cwd])
+
+if ('darwin' in platform):
+    dicom_storeEnv.Replace(CC = 'clang')
+    dicom_storeEnv.Replace(CCFLAGS = '-Os -arch x86_64 -DHAVE_CONFIG_H -D_REENTRANT -DNDEBUG -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       dicom_storeEnv.Append(CCFLAGS = os.getenv('osxflags'))
+    dicom_storeEnv.Replace(LINKFLAGS = '-Os -arch x86_64')
 
 # actual builds
 dicom_store_builds = []
@@ -68,8 +78,6 @@ fileList = [
             'storescu',
            ]
 
-# MAC -> darwin, Linux -> linux2
-platform = sys.platform
 if (platform!="darwin"):
    srcDir = os.path.join(ovjtools,'dicom3tools','dcmtk-3.5.4')
    for i in fileList:
