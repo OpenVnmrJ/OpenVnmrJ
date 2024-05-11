@@ -71,12 +71,12 @@ env = Environment(CCFLAGS    = '-fPIC -c -Wall -O -m32',
 if ('darwin' in platform):
     env.Replace(CC = 'clang')
     env.Append(CPPDEFINES = ['MACOS','NOASYNC'])
-    env.Replace(CCFLAGS = '-Os -arch x86_64 -fPIC -Wno-implicit-function-declaration ')
+    env.Replace(CCFLAGS = '-Os -fPIC -Wno-implicit-function-declaration ')
     osxflags = os.getenv('osxflags')
     if osxflags:
        env.Append(CCFLAGS = os.getenv('osxflags'))
     env.Replace(CPPFLAGS = '-Wall -Wno-format-security -Wno-return-type')
-    env.Replace(LINKFLAGS = ' -arch x86_64')
+    env.Replace(LINKFLAGS = '')
 
 
 buildMethods.makeSymLinks(env, acqcommStaticTarget, cwd, expprocPath, expprocFileList)
@@ -98,7 +98,7 @@ if ('darwin' not in platform) and ('interix' not in platform):
 
 if (platform=="darwin"):
     ncommSharedPath = os.path.join(os.sep, 'vnmr', 'lib', ncommSharedTarget)
-    env.Replace(LINKFLAGS = ['-arch','x86_64','-install_name',ncommSharedPath,'-undefined','dynamic_lookup'])
+    env.Replace(LINKFLAGS = ['-install_name',ncommSharedPath,'-undefined','dynamic_lookup'])
     ncommShared = env.SharedLibrary(ncommSharedTarget, [libncommList])
     
 acqcommStatic = env.StaticLibrary(acqcommStaticTarget, [libacqcommList])
@@ -107,7 +107,7 @@ if ('darwin' not in platform) and ('interix' not in platform):
 
 if (platform=="darwin"):
     acqcommSharedPath = os.path.join(os.sep, 'vnmr', 'lib', acqcommSharedTarget)
-    env.Replace(LINKFLAGS = ['-arch','x86_64','-install_name',acqcommSharedPath,'-undefined','dynamic_lookup'])
+    env.Replace(LINKFLAGS = ['-install_name',acqcommSharedPath,'-undefined','dynamic_lookup'])
     acqcommShared = env.SharedLibrary(acqcommSharedTarget, [libacqcommList])
 
 # define with absolute path where built files will be copied
