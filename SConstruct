@@ -103,6 +103,7 @@ buildList = """
 #                        kpsg  done by kpsglib
 
 buildList = """
+                         vnmrbg
                          3D
                          autotest
                          backproj
@@ -130,7 +131,6 @@ buildList = """
                          stars
                          tcl
                          veripulse
-                         vnmrbg
                          """.split();
 
 acqBuildList = """
