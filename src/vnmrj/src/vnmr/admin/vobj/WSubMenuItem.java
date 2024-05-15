@@ -19,7 +19,7 @@ import javax.swing.*;
 import vnmr.bo.*;
 import vnmr.util.*;
 import vnmr.ui.*;
-import vnmr.admin.*;
+// import vnmr.admin.*;
 import vnmr.admin.ui.*;
 import vnmr.admin.util.*;
 

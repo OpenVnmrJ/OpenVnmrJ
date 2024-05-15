@@ -20,7 +20,7 @@ import java.awt.dnd.*;
 import java.awt.datatransfer.*;
 import javax.swing.border.*;
 
-import vnmr.admin.*;
+// import vnmr.admin.*;
 import vnmr.ui.*;
 import vnmr.util.*;
 import vnmr.part11.*;

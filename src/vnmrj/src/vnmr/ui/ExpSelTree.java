@@ -1239,7 +1239,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
     public class SearchListener implements ActionListener {
 
         public void actionPerformed(ActionEvent ae) {
-            Enumeration <DefaultMutableTreeNode>enumer;
+            Enumeration <TreeNode>enumer;
             String cmd = ae.getActionCommand();
             String searchString = searchText.getText();
             TreePath treePath;
@@ -1274,7 +1274,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
             // the nodes so I can then go in either direction.
             enumer = rootNode.preorderEnumeration();            
             while(enumer.hasMoreElements()) {
-                DefaultMutableTreeNode node = enumer.nextElement();
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumer.nextElement();
                 nodeList.add(node); 
             }
             
@@ -1360,11 +1360,11 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
     
     // Find a node with this label and this parent's label
     public DefaultMutableTreeNode findNode(String label, String parent) {
-        Enumeration <DefaultMutableTreeNode>enumer;
+        Enumeration <TreeNode>enumer;
  
         enumer = rootNode.preorderEnumeration();            
         while(enumer.hasMoreElements()) {
-            DefaultMutableTreeNode node = enumer.nextElement();
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumer.nextElement();
             String thisLabel = (String)node.getUserObject();
             if(label.equals(thisLabel)) {
                 DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) node.getParent();

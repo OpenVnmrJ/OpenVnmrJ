@@ -15,7 +15,7 @@ import  vnmr.util.*;
 
 import java.util.*;
 import java.io.*;
-import java.awt.peer.*;
+// import java.awt.peer.*;
 import java.awt.image.*;
 import java.awt.event.*;
 import java.lang.reflect.*;
