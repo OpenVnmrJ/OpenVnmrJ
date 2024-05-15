@@ -278,7 +278,9 @@ public class ExpPanel extends JPanel
         // makeTitleBar();
         buttonList = new Vector<JButton>();
         resizeBut = new VJButton(Util.getImageIcon("resizeWin.gif"));
+/*
         tearBut = new VJButton(Util.getImageIcon("twinWin.gif"));
+ */
 
         busyBut = new JButton(Util.getImageIcon("busy.gif"));
         busyBut.setOpaque(false);
@@ -348,11 +350,13 @@ public class ExpPanel extends JPanel
             }
         });
 
+/*
         tearBut.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent evt) {
                 createTearFrame();
             }
         });
+ */
 
         /*dpsBut.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent evt) {
@@ -1024,6 +1028,7 @@ public class ExpPanel extends JPanel
         vcanvas.setOverlay(overlay, bottom, top, topObj);
     }
 
+/*
     private void  createTearFrame() {
         if (tearCanvas == null) {
             tearCanvas = new VnmrTearCanvas(vcanvas, this);
@@ -1037,6 +1042,7 @@ public class ExpPanel extends JPanel
         else
             tearBut.setVisible(false);
     }
+ */
 
     private void  showDpsFrame() {
         if (dpsPanel == null) {
@@ -7796,11 +7802,13 @@ public class ExpPanel extends JPanel
         bExiting = true;
         if (vpLayoutInfo != null)
            vpLayoutInfo.saveLayoutInfo();
+/*
         if (tearCanvas != null) {
            tearCanvas.setVisible(false);
            tearCanvas.dispose();
            tearCanvas = null;
         }
+ */
         sendToVnmr("jFunc("+VCLOSE+","+CLOSEALL+")\n");
         sendToVnmr("vnmrexit\n");
         if (vnmrProcess != null) {
@@ -7862,7 +7870,9 @@ public class ExpPanel extends JPanel
         csiButPanel = null;
         titleBar = null;
         resizeBut = null;
+/*
         tearBut = null;
+ */
         busyBut = null;
         dpsBut = null;
         dirBut = null;
@@ -7963,6 +7973,7 @@ public class ExpPanel extends JPanel
            buttonActiveCall(num);
     }
 
+/*
     public void tearOffOpen(boolean  open) {
         if (open) {
            if (bNative) {
@@ -7971,11 +7982,10 @@ public class ExpPanel extends JPanel
            }
            // tearBut.setVisible(false);
         }
-/*
         else
            tearBut.setVisible(true);
-*/
     }
+*/
 
     public void childMouseProc(MouseEvent ev, boolean release, boolean drag) {
         if (drag) {
@@ -9851,7 +9861,9 @@ public class ExpPanel extends JPanel
     private int vnmrHostPort = 0;
     private CanvasOutSocket outPort = null;
     private JButton resizeBut;
+/*
     private JButton tearBut;
+ */
     private JButton busyBut;
     private JButton dpsBut;
     private JButton dirBut;
@@ -9869,7 +9881,9 @@ public class ExpPanel extends JPanel
     private VnmrCanvas csiCanvas = null;
     private VnmrCanvas actCanvas = null;
     private VnmrCanvas aipCanvas = null;
+/*
     private VnmrTearCanvas tearCanvas;
+ */
     private VnmrProcess vnmrProcess;
     private StatusProcess statusProcess = null;
     private CanvasSocket vsocket;

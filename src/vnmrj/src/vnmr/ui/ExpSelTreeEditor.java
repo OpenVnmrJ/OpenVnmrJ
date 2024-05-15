@@ -298,10 +298,10 @@ public class ExpSelTreeEditor extends ModalDialog implements ActionListener
                 // Write the protocol lines.  Loop through all of the current Tree nodes
                 // and write a line for each protocol in the order given.  Start with
                 // rootNode.
-                Enumeration <DefaultMutableTreeNode> enumer = rootNode.preorderEnumeration();
+                Enumeration <TreeNode> enumer = rootNode.preorderEnumeration();
                 while(enumer.hasMoreElements()) {
                     String name="", label="", level0="", level1="", level2="";
-                    DefaultMutableTreeNode node = enumer.nextElement();
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumer.nextElement();
                     
                     // We only want the bottom level which can be found by
                     // checking if children are allowed
@@ -365,10 +365,10 @@ public class ExpSelTreeEditor extends ModalDialog implements ActionListener
             // If the user has created a new folder which is still empty, warn him
             // that it will be discarded.  Just find the first one.  If there are more than
             // one, he should get the message that he can't have empty folders.
-            Enumeration <DefaultMutableTreeNode> enumer = rootNode.preorderEnumeration();
+            Enumeration <TreeNode> enumer = rootNode.preorderEnumeration();
             while(enumer.hasMoreElements()) {
                 String name="", label="", level0="", level1="", level2="";
-                DefaultMutableTreeNode node = enumer.nextElement();
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumer.nextElement();
                 boolean giveWarning = false;
                 if(node.getAllowsChildren()) {
                     int count = node.getChildCount();
@@ -480,9 +480,9 @@ public class ExpSelTreeEditor extends ModalDialog implements ActionListener
     
     public boolean nodeContainsLabel(String label, DefaultMutableTreeNode node) {
         
-        Enumeration <DefaultMutableTreeNode> list = node.children();
+        Enumeration <TreeNode> list = node.children();
         while(list.hasMoreElements()) {
-            DefaultMutableTreeNode child = list.nextElement();
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) list.nextElement();
             String cLabel = (String)child.getUserObject();
             if(cLabel.equals(label)) {
                 Messages.postWarning(label + " is a duplicate and cannot be inserted here.");
@@ -760,11 +760,11 @@ public class ExpSelTreeEditor extends ModalDialog implements ActionListener
                             // just to make the node look like a folder.
                             // Go through nodes in toNode and see if any have
                             // UserObject == 3 spaces
-                            Enumeration <DefaultMutableTreeNode>enumer;
+                            Enumeration <TreeNode>enumer;
                             //                    enumer = node.preorderEnumeration();            
                             enumer = toParent.children();            
                             while(enumer.hasMoreElements()) {
-                                DefaultMutableTreeNode tnode = enumer.nextElement();
+                                DefaultMutableTreeNode tnode = (DefaultMutableTreeNode) enumer.nextElement();
                                 String userobj = (String)tnode.getUserObject();
                                 if(userobj.equals("   ")) {
                                     treeModel.removeNodeFromParent(tnode);
@@ -788,11 +788,11 @@ public class ExpSelTreeEditor extends ModalDialog implements ActionListener
                             // just to make the node look like a folder.
                             // Go through nodes in toNode and see if any have
                             // UserObject == 3 spaces
-                            Enumeration <DefaultMutableTreeNode>enumer;
+                            Enumeration <TreeNode>enumer;
                             //                    enumer = node.preorderEnumeration();            
                             enumer = toParent.children();            
                             while(enumer.hasMoreElements()) {
-                                DefaultMutableTreeNode tnode = enumer.nextElement();
+                                DefaultMutableTreeNode tnode = (DefaultMutableTreeNode) enumer.nextElement();
                                 String userobj = (String)tnode.getUserObject();
                                 if(userobj.equals("   ")) {
                                     treeModel.removeNodeFromParent(tnode);
@@ -1004,10 +1004,10 @@ public class ExpSelTreeEditor extends ModalDialog implements ActionListener
                                 // just to make the node look like a folder.
                                 // Go through nodes in toNode and see if any have
                                 // UserObject == 3 spaces
-                                Enumeration <DefaultMutableTreeNode>enumer;
+                                Enumeration <TreeNode>enumer;
                                 enumer = toNode.preorderEnumeration();            
                                 while(enumer.hasMoreElements()) {
-                                    DefaultMutableTreeNode node = enumer.nextElement();
+                                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumer.nextElement();
                                     String userobj = (String)node.getUserObject();
                                     if(userobj.equals("   ")) {
                                         treeModel.removeNodeFromParent(node);

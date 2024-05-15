@@ -20,7 +20,7 @@ import javax.swing.table.*;
 import vnmr.ui.*;
 import vnmr.bo.*;
 import vnmr.util.*;
-import vnmr.admin.*;
+// import vnmr.admin.*;
 import vnmr.templates.*;
 import vnmr.admin.util.*;
 import vnmr.admin.vobj.*;
