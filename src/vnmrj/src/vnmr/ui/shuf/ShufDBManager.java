@@ -14,6 +14,7 @@ import java.io.*;
 import java.util.*;
 import java.sql.*;
 
+import vnmr.bo.Record;
 import vnmr.bo.*;
 import vnmr.ui.*;
 import vnmr.util.*;
