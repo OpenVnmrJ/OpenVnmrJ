@@ -59,6 +59,11 @@ if [[ -z $(type -t brew) ]]; then
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
+if [ -f /opt/homebrew/bin/brew ]; then
+   eval "$(/opt/homebrew/bin/brew shellenv > /dev/null 2>&1)"
+elif [ -f /usr/local/bin/brew ]; then
+   eval "$(/usr/local/bin/brew shellenv > /dev/null 2>&1)"
+fi
 echo "Installing Postscript to PDF conversion tool"
 
 brew install ghostscript
