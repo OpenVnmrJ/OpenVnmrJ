@@ -700,7 +700,9 @@ else
   if [[ $b12Acq -eq 1 ]]; then
       acqInstall="libusb-dev"
   else
-      dpkg --add-architecture i386
+      if [[ $(uname -m) = "x86_64" ]]; then
+          dpkg --add-architecture i386
+      fi
       if [[ $ddrAcq -eq 1 ]]; then
           acqInstall="rarpd tftp-hpa tftpd-hpa"
           if [ $distmajor -lt 24 ] ; then
@@ -745,18 +747,24 @@ else
    # these are needed to build
     installList='gdm3
                  gnome-session
-                 gcc-multilib
-                 g++-multilib
                  libc6-dev
                  libglu1-mesa-dev
                  libgsl-dev'
+    if [[ $(uname -m) = "x86_64" ]]; then
+       installList="$installList gcc-multilib g++-multilib"
+    fi
     if [[ $distmajor -gt 20 ]]; then
-       installList="$installList default-jre lib32stdc++6"
+       installList="$installList default-jre"
+       if [[ $(uname -m) = "x86_64" ]]; then
+          installList="$installList lib32stdc++6"
+       fi
     else
        installList="$installList openjdk-8-jre lib32stdc++-8-dev"
     fi
     if [[ $b12Acq -ne 1 ]]; then
-       installList="$installList libcrypt1:i386"
+       if [[ $(uname -m) = "x86_64" ]]; then
+          installList="$installList libcrypt1:i386"
+       fi
     fi
     apt-get $repoArg -y install $installList &>> $logfile
   elif [ $distmajor -gt 16 ] ; then
@@ -823,6 +831,7 @@ else
              grep -v "^fonts-rit" |
              grep -v "^fonts-s" |
 	     grep -v "^fonts-t" | 
+             grep -v "^fonts-ubuntu-classic" |
              grep -v "^fonts-uk" |
 	     grep -v "^fonts-um" | 
              grep -v "^fonts-un" |
