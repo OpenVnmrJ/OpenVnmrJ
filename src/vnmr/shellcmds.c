@@ -900,7 +900,9 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        }
        while (k < strlen(argv[i]))
        {
-          if (argv[i][k] == ' ')
+          if ( (argv[i][k] == ' ') ||
+               (argv[i][k] == '(') ||
+               (argv[i][k] == ')') )
              cmdstr[j++] = '\\';
           cmdstr[j++] = argv[i][k];
           k++;
@@ -1148,9 +1150,10 @@ int Mv(int argc, char *argv[], int retc, char *retv[])
        strcpy(cmdstr,"/bin/mv");
        for (i=1; i<argc; i++)
        {
-	strncat(cmdstr," ",MAXSHSTRING - strlen(cmdstr) -1);
+	strncat(cmdstr," \"",MAXSHSTRING - strlen(cmdstr) -1);
 	len = MAXSHSTRING - strlen(cmdstr) -1;
-	strncat(cmdstr,check_spaces(argv[i],chkbuf,len),len);
+	strncat(cmdstr,argv[i],len);
+	strncat(cmdstr,"\"",MAXSHSTRING - strlen(cmdstr) -1);
        }
        TPRINT1("mv: command string \"%s\"\n",cmdstr);
        system_call(cmdstr);
@@ -1318,9 +1321,9 @@ int Rm(int argc, char *argv[], int retc, char *retv[])
        if ( ! access(argv[argnum],F_OK))
        {
           unlink(argv[argnum]);
-          if ( access(argv[argnum],F_OK))
-             RETURN;
        }
+       if ( access(argv[argnum],F_OK))
+          RETURN;
     }
     else if ( (argc == 3) &&
               ( !strcmp(argv[1],"-rf") || !strcmp(argv[1],"-r") || !strcmp(argv[1],"-R") ) )

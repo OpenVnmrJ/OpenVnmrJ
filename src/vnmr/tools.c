@@ -632,13 +632,15 @@ int verify_fname2(char *fnptr )
 		tchar = *(fnptr+iter);
 		if (tchar < 32 )
 		  return( -1 );
-      if (tchar != ' ')
-      {
+                if ((tchar != ' ') &&
+                    (tchar != '(') &&
+                    (tchar != ')'))
+                {
 		   jter = 0;
 		   while ((lchar = illegal_fchars[ jter++ ]) != '\0')
 		     if (lchar == tchar)
 		       return( -1 );
-      }
+                }
 	}
 	return( 0 );
 }
