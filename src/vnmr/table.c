@@ -716,7 +716,7 @@ static cmd_t vnmr_table[] = {
 	{"dosyfitv"   , dosyfit,	NO_REEXEC, 10},
 	{"dpcon"      , dpcon,	        NO_REEXEC, 1},
 	{"dpconn"     , dpcon,	        NO_REEXEC, 5},
-	{"dpf"        , dpf,	        NO_REEXEC, 7},
+	{"dpf"        , dpf,	        NO_REEXEC, 5},
 	{"dpir"       , dpir,	        NO_REEXEC, 10},
 	{"dpirN"      , dpir,	        NO_REEXEC, 5},
 	{"dps"        , dps,	        NO_REEXEC, 2},
