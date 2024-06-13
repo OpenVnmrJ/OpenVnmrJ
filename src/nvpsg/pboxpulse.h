@@ -809,6 +809,10 @@ void _pboxsim3pulse(PBOXPULSE shp1, PBOXPULSE shp2, PBOXPULSE shp3,
       printf("_pboxsim3pulse() Error: Two Channels the Same!\n");
       psg_abort(1);
    }
+
+   // BDZ NOTE 6-13-24: there are six three channel cases below but only
+   // one of them does a delay(rof1). Is that a bug? See below.
+
    if ((chnl1 == 1) && (chnl2 == 2) && (chnl3 == 3)) {
       obsblank();
       decblank();
@@ -833,7 +837,7 @@ void _pboxsim3pulse(PBOXPULSE shp1, PBOXPULSE shp2, PBOXPULSE shp3,
          dec2unblank();
       delay(shp1.t1);
       delay(2.0e-6);
-      delay(rof1);
+      delay(rof1); // BDZ NOTE: 6-13-24: only this one case does this delay. Bug? 
       if (NUMch > 2) {
          sim3shaped_pulse(shp1.pattern,shp2.pattern,shp3.pattern,shp1.pw,
                           shp2.pw,shp3.pw,phase1,phase2,phase3,0.0,0.0);
