@@ -10,8 +10,23 @@
  */
 /******************************************************************/
 /*  read_raw_data - Program to extract data, header, and status   */
-/*                  from FID file                                 */
+/*                  from file                                 */
 /*                                                                */
+/*                                                                */
+/*    read_raw_data <arg1> <arg2>                                 */
+/*                                                                */
+/*                  <arg1>  - dh (data header),                   */
+/*                            ds (data status),                   */     
+/*                            bh (block header),                  */
+/*                            bs (block status)                   */
+/*                            ch (hypercomplex header)            */
+/*                            cs (hpercomplex status)             */
+/*                            data (rawdata)                      */
+/*                            max (maximum of each fid)           */
+/*                  <arg2>  - input filename                      */
+/*                                                                */
+/*    If the compile option OUTPUT is defined, then the syntax    */
+/*    is as follows                                               */
 /*                                                                */
 /*    read_raw_data <arg1> <arg2> <arg3> arg<4>                   */
 /*                                                                */
@@ -46,6 +61,7 @@
 #include <stdio.h> 
 #include <math.h> 
 #include <stdlib.h>
+#include <arpa/inet.h>
 
 #define  MAXSTR  256
 #define  MAXARG  5
@@ -111,15 +127,15 @@ void show_header(struct HEADER header)
 {
      printf("\nHEADER \n");
      printf("===================================\n");
-     printf("Blocks in file:          %ld\n",header.nblocks);
-     printf("Traces per block:        %ld\n",header.ntraces);
-     printf("Elements per trace:      %ld\n",header.np);
-     printf("Bytes per element:       %ld\n",header.ebytes);
-     printf("Bytes per trace:         %ld\n",header.tbytes);
-     printf("Bytes per block:         %ld\n",header.bbytes);
-     printf("Software Version:        %i\n",header.vers_id);
-     printf("Status:                  %x[hex]\n",header.status);
-     printf("Block headers per block: %ld\n",header.nbheaders);
+     printf("Blocks in file:          %u\n",htonl(header.nblocks));
+     printf("Traces per block:        %u\n",htonl(header.ntraces));
+     printf("Elements per trace:      %u\n",htonl(header.np));
+     printf("Bytes per element:       %u\n",htonl(header.ebytes));
+     printf("Bytes per trace:         %u\n",htonl(header.tbytes));
+     printf("Bytes per block:         %u\n",htonl(header.bbytes));
+     printf("Software Version:        %i\n",htons(header.vers_id));
+     printf("Status:                  %x[hex]\n",htons(header.status));
+     printf("Block headers per block: %u\n",htonl(header.nbheaders));
      printf("===================================\n\n");
 }
 
@@ -131,21 +147,21 @@ void show_header_status (short status)
      printf("\nSTATUS - HEADER\n");
      printf("===================================\n");
      printf("Status bytes:     %x[hex]\n\n",status);
-     printf("Bit 0:  %x\tNo data    / Data\n",header.status & 0x01);   
-     printf("Bit 1:  %x\tFID        / Spectrum\n",header.status >> 1 & 0x01);
-     printf("Bit 2:  %x\t16-bit     / 32-bit integer (if Bit 3  =0 otherwise ignored)\n",(header.status >> 2) & 0x01 );
-     printf("Bit 3:  %x\tInteger    / Float\n",(header.status >> 3) & 0x01 );   
-     printf("Bit 4:  %x\tReal       / Complex\n",(header.status >> 4) & 0x01 );
-     printf("Bit 5:  %x\t -         / Hypercomplex\n",(header.status >> 5) & 0x01 );          
+     printf("Bit 0:  %x\tNo data    / Data\n",status & 0x01);   
+     printf("Bit 1:  %x\tFID        / Spectrum\n",status >> 1 & 0x01);
+     printf("Bit 2:  %x\t16-bit     / 32-bit integer (if Bit 3  =0 otherwise ignored)\n",(status >> 2) & 0x01 );
+     printf("Bit 3:  %x\tInteger    / Float\n",(status >> 3) & 0x01 );   
+     printf("Bit 4:  %x\tReal       / Complex\n",(status >> 4) & 0x01 );
+     printf("Bit 5:  %x\t -         / Hypercomplex\n",(status >> 5) & 0x01 );          
      printf("Bit 6:  - \tNot used\n");           
-     printf("Bit 7:  %x\tnot Acqpar / Acqpar\n",(header.status >> 6) & 0x01);     
-     printf("Bit 8:  %x\t1st FFT    / 2nd FFT\n",(header.status >> 7)  & 0x01);     
-     printf("Bit 9:  %x\tRegular    / Transposed\n",(header.status >> 8) & 0x01);     
+     printf("Bit 7:  %x\tnot Acqpar / Acqpar\n",(status >> 6) & 0x01);     
+     printf("Bit 8:  %x\t1st FFT    / 2nd FFT\n",(status >> 7)  & 0x01);     
+     printf("Bit 9:  %x\tRegular    / Transposed\n",(status >> 8) & 0x01);     
      printf("Bit 10: - \tNot used\n");                
-     printf("Bit 11: %x\t -         / np dimension active\n",(header.status >> 9) & 0x01);     
-     printf("Bit 12: %x\t -         / nf dimension active\n",(header.status >> 10) & 0x01);          	  
-     printf("Bit 13: %x\t -         / ni dimension active\n",(header.status >> 11) & 0x01);     
-     printf("Bit 14: %x\t -         / ni2 dimension active\n",(header.status >> 12) & 0x01);          
+     printf("Bit 11: %x\t -         / np dimension active\n",(status >> 9) & 0x01);     
+     printf("Bit 12: %x\t -         / nf dimension active\n",(status >> 10) & 0x01);          	  
+     printf("Bit 13: %x\t -         / ni dimension active\n",(status >> 11) & 0x01);     
+     printf("Bit 14: %x\t -         / ni2 dimension active\n",(status >> 12) & 0x01);          
      printf("Bit 15: - \tNot used\n");                
      printf("===================================\n");
 
@@ -158,15 +174,15 @@ void show_datablock_header(struct DATABLOCKHEAD dbheader, int counter)
 {
      printf("\nDATABLOCK HEADER #%i \n",counter);
      printf("===================================\n");
-     printf("Scaling factor:             %i\n",dbheader.scale);
-     printf("Status of data in block:    %x[hex]\n",dbheader.status);
-     printf("Block Index:                %i\n",dbheader.index);
-     printf("Mode of data in block:      %i\n",dbheader.mode);
-     printf("ct value of FID:            %ld\n",dbheader.ctcount);
-     printf("Left phase in phase file:   %f\n",dbheader.lpval);
-     printf("Right phase in phase file:  %f\n",dbheader.rpval);
-     printf("Left drift correction:      %f\n",dbheader.lvl);
-     printf("Tilt drift correction:      %f\n",dbheader.tlt);
+     printf("Scaling factor:             %i\n",htons(dbheader.scale));
+     printf("Status of data in block:    %x[hex]\n",htons(dbheader.status));
+     printf("Block Index:                %i\n",htons(dbheader.index));
+     printf("Mode of data in block:      %i\n",htons(dbheader.mode));
+     printf("ct value of FID:            %u\n",htonl(dbheader.ctcount));
+     printf("Left phase in phase file:   %f\n",(double) htonl(dbheader.lpval));
+     printf("Right phase in phase file:  %f\n",(double) htonl(dbheader.rpval));
+     printf("Left drift correction:      %f\n",(double) htonl(dbheader.lvl));
+     printf("Tilt drift correction:      %f\n",(double) htonl(dbheader.tlt));
      printf("===================================\n\n");
 }
 
@@ -178,19 +194,19 @@ void show_datablock_status (short status, int counter)
      printf("\nSTATUS - DATABLOCK HEADER #%i \n",counter);
      printf("===================================\n");
      printf("Status bytes:     %x[hex]\n\n",status);
-     printf("Bit 0:  %x\tNo data   / Data\n",dbheader.status & 0x1);   
-     printf("Bit 1:  %x\tFID       / Spectrum\n",(dbheader.status >> 1) & 0x01);
-     printf("Bit 2:  %i\t16-bit    / 32-bit integer (if Bit 3  =0 otherwise ignored)\n",(dbheader.status >> 2)  & 0x01);
-     printf("Bit 3:  %x\tInteger   / Float\n",(dbheader.status >> 3) & 0x01);   
-     printf("Bit 4:  %x\tReal      / Complex\n",(dbheader.status >> 4) & 0x01);
-     printf("Bit 5:  %x\t -        / Hypercomplex\n",(dbheader.status >> 5) & 0x01);          
+     printf("Bit 0:  %x\tNo data   / Data\n",status & 0x1);   
+     printf("Bit 1:  %x\tFID       / Spectrum\n",(status >> 1) & 0x01);
+     printf("Bit 2:  %i\t16-bit    / 32-bit integer (if Bit 3  =0 otherwise ignored)\n",(status >> 2)  & 0x01);
+     printf("Bit 3:  %x\tInteger   / Float\n",(status >> 3) & 0x01);   
+     printf("Bit 4:  %x\tReal      / Complex\n",(status >> 4) & 0x01);
+     printf("Bit 5:  %x\t -        / Hypercomplex\n",(status >> 5) & 0x01);          
      printf("Bit 6:  - \tNot used\n");           
-     printf("Bit 7:  %x\tmore blocks: absent / present\n",(dbheader.status >> 7) & 0x01);     
-     printf("Bit 8:  %x\tnp real   / np complex\n",(dbheader.status >> 8)& 0x010);     
-     printf("Bit 9:  %x\tnf real   / nf complex\n",(dbheader.status >> 9) & 0x01);     
+     printf("Bit 7:  %x\tmore blocks: absent / present\n",(status >> 7) & 0x01);     
+     printf("Bit 8:  %x\tnp real   / np complex\n",(status >> 8)& 0x010);     
+     printf("Bit 9:  %x\tnf real   / nf complex\n",(status >> 9) & 0x01);     
      printf("Bit 10: - \tNot used\n");                
-     printf("Bit 11: %x\tni real   / ni complex\n",(dbheader.status >> 11) & 0x01);     
-     printf("Bit 12: %x\tni2 real  / ni2 complex\n",(dbheader.status >> 12) & 0x01);          	  
+     printf("Bit 11: %x\tni real   / ni complex\n",(status >> 11) & 0x01);     
+     printf("Bit 12: %x\tni2 real  / ni2 complex\n",(status >> 12) & 0x01);          	  
      printf("Bit 13: - \tNot used\n");           
      printf("Bit 14: - \tNot used\n");           
      printf("Bit 15: - \tNot used\n");           
@@ -205,15 +221,15 @@ void show_complex_header(struct HYPERCOMPLEXHEADER hcompheader,short block_no)
 {
      printf("\nHYPERCOMPLEX DATABLOCK HEADER #%i \n",block_no);
      printf("===================================\n");
-     printf("Spare 1 (short):            %i\n",hcompheader.s_spare1);
-     printf("Status:                :    %x[hex]\n",hcompheader.status);
-     printf("Spare 2 (short):            %i\n",hcompheader.s_spare2);
-     printf("Spare 3 (short):            %i\n",hcompheader.s_spare3);
-     printf("Spare 4 (int):              %d\n",hcompheader.l_spare1);
-     printf("2D-f2:left phase:           %f\n",hcompheader.lpval1);
-     printf("2D-f2 rigth phase:          %f\n",hcompheader.rpval1);
-     printf("Spare 5 (float):            %f\n",hcompheader.f_spare1);
-     printf("Spare 6 (float):            %f\n",hcompheader.f_spare2);
+     printf("Spare 1 (short):            %i\n",htons(hcompheader.s_spare1));
+     printf("Status:                :    %x[hex]\n",htons(hcompheader.status));
+     printf("Spare 2 (short):            %i\n",htons(hcompheader.s_spare2));
+     printf("Spare 3 (short):            %i\n",htons(hcompheader.s_spare3));
+     printf("Spare 4 (int):              %d\n",htonl(hcompheader.l_spare1));
+     printf("2D-f2:left phase:           %f\n",(double) htonl(hcompheader.lpval1));
+     printf("2D-f2 rigth phase:          %f\n",(double) htonl(hcompheader.rpval1));
+     printf("Spare 5 (float):            %f\n",(double) htonl(hcompheader.f_spare1));
+     printf("Spare 6 (float):            %f\n",(double) htonl(hcompheader.f_spare2));
      printf("===================================\n\n");
 }
 
@@ -225,21 +241,21 @@ void show_complex_status (short status,short block_no)
      printf("\nSTATUS - HYPERCOMPLEX DATABLOCK HEADER #%i \n",block_no);
      printf("===================================\n");
      printf("Status bytes:     %x[hex]\n\n",status);
-     printf("Bit 0:  %x\t- / np: ph mode\n",hcompheader.status & 0x1);   
-     printf("Bit 1:  %x\t- / np: av mode\n",(hcompheader.status >>1) & 0x01);
-     printf("Bit 2:  %x\t- / np: pwr mode\n",(hcompheader.status >>2) & 0x01);
+     printf("Bit 0:  %x\t- / np: ph mode\n",status & 0x1);   
+     printf("Bit 1:  %x\t- / np: av mode\n",(status >>1) & 0x01);
+     printf("Bit 2:  %x\t- / np: pwr mode\n",(status >>2) & 0x01);
      printf("Bit 3:  - \tNot used\n");           
-     printf("Bit 4:  %x\t- / nf: ph mode   (currently not used)\n",(hcompheader.status >> 4) & 0x01);   
-     printf("Bit 5:  %x\t- / nf: av mode   (currently not used)\n",(hcompheader.status >> 5) & 0x01);
-     printf("Bit 6:  %x\t- / nf: pwr mode  (currently not used)\n",(hcompheader.status >> 6) & 0x01);
+     printf("Bit 4:  %x\t- / nf: ph mode   (currently not used)\n",(status >> 4) & 0x01);   
+     printf("Bit 5:  %x\t- / nf: av mode   (currently not used)\n",(status >> 5) & 0x01);
+     printf("Bit 6:  %x\t- / nf: pwr mode  (currently not used)\n",(status >> 6) & 0x01);
      printf("Bit 7:  - \tNot used\n");           
-     printf("Bit 8:  %x\t- / ni: ph mode   (currently not used)\n",(hcompheader.status >> 8) & 0x01);   
-     printf("Bit 9:  %x\t- / ni: av mode   (currently not used)\n",(hcompheader.status >> 9) & 0x01);
-     printf("Bit 10: %x\t- / ni: pwr mode  (currently not used)\n",(hcompheader.status >> 10) & 0x01);
+     printf("Bit 8:  %x\t- / ni: ph mode   (currently not used)\n",(status >> 8) & 0x01);   
+     printf("Bit 9:  %x\t- / ni: av mode   (currently not used)\n",(status >> 9) & 0x01);
+     printf("Bit 10: %x\t- / ni: pwr mode  (currently not used)\n",(status >> 10) & 0x01);
      printf("Bit 11:  - \tNot used\n");           
-     printf("Bit 12: %x\t- / ni2: ph mode  (currently not used)\n",(hcompheader.status >> 12) & 0x01);   
-     printf("Bit 13: %x\t- / ni2: av mode  (currently not used)\n",(hcompheader.status >> 13) & 0x01);
-     printf("Bit 14: %x\t- / ni2: pwr mode (currently not used)\n",(hcompheader.status >> 14) & 0x01);
+     printf("Bit 12: %x\t- / ni2: ph mode  (currently not used)\n",(status >> 12) & 0x01);   
+     printf("Bit 13: %x\t- / ni2: av mode  (currently not used)\n",(status >> 13) & 0x01);
+     printf("Bit 14: %x\t- / ni2: pwr mode (currently not used)\n",(status >> 14) & 0x01);
      printf("Bit 15:  - \tNot used\n");           
      printf("===================================\n");
 
@@ -252,15 +268,15 @@ void write_header(struct HEADER header, FILE *fpout)
 { 
      fprintf(fpout,"\nHEADER \n");
      fprintf(fpout,"===================================\n");
-     fprintf(fpout,"Blocks in file:          %ld\n",header.nblocks);
-     fprintf(fpout,"Traces per block:        %ld\n",header.ntraces);
-     fprintf(fpout,"Elements per trace:      %ld\n",header.np);
-     fprintf(fpout,"Bytes per element:       %ld\n",header.ebytes);
-     fprintf(fpout,"Bytes per trace:         %ld\n",header.tbytes);
-     fprintf(fpout,"Bytes per block:         %ld\n",header.bbytes);
-     fprintf(fpout,"Software Version:        %i\n",header.vers_id);
-     fprintf(fpout,"Status:                  %x[hex]\n",header.status);
-     fprintf(fpout,"Block headers per block: %ld\n",header.nbheaders);
+     fprintf(fpout,"Blocks in file:          %u\n",htonl(header.nblocks));
+     fprintf(fpout,"Traces per block:        %u\n",htonl(header.ntraces));
+     fprintf(fpout,"Elements per trace:      %u\n",htonl(header.np));
+     fprintf(fpout,"Bytes per element:       %u\n",htonl(header.ebytes));
+     fprintf(fpout,"Bytes per trace:         %u\n",htonl(header.tbytes));
+     fprintf(fpout,"Bytes per block:         %u\n",htonl(header.bbytes));
+     fprintf(fpout,"Software Version:        %i\n",htons(header.vers_id));
+     fprintf(fpout,"Status:                  %x[hex]\n",htons(header.status));
+     fprintf(fpout,"Block headers per block: %u\n",htonl(header.nbheaders));
      fprintf(fpout,"===================================\n\n");      
 }
  
@@ -272,21 +288,21 @@ void write_header_status(short status, FILE *fpout)
      fprintf(fpout,"\nSTATUS - HEADER\n");
      fprintf(fpout,"===================================\n");
      fprintf(fpout,"Status bytes:     %x[hex]\n\n",status);
-     fprintf(fpout,"Bit 0:  %x\tNo data    / Data\n",header.status & 0x01);   
-     fprintf(fpout,"Bit 1:  %x\tFID        / Spectrum\n",header.status >> 1 & 0x01);
-     fprintf(fpout,"Bit 2:  %x\t16-bit     / 32-bit integer (if Bit 3  =0 otherwise ignored)\n",(header.status >> 2) & 0x01 );
-     fprintf(fpout,"Bit 3:  %x\tInteger    / Float\n",(header.status >> 3) & 0x01 );   
-     fprintf(fpout,"Bit 4:  %x\tReal       / Complex\n",(header.status >> 4) & 0x01 );
-     fprintf(fpout,"Bit 5:  %x\t -         / Hypercomplex\n",(header.status >> 5) & 0x01 );          
+     fprintf(fpout,"Bit 0:  %x\tNo data    / Data\n",status & 0x01);   
+     fprintf(fpout,"Bit 1:  %x\tFID        / Spectrum\n",status >> 1 & 0x01);
+     fprintf(fpout,"Bit 2:  %x\t16-bit     / 32-bit integer (if Bit 3  =0 otherwise ignored)\n",(status >> 2) & 0x01 );
+     fprintf(fpout,"Bit 3:  %x\tInteger    / Float\n",(status >> 3) & 0x01 );   
+     fprintf(fpout,"Bit 4:  %x\tReal       / Complex\n",(status >> 4) & 0x01 );
+     fprintf(fpout,"Bit 5:  %x\t -         / Hypercomplex\n",(status >> 5) & 0x01 );          
      fprintf(fpout,"Bit 6:  - \tNot used\n");           
-     fprintf(fpout,"Bit 7:  %x\tnot Acqpar / Acqpar\n",(header.status >> 6) & 0x01);     
-     fprintf(fpout,"Bit 8:  %x\t1st FFT    / 2nd FFT\n",(header.status >> 7)  & 0x01);     
-     fprintf(fpout,"Bit 9:  %x\tRegular    / Transposed\n",(header.status >> 8) & 0x01);     
+     fprintf(fpout,"Bit 7:  %x\tnot Acqpar / Acqpar\n",(status >> 6) & 0x01);     
+     fprintf(fpout,"Bit 8:  %x\t1st FFT    / 2nd FFT\n",(status >> 7)  & 0x01);     
+     fprintf(fpout,"Bit 9:  %x\tRegular    / Transposed\n",(status >> 8) & 0x01);     
      fprintf(fpout,"Bit 10: - \tNot used\n");                
-     fprintf(fpout,"Bit 11: %x\t -         / np dimension active\n",(header.status >> 9) & 0x01);     
-     fprintf(fpout,"Bit 12: %x\t -         / nf dimension active\n",(header.status >> 10) & 0x01);          	  
-     fprintf(fpout,"Bit 13: %x\t -         / ni dimension active\n",(header.status >> 11) & 0x01);     
-     fprintf(fpout,"Bit 14: %x\t -         / ni2 dimension active\n",(header.status >> 12) & 0x01);          
+     fprintf(fpout,"Bit 11: %x\t -         / np dimension active\n",(status >> 9) & 0x01);     
+     fprintf(fpout,"Bit 12: %x\t -         / nf dimension active\n",(status >> 10) & 0x01);          	  
+     fprintf(fpout,"Bit 13: %x\t -         / ni dimension active\n",(status >> 11) & 0x01);     
+     fprintf(fpout,"Bit 14: %x\t -         / ni2 dimension active\n",(status >> 12) & 0x01);          
      fprintf(fpout,"Bit 15: - \tNot used\n");                
      fprintf(fpout,"===================================\n");
 }
@@ -298,15 +314,15 @@ void write_datablock_header (struct DATABLOCKHEAD dbheader, FILE *fpout)
 {
      fprintf(fpout,"\nDATABLOCK HEADER #%i \n",dbheader.index);
      fprintf(fpout,"===================================\n");
-     fprintf(fpout,"Scaling factor:             %i\n",dbheader.scale);
-     fprintf(fpout,"Status of data in block:    %x[hex]\n",dbheader.status);
-     fprintf(fpout,"Block Index:                %i\n",dbheader.index);
-     fprintf(fpout,"Mode of data in block:      %i\n",dbheader.mode);
-     fprintf(fpout,"ct value of FID:            %ld\n",dbheader.ctcount);
-     fprintf(fpout,"Left phase in phase file:   %f\n",dbheader.lpval);
-     fprintf(fpout,"Right phase in phase file:  %f\n",dbheader.rpval);
-     fprintf(fpout,"Left drift correction:      %f\n",dbheader.lvl);
-     fprintf(fpout,"Tilt drift correction:      %f\n",dbheader.tlt);
+     fprintf(fpout,"Scaling factor:             %i\n",htons(dbheader.scale));
+     fprintf(fpout,"Status of data in block:    %x[hex]\n",htons(dbheader.status));
+     fprintf(fpout,"Block Index:                %i\n",htons(dbheader.index));
+     fprintf(fpout,"Mode of data in block:      %i\n",htons(dbheader.mode));
+     fprintf(fpout,"ct value of FID:            %u\n",htonl(dbheader.ctcount));
+     fprintf(fpout,"Left phase in phase file:   %f\n",(double) htonl(dbheader.lpval));
+     fprintf(fpout,"Right phase in phase file:  %f\n",(double) htonl(dbheader.rpval));
+     fprintf(fpout,"Left drift correction:      %f\n",(double) htonl(dbheader.lvl));
+     fprintf(fpout,"Tilt drift correction:      %f\n",(double) htonl(dbheader.tlt));
      fprintf(fpout,"===================================\n\n");
 }
 
@@ -318,19 +334,19 @@ void write_datablock_status (short status, FILE *fpout)
      fprintf(fpout,"\nSTATUS - DATABLOCK HEADER #%i \n",dbheader.index);
      fprintf(fpout,"===================================\n");
      fprintf(fpout,"Status bytes:     %x[hex]\n\n",status);
-     fprintf(fpout,"Bit 0:  %x\tNo data   / Data\n",dbheader.status & 0x1);   
-     fprintf(fpout,"Bit 1:  %x\tFID       / Spectrum\n",(dbheader.status >> 1) & 0x01);
-     fprintf(fpout,"Bit 2:  %i\t16-bit    / 32-bit integer (if Bit 3  =0 otherwise ignored)\n",(dbheader.status >> 2)  & 0x01);
-     fprintf(fpout,"Bit 3:  %x\tInteger   / Float\n",(dbheader.status >> 3) & 0x01);   
-     fprintf(fpout,"Bit 4:  %x\tReal      / Complex\n",(dbheader.status >> 4) & 0x01);
-     fprintf(fpout,"Bit 5:  %x\t -        / Hypercomplex\n",(dbheader.status >> 5) & 0x01);          
+     fprintf(fpout,"Bit 0:  %x\tNo data   / Data\n",status & 0x1);   
+     fprintf(fpout,"Bit 1:  %x\tFID       / Spectrum\n",(status >> 1) & 0x01);
+     fprintf(fpout,"Bit 2:  %i\t16-bit    / 32-bit integer (if Bit 3  =0 otherwise ignored)\n",(status >> 2)  & 0x01);
+     fprintf(fpout,"Bit 3:  %x\tInteger   / Float\n",(status >> 3) & 0x01);   
+     fprintf(fpout,"Bit 4:  %x\tReal      / Complex\n",(status >> 4) & 0x01);
+     fprintf(fpout,"Bit 5:  %x\t -        / Hypercomplex\n",(status >> 5) & 0x01);          
      fprintf(fpout,"Bit 6:  - \tNot used\n");           
-     fprintf(fpout,"Bit 7:  %x\tmore blocks: absent / present\n",(dbheader.status >> 7) & 0x01);     
-     fprintf(fpout,"Bit 8:  %x\tnp real   / np complex\n",(dbheader.status >> 8)& 0x010);     
-     fprintf(fpout,"Bit 9:  %x\tnf real   / nf complex\n",(dbheader.status >> 9) & 0x01);     
+     fprintf(fpout,"Bit 7:  %x\tmore blocks: absent / present\n",(status >> 7) & 0x01);     
+     fprintf(fpout,"Bit 8:  %x\tnp real   / np complex\n",(status >> 8)& 0x010);     
+     fprintf(fpout,"Bit 9:  %x\tnf real   / nf complex\n",(status >> 9) & 0x01);     
      fprintf(fpout,"Bit 10: - \tNot used\n");                
-     fprintf(fpout,"Bit 11: %x\tni real   / ni complex\n",(dbheader.status >> 11) & 0x01);     
-     fprintf(fpout,"Bit 12: %x\tni2 real  / ni2 complex\n",(dbheader.status >> 12) & 0x01);          	  
+     fprintf(fpout,"Bit 11: %x\tni real   / ni complex\n",(status >> 11) & 0x01);     
+     fprintf(fpout,"Bit 12: %x\tni2 real  / ni2 complex\n",(status >> 12) & 0x01);          	  
      fprintf(fpout,"Bit 13: - \tNot used\n");           
      fprintf(fpout,"Bit 14: - \tNot used\n");           
      fprintf(fpout,"Bit 15: - \tNot used\n");           
@@ -344,15 +360,15 @@ void write_complex_header (struct HYPERCOMPLEXHEADER hcompheader, short block_no
 {
      fprintf(fpout,"\nHYPERCOMPLEX DATABLOCK HEADER #%i \n",block_no);
      fprintf(fpout,"===================================\n");
-     fprintf(fpout,"Spare 1 (short):            %i\n",hcompheader.s_spare1);
-     fprintf(fpout,"Status:                :    %x[hex]\n",hcompheader.status);
-     fprintf(fpout,"Spare 2 (short):            %i\n",hcompheader.s_spare2);
-     fprintf(fpout,"Spare 3 (short):            %i\n",hcompheader.s_spare3);
-     fprintf(fpout,"Spare 4 (int):              %d\n",hcompheader.l_spare1);
-     fprintf(fpout,"2D-f2:left phase:           %f\n",hcompheader.lpval1);
-     fprintf(fpout,"2D-f2 rigth phase:          %f\n",hcompheader.rpval1);
-     fprintf(fpout,"Spare 5 (float):            %f\n",hcompheader.f_spare1);
-     fprintf(fpout,"Spare 6 (float):            %f\n",hcompheader.f_spare2);
+     fprintf(fpout,"Spare 1 (short):            %i\n",htons(hcompheader.s_spare1));
+     fprintf(fpout,"Status:                :    %x[hex]\n",htons(hcompheader.status));
+     fprintf(fpout,"Spare 2 (short):            %i\n",htons(hcompheader.s_spare2));
+     fprintf(fpout,"Spare 3 (short):            %i\n",htons(hcompheader.s_spare3));
+     fprintf(fpout,"Spare 4 (int):              %d\n",htonl(hcompheader.l_spare1));
+     fprintf(fpout,"2D-f2:left phase:           %f\n",(double) htonl(hcompheader.lpval1));
+     fprintf(fpout,"2D-f2 rigth phase:          %f\n",(double) htonl(hcompheader.rpval1));
+     fprintf(fpout,"Spare 5 (float):            %f\n",(double) htonl(hcompheader.f_spare1));
+     fprintf(fpout,"Spare 6 (float):            %f\n",(double) htonl(hcompheader.f_spare2));
      fprintf(fpout,"===================================\n\n");
 } 
 
@@ -364,21 +380,21 @@ void write_complex_status (short status, short block_no, FILE *fpout)
      fprintf(fpout,"\nSTATUS - HYPERCOMPLEX DATABLOCK HEADER #%i \n",block_no);
      fprintf(fpout,"===================================\n");
      fprintf(fpout,"Status bytes:     %x[hex]\n\n",status);
-     fprintf(fpout,"Bit 0:  %x\t- / np: ph mode\n",hcompheader.status & 0x1);   
-     fprintf(fpout,"Bit 1:  %x\t- / np: av mode\n",(hcompheader.status >>1) & 0x01);
-     fprintf(fpout,"Bit 2:  %x\t- / np: pwr mode\n",(hcompheader.status >>2) & 0x01);
+     fprintf(fpout,"Bit 0:  %x\t- / np: ph mode\n",status & 0x1);   
+     fprintf(fpout,"Bit 1:  %x\t- / np: av mode\n",(status >>1) & 0x01);
+     fprintf(fpout,"Bit 2:  %x\t- / np: pwr mode\n",(status >>2) & 0x01);
      fprintf(fpout,"Bit 3:  - \tNot used\n");           
-     fprintf(fpout,"Bit 4:  %x\t- / nf: ph mode   (currently not used)\n",(hcompheader.status >> 4) & 0x01);   
-     fprintf(fpout,"Bit 5:  %x\t- / nf: av mode   (currently not used)\n",(hcompheader.status >> 5) & 0x01);
-     fprintf(fpout,"Bit 6:  %x\t- / nf: pwr mode  (currently not used)\n",(hcompheader.status >> 6) & 0x01);
+     fprintf(fpout,"Bit 4:  %x\t- / nf: ph mode   (currently not used)\n",(status >> 4) & 0x01);   
+     fprintf(fpout,"Bit 5:  %x\t- / nf: av mode   (currently not used)\n",(status >> 5) & 0x01);
+     fprintf(fpout,"Bit 6:  %x\t- / nf: pwr mode  (currently not used)\n",(status >> 6) & 0x01);
      fprintf(fpout,"Bit 7:  - \tNot used\n");           
-     fprintf(fpout,"Bit 8:  %x\t- / ni: ph mode   (currently not used)\n",(hcompheader.status >> 8) & 0x01);   
-     fprintf(fpout,"Bit 9:  %x\t- / ni: av mode   (currently not used)\n",(hcompheader.status >> 9) & 0x01);
-     fprintf(fpout,"Bit 10: %x\t- / ni: pwr mode  (currently not used)\n",(hcompheader.status >> 10) & 0x01);
+     fprintf(fpout,"Bit 8:  %x\t- / ni: ph mode   (currently not used)\n",(status >> 8) & 0x01);   
+     fprintf(fpout,"Bit 9:  %x\t- / ni: av mode   (currently not used)\n",(status >> 9) & 0x01);
+     fprintf(fpout,"Bit 10: %x\t- / ni: pwr mode  (currently not used)\n",(status >> 10) & 0x01);
      fprintf(fpout,"Bit 11:  - \tNot used\n");           
-     fprintf(fpout,"Bit 12: %x\t- / ni2: ph mode  (currently not used)\n",(hcompheader.status >> 12) & 0x01);   
-     fprintf(fpout,"Bit 13: %x\t- / ni2: av mode  (currently not used)\n",(hcompheader.status >> 13) & 0x01);
-     fprintf(fpout,"Bit 14: %x\t- / ni2: pwr mode (currently not used)\n",(hcompheader.status >> 14) & 0x01);
+     fprintf(fpout,"Bit 12: %x\t- / ni2: ph mode  (currently not used)\n",(status >> 12) & 0x01);   
+     fprintf(fpout,"Bit 13: %x\t- / ni2: av mode  (currently not used)\n",(status >> 13) & 0x01);
+     fprintf(fpout,"Bit 14: %x\t- / ni2: pwr mode (currently not used)\n",(status >> 14) & 0x01);
      fprintf(fpout,"Bit 15:  - \tNot used\n");           
      fprintf(fpout,"===================================\n");
 
@@ -388,12 +404,32 @@ void write_complex_status (short status, short block_no, FILE *fpout)
  **********************************************************/
 void show_syntax (void)
 {
-printf("\n\nSYNTAX :\n");
+printf("\nread_raw_data will display the content of data files.\n");
+printf("\nSYNTAX :\n");
+#ifdef OUTPUT
 printf("read_raw_data <arg1> <arg2> <arg3> <arg4>\n\n");
 printf("              <arg1> = dh | ds | bh | bs | ch | cs | data | max \n");
 printf("              <arg2> = disp | file\n");
 printf("              <arg3> = source filename (default = fid) \n");
 printf("              <arg4> = target filename (default = rawdata) \n\n");
+#else
+printf("read_raw_data <arg1> <arg2>\n");
+printf("              <arg1> = dh | ds | bh | bs | ch | cs | data | max \n");
+printf("              <arg2> = filename\n");
+printf("For example:\n");
+printf("read_raw_data \"dh ds max\" /home/vnmr1/vnmrsys/exp1/datdir/data\n");
+printf("read_raw_data \"dh ds bh bs\" /home/vnmr1/vnmrsys/exp1/datdir/data\n");
+#endif
+printf("\n");
+printf("Where: dh - data header\n");
+printf("       ds - data status\n");
+printf("       bh - block header\n");
+printf("       bs - block status\n");
+printf("       ch - hypercomplex header\n");
+printf("       cs - hypercomplex status\n");
+printf("       data - data in block\n");
+printf("       max  - maximum of data in block\n");
+printf("\n");
 }
 
 
@@ -410,6 +446,14 @@ void write_max (float max, int block_no, int block, int trace, FILE *fpout)
      fprintf(fpout,"BLOCK %d\t Trace %d ::  %f\n", block, trace, max);
 }
 
+float htonf(float val)
+{
+   uint32_t rep;
+   memcpy(&rep, &val, sizeof rep);
+   rep = htonl(rep);
+   memcpy(&val, &rep, sizeof rep);
+   return(val);
+}
 
 /**********************************************************
  *   int -  display data                                  *
@@ -426,7 +470,7 @@ void show_int_data (void *values, int size)
        {
        if (i%line_elements ==0)
           printf("\n");
-       printf("%i\t",*ptr);
+       printf("%i ", htonl(*ptr));
        ptr++;
        } 
  
@@ -447,7 +491,7 @@ void show_short_data (void *values, int size)
        {
        if (i%line_elements ==0)
           printf("\n");
-       printf("%i\t",*ptr);
+       printf("%i ",htons(*ptr));
        ptr++;
        } 
  
@@ -460,17 +504,20 @@ void show_float_data (void *values, int size)
 {
     int    i, line_elements;
     float  *ptr;
+    float tmp;
 
     ptr = (float *)values;
     line_elements =10;
     
     for (i= 0; i<size; i++)
        {
+       tmp = htonf( *ptr );
        if (i%line_elements ==0)
           printf("\n");
-       printf("%f\t",*ptr);
+       printf("%f ",tmp);
        ptr++;
        } 
+    printf("\n");
  
 }
 
@@ -483,6 +530,7 @@ float find_absmax_int (void *values, int size)
     int i;
     float max_val;
     int   *ptr;
+    int val;
  
     ptr = (int *)values;
     /* initialize value */
@@ -491,9 +539,10 @@ float find_absmax_int (void *values, int size)
     /* find absolute maximum */
     for (i=0; i <size ; i++)
 	{
-        if (max_val < abs(*ptr) )
+        val = htonl( *ptr);
+        if (max_val < abs(val) )
 	    {
-	     max_val = (float)abs(*ptr);
+	     max_val = (float)abs(val);
 	     }
 	
 	ptr++;
@@ -510,6 +559,7 @@ float find_absmax_short (void *values, int size)
     int i;
     float max_val;
     short   *ptr;
+    int val;
  
     ptr = (short *)values;
     /* initialize value */
@@ -518,9 +568,10 @@ float find_absmax_short (void *values, int size)
     /* find absolute maximum */
     for (i=0; i <size ; i++)
 	{
-        if (max_val < abs(*ptr) )
+        val = (int) htons( *ptr );
+        if (max_val < (float) abs(val) )
 	    {
-	     max_val = (float)abs(*ptr);
+	     max_val = (float)abs(val);
 	     }
 	
 	ptr++;
@@ -537,6 +588,7 @@ float find_absmax_float (void *values, int size)
     int i;
     float max_val;
     float   *ptr;
+    float val;
  
     ptr = (float *)values;
     /* initialize value */
@@ -545,9 +597,10 @@ float find_absmax_float (void *values, int size)
     /* find absolute maximum */
     for (i=0; i <size ; i++)
 	{
-        if (max_val < abs(*ptr) )
+        val = htonf( *ptr );
+        if (max_val < fabs(val) )
 	    {
-	     max_val = (float)abs(*ptr);
+	     max_val = fabs(val);
 	     }
 	
 	ptr++;
@@ -591,8 +644,10 @@ int main (int argc, char *argv[])
     /*  Define variables */
     /*-------------------*/    
     char    file[MAXSTR];        /* data file */
+#ifdef OUTPUT
     char    *filename, *path;    /* filename and path */
     char    *outfile;            /* default output file */
+#endif
     int     counter;             /* counter for looping (blocks)*/
     int     traces;              /* counter for looping (traces)*/
     void    *temp;               /* pointer to data*/
@@ -605,15 +660,17 @@ int main (int argc, char *argv[])
     char    arg_status;          /* status of arguments passed into program */
     char    *args[MAXOPT] ={"dh", "ds", "bh", "bs", "ch", "cs", "data", "max"};
     char    output;              /* flag containing output action [0] = display, [1] write to file */
-    FILE   *fp, *fpout;
+    FILE   *fp;
+    FILE   *fpout = NULL;
     
-    int i;
     /*-----------------------*/
     /*  Initialize variables */
     /*-----------------------*/    
-    path       = "/space/vnmr1/vnmrsys/mxm_code/";
+#ifdef OUTPUT
+    path       = "/home/vnmr1/vnmrsys/";
     filename   = "fid";
     outfile    = "rawdata";
+#endif
     arg_status = 0;
     output     = 0;
      
@@ -622,7 +679,8 @@ int main (int argc, char *argv[])
     /*------------------------------*/    
     if ((argc > MAXARG)  || (argc < 3))
        {
-       printf("Wrong number of arguments ! \n");
+       if (argc > 1)
+          printf("Wrong number of arguments ! \n");
        show_syntax();
        exit(0);
        }
@@ -635,6 +693,7 @@ int main (int argc, char *argv[])
        cmpres = strstr(argv[1],args[counter]);
        if (cmpres != NULL)
 	  {
+
            arg_status = arg_status + pow(2,counter);
 	  }
        }	
@@ -649,6 +708,7 @@ int main (int argc, char *argv[])
     /* set argument flags for 1st argument*/	 
     assign_status(arg_status);
 
+#ifdef OUTPUT
     /*---------------------*/
     /* check 2nd argument  */
     /*---------------------*/    
@@ -701,6 +761,9 @@ int main (int argc, char *argv[])
 	      exit(0);
 	      }
        }
+#else
+   strcpy(file,argv[2]);
+#endif
 
    
    /*---------------------------------------------------------------------*/
@@ -723,16 +786,16 @@ int main (int argc, char *argv[])
  	   show_header(header);
       /*  show header status */		
       if ((action.header_status) && (!output))
-	   show_header_status(header.status);
+	   show_header_status(htons(header.status));
       /*  write header  */		
       if ((output) && (action.header))
 	   write_header(header, fpout);
       /*  write header status */		
       if ((output) && (action.header_status))
-	   write_header_status(header.status, fpout);
+	   write_header_status(htons(header.status), fpout);
 
       /* loop for number of blocks in file */
-      for (counter = 1; counter <= header.nblocks; counter++)
+      for (counter = 1; counter <= htonl(header.nblocks); counter++)
 	 {
 	 /*------------------------*/
 	 /* read datablock header  */
@@ -747,18 +810,18 @@ int main (int argc, char *argv[])
               show_datablock_header(dbheader, counter);
 	 /* show block header status */	   
 	 if ((action.blockheader_status) && (!output))
-              show_datablock_status(dbheader.status,counter);
+              show_datablock_status(htons(dbheader.status),counter);
          /* write datablock header */
 	 if ((output) && (action.blockheader) )
 	      write_datablock_header(dbheader, fpout);
          /* write datablock header status*/	      
   	 if ((output) && (action.blockheader_status))
-              write_datablock_status(dbheader.status, fpout);
+              write_datablock_status(htons(dbheader.status), fpout);
 	      
          /*--------------------------------*/
 	 /* read complex datablock header  */
          /*--------------------------------*/	 
-         if (header.nbheaders > 1)
+         if (htonl(header.nbheaders) > 1)
              {
 	     if ((read_status=fread(&hcompheader, sizeof(hcompheader), 1,fp)) == 0)
 	         {
@@ -767,35 +830,35 @@ int main (int argc, char *argv[])
 	         }	  
              /* show hpercomplex block */
 	     if ((action.complex_blockheader) && (!output))
-		  show_complex_header(hcompheader,dbheader.index);
+		  show_complex_header(hcompheader,htonl(dbheader.index));
 	     /* show hpercomplex block status */     
 	     if ((action.complex_status) && (!output))
-                  show_complex_status(hcompheader.status,dbheader.index);
+                  show_complex_status(htons(hcompheader.status),htonl(dbheader.index));
              /* write hpercomplex block */
 	     if ((output) && (action.complex_blockheader))
-		  write_complex_header(hcompheader,dbheader.index, fpout);
+		  write_complex_header(hcompheader,htonl(dbheader.index), fpout);
 	     /* write hpercomplex block status */     
 	     if ((output) && (action.complex_status))
-                  write_complex_status(hcompheader.status,dbheader.index, fpout);
+                  write_complex_status(htons(hcompheader.status),htonl(dbheader.index), fpout);
 	     }
 
-         for (traces = 1; traces <= header.ntraces; traces++)
+         for (traces = 1; traces <= htonl(header.ntraces); traces++)
 	      { 
 	      /* allocate memory for data */
-	      if (( temp =malloc(header.tbytes)) == NULL)
+	      if (( temp =malloc(htonl(header.tbytes))) == NULL)
         	   printf("Error allocating memory !\n");
 	      else
 		  { 
 		  /*---------------*/
 		  /* read data     */
 		  /*---------------*/
-        	  if ((data_size=fread(temp,header.ebytes,header.np,fp)) == 0)
+        	  if ((data_size=fread(temp,htonl(header.ebytes),htonl(header.np),fp)) == 0)
 	              {
         	      printf("Error reading data !\n");
         	      exit(0);
 	              }
 		  /* evaluate status bit for format */
-        	  data_format = header.status >> 2 &0x3;
+        	  data_format = htons(header.status) >> 2 &0x3;
 
       		  /* show data */
 		  if (action.data)
@@ -803,11 +866,11 @@ int main (int argc, char *argv[])
 		       printf("SHOW DATA :\n");
 		       switch (data_format)
 	        	  {
-			  case   0: show_short_data(temp, header.np);
+			  case   0: show_short_data(temp, htonl(header.np));
 		        	    break;
-			  case   1: show_int_data(temp, header.np);
+			  case   1: show_int_data(temp, htonl(header.np));
 	  	        	    break;
-			  case   2: show_float_data(temp, header.np);
+			  case   2: show_float_data(temp, htonl(header.np));
 		        	    break;
 			  default : printf("Invalid data format or file status !\n");
 	        	  }
@@ -815,7 +878,7 @@ int main (int argc, char *argv[])
 		  /* write data to file */
 		  if ((output) && (action.data))
 	               {
-		       if ((write_status=fwrite(temp,header.ebytes,header.np,fpout)) == 0)
+		       if ((write_status=fwrite(temp,htonl(header.ebytes),htonl(header.np),fpout)) == 0)
 	        	  {
         		  printf("Error writting data !\n");
         		  exit(0);
@@ -829,17 +892,17 @@ int main (int argc, char *argv[])
 		       /* extract max value */               
 		       switch (data_format)
 			  {
-			  case   0: max_value=find_absmax_short(temp,header.np);
+			  case   0: max_value=find_absmax_short(temp,htonl(header.np));
 				    break;
-			  case   1: max_value=find_absmax_int(temp,header.np);
+			  case   1: max_value=find_absmax_int(temp,htonl(header.np));
 				    break;		  
-			  case   2: max_value=find_absmax_float(temp,header.np);
+			  case   2: max_value=find_absmax_float(temp,htonl(header.np));
 				    break;		  
 			  default : printf("Invalid data format or file status !\n");
         		  }
                 	if (output)
 			    {
-			    write_max(max_value, header.nblocks, dbheader.index, traces, fpout);
+			    write_max(max_value, htonl(header.nblocks), htonl(dbheader.index), traces, fpout);
 			    }
                 	else
 			    {
