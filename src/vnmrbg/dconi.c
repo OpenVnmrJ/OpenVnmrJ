@@ -38,6 +38,7 @@ static int rev_h, rev_v;
 static int freq_h, freq_v;
 static int revAxis_h, revAxis_v;
 static int axisonly = 0;
+static int vpt = 0;
 
 static int level_y0,level_y1,level_x1;
 static int level_first;
@@ -260,7 +261,7 @@ void dconi_reset()
   if (!d2flag && axisonly)
      setVertAxis();
   xoffset = mnumxpnts - dfpnt + 8*xcharpixels;
-  yoffset = dfpnt2 + dnpnt2 + mnumypnts / 50;
+  yoffset = dfpnt2 + dnpnt2 + mnumypnts / 50 + vpt;
   if (project_buffer) release(project_buffer);
   project_buffer = 0;
   trace_mode=0;
@@ -1652,8 +1653,12 @@ int init_dconi(int plotflag)
   double start,len,axis_scl;
 
   if (select_init(1,plotflag, 0, 0, 1, 1, 0, 0)) return 1;
+  if (P_getreal(CURRENT,"vpt", &start, 1) != 0)
+     vpt = 0;
+  else
+     vpt = (int) start;
   discalib = (float)(mnumypnts-ymin) / wc2max;
-  yoffset = dfpnt2 + dnpnt2 + mnumypnts / 50;
+  yoffset = dfpnt2 + dnpnt2 + mnumypnts / 50 + vpt;
   xoffset = mnumxpnts - dfpnt + 8*xcharpixels;
   get_scale_pars(HORIZ,&start,&len,&axis_scl,&rev_h);
   get_scale_pars(VERT,&start,&len,&axis_scl,&rev_v);
