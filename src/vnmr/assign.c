@@ -346,7 +346,7 @@ int assignString(const char *s, varInfo *v, int i)
               v->active = ACT_OFF;
             else
             {
-              WerrprintfWithPos("Can't assign STRING value to REAL variable");
+              WerrprintfWithPos("Can't assign STRING value '%s' to REAL variable", s);
 #ifdef VNMRJ
 	      jExpressionError();
 #endif 
@@ -606,6 +606,11 @@ int checkParm(pair *p, varInfo *v, char *name)
     {
       case T_REAL:    if (v->T.basicType != T_STRING)
                       {
+                         if ((v->active == 0)  && (v->prot & P_ACT))
+                         {
+                            WerrprintfWithPos("Can't assign value to variable '%s' that has 'off' status locked",name);
+		            return(2);
+                         }
                          r = p->R;
 		         while (r)
 		         { 
@@ -692,6 +697,17 @@ int checkParm(pair *p, varInfo *v, char *name)
 			 appendvarlist(name);
 #endif 
 		         return(0);
+                      }
+		      else if ((v->T.basicType == T_REAL) &&
+                              (v->prot & P_ACT) )
+                      {
+                         WerrprintfWithPos("Can't change active / not active status of variable \"%s\"",
+                                            name);
+#ifdef VNMRJ
+			 jExpressionError();
+			 appendvarlist(name);
+#endif 
+		         return(1);
                       }
 		      else
 			return(1);
