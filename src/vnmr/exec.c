@@ -1996,7 +1996,8 @@ int execS(node *n, char *macroName)
                                            clearVar(name);
                                         }
                                      }
-                                     if (checkParm(&p,v,name))
+                                     res = checkParm(&p,v,name);
+                                     if (res == 1)
                                      {
 #ifdef VNMRJXXX
 					int diffval = 1;
@@ -2063,6 +2064,15 @@ int execS(node *n, char *macroName)
                                       }
                                         if (v->prot & P_SYS)
                                           check_datastation();
+                                     }
+                                     else if (res == 2)
+                                     {
+                                        /* This is case where trying to assign a value
+ *                                       * to a parameter that has its active status
+ *                                       * locked to off
+ *                                       */
+                                        give = 1;
+                                        gotError = 0;
                                      }
                                      else
                                      {

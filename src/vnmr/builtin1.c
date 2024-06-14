@@ -2572,9 +2572,10 @@ int Off(int argc, char *argv[], int retc, char *retv[])
     { case 2:	tree = "current";
 		break;
       case 3:	
+      case 4:	
 		tree = argv[2];
 	    	break;
-      default:	Werrprintf("Usage -- %s('varname'[,'tree'])",argv[0]);
+      default:	Werrprintf("Usage -- %s('varname'[,'tree'<,'force'>])",argv[0]);
 		if (retc > 0)
 		  retv[0] = realString((double)ACT_NOTEXIST);
 		RETURN;
@@ -2597,6 +2598,13 @@ int Off(int argc, char *argv[], int retc, char *retv[])
             else if (strcmp(argv[0],"on") == 0)
               i = (v->active == ACT_ON);
             retv[0] = realString((double)i);
+          }
+        else if ((v->prot & P_ACT) && (argc < 4) )
+          {
+             if ((!strcmp(argv[0],"off") && (v->active != ACT_OFF)) ||
+                 (!strcmp(argv[0],"on") && (v->active != ACT_ON)) )
+                Werrprintf("Cannnot change active / not active status of %s",
+                           argv[1]);
           }
         else
           { if (strcmp(argv[0],"off") == 0)
