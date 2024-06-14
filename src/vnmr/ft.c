@@ -302,6 +302,7 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
 		dspwr,
 		fnActive,
 		realt2data;
+  int		doFpmult = 0;
   int		inverseWT;
   float		*outp,
 		*finaloutp = NULL,
@@ -394,6 +395,10 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
      else if (strcmp(argv[arg_no], "dodc") == 0)
      {
         ftpar.t2dc = TRUE;
+     }
+     else if (strcmp(argv[arg_no], "dofpmult") == 0)
+     {
+        doFpmult = 1;
      }
      else if (strcmp(argv[arg_no], "noft") == 0)
      {
@@ -673,13 +678,13 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
   }
 // fprintf(stderr,"npx= %d npadj= %d np0= %d\n",npx, npadj, ftpar.np0);
 
-/*
-  fpointmult = (ftpar.wtflag) ? getfpmult(S_NP, fidhead.status & S_DDR) : 1.0;
- */
 /* first point multiply is needed for correct FT behavior. Since no ft is happening
- * I will skip it here. This prevents applying it twice
+ * I will skip it here unless it is specifically called for
  */
-  fpointmult = 1.0;
+  if (doFpmult)
+     fpointmult = getfpmult(S_NP, fidhead.status & S_DDR);
+  else
+     fpointmult = 1.0;
   if (ftpar.ftarg.numShift && (ftpar.ftarg.fidsPerSpec > 1) && ftpar.ftarg.numSa )
   {
      /* Assume PureShift */
