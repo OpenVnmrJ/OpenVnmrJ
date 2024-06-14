@@ -1828,6 +1828,8 @@ static int chpar(int getflag, int specadd)
    static char		dpsave[4];
    static double	rpsave,
 			lpsave;
+   static double	lvlsave,
+			tltsave;
    char			*parname;
    int			r,
 			i;
@@ -1848,11 +1850,13 @@ static int chpar(int getflag, int specadd)
          return(ERROR); 
       }
 
-      i = 2;
+      i = 4;
       while (i)
       {
          switch (i)
          {
+            case 4:	parname = "lvl"; break;
+            case 3:	parname = "tlt"; break;
             case 2:	parname = "rp"; break;
             case 1:	parname = "lp"; break;
             default:	parname = "rp";
@@ -1875,6 +1879,8 @@ static int chpar(int getflag, int specadd)
 
          switch (i)
          {
+            case 4:	lvlsave = tmp; break;
+            case 3:	tltsave = tmp; break;
             case 2:	rpsave = tmp; break;
             case 1:	lpsave = tmp; break;
             default:	rpsave = tmp;
@@ -1891,11 +1897,13 @@ static int chpar(int getflag, int specadd)
          return(ERROR);  
       }
 
-      i = 2;
+      i = 4;
       while (i)
       {
          switch (i)
          {
+            case 4:	tmp = lvlsave; parname = "lvl"; break;
+            case 3:	tmp = tltsave; parname = "tlt"; break;
             case 2:	tmp = rpsave; parname = "rp"; break;
             case 1:	tmp = lpsave; parname = "lp"; break;
             default:	tmp = rpsave; parname = "rp";
