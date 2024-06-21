@@ -2239,17 +2239,17 @@ DREAM getdream(char *seqName, double p, double phint, int iRec, int calc)
 
 //Set a Tangent Shape Only
 
-   sprintf(d.Ruu.sh,"t");
-   sprintf(d.Rud.sh,"t");
-   sprintf(d.Rdu.sh,"t");
-   sprintf(d.Rdd.sh,"t");
+   sprintf(d.Ruu.sh,"%s","t");
+   sprintf(d.Rud.sh,"%s","t");
+   sprintf(d.Rdu.sh,"%s","t");
+   sprintf(d.Rdd.sh,"%s","t");
 
 //Set the Polarity of Each Waveform
 
-   sprintf(d.Ruu.pol,"uu");
-   sprintf(d.Rud.pol,"ud");
-   sprintf(d.Rdu.pol,"du");
-   sprintf(d.Rdd.pol,"dd");
+   sprintf(d.Ruu.pol,"%s","uu");
+   sprintf(d.Rud.pol,"%s","ud");
+   sprintf(d.Rdu.pol,"%s","du");
+   sprintf(d.Rdd.pol,"%s","dd");
 
 //Set the Pattern Name for Each Waveform
 
