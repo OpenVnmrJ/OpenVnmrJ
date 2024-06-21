@@ -3,8 +3,15 @@
 
 BINDIR = ../bin
 SRCDIR = ../src
+ifeq (,$(findstring 64-bit, $(shell file /vnmr/lib/libddl.so)))
+	ARCH = -m32
+else
+	ARCH = 
+endif
+#
 
-CFLAGS = -O -DLINUX -m32 -fPIC
+# echo "arch is $(arch)"
+CFLAGS = -O -DLINUX $(ARCH) -fPIC
 CC = gcc
 LIBFLAG = -shared -Wl,-rpath,.:$(BROWSERDIR)/math/lib:$(vnmrsystem)/lib \
                 -L. -L$(BROWSERDIR)/math/lib -L$(vnmrsystem)/lib \
@@ -35,59 +42,59 @@ all:
 	make clean
 
 fit: $(FITOBJ)
-	$(CC) -shared -o fit -m32 -fPIC -Wl,-rpath,.:$(BROWSERDIR)/math/lib:$(vnmrsystem)/lib $(FITOBJ) \
+	$(CC) -shared -o fit $(CFLAGS) -Wl,-rpath,.:$(BROWSERDIR)/math/lib:$(vnmrsystem)/lib $(FITOBJ) \
 		-L. -L$(BROWSERDIR)/math/lib -L$(vnmrsystem)/lib \
 		-lddl -lport3 -lf2c -lm
 	rm -f $(BINDIR)/fit
 	ln -s $(SRCDIR)/fit $(BINDIR)/fit
 
 maxof: ufuncs.o parmlist.o maxof.o
-	$(CC) -o maxof -m32 -fPIC ufuncs.o parmlist.o maxof.o $(LIBFLAG)
+	$(CC) -o maxof $(CFLAGS) ufuncs.o parmlist.o maxof.o $(LIBFLAG)
 	rm -f $(BINDIR)/maxof
 	ln -s $(SRCDIR)/maxof $(BINDIR)/maxof
 
 addms: ufuncs.o parmlist.o addms.o
-	$(CC) -o addms -m32 -fPIC ufuncs.o parmlist.o addms.o $(LIBFLAG)
+	$(CC) -o addms $(CFLAGS) ufuncs.o parmlist.o addms.o $(LIBFLAG)
 	rm -f $(BINDIR)/addms
 	ln -s $(SRCDIR)/addms $(BINDIR)/addms
 
 subms: ufuncs.o parmlist.o subms.o
-	$(CC) -o subms -m32 -fPIC ufuncs.o parmlist.o subms.o $(LIBFLAG)
+	$(CC) -o subms $(CFLAGS) ufuncs.o parmlist.o subms.o $(LIBFLAG)
 	rm -f $(BINDIR)/subms
 	ln -s $(SRCDIR)/subms $(BINDIR)/subms
 
 stats: ufuncs.o parmlist.o stats.o
-	$(CC) -o stats -m32 -fPIC ufuncs.o parmlist.o stats.o $(LIBFLAG)
+	$(CC) -o stats $(CFLAGS) ufuncs.o parmlist.o stats.o $(LIBFLAG)
 	rm -f $(BINDIR)/stats
 	ln -s $(SRCDIR)/stats $(BINDIR)/stats
 
 baseline: ufuncs.o parmlist.o baseline.o
-	$(CC) -o baseline -m32 -fPIC ufuncs.o parmlist.o baseline.o $(LIBFLAG)
+	$(CC) -o baseline $(CFLAGS) ufuncs.o parmlist.o baseline.o $(LIBFLAG)
 	rm -f $(BINDIR)/baseline
 	ln -s $(SRCDIR)/baseline $(BINDIR)/baseline
 
 circ: ufuncs.o parmlist.o circ.o
-	$(CC) -o circ -m32 -fPIC ufuncs.o parmlist.o circ.o $(LIBFLAG)
+	$(CC) -o circ $(CFLAGS) ufuncs.o parmlist.o circ.o $(LIBFLAG)
 	rm -f $(BINDIR)/circ
 	ln -s $(SRCDIR)/circ $(BINDIR)/circ
 
 mean: ufuncs.o parmlist.o mean.o
-	$(CC) -o mean -m32 -fPIC ufuncs.o parmlist.o mean.o $(LIBFLAG)
+	$(CC) -o mean $(CFLAGS) ufuncs.o parmlist.o mean.o $(LIBFLAG)
 	rm -f $(BINDIR)/mean
 	ln -s $(SRCDIR)/mean $(BINDIR)/mean
 
 object: ufuncs.o parmlist.o object.o
-	$(CC) -o object -m32 -fPIC ufuncs.o parmlist.o object.o $(LIBFLAG)
+	$(CC) -o object $(CFLAGS) ufuncs.o parmlist.o object.o $(LIBFLAG)
 	rm -f $(BINDIR)/object
 	ln -s $(SRCDIR)/object $(BINDIR)/object
 
 snr: ufuncs.o parmlist.o snr.o
-	$(CC) -o snr -m32 -fPIC ufuncs.o parmlist.o snr.o $(LIBFLAG)
+	$(CC) -o snr $(CFLAGS) ufuncs.o parmlist.o snr.o $(LIBFLAG)
 	rm -f $(BINDIR)/snr
 	ln -s $(SRCDIR)/snr $(BINDIR)/snr
 
 snrme: ufuncs.o parmlist.o snrme.o
-	$(CC) -o snrme -m32 -fPIC ufuncs.o parmlist.o snrme.o $(LIBFLAG)
+	$(CC) -o snrme $(CFLAGS) ufuncs.o parmlist.o snrme.o $(LIBFLAG)
 	rm -f $(BINDIR)/snrme
 	ln -s $(SRCDIR)/snrme $(BINDIR)/snrme
 

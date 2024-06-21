@@ -16,13 +16,6 @@
 #		  it executes the "makeuserpsg"             #
 #		  makefile stored in /vnmr/psg.		    #
 #                                                           #
-#    02/1996	  Extended to define PATH so the search for #
-#		  executables starts with GNU and then goes #
-#		  to /usr/ccs/bin on Solaris.  Corrects an  #
-#		  obscure bug which results when the shell  #
-#		  finds the (non-functioning) /usr/ucb/cc   #
-#		  compiler.				    #
-#                                                           #
 #    04/1996      If the /vnmr/lib directory exists, copy   #
 #		  the newly made libray into it.  Both      #
 #		  shared and static libraries are copied    #
@@ -41,43 +34,11 @@ then
 fi
 
 osname=`vnmr_uname`
-verify_ccs()
-{
-   if (test ! -x /usr/ccs/bin/$1)
-   then
-      echo "'$1' program missing from /usr/ccs/bin"
-      echo "This means most likely that you have not loaded the"
-      echo "Solaris Developers option, which is required for fixpsg."
-      echo "This is an irrecoverable error."
-      echo " "
-      exit 1
-   fi
-}
 
 # main program starts here
 
 
-if test $osname = "Linux" -o $osname = "Darwin"
-then
-   makename="makeuserpsg.lnx"
-else
-   if test $osname = "Interix"
-   then
-      makename="makeuserpsg"
-   else
-      if (test ! -x $vnmrsystem/gnu/bin/cc)
-      then
-         echo "GNU C compiler not installed"
-         echo "You must install this option before using fixpsg"
-         echo "This is an irrecoverable error."
-         exit 1
-      fi
-      verify_ccs make
-      verify_ccs ar
-      verify_ccs ld
-      makename="makeuserpsg"
-   fi
-fi
+makename="makeuserpsg.lnx"
 
 cd $vnmrsystem/psg
 if (test ! -f $makename)
@@ -92,23 +53,24 @@ fi
 
 if test $osname = "Linux"
 then
+   Wextra=""
+   gcc -Q --help=warning | grep Wformat-overflow >& /dev/null
+   if [[ $? -eq 0 ]]
+   then
+      Wextra=${Wextra}" -Wno-format-overflow"
+   fi
+   arch=""
+   file $vnmrsystem/lib/libpsglib.so | grep "32-bit" $file >& /dev/null
+   if [[ $? -eq 0 ]]; then
+      arch="-m32"
+   fi
    rm -f *.o
-   make -s -e -f makeuserpsg.lnx fixlib
+   make -e -s -f makeuserpsg.lnx CFLAGS="-O -fPIC ${arch} ${Wextra}" LDFLAGS="-shared ${arch}" fixlib
 else
    if test $osname = "Darwin"
    then
       rm -f *.o
       make -s -e -f makeuserpsg.lnx macfixlib
-   else
-      if test $osname = "Interix"
-      then
-         rm -f *.o
-         make -s -e -f makeuserpsg fixlibwin
-      else
-         PATH=$GNUDIR/bin:/usr/ccs/bin:$PATH
-         export PATH
-         make -s -e -f makeuserpsg fixlibsol
-      fi
    fi
 fi
 

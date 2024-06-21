@@ -906,8 +906,13 @@ print_statement()
 		p = timeVals[k];
 		if (p > 0 && p <= argNum)
                 {
-	     	   // timer = &argArray[0] + argPtrs[p - 1];
-	     	   timer = argPtrs[p - 1];
+		   // The third argument is the gradient name. It is cast to
+		   // an int, which is wrong if compiled as 64-bit.
+		   // The argument is not actually used, so jut substitute a 0
+		   if ( (timeCode == PESHGR) && (p == 3) )
+		      timer = "0";
+		   else
+	     	       timer = argPtrs[p - 1];
                 }
 		else if (p >= 90)
 		{
@@ -976,7 +981,9 @@ print_statement()
 	        fprintf(fout, "DPStimer(%d, (int)%s%s)", timeCode, rtStr, timeStr);
 	   }
 	   else
+           {
 	       fprintf(fout, "DPStimer(%d,%d%s)", timeCode, rtCode, timeStr);
+	   }
 	}
 	else
 	{

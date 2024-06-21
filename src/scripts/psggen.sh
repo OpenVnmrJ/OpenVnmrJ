@@ -71,6 +71,7 @@ else
 fi
 
 cd "$vnmruser"/psg
+arch=""
 if test $osname = "Linux"
 then
    rm -f *.o
@@ -101,7 +102,11 @@ then
    then
       Wextra=${Wextra}" -Wno-format-overflow"
    fi
-   make -e -s -f makeuserpsg.lnx CFLAGS="-O -fPIC -m32 ${Wextra}" lib
+   file $vnmrsystem/lib/libpsglib.so | grep "32-bit" $file >& /dev/null
+   if [[ $? -eq 0 ]]; then
+      arch="-m32"
+   fi
+   make -e -s -f makeuserpsg.lnx CFLAGS="-O -fPIC ${arch} ${Wextra}" lib
 else
    if test $osname = "Darwin"
    then
