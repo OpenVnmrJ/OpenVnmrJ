@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "f2c.h"
+#include "imagemath.h"
 
 extern int hybsvd_(integer *, integer *, integer *, integer*, integer*,
 		   integer*, integer*,

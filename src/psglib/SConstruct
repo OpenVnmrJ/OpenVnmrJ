@@ -71,10 +71,14 @@ for i in range(len(headerFiles)):
 symlink(os.path.join(nvpsgPath,'chempack.h'),os.path.join(psgPath,'chempack.h'))
 
 
+if os.path.exists("m64") or os.path.exists("../datastation"):
+  compileFlag = ""
+else:
+  compileFlag = " -m32"
 # build environments
-seqLibEnv = Environment(CCFLAGS    = '-O -m32',
+seqLibEnv = Environment(CCFLAGS    = '-O '+compileFlag,
                         CPPDEFINES = ['LINUX', 'NESSIE'],
-                        LINKFLAGS  = '-O -m32 -Wl,-rpath,/vnmr/lib',
+                        LINKFLAGS  = '-O -Wl,-rpath,/vnmr/lib'+compileFlag,
                         CPPPATH    = [psgPath])
 if (platform=="darwin"):
     seqLibEnv.Replace(CC = 'clang')
@@ -87,9 +91,9 @@ if (platform=="darwin"):
     seqLibEnv.Replace(CPPFLAGS = '-Wall -Wno-format-security -Wno-return-type')
     seqLibEnv.Replace(LINKFLAGS = '-Os -Wl,-rpath,/vnmr/lib')
                                       
-nvseqLibEnv = Environment(CPPFLAGS   = '-O -m32 -Wno-unused-variable -Wno-switch -Wno-format-security',
+nvseqLibEnv = Environment(CPPFLAGS   = '-O -Wno-unused-variable -Wno-switch -Wno-format-security'+compileFlag,
                           CPPDEFINES = ['LINUX', 'NESSIE', 'NVPSG', 'codeint=int', 'codelong=int'],
-                          LINKFLAGS  = '-O -m32 -Wl,-rpath,/vnmr/lib',
+                          LINKFLAGS  = '-O -Wl,-rpath,/vnmr/lib'+compileFlag,
                           LINK       = 'g++',
                           CPPPATH    = [nvpsgPath,psgPath])
 
@@ -214,7 +218,7 @@ seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','console','ddr'
 SConscript('lcseqlib/SConstruct.vnmrs',exports = 'nvseqLibEnv psgPath nvpsgPath vnmrPath ncommPath seqPath')
 
 #seqlib build
-if ( ('darwin' not in platform) and ('interix' not in platform) ):
+if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
 #    SConscript(os.path.join(psgPath, 'SConstruct'))
     if os.path.exists('/usr/bin/scons') or os.path.exists('/usr/local/bin/scons'):
        cmd='cd ../psg;scons'

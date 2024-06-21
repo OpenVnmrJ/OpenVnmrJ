@@ -105,7 +105,6 @@ buildList = """
 buildList = """
                          vnmrbg
                          3D
-                         autotest
                          backproj
                          bin
                          biopack
@@ -114,21 +113,25 @@ buildList = """
                          dicom_store
                          DOSY
                          ddr
-                         Gilson
-                         gxyzshim
                          IMAGE
                          languages
                          layouts
                          license
-                         LCNMR
                          p11
                          passwd
                          psglib
-                         roboproc
                          scripts
                          shuffler
                          solidspack
                          stars
+                         """.split();
+
+build2List = """
+                         autotest
+                         Gilson
+                         gxyzshim
+                         LCNMR
+                         roboproc
                          tcl
                          veripulse
                          """.split();
@@ -220,6 +223,9 @@ javaLink = os.path.join(ovjtools, 'java')
 
 for i in buildList:
    SConscript(os.path.join('src',i, 'SConstruct'))
+if ( not os.path.exists(os.path.join('src','datastation'))) :
+   for i in build2List:
+      SConscript(os.path.join('src',i, 'SConstruct'))
 
 # Check for link to java home on Linux only (darwin uses the System java)
 if os.path.exists(javaLink) or 'linux' not in platform:
@@ -236,13 +242,13 @@ else:
 
 vnmrPath    = os.path.join(cwd, os.pardir,'vnmr')
 
-if ( 'darwin' not in platform):
-   for i in acqBuildList:
-      SConscript(os.path.join('src',i, 'SConstruct'))
-
-   if os.path.exists(javaLink):
-      for i in javaAcqBuildList:
+if ( 'darwin' not in platform) :
+   if ( not os.path.exists(os.path.join('src','datastation'))) :
+      for i in acqBuildList:
          SConscript(os.path.join('src',i, 'SConstruct'))
+      if os.path.exists(javaLink):
+         for i in javaAcqBuildList:
+            SConscript(os.path.join('src',i, 'SConstruct'))
 
    wkLink = os.path.join(ovjtools, 'wkhtmltopdf')
    if os.path.exists(wkLink):

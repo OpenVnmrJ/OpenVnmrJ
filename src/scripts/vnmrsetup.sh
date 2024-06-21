@@ -660,23 +660,25 @@ if [ -e /tmp/.ovj_installed ]; then
       echo " "
    fi
 
-   echo "Shall this system be configured as a spectrometer."
-   if [ -d /vnmr/acq/download ] || [ -d /vnmr/acq/vxBoot ]
-   then
-      echo "This involves setting up the network and downloading the"
-      echo "acquisition console software"
-   fi
-   echo "Would you like to configure it now? (y/n) "
-   read ans
-   if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
-      echo "Configuring system."
-      /vnmr/bin/setacq
-      echo " "
-   else
-      echo "The system may be configured as a spectrometer."
-      echo "  1. Log in as the OpenVnmrJ adminstrator account, $nmr_user."
-      echo "  2. Exit all OpenVnmrJ programs."
-      echo "  3. Run /vnmr/bin/setacq"
+   if [ -f /vnmr/acqbin/Expproc ]; then
+      echo "Shall this system be configured as a spectrometer."
+      if [ -d /vnmr/acq/download ] || [ -d /vnmr/acq/vxBoot ]
+      then
+         echo "This involves setting up the network and downloading the"
+         echo "acquisition console software"
+      fi
+      echo "Would you like to configure it now? (y/n) "
+      read ans
+      if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
+         echo "Configuring system."
+         /vnmr/bin/setacq
+         echo " "
+      else
+         echo "The system may be configured as a spectrometer."
+         echo "  1. Log in as the OpenVnmrJ adminstrator account, $nmr_user."
+         echo "  2. Exit all OpenVnmrJ programs."
+         echo "  3. Run /vnmr/bin/setacq"
+      fi
    fi
    finalInstructions
 fi

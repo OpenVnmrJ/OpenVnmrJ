@@ -40,11 +40,15 @@ SConscript(os.path.join(ddlPath, 'SConstruct'))
 
 ibPath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,os.pardir,os.pardir,os.pardir,'ib')
 SConscript(os.path.join(ibPath, 'SConstruct'))
+if os.path.exists("m64") or os.path.exists(os.path.join(ibPath,'..','datastation')):
+  compileFlag = ""
+else:
+  compileFlag = " -m32"
 
 # build environments
-cEnv = Environment(CCFLAGS    = '-O -DLINUX -m32 -fPIC',
+cEnv = Environment(CCFLAGS    = '-O -DLINUX -fPIC'+compileFlag,
                    CPPDEFINES = ['LINUX'],
-                   LINKFLAGS  = '-m32 -shared -Wl,-rpath,.:/vnmr/lib ',
+                   LINKFLAGS  = '-shared -Wl,-rpath,.:/vnmr/lib '+compileFlag,
                    CPPPATH    = [cwd,
                                  ])
 LibList = [ 'ddl', 'port3', 'f2c', 'm' ]
