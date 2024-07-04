@@ -14,7 +14,7 @@
 // getramp() - RAMP         Build a Tangent Ramp
 // getms() - MPSEQ          Build a Magic Sandwich
 // getpuls() - MPSEQ        Build a Pulse with offset
-// getpasl() - MPSEQ        Build a Spinlock
+// getpasl() - MPSEQ        Build a Spinlock : needs compiler name GETPASL defined
 // getr1235() - MPSEQ       Build R12-sub3-sup5 with Supercycle
 // getr1462() - MPSEQ       Build R14-sub6-sup2
 // getr1825() - MPSEQ       Build R18-sub2-sup5
@@ -410,6 +410,7 @@ MPSEQ getpul(char *seqName, int iph, double p, double phint, int iRec, int calc)
 // Build a PASL
 //===============
 
+#ifdef GETPASL
 MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
 { 
    MPSEQ f = {};
@@ -458,6 +459,9 @@ MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
    }
 // Set the Step Sizes
 
+// The following 9 lines of code may be problematic.
+// Most functions use the above code to initialize
+// n90, n90m, and trap
    f.n90 = 4;
    f.n90m = 5;
    f.trap = 0;
@@ -535,6 +539,7 @@ MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
    }
    return f;
 }
+#endif   // GETPASL
 
 //========================================
 //Build [R12-sub3-sup5]3-sup1
