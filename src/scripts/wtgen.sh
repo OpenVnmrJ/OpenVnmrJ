@@ -120,7 +120,12 @@ then
 fi
 if test x$ostype = "xLinux"
 then
-   cc -m32 -O $file.c usrwt.o -lm -o $file > errmsg
+   arch=""
+   file $vnmrsystem/bin/Vnmrbg | grep "32-bit" $file >& /dev/null
+   if [[ $? -eq 0 ]]; then
+      arch="-m32"
+   fi
+   cc $arch -O $file.c usrwt.o -lm -o $file > errmsg
 else
    cc -O $file.c usrwt.o -lm -o $file > errmsg
 fi
