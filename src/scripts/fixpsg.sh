@@ -60,7 +60,7 @@ then
       Wextra=${Wextra}" -Wno-format-overflow"
    fi
    arch=""
-   file $vnmrsystem/lib/libpsglib.so | grep "32-bit" $file >& /dev/null
+   file -L $vnmrsystem/lib/libpsglib.so | grep "32-bit" $file >& /dev/null
    if [[ $? -eq 0 ]]; then
       arch="-m32"
    fi
