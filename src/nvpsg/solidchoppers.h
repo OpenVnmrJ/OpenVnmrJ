@@ -19,6 +19,8 @@
 //                      with STATE's.   
 // genericInitShape1() - SHAPE  Special version used with make_shape1.
 
+#define SAFE_MAX_FOR_TICKS 5
+
 //=======================================
 // Redeclare userDECShape
 //=======================================
@@ -218,7 +220,7 @@ SHAPE make_shape(SHAPE s)
             if (((nstep >= s.pars.n90m) && ((fabs(aCurrent - aLast) >= DWFM) || 
                                        (fabs(phCurrent - phLast) >= DPH) ||
                                        (fabs(gCurrent - gLast) > 0.0))) ||
-                                       (nstep >= 255)) { 
+                                       (nstep >= SAFE_MAX_FOR_TICKS)) { 
 //             printf("aLast = %f aCurrent = %f\n",aLast,aCurrent);
                a0Out = roundamp(aLast,1.0/WSD);
                aOut =  roundamp((aCurrent + aLast)/2.0,1.0/WSD);  
@@ -464,7 +466,7 @@ SHAPE make_shape1(SHAPE s)
             if (((nstep >= s.pars.n90m) && ((fabs(aCurrent - aLast) >= DWFM) || 
                                        (fabs(phCurrent - phLast) >= DPH) ||
                                        (fabs(gCurrent - gLast) > 0.0))) ||
-                                       (nstep >= 255)) { 
+                                       (nstep >= SAFE_MAX_FOR_TICKS)) { 
 //             printf("aLast = %f aCurrent = %f\n",aLast,aCurrent);
                a0Out = roundamp(aLast,1.0/WSD);
                aOut =  roundamp((aCurrent + aLast)/2.0,1.0/WSD);  
@@ -874,7 +876,7 @@ MPSEQ MPchopper(MPSEQ seq)
                   nstep = 0;
                }
                if (((nstep >= seq.n90m) && (fabs(phCurrent - phLast) >= DPH)) ||
-                                           (nstep >= 255)) {
+                                           (nstep >= SAFE_MAX_FOR_TICKS)) {
 //                printf("nstep = %d n90m = %d\n",nstep,seq.n90m);
 //                printf("phLast = %f phCurrent = %f\n",phLast,phCurrent);
                   ph0Out = roundphase(phLast,360.0/(PSD*8192));
@@ -1139,7 +1141,7 @@ CP make_cp(CP cp)
             }
             if (((nstep >= cp.n90m) && ((fabs(aCurrent - aLast) >= DWFM) || 
                                       (fabs(phCurrent - phLast) >= DPH)))||
-                                      (nstep >= 255.0)) {
+                                      (nstep >= SAFE_MAX_FOR_TICKS)) {
 //             printf("aLast = %f aCurrent = %f\n",aLast,aCurrent);
                a0Out = roundamp(aLast,1.0/WSD);
                aOut =  roundamp((aCurrent + aLast)/2.0,1.0/WSD);  
