@@ -453,6 +453,7 @@ extern int sread();
 extern int string();
 extern int Strstr();
 extern int substr();
+extern int svdfit(int argc, char *argv[], int retc, char *retv[]);
 extern int svf();
 extern int svr_FDA();
 extern int svphf();
@@ -1108,6 +1109,7 @@ static cmd_t vnmr_table[] = {
 	{"strstr"     , Strstr,		NO_REEXEC, 10},
 	{"sub"        , addsub,		NO_REEXEC, 10},
 	{"svd"        , raster_dump,	NO_REEXEC, 0},
+	{"svdfit"     , svdfit,		NO_REEXEC, 0},
 	{"SVF"        , svf,		NO_REEXEC, 0},
 	{"Svfname"    , autoname,	NO_REEXEC, 0},
         {"svr"        , svr_FDA,        NO_REEXEC, 0},
