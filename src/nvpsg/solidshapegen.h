@@ -9,6 +9,8 @@
 #ifndef SOLIDSHAPEGEN_H
 #define SOLIDSHAPEGEN_H
 
+#define SAFE_MAX_FOR_TICKS 5
+
 //###################  Please Note ################################
 // The choppers, make_shape, MPchopper and make_cp have been moved
 // to the new file solidchoppers.h. The above functions in this file
@@ -545,7 +547,7 @@ CP make_cp(CP cp)
              naccumpuls = 0;
              break;
          }
-         if (fabs(cp.phInt) >= DPH || fabs(aCurrent - aLast) >= 1.0) {
+         if (fabs(cp.phInt) >= DPH || fabs(aCurrent - aLast) >= 1.0 || (naccumpuls / nmin) >= SAFE_MAX_FOR_TICKS) {
              ph = ph + cp.phInt;
              cp.phInt = 0.0;
              aLast = aCurrent;
@@ -1385,8 +1387,8 @@ MPSEQ MPchopper(MPSEQ seq)
                naccumpuls = 0;
                break;
             }
-            if (fabs(seq.phInt) >= DPH) { //Write a step if delta-ph > DPH, else
-               ph =  ph + seq.phInt;      //accumulate the running phase
+            if (fabs(seq.phInt) >= DPH || (naccumpuls / nmin) >= SAFE_MAX_FOR_TICKS) { //Write a step if delta-ph > DPH, else
+               ph =  ph + seq.phInt;                                                   //accumulate the running phase
                seq.phInt = 0;
                phase = roundphase(ph+seq.phBase[i%seq.nph]+seq.phSuper[iph],360.0/8192);
                if (printmode == 1)
@@ -1593,7 +1595,7 @@ RAMP make_ramp(RAMP r)
                r.phInt += r.n90*dph;
                naccumpuls = 0;
             }
-            if (fabs(r.phInt) >= DPH || fabs(aCurrent - aLast) >= 1.0) {
+            if (fabs(r.phInt) >= DPH || fabs(aCurrent - aLast) >= 1.0 || (naccumpuls / r.n90) >= SAFE_MAX_FOR_TICKS) {
                ph = ph + r.phInt;
                r.phInt = 0.0;
                aLast = aCurrent;
@@ -1863,8 +1865,9 @@ SHAPE make_shape(SHAPE s)
          }
          if (fabs(s.pars.phInt) >= DPH ||
             fabs(aCurrent - aLast) >= 1.0 ||
-            fabs(phShapeCurrent - phShapeLast ) >= DPH) { //Write a new step if different or delta-ph > DPH, else
-                                                          //or delta-ph > DPH, else set the running phase.
+            fabs(phShapeCurrent - phShapeLast) >= DPH ||
+    	    (naccumpuls / s.pars.n90) >= SAFE_MAX_FOR_TICKS) //Write a new step if different or delta-ph > DPH, else
+	 {                                                   //or delta-ph > DPH, else set the running phase.
             ph = ph + s.pars.phInt;
             s.pars.phInt = 0.0;
             aLast = aCurrent;
