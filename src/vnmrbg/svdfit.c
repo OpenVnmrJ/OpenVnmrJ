@@ -12,6 +12,7 @@
 #include <errno.h>
 
 #include "vnmrsys.h"
+#include "tools.h"
 #include "wjunk.h"
 #include "vnmr_svd.h"
 
@@ -199,6 +200,7 @@ int svdfit(int argc, char *argv[], int retc, char *retv[])
     int i,j;
     double *x,*b,*w,**u,**v;
     double max;
+    double **usav;
 
     if (argc != 4)
     {
@@ -224,7 +226,7 @@ int svdfit(int argc, char *argv[], int retc, char *retv[])
     }
     if ((afile=fopen(argv[1],"r"))==0)
     {
-        Werrprintf("%s: cannot open experimental data file [b] %s",
+        Werrprintf("%s: cannot open basis data file [A] %s",
                   argv[0], argv[1]);
         fclose(bfile);
         ABORT;
@@ -278,7 +280,21 @@ int svdfit(int argc, char *argv[], int retc, char *retv[])
     {
         Werrprintf("%s: cannot open output results file [x] %s",
                   argv[0], argv[3]);
+        free_dvector(x,1,ncols);
+        free_dvector(b,1,nrows);
+        free_dvector(w,1,ncols);
+        free_dmatrix(u,1,nrows ,1,ncols);
+        free_dmatrix(v,1,ncols ,1,ncols);
         ABORT;
+    }
+    if (retc) // save copy of U matrix to calculate chisq
+    {
+       usav=dmatrix(1,nrows,1,ncols);
+       for (i = 1; i <= nrows; i++)
+       {
+          for (j = 1; j <= ncols; j++)
+             usav[i][j] = u[i][j];
+       }
     }
     
     vnmr_svd(u, nrows, ncols, w, v); // Given A (in u) get U, W, and V.
@@ -304,6 +320,26 @@ int svdfit(int argc, char *argv[], int retc, char *retv[])
     if (debug)
        for (j = 1; j <= ncols; j++)
           fprintf(stderr,"x[%d]= %g\n", j, x[j]);
+    if (retc)
+    {
+       double chisq = 0.0;
+       double sum;
+       for (i = 1; i <= nrows; i++)
+       {
+          sum = 0.0;
+          for (j = 1; j <= ncols; j++)
+          {
+             sum += usav[i][j] * x[j];
+             if (debug)
+                fprintf(stderr,"sum(%g) += usav[%d][%d](%g) * x[%d](%g)\n", sum, i, j, usav[i][j], j, x[j]);
+          }
+          chisq += (b[i] - sum) * (b[i] - sum);
+          if (debug)
+             fprintf(stderr,"chisq(%g) += (b[%d](%g) - sum(%g))**2\n", chisq, i, b[i], sum);
+       }
+       free_dmatrix(usav,1,nrows ,1,ncols);
+       retv[0] =  realString(chisq);
+    }
     for (j = 1; j <= ncols; j++)
        fprintf(xfile,"%g\n", x[j]);
     fclose(xfile);
