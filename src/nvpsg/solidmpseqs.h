@@ -5507,9 +5507,8 @@ MPSEQ getsat(char *seqName, double p, double phint, int iRec, int calc)
    s.array = disarry(var, s.array);
    s.pw[0] = cycle - s.pw[1];
 
-   if (s.pw[0] < 0.0) { 
-      printf("Error in getsat(). No delay between pulses\n");
-      psg_abort(1);
+   if (s.pw[0] <= 0.0) { 
+      abort_message("Error in getsat(). No delay between pulses\n");
    }
 
 //Set the Offset List
