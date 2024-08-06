@@ -1675,51 +1675,6 @@ void writetabletopar(int tablename,char *parname)
   return;
 }
 
-
-void putarray(char *param, double *value, int n) 
-{
-/* Return a numerical arrayed parameter value to VnmrJ 
-   in both current and processed trees */
-  int i;
-
-  /* Set parameter in 'current' tree */
-  putCmd("exists('%s','parameter'):$ex\n",param);
-  putCmd("if ($ex > 0) then \n");
-  putCmd("  %s = %.10f\n",param,value[0]);   /* reset parameter to non-array */
-  if( n > 1 ) {
-    for (i = 1; i < n; i++)
-      putCmd("  %s[%d] = %.10f\n",param,i+1,value[i]);
-  }
-  putCmd("endif\n");
-
-  /* Set parameter in 'processed' tree */
-  putCmd("exists('%s','parameter','processed'):$ex\n",param);
-  putCmd("if ($ex > 0) then \n");
-  putCmd("  setvalue('%s',%.10f,0,'processed')\n",param,value[0]);   /* reset parameter to non-array */
-  if( n > 1 ) {
-    for (i = 1; i < n; i++)
-      putCmd("  setvalue('%s',%.10f,%d,'processed')\n",param,value[i],i+1);
-  }
-  putCmd("endif\n");
-}
-
-
-void putvalue(char *param, double value) 
-{
-  putarray(param,&value,1);
-}
-
-
-void putstring(char *param, char value[]) 
-{
-/* Return a string parameter value to VnmrJ in both current and processed trees */
-  putCmd("exists('%s','parameter'):$ex\n",param);
-  putCmd("if ($ex > 0) then %s='%s' endif\n",param,value);
-
-  putCmd("exists('%s','parameter','processed'):$ex\n",param);
-  putCmd("if ($ex > 0) then setvalue('%s','%s','processed') endif\n",param,value);
-}
-
 void sgl_abort_message(char *format, ...) 
 {
   va_list vargs;
