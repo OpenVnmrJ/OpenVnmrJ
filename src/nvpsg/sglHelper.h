@@ -56,11 +56,6 @@ double prep_profile( char profilechar,
                      double steps, 
                      PHASE_ENCODE_GRADIENT_T *pe,
                      PHASE_ENCODE_GRADIENT_T *per);
-void   putstring( char *param, 
-                  char value[]); 
-void   putvalue( char *param, 
-                 double value);
-void   putarray(char *param, double *value, int n);
 void   retrieve_parameters();
 void   sgl_abort_message( char *format, ...);
 void   sgl_error_check( int error_flag);
@@ -103,11 +98,6 @@ double t_prep_profile( char profilechar,
                        double steps, 
                        PHASE_ENCODE_GRADIENT_T *pe,
                        PHASE_ENCODE_GRADIENT_T *per);
-void   t_putstring( char *param, 
-                    char value[]); 
-void   t_putvalue( char *param, 
-                   double value);
-void   t_putarray(char *param, double *value, int n);
 void   t_retrieve_parameters();
 void   t_sgl_abort_message(char *format, ...);
 void   t_sgl_error_check(int error_flag);
@@ -150,11 +140,6 @@ double x_prep_profile( char profilechar,
                        double steps, 
                        PHASE_ENCODE_GRADIENT_T *pe,
                        PHASE_ENCODE_GRADIENT_T *per);
-void   x_putstring( char *param, 
-                    char value[]); 
-void   x_putvalue( char *param, 
-                   double value);
-void   x_putarray(char *param, double *value, int n);
 void   x_retrieve_parameters();
 void   x_sgl_abort_message(char *format, ...);
 void   x_sgl_error_check(int error_flag);

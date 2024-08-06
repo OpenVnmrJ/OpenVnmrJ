@@ -1448,14 +1448,6 @@ void sgl_error_check(int err_flag);
 void t_sgl_error_check(int err_flag);
 void x_sgl_error_check(int err_flag);
 
-void putvalue(char *param, double value);
-void t_putvalue(char *param, double value);
-void x_putvalue(char *param, double value);
-
-void putstring(char *param, char value[]);
-void t_putstring(char *param, char value[]);
-void x_putstring(char *param, char value[]);
-
 /*----------------------------------------------------------------------*/
 /*----------------------------------------------------------------------*/
 /*--- S T A R T   O F   P A R A M E T E R    D E C L A R A T I O N  ----*/

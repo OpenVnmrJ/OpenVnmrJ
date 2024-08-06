@@ -19,5 +19,8 @@ extern void text_error(const char *format, ...) __attribute__((format(printf,1,2
 extern void close_error(int success);
 extern void setupPsgFile();
 extern void putCmd(const char *format, ...) __attribute__((format(printf,1,2)));
+extern void putstring(const char *param, char *value); 
+extern void putvalue(const char *param, double value);
+extern void putarray(const char *param, double *value, int n);
 
 #endif
