@@ -1,0 +1,72 @@
+"macro autoh2cal"
+"********************************************************"
+"autoh2cal - Automatically process speactra and run h2cal"
+"********************************************************"
+
+if ($# < 1) then
+	$output='graphics'
+else
+	substr($1,1,1):$output
+endif
+
+if ($output='s') then // Load gamma H2 experiment
+	rtp('/vnmr/tests/gammaH2')
+	wexp='autoh2cal'
+	dps
+	return
+elseif ($output='p') then
+	$output='plotter'
+endif
+
+// Check which spectrum is high field
+if ( dof[1] > dof[2] ) then
+	$firsthigh=0
+else
+	$firsthigh=1
+endif
+
+// Process spectrum 1
+lb=3 vp=0
+wft aph0 vsadj ff
+ds(1)
+thadj:$silent
+nll:$peaks
+// Make sure all peaks are selected
+while $peaks<3
+do
+	th=th-1
+	nll:$peaks
+endwhile
+$first=llfrq[1]-llfrq[2]
+
+// Process spectrum 2
+ds(2) aph0
+thadj:$silent
+nll:$peaks
+// Make sure all peaks are selected
+while $peaks<3
+do
+	th=th-1
+	nll:$peaks
+endwhile
+$second=llfrq[1]-llfrq[2]
+
+// Switch view to Process->Text Output panel
+vnmrjcmd('setpage','Process','Text Output') clear(4)
+vnmrjcmd('setpage','Process','') // Unset page option for Process tab
+	
+// Run h2cal
+if $firsthigh then
+	h2cal($second,$first,142)
+	h2cal($second,$first,142):$gamma,$pw90,$freq
+else
+	h2cal($first,$second,142)
+	h2cal($first,$second,142):$gamma,$pw90,$freq
+endif
+
+cr=$freq-rfl-rfp
+write($output,20,wc2-20,'Gamma-H2 = %0.2f Hz',$gamma)
+write($output,20,wc2-30,'90 degree pulse = %0.2f usec',$pw90)
+write($output,20,wc2-40,'coalescence frequency = %0.2f Hz',$freq)
+write($output,20,wc2-60,'dmf = %0.2f Hz',$gamma*4)
+write('alpha','\ndmf = %0.2f Hz',$gamma*4)

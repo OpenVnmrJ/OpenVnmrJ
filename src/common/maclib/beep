@@ -1,0 +1,80 @@
+"macro beep"
+"********************************************************"
+"beep - Play an alert sound                              "
+"********************************************************"
+
+$directory='/usr/share/sounds/gnome/default/alerts/'
+exists($directory,'directory'):$e
+if not ($e) then
+	$directory='/usr/share/sounds/freedesktop/stereo/'	
+endif
+
+// Set path for appdir sounds
+exists($0,'maclib'):$i,$beeppath
+substr($beeppath,'dirname'):$beeppath // Remove beep
+substr($beeppath,'dirname'):$beeppath // Remove maclib
+$beeppath=$beeppath+'/user_templates/sounds/'
+
+if $#>0 then
+	if typeof('$1') then
+		$sound=$1
+		if ($sound='options') or ($sound='list') then
+			// Switch view to Process->Text Output panel
+			vnmrjcmd('setpage','Process','Text Output') clear(4)
+			vnmrjcmd('setpage','Process','') // Unset page option for Process tab
+			// Output options
+			echo('Sound directory: '+$directory)
+			shell('ls '+$directory+' | sed \'s/\.og.//g\' | xargs -n2 | sed \'s/\ /\t\t/\';')
+			echo(' ')
+			echo('Sound directory: '+$beeppath)
+			shell('ls '+$beeppath+' | sed \'s/\.og.//g\' | xargs -n2 | sed \'s/\ /\t\t/\';')
+			return
+		endif
+		exists($sound,'file'):$e
+		if not ($e) then
+			exists($directory+$sound+'.ogg','file'):$g
+			exists($directory+$sound+'.oga','file'):$a
+			exists($beeppath+$sound+'.ogg','file'):$bg
+			exists($beeppath+$sound+'.oga','file'):$ba
+			if ($g) then
+				$sound=$sound+'.ogg'
+			elseif ($a) then
+				$sound=$sound+'.oga'
+			elseif ($bg) then
+				$directory=$beeppath
+				$sound=$sound+'.ogg'
+			elseif ($ba) then
+				$directory=$beeppath
+				$sound=$sound+'.oga'
+			else
+				write('error','Error: Sound not found. Select a sound listed with beep(\'options\') or provide full path to file.')
+				return
+			endif
+		else
+			$directory=''
+		endif	
+	endif
+else
+	exists($directory+'complete.ogg','file'):$completeogg
+	exists($directory+'complete.oga','file'):$completeoga
+	exists($directory+'drip.ogg','file'):$dripogg
+	exists($directory+'drip.oga','file'):$dripoga
+	exists($beeppath+'complete.ogg','file'):$appdircomplete
+	if ($completeogg) then
+		$sound='complete.ogg'
+	elseif ($completeoga) then
+		$sound='complete.oga'
+	elseif ($dripogg) then
+		$sound='drip.ogg'
+	elseif ($dripoga) then
+		$sound='drip.oga'
+	elseif ($appdircomplete) then
+		$directory=$beeppath
+		$sound='complete.ogg'
+	else
+		write('error','Error: Default sound missing. Please specify sound. See beep(\'options\') for options')
+		return
+	endif
+endif
+
+shell('ogg123 -q '+$directory+$sound+' &')

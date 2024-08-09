@@ -1,0 +1,34 @@
+"macro logtempspin"
+"*****************************************************************"
+"logtempspin - Log current spin and temperature status to explog  "
+"*****************************************************************"
+
+$spin=0
+$regS=0
+$regT=0
+$temp=0
+$condition=' '
+readhw('spin'):$spin,$regS
+readhw('temp'):$temp,$regT
+systemtime('%a %b %d %T %Y'):$time
+if ($regS=0) then
+        $condition='(Regulation Off)'
+elseif ($regS=1) then
+        $condition='(Regulated)'
+elseif ($regS=2) then
+        $condition='(Not Regulated)'
+else
+        $condition=''
+endif
+write('file',curexp+'/acqfil/log','%s: Spin rate: %d Hz %s',$time,$spin,$condition)
+if ($regT=0) then
+        $condition='(Regulation Off)'
+elseif ($regT=1) then
+        $condition='(Regulated)'
+elseif ($regT=2) then
+        $condition='(Not Regulated)'
+else
+        $condition=''
+endif
+write('file',curexp+'/acqfil/log','%s:  VT  Temp: %d C  %s',$time,$temp,$condition)
+

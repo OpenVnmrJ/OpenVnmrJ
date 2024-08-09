@@ -1,0 +1,35 @@
+"macro rotortemp"
+"*****************************************************************************"
+"rotortemp - Estimate temperature change from spinning at a given rate    (M) "
+"*****************************************************************************"
+
+if ($#>0) then 
+	$rotor=$1
+else
+	input('Enter rotor diameter in mm (4, 3.2, 2.5, 1.3): '):$rotor
+endif
+
+if ($#>1) then
+	$frequency=$2
+else
+	input('Enter spin rate in kHz: '):$frequency
+endif
+
+if ($rotor=4.0) then
+	$rise=(0.1056*$frequency*$frequency)-(0.1738*$frequency)
+elseif ($rotor=3.2) then
+	$rise=(0.0853*$frequency*$frequency)-(0.2337*$frequency)
+elseif ($rotor=2.5) then
+	$rise=(0.0544*$frequency*$frequency)-(0.0585*$frequency)
+elseif ($rotor=1.3) then
+	$rise=(0.0108*$frequency*$frequency)-(0.1859*$frequency)
+else
+	write('error','Data unavailable for a %.1f mm rotor.',$rotor)
+	return
+endif
+
+if ($## = 0) then
+	write('line3','Spinning a %.1f mm rotor at %d kHz raises the temperature by approx. %.0f K',$rotor,$frequency,$rise)
+endif
+
+return($rise)

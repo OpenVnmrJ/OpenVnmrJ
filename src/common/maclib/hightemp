@@ -1,0 +1,91 @@
+"macro hightemp / lowtemp / plhightemp / pllowtemp"
+"********************************************************"
+"hightemp   - Auto-process tempcal data                  "
+"lowtemp    -                                            "
+"                                                        "
+"plhightemp - Plot tempcal data and calculation results  "
+"pllowtemp  -                                            "
+"********************************************************"
+
+$plot=0 $high=1
+$device='graphics'
+substr($0,1,1):$disp
+if ($disp='p') then
+	$plot=1
+	$device='plotter'
+	substr($0,3,1):$hilo
+	if ($hilo='l') then
+		$high=0
+	endif
+elseif ($disp='l') then
+	$high=0
+endif
+if ($high=1) and (temp<26) then
+	input('Temp<26. Run low temp calculation? [Y/n]: '):$ans
+	if ($ans='y') or ($ans='Y') or ($ans='') then
+		$high=0
+	endif
+endif
+if ($high=0) and (temp>24) then
+	input('Temp>24. Run high temp calculation? [Y/n]: '):$ans
+	if ($ans='y') or ($ans='Y') or ($ans='') then
+		$high=1
+	endif
+endif
+
+lb=2 ff wft 
+if ($#>0) then
+	if typeof('$1') then
+		if not ($1='noph') then
+			aph0('peakmax')
+		endif
+	else
+		aph0('peakmax')
+	endif
+else
+	aph0
+endif
+
+vp=0 vsadj(110)
+
+// Find two max peaks
+thadj:$silent nll:$num
+repeat
+	if ($num>2) then
+		th=th+1
+		nll:$num
+	endif
+until $num=2
+
+// Place cursors on peaks and set window
+cr=llfrq[1]-rfl delta=(llfrq[1]-rfl)-(llfrq[2]-rfl)
+wp=delta+2.5p
+sp=llfrq[size('llfrq')]-rfl-1.25p
+ds
+ds('toggle')
+
+// Run tempcal and display output
+if ($high) then
+	tempcal('e'):$temp
+else
+	tempcal('m'):$temp
+endif
+
+if ($##=0) then
+	if ($high) then
+		tempcal('e')
+	else
+		tempcal('m')
+	endif
+endif
+
+write('graphics',wc/2-22,wc2-20,'Regulated Temp = %.2f deg C',temp)
+write('graphics',wc/2-22,wc2-30,'Measured Temp = %.2f deg C',$temp)
+
+if ($plot) then
+	pl pscale
+	write('plotter',wcmax/2-22,wc2max-30,'Regulated Temp = %.2f deg C',temp)
+	write('plotter',wcmax/2-22,wc2max-35,'Measured Temp = %.2f deg C',$temp)
+endif
+
+return($temp,delta)

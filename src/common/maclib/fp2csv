@@ -1,0 +1,61 @@
+"macro fp2csv"
+"*************************************************************"
+"fp2csv - Save peak frequencies and amplitudes to a csv file  "
+"*************************************************************"
+
+nll:$numlines
+
+$c=1
+repeat
+	getll($c):$heights[$c],$freqs[$c]
+	$c=$c+1
+until $c>$numlines
+
+$file=curexp+'/fp.csv'
+$filetmp=curexp+'/fp.tmp'
+$array=array
+
+if $#>0 then
+	substr($1,'dirname'):$s
+	if $s='.' then
+		$array=$1
+	else
+		$file=$1
+	endif
+	if $#=2 then
+		substr($2,'dirname'):$s
+		if $s='.' then
+			$array=$2
+		else
+			$file=$2
+		endif
+	endif
+endif
+
+substr($array,1,'delimiter',','):$array
+substr($array,1,1):$s
+if $s='(' then
+	input('Input array variable name: '):$array
+endif
+
+write('reset',$filetmp)
+
+// Write array (x-axis) to line 1
+write('fileline',$filetmp,'%s',$array)
+$c=1
+repeat
+	write('fileline',$filetmp,',%.3f',{$array}[$c])
+	$c=$c+1
+until $c>arraydim
+write('fileline',$filetmp,'\n')
+
+// Add data from fp.out (y-axes)
+fp
+$sfrqS=' '
+format(sfrq,1,0):$sfrqS
+shell('awk -v sfrq='+$sfrqS+' \'BEGIN {OFS=","}; NR==1 {a=$3; b=$10 };NR==3,NR==a+2 {c[$1]=$2/sfrq " ppm"};NR>a+2 {d[$1,$2,1]=$3} END {for (j = 1; j <=a; j++) {printf("%s",c[j]);for (k = 1; k <= b; k++) {printf(",%.3f",d[j,k,1])};printf("\\n")}}\' '+curexp+'/fp.out >> '+$filetmp)
+
+// Transpose the output to put data in columns
+shell('awk \'BEGIN {FS=","} {for (i=1;i<=NF;i++) {arr[NR,i]=$i;if(tnf <= NF) tnf=NF;}} END {for(i=1;i<=tnf;i++) {for(j=1;j<=NR;j++) {if(j != NR) printf("%s,",arr[j,i]);if(j == NR) printf("%s",arr[j,i]);};printf("\\n");}}\' '+$filetmp+' > '+$file)
+
+rm($filetmp):$dummy

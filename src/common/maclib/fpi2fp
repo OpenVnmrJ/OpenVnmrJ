@@ -1,0 +1,9 @@
+"macro fpi2fp"
+"********************************************************"
+"fpi2fp - Convert fpi.out to fp.out                      "
+"********************************************************"
+
+$sfrq='' $ref=''
+format(sfrq,1,3):$sfrq
+
+shell('awk \'NR==1 {a=$3;print "List of",$3,"lines in spectrum 1 to spectrum",$10}; NR==2 {print "line         frequency (Hz)"}; NR==3,NR==a+2 {printf "   %d           %7.2f\\n",$1,($3+($2-$3)/2)*'+$sfrq+'}; NR==a+3 {print "line    spectrum    amplitude (mm)"}; NR>a+3 {print "  ",$1,"       ",$2,"        ",$3}\' '+curexp+'/fpi.out > '+curexp+'/fp.out')

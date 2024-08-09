@@ -1,0 +1,41 @@
+"macro autosave"
+"********************************************************"
+"autosave - Setup future action for auto-saving data     "
+"********************************************************"
+
+if ($# = 1) then
+	$path = $1
+else
+	$path = userdir+'/data/'
+endif
+
+$_bs='n' input('Save on bs [y/N]? '):$_bs
+$_nt='n' input('Save on nt [y/N]? '):$_nt
+$_exp='n' input('Save on exp [y/N]? '):$_exp
+
+$file='' shell('zenity --file-selection --save --title="AutoSave" --filename='+$path):$file
+
+if ($file = '') then
+	return
+endif
+
+$_commands='' input('Enter commands to run before saving: '):$_commands
+
+if ($_commands = '') then
+	$_commands = 'wft'
+endif
+
+$_commands=$_commands+' svf(\''+$file+'\',\'force\')'
+
+if ($_bs = 'y') or ($_bs = 'Y') then
+	wbs($_commands)
+	wbs?
+endif
+if ($_nt = 'y') or ($_nt = 'Y') then
+	wnt($_commands)
+	wnt?
+endif
+if ($_exp = 'y') or ($_exp = 'Y') then
+	wexp($_commands)
+	wexp?
+endif
