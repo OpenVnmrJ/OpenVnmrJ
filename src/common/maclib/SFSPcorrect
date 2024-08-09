@@ -72,6 +72,27 @@ IF ($1='updateprobe') THEN
 	 endif
 	 $x=$x+1
    until $x = $i
+
+   "Handle std1Ds correctly (load SF/SP for pw90/tpwr) by deleting the respective"
+   "lines from /vnmr/adm/walkupadm/approvedExpModule or local file "
+
+   $userAEM=userdir+'/adm/walkupadm/approvedExpModule'
+   $sysAEM=systemdir+'/adm/walkupadm/approvedExpModule'
+
+   exists(userdir+'/probes/'+ probe,'file'):$e
+   if $e then
+     exists(userdir+'/adm','file'):$e 
+     if not $e then mkdir(userdir+'/adm') endif
+     exists(userdir+'/adm/walkupadm','file'):$e 
+     if not $e then mkdir(userdir+'/adm/walkupadm') endif
+     exists($userAEM,'file'):$ef
+     if not $ef then cp($sysAEM,$userAEM) endif
+     $AEMfile=$userAEM
+   else
+     $AEMfile=$sysAEM
+   endif
+   shell('(cat '+$AEMfile+' | sed -e \'s|apptype      std1D|#apptype      std1D|g\' > /tmp/AEMtmp)')
+   mv('/tmp/AEMtmp',$AEMfile)
    RETURN
 ENDIF
 

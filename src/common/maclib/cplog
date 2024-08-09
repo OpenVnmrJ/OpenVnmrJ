@@ -341,7 +341,6 @@ ELSEIF ($arg2='last') or ($arg2 = 'first') THEN
 	endif
     endif
 */
-
     $fidlog=$archsamp+'/dirinfo/fidlog'
     $name=$1 $lname='' $total=0 $lastname=''
     exists($fidlog,'file'):$lsfex
@@ -377,8 +376,13 @@ ELSEIF ($arg2='last') or ($arg2 = 'first') THEN
 		if $active>-0.5 then
 		    rtv($archsamp+'/'+$lastname,'noabort','lockfreq_'):$lockfreq
 		endif
+
+		$mimic=0
+		exists('mimicpath','parameter','global'):$ismimic
+		if $ismimic then if mimicpath<>'' then $mimic=1 endif endif
+
 		abs(lockfreq-$lockfreq):$diff
-		if ($diff > 0.001) then
+		if ($diff > 0.001) and $mimic=0 then
 		    $lastname=''
 		elseif ($checktn<>'') or ($checkdn<>'') then
 		    rtv($archsamp+'/'+$lastname,'tn'):$tn
