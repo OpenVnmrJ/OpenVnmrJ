@@ -1,0 +1,69 @@
+"macro btime"
+"********************************************************"
+"btime - Display duration of one block size              "
+"********************************************************"
+
+$orig_nt=nt $orig_ss=ss
+nt=1 ss=0
+if (arraydim>1) then
+	$orig_array={array}
+	$arrayname=array
+	{array}={array}[1]
+	exptime:$scan
+	{$arrayname}=$orig_array
+else
+	exptime:$scan
+endif
+$scan=$scan-pad
+nt=$orig_nt ss=$orig_ss
+
+if ($#>0) then
+	if ($#>1) then
+		$hours=$1
+		$mins=$2
+	else
+		$hours=0
+		$mins=$1
+	endif
+	$btime=$hours*3600+$mins*60
+	bs=trunc($btime/$scan)
+	if (bs=0) or (bs=1) then
+		bs=1
+	else
+		while not (bs mod 4 = 0)
+		do
+			bs=bs+1
+		endwhile
+	endif
+	write('line3','Block size set to %d',bs)
+endif
+
+$btime=bs*$scan
+// Convert difference to hrs, mins, secs and display
+$hours=trunc($btime/3600)
+$mins=trunc(($btime-$hours*3600)/60)
+$secs=$btime-($mins*60)-($hours*3600)
+if $## < 1 then // Only show output if return values not requested
+	if ($hours > 0) then
+		write('line3','Block size is %d hr, %d min, %d sec',$hours,$mins,$secs)
+	elseif ($mins > 0) then
+		write('line3','Block size is %d min, %d sec',$mins,$secs)
+	else
+		write('line3','Block size is %d sec',$secs)
+	endif
+endif
+$hS='' $mS='' $sS=''
+format($hours,1,0):$hS
+format($mins,1,0):$mS
+format($secs,1,0):$sS
+if ($hours<10) then
+	$hS='0'+$hS
+endif
+if ($mins<10) then
+	$mS='0'+$mS
+endif
+if ($secs<10) then
+	$sS='0'+$sS
+endif
+$outstring=$hS+':'+$mS+':'+$sS
+return($btime,$outstring)

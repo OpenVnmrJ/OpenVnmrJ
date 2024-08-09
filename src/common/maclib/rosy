@@ -1,0 +1,133 @@
+"macro rosy"
+"*******************************************************************"
+"rosy - Display relaxation data in a DOSY-like plot                 "
+"*******************************************************************"
+
+if $#<2 then $1=0 $2=20 endif
+
+wft
+integ:$integral1,$integral2
+if $integral1<0 then phase(180) endif
+nll fp
+if seqfil='INVREC' then t1s elseif seqfil='CPMGT2' then t2s else write('line3','Unknown pulse sequence') endif
+
+$file=curexp+'/dll.out'
+$file2=curexp+'/dosy/diffusion_display.inp'
+$file3=curexp+'/analyze.list'
+$amptmp=0
+
+exists(curexp+'/dosy/','directory'):$k1
+if $k1=0
+then
+	mkdir(curexp+'/dosy/')
+endif
+
+
+exists('continflag','parameter'):$k1
+if $k1=0
+then
+	create('continflag','string')
+	continflag='n'
+endif
+
+exists('str1','parameter'):$k1
+if $k1=0
+then
+	create('str1','string')
+	create('str2','string')
+endif
+
+readfile($file3,'str1','str2')
+
+$fsize=size('str2')
+$k1=2
+repeat
+	$k1=$k1+1
+	substr(str2[$k1],1):$m1
+	substr(str2[$k1],2):$m2
+until ($k1>=$fsize)
+
+      nll:$nsize,$scale
+"if normalized, scale is vs * normalize"
+"otherwise scale is vs"
+"write('line3','dll: scale=%g vs=%g nsize=%d',$scale,vs,$nsize)"
+
+isvnmrj:$isj
+if $nsize>0.5 then
+  write('reset',$file)
+  write('reset',$file2)
+  if $isj>0.5 then
+    if axis='p' then
+      $title='index   freq(ppm)      intensity'
+    else
+      $title='index   freq(Hz)       intensity'
+    endif
+    write('file',$file,'%s',$title)
+  endif
+  $rflrfp = rfl - rfp
+  $ifrq = 1.0 / reffrq
+  $n=0
+  $k1=2
+  repeat
+    $n=$n+1
+    $k1=$k1+1
+    $frq = llfrq[$n] - $rflrfp
+    $amp = llamp[$n] * $scale
+	substr(str2[$k1],1):$m1
+	substr(str2[$k1],2):$m2
+    write('file',$file,'%4d  %10g    %10g',$n,$frq,$amp)
+    write('file',$file2,'%10.4f	%10.4f   %s   %s	    0.0000	    0.0000	  0.000000',$frq,$amp,$m1,$m2)
+if $amp>$amptmp then
+   $amptmp=$amp
+endif
+
+
+  until ($n>=$nsize)
+  if $isj>0.5 then
+    curexp=curexp
+  endif
+  clear
+  cat($file)
+endif
+
+
+exists('sw1','parameter'):$k1
+if $k1=0
+then
+	create('sw1','real','processed')
+	create('sw1','real','current')
+endif
+exists('dosybypoints','parameter'):$k1
+if $k1=0
+then
+	create('dosybypoints','string','processed')
+	create('dosybypoints','string','current')
+endif
+
+exists('ni','parameter'):$k1
+if $k1=0
+then
+	create('ni','real','processed')
+        create('ni','real','current')
+endif
+ni=1
+
+$amptmp=$amptmp*1.2
+sw1=$amptmp
+shell('cp '+curexp+'/dosy/diffusion_display.inp '+curexp+'/dosy/diffusion_spectrum') 
+
+
+wft
+
+ds(1)
+ff
+
+ddif('i',$1,$2)
+if seqfil='INVREC' then unit('D','T1',1) elseif seqfil='CPMGT2' then unit('D','T2',1) else write('line3','Unknown pulse sequence') endif
+
+vs2d=$scale*$amptmp
+trace='f2'
+dconi
+vsproj=$scale
+init_dis('hproj') dconi('hproj_max') init_dis('vproj') dconi('vproj_max')
+newmenu('dconi') dconi('restart')

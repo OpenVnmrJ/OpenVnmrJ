@@ -1,0 +1,38 @@
+"macro ctime"
+"********************************************************"
+"ctime - Display the elapsed experiment time on line 3   "
+"********************************************************"
+
+if (file='exp') and ($#>0) then
+	$filepath=curexp+'/acqfil/log'
+else
+	$filepath=file+'/log'
+endif
+
+// Get experiment start time from first line of log
+lookup('file',curexp+'/acqfil/log','readline'):$exp
+
+// Convert start time to seconds 
+systemtime('%a %b %d %T %Y:',$exp):$start
+
+// Get current time if exp or use time from the last line of log file in seconds
+if (file='exp') and ($#=0) then
+	systemtime:$now
+else
+	readfile($filepath,'$exp','$exp','','local'):$t
+	//readfile($filepath,'$exp','','','local'):$t // OpenVnmrJ
+	$exp=$exp[$t]
+	systemtime('%b %d %T %Y:',$exp):$now
+	//systemtime('%a %b %d %T %Y:',$exp):$now // OpenVnmrJ
+endif
+
+$elapsed=$now-$start
+	
+// Convert difference to hrs, mins, secs and display
+$hours=trunc($elapsed/3600)
+$mins=trunc(($elapsed-$hours*3600)/60)
+$secs=$elapsed-($mins*60)-($hours*3600)
+if $## < 1 then // Only show output if return values not requested
+	write('line3','Elapsed time: %d hr %d min %d sec',$hours,$mins,$secs)
+endif
+return($elapsed)

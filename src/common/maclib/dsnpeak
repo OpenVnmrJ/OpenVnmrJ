@@ -1,0 +1,100 @@
+"macro dsnpeak"
+"*************************************************************"
+"dsnpeak  - Display maximum signal-to-noise for selected peak "
+"dsnpeaks - Display maximum S/N for all peaks in peak list    "
+"*************************************************************"
+
+$peak=0 $delta=0
+if ($#>0) then
+	if ($#>1) then
+		if typeof('$1') then // is a string
+			$peak=llfrq  // set peak list to line list
+			$delta=$2
+		else                 // is real or array
+			$peak=$1
+			$delta=$2
+		endif
+	else
+		if typeof('$1') then // is a string
+			$peak=llfrq  // set peak list to line list
+		else
+			$peak=cr     // use cursor position for peak
+			$delta=$1
+		endif
+	endif
+else // use cursor postion for peak
+	$peak=cr
+endif
+
+// Add referencing to llfrq-based peak array
+if ($peak=llfrq) then
+	$i=1
+	repeat
+		$peak[$i]=llfrq[$i]-rfl-rfp
+		$i=$i+1
+	until $i>size('$peak')
+endif
+
+// Set default delta values if not provided
+//     - defaults based on values from manual SN calibration
+//     - Manuals > System Calibrations > ManualProbeCalibration > [X] Sensitivity
+if ($delta=0) then
+	if (tn='H1') or (tn='F19') then
+		$delta=200
+	elseif (tn='P31') then
+		$delta=2000
+	elseif (tn='N15') then
+		$delta=100
+	elseif (tn='H2') then
+		$delta=1000
+	else // Use SN delta for C13
+		$delta=1400
+	endif
+endif
+
+echo
+if ( size('$peak')>1) and (ct<nt) and (ct>0) then // incomplete nt
+	write('alpha','Noise region: %d Hz',$delta)
+	write('alpha',' peak     frq(ppm)      height           s/n         s/n at end of exp')
+	write('alpha','------    --------    ----------    ------------    -------------------')
+elseif ( size('$peak')>1) then // full nt
+	write('alpha','Noise region: %d Hz',$delta)
+	write('alpha',' peak     frq(ppm)      height           s/n')
+	write('alpha','------    --------    ----------    ------------')
+endif
+
+$sp=sp $wp=wp $cr=cr // Store current values to restore later
+ds f                 // View full spectrum
+cr=sp                // Set cursor to beginning
+dsnmax($delta):$sn   // Measure max SN and supress output
+dsn:$sn,$noise       // Get SN (again) and unscaled noise amplitude
+
+// Calculate SN for each peak
+$i=1
+repeat
+	cr=$peak[$i]  // Place cursor at peak
+	peak(cr-1,cr+1):$height[$i],$frq[$i],$signal[$i] // Get peak scaled height, frequency, and unscaled height
+	$sn[$i]=$signal[$i]/$noise // Calculate SN with unscaled parameters
+	$finalsn[$i]=$sn[$i]*sqrt(nt/ct) // Predict s/n at nt
+	
+	if ( size('$peak')=1 ) then // 1 peak, output to line3
+		write('line3','calc rms s/n ratio (%6.3f ppm) = %6.3f',$peak/reffrq,$sn)
+		if (ct<nt) and (ct>0) then // incomplete nt
+			write('line3',' est. s/n at full nt (%6.3f ppm) = %6.3f',$peak/reffrq,$finalsn)
+		endif
+	else // multi-peak, output to alpha
+		if (ct<nt) and (ct>0) then // incomplete nt
+			write('alpha','%6d %11.3f %13.3f %15.3f %22.3f',$i,$peak[$i]/reffrq,$height[$i],$sn[$i],$finalsn[$i])
+		else
+			write('alpha','%6d %11.3f %13.3f %15.3f',$i,$peak[$i]/reffrq,$height[$i],$sn[$i])
+		endif	
+	endif
+	$i=$i+1
+until $i>size('$peak')
+
+echo
+sp=$sp wp=$wp cr=$cr // Restore view and cursor position
+return($sn,$peak,$signal,$noise,$finalsn)
+
+
+
