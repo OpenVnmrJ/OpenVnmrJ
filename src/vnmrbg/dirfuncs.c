@@ -29,6 +29,9 @@
 #include <fts.h>
 #include <sys/stat.h>
 #include <regex.h>
+#ifdef MACOS
+#include <libgen.h>
+#endif
 
 #include "vnmrsys.h"
 #include "variables.h"
@@ -362,6 +365,27 @@ int Cpdir(char *fromdir, char *todir)
    return(0);
 }
 
+#ifdef MACOS
+static int getlink(char *dir)
+{
+   char lnkdir[MAXPATH];
+   char dir2[MAXPATH];
+   int ival;
+
+   strcpy(dir2,dir);
+   strcpy(dir,dirname( &dir2[0] ));
+   ival = readlink( dir2, lnkdir, sizeof( lnkdir ) );
+   if (ival < 0)
+   {
+      Werrprintf("getfile: trouble opening link %s",dir);
+      return(-1);
+   }
+   lnkdir[ ival ] = '\0';
+   strcat(dir,"/");
+   strcat(dir,lnkdir);
+   return(0);
+}
+#endif
 /*------------------------------------------------------------------------
 |
 |	This module returns the name of the n th file
@@ -382,8 +406,23 @@ int getitem(char *dirname, int index, char *filename, char *fileCmp, int recurse
    argv2[1] = NULL;
 
 #ifdef MACOS
+   struct stat buf;
+
    if ( dirname[strlen(dirname)-1] == '/')
       dirname[strlen(dirname)-1] = '\0';
+   if (lstat(dirname, &buf))
+   {
+      Werrprintf("getfile: trouble getting status of %s",dirname);
+      return(-1);
+   }
+   if ((buf.st_mode & S_IFLNK) == S_IFLNK)
+   {
+      if (getlink(dirname))
+      {
+         Werrprintf("getfile: trouble getting directory link %s",dirname);
+         return(-1);
+      }
+   }
 #endif
    if (recurse)
    {
@@ -484,14 +523,26 @@ int getitem(char *dirname, int index, char *filename, char *fileCmp, int recurse
          if (cnt == 1)
             assignString("",v1,0);
          if ( (recurse) || (regExp == 3) )
+         {
+#ifdef MACOS
+            if ( node->fts_path[len] == '/')
+               len++;
+#endif
             assignString(&node->fts_path[len],v1,cnt);
+         }
          else
             assignString(node->fts_name,v1,cnt);
       }
       if (index && (index == cnt))
       {
          if ( (recurse) || (regExp == 3) )
+         {
+#ifdef MACOS
+            if ( node->fts_path[len] == '/')
+               len++;
+#endif
             strcpy(filename,&node->fts_path[len]);
+         }
          else
             strcpy(filename,node->fts_name);
          break;

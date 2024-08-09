@@ -96,6 +96,7 @@ cp ovjFixMac.sh $vjdir/bin/ovjFixMac
 chmod 755 $vjdir/bin/ovjFixMac
 cp ovjGetps2pdf.sh $vjdir/bin/ovjGetps2pdf
 chmod 755 $vjdir/bin/ovjGetps2pdf
+mv $vjdir/maclib/_sw_ddr $vjdir/maclib/_sw
 
 echo "vnmrs" >> $vjdir/vnmrrev 
 cd $vjdir/adm/users
