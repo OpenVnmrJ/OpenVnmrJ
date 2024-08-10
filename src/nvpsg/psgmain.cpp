@@ -2490,5 +2490,48 @@ void checkGradtype()
 
 //--------------------- methods for writing nv macros ----------------------------
 
-/* END OF FILE */
 
+// Useful methods that can be adopted in many places to cut down code duplication
+
+extern "C" int rfChanNum(const char* rf_ch_name, const char* comment);
+extern "C" int isObsChannel(int rf_ch_num);
+extern "C" int isDecChannel(int rf_ch_num);
+extern "C" int isDec2Channel(int rf_ch_num);
+extern "C" int isDec3Channel(int rf_ch_num);
+extern "C" int isDec4Channel(int rf_ch_num);
+
+int rfChanNum(const char* rf_ch_name, const char* comment) {
+    if      (strcmp( rf_ch_name, "obs"  ) == 0) return OBSch;
+    else if (strcmp( rf_ch_name, "dec"  ) == 0) return DECch;
+    else if (strcmp( rf_ch_name, "dec2" ) == 0) return DEC2ch;
+    else if (strcmp( rf_ch_name, "dec3" ) == 0) return DEC3ch;
+    else if (strcmp( rf_ch_name, "dec4" ) == 0) return DEC4ch;
+    else abort_message("unknown rf channel (%s): %s", rf_ch_name, comment);
+}
+
+int isObsChannel(int rf_ch_num) {
+ 
+    return rf_ch_num == OBSch;
+}
+
+int isDecChannel(int rf_ch_num) {
+ 
+    return rf_ch_num == DECch;
+}
+
+int isDec2Channel(int rf_ch_num) {
+ 
+    return rf_ch_num == DEC2ch;
+}
+
+int isDec3Channel(int rf_ch_num) {
+ 
+    return rf_ch_num == DEC3ch;
+}
+
+int isDec4Channel(int rf_ch_num) {
+ 
+    return rf_ch_num == DEC4ch;
+}
+
+/* END OF FILE */
