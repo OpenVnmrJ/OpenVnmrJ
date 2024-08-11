@@ -61,8 +61,7 @@ void setvvarnumber(int lvvarindex)
 //=================================================
 // Assign the next tablenumber and do settable()
 //=================================================
-int settablename(lnumelements,ltablearray)
-   int lnumelements,ltablearray[];
+int settablename(int lnumelements, int ltablearray[])
 {
    int tableindex = globaltableindex;   
    settable(tableindex,lnumelements,ltablearray);
