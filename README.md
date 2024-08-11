@@ -2,8 +2,17 @@
 
 OpenVnmrJ is free and open-source software owned by the University of Oregon. Read more about OpenVnmrJ and it's history at [Background](http://openvnmrj.org/Background).
 
-OpenVnmrJ Version 3 is the latest OpenVnmrJ release. It contains additions as described in the [Notes.txt](Notes.txt) file. Installation instructions are in the [Install](Install.md) file. OpenVnmrJ Version 3 can co-exist with any VnmrJ version. However, VnmrJ need not be installed in order for OpenVnmrJ to be completely functional as a spectrometer.
-OpenVnmrJ 3 supports the following:
+OpenVnmrJ Version 3.2 is the latest OpenVnmrJ release. It contains additions as described in the [Notes.txt](Notes.txt) file. Installation instructions are in the [Install](Install.md) file. OpenVnmrJ Version 3.2 can co-exist with any VnmrJ version. VnmrJ need not be installed in order for OpenVnmrJ to be completely functional as a spectrometer.
+OpenVnmrJ 3.2 supports the following:
+- RHEL:      Version 8 and 9
+- AlmaLinux: Version 8 and 9
+- Ubuntu:    Version 20, 22, and 24.
+- MacOS:     Versions 10.13 (High Sierra) to 14 (Sonoma). (data station only)
+
+insert zenodo reference here
+
+OpenVnmrJ Version 3.1 was released in Oct. 2021. It contains additions as described in the [Notes.txt](Notes.txt) file. Installation instructions are in the [Install31](Install31.md) file. OpenVnmrJ Version 3.1 can co-exist with any VnmrJ version. VnmrJ need not be installed in order for OpenVnmrJ to be completely functional as a spectrometer.
+OpenVnmrJ 3.1 supports the following:
 - CentOS:    Version 7.5 - 7.9.
 - RHEL:      Version 8.4
 - AlmaLinux: Version 8.4

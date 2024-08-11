@@ -3,7 +3,7 @@
 // License or the Apache License, as specified in the LICENSE file.
 // For more information, see the LICENSE file.
 
-const char RevID[]     = "OpenVnmrJ VERSION 3.1 REVISION A";
-const char Copyright[] = "Copyright 2021 by University of Oregon" ;
+const char RevID[]     = "OpenVnmrJ VERSION 3.2 BETA1";
+const char Copyright[] = "Copyright 2024 by University of Oregon" ;
 const char RevTitle[]  = "OpenVnmrJ" ;
 const char RevDate[]   = REVISION_DATE ;
