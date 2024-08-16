@@ -43,7 +43,7 @@ $arg2=$2
 //    if ($dim=3) and ($arg3='f3') then
 //	$arg3='acq'
 //    endif
-    if ($arg3<>'acq') and ($arg3<>'f1') and ($arg3<>'f3') then
+    if ($arg3<>'acq') and ($arg3<>'f1') and ($arg3<>'f2') then
         write('error','Argument %s not supported',$arg3)
         return($ret)
     endif
@@ -65,6 +65,21 @@ $arg2=$2
 IF ($arg2='set') THEN
         if ($3='none') then
 		off($lb) off($gf) off($gfs) off($sb) off($sbs) off($awc)
+	elseif $3='inactive' then
+		// special case where all the window funcions are made inactive
+	    setprotect($lb,'on',6)
+            setprotect($gf,'on',6)
+            setprotect($gfs,'on',6)
+            setprotect($sb,'on',6)
+            setprotect($sbs,'on',6)
+            setprotect($awc,'on',6)
+	elseif $3='active' then
+            setprotect($lb,'off',6)
+            setprotect($gf,'off',6)
+            setprotect($gfs,'off',6)
+            setprotect($sb,'off',6)
+            setprotect($sbs,'off',6)
+            setprotect($awc,'off',6)
         else
            exists($3,'maclib'):$macex
            if ($macex) then
@@ -191,7 +206,7 @@ ELSEIF ($arg2 = 'copy') THEN
 //    if ($dim=3) and ($arg3='f3') then
 //        $arg3='acq'
 //    endif
-    if ($arg3<>'acq') and ($arg3<>'f1') and ($arg3<>'f3') then
+    if ($arg3<>'acq') and ($arg3<>'f1') and ($arg3<>'f2') then
         write('error','Argument %s not supported',$arg3)
         return
     endif
@@ -202,7 +217,7 @@ ELSEIF ($arg2 = 'copy') THEN
     elseif ($arg3='f1') then
         $pars3='lb1 gf1 gfs1 sb1 sbs1 awc1'
     elseif ($arg3='f2') then
-        $pars='lb2 gf2 gfs2 sb2 sbs2 awc2'
+        $pars3='lb2 gf2 gfs2 sb2 sbs2 awc2'
     endif
 
     string2array($pars):$pars

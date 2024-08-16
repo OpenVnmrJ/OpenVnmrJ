@@ -2,16 +2,19 @@
 // arg1 is the new experiment
 // make sure to save the fid in curexp
 
-if $# < 1 then $1=0 endif
-if $# < 2 then $2=1 endif
-if $# < 3 then $3=999 endif
-if $# < 4 then $4=5 endif
+if $# < 1 then $1=0 endif	// newexp
+if $# < 2 then $2=1 endif	// downsampling factor
+if $# < 3 then $3=999 endif	//  dscoef
+if $# < 4 then $4=5 endif	// backlp
 
 if $1=0 then newexp:$1 endif
 
 tmpsqcopy($0)
 $cr=cr $delta=delta
 f full
+$rfl=rfl $rfp=rfp
+$rp=rp $lp=lp $sw=sw
+
 cr=$cr delta=$delta
 pards movedssw
 dscoef=$3
@@ -24,11 +27,19 @@ write('line3','jexp%d',$1):$jexp
 lb=1/at fn='n' wft
 if $4 then 
     setLP($4)
-    lb=1/at fn='n' wft
-    lp
-    rt(curexp+'/lp')
 endif
-proc='ft' wft f full dc
+wft f full dc
 file='exp'
 setvalue('file',file,'processed')
+
+$rawrp=$rp+$lp/2
+$rawlp=$lp
+$shiftlp=(dslsfrq*$lp/$sw)
+lp=($lp/downsamp)
+if downsamp=1 then
+    lsfrq=-1*dslsfrq
+    $shiftlp=0
+endif
+rp=$rawrp - lp/2 - $shiftlp
+wft
 

@@ -1,0 +1,19 @@
+// chempacker macro
+//  update instrument parameter in conpar
+//  if the user has write permission to /vnmr/conpar
+//    the instrument parameter is written to /vnmr/conpar
+//  else it is written to userdir/conpar
+
+if $#<1 then
+    host:$host
+else
+    $host=$1
+endif
+
+exists(systemdir+'/conpar','file','w'):$x
+setvalue('instrument',$host,'systemglobal')
+if $x then
+    writeparam(systemdir+'/conpar','instrument','systemglobal','add')
+else
+    writeparam(userdir+'/conpar','instrument','systemglobal','add')
+endif
