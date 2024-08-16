@@ -358,7 +358,7 @@ doUpgrade () {
                 echo $content | grep -w psglib  >& /dev/null
                 if [[ $? -eq 0 ]]; then
                     seq=$(echo $content | sed 's/psglib/seqlib/' | sed 's/\.c$//')
-                    mv $upgrade_temp_dir/$seq $vnmrsystem/$seq
+                    cp $upgrade_temp_dir/$seq $vnmrsystem/$seq
                 fi
             fi
         done
