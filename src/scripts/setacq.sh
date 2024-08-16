@@ -550,18 +550,19 @@ installConsole() {
    if [[ $? -eq 1 ]] ; then    
          echo "Old version of console software is present"
          echo "Updating requires use of the verifyCntrlsFlash script,"
-         echo "which will take a couple of minutes"
+         echo "which will take up to 30 minutes"
          echo "Do you wish to proceed (y/n) [y]? "
          read ans
          if [[ "x$ans" != "xn" ]] ; then
-            $vnmrsystem/adm/acq/verifyCntrlsFlash -r -y
+            $vnmrsystem/adm/acq/verifyCntlrsFlash -r -y
          else
             exit 0
          fi
-         sleep 10
+         sleep 30
          echo "Updating complete. Confirming console software."
+   else
+         $vnmrsystem/acqbin/consoledownload42x -tftpdir "$tftpdir"
    fi      
-   $vnmrsystem/acqbin/consoledownload42x -tftpdir "$tftpdir"
     
    nofile=1
    count=0
