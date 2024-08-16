@@ -325,7 +325,7 @@ ELSEIF ($1='buildCQ') THEN
 //   xmhaha_bCQ
    return
 "*******************************************************************"
-ELSEIF ($1='vnmr_data') or ($1='vnmr_record') or ($1='vnmr_rec_data') THEN
+ELSEIF ($1='vnmr_data') or ($1='vnmr_record') or ($1='vnmr_rec_data') or ($1='vnmr_par') THEN
 
    exists('craft_xmhaha','maclib'):$cxex
    if $cxex then
@@ -333,6 +333,8 @@ ELSEIF ($1='vnmr_data') or ($1='vnmr_record') or ($1='vnmr_rec_data') THEN
    	craft_xmhaha($1,$2):$ret
    	if $ret then return(1) endif
    endif
+
+   if $1='vnmr_par' then return(0) endif
 
    is_submitmode:$OK
    if ($OK) then
@@ -359,6 +361,13 @@ ELSEIF ($1='vnmr_data') or ($1='vnmr_record') or ($1='vnmr_rec_data') THEN
 "*******************************************************************"
 ELSEIF ($1='vfs') THEN
 
+   exists('craft_xmhaha','maclib'):$cxex
+   if $cxex then
+        $ret=0
+        craft_xmhaha($1,$2):$ret
+        if $ret then return(1) endif
+   endif
+
    dndvfs($2)
    return(1)
 
@@ -375,17 +384,13 @@ ELSEIF ($1='craft') THEN
 "*******************************************************************"
 ELSEIF ($1='directory') THEN
 
-    if $# < 3 then $3='' endif
-    if $# < 4 then $4='' endif
-    $ret=0
-    if $3<>'' and $4<>'' then
-   	exists('craft_xmhaha','maclib'):$cxex
-   	if $cxex then
-            $ret=0
-            craft_xmhaha($1,$2,$3,$4):$ret
-            if $ret then return(1) endif
-   	endif
-    endif
+   $ret=0
+   exists('craft_xmhaha','maclib'):$cxex
+   if $cxex then
+       $ret=0
+       craft_xmhaha($1,$2):$ret
+       if $ret then return(1) endif
+   endif
 
     $e='' $b=''
     substr($2,'basename'):$b,$e
@@ -402,6 +407,12 @@ ELSEIF ($1='unknown') or ($1='file') THEN
    if $cxex then
         $ret=0
         craft_xmhaha($1,$2):$ret
+        if $ret then return(1) endif
+   endif
+   exists('invade_xmhaha','maclib'):$cxex
+   if $cxex and $1='file' then
+        $ret=0
+        invade_xmhaha($1,$2):$ret
         if $ret then return(1) endif
    endif
 

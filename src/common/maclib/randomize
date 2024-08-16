@@ -1,0 +1,39 @@
+// Chempacker macro
+// Given an array of numbers, will return a randomized array of the
+//	same numbers
+// Given a file as arg1, will write a file of arg2 with the lines
+//	randomized w.r.t. arg1
+
+if typeof('$1') then
+    exists($1,'file'):$fex
+    if not $fex then return endif
+
+    $s2='' readfile($1,'$s2','','','local'):$tot
+    $i=1
+    while $i<=$tot do
+	$x[$i]=$i
+	$i=$i+1
+    endwhile
+    {$0}($x):$y
+
+    write('reset',$2)
+    $i=1
+    while $i<=$tot do
+	$ix=$y[$i]
+	write('file',$2,'%s',$s2[$ix])
+	$i=$i+1
+    endwhile
+    return
+else
+    $arr=$1
+    $num=size('$arr')
+    $i=$num
+    while $i>1 do
+	random($i-1):$j
+	$tmp=$arr[$j+1]
+	$arr[$j+1]=$arr[$i]
+	$arr[$i]=$tmp
+ 	$i=$i-1
+    endwhile
+    return($arr)
+endif

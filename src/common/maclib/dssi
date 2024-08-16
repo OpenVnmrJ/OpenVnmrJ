@@ -182,8 +182,11 @@
 	else
 	    getvalue('arraydim','processed'):$dim
 	    $start=$1 $end=$dim $step=1
-	    if ($# > 1) then $end=$2 endif
-	    if ($# > 2) then $step=$3 endif
+	    if not $start then $end=0
+	    else
+	        if ($# > 1) then $end=$2 endif
+	        if ($# > 2) then $step=$3 endif
+	    endif
             exists('dssitrace','parameter'):$pex
             if not $pex then
                 create('dssitrace','real','current',0):$dum
@@ -246,19 +249,21 @@
 	    $i=$i+1
 	until $i > $tracedim
 	if $realdim > 512 then
-// Dont bother with color here
+	    write('line3','Warning: %d traces.  Interactive display limited to 512',$realdim)
 	    $i=1 $first=1 $vp=vp
+	    $vo=vo vo=wc2max/2/$realdim
 	    repeat
 		if $trace[$i] then
+		    $ix=$trace[$i]
 		    if not $first then
-			if $colorsize >= $i then
-			    dssn($trace[$i],$colors[$i])
+			if $colorsize >= $ix then
+			    dssn($trace[$i],$colors[$ix])
 			else
 			    dssn($trace[$i])
 			endif
 		    else
-			if $colorsize >= $i then
-			    dss($trace[$i],$colors[$i])
+			if $colorsize >= $ix then
+			    dss($trace[$i],$colors[$ix])
 			else
 			    dss($trace[$i])
 			endif
@@ -269,6 +274,7 @@
 		$i=$i+1
 	    until $i > $tracedim
 	    vp=$vp
+	    dscale
 	    return
 	endif
     endif
@@ -301,15 +307,17 @@
               else
                 write('line3','%s,%d',$arg,$trace[$x]):$arg
 	      endif
-	      if $colorsize >= $trace[$x] then
-		$inx=$trace[$x]
-	      else
-		$inx=$colorsize
-	      endif
-	      if $arg2='' then
-		write('line3','\'%s\'',$colors[$inx]):$arg2
-	      else
-		write('line3','%s,\'%s\'',$arg2,$colors[$inx]):$arg2
+	      if $colorsize then
+	      	if $colorsize >= $trace[$x] then
+		    $inx=$trace[$x]
+	      	else
+		    $inx=$colorsize
+	      	endif
+	      	if $arg2='' then
+		    write('line3','\'%s\'',$colors[$inx]):$arg2
+	      	else
+		    write('line3','%s,\'%s\'',$arg2,$colors[$inx]):$arg2
+	      	endif
 	      endif
 	    endif
 	    $x=$x+1
@@ -327,5 +335,5 @@
 	$cmd=$cmd+$arg+','+$arg2
     endif
     $cmd=$cmd+')'
-    exec($cmd)
+    exec($cmd):$dum2
     intmod='off' ds

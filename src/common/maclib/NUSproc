@@ -19,14 +19,14 @@ if ($isinflated=1) then
        if (execprocess='NUSproc') then execprocess='' setvalue('execprocess',execprocess,'processed') endif
     endif
     process
-    return 
+    return(1) 
 endif
 
 exists('CSreconmethod','parameter'):$parex
 if $parex then
     $procmethod=$0+CSreconmethod
     exists($procmethod,'maclib'):$ex
-    if $ex then exec($procmethod):$ok return endif
+    if $ex then exec($procmethod):$ok return($ok) endif
 endif
 
 "Use defaults"
@@ -105,13 +105,13 @@ if(CS_inf = 'y') then
   exists($file,'file'):$e
   if not($e) then
     write('line3','sampling schedule not found - inflateND aborted.')
-    return 
+    return(0) 
   endif
 endif
 
 NUSrsw($ift):$ok
 if not ($ok) then
-  return 
+  return(0) 
 endif
 if($ift) and (CS_inf='n') and (CS_se='n') then
   rt(curexp+'/procdir/rsw')
@@ -127,7 +127,7 @@ if(CS_se='y') then
   writeparam(curexp+'/procdir/rsw.fid/procpar','f1coef','add')
   if not ($ok) then
     write('line3','NUSproc_se failed - NUSproc aborted.')
-    return 
+    return(0) 
   endif
   if($ift) and (CS_inf='n')  then
     rt(curexp+'/procdir/rsw')
@@ -140,7 +140,7 @@ if(CS_inf='y') then
   NUSinflate:$ok
   if not ($ok) then
     write('line3','NUSinflate failed - NUSproc aborted.')
-    return 
+    return(0) 
   endif
   if($ift) then
     rt(curexp+'/procdir/inf')
@@ -227,3 +227,4 @@ if ($origfile<>'') then
 	setvalue('execprocess',execprocess,'processed')
     endif
 endif
+return(1)
