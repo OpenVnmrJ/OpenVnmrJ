@@ -928,38 +928,6 @@ done
 
 cd vnmrsys
 
-#  remove contents of seqlib
-#  use word count program (wc) so script variable will have a value
-#  that `test' sees as a single argument
-
-if test -d seqlib
-then
-    tmpval=`(cd seqlib; ls) | wc -c`
-    if test $tmpval != "0"
-    then
-	echo "  removing old pulse sequences for $name_add"
-	(cd seqlib; rm -f *)
-    fi
-fi
-
-#  remove make file and binary files in psg (*.ln, *.a, *.so.* *.o)
-#  One level of evaluation ($filespec => *.a) - Use double quotes
-#  Expand implicit wildcard ($filespec => libpsglib.a) - no quote characters
-#  redirect error output to /dev/null, to avoid messages if no such files exist
-
-if test -d psg
-then
-    for filespec in "*.a" "*.so.*" "*.ln" "*.o" "makeuserpsg"
-    do
-	tmpval=`(cd psg; ls $filespec 2>/dev/null) | wc -c`
-	if test $tmpval != "0"
-	then
-	    echo "  removing '$filespec' from psg subdirectory"
-	    (cd psg; rm -f $filespec)
-	fi
-    done
-fi
-
 #  make some subdirectories of the user's VNMR directory
 
 dirlist="help maclib manual menujlib parlib persistence probes psglib seqlib shapelib shims \
@@ -1034,19 +1002,20 @@ fi
 export vnmrsystem
 if test -d persistence
 then
-    rm -f persistence/LocatorHistory_*
-    rm -f persistence/TagList
-    rm -f persistence/session
-    rm -f persistence/Graphics
-    rm -f persistence/Interface
-    rm -f persistence/Plot
-    appfiles=$(ls persistence/appdir_* 2> /dev/null)
+    rm -f persistence/.vp_*
+    appfiles=$(cd persistence; ls appdir_* 2> /dev/null)
     for file in $appfiles
     do
-       cat $file | grep -v "CPpatch;" > ${file}_bk
-       mv ${file}_bk $file
+       cat persistence/$file | grep -vi "CPpatch;" > persistence/${file}_bk
+       diff --brief persistence/$file persistence/${file}_bk >& /dev/null
+       if [[ $? -ne 0 ]] && [[ -f CPpatch/CP_Readme/CP_Version ]] ; then
+          cp -f persistence/$file persistence/bk_$file
+          mv persistence/${file}_bk persistence/$file
+          echo "Disabling obsolete CPpatch appdir"
+       else
+          rm -f persistence/${file}_bk
+       fi
     done
-    echo "  persistence directory cleaned."
 fi
 
 if test ! -d exp1
