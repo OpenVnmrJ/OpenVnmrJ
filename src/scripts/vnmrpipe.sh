@@ -10,21 +10,15 @@
 # 
 #
 if (!($?NMRBASE)) then
-   set ostype=`uname -s`
-   if ( x$ostype == "xLinux" ) then
-      if ( -f /vnmr/nmrpipe/com/nmrInit.linux212_64.com ) then
-         source /vnmr/nmrpipe/com/nmrInit.linux212_64.com
-      else
+   if ( -f /vnmr/nmrpipe/com/nmrInit.link.com ) then
+      source /vnmr/nmrpipe/com/nmrInit.link.com
+   else
+      set ostype=`uname -s`
+      if ( x$ostype == "xLinux" ) then
          source /vnmr/nmrpipe/com/vj_nmrInit.linux9.com
-      endif
-   else if ( x$ostype == "xDarwin" ) then
-      if ( -f /vnmr/nmrpipe/com/nmrInit.mac11_64.com ) then
-         source /vnmr/nmrpipe/com/nmrInit.mac11_64.com
-      else
+      else # MacOS
          source /vnmr/nmrpipe/com/vj_nmrInit.mac.com
       endif
-   else # Interix
-      source /vnmr/nmrpipe/com/vj_nmrInit.winxp.com
    endif
    source /vnmr/nmrpipe/dynamo/com/dynInit.com
 endif

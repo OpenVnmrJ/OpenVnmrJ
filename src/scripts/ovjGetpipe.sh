@@ -100,9 +100,9 @@ downloadMac() {
       $OVJ_VECHO "Downloading file 5 of 7"
       curl -O https://www.ibbr.umd.edu/nmrpipe/dyn.tZ
       $OVJ_VECHO "Downloading file 6 of 7"
-      curl -O https://spin.niddk.nih.gov/bax/software/talos_nmrPipe.tZ
+      curl -O https://www.ibbr.umd.edu/nmrpipe/talos_nmrPipe.tZ
       $OVJ_VECHO "Downloading file 7 of 7"
-      curl -O https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ
+      curl -O https://www.ibbr.umd.edu/nmrpipe/plugin.smile.tZ
    else
       $OVJ_VECHO "Downloading file 1 of 7"
       echo "Downloading file 1 of 7 (install.com)" >> ${OVJ_LOG}
@@ -121,10 +121,10 @@ downloadMac() {
       curl -O https://www.ibbr.umd.edu/nmrpipe/dyn.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 6 of 7"
       echo "Downloading file 6 of 7 (talos_nmrPipe.tz)" >> ${OVJ_LOG}
-      curl -O https://spin.niddk.nih.gov/bax/software/talos_nmrPipe.tZ 2>> ${OVJ_LOG}
+      curl -O https://www.ibbr.umd.edu/nmrpipe/talos_nmrPipe.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 7 of 7"
       echo "Downloading file 7 of 7 (plugin.smile.tz)" >> ${OVJ_LOG}
-      curl -O https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ 2>> ${OVJ_LOG}
+      curl -O https://www.ibbr.umd.edu/nmrpipe/plugin.smile.tZ 2>> ${OVJ_LOG}
    fi
 }
 
@@ -142,9 +142,9 @@ downloadLinux() {
       $OVJ_VECHO "Downloading file 5 of 7"
       wget -nv https://www.ibbr.umd.edu/nmrpipe/dyn.tZ
       $OVJ_VECHO "Downloading file 6 of 7"
-      wget -nv https://spin.niddk.nih.gov/bax/software/talos_nmrPipe.tZ
+      wget -nv https://www.ibbr.umd.edu/nmrpipe/talos_nmrPipe.tZ
       $OVJ_VECHO "Downloading file 7 of 7"
-      wget -nv https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ
+      wget -nv https://www.ibbr.umd.edu/nmrpipe/plugin.smile.tZ
    else
       $OVJ_VECHO "Downloading file 1 of 7"
       echo "Downloading file 1 of 7 (install.com)" >> ${OVJ_LOG}
@@ -163,10 +163,10 @@ downloadLinux() {
       wget  -nv https://www.ibbr.umd.edu/nmrpipe/dyn.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 6 of 7"
       echo "Downloading file 6 of 7 (talos_nmrPipe.tz)" >> ${OVJ_LOG}
-      wget  -nv https://spin.niddk.nih.gov/bax/software/talos_nmrPipe.tZ 2>> ${OVJ_LOG}
+      wget  -nv https://www.ibbr.umd.edu/nmrpipe/talos_nmrPipe.tZ 2>> ${OVJ_LOG}
       $OVJ_VECHO "Downloading file 7 of 7"
       echo "Downloading file 7 of 7 (plugin.smile.tz)" >> ${OVJ_LOG}
-      wget  -nv https://spin.niddk.nih.gov/bax/software/smile/plugin.smile.tZ 2>> ${OVJ_LOG}
+      wget  -nv https://www.ibbr.umd.edu/nmrpipe/plugin.smile.tZ 2>> ${OVJ_LOG}
    fi
 }
 
@@ -214,9 +214,9 @@ cleanup() {
    rm -f ./talos_nmrPipe.tZ
    rm -f ./plugin.smile.tZ
    if [ x`uname -s` = "xDarwin" ]; then
-      rm -rf nmrbin.linux nmrbin.linux212_64 nmrbin.linux9 nmrbin.mac nmrbin.mac11
+      rm -rf nmrbin.linux* nmrbin.mac nmrbin.mac11
    elif [ x`uname -s` = "xLinux" ]; then
-      rm -rf nmrbin.linux nmrbin.linux9 nmrbin.mac nmrbin.mac11 nmrbin.mac11_64
+      rm -rf nmrbin.mac*
    fi
 }
 
