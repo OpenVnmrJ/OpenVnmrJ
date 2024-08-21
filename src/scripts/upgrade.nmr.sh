@@ -337,7 +337,7 @@ doUpgrade () {
                         mv $upgrade_temp_dir/$content $vnmrsystem/$content.new
                     else
                         mv $vnmrsystem/$content $tmp_save/$dirContent/.
-                        mv $upgrade_temp_dir/$content $vnmrsystem/$content
+                        cp $upgrade_temp_dir/$content $vnmrsystem/$content
                     fi
                     echo $content | grep -w psglib  >& /dev/null
                     if [[ $? -eq 0 ]]; then
@@ -347,18 +347,20 @@ doUpgrade () {
                             mkdir -p $tmp_save/$dirContent
                         fi
                         mv $vnmrsystem/$seq $tmp_save/$dirContent/.
-                        mv $upgrade_temp_dir/$seq $vnmrsystem/$seq
+                        cp $upgrade_temp_dir/$seq $vnmrsystem/$seq
                     fi
                 fi
             else
                 if [[ ! -d $vnmrsystem/$dir ]]; then
                     mkdir -p $vnmrsystem/$dir
                 fi
-                mv $upgrade_temp_dir/$content $vnmrsystem/$content
+                cp $upgrade_temp_dir/$content $vnmrsystem/$content
                 echo $content | grep -w psglib  >& /dev/null
                 if [[ $? -eq 0 ]]; then
                     seq=$(echo $content | sed 's/psglib/seqlib/' | sed 's/\.c$//')
-                    cp $upgrade_temp_dir/$seq $vnmrsystem/$seq
+		    if [[ -f $upgrade_temp_dir/$seq ]] ; then
+                       cp $upgrade_temp_dir/$seq $vnmrsystem/$seq
+		    fi
                 fi
             fi
         done
