@@ -27,7 +27,7 @@ elif [[ $numHost -gt 1 ]]; then
   echo "Hostname $(hostname) should only be defined once in the /etc/hosts file"
 fi
 
-if hash ldd 2> /dev/null; then
+if [[ ! -z $(type -t ldd) ]] ; then
   ldd /vnmr/bin/Vnmrbg | grep -i "not found" > /dev/null 2>&1
   if [[ $? -eq 0 ]]; then
     echo "Some libraries appear to be missing."
@@ -41,6 +41,10 @@ if hash ldd 2> /dev/null; then
   ldd /vnmr/bin/Vnmrbg | grep -i "not a dynamic executable" > /dev/null 2>&1
   if [[ $? -eq 0 ]]; then
     echo "Some libraries appear to be missing."
+    if [[ ! -z $(type -t objdump) ]] ; then
+       echo "They appear as \"NEEDED\" in the following output"
+       objdump -p ./Vnmrbg | grep NEEDED
+    fi
     echo "Use /vnmr/bin/installpkgs"
     echo "to install the missing libraries"
     echo ""
