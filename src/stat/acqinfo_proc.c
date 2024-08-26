@@ -7,6 +7,7 @@
  * For more information, see the LICENSE file.
  */
 
+#ifdef USE_RPC
 /*
 * acqinfo_proc.c: implementation of remote procedure for acqinfo_svc
 *       There must be a file in /vnmr/acqqueue named acqinfo in the form:
@@ -238,3 +239,4 @@ ft3ddata	*ft3dargs;
 
    return(&status);
 }
+#endif // USE_RPC

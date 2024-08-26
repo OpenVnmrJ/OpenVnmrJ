@@ -6,7 +6,14 @@ import sys
 sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import buildMethods
 
+# current working directory
+cwd = os.getcwd()
 ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print("OVJ_TOOLS env not found. Trying default location.")
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
 if not ovjtools:
     print("OVJ_TOOLS env not found.")
     print("For bash and variants, use export OVJ_TOOLS=<path>")
@@ -18,12 +25,6 @@ Import("*")
 
 # define target file names
 infoProcTarget = 'Infoproc'
-
-# we need to specify an absolute path so this SConstruct file
-# can be called from any other SConstruct file
-cwd = os.getcwd()
-
-javaPath = os.path.join(ovjtools, 'java', 'bin')
 
 ## NDDS include/lib paths
 # get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
@@ -162,11 +163,11 @@ infoProcObjEnv.Append(CPPDEFINES = ['SUN', 'DATASEG'])
 
 # if 'Infoproc4x' in COMMAND_LINE_TARGETS:
 infoProcEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
-if os.path.exists('/usr/include/tirpc'):
-   infoProcEnv.Append(  CPPPATH=[ '/usr/include/tirpc']  )
-   LibList = [ 'pthread', 'nddscz', 'nddscorez', 'dl', 'tirpc' ]
-else:
-   LibList = [ 'pthread', 'nddscz', 'nddscorez', 'dl' ]
+# if os.path.exists('/usr/include/tirpc'):
+#    infoProcEnv.Append(  CPPPATH=[ '/usr/include/tirpc']  )
+#    LibList = [ 'pthread', 'nddscz', 'nddscorez', 'dl', 'tirpc' ]
+# else:
+LibList = [ 'pthread', 'nddscz', 'nddscorez', 'dl' ]
 
 # define Builders
 #nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \

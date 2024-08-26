@@ -385,8 +385,10 @@ int main(int argc, char *argv[])
 	create_Bframe(argc, argv);
 	create_Statuspanel();
 #endif
+#ifdef USE_RPC
 	if ((strcmp(RemoteHost, LocalHost)) && (RemoteHost[0] != '\0'))
 		initrpctcp(RemoteHost);
+#endif
 	/* to obtain acq. status info */
 	DoTheChores(0);
 #ifdef MOTIF
