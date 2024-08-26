@@ -135,6 +135,11 @@ do
   fi
 done
 
+if [[ $ddrAcq -eq 0 ]] && [[ $miAcq -eq 0 ]] && [[ $b12Acq -eq 0 ]]
+then
+   ddrAcq=1
+fi
+
 if [[ $ovjRepo -eq 0 ]] && [[ $noPing -eq 0 ]]
 then
   ping -4 -W 1 -c 1 google.com > /dev/null 2>&1
@@ -407,7 +412,6 @@ if [ ! -x /usr/bin/dpkg ]; then
   elif [ $version -ge 8 ]; then
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
     commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
-    package68List="$package68List libtirpc-devel"
     packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
   else
     epelList="$epelList scons meld x11vnc"
@@ -532,11 +536,6 @@ if [ ! -x /usr/bin/dpkg ]; then
           subscription-manager repos --enable "codeready-builder-for-rhel-8-${ARCH}-rpms" &>> $logfile
         fi
         yumList="$yumList sharutils"
-    elif [[ $version -ge 8 ]]; then
-      if [ "$(rpm -q libtirpc-devel.i686 |
-	    grep 'not installed' > /dev/null;echo $?)" == "0" ]; then
-          yum -y install --enablerepo="crb" libtirpc-devel.i686 &>> $logfile
-      fi
     fi
     if [ "x$yumList" != "x" ]; then
       yum -y install $yumList &>> $logfile
@@ -731,7 +730,8 @@ else
      apt-get -y install dpkg-dev &>> $logfile
      dpkg --add-architecture i386
   fi
-  apt-get $repoArg -y install tcsh make expect bc git scons g++ gfortran \
+  apt-get $repoArg -o DPkg::Options::="--force-confnew" -y install \
+      tcsh make expect bc git scons g++ gfortran \
       openssh-server mutt sharutils sendmail-cf gnome-power-manager \
       kdiff3 libcanberra-gtk-module ghostscript imagemagick vim xterm \
       gedit dos2unix zip cups gnuplot gnome-terminal enscript rpcbind \

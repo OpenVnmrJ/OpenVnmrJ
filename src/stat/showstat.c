@@ -8,6 +8,8 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -15,15 +17,14 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <sys/socket.h>
-#ifdef SOLARIS
-#include <sys/sockio.h>
-#endif
 #include <netinet/in.h>
 #include <netdb.h>
+#ifdef USE_RPC
 #include <rpc/types.h>
 #include <rpc/rpc.h>
-
 #include "acqinfo.h"
+#endif
+
 #include "ACQPROC_strucs.h"
 #include "STAT_DEFS.h"
 
@@ -65,6 +66,7 @@ static int  Acqmsgport; /* acquisition's async message socket port */
 static char AcqHost[HOSTLEN]; /* acquisition's machine name */
 
 
+#ifdef USE_RPC
 static CLIENT *client = NULL;  /* RPC client handle */
 
 /*-------------------------------------------------------------
@@ -191,6 +193,7 @@ char *hostname;
 
 	return(info.pid_active);
 }
+#endif // USE_RPC
 
 /*--------------------------------------------------------------------*/
 
@@ -233,12 +236,14 @@ char *argv[];
 /*  WARNING:  any address fields in local_entry not explicitly set
               may be reset the next time you call gethostbyname.	*/
 
+#ifdef USE_RPC
 	if (argc > 1) {
 		strcpy( RemoteHost, argv[ 1 ] );
 		if (initrpctcp( RemoteHost ) < 0)
 		  exit( 1 );
 	}
 	else
+#endif
 	  strcpy(RemoteHost,LocalHost);
 
     /* --- get user's name --- */
@@ -364,10 +369,12 @@ char *remotehost;
 	FILE *stream;
 	extern char *getenv();
  
+#ifdef USE_RPC
 	if ( (remotehost != NULL) &&
 	     (remotehost[0] != '\0') &&
 	     (strcmp(remotehost,LocalHost) != 0) )
 	  return(getinfo(remotehost));
+#endif
 
 	tmpptr = (char *)getenv("vnmrsystem");            /* vnmrsystem */
 	strcpy(filepath,tmpptr);

@@ -9,7 +9,7 @@
 /* 
  */
 
-#ifndef __INTERIX    /* not used in SFU, svc functions not supported, just ifdef out the entire file */
+#ifdef USE_RPC
 
 
 #include <sys/types.h>
@@ -666,4 +666,4 @@ SVCXPRT        *transp;
 }
 #endif
 
-#endif
+#endif  // USE_RPC

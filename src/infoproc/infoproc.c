@@ -21,14 +21,6 @@
 #include <sys/socket.h>
 #include <sys/resource.h>
 
-#ifdef AIX
-#include <sys/select.h>
-#endif
-
-#ifndef AIX
-#include <sys/termios.h>
-#endif
-
 #include <signal.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -129,7 +121,9 @@ char *argv[];
 
     this_hp = gethostbyname(LocalAcqHost);      /* see note at definition of this_hp */
 
+#ifdef USE_RPC
     acqinfo_svc();
+#endif
 }
 
 
@@ -347,14 +341,18 @@ setuppipehandler()
 static void
 terminated()
 {
+#ifdef USE_RPC
     close_rpc();
+#endif
     exit(1);
 }
 
 static void
 SigQuit()
 {
+#ifdef USE_RPC
     close_rpc();
+#endif
     exit(1);
 }
 

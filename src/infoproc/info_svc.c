@@ -6,13 +6,10 @@
  *
  * For more information, see the LICENSE file.
  */
-/* 
- */
+
+#ifdef USE_RPC
 
 #include <sys/types.h>
-#ifdef AIX
-#include <sys/select.h>	/* IBM AIX OS needs it, but not present on SUN */
-#endif
 #include <stdio.h>
 #include <errno.h>
 #include <rpc/types.h>
@@ -467,3 +464,5 @@ SVCXPRT        *transp;
       exit(1);
    }
 }
+
+#endif // USE_RPC

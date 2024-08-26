@@ -163,7 +163,7 @@ char *argv[];
 
     /* acqinfo_svc(); never return, need to make thread safe and call in a separate thread */
 
-#ifndef __INTERIX    /* not used in SFU, svc / rpc functions not supported */
+#ifdef USE_RPC
     start_svc_thread();
 #endif
 
@@ -247,7 +247,7 @@ void asyncMainLoop(sigset_t sigMask)
                case SIGTERM: /* TERM */
                case SIGQUIT: /* QUIT */
                     /* DPRINT1(-1,"Infproc: Received SIGINIT, SIGTERM, or SIGQUIT; SigNumber: %d\n",signo); */
-#ifndef __INTERIX
+#ifdef USE_RPC
     		    close_rpc();
 #endif
                     DestroyDomain();
@@ -261,7 +261,7 @@ void asyncMainLoop(sigset_t sigMask)
                     break;
  
                default:
-#ifndef __INTERIX
+#ifdef USE_RPC
     		    close_rpc();
 #endif
                     exit(1);

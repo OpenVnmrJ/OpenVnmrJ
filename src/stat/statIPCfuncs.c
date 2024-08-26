@@ -27,7 +27,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-#ifndef __INTERIX
+#ifdef USE_RPC
 #include <rpc/types.h>
 #include <rpc/rpc.h>
 #include "acqinfo.h"
@@ -62,7 +62,7 @@ static char AcqHost[HOSTLEN]; /* acquisition's machine name */
 static char filepath[128];
 static char Acqmessage[100];
 
-#ifndef __INTERIX
+#ifdef USE_RPC
 static CLIENT *client = NULL;  /* RPC client handle */
 #endif
 
@@ -85,7 +85,7 @@ char *remotehost;
 {
     int active;
  
-#ifndef __INTERIX /* RPC does not work on SFU */
+#ifdef USE_RPC
     if ( (strcmp(remotehost,LocalHost) != 0) && (remotehost[0] != 0) )
     {
       if ( callrpctcp(remotehost,
@@ -144,7 +144,7 @@ initIPCinfo(char *remotehost)
     newAcq = 0;
     Acqpid = -1;
 
-#ifndef __INTERIX
+#ifdef USE_RPC
     if ( (strcmp(remotehost,LocalHost) != 0) && (remotehost[0] != 0) )
     {
       return(getinfo(remotehost));
@@ -176,7 +176,7 @@ initIPCinfo(char *remotehost)
         	Acqpid,Acqrdport,Acqwtport,Acqmsgport);
 	  }
           fclose(stream);
-#if defined( LINUX ) && !defined( __INTERIX)
+#ifdef LINUX
           Acqmsgport = Acqmsgport & 0xFFFF;
 #else
           Acqmsgport = 0xFFFF & ntohs(Acqmsgport);
@@ -191,12 +191,12 @@ initIPCinfo(char *remotehost)
       }
       else
        return(0);
-#ifndef __INTERIX
+#ifdef USE_RPC
     }
 #endif
 }
 
-#ifndef __INTERIX
+#ifdef USE_RPC
 /*-------------------------------------------------------------
 |  getinfo()/1 - use RPC to regisitered server on remote host
 |	         to obtain the IPC socket information
@@ -350,7 +350,7 @@ xdrproc_t inproc,outproc;
    return( (int) clnt_stat);
 }
 
-#endif    /* #ifndef __INTERIX */
+#endif    /* #ifdef USE_RPC */
 
 /*-----------------------------------------------------------------------
 |
@@ -505,7 +505,7 @@ AcqStatBlock *statblock;
 |	register the datagram socket for acquisition status updates
 |
 +---------------------------------------------------------------*/
-acqregister()
+void acqregister()
 {
     int localaddr, namlen;
  
@@ -551,17 +551,9 @@ acqregister()
 		localaddr,local_entry.h_addrtype,local_entry.h_length);
     if (debug)
        fprintf(stderr,"sendacq: '%s'\n",Acqmessage);
-#ifdef __INTERIX
-    if (sendacq(Acqpid,Acqmessage) == -1) {
-        fprintf(stderr,"message unable to be sent\n");
-        return(-1);
-    }
-    return(statussocket);
-#else
     if (sendacq(Acqpid,Acqmessage))
         fprintf(stderr,"message unable to be sent\n");
     register_input_event(statussocket);
-#endif
 }
 /*----------------------------------------------------------------
 |
@@ -569,7 +561,7 @@ acqregister()
 |	unregister the datagram socket for acquisition status updates
 |
 +------------------------------------------------------------------*/
-unregister()
+void unregister()
 
 {
     char message[100];
@@ -581,7 +573,6 @@ unregister()
         fprintf(stderr,"message unable to be sent\n");
 }
 
-#ifndef __INTERIX
 /*----------------------------------------------------------------
 |
 |	reregister()/0
@@ -589,14 +580,13 @@ unregister()
 |       must reregister otherwise Infoproc will assume this port exited.
 |
 +------------------------------------------------------------------*/
-reregister()
+void reregister()
 
 {
     /* ---- re-register this status socket with the acquisition process --- */
     /*      ignore any errors */
     sendacq(Acqpid,Acqmessage);
 }
-#endif 
 
 /*------------------------------------------------------------
 |
@@ -605,9 +595,7 @@ reregister()
 |       then transmit a message to it and disconnect.
 |
 +-----------------------------------------------------------*/
-sendacq(acqpid,message)
-char *message;
-int acqpid;
+int sendacq(int acqpid, char *message)
 {
     int fgsd;   /* socket discriptor */
     int result;

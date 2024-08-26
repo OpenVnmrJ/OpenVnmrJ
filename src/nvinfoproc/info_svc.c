@@ -19,7 +19,7 @@
  */
 
 
-#ifndef __INTERIX    /* not used in SFU, svc functions not supported, just ifdef out the entire file */
+#ifdef USE_RPC
 
 
 
@@ -336,4 +336,4 @@ void *acqinfo_svc(void *arg)
 }
 
 
-#endif
+#endif // USE_RPC
