@@ -678,18 +678,25 @@ public class VGraphics implements VGaphDef
                 }
                 ds = ins.available();
                 if (ds < rs) {
-                    while (ds < rs) {
+	            i = 2;
+                    while ((ds < rs) && (i > 0)) {
                        Thread.sleep(100);
                        ds = ins.available();
+		       i--;
                     }
                     k2 = 0;
                     d2 = 0;
                     in = (InputStream) ins;
                     if (ds > imgByteLen)
                        ds = imgByteLen;
-                    while (d2 < 4) {
+                    while ((d2 < 4) && (k2 < rs)) {
                        if (k2 >= ds)
-                           return;
+		       {
+                           i = ins.available();
+	                   if (i == 0)
+                              return;
+			   ds += i;
+		       }
                        c1 = in.read();
                        if (c1 == 0xEE)
                             d2++;
