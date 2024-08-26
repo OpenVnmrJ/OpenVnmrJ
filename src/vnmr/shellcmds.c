@@ -2012,6 +2012,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    int skipCount = 0;
    int tailArg = 0;
    int headArg = 0;
+   int noNullArg = 0;
    int tailStage = -1;
    int headOK = 1;
    int lineOK = 0;
@@ -2045,6 +2046,10 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
          {
             tailCount++;
             tailArg = atoi(argv[index+1]);
+         }
+         else if ( !strcmp(argv[index],"nn") )
+         {
+            noNullArg = 1;
          }
 // sed, sed g, and tr require two arguments
          else if ( !strcmp(argv[index],"sed") ||
@@ -2154,7 +2159,26 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       }
       else
       {
-         ret = (fgets(inLine, sizeof(inLine), inFile) == NULL);
+         if (noNullArg)
+         {
+            int ch;
+            int i = 0;
+            while ( ((ch=fgetc(inFile)) != EOF) && (ch != '\n') &&
+                    (i < sizeof(inLine)) )
+            {
+               if (ch != '\0')
+               {
+                  inLine[i] = ch;
+                  i++;
+               }
+            }
+            inLine[i] = '\0';
+            ret = (ch == EOF);
+         }
+         else
+         {
+            ret = (fgets(inLine, sizeof(inLine), inFile) == NULL);
+         }
          lineOK = 0;
       }
       if (ret)
@@ -2588,12 +2612,15 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                }
                else
                {
-                  Werrprintf("%s: unknown filter '%s'",argv[0],argv[index]);
-                  if (inFile)
-                     fclose(inFile);
-                  if (outFile)
-                     fclose(outFile);
-                  ABORT;
+                  if ( strcmp(argv[index],"nn") )
+                  {
+                     Werrprintf("%s: unknown filter '%s'",argv[0],argv[index]);
+                     if (inFile)
+                        fclose(inFile);
+                     if (outFile)
+                        fclose(outFile);
+                     ABORT;
+                  }
                }
             }
          }
