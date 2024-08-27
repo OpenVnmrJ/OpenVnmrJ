@@ -1,0 +1,56 @@
+from __future__ import print_function
+import os
+import sys
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+# targets
+send2VnmrTarget = 'send2Vnmr'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# library dependancies
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
+
+# source files
+send2VnmrFileList = ['send2Vnmr.c']
+
+if os.path.exists("m64") or os.path.exists("../datastation"):
+  compileFlag = ""
+else:
+  compileFlag = " -m32"
+
+# build environments
+env = Environment(CC         = 'aarch64-linux-gnu-gcc',
+                  CCFLAGS    = '-O2'+compileFlag,
+                  CPPDEFINES = ['LINUX'],
+                  LINKFLAGS  = '-O -Wl,-rpath,/vnmr/lib'+compileFlag,
+                  LIBPATH = [ncommPath],
+                  LIBS = [ 'm', 'acqcomm' ])
+
+
+if ('darwin' in platform):
+    env.Replace(CC = 'clang')
+    env.Replace(CCFLAGS = '-Os -Wall -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       env.Append(CCFLAGS = os.getenv('osxflags'))
+    env.Replace(LINKFLAGS = '-Os -Wl,-rpath,/vnmr/lib')
+
+# actual builds
+send2Vnmr = env.Program(target  = send2VnmrTarget,
+                        source  = [send2VnmrFileList],
+                       )
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+Execute(Mkdir(vnmrInstallPath))
+
+env.AddPostAction(send2Vnmr,
+                  Action(Copy(vnmrInstallPath, os.path.join(cwd, send2VnmrTarget))))
+

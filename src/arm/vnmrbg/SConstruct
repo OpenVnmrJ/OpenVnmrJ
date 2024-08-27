@@ -1,0 +1,867 @@
+#!
+
+from __future__ import print_function
+import os
+import time
+import datetime
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
+opensource = "false"
+gplsource  = "false"
+opensource = "true"
+# gplsource  = "true"
+
+# target to build
+vnmrbgTarget = 'Vnmrbg'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+# vnmrjPath     = os.path.join(cwd, os.pardir, 'vnmrj')
+# vnmrjFileList = ['vnmrjNative.c']
+
+unmrBgFileList = [
+                  'banner.c',
+                  'convertbruker.c',
+                  'convertdelta.c',
+                  'convertmagritek.c',
+                  'convertoxford.c',
+                  'convertqone.c',
+                  'dcon.c',
+                  'dconi.c',
+                  'decc.c',
+                  'dfid.c',
+                  'dirfuncs.c',
+                  'dpcon.c',
+                  'dpsx.c',
+                  'fdatap.c',
+                  'iplan.c',
+                  'iplan_graphics.c',
+                  'iplan_params.c',
+                  'locki.c',
+                  'main.c',
+                  'master.c',
+                  'pipeRead.c',
+                  'ras_dump.c',
+                  'smagic.c',
+                  'svdfit.c',
+                  'crosshair.c',
+                  'mouseHandler.c',
+                  'frameManager.c',
+                  'displayOpt.c',
+                  'ParseGeom.c',
+                  'wjunk.c']
+
+if (platform=="darwin"):
+    compileFlag = ""
+    compileOption = ""
+else:
+    compileFlag = "-m32"
+    compileOption = "-DHAVE_LARGEFILE_SUPPORT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+
+compileLinuxDir = "linux"
+compileMacOsDir = "macos64"
+# switching vnmrbg to 64-bit requires switch for PSG too
+# Following defines for 64-bit Linux compile
+if os.path.exists("m64") or os.path.exists("../datastation"):
+  compileFlag = ""
+  compileOption = ""
+  compileLinuxDir = "linux_arm"
+
+if (opensource=="false"):
+    cOptFileList = ['vnmr_nr.c',
+                    'vnmr_dosyfit_nr.c',
+                    'vnmr_gradfit_nr.c',
+                    'vnmr_gxyzcalib_nr.c',
+                     ]
+elif (gplsource=="true"):
+    cOptFileList = ['vnmr_svd.c',
+                    'vnmr_dosyfit.c',
+                    'vnmr_gradfit.c',
+                    'vnmr_gxyzcalib.c',
+                     ]
+else:
+    if (platform=="darwin"):
+        cOptFileList = [compileMacOsDir+'/vnmr_nr.o',
+                    compileMacOsDir+'/vnmr_dosyfit_nr.o',
+                    compileMacOsDir+'/vnmr_gradfit_nr.o',
+                    compileMacOsDir+'/vnmr_gxyzcalib_nr.o',
+                     ]
+    else:
+        cOptFileList = [compileLinuxDir+'/vnmr_nr.o',
+                    compileLinuxDir+'/vnmr_dosyfit_nr.o',
+                    compileLinuxDir+'/vnmr_gradfit_nr.o',
+                    compileLinuxDir+'/vnmr_gxyzcalib_nr.o',
+                     ]
+
+vnmrBgWinFileList = ['graphics_win.c',
+                     'master_win.c',
+                     'smagic_win.c']
+
+expProcPath    = os.path.join(cwd, os.pardir, 'expproc')
+expProcHdrList = ['expQfuncs.h',
+                  'shrexpinfo.h',
+                  'hostMsgChannels.h',
+                  'shrstatinfo.h']
+expProcFileList = ['expQfuncs.c',
+                   'statfuncs.c']
+
+vwacqPath    = os.path.join(cwd, os.pardir, 'vwacq')
+vwacqHdrList = ['acqcmds.h',
+                'hostAcqStructs.h']
+
+nacqiPath     = os.path.join(cwd, os.pardir, 'nacqi')
+nacqiHdrList  = ['acqInterface.h']
+nacqiFileList = ['msgqueue.c']
+
+unmrComPath    = os.path.join(cwd, os.pardir, 'vnmr')
+unmrComHdrList = ['acqerrmsges.h',
+                  'acquisition.h',
+                  'allocate.h',
+                  'asm.h',
+                  'bgvars.h',
+                  'buttons.h',
+                  'CSfuncs.h',
+                  'data.h',
+                  'disp.h',
+                  'displayops.h',
+                  'dps_menu.icon',
+                  'dps.h',
+                  'dpsdef.h',
+                  'dscale.h',
+                  'element.h',
+                  'epi_recon.h',
+                  'errorcodes.h',
+                  'md5global.h',
+                  'md5.h',
+                  'part11.h',
+                  'fft.h',
+                  'ftpar.h',
+                  'graphics.h',
+                  'graphics_util.h',
+                  'group.h',
+                  'init.h',
+                  'init_display.h',
+                  'init_proc.h',
+                  'init2d.h',
+                  'iplan.h',
+                  'iplan_graphics.h',
+                  'locksys.h',
+                  'node.h',
+                  'params.h',
+                  'phase_correct.h',
+                  'process.h',
+                  'pvars.h',
+                  'shims.h',
+                  'sky.h',
+                  'sockinfo.h',
+                  'stack.h',
+                  'symtab.h',
+                  'tools.h',
+                  'variables.h',
+                  'vfilesys.h',
+                  'vnmrsys.h',
+                  'whenmask.h',
+                  'wjunk.h']
+
+unmrComFileList = ['acqfuncs.c',
+                   'acqhwcmd.c',
+                   'addsub.c',
+                   'ai.c',
+                   'allocate.c',
+                   'asm.c',
+                   'asmfuncs.c',
+                   'assign.c',
+                   'bgvars.c',
+                   'bootup.c',
+                   'builtin.c',
+                   'builtin1.c',
+                   'buttons.c',
+                   'continprepare.c',
+                   'continread.c',
+                   'createparams.c',
+                   'CSfuncs.c',
+                   'data.c',
+                   'ddf.c',
+                   'ddif.c',
+                   'ddph.c',
+                   'debug.c',
+                   'df2d.c',
+                   'dfww.c',
+                   'dg.c',
+                   'disp3Dmap.c',
+                   'dll.c',
+                   'dosyfit.c',
+                   'dpf.c',
+                   'dps.c',
+                   'ds.c',
+                   'dscale.c',
+                   'dsn.c',
+                   'dsp.c',
+                   'dsww.c',
+                   'element.c',
+                   'emouse.c',
+                   'execcmd.c',
+                   'fiddle.c',
+                   'files.c',
+                   'flashc.c',
+                   'ft.c',
+                   'ft2d.c',
+                   'ftinit.c',
+                   'full.c',
+                   'gdevsw.c',
+                   'go.c',
+                   'gradfit.c',
+                   'graphics.c',
+                   'graphics_util.c',
+                   'gxyzcalib.c',
+                   'gxyzmap.c',
+                   'gzfit.c',
+                   'handler.c',
+                   'help.c',
+                   'history.c',
+                   'hpa.c',
+                   'ht.c',
+                   'init2d.c',
+                   'init_display.c',
+                   'init_proc.c',
+                   'integ.c',
+                   'io.c',
+                   'jexp.c',
+                   'll2d.c',
+                   'lockfreqfunc.c',
+                   'locksys.c',
+                   'lookup.c',
+                   'lp.c',
+                   'lstring.c',
+                   'macro.c',
+                   'magnetom.c',
+                   'makeslice.c',
+                   'md5c.c',
+                   'mfdata.c',
+                   'ops.c',
+                   'p11Tools.c',
+                   'part11.c',
+                   'pcmap.c',
+                   'phase_fid.c',
+                   'plot_handlers.c',
+                   'plot_construct.c',
+                   'proc2d.c',
+                   'pvars.c',
+                   'recon_all.c',
+                   'recon3D.c',
+                   'recon_mm.c',
+                   'readlk.c',
+                   'rtvarcmds.c',
+                   'savretphf.c',
+                   'set3dproc.c',
+                   'shellcmds.c',
+                   'shims.c',
+                   'sky.c',
+                   'specfreq.c',
+                   'splmodprepare.c',
+                   'splmodread.c',
+                   'sread.c',
+                   'swrite.c',
+                   'symtab.c',
+                   'table.c',
+                   'tempstuff.c',
+                   'terminal.c',
+                   'text.c',
+                   'tools.c',
+                   'variables1.c',
+                   'vcolor.c',
+                   'vfilesys.c',
+                   'weight.c',
+                   'annotate.c',
+                   'csiFuncs.c',
+                   'wti.c']
+
+unmrSpcPath      = os.path.join(cwd, os.pardir, 'vnmr')
+unmrSpcFileListA = ['acqhdl.c']
+unmrSpcFileListB = ['displayops.c',
+                    'foldj.c']
+
+ddlLibPath    = os.path.join(cwd, os.pardir, 'ddl')
+ddlLibHdrList = ['ddlList.h',
+                 'ddlNode.h',
+                 'ddlParser.h',
+                 'ddlScanner.h',
+                 'ddlSymbol.h']
+ddlLibFileList = ['ddlAction.C',
+                  'ddlNode.C',
+                  'ddlParser.C',
+                  'ddlScanner.C',
+                  'ddlSymbolTable.C']
+ddlYaccLibFileList  = ['ddlGrammar.y']
+ddlYaccCLibFileList = ['ddlGrammar.C']
+ddlScript           = ['yytoddl']
+
+AspLibPath    = os.path.join(cwd, os.pardir, 'Asp')
+AspLibHdrList = ['AspUtil.h',
+		 'AspDataInfo.h',
+		 'AspFrame.h',
+		 'AspCellList.h',
+		 'AspCell.h',
+		 'AspFrameMgr.h',
+		 'AspMouse.h',
+		 'AspCursor.h',
+		 'AspRoi.h',
+		 'AspRoiList.h',
+		 'AspTrace.h',
+		 'AspTraceList.h',
+		 'AspRenderedTrace.h',
+		 'AspDis1D.h',
+		 'AspPeak.h',
+		 'AspPeakList.h',
+		 'AspDisPeaks.h',
+		 'AspAnno.h',
+		 'AspAnnoList.h',
+		 'AspDisAnno.h',
+		 'AspPoint.h',
+		 'AspText.h',
+		 'AspLine.h',
+		 'AspBar.h',
+		 'AspArrow.h',
+		 'AspBox.h',
+		 'AspOval.h',
+		 'AspPolygon.h',
+		 'AspPolyline.h',
+		 'AspInteg.h',
+		 'AspIntegList.h',
+		 'AspDisInteg.h',
+		 'AspRegion.h',
+		 'AspRegionList.h',
+		 'AspDisRegion.h',
+#		 'AspAsignment.h',
+#		 'AspAsignmentTable.h'
+                ]
+AspLibFileList = ['AspUtil.C',
+		  'AspDataInfo.C',
+		  'AspFrame.C',
+		  'AspCellList.C',
+		  'AspCell.C',
+		  'AspFrameMgr.C',
+		  'AspMouse.C',
+		  'AspCursor.C',
+		  'AspRoi.C',
+		  'AspRoiList.C',
+		  'AspTrace.C',
+		  'AspTraceList.C',
+		  'AspRenderedTrace.C',
+		  'AspDis1D.C',
+		  'AspPeak.C',
+		  'AspPeakList.C',
+		  'AspDisPeaks.C',
+		  'AspAnno.C',
+		  'AspAnnoList.C',
+		  'AspDisAnno.C',
+		  'AspPoint.C',
+		  'AspText.C',
+		  'AspLine.C',
+		  'AspBar.C',
+		  'AspArrow.C',
+		  'AspBox.C',
+		  'AspOval.C',
+		  'AspPolygon.C',
+		  'AspPolyline.C',
+		  'AspInteg.C',
+		  'AspIntegList.C',
+		  'AspDisInteg.C',
+		  'AspRegion.C',
+		  'AspRegionList.C',
+		  'AspDisRegion.C',
+#		  'AspAsignment.C',
+#		  'AspAsignmentTable.C'
+                 ]
+
+aipLibPath    = os.path.join(cwd, os.pardir, 'aip')
+aipLibHdrList = ['aipBox.h',
+                 'aipAxisInfo.h',
+                 'aipCFuncs.h',
+                 'aipCInterface.h',
+                 'aipCommands.h',
+                 'aipSpecViewMgr.h',
+                 'aipCStructs.h',
+                 'aipDataInfo.h',
+                 'aipDataManager.h',
+                 'aipDataStruct.h',
+                 'aipEdgelist.h',
+                 'aipGframe.h',
+                 'aipGframeManager.h',
+                 'aipGraphics.h',
+                 'aipGraphicsWin.h',
+                 'aipHistogram.h',
+                 'aipImgInfo.h',
+                 'aipImgOverlay.h',
+                 'aipInitStart.h',
+                 'aipInterface.h',
+                 'aipInterpolation.h',
+                 'aipLine.h',
+                 'aipMouse.h',
+                 'aipOrthoSlices.h',
+                 'aipOval.h',
+                 'aipParmList.h',
+                 'aipPoint.h',
+                 'aipPolygon.h',
+                 'aipPolyline.h',
+                 'aipRoi.h',
+                 'aipRoiManager.h',
+                 'aipRoiStat.h',
+                 'aipSpecStruct.h',
+                 'aipSpecData.h',
+                 'aipSpecDataMgr.h',
+                 'aipSpecView.h',
+                 'aipSpecViewList.h',
+                 'aipStderr.h',
+                 'aipStructs.h',
+                 'aipUtils.h',
+                 'aipViewInfo.h',
+                 'aipVnmrFuncs.h',
+                 'aipVolData.h',
+                 'aipVsInfo.h',
+                 'aipWinMath.h',
+                 'aipWinMovie.h',
+                 'aipMovie.h',
+                 'aipWinRotation.h',
+                 'aipWriteData.h',
+                 'aipReviewQueue.h',
+                 'aipRQparser.h',
+                 'aipRQnode.h',
+                 'aipRQimage.h',
+                 'aipRQgroup.h',
+                 'aipRQstudy.h',
+                 'ddlCInterface.h',
+                 'sharedPtr.h']
+aipLibFileList = ['aipBox.C',
+                  'aipAxisInfo.C',
+                  'aipCommands.C',
+                  'aipSpecViewMgr.C',
+                  'aipDataInfo.C',
+                  'aipDataManager.C',
+                  'aipEdgelist.C',
+                  'aipGframe.C',
+                  'aipGframeManager.C',
+                  'aipGraphicsWin.C',
+                  'aipHistogram.C',
+                  'aipImgInfo.C',
+                  'aipImgOverlay.C',
+                  'aipInitStart.C',
+                  'aipInterface.C',
+                  'aipInterpolation.C',
+                  'aipLine.C',
+                  'aipMouse.C',
+                  'aipOrthoSlices.C',
+                  'aipOval.C',
+                  'aipParmList.C',
+                  'aipPoint.C',
+                  'aipPolygon.C',
+                  'aipPolyline.C',
+                  'aipRoi.C',
+                  'aipRoiManager.C',
+                  'aipRoiStat.C',
+                  'aipSpecData.C',
+                  'aipSpecDataMgr.C',
+                  'aipSpecView.C',
+                  'aipSpecViewList.C',
+                  'aipStderr.C',
+                  'aipUtils.C',
+                  'aipViewInfo.C',
+                  'aipVnmrFuncs.C',
+                  'aipVolData.C',
+                  'aipVsInfo.C',
+                  'aipWinMath.C',
+                  'aipWinMovie.C',
+                  'aipMovie.C',
+                  'aipWinRotation.C',
+                  'aipWriteData.C',
+                  'aipReviewQueue.C',
+                  'aipRQparser.C',
+                  'aipRQnode.C',
+                  'aipRQimage.C',
+                  'aipRQgroup.C',
+                  'aipRQstudy.C',
+                  'ddlCInterface.C']
+
+if (opensource=="false"):
+    cplusplusOptFileList = ['vnmr_aipSpline_nr.C',
+                     ]
+elif (gplsource=="true"):
+    cplusplusOptFileList = [
+                     ]
+else:
+    if (platform=="darwin"):
+        cplusplusOptFileList = [compileMacOsDir+'/vnmr_aipSpline_nr.o',
+                     ]
+    else:
+        cplusplusOptFileList = [compileLinuxDir+'/vnmr_aipSpline_nr.o',
+                     ]
+
+vnmrBgCCFileList = ['graphics3D.C']
+
+xracqPath    = os.path.join(cwd, os.pardir, 'xracq')
+xracqHdrList = ['ACQ_HAL.h',
+                'ACQ_SUN.h',
+                'STAT_DEFS.h',
+                'acodes.h']
+
+psgPath    = os.path.join(cwd, os.pardir, 'psg')
+psgHdrList = ['REV_NUMS.h',
+              'Pbox_HT.h',
+              'ap_device.p',
+              'common.p',
+              'device.p',
+              'ecc.h',
+              'freq_device.p',
+              'objerror.h',
+              'oopc.h',
+              'rfconst.h']
+psgFileList = ['ap_device.c',
+               'device.c',
+               'ecc_setup.c',
+               'ecc_worstCase.c',
+               'freq_device.c',
+               'freqfuncs.c',
+               'objerror.c']
+
+ft3dPath    = os.path.join(cwd, os.pardir, '3D')
+ft3dHdrList = ['lock3D.h',
+               'struct3d.h']
+ft3dFileList = ['lock3Dfiles.c']
+
+magicComPath     = os.path.join(cwd, os.pardir, 'vnmr')
+magicComFileList = ['exec.c',
+                    'dli.c',
+                    'fft.c',
+                    'lexjunk.c',
+                    'lpz.c',
+                    'matrix.c',
+                    'node.c']
+
+magicComSpcPath     = os.path.join(cwd, os.pardir, 'vnmr')
+magicComSpcFileList = ['downsample.c',
+                       'lpqld.c']
+
+acqcomPath     = os.path.join(cwd, os.pardir, 'vnmr')
+acqcomHdrList  = ['comm.h']
+acqcomFileList = ['socket1.c',
+                  'comm.c',
+                  'socket.c']
+
+ncommPath    = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList = ['sockets.h',
+                'chanLib.h',
+                'mfileObj.h',
+                'errLogLib.h',
+                'hhashLib.h',
+                'ipcKeyDbm.h',
+                'ipcMsgQLib.h',
+                'semLib.h',
+                'msgQLib.h',
+                'eventHandler.h',
+                'eventQueue.h',
+                'eventQueueP.h',
+                'listObj.h',
+                'shrMLib.h']
+ncommFileList = ['sockets.c',
+                 'mfileObj.c',
+                 'errLogLib.c',
+                 'hhashLib.c',
+                 'ipcKeyDbm.c',
+                 'ipcMsgQLib.c',
+                 'semLib.c',
+                 'msgQLib.c',
+                 'eventHandler.c',
+                 'eventQueue.c',
+                 'listObj.c',
+                 'fdmask.c',
+                 'shrMLib.c']
+
+yaccSrcPath     = os.path.join(cwd, os.pardir, 'vnmr')
+yaccSrcFileList = ['magic.gram.y',
+                   'magic.parser']
+
+yaccSrcCPath     = os.path.join(cwd, os.pardir, 'magic')
+yaccSrcCFileList = ['magic.gram.c', 'magic.lex.c']
+yaccSrcCHdrList  = ['magic.gram.h']
+
+lexSrcPath      = os.path.join(cwd, os.pardir, 'vnmr')
+lexSrcFileList  = ['magic.lex.l']
+
+lexSrcCPath     = os.path.join(cwd, os.pardir, 'magic')
+lexSrcCFileList = ['magic.lex.c']
+
+revdatePath     = os.path.join(cwd, os.pardir, 'vnmr')
+revdateFileList = ['revdate.c']
+
+# The sed script "yytoddl" renames a bunch a global symbols produced
+# by yacc.  Otherwise they will collide with the same symbols from
+# other invocations of yacc (e.g., the MAGICAL yacc parser).
+# FIXME: running this will cause a link error, for now we copy
+#        the files from the sol/proglib/vnmrbg/
+#Execute('bison -dv ddlGrammar.y && ' + \
+#        'sed -f yytoddl ddlGrammar.tab.c > ddlGrammar.C && ' + \
+#        'sed -f yytoddl ddlGrammar.tab.h > ddlGrammar.h')
+
+# FIXME: running this will cause a compile error, for now we copy
+#        the magic.gram.c and magic.gram.h files from the sol/proglib/vnmrbg/
+#        directory.
+#Execute('bison -dv magic.gram.y && ' + \
+#        'mv magic.gram.tab.c magic.gram.c && ' + \
+#        'mv magic.gram.tab.h magic.gram.h')
+
+# magic.lex.c generation
+#Execute("cat magic.lex.l | sed 's/{stdin}/(FILE *) 0/g' " + \
+#        "| sed 's/{stdout}/(FILE *) 0/g' > lex_tmp  ; " + \
+#        "mv lex_tmp magic.lex.l")
+#Execute("flex -omagic.lex.c magic.lex.l")
+
+
+interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
+interixgpp= os.path.join(os.sep,'opt','gcc.3.3','bin','g++')
+
+if (platform=="darwin"):
+    ccflags_32_64 = compileFlag +' -arch x86_64 -arch arm64 -O3 -Wall -Wno-format-security ' + compileOption
+    linkflags_32_64 = compileFlag +' -arch x86_64 -arch arm64 -O3 '
+else:
+    ccflags_32_64 = compileFlag +' -Wall ' + compileOption
+    linkflags_32_64 = compileFlag +' -O -rdynamic'
+
+# build environment
+vnmrBgCEnv = Environment(CC         = "aarch64-linux-gnu-gcc",
+                         CCFLAGS    = ccflags_32_64,
+                         CPPDEFINES = ['LINUX', 'VNMRJ', 'BSDACQ', 'SUN', 'X11',
+                                       'NOMOTIF', 'NESSIE', 'USE_HTONS'],
+                         LINKFLAGS  = linkflags_32_64,
+                         CPPPATH    =  cwd)
+
+
+if (platform=="darwin"):
+    vnmrBgCEnv.Append(CPPDEFINES = 'MACOS')
+    vnmrBgCEnv.Replace(CC = 'clang')
+    vnmrBgCEnv.Append(CCFLAGS = ' -Wno-implicit-function-declaration -Wno-deprecated-declarations -Wno-deprecated-non-prototype ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       vnmrBgCEnv.Append(CCFLAGS = os.getenv('osxflags'))
+if (opensource=="true"):
+    if (gplsource=="true"):
+        vnmrBgCEnv.Append(CPPDEFINES = 'VNMR_GPL')
+
+vnmrBgCppEnv = vnmrBgCEnv.Clone(CXX         = 'aarch64-linux-gnu-g++',
+                               CCFLAG = '',
+                               CPPDEFINES = ['LINUX', 'VNMRJ'])
+
+# This will define boost for MacOS and Ubuntu
+if not os.path.exists("/etc/redhat-release"):
+    vnmrBgCppEnv.Append(CPPDEFINES = 'boost=std')
+else:
+# This is for CentOS 7
+    if os.path.exists("/usr/bin/systemctl"):
+        vnmrBgCppEnv.Append(CCFLAGS = ' -O2 -Wno-format-security -std=c++11 ')
+        vnmrBgCppEnv.Append(CPPDEFINES = 'boost=std')
+
+if (platform!="darwin"):
+    vnmrBgCEnv.Append(CCFLAGS = ' -O2 -Wno-format-security ')
+
+if (opensource=="true"):
+    if (gplsource=="true"):
+        vnmrBgCppEnv.Append(CPPDEFINES = 'VNMR_GPL')
+
+# copy and process the magic.lex.c file
+# srcFile    = os.path.join(lexSrcCPath, 'magic.lex.c')
+# targetFile = os.path.join(cwd, 'magic.lex.c.orig')
+# vnmrBgCppEnv.Command(target = targetFile,
+#                      source = srcFile,
+#                      action = 'cp ' + srcFile + ' ' + targetFile)
+
+# srcFile    = os.path.join(cwd, 'magic.lex.c.orig')
+# targetFile = os.path.join(cwd, 'magic.lex.c')
+# vnmrBgCppEnv.Command(target = targetFile,
+#                      source = srcFile,
+#                      action = "cd " + cwd + \
+#                               " && cat magic.lex.c.orig | sed 's/{stdin}/(FILE *) 0/g' " + \
+#                               "| sed 's/{stdout}/(FILE *) 0/g' > magic.lex.c")
+
+# vnmrBgCppEnv.Depends(target     = 'magic.lex.o',
+#                      dependency = 'magic.lex.c')
+
+# define to get tokens from, a file
+def getTokenValue(str,file):
+   f=open(file,'r')
+   for line in f:
+      lineParts=line.split("=",1)
+      if (lineParts[0]==str):
+         value=lineParts[1]
+         value=value[:-1]
+         break
+   f.close()
+   return(value)
+
+revDateCEnv = vnmrBgCEnv.Clone()
+todaysDate = datetime.datetime.now().strftime("%B %d, %Y")
+# todaysDateShort = datetime.datetime.now().strftime("%m/%d/%y %H:%M")
+# the REVISION_ID should come from a top level file pulled in by the build
+# where the versions file is
+# versionsPath=os.path.join(cwd,os.pardir,os.pardir,"versions")
+# token=getTokenValue("REVISION_ID", versionsPath)
+# cr_token=getTokenValue("COPYRIGHT", versionsPath)
+# print(token)
+# print(token+'\' ')
+
+revDateCEnv.Append(CPPFLAGS = '-DREVISION_DATE=\'\"' + todaysDate + '\"\' ')
+
+# symlink source and build it
+unmrComObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, unmrComPath, unmrComFileList)  # UNMR_COM_OBJ
+ft3dObjs    = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, ft3dPath, ft3dFileList)        # FT3D_OBJ
+psgObjs     = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, psgPath, psgFileList)          # PSG_OBJ
+acqcomObjs  = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, acqcomPath, acqcomFileList)    # ACQCOM_OBJ
+ncommObjs   = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, ncommPath, ncommFileList)      # NCOMM_OBJ
+expProcObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, expProcPath, expProcFileList)  # EXPPROC_OBJ
+nacqiObjs   = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, nacqiPath, nacqiFileList)      # NACQI_OBJ
+unmrSpcObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, unmrSpcPath, unmrSpcFileListB) # UNMR_SPC_OBJ
+
+# these are already local
+vnmrBgWinObjs = vnmrBgCEnv.StaticObject(source = vnmrBgWinFileList)
+unmrBgObjs    = vnmrBgCEnv.StaticObject(source = unmrBgFileList)    # UNMR_BG_OBJ
+if (opensource=="false"):
+    cOptObjs    = vnmrBgCEnv.StaticObject(source = cOptFileList)
+elif (gplsource=="true"):
+    cOptObjs    = vnmrBgCEnv.StaticObject(source = cOptFileList)
+else:
+    cOptObjs    = cOptFileList
+
+# symlink in headers
+buildMethods.symLinkHeader(vnmrBgCEnv, unmrComFileList, cwd, unmrComPath, unmrComHdrList)
+buildMethods.symLinkHeader(vnmrBgCEnv, ft3dFileList, cwd, ft3dPath, ft3dHdrList)
+buildMethods.symLinkHeader(vnmrBgCEnv, psgFileList, cwd, psgPath, psgHdrList)
+buildMethods.symLinkHeader(vnmrBgCEnv, acqcomFileList, cwd, acqcomPath, acqcomHdrList)
+buildMethods.symLinkHeader(vnmrBgCEnv, ncommFileList, cwd, ncommPath, ncommHdrList)
+buildMethods.symLinkHeader(vnmrBgCEnv, expProcFileList, cwd, expProcPath, expProcHdrList)
+buildMethods.symLinkHeader(vnmrBgCEnv, nacqiFileList, cwd, nacqiPath, nacqiHdrList)
+buildMethods.symLinkHeader(vnmrBgCEnv, unmrComFileList, cwd, xracqPath, xracqHdrList)
+buildMethods.symLinkHeader(vnmrBgCEnv, unmrBgFileList, cwd, vwacqPath, vwacqHdrList)
+
+unmrCObjs = unmrComObjs + \
+            unmrBgObjs + \
+            cOptObjs + \
+            ft3dObjs + \
+            psgObjs + \
+            vnmrBgWinObjs + \
+            acqcomObjs + \
+            ncommObjs + \
+            expProcObjs + \
+            nacqiObjs + \
+            unmrSpcObjs
+
+# symlink source and headers, build symlinked source
+acqhdlEnv = vnmrBgCEnv.Clone()
+acqhdlEnv.Append(CPPDEFINES = ['ACQPROC_LC'])
+acqhdlObj     = buildMethods.symLinkStaticObj(acqhdlEnv, cwd, unmrSpcPath, unmrSpcFileListA) # UNMR_SPC_OBJ
+aipLibCppObjs = buildMethods.symLinkStaticObj(vnmrBgCppEnv, cwd, aipLibPath, aipLibFileList) # AIPLIB_OBJ
+ddlLibCppObjs = buildMethods.symLinkStaticObj(vnmrBgCppEnv, cwd, ddlLibPath, ddlLibFileList) # DDLLIB_OBJ
+AspLibCppObjs = buildMethods.symLinkStaticObj(vnmrBgCppEnv, cwd, AspLibPath, AspLibFileList) # DISLIB_OBJ
+
+# symlink in headers
+buildMethods.symLinkHeader(vnmrBgCppEnv, aipLibFileList, cwd, aipLibPath, aipLibHdrList)
+buildMethods.symLinkHeader(vnmrBgCppEnv, ddlLibFileList, cwd, ddlLibPath, ddlLibHdrList)
+buildMethods.symLinkHeader(vnmrBgCppEnv, AspLibFileList, cwd, AspLibPath, AspLibHdrList)
+
+# already local
+vnmrBgCCCppObjs    = vnmrBgCppEnv.StaticObject(source = vnmrBgCCFileList)    # VNMRBG_CC_OBJ
+ddlYaccCLibCppObjs = vnmrBgCppEnv.StaticObject(source = ddlYaccCLibFileList) # YACC_DDL_OBJ
+#buildMethods.makeSymLinks(vnmrBgCppEnv, ddlYaccCLibCppObjs, cwd, ddlLibPath, ddlYaccLibFileList)
+if (opensource=="false"):
+    optCppObjs    = vnmrBgCppEnv.StaticObject(source = cplusplusOptFileList)
+elif (gplsource=="true"):
+    optCppObjs    = vnmrBgCppEnv.StaticObject(source = cplusplusOptFileList)
+else:
+    optCppObjs    = cplusplusOptFileList
+
+unmrCppObjs = aipLibCppObjs + \
+              ddlLibCppObjs + \
+              AspLibCppObjs + \
+              optCppObjs + \
+              ddlYaccCLibCppObjs + \
+              vnmrBgCCCppObjs
+
+revDateObj = buildMethods.symLinkStaticObj(revDateCEnv, cwd, revdatePath, revdateFileList)
+ 
+unmrAllObjs = unmrCObjs + unmrCppObjs + acqhdlObj + revDateObj # UNMR_ALL_OBJ
+
+# symlink source and headers, build symlinked source
+magicComObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, magicComPath, magicComFileList) # MAGIC_COM_OBJ
+yaccSrcCObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, yaccSrcCPath, yaccSrcCFileList) # YACC_OBJ
+#buildMethods.makeSymLinks(vnmrBgCEnv, yaccSrcCObjs, cwd, yaccSrcPath, yaccSrcFileList)
+
+# symlink in headers
+buildMethods.symLinkHeader(vnmrBgCEnv, yaccSrcCFileList, cwd, yaccSrcCPath, yaccSrcCHdrList)
+
+# already local
+# lexSrcCObjs = vnmrBgCEnv.StaticObject(source = lexSrcCFileList)  # LEX_OBJ
+
+magicCObjs = magicComObjs + \
+             yaccSrcCObjs
+
+#vnmrBgCEnv.Depends(target     = magicCObjs,
+#                   dependency = lexSrcCFileList)
+
+magicComSpcObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, magicComSpcPath, magicComSpcFileList)
+
+magicAllObjs = magicCObjs + magicComSpcObjs # MAGIC_ALL_OBJ
+
+if ('interix' not in platform):    # Interix
+   if (platform=="darwin"):
+       linkflags2_32_64 = compileFlag +' -arch x86_64 -arch arm64 -O3 '
+       vnmrBgCppEnv.Replace(CXX = 'clang++')
+   else:
+       linkflags2_32_64 = compileFlag +' -O2 -rdynamic'
+
+   if (opensource=="false"):
+       vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
+                                   source    = [unmrAllObjs,
+                                                magicAllObjs],
+                                   LINKFLAGS = linkflags2_32_64,
+                                   LIBPATH   = [cwd],
+                                   LIBS      = ['dl'])
+   elif (gplsource=="true"):
+       vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
+                                   source    = [unmrAllObjs,
+                                                magicAllObjs],
+                                   LINKFLAGS = linkflags2_32_64,
+                                   LIBPATH   = [cwd],
+                                   LIBS      = ['gsl','gslcblas','dl'])
+   else:
+       vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
+                                   source    = [unmrAllObjs,
+                                                magicAllObjs],
+                                   LINKFLAGS = linkflags2_32_64,
+                                   LIBPATH   = [cwd],
+                                   LIBS      = ['dl'])
+else:
+   vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
+                                   source    = [unmrAllObjs,
+                                                magicAllObjs],
+                                   LINKFLAGS = '-O2 -m32',
+                                   LIBPATH   = [cwd,
+                                                os.path.join(os.sep, 'usr','lib','x86'),
+                                                os.path.join(os.sep, 'usr', 'X11R6', 'lib')],
+                                   LIBS      = ['dl','m','X11','Xt','Xp','Xext','SM','ICE','l','socket'])
+   
+
+# define with absolute path where built files will be copied
+vnmrBinInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrBinInstallPath):
+   os.makedirs(vnmrBinInstallPath)
+
+# actions to be performed after targets are built
+vnmrBgCppEnv.AddPostAction(vnmrbgBuild,
+                           Action(Copy(vnmrBinInstallPath, os.path.join(cwd, vnmrbgTarget))))
+

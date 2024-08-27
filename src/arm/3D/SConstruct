@@ -1,0 +1,133 @@
+#!
+
+import os
+import sys
+import string
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+# define target file names
+ft3dTarget        = 'ft3d'
+getplaneTarget    = 'getplane'
+compressfidTarget = 'compressfid'
+
+# MAC -> darwin, Linux -> linux2
+platform = sys.platform
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+unmr3dLibFileList = ['combine.c',
+		               'comline.c',
+		               'errorlog.c',
+		               'fft3d.c',
+		               'fileinfo.c',
+		               'fmap.c',
+		               'ft3d.c',
+		               'ft3dio.c',
+		               'ftutil.c',
+                               'errLogLib.c',
+                               'sockets.c',
+		               'lock3Dfiles.c']
+
+vnmrPath     = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrHdrList  = ['process.h',
+                'ftpar.h',
+                'data.h',
+                'process.h',
+                'allocate.h',
+                'group.h',
+                'process.h',
+                'pvars.h',
+                'variables.h',
+                'wjunk.h']
+
+vnmrFileList = ['lpqld.c',
+                'lpz.c']
+
+ncommPath     = os.path.join(cwd, os.pardir, 'ncomm')
+ncommFileList = ['errLogLib.h',
+                 'errLogLib.c',
+                 'sockets.h',
+                 'sockets.c']
+
+getPlFileList    = ['plextract.c']
+cmprsFidFileList = ['compressfid.c']
+if os.path.exists("m64") or os.path.exists("../datastation"):
+  compileFlag = ""
+else:
+  compileFlag = "-m32"
+
+
+# build environments
+env = Environment(CC         = 'aarch64-linux-gnu-gcc',
+                  CCFLAGS    = '-O3 -Wall '+compileFlag,
+                  CPPDEFINES = ['LINUX','FT3DIO','NOASYNC'],
+                  LINKFLAGS  = '-DLINUX '+compileFlag,
+                  CPPPATH    = cwd)
+
+if (platform=="darwin"):
+    env.Replace(CC = 'clang')
+    env.Append(CPPDEFINES = 'MACOS')
+    env.Replace(CCFLAGS = '-Os -Wall -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       env.Append(CCFLAGS = os.getenv('osxflags'))
+    env.Replace(LINKFLAGS = '')
+
+
+buildMethods.makeSymLinks(env, getplaneTarget, cwd, vnmrPath, vnmrHdrList)
+
+lpEnv = env.Clone(CCFLAGS = '-O3 -Wall '+compileFlag)
+lpEnv.Append(CPPDEFINES = ['FT3D'])
+
+if (platform=="darwin"):
+    lpEnv.Replace(CC = 'clang')
+    lpEnv.Append(CPPDEFINES = 'MACOS')
+    lpEnv.Replace(CCFLAGS = '-Os -Wall -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       lpEnv.Append(CCFLAGS = os.getenv('osxflags'))
+    lpEnv.Replace(LINKFLAGS = '')
+
+buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, ncommPath, ncommFileList)
+buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, vnmrPath, vnmrFileList)
+
+# objects
+vnmrObj   = lpEnv.Object(vnmrFileList)
+unmr3dObj = env.Object(unmr3dLibFileList)
+
+# actual builds
+ft3d = lpEnv.Program(target = ft3dTarget,
+                     source = [vnmrObj,
+                               unmr3dObj],
+                     LIBS   = ['m'])
+Depends(ft3d,vnmrFileList)
+
+getplane = env.Program(target = getplaneTarget,
+                       source = getPlFileList,
+                       LIBS   = ['m'])
+
+compressfid = env.Program(target = compressfidTarget,
+                          source = cmprsFidFileList,
+                          LIBS   = ['m'])
+
+# define with absolute path where built files will be copied
+installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(installPath):
+   os.makedirs(installPath)
+
+# actions to be performed after targets are built
+lpEnv.AddPostAction(ft3d,
+                    Action(Copy(installPath, os.path.join(cwd, ft3dTarget))))
+lpEnv.AddPostAction(ft3d,
+                    Action('cd ' + installPath + ';rm -f noft3d; ln -s ' + ft3dTarget + ' noft3d'))
+env.AddPostAction(getplane,
+                  Action(Copy(installPath, os.path.join(cwd, getplaneTarget))))
+env.AddPostAction(compressfid,
+                  Action(Copy(installPath, os.path.join(cwd, compressfidTarget))))
+
