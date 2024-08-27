@@ -1,0 +1,71 @@
+from __future__ import print_function
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+# targets
+diffparamsTarget = 'diffparams'
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+diffParamsFileList = ['diffparams.c']
+
+vnmrDiffParamsPath     = os.path.join(cwd, os.pardir, 'vnmr')
+vnmrDiffParamsHdrList = ['allocate.h',
+                         'init.h',
+                         'graphics.h',
+                         'group.h',
+                         'params.h',
+                         'pvars.h',
+                         'symtab.h',
+                         'tools.h',
+                         'variables.h',
+                         'vnmrsys.h',
+                         'wjunk.h']
+vnmrDiffParamsFileList = ['assign.c',
+                          'allocate.c',
+                          'pvars.c',
+                          'symtab.c',
+                          'tools.c',
+                          'variables1.c']
+
+# build environments
+diffEnv = Environment(CC         = 'aarch64-linux-gnu-gcc',
+                      CCFLAGS    = '-O -Wall',
+                      CPPDEFINES = ['LINUX'],
+                      LINKFLAGS  = '',
+                      CPPPATH    = [cwd])
+
+if ('darwin' in platform):
+    diffEnv.Replace(CC = 'clang')
+    diffEnv.Replace(CCFLAGS = '-Os -Wall -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       diffEnv.Append(CCFLAGS = os.getenv('osxflags'))
+
+
+buildMethods.makeSymLinks(diffEnv, diffparamsTarget, cwd, vnmrDiffParamsPath, vnmrDiffParamsFileList)
+buildMethods.makeSymLinks(diffEnv, diffparamsTarget, cwd, vnmrDiffParamsPath, vnmrDiffParamsHdrList)
+
+# actual builds
+diffparams = diffEnv.Program(target = diffparamsTarget,
+                             source = [diffParamsFileList,
+                                       vnmrDiffParamsFileList],
+                             LIBS   = ['m'])
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+diffEnv.AddPostAction(diffparams,
+                      Action(Copy(vnmrInstallPath, os.path.join(cwd, diffparamsTarget))))
+

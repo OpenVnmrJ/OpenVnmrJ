@@ -1,0 +1,44 @@
+import os
+import sys
+
+platform = sys.platform        # sys.platform -> 'linux2' linux, 'interix6' win7 SUA
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+pboxFileList = ['Pbox.c',
+                'Pxfid.c',
+                'Pxsim.c',
+                'Pxspy.c']
+
+# build environments
+env = Environment(CC        = 'aarch64-linux-gnu-gcc',
+                  CCFLAGS = '-O2 -Wall',
+                  LINKFLAGS = '')
+
+if ('darwin' in platform):
+    env.Replace(CC = 'clang')
+    env.Replace(CCFLAGS = '-Os -Wall -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       env.Append(CCFLAGS = os.getenv('osxflags'))
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actual builds
+for i in pboxFileList:
+   (filename, ext) = os.path.splitext(i)
+   tempBuildObj = env.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(vnmrInstallPath, os.path.join(cwd, filename))))
+

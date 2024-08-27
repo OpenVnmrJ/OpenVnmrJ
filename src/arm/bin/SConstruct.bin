@@ -1,0 +1,126 @@
+#
+
+from __future__ import print_function
+import os
+import sys
+import shutil
+
+platform = sys.platform
+
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
+# source files
+bit32FileList = ['convertbru.c',
+                      'expfit.c',
+                      'import1Dspec.c',
+                      'jdxfid.c',
+                      'jdxspec.c',
+                      'listparam.c',
+                      'writetrace.c',
+                      'loginvjpassword.c',
+                      'PboxAdapter.c',
+                      'setGifAspect.c',
+                      'B0_cor.c',
+                      'ecc4.c',
+                      'header_change.c',
+                      'phcor5.c',
+                      'spins.c']
+
+acqStandAloneFileList = ['cptoconpar.c']
+
+imageStandAloneFileList = ['read_raw_data.c']
+
+bit64FileList = ['cln2d.c',
+                'cln3d.c',
+                'fidx.c',
+                'fileowner.c',
+                'findLinks.c',
+                'inflateND.c',
+                'mkCSsch.c',
+                'proc_se.c',
+                'rsw.c',
+                'sch2fid.c',
+                'wmpro.c']
+
+# build environments
+env = Environment(CC        = 'aarch64-linux-gnu-gcc',
+                  CCFLAGS = '-O2 -Wall',
+                  LINKFLAGS = '')
+
+if ('darwin' in platform):
+    env.Replace(CC = 'clang')
+    env.Replace(CCFLAGS = '-Os -Wall -Wno-implicit-function-declaration ')
+    osxflags = os.getenv('osxflags')
+    if osxflags:
+       env.Append(CCFLAGS = os.getenv('osxflags'))
+    env.Replace(LINKFLAGS = '-Os')
+
+# define with absolute path where built files will be copied
+vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrInstallPath):
+   os.makedirs(vnmrInstallPath)
+
+# actual builds
+for i in bit32FileList:
+   (filename, ext) = os.path.splitext(i)
+   tempBuildObj = env.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(vnmrInstallPath, os.path.join(cwd, filename))))
+   if filename == 'jdxspec':
+      env.AddPostAction(tempBuildObj,
+                     Action('cd ' + vnmrInstallPath + ';rm -f jdxlspec; ln -s jdxspec jdxlspec'))
+
+for i in bit64FileList:
+   (filename, ext) = os.path.splitext(i)
+   tempBuildObj = env.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+
+   env.AddPostAction(tempBuildObj,
+                     Action(Copy(vnmrInstallPath, os.path.join(cwd, filename))))
+
+if (platform!="darwin"):
+    for i in acqStandAloneFileList:
+       (filename, ext) = os.path.splitext(i)
+       tempBuildObj = env.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+       env.AddPostAction(tempBuildObj,
+                     Action(Copy(vnmrInstallPath, os.path.join(cwd, filename))))
+
+shutil.copy(os.path.join(cwd,'weight.h'),
+            os.path.join(vnmrInstallPath,'weight.h') )
+# The program fitspec contains NR code that cannot be open-sourced.
+# Copy the executable.
+if (platform!="darwin"):
+    src = os.path.join(cwd,'fitspec')
+else:
+    src = os.path.join(cwd,'macos','fitspec')
+
+shutil.copy(src, os.path.join(vnmrInstallPath,'fitspec') )
+os.system('chmod 755 '+os.path.join(vnmrInstallPath,'fitspec') )
+
+#image path
+stdImageBinPath = os.path.join(cwd,os.pardir,os.pardir,os.pardir,
+			'vnmr','bin')
+
+# make sure the path(s) exist
+if not os.path.exists(stdImageBinPath):
+   os.makedirs(stdImageBinPath)
+
+for i in imageStandAloneFileList:
+   (filename, ext) = os.path.splitext(i)
+   imageBuildObj = env.Program(target = filename,
+                              source = i,
+                              LIBS   = ['m'])
+
+   env.AddPostAction(imageBuildObj,
+                     Action(Copy(stdImageBinPath, os.path.join(cwd, filename))))
+
