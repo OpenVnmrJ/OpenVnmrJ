@@ -51,13 +51,17 @@ IF ($arg = '1') THEN
     setddrtc:$dum
     setref
     $solv='' format(solvent,'lower'):$solv
-    if ($solv) then cr=0p else cr=75p endif
+    if $solv='cdcl3' then // ID1 or Autotest sample
+    	cr=0p delta=50p 
+    else 
+    	cr=49p delta=1p if h1freq<500 then nt=4 endif
+    endif
     delta=50p movesw:$dum
     is_IP:$isIP
     if ($isIP) then C13tpwr=51 endif
     tpwr=C13tpwr pw90=C13pw90 pw=pw90
     dpwr=H1dpwr dmf=H1dmf pplvl=H1pplvl pp=H1pp
-    dm='nnn' dmm='ccc'
+    dmm='ccc'
 
     getparam('tpwr'):$power
     getparam('pw90'):$oldpw
@@ -77,10 +81,10 @@ IF ($arg = '1') THEN
  	endif
     endif
     
-    d1=20 
+    d1=20
     ai at=0.5 fn=4*np lb=1/at nt=1 
     if (Console = 'mercury') then gain=20 else gain=30 endif
-    wnt='wft f full vsadj'
+    wnt='wft f full aph0 vsadj'
     caliblist=$0
     xmhaha_calib('synonym',$0):caliblist
     calibnode='_iteration'
@@ -367,7 +371,7 @@ ELSEIF ($arg = 'init') THEN
     else
   		"set up window for CH3OH"
 	cr = 49p movetof sw = 3000 setref
-  	dof = -1.6*dfrq  
+  	dof = -1.2*dfrq
 		"about where CH3OH should be"
      	d1 = 12  at = 3  
 		"T1 for AutoTest CH3 ca. 3 sec "

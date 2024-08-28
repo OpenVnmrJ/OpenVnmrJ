@@ -1,0 +1,100 @@
+"macro NUGcal"
+
+"NUGcal - Proton observe DOSY calibration for non-uniform gradients"
+
+$gradtype=gradtype
+exists('tmpgradtype','parameter'):$e
+if ($e) then is_postvj22b:$e endif
+if ($e) then $gradtype=tmpgradtype endif
+getparam('gradient','Probe'):$probegradient
+if $probegradient='n' then 
+   error('Must have gradients to perform DOSY!') return 
+endif
+$pw=0 $tpwr=0
+getparam('pw90','H1'):$pw
+getparam('tpwr','H1'):$tpwr
+if ($pw=0) or ($tpwr=0) then 
+   error('Must calibrate 1H pw90/tpwr first!') return 
+endif
+
+auargs('gradtype_nn')
+
+if ($# < 1) then $1=0 endif
+
+IF ($1 = 0) THEN
+
+    cplog('PROTON','first'):$file,$asdir
+    if ($file<>'') then rt($asdir+'/'+$file) else abort endif
+    wft
+    execprocess='wft dssh'
+    execplot='execplot=\'\''
+    $pfgon3=''
+    substr(pfgon,3,1):$pfgon3
+    if ($pfgon3='n') then pfgon='nny' endif
+    $dn=dn
+    $solvent=solvent
+    is_IP:$isIP
+    savesampglobal('cp')
+
+//    groupcopy('current','processed','acquisition')
+//    groupcopy('current','processed','display')
+//    groupcopy('current','processed','processing')
+
+    if ($isIP) then
+	IPmodule('get')
+    else
+	$IPparlist=''
+        module('list','IPpars'):$IPparlist
+        destroy($IPparlist):$e
+    endif
+    solvent=$solvent
+    file='exp'
+    $dum=''
+
+    wstart='wshim=\'n\' wstart=\'\''
+    if (spintype<>'tach') then spin=0 endif
+
+    fread($asdir+'/'+$file+'.fid/procpar','current','newonly')
+    getsampglobal('cp')
+    PFGflg='y'
+    wnt=''
+    
+    execprocess='proc=\'ft\' wft dssh'
+    execplot='return'
+    caliblist=$0
+    xmhaha_calib('synonym',$0):caliblist
+    calibnode='_offset'
+    xmhaha_calib('addNode','NUGcal(1)')
+
+    banner('Finding offset')
+
+ENDIF
+
+"********************************************************"
+IF ($1 = 1) THEN
+
+    cplog('PROTON','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    proc='ft' wft setref f full av peak:$ht,cr movetof
+    $tof=tof //$sw=sw
+    Doneshot_nugmap
+    tof=$tof //sw=$sw
+    nug_sample='d' 
+    nug_probefile='y'
+    execprocess='proc=\'ft\' wft f full vsadj(100)'
+    wexp='wft f full vsadj(100) region fbc dss nugcalib(nug_sample,nug_temp,nug_globalcopy,nug_probefile)'
+    execplot='return'
+    calibnode='_NUGcal'
+    banner('Calibrating non-uniform gradients')
+ 
+ENDIF
+
+"********************************************************"
+IF ($1 = 2) THEN
+
+    cplog('Doneshot_nugmap','last'):$file,$asdir
+    rt($asdir+'/'+$file)
+    proc='ft' wft f full vsadj(100) region fbc dss
+
+ENDIF
+
