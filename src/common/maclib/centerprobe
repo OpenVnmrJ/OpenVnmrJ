@@ -1,5 +1,4 @@
-"macro centerprobe"
-
+"macro IPcenterprobe"
 $jfile=userdir+'/gshimlib/data/gshim.bas'
 exists($jfile,'file'):$e
 if $e<0.5 then
@@ -64,11 +63,29 @@ $xmin = 0
 $xmin = -0.5 * $a[2] / $a[3]
 $fmin = $xmin * 0.5 * ($f[$npskip+$npnew] - $f[$npskip+1])
 
+//Read RF coil length and gcal from probe file if there
 $fullmm=16
+getparam('rfsize','Probe'):$fullmm
+if $fullmm=0 then $fullmm=20 endif
+write('line3','Using RF coil length of %d',$fullmm)
+getparam('gcal','Probe'):$gcal
+if $gcal<>0 then
+	gcal=$gcal
+else
+	$zgradtype=''
+	substr(gradtype,3,1):$zgradtype
+	if ($zgradtype='l') then
+		gcal=0.01
+	else
+		gcal=0.002
+	endif
+endif
+write('line3','Using gcal=%f',gcal)
+
 if $#>0.5 then  "not used -see gcal below"
   $fullmm=$1
 else
-  $fullmm=16
+  $fullmm=20
 endif
 $fullmm=$fullmm * 0.5 * 0.75  "$npnew is 0.75*$np"
 $mmin=0

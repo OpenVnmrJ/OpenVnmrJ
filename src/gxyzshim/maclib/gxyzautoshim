@@ -1,5 +1,4 @@
 "macro gxyzautoshim"
-" Agilent gxyzautoshim							"
 " GAM 28v03							"
 " from VVKautoshim						"
 
@@ -194,7 +193,7 @@ atext('Cycle number '+$cy+' out of '+$ncy)
 atext('')
 
 $shimpower='NA'
-if (shimset<10 or shimset>12) then
+if (shimset<>10) then
         format(r2,1,1):$shimpower
 	atext('Estimated shim power dissipation = '+$shimpower+' W')
 endif
@@ -307,9 +306,12 @@ else "Instead use the peak-to-peak frequency variations to optimise tau[2]"
 	if ($logex > 0.5) then
 		shell('wc -l  <'+$shimlogfile+'; cat'):$numlinesinlog
 		lookup('file',$shimlogfile)
-		$i=1
+		lookup('readline',3)
+		$i=1 $tmp=0
 		repeat
-        		lookup('seekcs','NA','read'):$tmp
+//        		lookup('seekcs','NA','read'):$tmp
+			lookup('skip',1,'read'):$tmp 
+			lookup('readline',1)
 			if ($tmp < $lastrange) then $lastrange=$tmp endif
         		$i=$i+1
 		until $i=$numlinesinlog-2
@@ -352,7 +354,7 @@ if ($function='acquireref1D') then "Set up and start 1D measurement"
 	$solv=solvent
 	$pw90=refpw $tpwr=reftpwr $gain=refgain
 	$refnuc=refnuc $refppm=refppm 
-	$shimpower=''
+	$shimpower='' 
       	format(r2,1,1):$shimpower
 	$pltopt=pltopt $gxyzshimPDF=gxyzshimPDF $gxyzshimPSn=gxyzshimPSn
 	$gxyzshimPS=gxyzshimPS
@@ -431,7 +433,7 @@ if ($function='processref1D') then
 	lookup('seek','mapname','read'):$mapname
 	lookup('seek','rmsdiff/rmserr','read'):$rmserrs
 	atext('rms diff/rms err = '+$rmserrs)
-	if (shimset<10 or shimset>12) then atext('Estimated shim power dissipation = '+n3+' W') endif
+	if (shimset<>10) then atext('Estimated shim power dissipation = '+n3+' W') endif
 	"Not really needed, but if autophasing is bad you can get -ve linewidths reported by dres"
 	if ($tauopt <0) then $tauopt=0.005 endif
 	if n1='y' or n1='p' then
