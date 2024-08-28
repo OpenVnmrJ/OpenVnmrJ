@@ -304,7 +304,7 @@ SHAPE getsinc(char *seqName, double p, double phint, int iRec, int calc)
    var = getname0("nzc",s.pars.seqName,"");
    s.pars.ip[0] = getval(var);
    if ( s.pars.ip[0]%2) {
-      printf("Error in getSINC. Number of zero crossings must be even! \n");
+      printf("Error in getsinc(). Number of zero crossings must be even! \n");
       psg_abort(1);
    }
    s.pars.array = disarry(var, s.pars.array);
@@ -332,7 +332,7 @@ SHAPE gettanramp(char *seqName, double p, double phint, int iRec, int calc)
    s.get_state = tanramp_state;
 
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
-      printf("Error in getsfmpulse(). The type name %s is invalid!\n",seqName);
+      printf("Error in gettanramp(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
    sprintf(s.pars.seqName,"%s",seqName);

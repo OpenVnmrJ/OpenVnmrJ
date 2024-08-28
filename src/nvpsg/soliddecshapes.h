@@ -1435,7 +1435,7 @@ void _dseqoff(DSEQ dseq)
 
 void _dseqon2(DSEQ dseq)
 {
-  printf("Sequence uses _dseqon2 statement which will be obsolete soon.Please, use _dseqon instead which provides the same functionality\n");
+  printf("Sequence uses _dseqon2 statement which will be obsolete soon. Please, use _dseqon instead which provides the same functionality\n");
   _dseqon(dseq);
 }
 
