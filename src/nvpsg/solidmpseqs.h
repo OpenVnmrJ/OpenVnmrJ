@@ -421,7 +421,7 @@ MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
    f.nRec = iRec;
    f.phInt = phint;
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 2) {
-      printf("Error in getpuls(). The sequence name %s is invalid!\n",seqName);
+      printf("Error in getpasl(). The sequence name %s is invalid!\n",seqName);
       psg_abort(-1);
    }
    sprintf(f.seqName,"%s",seqName);
@@ -1174,7 +1174,7 @@ MPSEQ getfslg(char *seqName, int iph, double p, double phint, int iRec, int calc
    extern MPSEQ MPchopper(MPSEQ f);
 
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
-        printf("Error in getfslg1(). The type name %s is invalid!\n",seqName);
+        printf("Error in getfslg(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
    sprintf(f.seqName,"%s",seqName);
@@ -2732,7 +2732,7 @@ MPSEQ getpipsxy(char *seqName, int iph, double p, double phint, int iRec, int ca
    MPSEQ pips = {};
    extern MPSEQ MPchopper(MPSEQ pips);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
-        printf("Error in getpips(). The type name %s is invalid!\n",seqName);
+        printf("Error in getpipsxy(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
    sprintf(pips.seqName,"%s",seqName);
@@ -4354,7 +4354,7 @@ MPSEQ gettmrev5(char *seqName, int iph, double p, double phint, int iRec, int ca
    MPSEQ tm = {};
    extern MPSEQ MPchopper(MPSEQ tm);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
-        printf("Error in gettmrev(). The type name %s is invalid!\n",seqName);
+        printf("Error in gettmrev5(). The type name %s is invalid!\n",seqName);
         psg_abort(1);
    }
    sprintf(tm.seqName,"%s",seqName);
@@ -4998,7 +4998,7 @@ MPSEQ getsuper(char *seqName, int iph, double p, double phint, int iRec, int cal
 
    double del = taur - 2.0*taua - 8.0*lpw;
    if (del < 0.0) {
-      printf("Error in getsuper(). tauR to small!");
+      printf("Error in getsuper(). tauR too small!");
       psg_abort(1);
    }
 
@@ -5096,7 +5096,7 @@ MPSEQ getdumboxmx(char *seqName, int iph, double p, double phint, int iRec, int 
    char *var;
    extern MPSEQ MPchopper(MPSEQ pm);
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
-      printf("Error in getdumbo(). The type name %s is invalid!\n",seqName);
+      printf("Error in getdumboxmx(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
    sprintf(pm.seqName,"%s",seqName);
@@ -5247,7 +5247,7 @@ MPSEQ getdumbogen(char *seqName, char *coeffName, int iph, double p, double phin
    extern MPSEQ MPchopper(MPSEQ dumbo);
 
    if (strlen(seqName) >= NSUFFIX  || strlen(seqName) < 1) {
-      printf("Error in getdumbogeneric(). The type name %s is invalid!\n",seqName);
+      printf("Error in getdumbogen(). The type name %s is invalid!\n",seqName);
       psg_abort(1);
    }
    sprintf(dumbo.seqName,"%s",seqName);

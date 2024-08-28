@@ -2384,7 +2384,7 @@ WMPA getwdumbogen(char *seqName, char *coeffName)
    var = getname0("q",coeffName,"");
    int steps = getval(var);
    if (steps > 512) {
-   	printf("too many steps: %d\n",steps);
+	printf("too many steps: %d (max = 512)\n",steps);
 	psg_abort(1);
    }
 
