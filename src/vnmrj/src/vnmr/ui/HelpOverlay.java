@@ -256,6 +256,7 @@ public class HelpOverlay extends JPanel implements ActionListener,
              if (str != null)
                  bVisible = str.equals("off") ? false : true;
          }
+/*
          if (Util.isImagingUser())
              bVisible = false;
          else
@@ -264,6 +265,8 @@ public class HelpOverlay extends JPanel implements ActionListener,
             if (fd.exists())
                bVisible = false;
          }
+ */
+         bVisible = false;
          showCk.setSelected(bVisible);
 
          addMouseListener(new MouseAdapter() {

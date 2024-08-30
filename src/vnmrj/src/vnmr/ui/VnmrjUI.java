@@ -709,8 +709,8 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
             frameRec.height = ix.intValue();
         initGraphicsToolBar();
 
-        createHelpOverlayPanel();
 /*
+        createHelpOverlayPanel();
         st = (String) hs.get("mainMenu");
         if (st != null) {
             if (st.equals("off"))
