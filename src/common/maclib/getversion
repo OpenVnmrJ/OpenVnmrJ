@@ -55,31 +55,5 @@ else
   endif
 endif
 
-exists('CP_Version','CP_Readme'):$e,$path
-if ($e) then
-  write('file',$t,'')
-  write('file',$t,'CHEMPACK:')
-  append($path,'grep','^Chempack','grep -w','Patch','head',1,$t)
-  append($path,'grep','Installed on',$t)
-endif
-getbinpath('Craft'):$ce,$cv
-if $ce then
-     write('file',$t,'')
-    $crev='' exists('craftrev',''):$ex,$crev
-    if $ex then
-	append($crev,'grep','^craftbox',$t)
-    endif
-    $cbacct=''
-    exists(systemdir+'/craft/cbInfo','file'):$cbex
-    if $cbex then
-        lookup('mfile',systemdir+'/craft/cbInfo','seekcs','cbAcct','readline',1):$cbacct
-        substr($cbacct,1):$cbacct
-    endif
-    if $cbacct='' then $cbacct='Guest' endif
-    write('file',$t,'CraftID \t%s',$cbacct)
-
-     shell('('+$cv+' -CraftRev | grep -v CraftID >> '+$t+')'):$devnull
-     shell('('+$cv+' -listModules | awk \'{print "  "$0}\' | sed \'s|MISTQ|MISTiQ|g\' >> '+$t+')'):$devnull
-endif
 dousermacro($0,$t)
 chmod('a+w',$t)
