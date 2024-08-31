@@ -42,6 +42,7 @@ public class ParamLayout extends ParamPanel
     private Vector<Component> tabs;
     private Component seltab=null;
     private String selLabel=null;
+    private String selectedPage=null;
     private JList tabList=null;
     private HashMap menu_names;
     private ParameterPanel paramPanel=null;
@@ -90,6 +91,10 @@ public class ParamLayout extends ParamPanel
     }
     public ParameterPanel getParameterPanel() {
         return paramPanel;
+    }
+
+    public void saveSelectedPage(String name) {
+        selectedPage = name;
     }
 
     public void setTabList(JList t) {
@@ -462,7 +467,14 @@ public class ParamLayout extends ParamPanel
         boolean inlist=isTabLabel(s);
         if((inlist && !vis) || (!inlist && vis)){
             buildTabMenu();
-            setLastSelectedTab();
+            if (vis && (selectedPage!= null ) &&
+                selectedPage.equals(s) )
+            {
+                selectTab(selectedPage);
+                selectedPage = null;
+            } else {
+                setLastSelectedTab();
+            }
         }
     }
 

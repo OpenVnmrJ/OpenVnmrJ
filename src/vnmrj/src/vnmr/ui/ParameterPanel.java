@@ -225,6 +225,8 @@ public class ParameterPanel extends JLayeredPane implements StatusListenerIF, Pr
         setDebug("selectPage("+page+") index "+listModel.indexOf(page));
         if (paramLayout != null && listModel.contains(page)){
             tabList.setSelectedValue(page, true);
+        } else if (paramLayout != null ) {
+            paramLayout.saveSelectedPage(page);
         }
     }
 
