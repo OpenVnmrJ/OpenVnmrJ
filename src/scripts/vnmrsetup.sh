@@ -11,7 +11,7 @@
 #
 #   aka load.nmr 
 #
-# This is the start-up script for loading Vnmr software
+# This is the start-up script for loading OpenVnmr software
 #
 # "loadvnmr" could be executed with user and group option
 # ex: loadvnmr <chin> <software> .
@@ -263,7 +263,7 @@ if [ $userId != "uid=0(root)" ]; then
   if [ x$distroType = "xdebian" ]; then
      echo "Installing OpenVnmrJ for Ubuntu."
   else
-     echo "Installing OpenVnmrJ for RHEL / CentOS"
+     echo "Installing OpenVnmrJ for RHEL / AlmaLinux"
   fi
   echo "Or type cntrl-C to exit."
   echo
@@ -528,12 +528,22 @@ if [ -e /tmp/.ovj_installed ]; then
    opFile="/vnmr/adm/users/operators/operatorlist"
    chown $nmr_user:$nmr_group $opFile
    chmod 644 $opFile
-   echo "Configuring $nmr_user with the standard configuration (stdConf)"
-   echo "Configuring $nmr_user with the standard configuration (stdConf)" >> $insLog
-   if [ x$distroType = "xdebian" ]; then
-      sudo -i -u $nmr_user /vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog
+   if [[ -f /vnmr/conpar.prev ]]; then
+      echo "Configuring $nmr_user with the standard configuration (stdConf) and running config"
+      echo "Configuring $nmr_user with the standard configuration (stdConf) and running config" >> $insLog
+      if [ x$distroType = "xdebian" ]; then
+         sudo -i -u $nmr_user /vnmr/bin/Vnmrbg -mback -n1 "stdConf config('auto')" >> $insLog
+      else
+         su - $nmr_user -c "/vnmr/bin/Vnmrbg -mback -n1 \"stdConf config('auto')\" >> $insLog"
+      fi
    else
-      su - $nmr_user -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog"
+      echo "Configuring $nmr_user with the standard configuration (stdConf)"
+      echo "Configuring $nmr_user with the standard configuration (stdConf)" >> $insLog
+      if [ x$distroType = "xdebian" ]; then
+         sudo -i -u $nmr_user /vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog
+      else
+         su - $nmr_user -c "/vnmr/bin/Vnmrbg -mback -n1 stdConf >> $insLog"
+      fi
    fi
    if [ ! -d /home/walkup ] || [ ! -d /home/service ]
    then
