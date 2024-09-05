@@ -1158,7 +1158,7 @@ WMPA getwpmlg(char *seqName)
 
 // Set PMLG pulse
 
-   mp.pw  = roundoff(mp.pw/mp.q, 0.0125e-6);
+   mp.pw  = roundoff(mp.pw/mp.q, DTCK);
 
 // Double mp.q for +/- phase steps and and create v-vars for the nested loop
 
@@ -1355,7 +1355,7 @@ WMPA getwdumbo(char *seqName)
 
 // Set DUMBO pulse
 
-   mp.pw  = roundoff(mp.pw/64.0, 0.0125e-6);
+   mp.pw  = roundoff(mp.pw/64.0, DTCK);
 
 // Double mp.q for +/- phase steps and and create v-vars for the nested loop
 
@@ -1492,7 +1492,7 @@ WMPA getwdumbot(char *seqName)
 
 // Set DUMBO pulse
 
-   mp.pw  = roundoff(mp.pw/64.0, 0.0125e-6);
+   mp.pw  = roundoff(mp.pw/64.0, DTCK);
 
 // Double mp.q for +/- phase steps and and create v-vars for the nested loop
 
@@ -1890,7 +1890,7 @@ WMPA getxmxwpmlg(char *seqName)
 
 // Set PMLG pulse
 
-   mp.pw  = roundoff(mp.pw/mp.q, 0.0125e-6);
+   mp.pw  = roundoff(mp.pw/mp.q, DTCK);
 
 // Double mp.q for +/- phase steps and and create v-vars for the nested loop
 
@@ -2149,7 +2149,7 @@ WMPA getwpmlgxmx(char *seqName)
 
 // Set PMLG pulse
 
-   mp.pw  = roundoff(mp.pw/mp.q, 0.0125e-6);
+   mp.pw  = roundoff(mp.pw/mp.q, DTCK);
 
 // Double mp.q for +/- phase steps and and create v-vars for the nested loop
 
@@ -2274,7 +2274,7 @@ WMPA getwdumboxmx(char *seqName)
 
 // Set the DUMBO pulse
 
-   mp.pw  = roundoff(mp.pw/64.0, 0.0125e-6);
+   mp.pw  = roundoff(mp.pw/64.0, DTCK);
 
 // Double mp.q for +/- phase steps and and create v-vars for the nested loop
 
@@ -2451,7 +2451,7 @@ WMPA getwdumbogen(char *seqName, char *coeffName)
 
 // Set DUMBO pulse
 
-   mp.pw  = roundoff(mp.pw/steps, 0.0125e-6);
+   mp.pw  = roundoff(mp.pw/steps, DTCK);
 
 // Double mp.q for +/- phase steps and and create v-vars for the nested loop
 

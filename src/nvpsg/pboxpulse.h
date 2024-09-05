@@ -302,7 +302,7 @@ PBOXPULSE getpboxpulse(char *seqName, int iRec, int calc)
    double srate = getval("srate");
    double taur = 2.0e-4;
    if (srate >= 500.0)
-      taur = roundoff((1.0/srate), 0.0125e-6);
+      taur = roundoff((1.0/srate), DTCK);
    else {
       printf("ABORT: Spin Rate (srate) must be greater than 500\n");
       psg_abort(1);
@@ -411,7 +411,7 @@ PBOXPULSE getrefpboxpulse(char *seqName, int iRec, int calc)
    double srate = getval("srate");
    double taur = 2.0e-4;
    if (srate >= 500.0)
-      taur = roundoff((1.0/srate), 0.0125e-6);
+      taur = roundoff((1.0/srate), DTCK);
    else {
       printf("ABORT: Spin Rate (srate) must be greater than 500\n");
       psg_abort(1);
