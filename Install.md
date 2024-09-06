@@ -167,6 +167,16 @@ of the OpenVnmrJ versions. Older versions of OpenVnmrJ can be removed by, for ex
   cd /APplications/OpenVnmrJ.app
   rm -rf Contents_3.1_BETA4
 
+There are a number of tools that OpenVnmrJ uses that may not be present in a standard
+MacOS installation. The script ovjMacTools is provided to install these tools. It
+installs GhostScript, which has the PostScript to PDF conversion tool (ps2pdf). It
+installs ImageMagick, which has the convert tool to convert various image formats.
+It installs xterm, along with xQuartz, which is used by NMRpipe, for example.
+The ovjMacTools script uses brew to install these tools.
+
+The first time OpenVnmrJ starts on MacOS, a popup asking
+   Do you want the application "VnmrBg" to accept incoming netwrk connections?
+may appear. You can click Deny. That popup should not appear again.
 
 Upgrading an existing OpenVnmrJ installation.
 =============================================
