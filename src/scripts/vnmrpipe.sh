@@ -17,7 +17,7 @@ if (!($?NMRBASE)) then
       if ( x$ostype == "xLinux" ) then
          source /vnmr/nmrpipe/com/vj_nmrInit.linux9.com
       else # MacOS
-         source /vnmr/nmrpipe/com/vj_nmrInit.mac.com
+         source /vnmr/nmrpipe/com/nmrInit.mac11_64.com
       endif
    endif
    source /vnmr/nmrpipe/dynamo/com/dynInit.com

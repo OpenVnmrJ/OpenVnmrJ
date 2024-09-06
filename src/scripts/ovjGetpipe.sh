@@ -17,6 +17,7 @@ SCRIPT=$(basename "$0")
 : ${OVJ_LOG=""}
 : ${OVJ_VECHO="echo"}
 : ${OVJ_PIPETEST=0}
+: ${OVJ_BIN=""}
 
 ovj_usage() {
     cat <<EOF
@@ -57,6 +58,7 @@ options:
     -t|--test                 Perform nmmrPipe installation tests
     -v|--verbose              Use verbose output (default)
     -vv|--debug               Debug script
+    -b|--bintype              Specify binary type of the OS
 
 EOF
     exit 1
@@ -77,6 +79,7 @@ while [ $# -gt 0 ]; do
         -v|--verbose)           OVJ_VECHO="echo" ;;
         noPing)                 noPing=1; ;;
         -vv|--debug)            set -x ;;
+        -b|--bintype)           OVJ_BIN="$2"; shift    ;;
         *)
             # unknown option
             echo "unrecognized argument: $key"
@@ -218,6 +221,18 @@ cleanup() {
    elif [ x`uname -s` = "xLinux" ]; then
       rm -rf nmrbin.mac*
    fi
+# Temporary fix until NMRPipe install makes the link file
+   cd com
+   if [[ ! -f nmrInit.link.com ]]; then
+      list=$(ls nmrInit*.com)
+      for file in $list; do
+         if [[ $file != "nmrInit.com" ]] &&
+            [[ $file != "nmrInit.generic.com" ]]; then
+            ln -s $file "nmrInit.link.com"
+	    break
+         fi
+      done
+   fi
 }
 
 checkNetwork() {
@@ -333,15 +348,23 @@ chmod a+r  *.tZ
 chmod u+rx *.com
 if [ ${OVJ_PIPETEST} -eq 1 ]; then
    if [ "x${OVJ_LOG}" = "x" ] ; then
-      ./install.com +dest /vnmr/nmrpipe
+      ./install.com +dest /vnmr/nmrpipe +nocshrc
    else
-      ./install.com +dest /vnmr/nmrpipe >> ${OVJ_LOG}
+      ./install.com +dest /vnmr/nmrpipe +nocshrc >> ${OVJ_LOG}
    fi
 else
    if [ "x${OVJ_LOG}" = "x" ] ; then
-      ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc
+      if [ "x${OVJ_BIN}" = "x" ]; then
+         ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc
+      else
+         ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc +type ${OVJ_BIN}
+      fi
    else
-      ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc >> ${OVJ_LOG}
+      if [ "x${OVJ_BIN}" = "x" ]; then
+         ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc >> ${OVJ_LOG}
+      else
+         ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc +type ${OVJ_BIN} >> ${OVJ_LOG}
+      fi
    fi
 fi
 cleanup
