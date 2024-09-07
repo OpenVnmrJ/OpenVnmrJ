@@ -12,12 +12,6 @@ if [ ! -z "$url" ] ; then
    path=$url
 fi
 case "$ostype" in
-   cygwin | Interix )
-      opencmd="cmd /c start"
-      if [ -z "$url" ]; then 
-         path=$(unixpath2win "$1")
-      fi
-        ;;
    *inux*)   # Linux, linux, etc.
       # echo "linux"
       # opencmd="gnome-open"  deprecated
@@ -29,6 +23,7 @@ case "$ostype" in
       else 
          opencmd="gnome-open"
       fi
+      path=$(readlink -f $path)
         
         ;;
    *arwin*)  # Darwin, darwin
