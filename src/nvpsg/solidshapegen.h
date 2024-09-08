@@ -316,7 +316,7 @@ void cleardec3wfg()
    }
 }
 
-void obswfgon(char lpattern[], int lstep,
+void obswfgon(char lpattern[], double lstep,
               double ldres, double lpreset, double lpredelay)
 {  
    if (PWRF_DELAY > 0.0) {
@@ -332,7 +332,7 @@ void obswfgon(char lpattern[], int lstep,
       obsprgon(lpattern,lstep,ldres);
 }
 
-void decwfgon(char lpattern[], int lstep,
+void decwfgon(char lpattern[], double lstep,
               double ldres, double lpreset, double lpredelay)
 {
    if (PWRF_DELAY > 0.0) {
@@ -347,7 +347,7 @@ void decwfgon(char lpattern[], int lstep,
    else decprgon(lpattern,lstep,ldres);
 }
 
-void dec2wfgon(char lpattern[], int lstep,
+void dec2wfgon(char lpattern[], double lstep,
               double ldres, double lpreset, double lpredelay)
 {   
    if (PWRF_DELAY > 0.0) {
@@ -363,7 +363,7 @@ void dec2wfgon(char lpattern[], int lstep,
       dec2prgon(lpattern,lstep,ldres);
 }
 
-void dec3wfgon(char lpattern[], int lstep,
+void dec3wfgon(char lpattern[], double lstep,
               double ldres, double lpreset, double lpredelay)
 {   
    if (PWRF_DELAY > 0.0) {
