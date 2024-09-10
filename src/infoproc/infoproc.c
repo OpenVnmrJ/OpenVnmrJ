@@ -63,13 +63,11 @@ static void setup_sigio();
 |    Main Acqproc Loop, wait for messages
 |
 +-----------------------------------------------------------------------*/
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
     char *tmpptr;
     int  ival;
-    extern char  *getenv();
+    FILE *fp __attribute__((unused));
 
 
     if (argc > 1)
@@ -87,9 +85,9 @@ char *argv[];
     }
     if (!Acqdebug)
     {
-     	freopen("/dev/null","r",stdin);
-     	freopen("/dev/console","a",stdout);
-     	freopen("/dev/console","a",stderr);
+     	fp = freopen("/dev/null","r",stdin);
+     	fp = freopen("/dev/console","a",stdout);
+     	fp = freopen("/dev/console","a",stderr);
     }
 		
     /* initialize environment parameter vnmrsystem value */
@@ -123,6 +121,17 @@ char *argv[];
 
 #ifdef USE_RPC
     acqinfo_svc();
+#else
+    // Loop is interrupted by signals to update status information
+    while (1)
+    {
+       fd_set  rfds;
+       int inputfd = 0;
+       int res;
+
+       FD_ZERO( &rfds );
+       res = select(inputfd+1, &rfds, 0, 0, 0);
+    }
 #endif
 }
 
