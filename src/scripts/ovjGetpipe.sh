@@ -18,6 +18,7 @@ SCRIPT=$(basename "$0")
 : ${OVJ_VECHO="echo"}
 : ${OVJ_PIPETEST=0}
 : ${OVJ_BIN=""}
+: ${OVJ_PACKAGES=""}
 
 ovj_usage() {
     cat <<EOF
@@ -59,6 +60,7 @@ options:
     -v|--verbose              Use verbose output (default)
     -vv|--debug               Debug script
     -b|--bintype              Specify binary type of the OS
+    -p|--packages             Install Linux OS packages require by NMRPipe
 
 EOF
     exit 1
@@ -80,6 +82,7 @@ while [ $# -gt 0 ]; do
         noPing)                 noPing=1; ;;
         -vv|--debug)            set -x ;;
         -b|--bintype)           OVJ_BIN="$2"; shift    ;;
+        -p|--packages)          OVJ_PACKAGES="y"  ;;
         *)
             # unknown option
             echo "unrecognized argument: $key"
@@ -207,6 +210,18 @@ downloadFiles() {
    return 0
 }
 
+installPackages() {
+   if [ -x /usr/bin/dpkg ]; then
+      packageList="xterm libx11-6:i386 libxext6:i386 xfonts-75dpi msttcorefonts gedit "
+      echo "If requested, enter the admin (sudo) password"
+      sudo apt-get install -y $packageList
+   else
+      packageList="libgcc glibc libX11.so.6 libXext libstdc++ gedit"
+      echo "Please enter this system's root user password"
+      su root -c "yum install -y $packageList";
+    fi
+}
+
 cleanup() {
    cd /vnmr/nmrpipe
    rm -f ./install.com
@@ -271,6 +286,14 @@ if [ "x${OVJ_INSTALL}" = "x" ] ; then
         exit 1
     fi
 fi
+if [[ "x${OVJ_PACKAGES}" != "x" ]] ; then
+   if [ x$(uname -s) = "xLinux" ] ; then
+      installPackages
+   else
+      echo "$SCRIPT only installs Linux OS packages."
+   fi
+   exit 1
+fi
 if [ "x${OVJ_DOWNLOAD}" != "x" ] ; then
     downloadFiles ${OVJ_DOWNLOAD}
     exit 1
@@ -315,6 +338,7 @@ if [ -d /vnmr/nmrpipe ]; then
 fi
 mv nmrpipetmp  nmrpipe
 cd nmrpipe
+ask=0
 if [ "x${OVJ_INSTALL}" != "x" ] ; then
    $OVJ_VECHO "Copying NMRPipe files from ${OVJ_INSTALL}"
    cp ${OVJ_INSTALL}/install.com .
@@ -325,6 +349,7 @@ if [ "x${OVJ_INSTALL}" != "x" ] ; then
    cp ${OVJ_INSTALL}/talos_nmrPipe.tZ .
    cp ${OVJ_INSTALL}/plugin.smile.tZ .
 else
+   ask=1
    downloadFiles "/vnmr/nmrpipe"
 fi
 if [[ $? -ne 0 ]]; then
@@ -371,3 +396,13 @@ cleanup
 $OVJ_VECHO ""
 $OVJ_VECHO "NMRPipe installation complete"
 $OVJ_VECHO ""
+if [ $ask -eq 1 ] && [ x$(uname -s) = "xLinux" ]; then
+   echo " "
+   echo "Would you like to install OS packages required by NMRPipe?"
+   echo "It will require a sudo or root password. (y/n) "
+   read ans
+   echo " "
+   if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
+      installPackages
+   fi
+fi
