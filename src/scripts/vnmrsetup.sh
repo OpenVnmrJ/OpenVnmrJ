@@ -136,7 +136,7 @@ form_dest_dir() {
 
 disableSelinux() {
 
- if [ x$distroType  != "xdebian" ] ; then
+ if [ x$distroType  != "xdebian" ] && [ -f /etc/selinux/config ] ; then
     #   SELINUX=disabled   (possible values: enforcing, permissive, disabled)
    selinux=$(grep ^SELINUX /etc/selinux/config | grep -i disabled)
    # echo "str: $str"
