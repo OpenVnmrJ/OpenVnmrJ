@@ -9,6 +9,9 @@ OpenVnmrJ 3.2 supports the following:
 - Ubuntu:    Version 20, 22, and 24.
 - MacOS:     Versions 10.13 (High Sierra) to 14 (Sonoma). (data station only)
 
+OpenVnmrJ Version 3.2 will also run on a Windows 11 PC using the MicroSoft WSL2 package. An installer
+for this system is available from Jessi Baughman at [OpenVnmrJ_WSL](https://github.com/JessiBaughman/OpenVnmrJ_WSL)
+
 insert zenodo reference here
 
 OpenVnmrJ Version 3.1 was released in Oct. 2021. It contains additions as described in the [Notes.txt](Notes.txt) file. Installation instructions are in the [Install31](Install31.md) file. OpenVnmrJ Version 3.1 can co-exist with any VnmrJ version. VnmrJ need not be installed in order for OpenVnmrJ to be completely functional as a spectrometer.
