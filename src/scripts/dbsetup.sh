@@ -122,7 +122,7 @@ godoit()
               owner=`"$vnmrsystem"/bin/fileowner $PGDATA`
           fi
           # The new postgres also uses postgres as a user
-          if [ x$newpostgres = 'xtrue']
+          if [ x$newpostgres = 'xtrue' ]
           then
               dbadm="postgres"
           else
