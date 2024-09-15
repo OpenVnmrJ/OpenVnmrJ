@@ -85,9 +85,9 @@ public class ProgressMonitor extends JFrame {
         setTitle( "Installing "+consoleName+" Software Package" );
         /*setSize( 580 , 300 );
 	  setLocation( 210, 80 );*/
-        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-        double width = dim.width/2;
-        double height = dim.height/2;
+        DisplayMode mode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
+        double width = mode.getWidth()/2;
+        double height = mode.getHeight()/2;
         double x = width/2;
         double y = height/2;
         setSize( (int)width , (int)height );
