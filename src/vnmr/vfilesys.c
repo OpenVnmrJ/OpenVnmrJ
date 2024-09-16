@@ -274,9 +274,12 @@ static void getappdirPaths()
                ++appdirNumPaths;
                if ( ! strcmp(sPath,"USERDIR") )
                   strcpy(sPath, userdir);
-#ifdef __INTERIX
-               //winPathToUnix(sPath);
-#endif
+	       else if ( ! strncmp(sPath,"USERDIR",strlen("USERDIR")) )
+               {
+                  strcpy(buf,&sPath[strlen("USERDIR")]);
+                  strcpy(sPath, userdir);
+                  strcat(sPath,buf);
+               }
                if ( ! strcmp(sPath, systemdir) )
                   systemInList = 1;
                if (appdirPaths == NULL)
