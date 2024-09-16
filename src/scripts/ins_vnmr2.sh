@@ -843,6 +843,13 @@ EOF
       then
           cp_overlay='y'
       fi
+      if [ x$lflvr != "xdebian" ]
+      then
+         (su $nmr_adm -fc "dbsetup remove")
+      else
+         (sudo -u $nmr_adm dbsetup remove)
+      fi
+      
 fi
 
 # if the VAST option was selected we 
@@ -2208,6 +2215,16 @@ then
 fi
 if [ x$did_vnmr = "xy" ]
 then
+   if [[ -f $source_dir/LocatorOff ]] && 
+      [[ ! -f $dest_dir/pgsql/persistence/LocatorOff ]] ; then
+       if [[ ! -d $dest_dir/pgsql/persistence ]] ; then
+          mkdir $dest_dir/pgsql/persistence
+       fi
+       echo "Skip setting up Locator "
+       touch $dest_dir/pgsql/persistence/LocatorOff
+       chown -R ${nmr_adm}:${nmr_group} $dest_dir/pgsql/persistence
+       chmod 666 $dest_dir/pgsql/persistence/LocatorOff
+   fi
    if [ $update_adm = "yes" ] || [ ! -d ${nmr_home}/${nmr_adm}/vnmrsys ]
    then
       vnmrsystem=$dest_dir
@@ -2220,7 +2237,9 @@ then
    else
       sudo -u $nmr_adm $dest_dir/bin/ovjUser ${nmr_adm}
    fi
-   "$dest_dir"/bin/dbsetup ${nmr_adm} "$dest_dir"
+   if [ ! -f $dest_dir/pgsql/persistence/LocatorOff ] ; then
+      "$dest_dir"/bin/dbsetup ${nmr_adm} "$dest_dir"
+   fi
    if [ $update_adm = "yes" ]; then
       echo " "
       if [ x$lflvr != "xdebian" ]; then
