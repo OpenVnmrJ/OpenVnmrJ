@@ -1168,6 +1168,7 @@ struct _sharedVnmrInfo
 
 static struct _sharedVnmrInfo *sharedVnmrInfo;
 static MFILE_ID inmd = NULL;
+static struct _sharedVnmrInfo localOnly;
 
 int openVnmrInfo(char *dir)
 {
@@ -1175,8 +1176,15 @@ int openVnmrInfo(char *dir)
 
    sprintf(filename,"%s/acq/info",dir);
    inmd = mOpen(filename,sizeof(struct _sharedVnmrInfo) ,O_RDWR | O_CREAT);
-   inmd->newByteLen = inmd->mapLen;
-   sharedVnmrInfo = (struct _sharedVnmrInfo *) inmd->offsetAddr;
+   if (inmd == NULL)
+   {
+      sharedVnmrInfo = &localOnly;
+   }
+   else
+   {
+      inmd->newByteLen = inmd->mapLen;
+      sharedVnmrInfo = (struct _sharedVnmrInfo *) inmd->offsetAddr;
+   }
    return(0);
 }
 
