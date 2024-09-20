@@ -47,11 +47,15 @@ cd ../../vnmr;
 #   GMB
 # find . -follow \( -type f -o -type l \) ! -name ".git*" -exec sha1sum {} > adm/sha1/sha1chklist.txt \;
 find . -follow \( -type f -o -type l \) ! -name ".git*" -exec $SHA1SUM {} > adm/sha1/sha1chklist.txt \;
-cd ../options
-find standard -follow \( -type f -o -type l \)  ! -name ".git*" -exec $SHA1SUM {} > ../vnmr/adm/sha1/sha1chklistOptionsStd.txt \;
-find console -follow \( -type f -o -type l \)  ! -name ".git*" -exec $SHA1SUM {} > ../vnmr/adm/sha1/sha1chklistOptionsConsole.txt \;
-cd ../console
-find . -follow \( -type f -o -type l \) ! -name ".git*" -exec $SHA1SUM {} > ../vnmr/adm/sha1/sha1chklistConsole.txt \;
+if [ -d ../options ]; then
+   cd ../options
+   find standard -follow \( -type f -o -type l \)  ! -name ".git*" -exec $SHA1SUM {} > ../vnmr/adm/sha1/sha1chklistOptionsStd.txt \;
+   find console -follow \( -type f -o -type l \)  ! -name ".git*" -exec $SHA1SUM {} > ../vnmr/adm/sha1/sha1chklistOptionsConsole.txt \;
+fi
+if [ -d ../console ]; then
+   cd ../console
+   find . -follow \( -type f -o -type l \) ! -name ".git*" -exec $SHA1SUM {} > ../vnmr/adm/sha1/sha1chklistConsole.txt \;
+fi
 
 cd ../vnmr
 $SHA1SUM ./adm/sha1/Build_Id.txt ./adm/sha1/sha1chklist.txt ./adm/sha1/sha1chklistOptionsStd.txt ./adm/sha1/sha1chklistOptionsConsole.txt ./adm/sha1/sha1chklistConsole.txt > adm/sha1/sha1chklistFiles.txt
