@@ -13,7 +13,11 @@ As a spectrometer host, OpenVnmrJ Version 3.2 is compatible with:
 - Ubuntu:    Version 20, 22, 24.
 
 For data processing only, OpenVnmrJ Version 3.2 is also compatible with:
-- MacOS: Versions 10.13 (High Sierra) to 14 (Sonoma).
+- MacOS: Versions 10.13 (High Sierra) to 15 (Sequoia).
+
+OpenVnmrJ Version 3.2 will also run on a Windows 10 or 11 PC using the
+MicroSoft WSL2 package. An installer for this system is available from
+Jessi Baughman at [OpenVnmrJ_WSL](https://github.com/JessiBaughman/OpenVnmrJ_WSL)
 
 ## Download instructions
 - For VNMRS and later systems download the OpenVnmrJ_3.2_DDR.zip file.

@@ -9,7 +9,7 @@ Version 20, 22, and 24 systems. Note the last CentOS version 7 had its
 end of like in June, 2024. This release does not support CentOS.
 
 The MacOS version of OpenVnmrJ has been installed on versions High Sierra (10.13)
-to Sonoma (14). Installation on RHEL, AlmaLinux, and Ubuntu systems
+to Sequoia (15). Installation on RHEL, AlmaLinux, and Ubuntu systems
 can be used to run a spectrometer. The MacOS version is for data-processing only.
 
 RedHat has introduced a no cost developer subscription for up to 
