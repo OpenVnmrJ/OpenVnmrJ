@@ -22,5 +22,5 @@ For data processing only, OpenVnmrJ Version 3 is also compatible with:
 - For the native MacOS version download OpenVnmrJ_3.1.pkg file.
 
 ## Installation
-See the [Install](../../blob/master/Install.md) file for installation instructions.
+See the [Install31](../../blob/master/Install31.md) file for installation instructions.
 

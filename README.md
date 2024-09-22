@@ -7,9 +7,9 @@ OpenVnmrJ 3.2 supports the following:
 - RHEL:      Version 8 and 9
 - AlmaLinux: Version 8 and 9
 - Ubuntu:    Version 20, 22, and 24.
-- MacOS:     Versions 10.13 (High Sierra) to 14 (Sonoma). (data station only)
+- MacOS:     Versions 10.13 (High Sierra) to 15 (Sequoia). (data station only)
 
-OpenVnmrJ Version 3.2 will also run on a Windows 11 PC using the MicroSoft WSL2 package. An installer
+OpenVnmrJ Version 3.2 will also run on a Windows 10 or 11 PC using the MicroSoft WSL2 package. An installer
 for this system is available from Jessi Baughman at [OpenVnmrJ_WSL](https://github.com/JessiBaughman/OpenVnmrJ_WSL)
 
 insert zenodo reference here
