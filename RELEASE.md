@@ -1,7 +1,7 @@
 ## Updated August 2024.
 This software may be cited as:
 
-Dan Iverson. (August 2024). OpenVnmrJ (Version 3.2). Zenodo.
+Dan Iverson. (August 2024). OpenVnmrJ (Version 3.2). Zenodo. https://doi.org/10.5281/zenodo.13831022
 
 ## Release Notes
 See the [Notes.txt](../../blob/master/Notes.txt) file for the release notes.
