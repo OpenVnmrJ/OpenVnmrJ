@@ -601,12 +601,6 @@ if [ -e /tmp/.ovj_installed ]; then
          su - $nmr_user -c "/vnmr/bin/ovjGetpipe $noPing -l $insLog"
       fi
       echo " "
-   elif [[ x$oldVnmr != "x" ]] ; then
-      if [[ -d $oldVnmr/nmrpipe ]] ; then
-         echo "Collecting NMRpipe from $oldVnmr"
-         cd $oldVnmr
-         tar cf - nmrpipe | (cd /vnmr && tar xpf -)
-      fi
    fi
    echo " "
    echo "New updates of NMRPipe may be installed at any time by running"
