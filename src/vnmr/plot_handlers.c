@@ -235,6 +235,7 @@ int	xcharp1,ycharp1;
 int     hires_ps = 0;
 char    default_font[64] = "Courier-Bold";
 char    default_font2[64] = "Courier";
+double  def_charsize = 0.7;
 
 #ifdef VNMR
 int loadPlotInfo(char *pltype);
@@ -2223,7 +2224,8 @@ setplotter()
   double x0v,y0v,tmp;
   int    e,xoffset,yoffset;
   int    vplot_mode;
-
+ 
+   def_charsize = 0.7;
    vplot_mode = is_vplot_session(0);
    save_raster_charsize = 0;
    plot = 0; /* as long as not everything has been set properly */
@@ -2248,6 +2250,7 @@ setplotter()
    {  
       if (tmp > 0)
          infoFontSize = tmp / SCALEPOINTS;
+      def_charsize = infoFontSize;
    }
    if ( (e=P_getstring(GLOBAL,"plotter" ,pltype, 1,60)) ) 
       pltype[0] = '\0';
