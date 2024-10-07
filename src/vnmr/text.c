@@ -72,6 +72,7 @@ extern int           interuption;
 extern int           working;
 extern jmp_buf       jmpEnvironment;
 extern double yppmm;
+extern double def_charsize;
 extern void plotpage(int n, char *filename, int retc, char *retv[]);
 extern void getMouse(int event_type, int button_ask, int *retX, int *retY,
          int *b1, int *b2, int *b3);
@@ -1112,6 +1113,7 @@ int nmr_write(int argc, char *argv[], int retc, char *retv[])
 
   if ((device==T_PLOTTER)||(device==T_GRAPHICS))
     { col = PARAM_COLOR;
+      def_charsize = 0.7;
       if (device==T_PLOTTER)
         { if (setplotter())
           {
@@ -1176,7 +1178,8 @@ int nmr_write(int argc, char *argv[], int retc, char *retv[])
 
       amove(x,y);
       color(col);
-      charsize(0.7);
+      // def_charsize may be set by setplotter()
+      charsize(def_charsize);
       if (retc > 0)
          retv[0] = realString((double) (ycharpixels * ymultiplier) / nppmm);
     }
