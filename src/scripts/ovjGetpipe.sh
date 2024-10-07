@@ -16,10 +16,9 @@ SCRIPT=$(basename "$0")
 : ${OVJ_INSTALL=""}
 : ${OVJ_LOG=""}
 : ${OVJ_VECHO="echo"}
-: ${OVJ_PIPETEST=0}
+: ${OVJ_PIPETEST="+nopost"}
 : ${OVJ_BIN=""}
-: ${OVJ_PACKAGES=""}
-: ${OVJ_NO_PACKAGES=""}
+: ${OVJ_DEBUG=""}
 
 ovj_usage() {
     cat <<EOF
@@ -61,8 +60,6 @@ options:
     -v|--verbose              Use verbose output (default)
     -vv|--debug               Debug script
     -b|--bintype              Specify binary type of the OS
-    -p|--packages             Install Linux OS packages required by NMRPipe
-    -n|--no-packages          Do not ask about installing Linux OS packages required by NMRPipe
 
 EOF
     exit 1
@@ -79,13 +76,11 @@ while [ $# -gt 0 ]; do
         -i|--install)           OVJ_INSTALL="$2"; shift     ;;
         -l|--log)               OVJ_LOG="$2"; shift     ;;
         -nv|--no-verbose)       OVJ_VECHO=":" ;;
-        -t|--test)              OVJ_PIPETEST="$2"; shift    ;;
+        -t|--test)              OVJ_PIPETEST=""  ;;
         -v|--verbose)           OVJ_VECHO="echo" ;;
         noPing)                 noPing=1; ;;
-        -vv|--debug)            set -x ;;
-        -b|--bintype)           OVJ_BIN="$2"; shift    ;;
-        -p|--packages)          OVJ_PACKAGES="y"  ;;
-        -n|--no-packages)       OVJ_NO_PACKAGES="y"  ;;
+        -vv|--debug)            OVJ_DEBUG="csh -x "; set -x ;;
+        -b|--bintype)           OVJ_BIN="+type $2"; shift    ;;
         *)
             # unknown option
             echo "unrecognized argument: $key"
@@ -213,31 +208,15 @@ downloadFiles() {
    return 0
 }
 
-installPackages() {
-   if [ -x /usr/bin/dpkg ]; then
-      packageList="xterm libx11-6:i386 libxext6:i386 xfonts-75dpi msttcorefonts gedit "
-      echo "If requested, enter the admin (sudo) password"
-      sudo apt-get install -y $packageList
-   else
-      packageList="libgcc glibc libX11.so.6 libXext libstdc++ gedit"
-      echo "Please enter this system's root user password"
-      su root -c "yum install -y $packageList";
-    fi
-}
-
 cleanup() {
    cd /vnmr/nmrpipe
    rm -f ./install.com
    rm -f ./binval.com
-   rm -f ./NMRPipeX.tZ
-   rm -f ./s.tZ
-   rm -f ./dyn.tZ
-   rm -f ./talos_nmrPipe.tZ
-   rm -f ./plugin.smile.tZ
+   rm -f ./*.tZ
    if [ x`uname -s` = "xDarwin" ]; then
       rm -rf nmrbin.linux* nmrbin.mac nmrbin.mac11
    elif [ x`uname -s` = "xLinux" ]; then
-      rm -rf nmrbin.mac*
+      rm -rf nmrbin.mac* nmrbin.linux9
    fi
 # Temporary fix until NMRPipe install makes the link file
    cd com
@@ -288,14 +267,6 @@ if [ "x${OVJ_INSTALL}" = "x" ] ; then
     if [[ $? -ne 0 ]]; then
         exit 1
     fi
-fi
-if [[ "x${OVJ_PACKAGES}" != "x" ]] ; then
-   if [ x$(uname -s) = "xLinux" ] ; then
-      installPackages
-   else
-      echo "$SCRIPT only installs Linux OS packages."
-   fi
-   exit 1
 fi
 if [ "x${OVJ_DOWNLOAD}" != "x" ] ; then
     downloadFiles ${OVJ_DOWNLOAD}
@@ -372,38 +343,12 @@ fi
 $OVJ_VECHO "NMRPipe installation started"
 chmod a+r  *.tZ
 chmod u+rx *.com
-if [ ${OVJ_PIPETEST} -eq 1 ]; then
-   if [ "x${OVJ_LOG}" = "x" ] ; then
-      ./install.com +dest /vnmr/nmrpipe +nocshrc
-   else
-      ./install.com +dest /vnmr/nmrpipe +nocshrc >> ${OVJ_LOG}
-   fi
+if [ "x${OVJ_LOG}" = "x" ] ; then
+   ${OVJ_DEBUG} ./install.com +dest /vnmr/nmrpipe +nocshrc ${OVJ_PIPETEST} ${OVJ_BIN}
 else
-   if [ "x${OVJ_LOG}" = "x" ] ; then
-      if [ "x${OVJ_BIN}" = "x" ]; then
-         ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc
-      else
-         ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc +type ${OVJ_BIN}
-      fi
-   else
-      if [ "x${OVJ_BIN}" = "x" ]; then
-         ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc >> ${OVJ_LOG}
-      else
-         ./install.com +dest /vnmr/nmrpipe +nopost +nocshrc +type ${OVJ_BIN} >> ${OVJ_LOG}
-      fi
-   fi
+   ${OVJ_DEBUG} ./install.com +dest /vnmr/nmrpipe +nocshrc ${OVJ_PIPETEST} ${OVJ_BIN} >> ${OVJ_LOG}
 fi
 cleanup
 $OVJ_VECHO ""
 $OVJ_VECHO "NMRPipe installation complete"
 $OVJ_VECHO ""
-if [ "x${OVJ_NO_PACKAGES}" != "xy" ] && [ x$(uname -s) = "xLinux" ]; then
-   echo " "
-   echo "Would you like to install OS packages required by NMRPipe?"
-   echo "It will require a sudo or root password. (y/n) "
-   read ans
-   echo " "
-   if [ "x$ans" = "xy" -o "x$ans" = "xY" ] ; then
-      installPackages
-   fi
-fi
