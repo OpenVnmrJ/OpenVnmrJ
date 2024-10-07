@@ -78,12 +78,15 @@ uninstallPatch () {
       source $dir/p_uninstall
       rm p_uninstall
    fi
-   zip -qry patch.zip *
-   mv patch.zip $vnmrsystem
-   cd $vnmrsystem
+   fileList=$(ls)
+   if [[ ! -z $fileList ]]; then
+      zip -qry patch.zip *
+      mv patch.zip $vnmrsystem
+      cd $vnmrsystem
+      unzip -q -o patch.zip
+      rm patch.zip
+   fi
    rm -rf $dir
-   unzip -q -o patch.zip
-   rm patch.zip
    return 0
 }
 
