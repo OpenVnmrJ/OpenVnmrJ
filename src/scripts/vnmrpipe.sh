@@ -20,7 +20,9 @@ if (!($?NMRBASE)) then
          source /vnmr/nmrpipe/com/nmrInit.mac11_64.com
       endif
    endif
-   source /vnmr/nmrpipe/dynamo/com/dynInit.com
+   if ( -f /vnmr/nmrpipe/dynamo/com/dynInit.com ) then
+      source /vnmr/nmrpipe/dynamo/com/dynInit.com
+   endif
 endif
 
 if ($#argv == 1) then

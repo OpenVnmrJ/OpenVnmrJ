@@ -1244,7 +1244,7 @@ static int freebuffers()
   if(c_buffer>=0) /* release last used block */
     if ( (res=D_release(D_PHASFILE,c_buffer)) )
     {
-      D_error(res); 
+      // D_error(res); 
       D_close(D_PHASFILE);  
       return(ERROR);
     }
