@@ -54,14 +54,17 @@ public class ShufDBManager extends FillDBManager {
 
 
     public ShufDBManager() {
-        String persona = System.getProperty("persona");
-        boolean bAdm = (persona != null && persona.equalsIgnoreCase("adm")) ? true
+        if ( ! FillDBManager.locatorOff())  {
+           String persona = System.getProperty("persona");
+           boolean bAdm = (persona != null && persona.equalsIgnoreCase("adm")) ? true
                             : false;
 
-        // for admin interface, don't need the locator, nor if it is off
-        if (!bAdm) {
-            attrList = new LocAttrList(this);
-        }
+           // for admin interface, don't need the locator, nor if it is off
+			    
+           if (!bAdm)  {
+              attrList = new LocAttrList(this);
+           }
+	}
 
     } // End ShufDBManager()
 
@@ -180,7 +183,7 @@ public class ShufDBManager extends FillDBManager {
             // Fill the columns with Error and continue.
             // If debug set to locatorOff, then put "Off" in the panel
             String err = "Error";
-            if(locatorOff())
+            if(FillDBManager.locatorOff())
                 err = "Off";
 
             result = new SearchResults[1];

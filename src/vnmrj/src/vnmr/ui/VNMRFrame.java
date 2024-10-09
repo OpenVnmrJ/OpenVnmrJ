@@ -595,12 +595,14 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             // Skip some things if adm
             if(!adm) {
                 // Save Holding table info.
+              if (!FillDBManager.locatorOff()) {
                 HoldingDataModel holdingDataModel = sshare.holdingDataModel();
                 if (holdingDataModel != null)
                     holdingDataModel.writePersistence();
                 LocatorHistoryList lhl = sshare.getLocatorHistoryList();
                 if (lhl != null)
                     lhl.writePersistence();
+	      }
 
                 // Save current tags table.
                 TagList.writePersistence();
