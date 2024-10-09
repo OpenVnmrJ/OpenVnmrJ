@@ -81,7 +81,9 @@ public class SessionShare {
 
             // for admin interface, don't need to fill the locator.
             if (!bAdm) {
+    	       if (!FillDBManager.locatorOff()){
                 FillLocatorHistoryList();
+	       }
             }
         }
         if (userInfoTable == null)
@@ -95,18 +97,20 @@ public class SessionShare {
     /** FillLocatorHistoryList
      */
     public void FillLocatorHistoryList() {
-	         locatorHistoryList = new LocatorHistoryList();
     	 if (!FillDBManager.locatorOff()){
+	         locatorHistoryList = new LocatorHistoryList();
 	         StatementHistory history = statementHistory();
 	         if(history !=null)
 	            history.updateWithoutNewHistory();
-	         // if (searchCache == null)
-	         //    searchCache = new Hashtable();
-    	 }
-         if(holdingDataModel == null)
-            holdingDataModel = new HoldingDataModel();
-         if (searchCache == null)
-            searchCache = new Hashtable();
+            if(holdingDataModel == null)
+               holdingDataModel = new HoldingDataModel();
+            if (searchCache == null)
+               searchCache = new Hashtable();
+          }
+	  else
+	  {
+	     locatorHistoryList = null;
+	  }
     }
 
     /**

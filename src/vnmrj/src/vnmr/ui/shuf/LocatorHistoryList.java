@@ -75,6 +75,17 @@ public class LocatorHistoryList {
 	int	index1;
 	int	index2;
 	
+	// This is the default dir if files are not found
+	sysdir = new String(System.getProperty("sysdir"));
+	dirPath = new String(sysdir + "/shuffler");
+
+	file = new UNFile(dirPath);
+	if (! file.exists() )
+	{
+    	    FillDBManager.setLocatorOff(true);
+	    return;
+	}
+
 	lhList = new HashMap();
 
 	files = new ArrayList();
@@ -91,10 +102,6 @@ public class LocatorHistoryList {
                            " statements for this locator type");
             }
 	}
-
-	// This is the default dir if files are not found
-	sysdir = new String(System.getProperty("sysdir"));
-	dirPath = new String(sysdir + "/shuffler");
 
 	if(files.size() == 0) {
 	    filepath = dirPath + "/" + STATE_DEF_FILE + DEFAULT_LH + ".xml";
@@ -165,8 +172,13 @@ public class LocatorHistoryList {
 
     /** Get the currently active LocatorHistory */
     public LocatorHistory getLocatorHistory() {
-	LocatorHistory lh = (LocatorHistory) lhList.get(activeLH);
-	return lh;
+	if( ! FillDBManager.locatorOff() )
+	{
+           LocatorHistory lh = (LocatorHistory) lhList.get(activeLH);
+	   return lh;
+	}
+	else
+           return null;
     }
 
     /** Set a new active LocatorHistory.  Update the Spotter Menu accordingly */

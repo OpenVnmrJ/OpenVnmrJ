@@ -7339,20 +7339,23 @@ public class FillDBManager {
     }
 
     // Set variable determining if locator is active or not
-    public void setLocatorOff(boolean setting) {
+    static public void setLocatorOff(boolean setting) {
         locatoroff = setting;
 
         // Write out the new value to the persistence file
         writeLocatorOff(setting);
         
         // Cause another shuffle.
-        SessionShare sshare = ResultTable.getSshare();
-        StatementHistory history = sshare.statementHistory();
-        history.updateWithoutNewHistory();
+	if ( ! locatoroff)
+	{
+           SessionShare sshare = ResultTable.getSshare();
+           StatementHistory history = sshare.statementHistory();
+           history.updateWithoutNewHistory();
 
-        String persona = System.getProperty("persona");
-        if (persona != null && persona.equalsIgnoreCase("adm"))
-            locatoroff = true;
+           String persona = System.getProperty("persona");
+           if (persona != null && persona.equalsIgnoreCase("adm"))
+               locatoroff = true;
+	}
     }
 
     // Convienent method to accept value as String
@@ -7516,19 +7519,29 @@ public class FillDBManager {
             }
         }
 
-        UNFile file = new UNFile(FileUtil.sysdir() +
+	if ( ! locatoroff )
+	{
+           UNFile file = new UNFile(FileUtil.sysdir() +
+                                "/pgsql");
+           if (file == null)
+           {
+              locatoroff = true;
+              return locatoroff;
+           }
+           file = new UNFile(FileUtil.sysdir() +
                                 "/pgsql/persistence/LocatorOff");
-        if (file == null)
-        {
+           if (file == null)
+           {
+              locatoroff = false;
+              return locatoroff;
+           }
+           if (file.exists())
+           {
+              locatoroff = true;
+              return locatoroff;
+           }
            locatoroff = false;
-           return locatoroff;
-        }
-        if (file.exists())
-        {
-           locatoroff = true;
-           return locatoroff;
-        }
-        locatoroff = false;
+	}
         return locatoroff;
     }
 
