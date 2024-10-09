@@ -270,7 +270,7 @@ if [ "x${OVJ_INSTALL}" = "x" ] ; then
 fi
 if [ "x${OVJ_DOWNLOAD}" != "x" ] ; then
     downloadFiles ${OVJ_DOWNLOAD}
-    exit 1
+    exit
 fi
 
 cd /vnmr/
@@ -316,11 +316,7 @@ if [ "x${OVJ_INSTALL}" != "x" ] ; then
    $OVJ_VECHO "Copying NMRPipe files from ${OVJ_INSTALL}"
    cp ${OVJ_INSTALL}/install.com .
    cp ${OVJ_INSTALL}/binval.com .
-   cp ${OVJ_INSTALL}/NMRPipeX.tZ .
-   cp ${OVJ_INSTALL}/s.tZ .
-   cp ${OVJ_INSTALL}/dyn.tZ .
-   cp ${OVJ_INSTALL}/talos_nmrPipe.tZ .
-   cp ${OVJ_INSTALL}/plugin.smile.tZ .
+   cp ${OVJ_INSTALL}/*.tZ .
 else
    downloadFiles "/vnmr/nmrpipe"
 fi
