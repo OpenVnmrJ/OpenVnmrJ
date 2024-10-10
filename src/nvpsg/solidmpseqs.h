@@ -2894,7 +2894,6 @@ MPSEQ getsr4(char *seqName, int iph, double p, double phint, int iRec, int calc)
    int na = 1; 
    int ng = 1;
    MPinitializer(&r,npw,nph,nof,na,ng,nphBase,nphSuper);
-   MPinitializer(&r,1,1,1,1,1,1,24);
 
 // Set the Step Sizes
 
