@@ -303,5 +303,26 @@ typedef struct
    SHAPE_PARS pars;                         //shape parameters
 } SHAPE;
 
-#endif
 
+//========================
+// Steps helper method
+//========================
+
+void set_step_sizes(int* n90, int* n90m, int* trap) {
+
+   // Set the Step Sizes
+
+   if (PWRF_DELAY > 0.0) {
+      *n90  = INOVAN90;
+      *n90m = INOVAN90M;
+      *trap = INOVATRAP;
+   }
+   else {
+      *n90  = VNMRSN90;
+      *n90m = VNMRSN90M;
+      *trap = VNMRSTRAP;
+   }
+
+}
+
+#endif
