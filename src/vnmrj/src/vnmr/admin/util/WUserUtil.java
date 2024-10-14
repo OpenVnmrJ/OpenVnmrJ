@@ -1232,24 +1232,34 @@ public class WUserUtil
 
     public static WMessage createPgSqlUser(String strName)
     {
+	WMessage msg;
         String sysDir = System.getProperty("sysdir");
         if (sysDir == null)
             sysDir = File.separator+"vnmr";
-        if (Util.iswindows())
-            sysDir = UtilB.windowsPathToUnix(sysDir);
-
-        String strg = null;
-
-        String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, sysDir +
+        File flScript = new File(sysDir+"/bin/create_pgsql_user");
+        if ( flScript.exists() )
+	{
+           String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, sysDir +
                             "/bin/create_pgsql_user" + " " + strName };
-        WMessage msg = WUtil.runScript(cmd);
-       return msg;
+           msg = WUtil.runScript(cmd);
+	}
+	else
+	{
+            msg = new WMessage(true, "");
+	}
+        return msg;
     }
 
     public static void updateDB()
     {
-        new Thread(new Runnable()
-        {
+        String sysDir = System.getProperty("sysdir");
+        if (sysDir == null)
+            sysDir = File.separator+"vnmr";
+        File flScript = new File(sysDir+"/bin/managedb");
+        if ( flScript.exists() )
+	{
+          new Thread(new Runnable()
+          {
             public void run()
             {
                 try
@@ -1267,7 +1277,8 @@ public class WUserUtil
                     Messages.postDebug("ERROR running managedb update " + e.toString());
                 }
             }
-        }).start();
+          }).start();
+	}
     }
 
     public static String getUserHome(String strName)
@@ -2013,17 +2024,21 @@ public class WUserUtil
      */
     public static WMessage dropPgSqlUser(String strName)
     {
+	WMessage msg;
         String sysDir = System.getProperty("sysdir");
         if (sysDir == null)
             sysDir = File.separator+"vnmr";
-        if (Util.iswindows())
-            sysDir = UtilB.windowsPathToUnix(sysDir);
-
-        String strg = null;
-
-        String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, sysDir +
+        File flScript = new File(sysDir+"/pgsql/bin/dropuser");
+        if ( flScript.exists() )
+	{
+           String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, sysDir +
                             "/pgsql/bin/dropuser" + " " + strName };
-        WMessage msg = WUtil.runScript(cmd);
+           msg = WUtil.runScript(cmd);
+	}
+	else
+	{
+            msg = new WMessage(true, "");
+	}
         return msg;
     }
 
