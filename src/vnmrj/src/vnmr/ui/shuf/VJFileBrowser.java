@@ -579,10 +579,7 @@ public class VJFileBrowser extends JPanel implements ActionListener
         // If windows, we need to convert the windows path
         // to a unix type path at this point.
         String uPath;
-        if(UtilB.iswindows())
-            uPath = UtilB.windowsPathToUnix(fullpath);
-        else
-            uPath = fullpath;
+        uPath = fullpath;
 
         String hostFullpath = localHost + ":" + uPath;
                          
@@ -590,7 +587,11 @@ public class VJFileBrowser extends JPanel implements ActionListener
         // Get the owner from the DB if available
         boolean isAccessible=true;
         FillDBManager dbm = FillDBManager.fillDBManager;
-        String owner = dbm.getAttributeValueNoError(objType, 
+        String owner;
+	if (dbm == null)
+           owner = "";
+	else
+           owner = dbm.getAttributeValueNoError(objType, 
                                                     uPath, localHost, "owner");
 
         // If the file is not in the DB or any other problem, 
