@@ -158,9 +158,7 @@ static void side_specdisp(int local_color)
   {
         calc_hires_ps(spectrum+fpnt,vs * scale,dfpnt2,dnpnt2,npnt,1,xoffset,
            (xoffset+specmax > mnumxpnts - 1) ? mnumxpnts - 1 : xoffset+specmax,
-           (xoffset-specmin < xoffset-mnumxpnts/80+1) ?
-              xoffset-mnumxpnts/80+1 : xoffset-specmin,local_color);
-
+              mnumxpnts/80 ,local_color);
   }
   else
   {
@@ -169,8 +167,7 @@ static void side_specdisp(int local_color)
      erase = 0;
      displayspec(dfpnt2,dnpnt2,1,&spec_index,&spec_index,&erase,
            (xoffset+specmax > mnumxpnts - 1) ? mnumxpnts - 1 : xoffset+specmax,
-           (xoffset-specmin < xoffset-mnumxpnts/80+1) ?
-              xoffset-mnumxpnts/80+1 : xoffset-specmin,local_color);
+           mnumxpnts/80, local_color);
   }
 }
 
