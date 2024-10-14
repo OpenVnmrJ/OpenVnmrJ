@@ -54,7 +54,7 @@ then
 else
    patchname=custom_$date.ptc
 fi
-zip -ry patch.zip *
+zip -qry patch.zip *
 os=`uname -s`
 if [ x$os = "xDarwin" ]
 then
@@ -63,7 +63,7 @@ else
    csum=`md5sum patch.zip | awk '{print $1}'`
 fi
 echo $csum > checksum
-zip $patchname checksum patch.zip
+zip -q $patchname checksum patch.zip
 rm -f checksum patch.zip
 mv $patchname $curDir/.
 cd $curDir
