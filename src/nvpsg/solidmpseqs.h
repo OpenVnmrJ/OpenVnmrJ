@@ -3902,13 +3902,9 @@ MPSEQ getspnl(char *seqName, int iph, double p, double phint, int iRec, int calc
    int ng = 1;
    MPinitializer(&spnl,npw,nph,nof,na,ng,nphBase,nphSuper);
 
-// TODO
-//
-// This was not present but maybe we should activate it since other routines have it
-//
-//// Set the Step Sizes
-//
-//   set_step_sizes(&spnl.n90, &spnl.n90m, &spnl.trap);
+// Set the Step Sizes : added by BDZ 10-29-24
+
+   set_step_sizes(&spnl.n90, &spnl.n90m, &spnl.trap);
 
 // Set the Base Phase List
 
@@ -4055,13 +4051,9 @@ MPSEQ getr1817(char *seqName, int iph, double p, double phint, int iRec, int cal
    int ng = 1;
    MPinitializer(&r,npw,nph,nof,na,ng,nphBase,nphSuper);
 
-// TODO
-//
-// This was not present but maybe we should activate it since other routines have it
-//
-//// Set the Step Sizes
-//
-//   set_step_sizes(&r.n90, &r.n90m, &r.trap);
+// Set the Step Sizes : added by BDZ 10-29-24
+
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 // Set the Base Phase List 
 
@@ -5328,13 +5320,9 @@ MPSEQ getpostc6(char *seqName, int iph, double p, double phint, int iRec, int ca
    int ng = 1;
    MPinitializer(&c6,npw,nph,nof,na,ng,nphBase,nphSuper);
 
-// TODO
-//
-// This was not present but maybe we should activate it since the c7 routine has it
-//
-//// Set the Step Sizes
-//
-//   set_step_sizes(&c6.n90, &c6.n90m, &c6.trap);
+// Set the Step Sizes : added by BDZ 10-29-24
+
+   set_step_sizes(&c6.n90, &c6.n90m, &c6.trap);
 
 // Set the Base Phase List
 
