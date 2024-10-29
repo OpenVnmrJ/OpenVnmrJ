@@ -94,15 +94,7 @@ RAMP getramp(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   r.n90 = VNMRSN90;
-   r.n90m = VNMRSN90M;
-   r.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      r.n90 = INOVAN90;
-      r.n90m = INOVAN90M;
-      r.trap = INOVATRAP;
-   }
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 //channel
 
@@ -204,17 +196,10 @@ MPSEQ getms(char *seqName, int iph, double p, double phint, int iRec, int calc)
    int na = 1;
    int ng = 1;
    MPinitializer(&m,npw,nph,nof,na,ng,nphBase,nphSuper);
+
 // Set the Step Sizes
 
-   m.n90 = VNMRSN90;
-   m.n90m = VNMRSN90M;
-   m.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      m.n90 = INOVAN90;
-      m.n90m = INOVAN90M;
-      m.trap = INOVATRAP;
-   }
+   set_step_sizes(&m.n90, &m.n90m, &m.trap);
 
 // Set the Base Phase List
 
@@ -329,17 +314,10 @@ MPSEQ getpul(char *seqName, int iph, double p, double phint, int iRec, int calc)
    int na = 1;
    int ng = 1;
    MPinitializer(&pul,npw,nph,nof,na,ng,nphBase,nphSuper);
+
 // Set the Step Sizes
 
-   pul.n90 = VNMRSN90;
-   pul.n90m = VNMRSN90M;
-   pul.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      pul.n90 = INOVAN90;
-      pul.n90m = INOVAN90M;
-      pul.trap = INOVATRAP;
-   }
+   set_step_sizes(&pul.n90, &pul.n90m, &pul.trap);
 
 // Set the Base Phase List
 
@@ -448,15 +426,8 @@ MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   f.n90 = VNMRSN90;
-   f.n90m = VNMRSN90M;
-   f.trap = VNMRSTRAP;
+   set_step_sizes(&f.n90, &f.n90m, &f.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      f.n90 = INOVAN90;
-      f.n90m = INOVAN90M;
-      f.trap = INOVATRAP;
-   }
 // Set the Step Sizes
 
 // The following 9 lines of code may be problematic.
@@ -471,6 +442,7 @@ MPSEQ getpasl(char *seqName,int iph,double p, double phint, int iRec, int calc)
       f.n90m = 1;
       f.trap = 0;
    }
+
 // Set the Base Phase List
 
    f.phBase[0] = 0.0;
@@ -582,15 +554,7 @@ MPSEQ getr1235(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 // Set the Step Sizes
 
-   r.n90 = VNMRSN90;
-   r.n90m = VNMRSN90M;
-   r.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      r.n90 = INOVAN90;
-      r.n90m = INOVAN90M;
-      r.trap = INOVATRAP;
-   }
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 // Set the Base Phase List
 
@@ -722,15 +686,7 @@ MPSEQ getr1426(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 // Set the Step Sizes
 
-   r.n90 = VNMRSN90;
-   r.n90m = VNMRSN90M;
-   r.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      r.n90 = INOVAN90;
-      r.n90m = INOVAN90M;
-      r.trap = INOVATRAP;
-   }
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 // Set the Base Phase List
 
@@ -838,15 +794,7 @@ MPSEQ getr1825(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 // Set the Step Sizes
 
-   r.n90 = VNMRSN90;
-   r.n90m = VNMRSN90M;
-   r.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      r.n90 = INOVAN90;
-      r.n90m = INOVAN90M;
-      r.trap = INOVATRAP;
-   }
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 // Set the Base Phase List
 
@@ -954,15 +902,8 @@ MPSEQ getspc5(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 // Set the Step Sizes
 
-   spc5.n90 = VNMRSN90;
-   spc5.n90m = VNMRSN90M;
-   spc5.trap = VNMRSTRAP;
+   set_step_sizes(&spc5.n90, &spc5.n90m, &spc5.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      spc5.n90 = INOVAN90;
-      spc5.n90m = INOVAN90M;
-      spc5.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    spc5.phBase[0] = 0.0;
@@ -1078,17 +1019,10 @@ MPSEQ getpostc7(char *seqName, int iph, double p, double phint, int iRec, int ca
    int na = 1;
    int ng = 1;
    MPinitializer(&c7,npw,nph,nof,na,ng,nphBase,nphSuper);
+
 // Set the Step Sizes
 
-   c7.n90 = VNMRSN90;
-   c7.n90m = VNMRSN90M;
-   c7.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      c7.n90 = INOVAN90;
-      c7.n90m = INOVAN90M;
-      c7.trap = INOVATRAP;
-   }
+   set_step_sizes(&c7.n90, &c7.n90m, &c7.trap);
 
 // Set the Base Phase List
 
@@ -1201,15 +1135,8 @@ MPSEQ getfslg(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 // Set the Step Sizes
 
-   f.n90 = VNMRSN90;
-   f.n90m = VNMRSN90M;
-   f.trap = VNMRSTRAP;
+   set_step_sizes(&f.n90, &f.n90m, &f.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      f.n90 = INOVAN90;
-      f.n90m = INOVAN90M;
-      f.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    f.phBase[0] = 0.0;
@@ -1340,16 +1267,8 @@ MPSEQ getpmlg(char *seqName, int iph ,double p, double phint, int iRec, int calc
 
 // Set the Step Sizes
 
-   pm.n90 = VNMRSN90;
-   pm.n90m = VNMRSN90M;
-   pm.trap = VNMRSTRAP;
+   set_step_sizes(&pm.n90, &pm.n90m, &pm.trap);
 
-
-   if (PWRF_DELAY > 0.0) {
-      pm.n90 = INOVAN90;
-      pm.n90m = INOVAN90M;
-      pm.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    double obsstep = 360.0/8192;
@@ -1469,17 +1388,11 @@ MPSEQ getblew(char *seqName, int iph, double p, double phint, int iRec, int calc
    int na = 1;
    int ng = 1;
    MPinitializer(&pm,npw,nph,nof,na,ng,nphBase,nphSuper);
+
 // Set the Step Sizes
 
-   pm.n90 = VNMRSN90;
-   pm.n90m = VNMRSN90M;
-   pm.trap = VNMRSTRAP;
+   set_step_sizes(&pm.n90, &pm.n90m, &pm.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      pm.n90 = INOVAN90;
-      pm.n90m = INOVAN90M;
-      pm.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    pm.nphBase = 12; 
@@ -1601,15 +1514,7 @@ MPSEQ getdumbo(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 // Set the Step Sizes
 
-   pm.n90 = VNMRSN90;
-   pm.n90m = VNMRSN90M;
-   pm.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      pm.n90 = INOVAN90;
-      pm.n90m = INOVAN90M;
-      pm.trap = INOVATRAP;
-   }
+   set_step_sizes(&pm.n90, &pm.n90m, &pm.trap);
 
 // Set the Base Phase List
 
@@ -1742,15 +1647,8 @@ MPSEQ getbaba(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 // Set the Step Sizes
 
-   baba.n90 = VNMRSN90;
-   baba.n90m = VNMRSN90M;
-   baba.trap = VNMRSTRAP;
+   set_step_sizes(&baba.n90, &baba.n90m, &baba.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      baba.n90 = INOVAN90;
-      baba.n90m = INOVAN90M;
-      baba.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    baba.phBase[0] = 0.0;
@@ -1899,15 +1797,7 @@ MPSEQ getxy8(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   xy8.n90 = VNMRSN90;
-   xy8.n90m = VNMRSN90M;
-   xy8.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      xy8.n90 = INOVAN90;
-      xy8.n90m = INOVAN90M;
-      xy8.trap = INOVATRAP;
-   }
+   set_step_sizes(&xy8.n90, &xy8.n90m, &xy8.trap);
 
 // Set the Base Phase List
 
@@ -2023,15 +1913,7 @@ CP getcp(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   cp.n90 = VNMRSN90;
-   cp.n90m = VNMRSN90M;
-   cp.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      cp.n90 = INOVAN90;
-      cp.n90m = INOVAN90M;
-      cp.trap = INOVATRAP;
-   }
+   set_step_sizes(&cp.n90, &cp.n90m, &cp.trap);
 
 // Supply INOVA Start Delays
 
@@ -2167,15 +2049,7 @@ DREAM getdream(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   d.n90 = VNMRSN90;
-   d.n90m = VNMRSN90M;
-   d.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      d.n90 = INOVAN90;
-      d.n90m = INOVAN90M;
-      d.trap = INOVATRAP;
-   }
+   set_step_sizes(&d.n90, &d.n90m, &d.trap);
 
 // Supply INOVA Start Delays
 
@@ -2321,15 +2195,7 @@ MPSEQ getdraws(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 // Set the Step Sizes
 
-   r.n90 = VNMRSN90;
-   r.n90m = VNMRSN90M;
-   r.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      r.n90 = INOVAN90;
-      r.n90m = INOVAN90M;
-      r.trap = INOVATRAP;
-   }
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 // Set the Base Phase List
 
@@ -2463,15 +2329,7 @@ MPSEQ getrapt(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   r.n90 = VNMRSN90;
-   r.n90m = VNMRSN90M;
-   r.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      r.n90 = INOVAN90;
-      r.n90m = INOVAN90M;
-      r.trap = INOVATRAP;
-   }
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 // Set the Base Phase List
 
@@ -2609,15 +2467,7 @@ MPSEQ getgrapt(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   r.n90 = VNMRSN90;
-   r.n90m = VNMRSN90M;
-   r.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      r.n90 = INOVAN90;
-      r.n90m = INOVAN90M;
-      r.trap = INOVATRAP;
-   }
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 // Set the Base Phase List
 
@@ -2759,15 +2609,7 @@ MPSEQ getpipsxy(char *seqName, int iph, double p, double phint, int iRec, int ca
 
 // Set the Step Sizes
 
-   pips.n90 = VNMRSN90;
-   pips.n90m = VNMRSN90M;
-   pips.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      pips.n90 = INOVAN90;
-      pips.n90m = INOVAN90M;
-      pips.trap = INOVATRAP;
-   }
+   set_step_sizes(&pips.n90, &pips.n90m, &pips.trap);
 
 // Set the Base Phase List
 
@@ -2897,15 +2739,7 @@ MPSEQ getsr4(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   r.n90 = VNMRSN90;
-   r.n90m = VNMRSN90M;
-   r.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      r.n90 = INOVAN90;
-      r.n90m = INOVAN90M;
-      r.trap = INOVATRAP;
-   }
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
 
 // Set the Base Phase List
 
@@ -3031,15 +2865,7 @@ MPSEQ getsammyd(char *seqName, int iph, double p, double phint, int iRec, int ca
 
 // Set the Step Sizes
 
-   sd.n90 = VNMRSN90;
-   sd.n90m = VNMRSN90M;
-   sd.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      sd.n90 = INOVAN90;
-      sd.n90m = INOVAN90M;
-      sd.trap = INOVATRAP;
-   }
+   set_step_sizes(&sd.n90, &sd.n90m, &sd.trap);
 
 // Set the Base Phase List
 
@@ -3189,15 +3015,7 @@ MPSEQ getsammyo(char *seqName, int iph, double p, double phint, int iRec, int ca
 
 // Set the Step Sizes
 
-   so.n90 = VNMRSN90;
-   so.n90m = VNMRSN90M;
-   so.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      so.n90 = INOVAN90;
-      so.n90m = INOVAN90M;
-      so.trap = INOVATRAP;
-   }
+   set_step_sizes(&so.n90, &so.n90m, &so.trap);
 
 // Set the Base Phase List 
 
@@ -3323,15 +3141,8 @@ MPSEQ getlg(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   f.n90 = VNMRSN90;
-   f.n90m = VNMRSN90M;
-   f.trap = VNMRSTRAP;
+   set_step_sizes(&f.n90, &f.n90m, &f.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      f.n90 = INOVAN90;
-      f.n90m = INOVAN90M;
-      f.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    f.nphBase = 1;
@@ -3440,15 +3251,8 @@ MPSEQ getrfdrxy8(char *seqName, int iph, double p, double phint, int iRec, int c
 
 // Set the Step Sizes
 
-   xy8.n90 = VNMRSN90;
-   xy8.n90m = VNMRSN90M;
-   xy8.trap = VNMRSTRAP;
+   set_step_sizes(&xy8.n90, &xy8.n90m, &xy8.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      xy8.n90 = INOVAN90;
-      xy8.n90m = INOVAN90M;
-      xy8.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    xy8.phBase[0] = 0.0;
@@ -3596,15 +3400,7 @@ MPSEQ getseac7(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 // Set the Step Sizes
 
-   seac7.n90 = VNMRSN90;
-   seac7.n90m = VNMRSN90M;
-   seac7.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      seac7.n90 = INOVAN90;
-      seac7.n90m = INOVAN90M;
-      seac7.trap = INOVATRAP;
-   }
+   set_step_sizes(&seac7.n90, &seac7.n90m, &seac7.trap);
 
 // Set the Base Phase List
 
@@ -3750,15 +3546,8 @@ MPSEQ getsc14(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 // Set the Step Sizes
 
-   sc14.n90 = VNMRSN90;
-   sc14.n90m = VNMRSN90M;
-   sc14.trap = VNMRSTRAP;
+   set_step_sizes(&sc14.n90, &sc14.n90m, &sc14.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      sc14.n90 = INOVAN90;
-      sc14.n90m = INOVAN90M;
-      sc14.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    sc14.phBase[0] = 0.0;
@@ -3862,15 +3651,7 @@ MPSEQ getptrfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
 
 // Set the Step Sizes
 
-   pt.n90 = VNMRSN90;
-   pt.n90m = VNMRSN90M;
-   pt.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      pt.n90 = INOVAN90;
-      pt.n90m = INOVAN90M;
-      pt.trap = INOVATRAP;
-   }
+   set_step_sizes(&pt.n90, &pt.n90m, &pt.trap);
 
 // Set the Base Phase List
 
@@ -3997,15 +3778,7 @@ MPSEQ getfprfdr(char *seqName, int iph, double p, double phint, int iRec, int ca
 
 // Set the Step Sizes
 
-   fp.n90 = VNMRSN90;
-   fp.n90m = VNMRSN90M;
-   fp.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      fp.n90 = INOVAN90;
-      fp.n90m = INOVAN90M;
-      fp.trap = INOVATRAP;
-   }
+   set_step_sizes(&fp.n90, &fp.n90m, &fp.trap);
 
 // Set the Base Phase List
 
@@ -4127,6 +3900,10 @@ MPSEQ getspnl(char *seqName, int iph, double p, double phint, int iRec, int calc
    int na = 1;
    int ng = 1;
    MPinitializer(&spnl,npw,nph,nof,na,ng,nphBase,nphSuper);
+
+// Set the Step Sizes : added by BDZ 10-29-24
+
+   set_step_sizes(&spnl.n90, &spnl.n90m, &spnl.trap);
 
 // Set the Base Phase List
 
@@ -4273,6 +4050,10 @@ MPSEQ getr1817(char *seqName, int iph, double p, double phint, int iRec, int cal
    int ng = 1;
    MPinitializer(&r,npw,nph,nof,na,ng,nphBase,nphSuper);
 
+// Set the Step Sizes : added by BDZ 10-29-24
+
+   set_step_sizes(&r.n90, &r.n90m, &r.trap);
+
 // Set the Base Phase List 
 
    r.phBase[0] = 0.0;
@@ -4380,15 +4161,7 @@ MPSEQ gettmrev5(char *seqName, int iph, double p, double phint, int iRec, int ca
 
 // Set the Step Sizes
 
-   tm.n90 = VNMRSN90;
-   tm.n90m = VNMRSN90M;
-   tm.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      tm.n90 = INOVAN90;
-      tm.n90m = INOVAN90M;
-      tm.trap = INOVATRAP;
-   }
+   set_step_sizes(&tm.n90, &tm.n90m, &tm.trap);
 
 // Set the Base Phase List
 
@@ -4524,15 +4297,8 @@ MPSEQ getpxy(char *seqName, int iph, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   pxy.n90 = VNMRSN90;
-   pxy.n90m = VNMRSN90M;
-   pxy.trap = VNMRSTRAP;
+   set_step_sizes(&pxy.n90, &pxy.n90m, &pxy.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      pxy.n90 = INOVAN90;
-      pxy.n90m = INOVAN90M;
-      pxy.trap = INOVATRAP;
-   }
 // Set the Base Phase List
 
    pxy.phBase[0] = 0.0;
@@ -4642,15 +4408,7 @@ MPSEQ getsamn(char *seqName, int iph, double p, double phint, int iRec, int calc
 
 // Set the Step Sizes
 
-   pm.n90 = VNMRSN90;
-   pm.n90m = VNMRSN90M;
-   pm.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      pm.n90 = INOVAN90;
-      pm.n90m = INOVAN90M;
-      pm.trap = INOVATRAP;
-   }
+   set_step_sizes(&pm.n90, &pm.n90m, &pm.trap);
 
 //pwHsam - The Time for One Rotor Cycle
 
@@ -4787,15 +4545,7 @@ MPSEQ getpmlgxmx(char *seqName, int iph ,double p, double phint, int iRec, int c
 
 // Set the Step Sizes
 
-   pm.n90 = VNMRSN90;
-   pm.n90m = VNMRSN90M;
-   pm.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      pm.n90 = INOVAN90;
-      pm.n90m = INOVAN90M;
-      pm.trap = INOVATRAP;
-   }
+   set_step_sizes(&pm.n90, &pm.n90m, &pm.trap);
 
 // Set the Base Phase List
 
@@ -4919,15 +4669,7 @@ MPSEQ getsuper(char *seqName, int iph, double p, double phint, int iRec, int cal
 
 // Set the Step Sizes
 
-   super.n90 = VNMRSN90;
-   super.n90m = VNMRSN90M;
-   super.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      super.n90 = INOVAN90;
-      super.n90m = INOVAN90M;
-      super.trap = INOVATRAP;
-   }
+   set_step_sizes(&super.n90, &super.n90m, &super.trap);
 
 // Set the Base Phase List
 
@@ -5122,15 +4864,7 @@ MPSEQ getdumboxmx(char *seqName, int iph, double p, double phint, int iRec, int 
 
 // Set the Step Sizes
 
-   pm.n90 = VNMRSN90;
-   pm.n90m = VNMRSN90M;
-   pm.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      pm.n90 = INOVAN90;
-      pm.n90m = INOVAN90M;
-      pm.trap = INOVATRAP;
-   }
+   set_step_sizes(&pm.n90, &pm.n90m, &pm.trap);
 
 // Set the Base Phase List
 
@@ -5305,15 +5039,7 @@ MPSEQ getdumbogen(char *seqName, char *coeffName, int iph, double p, double phin
 
 // Set the Step Sizes
 
-   dumbo.n90 = VNMRSN90;
-   dumbo.n90m = VNMRSN90M;
-   dumbo.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      dumbo.n90 = INOVAN90;
-      dumbo.n90m = INOVAN90M;
-      dumbo.trap = INOVATRAP;
-   }
+   set_step_sizes(&dumbo.n90, &dumbo.n90m, &dumbo.trap);
 
 //get Fourier coefficients
    char *coef[12]={"ca1","ca2","ca3","ca4","ca5","ca6","cb1","cb2","cb3","cb4","cb5","cb6"};
@@ -5472,15 +5198,7 @@ MPSEQ getsat(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   s.n90 = VNMRSN90;
-   s.n90m = VNMRSN90M;
-   s.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      s.n90 = INOVAN90;
-      s.n90m = INOVAN90M;
-      s.trap = INOVATRAP;
-   }
+   set_step_sizes(&s.n90, &s.n90m, &s.trap);
 
 // Set the Base Phase List
 
@@ -5600,6 +5318,10 @@ MPSEQ getpostc6(char *seqName, int iph, double p, double phint, int iRec, int ca
    int na = 1;
    int ng = 1;
    MPinitializer(&c6,npw,nph,nof,na,ng,nphBase,nphSuper);
+
+// Set the Step Sizes : added by BDZ 10-29-24
+
+   set_step_sizes(&c6.n90, &c6.n90m, &c6.trap);
 
 // Set the Base Phase List
 

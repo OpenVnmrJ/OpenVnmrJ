@@ -38,15 +38,7 @@ SHAPE getpulse(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   s.pars.n90 = VNMRSN90;
-   s.pars.n90m = VNMRSN90M;
-   s.pars.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      s.pars.n90 = INOVAN90;
-      s.pars.n90m = INOVAN90M;
-      s.pars.trap = INOVATRAP;
-   }
+   set_step_sizes(&s.pars.n90, &s.pars.n90m, &s.pars.trap);
 
 //pw (pulse length)
 
@@ -89,15 +81,7 @@ SHAPE getdfspulse(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
   
-   s.pars.n90 = VNMRSN90;
-   s.pars.n90m = VNMRSN90M;
-   s.pars.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      s.pars.n90 = INOVAN90;
-      s.pars.n90m = INOVAN90M;
-      s.pars.trap = INOVATRAP;
-   }
+   set_step_sizes(&s.pars.n90, &s.pars.n90m, &s.pars.trap);
 
 //pwXdfs (dfs pulse length)
 
@@ -157,15 +141,7 @@ SHAPE getsfspulse(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   s.pars.n90 = VNMRSN90;
-   s.pars.n90m = VNMRSN90M;
-   s.pars.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      s.pars.n90 = INOVAN90;
-      s.pars.n90m = INOVAN90M;
-      s.pars.trap = INOVATRAP;
-   }
+   set_step_sizes(&s.pars.n90, &s.pars.n90m, &s.pars.trap);
 
 //pwXsfs (dfs pulse length)
 
@@ -225,15 +201,7 @@ SHAPE getsfmpulse(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   s.pars.n90 = VNMRSN90;
-   s.pars.n90m = VNMRSN90M;
-   s.pars.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      s.pars.n90 = INOVAN90;
-      s.pars.n90m = INOVAN90M;
-      s.pars.trap = INOVATRAP;
-   }
+   set_step_sizes(&s.pars.n90, &s.pars.n90m, &s.pars.trap);
 
 //pwXsfs (dfs pulse length)
 
@@ -279,15 +247,7 @@ SHAPE getsinc(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   s.pars.n90 = VNMRSN90;
-   s.pars.n90m = VNMRSN90M;
-   s.pars.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      s.pars.n90 = INOVAN90;
-      s.pars.n90m = INOVAN90M;
-      s.pars.trap = INOVATRAP;
-   }
+   set_step_sizes(&s.pars.n90, &s.pars.n90m, &s.pars.trap);
 
 //bandwidth
 
@@ -341,15 +301,8 @@ SHAPE gettanramp(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   s.pars.n90 = VNMRSN90;
-   s.pars.n90m = VNMRSN90M;
-   s.pars.trap = VNMRSTRAP;
+   set_step_sizes(&s.pars.n90, &s.pars.n90m, &s.pars.trap);
 
-   if (PWRF_DELAY > 0.0) {
-      s.pars.n90 = INOVAN90;
-      s.pars.n90m = INOVAN90M;
-      s.pars.trap = INOVATRAP;
-   }
 //delta
 
    var = getname0("d",s.pars.seqName,"");
@@ -413,15 +366,7 @@ SHAPE getcpm(char *seqName, double p, double phint, int iRec, int calc)
 
 // Set the Step Sizes
 
-   s.pars.n90 = VNMRSN90;
-   s.pars.n90m = VNMRSN90M;
-   s.pars.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      s.pars.n90 = INOVAN90;
-      s.pars.n90m = INOVAN90M;
-      s.pars.trap = INOVATRAP;
-   }
+   set_step_sizes(&s.pars.n90, &s.pars.n90m, &s.pars.trap);
 
 //pw (pulse length)
 
@@ -474,15 +419,7 @@ SHAPE getdumbogenshp(char *seqName, char *coeffName, double p, double phint, int
 
 // Set the Step Sizes
 
-   s.pars.n90 = VNMRSN90;
-   s.pars.n90m = VNMRSN90M;
-   s.pars.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      s.pars.n90 = INOVAN90;
-      s.pars.n90m = INOVAN90M;
-      s.pars.trap = INOVATRAP;
-   }
+   set_step_sizes(&s.pars.n90, &s.pars.n90m, &s.pars.trap);
 
    var = getname0("sc",coeffName,"");
    s.pars.array = disarry(var, s.pars.array);

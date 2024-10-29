@@ -910,16 +910,8 @@ MPSEQ getpmlgsuper(char *seqName, int iph ,double p, double phint, int iRec, int
 
 // Set the Step Sizes
 
-   pm.n90 = VNMRSN90;
-   pm.n90m = VNMRSN90M;
-   pm.trap = VNMRSTRAP;
-
-   if (PWRF_DELAY > 0.0) {
-      pm.n90 = INOVAN90;
-      pm.n90m = INOVAN90M;
-      pm.trap = INOVATRAP;
-   }
-
+   set_step_sizes(&pm.n90, &pm.n90m, &pm.trap);
+   
 // Set the Base Phase List
 
    double obsstep = 360.0/8192;
