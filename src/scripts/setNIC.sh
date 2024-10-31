@@ -142,7 +142,7 @@ EOF
 }
 
 addToNetplan() {
-   file=$(ls /etc/netplan/*yaml)
+   file=$(ls /etc/netplan/*network-manager*yaml)
    grep OpenVnmrJ $file > /dev/null
    if [[ $? -eq 0 ]]; then
       sed --in-place '/# OpenVnmrJ Start/,/# OpenVnmrJ End/d' $file
