@@ -259,6 +259,8 @@ public class FileUtil
 		String path = str;
 		if (str.equalsIgnoreCase("USERDIR")) {
 			path = FileUtil.usrdir();
+		} else if (str.startsWith("USERDIR")) {
+		 	path = FileUtil.usrdir() + str.substring("USERDIR".length());
 		} else if (str.startsWith("SYSTEMDIR"))
 			systok = "SYSTEMDIR";
 		else if (str.startsWith("/vnmr"))
@@ -267,7 +269,7 @@ public class FileUtil
 			String f = str.substring(systok.length());
 			path = FileUtil.sysdir() + f;
 		}
-		return UtilB.addWindowsPathIfNeeded(path);
+		return path;
 	}
 
     //----------------------------------------------------------------
@@ -408,19 +410,6 @@ public class FileUtil
         if (type != null)
             strPath = (String)vnmr_dirs.get(type);
         return strPath;
-    }
-
-    /**
-     *  Returns the directory with the correct path name depending on the OS.
-     *  If dir starts with /dev/fs/C/SFU (SFUDIR_INTERIX), then we are on
-     *  a PC and we need to replace this part with C:\SFU (SFUDIR_WINDOWS)
-     */
-    public static String getOSSyntaxDir(String dir)
-    {
-        if (UtilB.OSNAME.startsWith("Windows") && 
-                  dir != null && dir.startsWith(UtilB.SFUDIR_INTERIX))
-            dir = dir.replaceFirst(UtilB.SFUDIR_INTERIX,UtilB.SFUDIR_WINDOWS); 
-        return dir;
     }
 
     //----------------------------------------------------------------
@@ -730,11 +719,6 @@ public class FileUtil
         // This would be a full path for unix
         if (f.startsWith(File.separator) || f.startsWith("/"))
             path=f;
-        // This would a full path for Windows
-        else if (UtilB.OSNAME.startsWith("Windows") &&
-                 f.indexOf(':') == 1) {
-            path=f;
-        }
         else if (f.startsWith("~/"))
             path=new StringBuffer().append(System.getProperty("user.home")).
                       append(FileUtil.separator).append(f.substring(2)).toString();
@@ -755,7 +739,7 @@ public class FileUtil
                         dir=fullPath((String)appDirs.get(j),f);
                         dir=XmlPath(dir,AppType);
                         if(canRead(dir))
-                        	return UtilB.addWindowsPathIfNeeded(dir);
+                        	return dir;
                     }
                 }
                 // check for non type name-extended files in all directories
@@ -763,7 +747,7 @@ public class FileUtil
                     dir=fullPath((String)appDirs.get(j),f);
                     dir=XmlPath(dir,null);
                     if(canRead(dir))
-                    	return UtilB.addWindowsPathIfNeeded(dir);
+                    	return dir;
                 }
             }
             else{           
@@ -772,12 +756,12 @@ public class FileUtil
                     if(dir==null)
                         continue;
                     if(canRead(dir))
-                        return UtilB.addWindowsPathIfNeeded(dir);
+                        return dir;
                  }
             }
         }
         if(canRead(path))
-            return UtilB.addWindowsPathIfNeeded(path);
+            return path;
         return null;
     }
 
