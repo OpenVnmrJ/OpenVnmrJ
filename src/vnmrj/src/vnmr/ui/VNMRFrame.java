@@ -218,14 +218,9 @@ public class VNMRFrame extends JFrame implements AppInstaller {
                 String strfile = System.getProperty("vjerrfile");
                 if (strfile != null && strfile.equals("custom"))
                 {
-                	String strpath;
-                	if (!UtilB.iswindows()) {
-                        strpath = FileUtil.openPath(FileUtil.usrdir()+"/"+
+                    String strpath;
+                    strpath = FileUtil.openPath(FileUtil.usrdir()+"/"+
                                                            Messages.getLogFileName());
-                	} else {
-                        strpath = FileUtil.openPath(FileUtil.usrdir()+"\\"+
-                                                           Messages.getLogFileName());
-                	}
                     if (strpath != null)
                         System.setErr(new PrintStream(new FileOutputStream(strpath, true)));
                 }
@@ -826,9 +821,10 @@ public class VNMRFrame extends JFrame implements AppInstaller {
                     String str = tok.nextToken().trim();
                     if (str.equalsIgnoreCase("USERDIR"))
                         str = FileUtil.usrdir();
+		    else if (str.startsWith("USERDIR"))
+		 	str = FileUtil.usrdir() + str.substring("USERDIR".length());
                     if (str.equalsIgnoreCase( FileUtil.sysdir() ))
                         sysdir = true;
-                    str=UtilB.addWindowsPathIfNeeded(str);
                     appDirectories.add(str);
                     if (tok.hasMoreTokens()) {
                         // Save the Labels also
