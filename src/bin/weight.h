@@ -18,4 +18,5 @@
 #define MAXWTCONST	 10
 
 extern float	wtconst[MAXWTCONST];	/* user-defined weighting constants */
+extern char	curexpdir[];
 

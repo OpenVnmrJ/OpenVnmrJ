@@ -45,12 +45,12 @@
 extern void wtcalc(float *wtpntr, int npoints, float delta_t);
 
 float	wtconst[MAXWTCONST];	/* user-defined weighting constants */
+char	curexpdir[MAXPATHL];
 
 
 int main(int argc, char *argv[])
 {
-   char		curexpdir[MAXPATHL],
-		wtfname[MAXPATHL],
+   char 	wtfname[MAXPATHL],
 		wtfilename[MAXPATHL],
 		parfilename[MAXPATHL];
    int		npoints,	/* number of points in weighting function */
