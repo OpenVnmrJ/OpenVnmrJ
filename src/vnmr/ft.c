@@ -352,6 +352,14 @@ int fidproc(int argc, char *argv[], int retc, char *retv[])
   noreal = ftflag = TRUE;
   nfft = acqflag = inverseWT = FALSE;
   ftpar.t2dc = -1;
+  if (P_getstring(CURRENT, "dc1d", msge, 1, MAXSTR-1) == 0)
+  {
+     ftpar.t2dc = (msge[0] == 'y');
+  }
+  else if (P_getstring(GLOBAL, "dc1d", msge, 1, MAXSTR-1) == 0)
+  {
+     ftpar.t2dc = (msge[0] == 'y');
+  }
   ftpar.zeroflag = FALSE;
   ftpar.sspar.lfsflag = ftpar.sspar.zfsflag = FALSE;
   ftpar.dspar.dsflag = FALSE;
@@ -1644,6 +1652,14 @@ int ft(int argc, char *argv[], int retc, char *retv[])
   do_ds = noreal = ftflag = TRUE;
   nfft = acqflag = inverseWT = FALSE;
   ftpar.t2dc = -1;
+  if (P_getstring(CURRENT, "dc1d", msge, 1, MAXSTR-1) == 0)
+  {
+     ftpar.t2dc = (msge[0] == 'y');
+  }
+  else if (P_getstring(GLOBAL, "dc1d", msge, 1, MAXSTR-1) == 0)
+  {
+     ftpar.t2dc = (msge[0] == 'y');
+  }
   ftpar.zeroflag = FALSE;
   ftpar.sspar.lfsflag = ftpar.sspar.zfsflag = FALSE;
   ftpar.dspar.dsflag = FALSE;
