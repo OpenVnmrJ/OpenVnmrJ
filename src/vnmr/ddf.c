@@ -303,6 +303,10 @@ int ddf(int argc, char *argv[], int retc, char *retv[])
             type[1] = '\0';
             retv[0] = newString(type);
          }
+         if (retc > 1)
+         {
+            retv[1] = intString((dhd.status & S_DDR) ? 1 : 0);
+         }
      }
 
      D_close(D_USERFILE);
