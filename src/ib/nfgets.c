@@ -6,9 +6,6 @@
  *
  * For more information, see the LICENSE file.
  */
-#ifndef lint
-	static char Sid[] = "@(#)nfgets.c 18.1 03/21/08 20:01:35 Dave Woodworth's perversion of fgets()";
-#endif (not) lint
 
 #include <stdio.h>
 
@@ -45,18 +42,7 @@
  Fremont, California
 */
 
-#if defined(__STDC__) || defined(__cplusplus) || defined(c_plusplus)
-
 int nfgets (char *s, int max, FILE *stream)
-
-#else
-
-int nfgets (s, max, stream)
- char *s;
- int   max;
- FILE *stream;
-
-#endif
 {
    /**************************************************************************
    LOCAL VARIABLES:
@@ -64,8 +50,8 @@ int nfgets (s, max, stream)
    i     A counter for the number of characters read from "stream".
    c     The character read from "stream".
    */
-   register int i;
-   register int c;
+   int i;
+   int c = 0;
 
    /* reduce the allowed length by one, for the NULL terminator */
    --max;

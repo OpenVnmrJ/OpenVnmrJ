@@ -240,14 +240,7 @@ int get_hdrsize (in_map, size)
  Fremont, California
 */
 
-#if defined(__STDC__) || defined(__cplusplus) || defined(c_plusplus)
 int fdfsplit ( char *in_file, char *hdr_file, char *dout_file)
-#else
-int fdfsplit ( in_file, hdr_file, dout_file)
- char *in_file;
- char *hdr_file;
- char *dout_file;
-#endif
 {
    /**************************************************************************
    LOCAL VARIABLES:
@@ -260,11 +253,8 @@ int fdfsplit ( in_file, hdr_file, dout_file)
    chk_len        The length of the data checksum string and header terminator.
    chk_sum        Checksum for binary data.
    chk_text       "int checksum=": DDL variable name for checksum in header.
-   pad_cnt        Number of pad characters needed for header terminator, to
-                  align the binary data as requested.
    hdr_fd         Handle for data file.
    hdr_size       Size of header file, in bytes.
-   hdr_map        Pointer to memory-map for header file.
    dout_fd         Handle for output file.
    */
    int    in_fd;
@@ -272,15 +262,11 @@ int fdfsplit ( in_file, hdr_file, dout_file)
    size_t in_len;
    char  *in_map;
 
-   int    pad_cnt;
-
    int    hdr_fd;
    int  hdr_size;
-   char  *hdr_map;
 
    int    dout_fd;
    off_t  dout_size;
-   size_t dout_len;
    char  *dout_map;
 
    if (in_file == (char *)NULL)
@@ -386,28 +372,18 @@ int fdfsplit ( in_file, hdr_file, dout_file)
 
 #ifdef MAIN
 
-#if defined(__STDC__) || defined(__cplusplus) || defined(c_plusplus)
 void bad_cmd_line (void)
-#else
-void bad_cmd_line()
-#endif
 {
    error ("USAGE: %s [inputfdf_file] data_file header_file", p_name);
    error_exit (1);
 
 } /* end of function "bad_cmd_line" */
 
-#if defined(__STDC__) || defined(__cplusplus) || defined(c_plusplus)
 int main (int argc, char *argv[])
-#else
-int main (argc, argv)
- int   argc;
- char *argv[];
-#endif
 {
    char  *in_file = (char *)NULL;
-   char  *hdr_file;
-   char  *dout_file;
+   char  *hdr_file = NULL;
+   char  *dout_file = NULL;
 
    /* set a pointer to the name of this program */
    if ( (p_name = strrchr (argv[0], '/')) == (char *)NULL)

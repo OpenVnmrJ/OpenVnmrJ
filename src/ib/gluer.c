@@ -549,7 +549,7 @@ int gluer (int align, off_t offset, char *template_file,
       }
       fprintf (stderr, "'\n");
       error ("    chk_len  = %d", chk_len);
-      fprintf (stderr, "    total    = %d\n", hdr_size+chk_len);
+      fprintf (stderr, "    total    = %jd\n", (intmax_t) (hdr_size+chk_len));
    }
 #endif
 
@@ -633,7 +633,7 @@ int vgluer(align, vnmr_fname, ntraces, outfile_tmpl, hdr_file)
     char *scale_text = "int scale =";
     char info_str[1024];
     int bytes;
-    int ct;
+    int ct =1;
     int dat_fd;
     int end;
     int hdr_fd;
@@ -644,7 +644,7 @@ int vgluer(align, vnmr_fname, ntraces, outfile_tmpl, hdr_file)
     int nbytes;			/* Bytes / output file */
     int nfiles;			/* # of files to write out */
     int out_fd;
-    int scale;
+    int scale = 0;
     int tlen;
     size_t hdr_len;
     tcrc chk_sum;

@@ -1,4 +1,4 @@
-: '@(#)wtgen.sh 22.1 03/24/08 1991-2005 '
+#!/bin/bash
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -24,7 +24,6 @@
 #**         program which is stored in $VNMRUSER/WTLIB.                **
 #************************************************************************
 
-echo " "
 echo " "
 echo "Beginning Weighting Routine Generation Process:"
 echo " "
@@ -113,22 +112,8 @@ ln -s "$vnmrsystem"/bin/weight.h weight.h
 # Compile user weighting function routine
 echo "Starting compilation and link loading..."
 
-ostype=`uname -s`
-if test x$ostype = "xSunOS"
-then
-    PATH=/usr/ccs/bin:/opt/cygnus-sol2-2.0/bin:"$PATH"; export PATH;
-fi
-if test x$ostype = "xLinux"
-then
-   arch=""
-   file $vnmrsystem/bin/Vnmrbg | grep "32-bit" $file >& /dev/null
-   if [[ $? -eq 0 ]]; then
-      arch="-m32"
-   fi
-   cc $arch -O $file.c usrwt.o -lm -o $file > errmsg
-else
-   cc -O $file.c usrwt.o -lm -o $file > errmsg
-fi
+cc -O $file.c usrwt.o -lm -o $file > errmsg
+
 if test -f $file
 then
    rm errmsg
