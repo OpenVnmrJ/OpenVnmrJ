@@ -750,9 +750,17 @@ int getitem_sorted(char *dirname, int index, char *filename, char *fileCmp, int 
       if (found)
       {
          if ( (recurse) || (regExp == 3) )
+         {
+#ifdef MACOS
+            if ( node->fts_path[len] == '/')
+               len++;
+#endif
             strcpy(sortPath[cnt-1].path, &node->fts_path[len]);
+         }
          else
+         {
             strcpy(sortPath[cnt-1].path, node->fts_name);
+         }
       }
    }
    qsort( &sortPath[0], cnt, sizeof(struct sort), doSort);
