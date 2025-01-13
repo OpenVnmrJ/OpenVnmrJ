@@ -86,9 +86,6 @@ public class SymLinkMap {
         if(DebugOutput.isSetFor("SymLinkMap"))
             Messages.postDebug("checkForSymLink Called for: " + dirToSearch);
 
-        // If on Windows, we will receive the canonical path here which
-        // will include the /dev/fs/C/SFU.  For the call to findLinks,
-        // we need that to be removed.
         directory = new String(dirToSearch);
 
         // Lets be sure the directory exists.  Else, we get an exception.
@@ -97,15 +94,6 @@ public class SymLinkMap {
             // Silently return if no directory
             return;
         }
-
-        if(UtilB.OSNAME.startsWith("Windows")) {
-            if(dirToSearch.startsWith(UtilB.SFUDIR_INTERIX)) {
-                // Remove it
-                directory = dirToSearch.substring(
-                       UtilB.SFUDIR_INTERIX.length(),dirToSearch.length());
-            }
-        }
-
 
         // Have we already searched this directory or a parent of it?
         // Go through the list of dirChecked and see if any is a parent
@@ -126,8 +114,8 @@ public class SymLinkMap {
 
             // Create a unique filename for the results to be put into.
             String thName = Thread.currentThread().getName();
-            String filePath = "/tmp/findLinks" + thName;
             String sysdir = System.getProperty("sysdir");
+            String filePath = sysdir +  "/tmp/findLinks" + thName;
 
             cmd = sysdir + "/bin/findLinks " 
                                            + directory + " " + filePath;
@@ -171,8 +159,7 @@ public class SymLinkMap {
             inLine = in.readLine();
             if(inLine != null) {
                 if(!inLine.equals("Links List")) {
-                    Messages.postLog("Problem with \'/tmp/findLinksList\'"
-                                         + " file heading.  Cannot get Links.");
+                    Messages.postLog("Locator problem with soft links");
                     file.delete();
                     return;
                 }
@@ -181,19 +168,11 @@ public class SymLinkMap {
                 if (inLine.length() > 1) {
                     tok = new StringTokenizer(inLine);
                     if(tok.countTokens() != 2) {
-                        Messages.postLog("Problem with "
-                                             + "\'/tmp/findLinksList\'"
-                                             + " format.  Cannot get Links.");
+                        Messages.postLog("Locator format problem with soft links");
                         file.delete();
                         return;
                     }
                     linkPath = new String(tok.nextToken().trim());
-
-                    // If windows, add the /dev/fs/C/SFU on the front
-                    if(UtilB.OSNAME.startsWith("Windows")) {
-                        linkPath = UtilB.SFUDIR_INTERIX + linkPath;
-                    }
-
 
                     // Avoid duplicates
                     if(!linkList.contains(linkPath)) {
@@ -218,7 +197,6 @@ public class SymLinkMap {
         catch (Exception e) {
             Messages.postWarning("Problem executing findLinks or "
                                  + "reading results.");
-            Messages.writeStackTrace(e);
             file.delete();
         }
 
