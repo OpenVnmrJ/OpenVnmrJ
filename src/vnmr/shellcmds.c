@@ -709,7 +709,7 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
        inode = buf.st_ino;
        nlink = buf.st_nlink;
        buf.st_ino = 0;
-       if ( (stat(toFile, &buf) == 0) && (S_ISDIR(buf.st_mode)) )
+       if ( ((res = stat(toFile, &buf)) == 0) && (S_ISDIR(buf.st_mode)) )
        {
           char tmpFile[MAXPATH];
           char *bname;
@@ -718,10 +718,10 @@ int Cp(int argc, char *argv[], int retc, char *retv[])
           bname = basename(tmpFile);
           strcat(toFile,"/");
           strcat(toFile,bname);
-          if (stat(toFile, &buf))
+          if ( (res = stat(toFile, &buf)) )
              buf.st_ino = 0;
        }
-       if ((inode == buf.st_ino) && (nlink == buf.st_nlink) )
+       if ((res == 0) && (inode == buf.st_ino) && (nlink == buf.st_nlink) )
        {
           if (retc)
           {
