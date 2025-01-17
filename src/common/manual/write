@@ -13,6 +13,11 @@ write(device,template,arg,arg,..)	write formatted text to a device
 		'fileline', 'filename'		writes to file with no
                                                 automatic linefeed
                 'net',host, port                write to network
+                'files','$parname'              write to files specified by parameter
+                'filesline','$parname'          write to files specified by parameter with
+                                                no automatic linefeed
+                'filesline3','$parname'         write to files specified by parameter and
+                                                message on line 3.
   color:	'red','green','blue','cyan','magenta','yellow','orange','black','white'
                 'cursor','integral','threshold','scale','fid','spectrum','imaginary','parameter'
   template:	as template string in printf command
@@ -66,6 +71,10 @@ write(device,template,arg,arg,..)	write formatted text to a device
    If the output starts with "Warning: ", then writing to 'line3' with this output will
    strip the "Warning: " from the output and display the rest of the output in yellow
    in the toolbar message box. Note that a space is required after the colon.
+   A special format for 'line3' is where the first argument is a null string ('') and
+   'line3' is the second argument, as in write('','line3',...). This gives macros the
+   flexibility to do something like $dev='file' $file='/vnmr/tmp/a' or
+   $dev='' $file='line3' write($dev,$file,...)
 
    When writing to a file using the keyword 'file',  each write command
    automatically appends a carriage return (linefeed) to the end of the
@@ -76,6 +85,20 @@ write(device,template,arg,arg,..)	write formatted text to a device
    backslashes (\\) are interpreted as a carriage return.  With the
    'fileline' keyword, two backslashes will output a single backslash
    into the file.
+
+   Using the keywords 'files', 'filesline', or 'filesline3' allows writing to
+   multiple files. In each case, the second argument is the name of a local
+   parameter (i.e., $filenames) that has as its array elements the path names
+   of the files to write to. In all other ways, these keywords are analogous to
+   the 'file', 'fileline', and 'line3' keywords, respectively. For example,
+
+   $filenames='file1','file2','/vnmr/tmp/file3'
+   write('files','$filenames',template,arg1, arg2, ...)
+   write('filesline','$filenames',template,arg1, arg2, ...)
+   write('filesline3','$filenames',template,arg1, arg2, ...)
+
+   will write to file1, file2, and /vnmr/tmp/file3. Note the single quotes
+   around the $filenames parameter.
 
    When using the 'reset' option, the write command will create an empty file
    by the name of filename, the second argument. If the 'filename' file already

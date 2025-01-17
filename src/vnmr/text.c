@@ -1058,11 +1058,49 @@ static void m_settext(int device, char filename[], char *s, int newline)
   else Werrprintf("Unable to open file %s",tfilepath);
 }
 
+static int  m_settextFiles(char *argv[], char *s, int newline)
+{
+    if ( argv[2][0] == '$' )
+    {
+       symbol **root;
+       varInfo *v1 = NULL;
+       Rval *r;
+       int i;
+       if ((root=selectVarTree(argv[2])) == NULL)
+       {
+          Werrprintf("%s: local variable \"%s\" doesn't exist",argv[0],argv[2]);
+          return(1);
+       }
+       if ((v1 = rfindVar(argv[2],root)) == NULL)
+       {   Werrprintf("%s: variable \"%s\" doesn't exist",argv[0],argv[2]);
+           return(1);
+       }
+       if (v1->T.basicType == T_REAL)
+       {   Werrprintf("%s: variable \"%s\" must be of string type",argv[0],argv[2]);
+           return(1);
+       }
+       r = v1->R;
+       for (i=1; i <= v1->T.size; i++)
+       {
+          if (strlen(r->v.s))
+             m_settext(TFILE,r->v.s,s,newline);
+          r = r->next;
+       }
+       return(0);
+    }
+    else
+    {
+       Werrprintf("%s: a local $variable must be used",argv[0]);
+       return(1);
+    }
+}
+
 /****************************/
 int nmr_write(int argc, char *argv[], int retc, char *retv[])
 /****************************/
 { int device,argnum,x,y,i,reverse,col;
   int newline = 1;
+  int multiFiles = 0;
   int writeXor = 0;
   char text[4096];
   char filename[MAXPATH];
@@ -1088,11 +1126,45 @@ int nmr_write(int argc, char *argv[], int retc, char *retv[])
      device = LINE3;
      argnum++;
   }
+  else if (strcmp(argv[1],"filesline3")==0)
+  {
+     if (argc < 4)
+     {
+        Werrprintf("usage: write(%s,'parname',template,...) requires a parameter name", argv[1]);
+        ABORT;
+     }
+     device = LINE3;
+     argnum++;
+     multiFiles=1;
+  }
   else if (strcmp(argv[1],"plotter")==0) device = T_PLOTTER;
   else if (strcmp(argv[1],"printer")==0) device = PRINTER;
   else if (strcmp(argv[1],"line3")==0)   device = LINE3;
   else if (strcmp(argv[1],"file")==0)    device = TFILE;
+  else if (strcmp(argv[1],"files")==0)
+  {
+     if (argc < 4)
+     {
+        Werrprintf("usage: write(%s,'parname',template,...) requires a parameter name", argv[1]);
+        ABORT;
+     }
+     device = TFILE;
+     argnum++;
+     multiFiles=1;
+  }
   else if (strcmp(argv[1],"fileline")==0){device= TFILE; newline = 0; }
+  else if (strcmp(argv[1],"filesline")==0)
+  {
+     if (argc < 4)
+     {
+        Werrprintf("usage: write(%s,'parname',template,...) requires a parameter name", argv[1]);
+        ABORT;
+     }
+     device = TFILE;
+     newline = 0;
+     argnum++;
+     multiFiles=1;
+  }
   else if (strcmp(argv[1],"reset")==0)   device = RESET;
   else if (strcmp(argv[1],"error")==0)   device = ERROR;
   else if (strcmp(argv[1],"alpha")==0)   device = ALPHA;
@@ -1183,7 +1255,7 @@ int nmr_write(int argc, char *argv[], int retc, char *retv[])
       if (retc > 0)
          retv[0] = realString((double) (ycharpixels * ymultiplier) / nppmm);
     }
-  if (device==TFILE || device==RESET)
+  if ((device==TFILE && !multiFiles) || device==RESET)
         {
             if (verify_fname2( argv[ argnum ] )) {
                Werrprintf( "file path '%s' not valid", argv[ argnum ] );
@@ -1434,8 +1506,14 @@ int nmr_write(int argc, char *argv[], int retc, char *retv[])
 	                retv[0] = newString(tptr);
                      else
                         Winfoprintf("%s",tptr);
+                     if (multiFiles)
+                        m_settextFiles(argv, tptr, newline);
                      break;
-      case TFILE:    m_settext(device,filename,tptr,newline);
+      case TFILE:       
+                     if (multiFiles)
+                        m_settextFiles(argv, tptr, newline);
+                     else
+                        m_settext(device,filename,tptr,newline);
                      break;
       case RESET:    m_settext(device,filename,"",newline);
                      break;
