@@ -2016,6 +2016,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
    int tailStage = -1;
    int headOK = 1;
    int lineOK = 0;
+   int teeFlag = 0;
    int fromStr;
    char *fromStrPtr = NULL;
    varInfo *v1 = NULL;
@@ -2610,6 +2611,25 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
                      }
                   }
                }
+               else if ( !strcmp(argv[index],"tee") )
+               {
+                  if ( ! fromStr )
+                  {
+                     Werrprintf("%s: 'tee' option only available with copystr and appendstr",
+                                argv[0]);
+                     if (inFile)
+                        fclose(inFile);
+                     if (outFile)
+                        fclose(outFile);
+                     ABORT;
+                  }
+                  else
+                  {
+                     teeFlag = index;
+                     headOK = 0;
+                     break;
+                  }
+               }
                else
                {
                   if ( strcmp(argv[index],"nn") )
@@ -2625,7 +2645,7 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
             }
          }
       }
-      if (lineOK)
+      if (lineOK && ! teeFlag)
       {
          lineCount++;
          if (wordCount >= 0)
@@ -2644,8 +2664,38 @@ int appendCmd(int argc, char *argv[], int retc, char *retv[])
       }
    }
 
+   if (lineOK && teeFlag)
+   {
+      int index;
+      if (outFile)
+         fprintf(outFile,"%s\n",inLine);
+      index = argc -2;
+      while ( strcmp(argv[index], "tee") )
+      {
+         fclose(outFile);
+         if ( !strncmp(argv[0], "app", 3) ) 
+            outFile = fopen(argv[index],"a");
+         else
+            outFile = fopen(argv[index],"w");
+         if (outFile == NULL)
+         {
+            if (retc)
+            {
+               retv[ 0 ] = intString(0);
+               RETURN;
+            }
+            Werrprintf("%s: cannot write to file %s",argv[0],argv[index]);
+            RETURN;
+         }
+         else
+         {
+            fprintf(outFile,"%s\n",inLine);
+         }
+         index--;
+      }
+   }
    // Handle case where only a null string is given
-   if (lineOK && !lineCount)
+   else if (lineOK && !lineCount)
    {
       lineCount++;
       if (outFile && tailStage && fromStr)
