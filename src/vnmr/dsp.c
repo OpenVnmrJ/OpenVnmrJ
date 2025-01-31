@@ -358,7 +358,7 @@ static int set2Ddatafile(int fn0, int fn1Val)
 }
 
 /**********************/
-static int setdatafile(int *fnval)
+static int setdatafile(int *fnval, int cmplx)
 /**********************/
 { char path[MAXPATHL];
   dfilehead datahead;
@@ -383,7 +383,7 @@ static int setdatafile(int *fnval)
 
   datahead.nblocks = 1;
   datahead.ntraces = 1;
-  datahead.np      = *fnval / 2;
+  datahead.np      = (cmplx) ? *fnval :  *fnval / 2;
   datahead.vers_id = VERSION;
   datahead.vers_id += DATA_FILE;
   datahead.nbheaders = 1;
@@ -392,6 +392,8 @@ static int setdatafile(int *fnval)
   datahead.bbytes  = datahead.tbytes * datahead.ntraces +
                        sizeof(dblockhead) * datahead.nbheaders;
   datahead.status  = (S_DATA|S_SPEC|S_FLOAT|S_NP);
+  if (cmplx)
+     datahead.status |= S_COMPLEX;
 
   if ( (r=D_newhead(D_DATAFILE,path,&datahead)) )
     { D_error(r); ABORT;
@@ -402,7 +404,9 @@ static int setdatafile(int *fnval)
 
   block.head->scale  = 0;
   block.head->status = (S_DATA|S_SPEC|S_FLOAT);
-  block.head->mode   = 0;	/* COULD BE A PROBLEM HERE??   S.F. */
+  if (cmplx)
+     block.head->status |= S_COMPLEX | NP_CMPLX;
+  block.head->mode   = 0;
   block.head->rpval  = 0;
   block.head->lpval  = 0;
   block.head->lvl    = 0;
@@ -431,8 +435,9 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
    float scalefactor;
    int   fntmp;
    int   do_ds = 1;
-   FILE *f1;
-   register float *rdata;
+   FILE *f_re;
+   FILE *f_im = NULL;
+   float *rdata;
    struct stat buf;
    int ibuf;
    float fbuf;
@@ -441,17 +446,25 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
    int fnVal;
    int fn1Val = 0;
    int f2 = 1;
+   int cmplx = 0;
    size_t ret __attribute__((unused));
 
    Wturnoff_buttons();
    D_allrelease();
-   argnum = 1;
    if (argc < 2)
    {
       Werrprintf("%s: requires file name as first argument",argv[0]);
       ABORT;
    }
-   argnum = 2;
+   if ( ! strcmp(argv[1],"complex") )
+   {
+      cmplx = 1;
+      argnum = 4;
+   }
+   else
+   {
+      argnum = 2;
+   }
    scalefactor = 1.0;
    wordSize = sizeof(int);
    intType=1; // defines integer type
@@ -488,22 +501,43 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
             Werrprintf("%s: fn1 argument must be followed by the number of f1 traces",argv[0]);
             ABORT;
          }
+         if (cmplx)
+         {
+            Werrprintf("%s: 'complex' keyword not supported for 2D data",argv[0]);
+            ABORT;
+         }
       }
       argnum++;
    }
-   if (!(f1 = fopen(argv[1],"r")))  {
-      Werrprintf("%s: Error - file \"%s\" not found",argv[0], argv[1]);
+   if (!(f_re = fopen(argv[cmplx+1],"r")))  {
+      Werrprintf("%s: Error - file \"%s\" not found",argv[0], argv[cmplx+1]);
       ABORT;
    }
-   stat(argv[1],&buf);
+   stat(argv[cmplx+1],&buf);
    fnVal = buf.st_size / wordSize;
+   if (cmplx)
+   { 
+      if  (!(f_im = fopen(argv[3],"r")))  {
+         Werrprintf("%s: Error - imaginary data file \"%s\" not found",argv[0], argv[3]);
+         fclose(f_re);
+         ABORT;
+      }
+      stat(argv[3],&buf);
+      if ( fnVal != buf.st_size / wordSize )
+      {
+         Werrprintf("%s: Error - real and imag data files must have the same number of points",argv[0]);
+         fclose(f_re);
+         fclose(f_im);
+         ABORT;
+      }
+   }
    if (fn1Val)
    {
       int j;
       if (fnVal % fn1Val)
       {
          Werrprintf("%s: Error - fn1 value inconsistent with data",argv[0]);
-         fclose(f1);
+         fclose(f_re);
          ABORT;
       }
       fnVal /= fn1Val;
@@ -513,7 +547,7 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
       P_setreal(PROCESSED,"procdim", (double) 2, 0);
       if (set2Ddatafile(fnVal, fn1Val))
       {
-         fclose(f1);
+         fclose(f_re);
          ABORT;
       }
       rdata = data;
@@ -524,9 +558,9 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
          {
             if (f2)
             {
-               fseek(f1,(long) (j+i*fnVal)*sizeof(int), SEEK_SET);
+               fseek(f_re,(long) (j+i*fnVal)*sizeof(int), SEEK_SET);
             }
-            ret = fread(&ibuf,sizeof(int),1,f1);
+            ret = fread(&ibuf,sizeof(int),1,f_re);
             *rdata++ = (float) ibuf * scalefactor;
          }
       }
@@ -537,42 +571,72 @@ int readspectrum(int argc, char *argv[], int retc, char *retv[])
          {
             if (f2)
             {
-               fseek(f1,(long) (j+i*fnVal)*sizeof(float), SEEK_SET);
+               fseek(f_re,(long) (j+i*fnVal)*sizeof(float), SEEK_SET);
             }
-            ret = fread(&fbuf,sizeof(float),1,f1);
+            ret = fread(&fbuf,sizeof(float),1,f_re);
             *rdata++ = fbuf * scalefactor;
          }
       }
    }
    else
    {
-   P_setreal(CURRENT,"fn", (double) fnVal*2, 0);
+      P_setreal(CURRENT,"fn", (double) fnVal*2, 0);
       P_setreal(CURRENT,"procdim", (double) 1, 0);
       P_setreal(PROCESSED,"procdim", (double) 1, 0);
-   if (setdatafile(&fntmp))
-   {
-      fclose(f1);
-      ABORT;
-   }
-   rdata = data;
-   if (intType) // integer
-   {
-      for (i=0; i<fnVal; i++)
+      if (setdatafile(&fntmp, cmplx))
       {
-         ret = fread(&ibuf,sizeof(int),1,f1);
-         *rdata++ = (float) ibuf * scalefactor;
+         fclose(f_re);
+         if (cmplx)
+            fclose(f_im);
+         ABORT;
+      }
+      rdata = data;
+      if (intType) // integer
+      {
+         if (cmplx)
+         {
+            for (i=0; i<fnVal; i++)
+            {
+               ret = fread(&ibuf,sizeof(int),1,f_re);
+               *rdata++ = (float) ibuf * scalefactor;
+               ret = fread(&ibuf,sizeof(int),1,f_im);
+               *rdata++ = (float) ibuf * scalefactor;
+            }
+         }
+         else
+         {
+            for (i=0; i<fnVal; i++)
+            {
+               ret = fread(&ibuf,sizeof(int),1,f_re);
+               *rdata++ = (float) ibuf * scalefactor;
+            }
+         }
+      }
+      else  // float
+      {
+         if (cmplx)
+         {
+            for (i=0; i<fnVal; i++)
+            {
+               ret = fread(&fbuf,sizeof(float),1,f_re);
+               *rdata++ = fbuf * scalefactor;
+               ret = fread(&fbuf,sizeof(float),1,f_im);
+               *rdata++ = fbuf * scalefactor;
+            }
+         }
+         else
+         {
+            for (i=0; i<fnVal; i++)
+            {
+               ret = fread(&fbuf,sizeof(float),1,f_re);
+               *rdata++ = fbuf * scalefactor;
+            }
+         }
       }
    }
-   else  // float
-   {
-      for (i=0; i<fnVal; i++)
-      {
-         ret = fread(&fbuf,sizeof(float),1,f1);
-         *rdata++ = fbuf * scalefactor;
-      }
-   }
-   }
-   fclose(f1);
+   fclose(f_re);
+   if (cmplx)
+      fclose(f_im);
    if ( (r=D_markupdated(D_DATAFILE,0)) )
    { D_error(r); ABORT;
    }
@@ -597,11 +661,11 @@ static int calculate(double scalefactor, int fitspecflag, int fnval)
 /* fixed for proper calculation of gaussian linewidth                   */
 /* according to suggestions by Frank Heatley, University of Manchester  */
 /* r.kyburz, 1/21/92 */
-{ register int i,pl,pr,delta,lw40;
-  register double lorenzian,vs0,vs1,lw_gfc,lwsq_2gfc;
+{ int i,pl,pr,delta,lw40;
+  double lorenzian,vs0,vs1,lw_gfc,lwsq_2gfc;
   double sw,rfl,rfp,vs;
   float pointsperhz;
-  register float *rdata;
+  float *rdata;
   char aig[10];
   int r;
 
@@ -752,7 +816,7 @@ int dsp(int argc, char *argv[], int retc, char *retv[])
     }
     argnum++;
   }
-  if (setdatafile(&fnval))
+  if (setdatafile(&fnval, 0))
     ABORT;
   if (calculate(scalefactor,fitspecflag,fnval))
     ABORT;
@@ -777,7 +841,7 @@ static int datawrite(char *filename)
 /************************/
 {
   FILE *datafile;
-  register int i,r;
+  int i,r;
   float *data;
   double vs;
   Wturnoff_buttons();
