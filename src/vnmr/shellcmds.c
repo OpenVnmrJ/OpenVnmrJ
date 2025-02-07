@@ -236,6 +236,35 @@ char  *get_cwd()
      return( getcwd(data,4096) );
 }
 
+// Used by atCmd to find any running foreground OVJ
+void checkVnmrch(char *name, int *port, int *pid)
+{
+   FILE *stream;
+   char cmd[32];
+   char data[1024];
+   data[0] = '\0';
+#ifdef MACOS
+   sprintf(cmd,"pgrep -u %s -f -l Vnmrch",name);
+#else
+   sprintf(cmd,"pgrep -u %s -f -a Vnmrch",name);
+#endif
+   if ((stream = popen_call(cmd, "r")) != NULL) {
+      // wait for shell to exit
+      char *p = fgets_nointr(data, 1024, stream);
+      while (p != NULL) {
+         int ret __attribute__((unused));
+         int len = strlen(data);
+         if ( (len > 0) && strstr(data,"foreground") )  {
+            ret = sscanf(data,"%d %*s %*s %*s %d %*[^\n]\n",
+                      pid, port);
+            break;
+         }
+         p = fgets_nointr(data, 1024, stream);
+      }
+      pclose_call(stream);
+   }
+}
+
 /*---------------------------------------------------------------------------
 |
 |    chDir
