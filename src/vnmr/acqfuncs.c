@@ -141,6 +141,7 @@ extern void      sleepMilliSeconds(int secs);
 extern double round_freq(double baseMHz, double offsetHz,
                   double init_offsetHz, double stepsizeHz);
 extern void setAppdirs();
+extern void checkVnmrch(char *name, int *port, int *pid);
 
 static int  no_experiment(char  *);
 static int  stop_acquisition(int, char *[], char [], char [], char []);
@@ -2510,17 +2511,21 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
             res = sscanf(cmd2do,"%d %d %[^\n]\n", &port, &pid, cmd2);
             if (res == 3)
             {
-		int err;
-		err = kill(pid, 0); /* Test for existence */
-		if (err == -1 && errno == ESRCH)
-                {
-                   repeatAt = 0;
-		}
-		else
-                {
-                   sprintf(cmd2do,"write('net','%s',%d,`%s`)\n", host, htons(port), cmd2);
+               int err;
+               err = kill(pid, 0); /* Test for existence */
+               if (err == -1 && errno == ESRCH)
+               {
+                  port = pid = 0;
+                  checkVnmrch(user, &port, &pid);
+                  if (port)
+                     sprintf(cmd,"%d %d %s",port,pid,cmd2);
+               }
+               if (port)
+               {
+                   sprintf(cmd2do,"write('net','%s',%d,`%s`)\n",
+                            host, htons(port), cmd2);
                    doCmd = 1;
-                }
+               }
                
             }
             else
