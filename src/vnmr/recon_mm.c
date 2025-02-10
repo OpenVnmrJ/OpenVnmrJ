@@ -32,6 +32,7 @@
 #include "symtab.h"
 #include "vnmrsys.h"
 #include "variables.h"
+#include "init2d.h"
 #include "fft.h"
 #include "ftpar.h"
 #include "process.h"
@@ -41,6 +42,7 @@
 #include "allocate.h"
 #include "pvars.h"
 #include "wjunk.h"
+#include "buttons.h"
 
 
 #ifdef VNMRJ
@@ -51,6 +53,17 @@ extern int interuption;
 extern void Vperror(char *);
 extern int specIndex;
 extern double getfpmult(int fdimname, int ddr);
+extern void halfFourier(float *data, int nsamp, int nfinal, int method);
+extern void recon_abort();
+extern int pc_pick(char *pc_str);
+extern int setdisplay();
+extern int  sunGraphClear();
+extern int arrayparse(char *arraystring, int *nparams,
+                arrayElement **arrayelsPP, int phasesize, int p2size);
+extern int arrayfdf(int block, int np, arrayElement *arrayels, char *fdfstring);extern void rotate_fid(float *fptr,double p0, double p1,int np, int dt);
+extern int pc_calc(float *d, float *r, int es, int etl, int m, int tr);
+extern int write_3Dfdf(float *, fdfInfo *, char *, int);
+
 
 static float *slicedata, *pc, *magnitude, *mag2;
 static float *rawmag, *rawphs;
@@ -86,6 +99,9 @@ static void generate_images(int slices, int views, int nro, int nmice,
            int slabs, float *window, fdfInfo *pInfo, int image_order,
            int multi_shot, int *dispcntptr, int dispint, int zeropad,
 			    int zeropad2, char *arstr,double *frq1, double *frq2);
+static int svmcalc(int trace, int block, svInfo *svI, int *view,
+	    int *slice, int *echo, int *nav, int *mouse);
+
 int phaseslice_ft(float *, int, int, int, float *, float *, int, int, int, int, float *, double *, double *);
 #ifdef MULTISLAB
 static  int psscompare(const void *p1, const void *p2);
@@ -1150,7 +1166,7 @@ retv  :  (   )  Return arguments.  Not used here
 	rInfo.narray=0;
 	if(strlen(arraystr))
 	  (void)arrayparse(arraystr, &(rInfo.narray), &(rInfo.arrayelsP),
-			   (views/viewsperblock));
+			   (views/viewsperblock), slices);
 	
 	/* compute product of arrayed element sizes */
 	arraydim=1;
@@ -2968,14 +2984,8 @@ static  int pcompare(const void *p1, const void *p2)
 
 /* returns slice and view number given trace and block number */
 /* modified for 3D multi mouse */
-int svmcalc(trace,block,svI,view,slice, echo, nav, mouse)
-     int trace, block;
-     svInfo *svI; 
-     int *view;
-     int *slice;
-     int *echo;
-     int *nav;
-     int *mouse;
+static int svmcalc(int trace, int block, svInfo *svI, int *view,
+	    int *slice, int *echo, int *nav, int *mouse)
 {
   int v,s;
   int d;
