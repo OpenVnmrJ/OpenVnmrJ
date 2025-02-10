@@ -4498,8 +4498,8 @@ static int generate_images3D(char *arstr) {
 /********************************************************************************/
 /* halfFourier                                                                  */
 /********************************************************************************/
-void halfFourier(data, nsamp, nfinal, method)
-    float *data;int nsamp, nfinal, method; {
+void halfFourier(float *data, int nsamp, int nfinal, int method)
+{
     int i;
     int offset;
     int nsmall;

@@ -57,6 +57,10 @@ extern int      bgflag;
 #define DPRINT4(level, str, arg1, arg2, arg3, arg4)
 #endif 
 
+#if defined __GNUC__ && __GNUC__ >= 14
+#pragma GCC diagnostic warning "-Wimplicit-function-declaration"
+#endif
+
 extern char    *ObjError(), *ObjCmd();
 extern void abort_message(const char *format, ...) __attribute__((format(printf,1,2),noreturn));
 extern void text_error(const char *format, ...) __attribute__((format(printf,1,2)));

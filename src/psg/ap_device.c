@@ -47,6 +47,10 @@ extern int      bgflag;
 #define DPRINT4(level, str, arg1, arg2, arg3, arg4)
 #endif 
 
+#if defined __GNUC__ && __GNUC__ >= 14
+#pragma GCC diagnostic warning "-Wimplicit-function-declaration"
+#endif
+
 extern char    *ObjError(), *ObjCmd();
 
 #define DPRTLEVEL 2

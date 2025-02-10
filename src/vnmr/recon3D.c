@@ -60,6 +60,17 @@ extern void Vperror(char *);
 extern int specIndex;
 extern double getfpmult(int fdimname, int ddr);
 extern int unlinkFilesWithSuffix(char *dirpath, char *suffix);
+extern int pc_pick(char *pc_str);
+extern int setdisplay();
+extern int  sunGraphClear();
+extern int arrayparse(char *arraystring, int *nparams,
+                arrayElement **arrayelsPP, int phasesize, int p2size);
+extern int arrayfdf(int block, int np, arrayElement *arrayels, char *fdfstring);
+extern void rotate_fid(float *fptr,double p0, double p1,int np, int dt);
+extern int pc_calc(float *d, float *r, int es, int etl, int m, int tr);
+extern int getphase(int ie, int el, int nv, double *ph, float *data, int tr);
+extern int phaseunwrap(double *i, int n, double *o);
+extern int smartphsfit(float *input, double *inphs, int npts, double *outphs);
 
 static float *slicedata, *pc, *magnitude, *mag2;
 static float *slicedata_neg, *pc_neg;
@@ -979,8 +990,8 @@ int recon3D(int argc, char *argv[], int retc, char *retv[]) {
                 /* get array info */
                 rInfo.narray=0;
                 if (strlen(arraystr)) {
-                    (void)arrayparse(arraystr, &(rInfo.narray),
-                            &(rInfo.arrayelsP), (views/viewsperblock));
+                    arrayparse(arraystr, &(rInfo.narray),
+                            &(rInfo.arrayelsP), (views/viewsperblock), slices);
                     /* find pss and determine number of blocks within each slice */
                     ip=0;
                     while ((!strstr((char *) rInfo.arrayelsP[ip].names, "pss"))
@@ -1148,8 +1159,8 @@ int recon3D(int argc, char *argv[], int retc, char *retv[]) {
         /* get array info */
         rInfo.narray=0;
         if (strlen(arraystr))
-            (void)arrayparse(arraystr, &(rInfo.narray), &(rInfo.arrayelsP),
-                    (views/viewsperblock));
+            arrayparse(arraystr, &(rInfo.narray), &(rInfo.arrayelsP),
+                    (views/viewsperblock),slices);
 
         zeropad2=0;
         fn1=0;
@@ -2981,8 +2992,8 @@ static int generate_imagesBig3D(char *arstr) {
    	float *imagedata, *magdata;
    	float *frq_pe2=NULL;
    	float frq;
-   	float *inplane;
-   	float *rotplane;
+   	float *inplane = NULL;
+   	float *rotplane = NULL;
       
    
     blkreps=FALSE;
