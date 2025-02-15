@@ -144,16 +144,21 @@ static peak_table_struct *peak_table=NULL;	/* peak table for all ll2d
 extern int expdir_to_expnum(char *expdir);
 extern void set_line_thickness(const char *thick);
 
-double dist_from_diag(double f1, double f2);
+double dist_from_diag(double f1, double f2, int horiz_f1);
 static int peak_bounds(peak_table_struct *peak_table, float stdev,
            double f1, double f2, double amp,
            double *f1_1, double *f1_2, double *f2_1, double *f2_2,
            double *fwhh1, double *fwhh2, double *vol,
            double thresh, int **array_status);
 static int argtest(int argc, char *argv[], char *argname);
-static int       ll2d_unmark(), ll2d_label();
-static int       ll2d_info(), ll2d_comment();
-static double    calc_volume();
+static int ll2d_unmark(int mark_mode, int clear_flag,
+                       int pos_neg_flag, int unmark_peak, int retc);
+static int ll2d_label(int mark_mode, char *name, int num);
+static int ll2d_comment(int mark_mode, char *name, int num);
+static int ll2d_info(int mark_mode, int num, int retc, char *retv[]);
+static double calc_volume(peak_table_struct *peak_table,
+                          double f1_min, double f1_max,
+                          double f2_min, double f2_max);
 int              ll2d_frq_to_dp(double frq, double sw, int fn);
 double           ll2d_dp_to_frq(double, double, int);
 static int       abs_vol_flag;
@@ -164,25 +169,25 @@ static int check_if_max(float array[INTERP_PTS][INTERP_PTS], float stdev,
 static int check_if_peak(float array[INTERP_PTS][INTERP_PTS], float peak_thresh,
                          float stdev, int *N_ppts, int **point_status,
                          int ctrace, int cpoint);
-static int check_axis_labels(/*peak_table*/);
+static int check_axis_labels(peak_table_struct *peak_table);
 static void init_peak_table(peak_table_struct **);
 static peak_table_struct *create_peak_table();
-static int insert_peak_in_table(/*peak_table,peak*/);
-static int insert_peak(/*peak_table,peak*/);
+static int insert_peak(peak_table_struct *peak_table, peak_struct *peak);
 static void delete_peak(peak_table_struct *peak_table, double f1, double f2);
-static void insert_peak_bounds(/*peak_table,f1,f2,x1,x2,y1,y2,fwhh1,fwhh2,vol*/);
+static void insert_peak_bounds(peak_table_struct *peak_table,
+       double f1, double f2, double x1, double x2, double y1, double y2,
+       double fwhh1, double fwhh2, double vol);
 static int peak_in_table(peak_table_struct *, double, double);
 static char *get_filename();
 static void pad_label(char *);
-static int create_peak_file(/*peak_table,filename*/);
-static int calc_header_size(/*peak_table*/);
-static void write_peak_file_header(/*peak_table*/);
-static void insert_peak_in_file(/*peak_table, peak*/);
-static int read_peak_file_header(/*peak_table*/);
-static peak_struct *read_peak_file_record(/*peak_table,record*/);
-static void update_peak_file_version(/*peak_table*/);
-static int read_ascii_peak_file(/*peak_table,filename*/);
-static void write_peak_file_entry(/*fp,peak*/);
+static int create_peak_file(peak_table_struct *peak_table, char *filename);
+static int calc_header_size(peak_table_struct *peak_table);
+static void write_peak_file_header(peak_table_struct *peak_table);
+static void insert_peak_in_file(peak_table_struct *peak_table,
+            peak_struct *peak);
+static int read_peak_file_header(peak_table_struct *peak_table);
+static void update_peak_file_version(peak_table_struct **peak_table);
+static int read_ascii_peak_file(peak_table_struct **peak_table, char *filename);
 static int write_ascii_peak_file(peak_table_struct *peak_table,
                                  char *filename, int peakMode);
 static int calculate_noise(float *, float *, float, int, int, int, int);
@@ -196,8 +201,8 @@ static void get_formats(char *, char *, char *, char *, char *, char *, int);
 static void ll2d_init();
 void ll2d_draw_peaks();
 
-static void adjust_peak_bounds();
-static void draw_peaks();
+static void adjust_peak_bounds(peak_table_struct *peak_table);
+static void draw_peaks(peak_table_struct *peak_table);
 static int ll2d_combine(int mark_mode, int weight, double *list, int numlist,
                         int retc, char *retv[]);
 static void ll2d_autocombine(int weight, double f1box, double f2box);
@@ -206,9 +211,10 @@ static void rekey_peaks(peak_table_struct *peak_table);
 static void delete_peak_from_table(peak_table_struct *peak_table, double f1, double f2);
 
 peak_struct *create_peak(double f1, double f2, double amp);
-void delete_peak_table(/*peak_table*/);
-int read_peak_file(/*peak_table,filename*/);
-void write_peak_file_record(/*peak_table,peak,record*/);
+void delete_peak_table(peak_table_struct **peak_table);
+int read_peak_file(peak_table_struct **peak_table, char *filename);
+void write_peak_file_record(peak_table_struct *peak_table,
+                            peak_struct *peak, int record);
 
 #ifdef DEBUG
 void dispPeak(peak_struct *peak)
@@ -264,6 +270,7 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	mark_flag, unmark_flag, adjust_flag, pos_neg_flag, clear_flag,
 	draw_flag, writetext_flag, comment_flag, readtext_flag,
 	combine_flag, label_peak, unmark_peak;
+   int peakno, peakmax, peakcnt;
    int writepeak_flag;
    int autocombine_flag, weight_flag;
    char ch, *filename = NULL, *label = NULL, mode_string[NUM_LL2DMODE+1];
@@ -276,7 +283,7 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
    extern int dconi_cursor();  /* from dconi.c */
    extern int dconi_mode;  /* from dconi.c */
 
-   extern int set_turnoff_routine(), turnoff_dconi();
+   extern int set_turnoff_routine(int (*funct)()), turnoff_dconi();
 
 
     Wturnoff_buttons();
@@ -293,11 +300,8 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
        ABORT;
      }
 
-    disp_status("LL2D  ");
-
     if (!peak_table_valid(peak_table))
       delete_peak_table(&peak_table);
-
 
     /* if command is pll2d */
     if (argv[0][0] == 'p')  {
@@ -323,7 +327,6 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	  !WgraphicsdisplayValid( "ds2d"  ))  {
 	delete_peak_table(&peak_table);
 	}
-      disp_status("    ");
       RETURN;
      }
 
@@ -350,6 +353,7 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
     weight_flag = NO;
     label_peak = 0;
     unmark_peak = 0;
+    peakmax = peakno = peakcnt = 0;
     comblist = NULL;
     /* see if argv overrides defaults */
     if (argc == 1)  {
@@ -447,6 +451,11 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	else if ( (strcmp(argv[1],"autocombine")==0) || (strcmp(argv[1],"autocombinewt")==0) )  {
 	  Werrprintf("ll2d: %s option requires F1 and F2 box bounds\n",argv[1]);
 	  ABORT;
+          }
+	else if (strcmp(argv[1],"peakno")==0) {
+             peakno=1;
+             peak_flag = 1;
+             peakmax=0;
           }
 	else  {
 	  Werrprintf("ll2d: illegal option \"%s\"\n",argv[1]);
@@ -579,6 +588,17 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	  ABORT;
 	  }
 	}
+      else if (strcmp(argv[1],"peakno")==0) {
+          peakno = 1;
+          peak_flag = 1;
+	  if (isReal(argv[2]))  {
+	     peakmax = (int) (stringReal(argv[2]) + 0.5);
+	  }
+	else   {
+	  Werrprintf("ll2d:  argument after 'peakno' must be maximum peaks");
+	  ABORT;
+	  }
+        }
       else  {
 	Werrprintf("ll2d: illegal option combination \"%s\" and \"%s\"\n",argv[1],argv[2]);
 	ABORT;
@@ -663,7 +683,6 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
       if (create_peak_file(peak_table,fname0))  {
         release(fname0);
         delete_peak_table(&peak_table);
-	disp_status("    ");
 	return(ERROR);
 	}
       release(fname0);
@@ -675,18 +694,15 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
       if ((res = read_peak_file(&temp_peak_table,filename))==FILE_NOT_FOUND)  {
         Werrprintf("Peak file not found");
         delete_peak_table(&temp_peak_table);
-        disp_status("    ");
 	return(COMPLETE);
 	}
       else if (res == ERROR)  {
         delete_peak_table(&temp_peak_table);
-        disp_status("    ");
 	return(COMPLETE);
 	}
       else if (temp_peak_table->num_peaks == 0)  {
         Werrprintf("Peak file is empty.");
         delete_peak_table(&temp_peak_table);
-        disp_status("    ");
 	return(COMPLETE);
 	}
       else if (temp_peak_table->num_peaks > 0)  {
@@ -695,7 +711,6 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	}
       else  {
         delete_peak_table(&temp_peak_table);
-        disp_status("    ");
 	return(COMPLETE);
 	}
       }
@@ -706,18 +721,15 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 		FILE_NOT_FOUND)  {
         Werrprintf("Peak file not found");
         delete_peak_table(&temp_peak_table);
-        disp_status("    ");
 	return(COMPLETE);
 	}
       else if (res == ERROR)  {
         delete_peak_table(&temp_peak_table);
-        disp_status("    ");
 	return(COMPLETE);
 	}
       else if (temp_peak_table->num_peaks == 0)  {
         Werrprintf("Peak file is empty.");
         delete_peak_table(&temp_peak_table);
-        disp_status("    ");
 	return(COMPLETE);
 	}
       else if (temp_peak_table->num_peaks > 0)  {
@@ -726,35 +738,36 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	}
       else  {
         delete_peak_table(&temp_peak_table);
-        disp_status("    ");
 	return(COMPLETE);
 	}
       }
 
     /* make sure everything is properly initialized */
-    if (!WgraphicsdisplayValid( "dconi" ) &&
+    if (! peakno)
+    {
+       if (!WgraphicsdisplayValid( "dconi" ) &&
 	!WgraphicsdisplayValid( "dcon"  ) &&
 	!WgraphicsdisplayValid( "dpcon" ) &&
 	!WgraphicsdisplayValid( "ds2d"  ))  {	 /* delete peak table if
 						   not in dconi mode */
-      if (!read_flag)
+       if (!read_flag)
 	ll2d_init();
       }
-    else  {
-      init_peak_table(&peak_table);
-      check_axis_labels(peak_table);
+      else  {
+       init_peak_table(&peak_table);
+       check_axis_labels(peak_table);
       }
-    if (!peak_table->file)  {
-      fname0 = get_filename();
-      if (create_peak_file(peak_table,fname0))  {
+      if (!peak_table->file)  {
+        fname0 = get_filename();
+        if (create_peak_file(peak_table,fname0))  {
+          release(fname0);
+          delete_peak_table(&peak_table);
+	  return(ERROR);
+	 }
         release(fname0);
-        delete_peak_table(&peak_table);
-	disp_status("    ");
-	return(ERROR);
-	}
-      release(fname0);
       }
 
+    }
     if (mark_flag == YES)  {
       ll2d_mark(dconi_mode, retc);
       }
@@ -794,7 +807,6 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
       if (peak_table)
 	if (peak_table->num_peaks > 0)
 	  if (ll2d_combine(dconi_mode,weight_flag,comblist,argc-2,retc,retv))  {
-	    disp_status("    ");
 	    dconi_mode = -1;
 	    dconi_cursor();
 	    if (comblist)
@@ -807,7 +819,6 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
     if (autocombine_flag == YES)  {
       if (peak_table && (peak_table->num_peaks > 0))
 	  ll2d_autocombine(weight_flag, stringReal(argv[2]), stringReal(argv[3]) );
-//      disp_status("    ");
 //      dconi_mode = -1;
 //      dconi_cursor();
 //      RETURN;
@@ -819,12 +830,10 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	  !WgraphicsdisplayValid( "dpcon" ) &&
 	  !WgraphicsdisplayValid( "ds2d"  ))
         delete_peak_table(&peak_table);
-      disp_status("    ");
       RETURN;
       }
     if (writetext_flag == YES)  {
       if (write_ascii_peak_file(peak_table,filename, writepeak_flag))  {
-        disp_status("    ");
 	return(ERROR);
 	}
       }
@@ -853,16 +862,32 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 
    /* find peaks */
    if (peak_flag == YES)  {
+     char horiz_ch;
+     char horiz_label = '\0';
+
      if ((npnt1 < 3) || (npnt < 3)) 
        { Werrprintf("ll2d: Display must have at least 3 points in each dimension");
          ABORT;
        }
+     get_display_label(HORIZ,&horiz_ch);
+     if (peakno)
+     {
+      char ch2;
+      get_display_label(VERT,&ch2);
+      if (horiz_ch < ch2)
+	horiz_label = horiz_ch;
+      else
+	horiz_label = ch2;
+     }
+     else
+     {
+        horiz_label = peak_table->f1_label;
+     }
      if (WgraphicsdisplayValid( "dconi" )) {
        get_cursor_pars(HORIZ,&cr,&delta);
        get_cursor_pars(VERT,&cr1,&delta1);
        get_rflrfp(HORIZ,&h_rflrfp);
        get_rflrfp(VERT,&v_rflrfp);
-       get_display_label(HORIZ,&ch);
 
        if (dconi_mode == BOX_MODE) {
 	 new_fpnt = ll2d_frq_to_dp(cr+h_rflrfp,sw,fn);
@@ -935,8 +960,7 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 
 
 	       /* calculate frequencies correctly depending on display direction*/
-	       get_display_label(HORIZ,&ch);
-	       if (ch == peak_table->f1_label)  {  /* f1 is HORIZ */
+	       if (horiz_ch == horiz_label)  {  /* f1 is HORIZ */
 	         f1_pk = ll2d_dp_to_frq((double)(new_fpnt+i)+fraction1,sw,fn);
 	         f2_pk = ll2d_dp_to_frq((double)(ctrace+new_fpnt1)+fraction2,sw1,fn1);
 	         }
@@ -950,9 +974,22 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 	       if ((peak_flag == YES) && ((pos_neg_flag == POS_NEG) ||
 		  ((pos_neg_flag == POS_ONLY) && (amp1_pk > 0.0)) ||
 		  ((pos_neg_flag == NEG_ONLY) && (amp1_pk < 0.0))))  {
-	         if (!peak_in_table(peak_table,f1_pk,f2_pk) &&
+                 if ( (peakno) &&
 			((diag_dist <= 0.0) ||
-			 (diag_dist < dist_from_diag(f1_pk,f2_pk))))  {
+			 (diag_dist < dist_from_diag(f1_pk,f2_pk,
+                                         (horiz_ch == horiz_label)))))
+                 {
+                    peakcnt++;
+                    if (peakmax)
+                    {
+                      if (peakcnt > peakmax)
+                         break;
+                    }
+                 }
+	         else if (!peak_in_table(peak_table,f1_pk,f2_pk) &&
+			((diag_dist <= 0.0) ||
+			 (diag_dist < dist_from_diag(f1_pk,f2_pk,
+                                         (horiz_ch == horiz_label)))))  {
 	           peak = create_peak(f1_pk,f2_pk,(double)(amp1_pk));
 	           if (insert_peak(peak_table,peak))  {
 		     /* if peak insert fails (table is full), clean up and abort*/
@@ -964,13 +1001,11 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
 		       delete_peak_table(&peak_table);
 		       D_allrelease();
 		       releaseAllWithId("ll2d");
-		       disp_status("    ");
 		       return(ERROR);
 		      }
 		     release(fname0);
 		     D_allrelease();
 		     releaseAllWithId("ll2d");
-		     disp_status("    ");
 		     ABORT;
 		     }
  	           }
@@ -979,6 +1014,8 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
              }
            }
 	 }
+         if (peakmax && (peakcnt > peakmax) )
+            break;
        }
       release(point_status);
      }
@@ -1026,6 +1063,27 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
      release(array_status);
 
      }
+   if (peakno)
+   {
+      if (retc)
+      {
+        if (peakmax)
+	   retv[0] = intString((peakcnt > peakmax) ? 0 : 1);
+        else
+	   retv[0] = intString(peakcnt);
+      }
+      else
+      {
+        if (peakmax)
+           Winfoprintf("ll2d: number of peaks <= %d is %s", peakmax,
+              (peakcnt <= peakmax) ? "true" : "false");
+        else
+           Winfoprintf("ll2d: number of peaks = %d", peakcnt);
+      }
+      D_allrelease();
+      releaseAllWithId("ll2d");
+      RETURN;
+   }
    /* adjust peak bounds */
    if (adjust_flag == YES)
      adjust_peak_bounds(peak_table);
@@ -1087,7 +1145,6 @@ int ll2d(int argc, char *argv[], int retc, char *retv[])
    if (peak_table)
      if (peak_table->file)
        fflush(peak_table->file);
-   disp_status("    ");
    RETURN;
 }
 
@@ -1714,13 +1771,11 @@ static int peak_table_valid(peak_table_struct *peak_table)
 
    
 /* return Euclidean distance from diagonal for spectra with any sw and sw1 */
-double dist_from_diag(double f1, double f2)
+double dist_from_diag(double f1, double f2, int horiz_f1)
 {
     double tmp_sw1, tmp_sw2, f1_diag, f2_diag;
-    char ch;
  
-    get_display_label(HORIZ,&ch);
-    if (ch == peak_table->f1_label)  {  /* f1 is HORIZ */
+    if (horiz_f1)  {  /* f1 is HORIZ */
       tmp_sw1 = sw;
       tmp_sw2 = sw1;
       }
@@ -2096,7 +2151,7 @@ static void adjust_peak_bounds(peak_table_struct *peak_table)
     peak_struct *pk_ptr;
     char ch;
     double ave, temp, f1_rflrfp, f2_rflrfp;
-    double f1_min, f1_max, f2_min, f2_max;
+//    double f1_min, f1_max, f2_min, f2_max;
 
     init_peak_table(&peak_table);
     get_rflrfp(HORIZ,&f2_rflrfp);
@@ -2108,6 +2163,7 @@ static void adjust_peak_bounds(peak_table_struct *peak_table)
       f2_rflrfp = temp;
       }
     
+#ifdef XXX
     if (ch == peak_table->f1_label)
       {  /* f1 horizontal */
       f1_max = ll2d_dp_to_frq((double)fpnt,sw,fn);
@@ -2122,6 +2178,7 @@ static void adjust_peak_bounds(peak_table_struct *peak_table)
       f1_max = ll2d_dp_to_frq((double)fpnt1,sw1,fn1);
       f1_min = ll2d_dp_to_frq((double)(fpnt1+npnt1),sw1,fn1);
       }
+#endif
     peaks = NULL;
     pres = peaks;
 /* adjust all peaks within current display region */
@@ -2409,7 +2466,8 @@ static void adjust_peak_bounds(peak_table_struct *peak_table)
 *	area within frequency bounds (sums all data points within area).
 ******************************************************************************/
 static double calc_volume(peak_table_struct *peak_table,
-                          double f1_min, double f1_max, double f2_min, double f2_max)
+                          double f1_min, double f1_max,
+                          double f2_min, double f2_max)
 {
     int h_min_pt, h_max_pt, v_min_pt, v_max_pt, i, j;
     char ch;
@@ -2524,11 +2582,9 @@ static void peak_to_pixel(peak_struct *peak_ptr, char ch,
 *  BOX_TO_PIXEL() -  get drawing coordinates for the sides of the peak
 *	bounds box.
 ******************************************************************************/
-static void box_to_pixel(peak_ptr,ch,h_rflrfp,v_rflrfp,x1,y1,x2,y2)
-peak_struct *peak_ptr;
-char ch;
-double h_rflrfp, v_rflrfp;
-int *x1, *y1, *x2, *y2;
+static void box_to_pixel(peak_struct *peak_ptr, char ch,
+            double h_rflrfp, double v_rflrfp,
+            int *x1, int *y1, int *x2, int *y2)
 {
     double f1, f2, f1_min, f1_max, f2_min, f2_max;
 
@@ -2818,7 +2874,6 @@ void ll2d_draw_peaks()
 {
     char mode_string[NUM_LL2DMODE+1];
  
-      disp_status("LL2D  ");
       if (!peak_table_valid(peak_table))
         delete_peak_table(&peak_table);
       if (!peak_table)
@@ -2835,7 +2890,6 @@ void ll2d_draw_peaks()
             }
 	  }
         }
-      disp_status("      ");
 }
  
 
@@ -2874,7 +2928,6 @@ static void ll2d_init()
 {
     char *fname0, fname[MAXPATHL];
 
-    disp_status("LL2D  ");
     delete_peak_table(&peak_table);
     init_peak_table(&peak_table);
     strcpy(fname,curexpdir);
@@ -3898,8 +3951,6 @@ static int ll2d_label(int mark_mode, char *name, int num)
 	double		 cr, cr1, delta, delta1;
 	double		 dist, min_dist;
 	char		 ch;
-	void		 write_one_label();
-
 	char 		 label[LINE_LEN+1];
 
 extern  int		dconi_reset();
@@ -4157,8 +4208,7 @@ static int frq_eq(double a, double b)
 *   CHECK_AXIS_LABELS - check to be sure axis labels in peak table are
 *	consistent with those in current display.
 *****************************************************************************/
-static int check_axis_labels(peak_table)
-peak_table_struct *peak_table;
+static int check_axis_labels(peak_table_struct *peak_table)
 {
     char ch1, ch2;
 
@@ -4380,9 +4430,7 @@ static void delete_peak_from_table(peak_table_struct *peak_table, double f1, dou
 *  INSERT_PEAK - insert peak into the in-memory peak table
 *       and the peak file.
 *****************************************************************************/
-static int insert_peak(peak_table, peak)
-peak_table_struct *peak_table;
-peak_struct *peak;
+static int insert_peak(peak_table_struct *peak_table, peak_struct *peak)
 {
     int res;
 
@@ -4410,9 +4458,9 @@ static void delete_peak(peak_table_struct *peak_table, double f1, double f2)
 *  INSERT_PEAK_BOUNDS - insert peak bounds into the in-memory peak table and
 *	peak file.  The peak must already be in the table.
 *****************************************************************************/
-static void insert_peak_bounds(peak_table,f1,f2,x1,x2,y1,y2,fwhh1,fwhh2,vol)
-peak_table_struct *peak_table;
-double f1,f2,x1,x2,y1,y2,fwhh1,fwhh2,vol;
+static void insert_peak_bounds(peak_table_struct *peak_table,
+       double f1, double f2, double x1, double x2, double y1, double y2,
+       double fwhh1, double fwhh2, double vol)
 {
   peak_struct *pk_ptr;
   int done;
@@ -4446,17 +4494,17 @@ double f1,f2,x1,x2,y1,y2,fwhh1,fwhh2,vol;
 static int peak_in_table(peak_table_struct *peak_table, double f1, double f2)
 {
   peak_struct *pk_ptr;
-  int found;
     
   pk_ptr = peak_table->head;
-  found = FALSE;
-  while (pk_ptr && !found)  {
+  while (pk_ptr)  {
     if (frq_eq(pk_ptr->f1, f1))
       if (frq_eq(pk_ptr->f2, f2))
-	found = TRUE;
+      {
+	return(1);
+     }
     pk_ptr = pk_ptr->next;
     }
-  return(found);
+  return(0);
 }
 
 #define MAX_FILENAME_SIZE	40
@@ -4524,9 +4572,7 @@ static void pad_label(char *label)
 *  CREATE_PEAK_FILE - initializes peak file header, and writes the header to
 *	the file "filename".
 *****************************************************************************/
-static int create_peak_file(peak_table,filename)
-peak_table_struct *peak_table;
-char *filename;
+static int create_peak_file(peak_table_struct *peak_table, char *filename)
 {
     int i, ival;
     char dirname[MAXPATHL];
@@ -4561,8 +4607,7 @@ char *filename;
 /*****************************************************************************
 *  CALC_HEADER_SIZE - return size of peak file header
 *****************************************************************************/
-static int calc_header_size(peak_table)
-peak_table_struct *peak_table;
+static int calc_header_size(peak_table_struct *peak_table)
 {
     int size;
 
@@ -4576,8 +4621,7 @@ peak_table_struct *peak_table;
 *  WRITE_PEAK_FILE_HEADER - writes peak header structure to beginning of file
 *	peak_table->file which must be open prior to calling this routine.
 *****************************************************************************/
-static void write_peak_file_header(peak_table)
-peak_table_struct *peak_table;
+static void write_peak_file_header(peak_table_struct *peak_table)
 {
     char ch[2], ch1;
     double f1_freq, f2_freq, f1_rflrfp, f2_rflrfp, info[4], tmp;
@@ -4625,10 +4669,8 @@ peak_table_struct *peak_table;
 *	a position "record" records after the peak file header or at the end
 *	of the file if the requested record is not already in the file.
 *****************************************************************************/
-void write_peak_file_record(peak_table,peak,record)
-peak_table_struct *peak_table;
-peak_struct *peak;
-int record;
+void write_peak_file_record(peak_table_struct *peak_table,
+                            peak_struct *peak, int record)
 {
     if (fseek(peak_table->file,calc_header_size(peak_table)+ 
 			(record-1)*sizeof(peak_struct),SEEK_SET))  {
@@ -4645,9 +4687,8 @@ int record;
 *  INSERT_PEAK_IN_FILE - writes peak "peak" into presently open peak file.
 *	updates peak file header, too.
 *****************************************************************************/
-static void insert_peak_in_file(peak_table, peak)
-peak_table_struct *peak_table;
-peak_struct *peak;
+static void insert_peak_in_file(peak_table_struct *peak_table,
+            peak_struct *peak)
 {
     write_peak_file_header(peak_table);
     write_peak_file_record(peak_table,peak,peak->key);
@@ -4657,8 +4698,7 @@ peak_struct *peak;
 *  READ_PEAK_FILE_HEADER - read peak header from file.  Assume file is already
 *	open.
 *****************************************************************************/
-static int read_peak_file_header(peak_table)
-peak_table_struct *peak_table;
+static int read_peak_file_header(peak_table_struct *peak_table)
 {
     char ch[2];
     double info[4];
@@ -4691,9 +4731,8 @@ peak_table_struct *peak_table;
 *  READ_PEAK_FILE_RECORD - read a particular peak record from file.
 *	Assume file is already open.
 *****************************************************************************/
-static peak_struct *read_peak_file_record(peak_table,record)
-peak_table_struct *peak_table;
-int record;
+static peak_struct *read_peak_file_record(peak_table_struct *peak_table,
+                    int record)
 {
     peak_struct *peak;
 
@@ -4721,9 +4760,7 @@ int record;
 *  READ_PEAK_FILE - read peak table from file.  If filename is NULL, open
 *	default filename "peakfile.ll2d", otherwise open filename.
 *****************************************************************************/
-int read_peak_file(peak_table,filename)
-peak_table_struct **peak_table;
-char *filename;
+int read_peak_file(peak_table_struct **peak_table, char *filename)
 {
     int j, npeaks, header_count;
     char filenm0[MAXPATHL], *peak_fn;
@@ -4851,8 +4888,7 @@ char *filename;
     return(COMPLETE);
 }
 
-static void update_peak_file_version(peak_table)
-peak_table_struct **peak_table;
+static void update_peak_file_version(peak_table_struct **peak_table)
 {
     char filenm0[MAXPATHL],cmdstr[MAXPATHL],*peak_fn;
     peak_table_struct *tmp_peak_table=NULL;
@@ -4910,11 +4946,9 @@ peak_table_struct **peak_table;
 *  READ_ASCII_PEAK_FILE - read peak table from file.  If filename is NULL,
 *	prompt for filename.
 *****************************************************************************/
-static int read_ascii_peak_file(peak_table,filename)
-peak_table_struct **peak_table;
-char *filename;
+static int read_ascii_peak_file(peak_table_struct **peak_table, char *filename)
 {
-    int i, j, key, length;
+    int i, key, length;
     char filenm0[MAXPATHL],label[LABEL_LEN+1], line[133], *ch_ptr, *peak_fn;
     char filenm[MAXPATHL], comment[COMMENT_LEN+1];
     char str[MAXPATHL];
@@ -4923,6 +4957,7 @@ char *filename;
     float ver;
     peak_struct *peak;
     FILE *fp;
+    char *ret __attribute__((unused));
 
     delete_peak_table(peak_table);
     init_peak_table(peak_table);
@@ -4957,7 +4992,6 @@ char *filename;
         return(FILE_NOT_FOUND);
       }
 
-    j = 0;
     if (fscanf(fp,"%f%lf%lf%lf%lf",&ver,&f1_axis_scl,&f2_axis_scl,&f1_rflrfp,
 			&f2_rflrfp) != 5)  {
       Werrprintf("Error reading peak file header: %s",filenm);
@@ -4969,10 +5003,10 @@ char *filename;
       /* No differences between versions 1.0 and 1.1 */
       (*peak_table)->version = CURRENT_VERSION;
       }
-    fgets(line,133,fp);
-    fgets(line,133,fp);
-    fgets(line,133,fp);
-    fgets(line,133,fp);
+    ret = fgets(line,133,fp);
+    ret = fgets(line,133,fp);
+    ret = fgets(line,133,fp);
+    ret = fgets(line,133,fp);
     if  ((ch_ptr = strchr(line,'F')) == NULL)  {
       Werrprintf("Error reading peak file header: %s",filenm);
       fclose(fp);
@@ -4985,8 +5019,8 @@ char *filename;
       return(ERROR);
       }
     (*peak_table)->f2_label = *(ch_ptr+1);
-    fgets(line,133,fp);
-    fgets(line,133,fp);
+    ret = fgets(line,133,fp);
+    ret = fgets(line,133,fp);
 
     peak_fn = get_filename();
     strcpy(filenm,peak_fn);
@@ -4998,13 +5032,13 @@ char *filename;
       return(ERROR);
       }
 
-    while (fgets(line,133,fp)) {
+    while ( (ret = fgets(line,133,fp)) ) {
       i = 0;
       while ((i < LABEL_LEN) && (line[i] != '\n'))     i++;
       line[i] = '\0';
       strncpy(label,line,LABEL_LEN);
       label[LABEL_LEN] = '\0';
-      fgets(line,133,fp);
+      ret = fgets(line,133,fp);
       i = 0;
       while ((i < COMMENT_LEN) && (line[i] != '\n'))     i++;
       line[i] = '\0';
@@ -5028,7 +5062,7 @@ char *filename;
         fclose(fp);
         return(ERROR);
         }
-      fgets(line,133,fp);
+      ret = fgets(line,133,fp);
       f1 = f1*f1_axis_scl + f1_rflrfp;
       f2 = f2*f2_axis_scl + f2_rflrfp;
 	/* check if peak bounds have been defined, then correct for reference
@@ -5084,13 +5118,10 @@ char *filename;
 *  WRITE_PEAK_FILE_ENTRY - write peak into ascii file.  Assume file is already
 *	open.
 *****************************************************************************/
-static void write_peak_file_entry(fp,peak,f1_rflrfp,f2_rflrfp,
-		f1_axis_scl,f2_axis_scl,format1,format2,format3)
-FILE *fp;
-peak_struct *peak;
-double f1_rflrfp, f2_rflrfp;
-double f1_axis_scl, f2_axis_scl;
-char *format1, *format2, *format3;
+static void write_peak_file_entry(FILE *fp, peak_struct *peak,
+                double f1_rflrfp, double f2_rflrfp,
+		double f1_axis_scl, double f2_axis_scl,
+                char *format1,char *format2,char *format3)
 {
     double f1, f1_min, f1_max, f2, f2_min, f2_max;
 
@@ -5356,9 +5387,8 @@ struct tb4
   };
 
 /******************/
-static int get_symbol(n)
+static int get_symbol(int n)
 /******************/
-int n;
 { int num;
   num = 'Z'-'A'+1;
   if (n<0)
@@ -5374,11 +5404,9 @@ int n;
 }
 
 /******************************/
-static void sorttable3(table3,tb3max)
+static void sorttable3(struct tb3 table3[], int *tb3max)
 /******************************/
-struct tb3 table3[];
-int *tb3max;
-{ register int i,j,s;
+{ int i,j,s;
 /* this would eliminate any peaks, which are not referenced from both axes
   i = 0;
   while (i<*tb3max)
@@ -5414,10 +5442,8 @@ int *tb3max;
 }
 
 /******************************/
-static void symmetrize(table2,tb2max)
+static void symmetrize(struct tb2 table2[], int tb2max)
 /******************************/
-struct tb2 table2[];
-int tb2max;
 { int i,j,x1,x2,x3,x4,y1,y2,y3,y4,mdif;
   /* first remove diagonal peaks */
   mdif = (int) (90.0 * npnt / wp);	/* remove, what is within 90 Hz */
@@ -5493,7 +5519,6 @@ static int ll2d_cosy(struct tb2 table2[], int tb2max)
   int tb2index,tb3index,tb3max,found,size2,pos2,size3,pos3,numcross,i,tb4index;
   int xdiff,ydiff,xdiff0,ydiff0,x,y,curx,cury,newx,tableflag,ytable,tb4max;
   char str[32];
-  extern double expf_dir();
   float exp_horiz,exp_vert;
   double r_newx;
 
@@ -5649,7 +5674,7 @@ static int ll2d_cosy(struct tb2 table2[], int tb2max)
       if ((tb3max*2+18)*xcharpixels<dfpnt)
         {
             char units[15];
-            char label[15];
+            char label[20];
 
             get_label(HORIZ,UNIT1,units);
             sprintf(label,"(%s)",units);
@@ -5771,11 +5796,9 @@ struct new_tb3
 
 
 /******************************/
-static int cluster(table2,tb2max,corr_size,diag_size,comb_size)
+static int cluster(struct new_tb2 table2[], int tb2max,
+           float corr_size, float diag_size, float comb_size)
 /******************************/
-struct new_tb2 table2[];
-int tb2max;
-float corr_size,diag_size, comb_size;
 { int i,j,numcross,cor;
   double amp,x1,x2,y1,y2,mdif;
 
@@ -5891,15 +5914,14 @@ float corr_size,diag_size, comb_size;
 }
 
 /******************************/
-static int cal_symm(x1,x2,y1,y2,nc,cx,cy, symm_size, diag_size)
+static int cal_symm(double x1, double x2, double y1, double y2,
+           int *nc, int cx[], int cy[],
+           float symm_size, float diag_size)
 /******************************/
-int  *nc, cx[PEAK_AREA_MAX], cy[PEAK_AREA_MAX];
-double x1,x2,y1,y2;
-float symm_size, diag_size;
 { int i,j, begin_pt, end_pt, begin_pt1, end_pt1, XPTS, YPTS;
 /*  double symm1[512][512], array1[512][512];  */
    double DELTA, SIGMA, MAXSYMM, symm;
-   register float *fsfl1, *fsfl2;
+   float *fsfl1, *fsfl2;
    int m, m1, k, l, maxx, maxy, dd;
  
    if (diag_size < 0.0) diag_size = 90.0;
@@ -6031,13 +6053,12 @@ float symm_size, diag_size;
 
 
 /******************************/
-static int correlate_table(table3,tb3max, table4,tb4max, table5,tb5max, size)
+static int correlate_table(struct new_tb3 table3[], int tb3max,
+           int table4[], int *tb4max, struct new_tb3 table5[], int *tb5max,
+           int size)
 /******************************/
-struct new_tb3 table3[];
-struct new_tb3 table5[];
-int tb3max, *tb4max, *tb5max, size, table4[];
 { 
-  register int i,j;
+  int i,j;
   double s,d;
   int tb4index, tb5index, found;
 
@@ -6160,10 +6181,10 @@ int tb3max, *tb4max, *tb5max, size, table4[];
    {
     for (j=0; j< *tb4max; j++)
       {
-      if ( table5[i].x == table4[j])
-        table5[i].x = j;
+        if ( table5[i].x == table4[j])
+          table5[i].x = j;
         if ( table5[i].y == table4[j])
-        table5[i].y = j;
+          table5[i].y = j;
       }  
    }
    
@@ -6174,12 +6195,10 @@ int tb3max, *tb4max, *tb5max, size, table4[];
 
 
 /*****************************/
-static int ll2d_cosy_new(table2,tb2max,h_rflrfp,v_rflrfp,symm_size,corr_size,diag_size,comb_size)
+static int ll2d_cosy_new(struct new_tb2 table2[], int tb2max,
+           double h_rflrfp, double v_rflrfp,
+           float symm_size, float corr_size, float diag_size, float comb_size)
 /*****************************/
-struct new_tb2 table2[];
-int tb2max;
-float symm_size, corr_size, diag_size, comb_size;
-double h_rflrfp, v_rflrfp;
 { struct new_tb3 table3[TABLE3SIZE];
   int table4[TABLE4SIZE];
   struct new_tb3 table5[TABLE3SIZE];
@@ -6189,7 +6208,6 @@ double h_rflrfp, v_rflrfp;
   int x,y,curx,cury,newx,tableflag,ytable,tb4max;
 
   char str[32];
-  extern double expf_dir();
   float exp_horiz,exp_vert;
   double x1, x2, y1, y2, r_newx;
   int nc, tb5max, tb5index, size, i, cx[PEAK_AREA_MAX], cy[PEAK_AREA_MAX];
@@ -6334,7 +6352,7 @@ double h_rflrfp, v_rflrfp;
       if ((tb4max*2+18)*xcharpixels<dfpnt)
         {
             char units[15];
-            char label[15];
+            char label[20];
 
             get_label(HORIZ,UNIT1,units);
             sprintf(label,"(%s)",units);
@@ -6630,13 +6648,11 @@ if (strcmp(callName, "acosy") == 0)
 }
 
 /*************************/
-int peak2d(argc,argv,retc,retv)
+int peak2d(int argc, char *argv[], int retc, char *retv[])
 /*************************/
-int argc; char *argv[];
-int retc; char *retv[];
-{  register int i,ctrace,maxtrace,maxpoint;
-   register double max;
-   register float *phasfl;
+{  int i,ctrace,maxtrace,maxpoint;
+   double max;
+   float *phasfl;
    double noise;
    double sum, sumsq, ave;
    int switchf1f2 = 0;
@@ -6798,7 +6814,7 @@ int retc; char *retv[];
 /* calculates the threshold for 2-D displaying such that the number of points above the threshold is between 70% to 90% of all the points and the difference of mean(peak) and mean(noise) is maximized.
 */
 
-     register double level, stdev, av;
+     double level, stdev, av;
      int loops, nn;
 
      double L[5], S[5], MB[5], MP[5], PB[5], Pmin, Pmax;
