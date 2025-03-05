@@ -1027,6 +1027,8 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
    char traceVal[16];
    int f2 = 1;
    int doMove = 0;
+   int asciiFlag = 0;
+   int ret __attribute__((unused));
 
    if(init2d(1,1)) return(ERROR);
    if (argc >=2)
@@ -1048,6 +1050,8 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
          f2 = 0;
       else if ( ! strcmp(argv[i],"f2") )
          f2 = 1;
+      else if ( ! strcmp(argv[i],"ascii") )
+         asciiFlag = 1;
    }
    if (d2flag)
    {
@@ -1096,21 +1100,45 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
          ptr = spectrum;
          if (intType)
          {
-            for (i=0; i<fn/2; i++)
-            {
-               ibuf = (int) (*ptr * scale);
-               ptr++;
-               write(fd, &ibuf , sizeof(int) );
-            }
+            if (asciiFlag)
+	    {
+               for (i=0; i<fn/2; i++)
+               {
+                  ibuf = (int) (*ptr * scale);
+                  ptr++;
+                  dprintf(fd, "%d\n", ibuf );
+               }
+	    }
+	    else
+	    {
+               for (i=0; i<fn/2; i++)
+               {
+                  ibuf = (int) (*ptr * scale);
+                  ptr++;
+                  ret = write(fd, &ibuf , sizeof(int) );
+               }
+	    }
          }
          else
          {
-            for (i=0; i<fn/2; i++)
-            {
-               fbuf = *ptr * scale;
-               ptr++;
-               write(fd, &fbuf , sizeof(float) );
-            }
+            if (asciiFlag)
+	    {
+               for (i=0; i<fn/2; i++)
+               {
+                  fbuf = *ptr * scale;
+                  ptr++;
+                  dprintf(fd, "%g\n", (double) fbuf );
+               }
+	    }
+	    else
+	    {
+               for (i=0; i<fn/2; i++)
+               {
+                  fbuf = *ptr * scale;
+                  ptr++;
+                  ret = write(fd, &fbuf , sizeof(float) );
+               }
+	    }
          }
          rel_spec();
       }
@@ -1140,21 +1168,45 @@ int writespectrum(int argc, char *argv[], int retc, char *retv[])
       ptr = spectrum;
       if (intType)
       {
-         for (i=0; i<fn/2; i++)
-         {
-            ibuf = (int) (*ptr * scale);
-            ptr++;
-            write(fd, &ibuf , sizeof(int) );
-         }
+         if (asciiFlag)
+	 {
+            for (i=0; i<fn/2; i++)
+            {
+               ibuf = (int) (*ptr * scale);
+               ptr++;
+               dprintf(fd, "%d\n", ibuf );
+            }
+	 }
+	 else
+	 {
+            for (i=0; i<fn/2; i++)
+            {
+               ibuf = (int) (*ptr * scale);
+               ptr++;
+               ret = write(fd, &ibuf , sizeof(int) );
+            }
+	 }
       }
       else
       {
-         for (i=0; i<fn/2; i++)
-         {
-            fbuf = *ptr * scale;
-            ptr++;
-            write(fd, &fbuf , sizeof(float) );
-         }
+         if (asciiFlag)
+	 {
+            for (i=0; i<fn/2; i++)
+            {
+               fbuf = *ptr * scale;
+               ptr++;
+               dprintf(fd, "%g\n",  (double) fbuf );
+            }
+	 }
+	 else
+	 {
+            for (i=0; i<fn/2; i++)
+            {
+               fbuf = *ptr * scale;
+               ptr++;
+               ret = write(fd, &fbuf , sizeof(float) );
+            }
+	 }
       }
       close(fd);
       if (doMove)
