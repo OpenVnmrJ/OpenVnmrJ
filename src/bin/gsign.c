@@ -35,9 +35,7 @@
 /* I/O string */
 char		str[80];
 
-main(argc,argv)
-int 	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
     FILE	*paramsfile,*imagefile;
     char	fieldname[80];

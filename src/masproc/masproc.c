@@ -37,6 +37,7 @@ extern int initCmdParser(void);                      /* parser.c        */
 extern int parser(char *str);                        /* parser.c        */
 extern int setupexcepthandler(void);                 /* excepthandler.c */
 extern void deliverMessageQ(char *interface, char *msg);
+extern void initMas();
 
 #define DEBUG_LEVEL 0
 #define LOGMSG

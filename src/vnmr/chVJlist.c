@@ -21,7 +21,7 @@ string flag ;   /* -l generate a list, -v validate the list, -x validate and rep
 
 void validFileList(string root, string name, string* files, int nfiles, int* nextra);
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 
     FILE* fp;

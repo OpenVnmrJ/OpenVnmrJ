@@ -51,9 +51,7 @@ AUTHOR: S. Sukumar
 char		str[80];
 static float puc;
 
-main(argc,argv)
-int 	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
     FILE	*mapparamsfile,*mapfieldfile,*mapmagfile;
     FILE	*reffieldfile,*refparamsfile,*refmagfile;

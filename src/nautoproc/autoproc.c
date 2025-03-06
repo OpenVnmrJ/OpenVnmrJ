@@ -27,6 +27,10 @@
 #include "expQfuncs.h"
 #include "procQfuncs.h"
 
+#if defined __GNUC__ && __GNUC__ >= 14
+#pragma GCC diagnostic warning "-Wimplicit-function-declaration"
+#endif
+
 #define MAXPATHL 256
 
 char ProcName[256];

@@ -38,9 +38,7 @@ float		shimvalue[TOTALSHIMS];		/* shim values from shim file */
 /* I/O string */
 char		str[80];
 
-main(argc,argv)
-int 	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
     /* number of shims in reference set */
     int		numrefshims;		/* no of shims used for mapping in shimmap.f */

@@ -9,14 +9,17 @@
 #include <sys/file.h>
 #include <sys/errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <string.h>
 
 
 #define maxsize 65536
 
+extern void putdata(int *si, float *wbuff, char infile_name1[]);
+extern void getdata(int *si, int *nproj, float *wbuff, char infile_name1[]);
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   float    wrkbuff0[maxsize],wrkbuff1[maxsize];
   char 	fil_in[100];  

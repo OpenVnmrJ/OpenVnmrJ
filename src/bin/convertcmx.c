@@ -70,6 +70,7 @@ static char Version_ID[] = "convert v2.75 STM 7/13/98";
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 
 #include "vdata.h"
 
@@ -1243,6 +1244,7 @@ void zero(old_data, elements, size, offset)
 unsigned char * old_data;
 int elements;
 int size;
+int offset;
 {
 	unsigned char * oldp;
 	int i, e, elements_2;

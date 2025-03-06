@@ -43,9 +43,7 @@
 /* I/O string */
 char		s[80];
 
-main(argc,argv)
-int 	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
     FILE	*rawfile,			/* raw data */
 		*rawfile2,			/* second echo data */

@@ -17,6 +17,9 @@
 #include <math.h>
 #include <string.h>
 
+extern void putdata(int *si, float *wbuff, char infile_name1[]);
+extern void getdata(int *si, int *nproj, float *wbuff, char infile_name1[]);
+
 #define maxsize 65536
 #define maxshim 8
 
@@ -40,7 +43,7 @@ void getcal(char *calfile, float *scal);
 void cal_shim(char *pos[3], poly_coeff a1,poly_coeff a2,shims *sval,float *scal);
 
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 { 
 
 extern int ns;

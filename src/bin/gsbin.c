@@ -29,6 +29,7 @@ Version: 20060811
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -45,9 +46,7 @@ struct datablockhead  *block_header1, *block_header2;
 
 typedef struct datablockhead DATABLOCKHEAD;
 
-main(argc, argv)
-int	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
 	char	dir1[128],outdir[128];
 	char	fid1[128],outfid[128];

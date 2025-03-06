@@ -69,6 +69,10 @@ SOFTWARE.
 #include "tzone.h"
 #include "bootpd.h"
 
+#if defined __GNUC__ && __GNUC__ >= 14
+#pragma GCC diagnostic warning "-Wincompatible-pointer-types"
+#endif
+
 #define HASHTABLESIZE		257	/* Hash table size (prime) */
 
 /* Non-standard hardware address type (see bootp.h) */

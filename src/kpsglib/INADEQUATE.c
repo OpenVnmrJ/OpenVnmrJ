@@ -37,7 +37,7 @@
 #include <chempack.h>
 #define BASE 45.0
 
-pulsesequence()
+void pulsesequence()
 {
    double          corr,
                    jcc    = getval("jcc"),

@@ -52,9 +52,7 @@ AUTHOR: S. Sukumar
 char		s[80];
 static float puc;
 
-main(argc,argv)
-int 	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
     FILE	*magfile, *paramsfile,*ufieldfile,*ufieldfile2;
     FILE	*fieldfile2,*fieldfile;

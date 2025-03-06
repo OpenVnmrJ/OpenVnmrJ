@@ -1864,7 +1864,7 @@ data_struct *data;
    fprintf(f2, "#PARAMETERS:\n");
    fprintf(f2, "seqfil    = %s\n",data->seqfil);
    fprintf(f2, "pslabel   = %s\n",data->seqfil);
-   time_struct = localtime(&(data->date));
+   time_struct = localtime((long*)&(data->date));
    strftime(datebuf,MAX_LINE,"%m%d%y",time_struct);
    strftime(timebuf,MAX_LINE,"%R:%S",time_struct);
    fprintf(f2, "date      = %s\n",datebuf);

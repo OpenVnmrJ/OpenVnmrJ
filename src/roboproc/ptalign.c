@@ -195,7 +195,7 @@ main (int argc, char *argv[])
 /**********/
 
     fflush(stdout);
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     buflen = strlen(buffer);
     if (bptr == NULL)
       break;

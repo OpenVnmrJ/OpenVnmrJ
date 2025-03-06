@@ -33,6 +33,11 @@ char *MASPORTNAME = "/dev/ttyS0";
 unsigned int MASTER_SpinPulseLow;
 unsigned int *pMASTER_SpinPulseLow = &MASTER_SpinPulseLow;
 
+extern void sendToMASSpeed(char *);
+extern int getMASSpeedResponseInt(int *result);
+extern void processMasMessage(char *msgBuf);
+extern int flushPort(int sPort);
+
 extern int masSpeedPort;
 extern float clkRate;
 
@@ -55,7 +60,7 @@ int calcSysClkTicks(int msec)
 void taskDelay(int msec)
 {
    struct timespec del;
-   int stat;
+   int stat __attribute__((unused));
 
    del.tv_sec = 0;
    del.tv_nsec = msec * 1000000;

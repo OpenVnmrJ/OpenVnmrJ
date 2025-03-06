@@ -63,8 +63,13 @@ void sendToMASSpeed(char *);
 void checkModuleChange();
 void getAllParams();
 void getAllParamsCmd();
+static void checkSpinLEDMas ();
+int getMASSpeedResponseString(char *result);
+int getMASSpeedResponseInt(int *result);
+int ckMASSpeedInternal();
 
 
+extern void msgQMasSend(int id, char *msg, int len, int a1, int a2);
 extern Console_Stat *pCurrentStatBlock;
 
 
@@ -429,7 +434,6 @@ void MASSpeed()
     char msgBuf[MAX_MSG_LEN];
     long cycle=0;
     int  delay;
-    int  len;
 
     DPRINT(1, "*** Starting MASSpeed in Sleep State\n");
     // Start up in sleep state.  It will be awaken when spintype is set
@@ -520,15 +524,14 @@ void MASSpeed()
 */
 void sendToMASSpeed(char *msg) {
     int i, msgSize;
-    int delay;
+    int ret __attribute__((unused));
     
     // Be sure nothing is waiting from or to the controller
     clearport(masSpeedPort);
 
     msgSize = strlen(msg);
     for(i=0; i < msgSize; i++) {
-        write(masSpeedPort, &msg[i], 1);
-        /* delay = (int)(clkRate * .12); */
+        ret = write(masSpeedPort, &msg[i], 1);
         taskDelay(calcSysClkTicks(117)); /* 117 ms, or 60 * .12 = 7.2, taskDelay(7); */
     }
 }
@@ -980,10 +983,6 @@ void masSpinner(int *paramvec, int *index, int count)
     int  token;
     char str[32];
     int  slen;
-    int  status;
-    int  result;
-
-   
 
     while (*index < count) {
         token = paramvec[*index]; (*index)++;
@@ -1097,9 +1096,9 @@ void masSpinner(int *paramvec, int *index, int count)
 int getMASResponseString(char *result, int len)
 {
     char in_str[1028];
-    int inlen,status = 0;
+    int status = 0;
     long cnt=0,prevchr;
-    long break_out=0, place;
+    long break_out=0;
 
     /* clear and terminate the input string in case we have an error
        and don't set the result string.
@@ -1269,7 +1268,8 @@ void setSpinLEDMas(int state) {
    If speed increasing then fast blinking, slowing slow blinking
    If speed is zero, LED off.
 */
-checkSpinLEDMas () {
+static void checkSpinLEDMas ()
+{
     int absSpeedDeviation;  // Deviation from setPoint
     int speedChangeSign;    // Speeding up = pos #, slowing down = neg #
 
