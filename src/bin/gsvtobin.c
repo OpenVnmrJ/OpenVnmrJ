@@ -25,6 +25,7 @@ Author: S. Sukumar
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -182,7 +183,7 @@ char	*argv[];
 		
 		}
 		/* write out the data only from input buffer */
-		if (write(outfile, fbuf, NP*EBYTES*NTRACES,sizeof(char)) <0)
+		if (write(outfile, fbuf, NP*EBYTES*NTRACES*sizeof(char)) <0)
 		{
 			printf("stripv: unable to write data \n");
 			exit(1);

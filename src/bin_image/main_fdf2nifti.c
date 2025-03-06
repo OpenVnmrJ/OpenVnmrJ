@@ -13,6 +13,10 @@
 
 #include "nifti1.h"
 
+#if defined __GNUC__ && __GNUC__ >= 14
+#pragma GCC diagnostic warning "-Wimplicit-function-declaration"
+#endif
+
 #define MAXSTR 1024
 #define MAXELEM 1024
 

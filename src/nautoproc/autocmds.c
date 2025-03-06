@@ -58,7 +58,7 @@ cmd table[] = {
 *
 *	Author Greg Brissey 10/5/94
 */
-sizeOfCmdTable()
+int sizeOfCmdTable()
 {
    return(sizeof(table));
 }

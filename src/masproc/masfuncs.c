@@ -27,6 +27,7 @@
 #include "acqcmds.h"
 #include "errorcodes.h"
 #include "iofuncs.h"
+#include "eventHandler.h"
 
 extern char HostName[];
 extern char systemdir[];
@@ -41,7 +42,10 @@ extern void shutdownComm(void);                      /* roboproc.c      */
 extern void masSpinner(int *paramvec, int *index, int count);
 extern int getMasSpeed();
 extern int masParsChanged(char *cmd);
+extern void setMasSpeedPort(int fd);
+extern void checkModuleChange();
 
+int terminate(char *str);
 /******************* TYPE DEFINITIONS AND CONSTANTS *************************/
 #define  _POSIX_SOURCE 1
 #define EOT  3

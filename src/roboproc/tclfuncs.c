@@ -2983,7 +2983,7 @@ runSample()
   error = gilSetContacts(pGilObjId, 2, 0 );
   fprintf(stderr,"Samples %d thru %d, vol: %0.1lf\n",SampStrt,SampEnd,Volume);
   fprintf(stderr,"OK to Proceed? (y or n): ");
-  bptr = gets(buffer);
+  bptr = fgets(buffer, sizeof(buffer), stdin);
   if (bptr == NULL)
       return;
   if (toupper(buffer[0]) != 'Y')

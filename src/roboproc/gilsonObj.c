@@ -3315,7 +3315,7 @@ main (int argc, char *argv[])
   {
     fprintf(stderr,"\nMesg Addr: 0x%lx, Respon Addr: 0x%lx\n",Mesg,Respon);
     fprintf(stderr,"Immediate Cmd or Buffered Cmd (i or b): \n");
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
       break;
     fprintf(stderr,"Type - '%s'\n", buffer);
@@ -3337,7 +3337,7 @@ main (int argc, char *argv[])
  
     memset(Respon,0,256);
     fprintf(stderr,"Cmd: ");
-    gets(buffer);
+    fgets(buffer, sizeof(buffer), stdin);
     fprintf(stderr,"\n");
     fprintf(stderr,"Cmd: '%s' \n",buffer);
     if (immediate)

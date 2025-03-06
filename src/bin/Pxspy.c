@@ -48,9 +48,7 @@
 #define SWAP(a,b) dm=(a); (a)=(b); (b)=dm
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 
-main(argc, argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
   FILE *inpf, *outf;
   char ch, ext[10], str[MAXSTR], name[MAXSTR], ifn[MAXSTR], ofn[MAXSTR];

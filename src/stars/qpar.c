@@ -27,9 +27,7 @@ march 1995 */
 
 
 
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
 int i,j,icase,sites;
 float f[5],freq[3];

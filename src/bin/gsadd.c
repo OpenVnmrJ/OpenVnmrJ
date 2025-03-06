@@ -32,9 +32,7 @@
 /* I/O string */
 char		s[80];
 
-main(argc,argv)
-int 	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
     FILE	*paramsfile,*phasefile1,*phasefile2,*fieldfile;
     char	fieldname[80];

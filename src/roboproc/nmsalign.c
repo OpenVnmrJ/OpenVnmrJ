@@ -113,7 +113,7 @@ main (int argc, char *argv[])
      }
    
      fflush(stdout);
-     bptr = gets(buffer);
+     bptr = fgets(buffer, sizeof(buffer), stdin);
      buflen = strlen(buffer);
      if (bptr == NULL)
         break;
@@ -156,7 +156,7 @@ main (int argc, char *argv[])
 		   robot('V', val);
                    break;
 
-	 case 'ETX':
+	 case ETX:
                    robot('',0);
                    break;
 

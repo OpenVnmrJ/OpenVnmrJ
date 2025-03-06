@@ -35,7 +35,7 @@ int debug = 0;
 int getAuditDir(string auditDir);
 int getCurAauditFile(string auditDir, string path);
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     FILE* fp;
     FILE* infp;

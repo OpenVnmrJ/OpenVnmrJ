@@ -229,7 +229,7 @@ main (int argc, char *argv[])
         /**********/
 
         fflush(stdout);
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         buflen = strlen(buffer);
         if (bptr == NULL)
             break;
@@ -344,7 +344,7 @@ setArmHeight()
         fflush(stdout);
     }
 
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -378,7 +378,7 @@ DefineRack()
         fflush(stdout);
     }
 
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -431,7 +431,7 @@ SaveParameter()
     }
     fflush(stdout);
 
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -468,7 +468,7 @@ setValve()
 
        fflush(stdout);
 
-       bptr = gets(buffer);
+       bptr = fgets(buffer, sizeof(buffer), stdin);
        if (bptr == NULL)
            return;
 
@@ -497,7 +497,7 @@ setOutputs()
 
         fflush(stdout);
 
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         if (bptr == NULL)
             return;
 
@@ -531,7 +531,7 @@ getInputs()
 
         fflush(stdout);
 
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         if (bptr == NULL)
             return;
 
@@ -566,7 +566,7 @@ setInjector()
 
         fflush(stdout);
 
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         if (bptr == NULL)
             return;
 
@@ -597,7 +597,7 @@ setCenters()
         fflush(stdout);
     }
 
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -681,7 +681,7 @@ PumpReplace()
     {
         fprintf(stdout,"Cmd:\n");
         fflush(stdout);
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         if (bptr == NULL)
             return;
         switch( toupper(buffer[0]) )
@@ -731,16 +731,16 @@ PumpReplace()
     if (verbose)
     {
         fprintf(stdout,"Replace Syringe NOW, press CR when done.: ");
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         fprintf(stdout,"OK to Home Syringe NOW, press CR: ");
     }
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     /* Up */
     result = gilHomeDiluter(pGilObjId);
 
 #ifdef XXX
     fprintf(stdout,"Volume in ul of new Pump: \n");
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
     volume  = atoi(bptr);
@@ -825,7 +825,7 @@ RinseAlignment()
     {
         fprintf(stdout,"Cmd:\n");
         fflush(stdout);
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         if (bptr == NULL)
             return;
         switch( toupper(buffer[0]) )
@@ -916,7 +916,7 @@ InjectAlignment()
     {
         fprintf(stdout,"Cmd:\n");
         fflush(stdout);
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         if (bptr == NULL)
             return;
         switch( toupper(buffer[0]) )
@@ -1007,7 +1007,7 @@ TrayAlignment()
     {
         fprintf(stdout,"Cmd:\n");
         fflush(stdout);
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         if (bptr == NULL)
             return;
         switch( toupper(buffer[0]) )
@@ -1060,7 +1060,7 @@ AjustXYZ()
         }
         fflush(stdout);
 
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
     
 /*CHIN*/
         if (verbose)
@@ -1177,7 +1177,7 @@ chkRack()
     fprintf(stdout,"Rack File Path (eg. ./code_205.grk): ");
     fflush(stdout);
 
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -1199,7 +1199,7 @@ chkRack()
                     "12-RB2F, 13-RB2FZ, 14-RF2B, 15-RF2BZ\n ");
     fprintf(stdout,"Select Range(e.g. 0 0, or 4 4, or 0 15): ");
     fflush(stdout);
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -1209,7 +1209,7 @@ chkRack()
     fprintf(stdout,"Start & End Zone#s & Sample#s (eg. 1 1 1 96): ");
     fflush(stdout);
 
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -1219,7 +1219,7 @@ chkRack()
     SampEnd = atoi(strtok(NULL," ,"));
 
     fprintf(stdout,"Lower Needle into Sample Well? (y or n): ");
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -1230,7 +1230,7 @@ chkRack()
         lower = 0;
 
     fprintf(stdout,"Delay (msec) between axis movement (1000 = 1 sec): ");
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
 
@@ -1243,7 +1243,7 @@ chkRack()
             ((lower==1) ? "Will Be" : "Will NOT Be"));
     fprintf(stderr,"Delay between Axises Movements %d \n",Delay);
     fprintf(stderr,"OK to Proceed? (y or n): ");
-    bptr = gets(buffer);
+    bptr = fgets(buffer, sizeof(buffer), stdin);
     if (bptr == NULL)
         return;
     if (toupper(buffer[0]) != 'Y')
@@ -1389,7 +1389,7 @@ GilsonTransparentMode()
     {
         fprintf(stdout,"\nCmd (QQ to quit): ");
         fflush(stdout);
-        bptr = gets(buffer);
+        bptr = fgets(buffer, sizeof(buffer), stdin);
         if (bptr == NULL)
             continue;
 
@@ -1423,7 +1423,7 @@ GilsonTransparentMode()
             {
                 type = "B";
                 stype = "Buffered";
-                cmd[1] = '\0000'; /* null out B */
+                cmd[1] = '\0'; /* null out B */
                 /* fprintf(stdout,"cmd: '%s', len: %d, type: '%s' \n",
                            cmd,len,stype); */
             }

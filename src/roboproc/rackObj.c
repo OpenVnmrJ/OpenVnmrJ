@@ -588,7 +588,7 @@ readGeometryBlock(FILE *tray_file, BLOCK_ID block, BLOCK_LIST *pTheBlockList)
 			geoline->top = values[axis]; 
 			break;
 		 default:
-			DPRINT2(0,"6th and more values ignored: values[i]=%d\n",axis+1,values[axis]);
+			DPRINT2(0,"6th and more values ignored: values[%d]=%d\n",axis+1,values[axis]);
               		break;
                 }
 	   }
@@ -620,7 +620,7 @@ rackGetXYLoc2(RACKOBJ_ID pRackId, int Zone, int sample,GEO_LINE_ID  resultLine)
 
    /* select zone, which will be one of the branches of this tree node */
    if (Zone > pRackId->numZoneInfo)
-      return NULL;
+      return;
 
     zoneInfo = &pRackId->zoneInfo[Zone-1];
     zoneLine = zoneInfo->zoneLine;
@@ -979,7 +979,7 @@ printBlock(BLOCK_ID pBlock,int indent)
   }
 }
 
-#else   Original routines
+#else   // Original routines
 
 /***********************************************************
 *
@@ -1825,9 +1825,9 @@ rackShow(RACKOBJ_ID pRackId, int level)
    int entries;
    LABEL_OBJ* pLabelId;
 
-   DPRINT2(0,"\n------------- rackShow Obj: 0x%lx, level: %d   \n\n",
+   DPRINT2(0,"\n------------- rackShow Obj: 0x%p, level: %d   \n\n",
 			pRackId,level);
-   diagPrint(NULL,"RackObj: 0x%lx\n",pRackId);
+   diagPrint(NULL,"RackObj: 0x%p\n",pRackId);
    diagPrint(NULL,"Rack Id: '%s'\n",pRackId->pRackIdStr);
    diagPrint(NULL,"SCCS ID: '%s'\n",pRackId->pSID);
    diagPrint(NULL,"Rack Center: X: %d, Y: %d \n",pRackId->rackCenter[0],

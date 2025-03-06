@@ -40,11 +40,12 @@ AUTHOR: S. Sukumar
 #include	"util.h"
 
 /*
-void obl_matrix(float ang1,float ang2,float ang3,
+void obl_matrix(double ang1,double ang2,double ang3,
                 double *tm11,double *tm12,double *tm13,
                 double *tm21,double *tm22,double *tm23,
                 double *tm31,double *tm32,double *tm33);                
 */
+void obl_matrix();
 		
 /* indexing calculations */
 #define 	refindex(xx,yy,zz) (xx*ymapsize*zmapsize+yy*zmapsize+zz)
@@ -57,9 +58,7 @@ void obl_matrix(float ang1,float ang2,float ang3,
 /* I/O string */
 char		str[80];
     
-main(argc,argv)
-int 	argc;
-char	*argv[];
+int main(int argc, char *argv[])
 {
     FILE	*fieldfile,*rfieldfile,*rmaskfile;
     FILE	*roiparamsfile,*map_paramsfile;
@@ -221,7 +220,7 @@ exit(1);
                 logical to magnet gradient transform matrix
         ********************************************************/
 
-obl_matrix(ang1,ang2,ang3,tm11,tm12,tm13,tm21,tm22,tm23,tm31,tm32,tm33)
+void obl_matrix(ang1,ang2,ang3,tm11,tm12,tm13,tm21,tm22,tm23,tm31,tm32,tm33)
 double ang1,ang2,ang3;
 double *tm11,*tm12,*tm13,*tm21,*tm22,*tm23,*tm31,*tm32,*tm33;
 {
