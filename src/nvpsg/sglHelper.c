@@ -14,6 +14,8 @@
 #include "sglCommon.h"
 #include "sglHelper.h"
 
+extern void getParSum(const char *par, double *val);
+extern void getParSum2(const char *par1, const char *par2, double *val);
 extern int checkflag;
 
 /*********************************************************************
@@ -1024,7 +1026,7 @@ double shapedbval_cross(double g1, double d1, double D1, int shape1, double g2, 
 void calc_mean_nt_tr()
 {
   int nnt,ntr;
-  double *ntvals,*trvals;
+  double sum;
   int i;
 
   if (ix > 1) return;
@@ -1037,35 +1039,23 @@ void calc_mean_nt_tr()
   else ntr=1;
 
   /* Calculate the mean */
-  if ((trvals=(double *)malloc(ntr*sizeof(double))) == NULL) abort_message("Insufficient memory");
-  if (ntr>1) S_getarray("tr",trvals,ntr*sizeof(double));
-  else trvals[0]=tr;
-  trmean = 0.0;
-  for (i=0;i<ntr;i++) trmean += trvals[i];
-  trmean /= ntr;
+  getParSum("tr", &sum);
+  trmean = sum / ntr;
 
   /* If nt is arrayed get the size of the nt array */
   if (array_check("nt",&arraypars)) nnt=get_nvals("nt",&arraypars);
   else nnt=1;
 
-  /* Get the array */
-  if ((ntvals=(double *)malloc(nnt*sizeof(double))) == NULL) abort_message("Insufficient memory");
-  if (nnt>1) S_getarray("nt",ntvals,nnt*sizeof(double));
-  else ntvals[0]=nt;
-
   /* Check if nt and tr are arrayed together */
-  ntmean = 0.0;
-  if ((nnt>1) && (ntr>1) && (get_cycle("nt",&arraypars)==get_cycle("tr",&arraypars))) {
-    for (i=0;i<nnt;i++) ntmean += (ntvals[i]*trvals[i]);
-    ntmean /= nnt;
+  if ((nnt>1) && (ntr>1) &&
+      (get_cycle("nt",&arraypars)==get_cycle("tr",&arraypars))) {
+    getParSum2("nt", "tr",  &sum);
+    ntmean = sum / nnt;
     ntmean /= trmean;
   } else {
-    for (i=0;i<nnt;i++) ntmean += ntvals[i];
-    ntmean /= nnt;
+    getParSum("nt", &sum);
+    ntmean = sum / nnt;
   }
-
-  free(trvals);
-  free(ntvals);
 }
 
 /***********************************************************************

@@ -6749,7 +6749,7 @@ int mergeGradient (char *waveform1, char *waveform2,
 
    while (!strstr(inString1, start))
    {
-      ret = fscanf(fpin1, "%s", inString1);
+      ret = fscanf(fpin2, "%s", inString1);
    }
    while (!feof(fpin2))
    {
@@ -6771,7 +6771,6 @@ int mergeGradient (char *waveform1, char *waveform2,
          points2 += atoi(inString2);
       }
    }
-   fclose(fpin1); /* close first input file */   
    fclose(fpin2); /* close second input file */
    fclose(fpout);  /* close output file */
 

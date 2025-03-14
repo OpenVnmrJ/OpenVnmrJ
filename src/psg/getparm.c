@@ -12,6 +12,7 @@
 #include <string.h>
 #include "abort.h"
 #include "group.h"
+#include "variables.h"
 #include "pvars.h"
 /*--------------------------------------------------------------
 |  getparm(variable_name,variable_type,tree,variable_address,varsize)
@@ -103,4 +104,56 @@ int getArrayparval(const char *parname, double *parval[])
   }
   return nn;
 }
+
+#ifdef NVPSG
+void getParSum(const char *parname, double *val)
+{
+    int      size,i;
+    vInfo    varinfo;
+    double value;
+
+    if ( P_getVarInfo(CURRENT, parname, &varinfo) )
+        abort_message("getarray: could not find the parameter \"%s\"\n",parname);
+    if ((int)varinfo.basicType != 1)
+        abort_message("getarray: \"%s\" is not an array of reals.\n",parname);
+
+    size = (int)varinfo.size;
+
+    *val = 0.0;
+    for (i=0; i<size; i++) {
+        if ( P_getreal(CURRENT,parname,&value,i+1) )
+	    abort_message("getarray: problem getting array element %d.\n",i+1);
+	*val += value;
+	
+    }
+}
+
+void getParSum2(const char *par1, const char *par2, double *val)
+{
+    int      size,i;
+    vInfo    varinfo;
+    double val1;
+    double val2;
+
+    if ( P_getVarInfo(CURRENT, par1, &varinfo) )
+        abort_message("getarray: could not find the parameter \"%s\"\n",par1);
+    if ((int)varinfo.basicType != 1)
+        abort_message("getarray: \"%s\" is not an array of reals.\n",par1);
+    size = (int)varinfo.size;
+    if ( P_getVarInfo(CURRENT, par2, &varinfo) )
+        abort_message("getarray: could not find the parameter \"%s\"\n",par2);
+    if ((int)varinfo.basicType != 1)
+        abort_message("getarray: \"%s\" is not an array of reals.\n",par2);
+    size = (int)varinfo.size;
+
+    *val = 0.0;
+    for (i=0; i<size; i++) {
+        if ( P_getreal(CURRENT,par1,&val1,i+1) )
+	    abort_message("getarray: problem getting array element %d.\n",i+1);
+        if ( P_getreal(CURRENT,par2,&val2,i+1) )
+	    abort_message("getarray: problem getting array element %d.\n",i+1);
+	*val += val1*val2;
+    }
+}
+#endif  // NVPSG
 
