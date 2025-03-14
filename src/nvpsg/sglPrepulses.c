@@ -874,7 +874,9 @@ fpwrscale=1.0;
                 for (i=0;i<npssvals;i++) {
                   if (FP_EQ(minpss,pssval[i])) sliceindex=i;
                 }
+#ifndef DPS
                 aslctrlpos=controlpos[sliceindex];
+#endif
               }
               else {
                 if (!checkflag) abort_message("ASL control positions (controlpos) have not been set correctly, run prep");
@@ -910,7 +912,9 @@ fpwrscale=1.0;
                 for (i=0;i<npssvals;i++) {
                   if (FP_EQ(minpss,pssval[i])) sliceindex=i;
                 }
+#ifndef DPS
                 aslctrlpos=controlpos[sliceindex];
+#endif
               }
               else {
                 if (!checkflag) abort_message("ASL control positions (controlpos) have not been set correctly, run prep");
