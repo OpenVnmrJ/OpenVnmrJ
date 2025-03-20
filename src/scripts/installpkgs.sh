@@ -407,8 +407,8 @@ if [ ! -x /usr/bin/dpkg ]; then
        if [[ ! -z $jdk ]]; then
           yum remove -y $jdk &>> $logfile
        fi
-       packageList="$packageList java-17-openjdk"
     fi
+    packageList="$packageList java-17-openjdk"
   elif [ $version -ge 8 ]; then
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
     commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
