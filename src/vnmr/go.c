@@ -2236,7 +2236,7 @@ static int do_space_check(int nelem)
        double  nacqpoints;		/* number of acquired data points: NP */
        double  nfval;           /* number of fids */
        char    dpval[MAXSTR];
-       char    tmpdir[MAXSTR];
+       char    tmpdir[MAXSTR+8];
        double  maxFidSizeMB = 16; /* default to standand DTM 16 MB Size */
        double  fidSizeBytes = 0.0;
        double  maxlbsw, sw;
@@ -5012,7 +5012,8 @@ static int checkChar( int ptr, int charType,
    {
       case 1:   {
                    int numChars;
-                   if (isalnum(ptr))
+                   // allow multibyte characters
+                   if (isalnum(ptr) || (ptr < 0) )
                       return(ptr);
                    numChars = strlen(defChars);
                    for (i=0; i < numChars; i++)

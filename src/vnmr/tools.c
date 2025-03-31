@@ -587,7 +587,9 @@ int verify_fnameChar(char tchar)
 {
    char lchar;
    int  jter;
-   if (tchar < 32 || tchar > 126)
+
+   // allow multibyte characters
+   if ((tchar < 32) && (tchar >  0))
       return( -1 );
    jter = 0;
    while ((lchar = illegal_fchars[ jter++ ]) != '\0')
@@ -607,7 +609,8 @@ int verify_fname(char *fnptr )
 
 	for (iter = 0; iter < len; iter++) {
 		tchar = *(fnptr+iter);
-		if (tchar < 32 )
+                // allow multibyte characters
+                if ((tchar < 32) && (tchar >  0))
 		  return( -1 );
 		jter = 0;
 		while ((lchar = illegal_fchars[ jter++ ]) != '\0')
@@ -630,7 +633,8 @@ int verify_fname2(char *fnptr )
 
 	for (iter = 0; iter < len; iter++) {
 		tchar = *(fnptr+iter);
-		if (tchar < 32 )
+                // allow multibyte characters
+                if ((tchar < 32) && (tchar >  0))
 		  return( -1 );
                 if ((tchar != ' ') &&
                     (tchar != '(') &&
