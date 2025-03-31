@@ -142,7 +142,13 @@ EOF
 }
 
 addToNetplan() {
-   file=$(ls /etc/netplan/*network-manager*yaml)
+   file="/etc/netplan/01-network-manager-all.yaml"
+   if [[ ! -f $file ]]; then
+      echo "# Let NetworkManager manage all devices on this system" > $file
+      echo "network:" >> $file
+      echo "  version: 2" >> $file
+      echo "  renderer: NetworkManager" >> $file
+   fi
    grep OpenVnmrJ $file > /dev/null
    if [[ $? -eq 0 ]]; then
       sed --in-place '/# OpenVnmrJ Start/,/# OpenVnmrJ End/d' $file
@@ -160,6 +166,7 @@ EOF
       echo "      macaddress: ${hwaddr}" >> ${file}
    fi
    echo "# OpenVnmrJ End" >> ${file}
+   chmod 600 $file
    netplan apply
 }
 
