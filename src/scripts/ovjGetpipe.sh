@@ -213,23 +213,15 @@ cleanup() {
    rm -f ./install.com
    rm -f ./binval.com
    rm -f ./*.tZ
-   if [ x`uname -s` = "xDarwin" ]; then
-      rm -rf nmrbin.linux* nmrbin.mac nmrbin.mac11
-   elif [ x`uname -s` = "xLinux" ]; then
-      rm -rf nmrbin.mac* nmrbin.linux9
-   fi
-# Temporary fix until NMRPipe install makes the link file
-   cd com
-   if [[ ! -f nmrInit.link.com ]]; then
-      list=$(ls nmrInit*.com)
-      for file in $list; do
-         if [[ $file != "nmrInit.com" ]] &&
-            [[ $file != "nmrInit.generic.com" ]]; then
-            ln -s $file "nmrInit.link.com"
-	    break
-         fi
-      done
-   fi
+   save=$(realpath com/nmrInit.link.com)
+   save=$(basename $save | sed s/.com// | sed s/Init/bin/)
+   files=$(ls -d nmrbin.*)
+   for file in $files
+   do
+      if [ $file != $save ]; then
+        rm -rf $file
+      fi
+   done
 }
 
 checkNetwork() {
