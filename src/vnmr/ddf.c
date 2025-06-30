@@ -1424,7 +1424,7 @@ int quadtt(int argc, char *argv[], int retc, char *retv[])
 {
    dfilehead dhd;
    dpointers block;
-   register int   *datapntr;
+   int   *datapntr;
    int             e,
                    f,
                    i,
@@ -1669,50 +1669,119 @@ int quadtt(int argc, char *argv[], int retc, char *retv[])
 }
 
 /* calc fid with summing into buffer */
-
 static void calc_FID(void *data, double freq, double amp, double decay, double phase, double dwell, int npnts)
 {
-   register int i;
-   register double arg;
-   register double time;
-   register float *ptr;
-   register double ph;
-   register double eval;
+   int i;
+   float *ptr;
+   double ph;
+   double x;
+   double cosph, sinph;
+   double cosx;
+   double cosix, sinix;
+   double cos1x, sin1x;
+   double cos2x, sin2x;
+   double e1,e2;
 
    ptr = (float *)data;
 
-   ph = (phase/360.0) * 2.0 * M_PI;
-   for (i=0; i < npnts/2; i++)
+   ph = phase * M_PI / 180.0;
+// Uses
+//      cos(a+b) = cos(a)cos(b) - sin(a)sin(b)
+//      sin(a+b) = sin(a)cos(b) + cos(a)sin(b)
+//      where a = i*dwell*freq*2.0*M_PI 
+//            b = ph
+//            
+// Also uses sin(ix) = 2cos(x)sin((i-1)x) - sin((i-2)x)
+//           cos(ix) = 2cos(x)cos((i-1)x) - cos((i-2)x)
+//      where x = dwell*freq*2.0*M_PI
+//
+// For exp, uses  exp(ir) = exp(r) ** i
+//
+   cosph = cos(ph);
+   sinph = sin(ph);
+// For i = 0 a = 0 and exp(0) = 1
+   *ptr++ += (float) (amp * cosph);   // calc_FID uses += here
+   *ptr++ += (float) (-amp * sinph);  // calc_FID uses += here
+// For i = 1
+   e2 = e1 = exp(-dwell/decay);
+   x = dwell * freq * 2.0 * M_PI;
+   cos1x = cos(x);
+   sin1x = sin(x);
+   *ptr++ += (float) (amp*e1 * (cos1x*cosph - sin1x*sinph));
+   *ptr++ += (float) (-amp*e1 * (sin1x*cosph + cos1x*sinph));
+   cosx  = 2.0 * cos1x;
+   cos2x = 1.0;
+   sin2x = 0.0;
+   e1 *= amp;
+   for (i=2; i < npnts/2; i++)
    {
-      time = i * dwell;
-      arg = time*freq*2.0*M_PI + ph;
-      eval = amp * exp(-time/decay);
-      *ptr++ += (float) (eval * cos(arg));
-      *ptr++ += (float) (-eval * sin(arg));
+      cosix = cosx*cos1x - cos2x;
+      sinix = cosx*sin1x - sin2x;
+      e1 *= e2;
+      *ptr++ += (float) (e1 * (cosix*cosph - sinix*sinph));
+      *ptr++ += (float) (-e1 * (sinix*cosph + cosix*sinph));
+      cos2x = cos1x;
+      cos1x = cosix;
+      sin2x = sin1x;
+      sin1x = sinix;
    }
 }
 
-/* calc fid with setting buffer */
-
 static void calc_FID2(void *data, double freq, double amp, double decay, double phase, double dwell, int npnts)
 {
-   register int i;
-   register double arg;
-   register double time;
-   register float *ptr;
-   register double ph;
-   register double eval;
+   int i;
+   float *ptr;
+   double ph;
+   double x;
+   double cosph, sinph;
+   double cosx;
+   double cosix, sinix;
+   double cos1x, sin1x;
+   double cos2x, sin2x;
+   double e1,e2;
 
    ptr = (float *)data;
 
-   ph = (phase/360.0) * 2.0 * M_PI;
-   for (i=0; i < npnts/2; i++)
+   ph = phase * M_PI / 180.0;
+// Uses
+//      cos(a+b) = cos(a)cos(b) - sin(a)sin(b)
+//      sin(a+b) = sin(a)cos(b) + cos(a)sin(b)
+//      where a = i*dwell*freq*2.0*M_PI 
+//            b = ph
+//            
+// Also uses sin(ix) = 2cos(x)sin((i-1)x) - sin((i-2)x)
+//           cos(ix) = 2cos(x)cos((i-1)x) - cos((i-2)x)
+//      where x = dwell*freq*2.0*M_PI
+//
+// For exp, uses  exp(ir) = exp(r) ** i
+//
+   cosph = cos(ph);
+   sinph = sin(ph);
+// For i = 0 a = 0 and exp(0) = 1
+   *ptr++ = (float) (amp * cosph);   // calc_FID uses += here
+   *ptr++ = (float) (-amp * sinph);  // calc_FID uses += here
+// For i = 1
+   e2 = e1 = exp(-dwell/decay);
+   x = dwell * freq * 2.0 * M_PI;
+   cos1x = cos(x);
+   sin1x = sin(x);
+   *ptr++ = (float) (amp*e1 * (cos1x*cosph - sin1x*sinph));
+   *ptr++ = (float) (-amp*e1 * (sin1x*cosph + cos1x*sinph));
+   cosx  = 2.0 * cos1x;
+   cos2x = 1.0;
+   sin2x = 0.0;
+   e1 *= amp;
+   for (i=2; i < npnts/2; i++)
    {
-      time = i * dwell;
-      arg = time*freq*2.0*M_PI + ph;
-      eval = amp * exp(-time/decay);
-      *ptr++ = (float) (eval * cos(arg));   // calc_FID uses += here
-      *ptr++ = (float) (-eval * sin(arg));  // calc_FID uses += here
+      cosix = cosx*cos1x - cos2x;
+      sinix = cosx*sin1x - sin2x;
+      e1 *= e2;
+      *ptr++ = (float) (e1 * (cosix*cosph - sinix*sinph));
+      *ptr++ = (float) (-e1 * (sinix*cosph + cosix*sinph));
+      cos2x = cos1x;
+      cos1x = cosix;
+      sin2x = sin1x;
+      sin1x = sinix;
    }
 }
 
@@ -1738,15 +1807,15 @@ static void cvrtReal(int npVal, int single_prec, void *mem_buffer)
 {
    if (single_prec)
    {
-      register short *optr = (short *) mem_buffer;
-      register float *iptr = (float *) mem_buffer;
+      short *optr = (short *) mem_buffer;
+      float *iptr = (float *) mem_buffer;
       while (npVal--)
          *optr++ = (short) *iptr++;
    }
    else
    {
-      register int *optr = (int *) mem_buffer;
-      register float *iptr = (float *) mem_buffer;
+      int *optr = (int *) mem_buffer;
+      float *iptr = (float *) mem_buffer;
       while (npVal--)
          *optr++ = (int) *iptr++;
    }
@@ -1759,6 +1828,7 @@ static void cvrtReal(int npVal, int single_prec, void *mem_buffer)
 #define  CALC_FILE      5
 #define  CALC_STR       6
 #define  CALC_INDEX     7
+#define  CALC_2D        8
 
 static void updateFidHead(dfilehead *fid_fhead, int blks, int pnts, int prec)
 {
@@ -1788,13 +1858,15 @@ static int mergeData(void *mem_buffer, dblockhead *this_bh, int element_number, 
    dpointers fid_block;
    int ival;
 
-// fprintf(stderr,"merge addFlag= %d element_number= %d\n",addFlag, element_number);
    if (addFlag)
+   {
       ival = D_getbuf( D_USERFILE, 1, element_number, &fid_block );
+   }
    else
       ival = D_allocbuf( D_USERFILE, element_number, &fid_block );
    if (ival) {
-// fprintf(stderr,"merge Error addFlag= %d ival= %d element_number= %d\n",addFlag, ival, element_number);
+      Werrprintf("merge Error addFlag= %d ival= %d element_number= %d",
+                  addFlag, ival, element_number);
       return(ival);
    }
 
@@ -1802,22 +1874,22 @@ static int mergeData(void *mem_buffer, dblockhead *this_bh, int element_number, 
    {
       if (new_fid_format == SINGLE_PREC)
       {
-         register short *optr = (short *) fid_block.data;
-         register short *iptr = (short *) mem_buffer;
+         short *optr = (short *) fid_block.data;
+         short *iptr = (short *) mem_buffer;
          while (npVal--)
             *optr++ += *iptr++;
       }
       else if (new_fid_format == DOUBLE_PREC)
       {
-         register int *optr = (int *) fid_block.data;
-         register int *iptr = (int *) mem_buffer;
+         int *optr = (int *) fid_block.data;
+         int *iptr = (int *) mem_buffer;
          while (npVal--)
             *optr++ += *iptr++;
       }
       else
       {
-         register float *optr = (float *) fid_block.data;
-         register float *iptr = (float *) mem_buffer;
+         float *optr = (float *) fid_block.data;
+         float *iptr = (float *) mem_buffer;
          while (npVal--)
             *optr++ += *iptr++;
       }
@@ -1935,6 +2007,145 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
 
         fclose( tfile );
         return( npnts );
+}
+
+static int calc_2d_fid(char *cmd_name, char *fn_addr,
+                       int npnts, double dwell, int fid_format,
+                       int ni, double sw1,
+                       dfilehead *fid_fhead )
+{
+   char     cur_line[ 122 ];
+   int      index, len, this_line;
+   double   f2offset, f2width, f2phase;
+   double   f1offset, f1width, f1phase;
+   double   amp;
+   FILE    *tfile;
+   int i, j, x;
+   int total = 0;
+   dblockhead this_bh1, this_bh2;
+   dpointers fid_block1, fid_block2;
+   int ival __attribute__((unused));
+   struct newLine {
+      double f2o, f2d, f2p, f1o, f1d, f1p, amp;
+      struct newLine *next;
+   } *nL;          
+   struct newLine *start = NULL;
+   struct newLine *p, **pp;
+
+   tfile = fopen( fn_addr, "r" );
+   if (tfile == NULL) {
+      Werrprintf( "%s:  problem opening %s", cmd_name, fn_addr );
+      return( -1 );
+   }
+   this_line = 0;
+   while (fgets( &cur_line[ 0 ], sizeof( cur_line ) - 1, tfile ) != NULL)
+   {
+      len = strlen( &cur_line[ 0 ] );
+      this_line++;
+/*
+ *  First check is not likely to succeed; its main purpose
+ *  is to eleminate lines not containing any input.
+ *
+ *  Second test serves to remove the new-line charater; if this
+ *  renders the line blank, skip to the next line.
+ *
+ *  Third test eliminates lines that have only space characters.
+ *
+ *  Fourth test eliminates those lines with the first non-space
+ *  character the pound sign (#)
+ */
+      if (len < 1)
+         continue;
+      if (cur_line[ len - 1 ] == '\n') {
+         if (len == 1)
+            continue;
+         cur_line[ len - 1 ] = '\0';
+         len--;
+      }
+      index = 0;
+      while (index < len) {
+         if (!isspace( cur_line[ index ] ))
+            break;
+         else
+            index++;
+      }
+      if (index >= len)
+         continue;
+      if (cur_line[ index ] == '#')
+         continue;
+      if (sscanf( &cur_line[ index ], "%lg %lg %lg %lg %lg %lg %lg",
+                  &f2offset, &f2width, &f2phase,
+                  &f1offset, &f1width, &f1phase,
+                  &amp) != 7 )
+      {
+         Werrprintf( "%s:  problem reading %s at line %d",
+                     cmd_name, fn_addr, this_line);
+         Werrprintf( "%s  index %d",
+                     cur_line, index);
+         fclose( tfile );
+         return( -1 );
+      }
+      nL = allocateWithId(sizeof(struct newLine), "makefid2d" );
+      nL->f2o = f2offset;
+      nL->f2d = 1.0/(M_PI*f2width);
+      nL->f2p = f2phase;
+      nL->f1o = f1offset*2.0*M_PI/sw1;
+      nL->f1d = sw1/(M_PI*f1width);
+      nL->f1p = f1phase;
+      nL->amp = log(amp/629.0);
+      nL->next = NULL;
+      pp = &start;
+      while ( (p=(*pp)) )
+         pp = &(p->next);
+      *pp = nL;
+      total++;
+   }
+   fclose( tfile );
+   pp = &start;
+   x = 1; j = 0;
+   make_std_bhead( &this_bh1, fid_fhead->status, (short) x );
+   make_std_bhead( &this_bh2, fid_fhead->status, (short) x+1 );
+   while ( j < ni )
+   {
+      double ampX, thisamp;
+      double mult;
+      ival = D_allocbuf( D_USERFILE, x-1, &fid_block1 );
+      ival = D_allocbuf( D_USERFILE, x, &fid_block2 );
+      p = *pp;
+      i = 1;
+      while ( i <= total )
+      {
+         ampX = exp(p->amp - (j/p->f1d));
+         mult = cos(p->f1o*j);
+         thisamp = ampX*mult;
+         if (i == 1)
+            calc_FID2(fid_block1.data, p->f2o, thisamp,
+                      p->f2d, p->f2p, dwell, npnts);
+         else
+            calc_FID(fid_block1.data, p->f2o, thisamp,
+                     p->f2d, p->f2p, dwell, npnts);
+         mult = sin(p->f1o*j);
+         thisamp = ampX*mult;
+         if (i == 1)
+            calc_FID2(fid_block2.data, p->f2o, thisamp,
+                      p->f2d, p->f2p, dwell, npnts);
+         else
+            calc_FID(fid_block2.data, p->f2o, thisamp,
+                     p->f2d, p->f2p, dwell, npnts);
+         p = p->next;
+         i++;
+      }
+      memcpy( fid_block1.head, &this_bh1, sizeof( dblockhead ) );
+      ival = D_markupdated( D_USERFILE, x-1 );
+      ival = D_release( D_USERFILE, x-1 );
+      memcpy( fid_block2.head, &this_bh2, sizeof( dblockhead ) );
+      ival = D_markupdated( D_USERFILE, x );
+      ival = D_release( D_USERFILE, x );
+      x += 2;
+      j++;
+   }
+   releaseAllWithId("makefid2d"); 
+   return( npnts );
 }
 
 static int calc_indexed_fid(char *cmd_name, char *fn_addr, void *mem_buffer,
@@ -2089,7 +2300,7 @@ static int calc_indexed_fid(char *cmd_name, char *fn_addr, void *mem_buffer,
 int makefid(int argc, char *argv[], int retc, char *retv[])
 {
    char            *cmd_name, *fn_addr;
-   void            *mem_buffer;
+   void            *mem_buffer = NULL;
    int              bytes_to_allocate, cur_fid_format, element_number, ival,
                     new_fid_format, nlines, np_makefid, old_nblocks,
                     update_fhead;
@@ -2134,6 +2345,12 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
    {
       new_fid_format = REAL_NUMBERS;
       calcFID = 3;
+   }
+   if (new_fid_format == CALC_2D)
+   {
+      new_fid_format = REAL_NUMBERS;
+      calcFID = 5;
+      forceUpdate = 1;
    }
    if (element_number == 0)
    {
@@ -2255,6 +2472,37 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
       P_setreal(CURRENT,"arraydim",(double) fid_fhead.nblocks,1);
       P_setreal(PROCESSED,"arraydim",(double) fid_fhead.nblocks,1);
    }
+   else if (calcFID == 5)  // 2D case
+   {
+      double npnts;
+      double swval;
+      double nival;
+      double sw1val;
+      P_getreal(CURRENT,"np",&npnts,1);
+      P_setreal(PROCESSED,"np",npnts,1);
+      P_getreal(CURRENT,"sw",&swval,1);
+      P_setreal(PROCESSED,"sw",swval,1);
+      if (P_getreal(CURRENT,"ni",&nival,1) )
+      {   Werrprintf("parameter ni not found");
+          ABORT;
+      }
+      P_setreal(PROCESSED,"ni",nival,1);
+      if (P_getreal(CURRENT,"sw1",&sw1val,1) )
+      {   Werrprintf("parameter sw1 not found");
+          ABORT;
+      }
+      P_setreal(PROCESSED,"sw1",sw1val,1);
+      updateFidHead(&fid_fhead, 1, npnts, new_fid_format);
+      fid_fhead.nblocks = (int) nival * 2;
+      D_updatehead( D_USERFILE, &fid_fhead );
+      np_makefid = calc_2d_fid(cmd_name, fn_addr,
+                               (int) npnts, 1.0/swval, new_fid_format,
+                               (int) nival, sw1val,
+                               &fid_fhead );
+      calcFID = 4;
+      P_setreal(CURRENT,"arraydim",(double) fid_fhead.nblocks,1);
+      P_setreal(PROCESSED,"arraydim",(double) fid_fhead.nblocks,1);
+   }
    else if (calcFID)
    {
       double npnts;
@@ -2303,7 +2551,8 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
                 nlines, new_fid_format, revFlag);
    }
    if (np_makefid < 0) {           /* load_ascii_numbers */
-      release( mem_buffer );  /* displays the error */
+      if (mem_buffer)
+         release( mem_buffer );
       ABORT;
    }
 
@@ -2318,7 +2567,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
                 cmd_name);
             Wscrprintf("number of points in input file: %d\n", np_makefid);
             Wscrprintf("number of points in FID: %d\n", fid_fhead.np);
-            release( mem_buffer );
+            if (mem_buffer) release( mem_buffer );
             ABORT;
          }
       }
@@ -2363,7 +2612,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
          if (zeroElems(element_number, old_nblocks, &fid_fhead))
          {
             Werrprintf("%s:  error zeroing elements", cmd_name);
-            release( mem_buffer );
+            if (mem_buffer) release( mem_buffer );
             ABORT;
          }
       }
@@ -2393,12 +2642,12 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
                     new_fid_format, fid_fhead.tbytes*fid_fhead.ntraces))
       {
          Werrprintf("%s:  error allocating space for block %d", cmd_name, element_number);
-         release( mem_buffer );
+         if (mem_buffer) release( mem_buffer );
          ABORT;
       }
    }
    
-   release( mem_buffer );
+   if (mem_buffer) release( mem_buffer );
    D_close( D_USERFILE );
    D_trash(D_PHASFILE);
    D_trash(D_DATAFILE);
@@ -2430,6 +2679,7 @@ static struct format_table_entry {
         { "16-bit",     SINGLE_PREC },
         { "32-bit",     DOUBLE_PREC },
         { "float",      REAL_NUMBERS },
+        { "2d",         CALC_2D },
         { "calc",       CALC_FILE },
         { "calcIndex",  CALC_INDEX },
         { "calcstr",    CALC_STR }
