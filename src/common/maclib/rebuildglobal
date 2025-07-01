@@ -1,0 +1,32 @@
+write('error','Locked workspace detected, may need to unlock')
+exists('appmode','parameter','global'):$e
+if not $e then
+  write('error','OpenVnmrJ improperly exited: rebuilding global file')
+  exists(userdir+'/global','file'):$g
+  if $g then
+    $date=''
+    systemtime('%Y-%m-%dT%H:%M:%S'):$date
+    cp(userdir+'/global',userdir+'/global'+$date)
+  endif
+  cp(systemdir+'/user_templates/global',userdir)
+endif
+
+fread(userdir+'/global','global','reset')
+exists('cpglobals','modules'):$mex,$cmodule
+fread($cmodule,'global')
+
+jexp:$e
+if ($e) then
+  $pars='seqfil','array','arraydim','layout','axis'
+  $e=1
+  $num=size('$pars')
+  $i=0
+  while ($i < $num) and ($e = 1) do
+    $i=$i+1
+    exists($pars[$i],'parameter'):$e
+  endwhile
+  if $i < $num then 
+    write('error','Experiment directory also corrupted: bringing in new PROTON parameters')
+    rtp(systemdir+'/parlib/PROTON')
+  endif
+endif
