@@ -2026,7 +2026,7 @@ static int calc_2d_fid(char *cmd_name, char *fn_addr,
    dpointers fid_block1, fid_block2;
    int ival __attribute__((unused));
    struct newLine {
-      double f2o, f2d, f2p, f1o, f1d, f1p, amp;
+      double f2o, f2d, f2p, f1o, f1d, f1p, amp, sign;
       struct newLine *next;
    } *nL;          
    struct newLine *start = NULL;
@@ -2092,7 +2092,8 @@ static int calc_2d_fid(char *cmd_name, char *fn_addr,
       nL->f1o = f1offset*2.0*M_PI/sw1;
       nL->f1d = sw1/(M_PI*f1width);
       nL->f1p = f1phase;
-      nL->amp = log(amp/629.0);
+      nL->amp = log(fabs(amp)/629.0);
+      nL->sign = (amp < 0) ? -1.0 : 1.0;
       nL->next = NULL;
       pp = &start;
       while ( (p=(*pp)) )
@@ -2115,7 +2116,7 @@ static int calc_2d_fid(char *cmd_name, char *fn_addr,
       i = 1;
       while ( i <= total )
       {
-         ampX = exp(p->amp - (j/p->f1d));
+         ampX = exp(p->amp - (j/p->f1d)) * p->sign;
          mult = cos(p->f1o*j);
          thisamp = ampX*mult;
          if (i == 1)
@@ -2128,10 +2129,10 @@ static int calc_2d_fid(char *cmd_name, char *fn_addr,
          thisamp = ampX*mult;
          if (i == 1)
             calc_FID2(fid_block2.data, p->f2o, thisamp,
-                      p->f2d, p->f2p, dwell, npnts);
+                      p->f2d, p->f2p + 180.0, dwell, npnts);
          else
             calc_FID(fid_block2.data, p->f2o, thisamp,
-                     p->f2d, p->f2p, dwell, npnts);
+                     p->f2d, p->f2p + 180.0, dwell, npnts);
          p = p->next;
          i++;
       }
