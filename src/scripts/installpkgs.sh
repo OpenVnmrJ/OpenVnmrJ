@@ -168,10 +168,16 @@ touch $logfile
 chmod 666 $logfile
 
 if [ ! -x /usr/bin/dpkg ]; then
+  almalinux=0
   if [ -f /etc/centos-release ]; then
     rel=centos-release
 #   remove all characters up to the first digit
     version=$(cat /etc/$rel | sed -E 's/[^0-9]+//')
+  elif [ -f /etc/almalinux-release ]; then
+    rel=almalinux-release
+#   remove all characters up to the first digit
+    version=$(cat /etc/$rel | sed -E 's/[^0-9]+//')
+    almalinux=1
   elif [ -f /etc/redhat-release ]; then
     rel=redhat-release
 #   remove all characters up to the first digit
@@ -400,7 +406,10 @@ if [ ! -x /usr/bin/dpkg ]; then
  '
   if [[ $version -ge 9 ]] &&
      [[ -z $(type -t subscription-manager) ]]; then
-    epelList="python3-scons ImageMagick kdiff3"
+    epelList="python3-scons ImageMagick"
+    if [[ $almalinux -eq 1 ]]; then
+       epelList="$epelList rsh rarpd"
+    fi
     packageList="$item68List $commonList $pipeList libnsl tcsh"
     if [[ -z $(rpm -qa | grep java | grep openjdk | grep -v headless) ]]; then
        jdk=$(rpm -qa | grep java | grep openjdk | grep headless)
@@ -647,7 +656,11 @@ if [ ! -x /usr/bin/dpkg ]; then
     echo "CentOS / RedHat package download complete"
     echo "Packages stored in $repoPath"
   else
-    echo "CentOS / RedHat package installation complete"
+    if [[ $almalinux -eq 1 ]]; then
+       echo "AlmaLinux package installation complete"
+    else
+       echo "CentOS / RedHat package installation complete"
+    fi
   fi
   echo " "
 else
