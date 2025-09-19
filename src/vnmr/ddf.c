@@ -796,11 +796,12 @@ int averag(int argc, char *argv[], int retc, char *retv[])
 |       order polynomial, or exponential
 |
 +---------------------------------------------------------------------*/
+#define MAXCOL 5
 int datafit(int argc, char *argv[], int retc, char *retv[])
 {
     int fitType=0;
-    int col[5];
-    double val[5];
+    int col[MAXCOL];
+    double val[MAXCOL];
     FILE *fd = NULL;
     symbol **root;
     varInfo *v1 = NULL;
@@ -845,6 +846,13 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
        while (index <= argc)
        {
           col[index-5] =  (int) stringReal(argv[index-1]) -1;
+          if (col[index-5]+1 > MAXCOL)
+          {
+             Werrprintf( "%s only supports %d columns in the data file",
+                        argv[0], MAXCOL);
+             fclose(fd);
+             ABORT;
+          }
           index++;
        }
     }
@@ -908,7 +916,15 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
           moreToDo = (fscanf(fd, "%[^\n]\n", line) != EOF );
           if ( ! moreToDo )
              break;
-          ret = sscanf(line, "%lg %lg %lg %lg %lg\n", &(val[0]), &(val[1]), &(val[2]), &(val[3]), &(val[4]));
+          ret = sscanf(line, "%lg %lg %lg %lg %lg\n",
+                  &(val[0]), &(val[1]), &(val[2]), &(val[3]), &(val[4]));
+          if (ret < col[0]+1)
+          {
+             Werrprintf( "%s:  column %d does not exist in %s",
+                        argv[0], col[0]+1, argv[3]);
+             fclose(fd);
+             ABORT;
+          }
           if (fitType == 2)
              val[col[1]] = log(val[col[1]]);
        }
