@@ -415,6 +415,7 @@ char *getRejectedDesc(int status)
 void Default_RequestedDeadlineMissed(void* listener_data, DDS_DataReader* reader,
                                          const struct DDS_RequestedDeadlineMissedStatus *status)
 {
+#ifdef DEBUG
    DDS_TopicDescription *topicDesc;
    topicDesc = DDS_DataReader_get_topicdescription(reader);
 /*
@@ -430,10 +431,12 @@ void Default_RequestedDeadlineMissed(void* listener_data, DDS_DataReader* reader
 */
    DPRINT2(-1,"Default_RequestedDeadlineMissed for: Type: '%s', Name: '%s'\n",
            DDS_TopicDescription_get_type_name(topicDesc), DDS_TopicDescription_get_name(topicDesc));
+#endif
 }
 void Default_RequestedIncompatibleQos(void* listener_data, DDS_DataReader* reader,
                       const struct DDS_RequestedIncompatibleQosStatus *status) 
 {
+#ifdef DEBUG
    DDS_TopicDescription *topicDesc;
    topicDesc = DDS_DataReader_get_topicdescription(reader);
 /*
@@ -456,12 +459,14 @@ void Default_RequestedIncompatibleQos(void* listener_data, DDS_DataReader* reade
 */
    DPRINT2(-5,"Default_RequestedIncompatibleQos for: Type: '%s', Name: '%s'\n",
            DDS_TopicDescription_get_type_name(topicDesc), DDS_TopicDescription_get_name(topicDesc));
-   DPRINT2(-5,"  Incompatible Qos: %d, '%s'\n",status->last_policy_id, getIncompatQosDesc(status->last_policy_id));
+//   DPRINT2(-5,"  Incompatible Qos: %d, '%d'\n",status->last_policy_id, getIncompatQosDesc(status->last_policy_id));
+#endif
 }
 
 void Default_RequestedSampleRejected(void* listener_data, DDS_DataReader* reader,
                         const struct DDS_SampleRejectedStatus *status)
 {
+#ifdef DEBUG
     DDS_TopicDescription *topicDesc;
 
 /*
@@ -482,11 +487,13 @@ void Default_RequestedSampleRejected(void* listener_data, DDS_DataReader* reader
    DPRINT1(-5,"Issue/Sample Rejected for: '%s'\n",DDS_TopicDescription_get_name(topicDesc));
    DPRINT2(-5,"Total: %d, Delta: %d\n", status->total_count, status->total_count_change);
    DPRINT2(-5,"Reason: %d, '%s'\n", status->last_reason, getRejectedDesc(status->last_reason));
+#endif
 
 }
 void Default_RequestedLivelinessChanged(void* listener_data, DDS_DataReader* reader,
                       const struct DDS_LivelinessChangedStatus *status) 
 {
+#ifdef DEBUG
     DDS_TopicDescription *topicDesc;
 /*
     DDS_Long 	alive_count
@@ -511,11 +518,13 @@ void Default_RequestedLivelinessChanged(void* listener_data, DDS_DataReader* rea
    DPRINT1(+1,"The total count of currently not_alive DDS_DataWriter entities: %d\n",status->not_alive_count);
    DPRINT1(+1,"The change in the alive_count: %d\n",status->alive_count_change);
    DPRINT1(+1,"The change in the not_alive_count: %d\n", status->not_alive_count_change);
-   DPRINT1(+1,"handle to the last remote writer to change its liveliness: 0x%lx\n",status->last_publication_handle);
+//   DPRINT1(+1,"handle to the last remote writer to change its liveliness: 0x%lx\n",status->last_publication_handle);
+#endif
 }
 void Default_RequestedSampleLost(void* listener_data, DDS_DataReader* reader,
                         const struct DDS_SampleLostStatus *status)
 {
+#ifdef DEBUG
     DDS_TopicDescription *topicDesc;
 /*
     DDS_Long 	total_count
@@ -530,10 +539,12 @@ void Default_RequestedSampleLost(void* listener_data, DDS_DataReader* reader,
            DDS_TopicDescription_get_type_name(topicDesc), DDS_TopicDescription_get_name(topicDesc));
    DPRINT(+1,"Issue/Sample Lost!\n");
    DPRINT2(+1,"Total: %d, Delta: %d\n", status->total_count, status->total_count_change);
+#endif
 }
 void Default_SubscriptionMatched(void* listener_data, DDS_DataReader* reader,
                         const struct DDS_SubscriptionMatchedStatus *status)
 {
+#ifdef DEBUG
     DDS_TopicDescription *topicDesc;
 /*
     DDS_Long 	total_count
@@ -554,6 +565,7 @@ void Default_SubscriptionMatched(void* listener_data, DDS_DataReader* reader,
    DPRINT4(+1,"Subscription Type: '%s', Name: '%s' Matched, Matched: %d, Delta: %d\n",
            DDS_TopicDescription_get_type_name(topicDesc), DDS_TopicDescription_get_name(topicDesc),
            status->current_count,status->current_count_change);
+#endif
 }
 void Default_OnDataAvailable( void* listener_data, DDS_DataReader* reader)
 {
@@ -567,7 +579,7 @@ void Default_OnDataAvailable( void* listener_data, DDS_DataReader* reader)
 void attachOnDataAvailableCallback(NDDS_ID pNDDS_Obj, 
            DDS_DataReaderListener_DataAvailableCallback callback, void *pUserData)
 {
-   DPRINT3(+2,"attachOnDataAvailable: obj: 0x%lx, callback: 0x%lx, Userdata: 0x%lx\n", pNDDS_Obj,callback,pUserData);
+//   DPRINT3(+2,"attachOnDataAvailable: obj: 0x%lx, callback: 0x%lx, Userdata: 0x%lx\n", pNDDS_Obj,callback,pUserData);
    pNDDS_Obj->pDReaderListener->on_data_available = callback;
    pNDDS_Obj->pDReaderListener->as_listener.listener_data = pUserData;
 }
@@ -615,7 +627,7 @@ void attachUserData(NDDS_ID pNDDS_Obj, void * pUserData)
 
 /* ------------------------------------------------------------------------------------*/
 
-initDataReaderListener(NDDS_ID pNDDS_Obj)
+void initDataReaderListener(NDDS_ID pNDDS_Obj)
 {
     struct DDS_DataReaderListener *pReader_listener = 
               (struct DDS_DataReaderListener*) malloc(sizeof(struct DDS_DataReaderListener));
@@ -654,7 +666,6 @@ void initSubMulticastAddr(NDDS_ID pNDDS_Obj)
 int initSubscription(NDDS_ID pNDDS_Obj)
 {
     DDS_ReturnCode_t retcode;
-    double requestedNAck;
 
     struct DDS_DataReaderQos *pReader_qos = (struct DDS_DataReaderQos*) malloc(sizeof(struct DDS_DataReaderQos));
     DDS_DataReaderQos_initialize(pReader_qos);
@@ -690,7 +701,6 @@ int initSubscription(NDDS_ID pNDDS_Obj)
     /* Set for Exclusive NOT Shared ownership;  for keyed topic */
     pReader_qos->ownership.kind = DDS_EXCLUSIVE_OWNERSHIP_QOS;
 
-    /* RtiNtpTimePackFromNanosec(pProperties->persistence, 0 , 16); /* 16 milliseconds */
     /* ================================================================================= */
     /* The time before a subscriber will switch to a new publisher after last pub from
        a previous publisher */
@@ -812,7 +822,6 @@ int initSubscription(NDDS_ID pNDDS_Obj)
 int initBESubscription(NDDS_ID pNDDS_Obj)
 {
     DDS_ReturnCode_t retcode;
-    double requestedNAck;
     long seconds,nanosec;
 
     struct DDS_DataReaderQos *pReader_qos = (struct DDS_DataReaderQos*) malloc(sizeof(struct DDS_DataReaderQos));
@@ -872,7 +881,7 @@ int initBESubscription(NDDS_ID pNDDS_Obj)
     /* subscriber update rate,  20 milliseconds */
     seconds = pNDDS_Obj->BE_UpdateMinDeltaMillisec  / 1000;
     nanosec = (pNDDS_Obj->BE_UpdateMinDeltaMillisec % 1000) * 1000000;
-    DPRINT2(+1,"BE: minimumSeparation: secs: %d, millisec: %d\n",seconds,nanosec/1000000);
+    DPRINT2(+1,"BE: minimumSeparation: secs: %ld, millisec: %ld\n",seconds,nanosec/1000000);
     if ( (seconds == 0) && (nanosec <= 0) )
       nanosec = 10000;
     pReader_qos->time_based_filter.minimum_separation.sec = seconds;
@@ -937,9 +946,11 @@ int createSubscription(NDDS_ID pNDDS_Obj)
 
 int nddsSubscriptionRemove(NDDS_ID pNDDS_Obj)
 {
+   return(0);
 }
 int nddsSubscriptionDestroy(NDDS_ID pNDDS_Obj)
 {
+   return(0);
 }
 #endif  /* RTI_NDDS_4x */
 

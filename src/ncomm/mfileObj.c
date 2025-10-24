@@ -627,8 +627,8 @@ int mFidSeek(MFILE_ID md, int fidNum, int headerSize, unsigned long bbytes)
        md->offsetAddr += fidoffset - md->firstByte;
     }
 
-    DPRINT4(1,"mFidSeek(): fid# = %lu, offset = %lu(0x%lx), addr = 0x%lx\n",
-		fidNum, fidoffset, fidoffset, md->offsetAddr);
+//    DPRINT4(1,"mFidSeek(): fid# = %d, offset = %lu(0x%lx), addr = 0x%lx\n",
+//		fidNum, fidoffset, fidoffset, md->offsetAddr);
     return(0);
 }
 
@@ -681,28 +681,19 @@ void mShow(MFILE_ID md)
 *   VOID
 *
 */
-void mShow(md)
-MFILE_ID md;
+void mShow(MFILE_ID md)
 {
-#ifdef DEBUG
-   unsigned long diff, psize;
-#endif
-  
    if (md == NULL)
      return;
 
 #ifdef DEBUG
-   psize = sysPageSize();
-
-   diff = (unsigned long)(md->offsetAddr) - (unsigned long)(md->mapStrtAddr);
-
    DPRINT1(-1,"File Mapped: %s\n",md->filePath);
-   DPRINT1(-1,"File Size on Open: %d\n",md->byteLen);
-   DPRINT3(-1,"Mapped Address and Size: 0x%lx, 0x%lx (%ld)\n",
-		   md->mapStrtAddr,md->mapLen,md->mapLen);
-   DPRINT2(-1,"Present Location with file: 0x%lx, Page: %ld\n",
-		   md->offsetAddr, (diff / psize) );
-   DPRINT1(-1,"New File Size: %d\n",md->newByteLen);
+//   DPRINT1(-1,"File Size on Open: %d\n",md->byteLen);
+//   DPRINT3(-1,"Mapped Address and Size: 0x%lx, 0x%lx (%ld)\n",
+//		   md->mapStrtAddr,md->mapLen,md->mapLen);
+//   DPRINT2(-1,"Present Location with file: 0x%lx, Page: %ld\n",
+//		   md->offsetAddr, (diff / psize) );
+//   DPRINT1(-1,"New File Size: %ld\n",md->newByteLen);
 #endif
 }
 

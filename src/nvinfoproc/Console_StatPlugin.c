@@ -1097,10 +1097,6 @@ RTIBool Console_StatPlugin_instance_to_id(
     DDS_InstanceId_t *id, RTIBool *is_unique,
     const Console_Stat *instance)
 {
-    int idIndex;
-
-    idIndex = 3;
-
     id->value[3] = 0;
     id->value[2] = 0;
     id->value[1] = 0;

@@ -96,70 +96,14 @@ char *get_console_hostname(void)
 
 
 /*
-   Solaris varient
    Obtain the IP for host given 
    e.g. getHostIP("wormhole",IPstr);
    e.g. 10.0.0.4
 */
-#ifndef VNMRS_WIN32
 char *getHostIP(char* hname, char *localIP)
 {
-   int ipval;
-   struct in_addr in;
-   struct hostent *hp;
-   char **p;
- 
-   if ( (hp = gethostbyname(hname)) == NULL) {
-     fprintf(stderr, "error in getting hostname\n");
-     return(NULL);
-   }
-   p = hp->h_addr_list;
-   memcpy(&in.s_addr, *p, sizeof (in.s_addr));
-   strcpy(localIP,inet_ntoa(in));
-   return(localIP);
-
-}
-
-#else   /* native Win32 */
-char *getHostIP(char* hname, char *localIP)
-{
-   struct in_addr in;
-   struct hostent *hp;
-   char **p;
-   int err;
-
-   WORD wVersionRequested;
-   WSADATA wsaData;
-
-   wVersionRequested = MAKEWORD( 1,1);
-
-   err = WSAStartup( wVersionRequested, &wsaData );
-   if ( err != 0 ) {
-       /* Tell the user that we could not find a usable */
-       /* WinSock DLL.                                  */
-       fprintf(stderr,"error %d in WSAStartup(), misssing WinSock ddl?\n",err);
-       return(NULL);
-   }
-
-   if ( (hp = gethostbyname(hname)) == NULL) {
-           err = WSAGetLastError();
-       fprintf(stderr, "error %d in getting hostname %s \n", err, hname);
-       return(NULL);
-   }
-   p = hp->h_addr_list;
-   memcpy(&in.s_addr, *p, sizeof (in.s_addr));
-   strcpy(localIP,inet_ntoa(in));
-   return(localIP);
-
-}
-
-#ifdef GREGWAY
-char *getHostIP(char* hname, char *localIP)
-{
-   // Declare and initialize variables.
    struct in_addr *in;
    struct sockaddr_in *sockadr;
-   char* ip = "wormhole";
    char* port = "";
    struct addrinfo aiHints;
    struct addrinfo *aiList = NULL;
@@ -178,17 +122,14 @@ char *getHostIP(char* hname, char *localIP)
    // the aiList variable will hold a linked list
    // of addrinfo structures containing response
    // information about the host
-   if ((retVal = getaddrinfo(ip, port, &aiHints, &aiList)) != 0) {
+   if ((retVal = getaddrinfo(hname, port, &aiHints, &aiList)) != 0) {
       return(NULL);
-    }
-    sockadr = (struct sockaddr_in *) aiList->ai_addr;
+   }
+   sockadr = (struct sockaddr_in *) aiList->ai_addr;
 	in = &(sockadr->sin_addr);
-    strcpy(localIP,inet_ntoa(*in));
-    return(localIP);
+   strcpy(localIP,inet_ntoa(*in));
+   return(localIP);
 }
-#endif // GREGWAY
-
-#endif   /* end of native WIN32 */
 
 #else  /* ++++++++++++++++  VxWorks +++++++++++++++++++++++++++ */
 
@@ -493,7 +434,7 @@ prtIntStack()
 
    char *intStackBase = vxIntStackBase;
    char *intStackEnd  = vxIntStackEnd;
-   register char  *pIntStackHigh;
+   char  *pIntStackHigh;
 
    for (pIntStackHigh = intStackEnd; * (UINT8 *)pIntStackHigh == 0xee;
              pIntStackHigh ++)
@@ -1336,7 +1277,7 @@ void * __wrap_malloc (int c)  {
          printf("'%s': Suspending malloc task\n", taskName(taskID));
          taskSuspend(taskID);
       }
-      /* tt(taskID); /* stack trace of calling function/task */
+      // tt(taskID); /* stack trace of calling function/task */
       printf("'%s': malloc called with %ld, return Addr: 0x%lx, PC=0x%lx\n", taskName(taskID), c, pointer,PC);
    }
    return pointer;
@@ -1361,7 +1302,7 @@ int __wrap_free (int addr)  {
    PC = pc(taskID);
    printf("'%s': free called with Addr: 0x%lx, PC = 0x%lx\n", taskName(taskID), addr,PC);
    ti(taskID);
-   /* tt(taskID); /* stack trace of calling function/task */
+   // tt(taskID); /* stack trace of calling function/task */
    printf("'%s': free called with Addr: 0x%lx, PC = 0x%lx\n", taskName(taskID), addr,PC);
    return status;
 }

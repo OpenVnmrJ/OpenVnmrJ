@@ -248,7 +248,7 @@ int hashPut (HASH_ID hashid, char* key, char* refaddr)
    while (hashlist[index].hashKey)     /* look for next free slot */
    {
       hashid->collisions++;
-         DPRINT3(4,"hash:collision with 0x%lx  and 0x%lx , total: %ld\n",
+         DPRINT3(4,"hash:collision with 0x%p  and %s , total: %ld\n",
                 key, hashlist[index].hashKey, hashid->collisions);
       ++index;   /* increment key */
       index %= hashid->maxEntries;
@@ -262,7 +262,7 @@ int hashPut (HASH_ID hashid, char* key, char* refaddr)
       errLogRet(ErrLogOp,debugInfo,"hash: ERROR Number of identifiers exceeds hash table\n");
    }
 
-   DPRINT3(4,"hash: table[%ld] -  key 0x%lx, refadr: 0x%lx \n", index, 
+   DPRINT3(4,"hash: table[%ld] -  key %s, refadr: %s \n", index, 
 	 hashlist[index].hashKey,hashlist[index].refAddr);
 
    return( OK );
@@ -374,14 +374,14 @@ void hashShow (HASH_ID hashid, int level)
 /* int        level;   	level of information output */
 {
 
-   DPRINT2(3,"Hash Table ID: '%s', 0x%lx\n",hashid->pHashIdStr,hashid);
+   DPRINT2(3,"Hash Table ID: '%s', %p\n",hashid->pHashIdStr,hashid);
    DPRINT(3,"Hash Stats:\n");
-   DPRINT2(3,"Hash Table Address:  %ld, 0x%lx\n",
+   DPRINT2(3,"Hash Table Address:  %p, %p\n",
 		hashid->pHashEntries,hashid->pHashEntries);
    DPRINT2(3,"Entries: %ld, Max Entries: %ld\n", hashid->numEntries, 
 			hashid->maxEntries);
    DPRINT1(3,"Number of Hashing Collisions: %ld\n",hashid->collisions);
-   DPRINT2(3,"Hash Func: 0x%lx, Comparison Func: 0x%lx\n",hashid->pHashFunc,
+   DPRINT2(3,"Hash Func: %p, Comparison Func: %p\n",hashid->pHashFunc,
 			hashid->pCmpFunc);
 
    if (level > 0)
@@ -396,7 +396,7 @@ void hashShow (HASH_ID hashid, int level)
      {
       if (hashlist[i].hashKey)
       {
-	DPRINT3(3,"Hash Index[%ld]: Key: 0x%lx, Reference Addr: 0x%lx\n",
+	DPRINT3(3,"Hash Index[%ld]: Key: %s, Reference Addr: %s\n",
 	 i,hashlist[i].hashKey,hashlist[i].refAddr);
       }
      }

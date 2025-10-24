@@ -37,6 +37,9 @@
 
 #include "ACQPROC_strucs.h"
 #include "statusextern.h"
+extern void register_input_event(int fd);
+int Ping_Pid();
+int sendacq(int acqpid, char *message);
 
 #define ERROR 1
 #define MAXRETRY 8
@@ -51,8 +54,10 @@
 static int			statussocket = -1;
 static struct sockaddr_in	statussockname,msgsockname;
 
+#ifdef USE_RPC
 static int  prog_num = -1;   /* rpc program number and version */
 static int  prog_ver = -1;
+#endif
 
 static int  Acqpid;    /* acquisitions process ID number for async usage */
 static int  Acqrdport; /* acquisition's read stream socket port */
@@ -80,12 +85,11 @@ extern struct hostent	local_entry;
 |
 |     mod.   8/15/89  Greg Brissey for RPC usage.
 +-------------------------------------------------------------------*/
-int Acqproc_ok(remotehost)
-char *remotehost;
+int Acqproc_ok(char *remotehost)
 {
+#ifdef USE_RPC
     int active;
  
-#ifdef USE_RPC
     if ( (strcmp(remotehost,LocalHost) != 0) && (remotehost[0] != 0) )
     {
       if ( callrpctcp(remotehost,
@@ -136,7 +140,7 @@ int Ping_Pid()
 |       obtain system,user, acquisition process information
 |
 +-------------------------------------------------------------------*/
-initIPCinfo(char *remotehost)
+int initIPCinfo(char *remotehost)
 {
     char *tmpptr;
     FILE *stream;
@@ -158,7 +162,7 @@ initIPCinfo(char *remotehost)
       else
          strcpy(filepath,"/vnmr");
       strcat(filepath,"/acqqueue/acqinfo");
-      if (stream = fopen(filepath,"r"))
+      if ( (stream = fopen(filepath,"r")) )
       {
        if (fscanf(stream,"%d%s%d%d%d",&Acqpid,AcqHost,&Acqrdport,&Acqwtport,
 		&Acqmsgport) != 5)
@@ -358,7 +362,7 @@ xdrproc_t inproc,outproc;
 |	Initialize the socket addresses for display and interactive use
 |                
 +-----------------------------------------------------------------------*/
-initsocket()    
+void initsocket()    
 {
     struct hostent *hp;
 
@@ -386,10 +390,11 @@ initsocket()
 |	    return the socket discriptor
 |
 +-------------------------------------------------------------------*/
-CreateSocket(type)
-int type;
+int CreateSocket(int type)
 {
+#ifndef LINUX
     int on = 1;
+#endif
     int sd;	/* socket descriptor */
     int flags;
 
@@ -414,7 +419,7 @@ int type;
     /*setsockopt(sd,SOL_SOCKET,(~SO_LINGER),&on,sizeof(on));*/
 
     /* --- We explicitly setup the descriptor as desired because ----*/
-    /*     the notifier remembers the old settings for a file descriptor
+    /*     the notifier remembers the old settings for a file descriptor */
     /* --- even if it was closed, so we take no chances ---- */
 
     /* Special Note:  There is nothing inherent in UDP sockets (type != STREAM)     */
@@ -468,8 +473,7 @@ int type;
 |         else nchr equal the number of bytes sent
 |
 +-----------------------------------------------------------------*/
-readacqstatblock(statblock)
-AcqStatBlock *statblock;
+int readacqstatblock(AcqStatBlock *statblock)
 {
     int nchr;
     int bytes;
@@ -507,7 +511,8 @@ AcqStatBlock *statblock;
 +---------------------------------------------------------------*/
 void acqregister()
 {
-    int localaddr, namlen;
+    int localaddr;
+    socklen_t namlen;
  
     statussockname.sin_family = AF_INET;
     statussockname.sin_addr.s_addr = INADDR_ANY;
@@ -524,18 +529,20 @@ void acqregister()
         exit(1);
     }
 
-    if (bind(statussocket,(caddr_t)&statussockname,sizeof(statussockname)) != 0)    {
+    if (bind(statussocket,(struct sockaddr *)&statussockname,
+             sizeof(statussockname)) != 0)    {
         perror("Register(): bind error");
         exit(0);
     }
     namlen = sizeof(statussockname);
-    getsockname(statussocket,&statussockname,&namlen);
+    getsockname(statussocket,(struct sockaddr *)&statussockname,&namlen);
     if (debug)
-        fprintf(stderr,"Status Port Number: %d\n",0xFFFF & ntohs(statussockname.sin_port));
+        fprintf(stderr,"Status Port Number: %d\n",
+                0xFFFF & ntohs(statussockname.sin_port));
  
     if (local_entry.h_length > sizeof( int ))
     {
-        fprintf( stderr, "Error: length of host address is %d, expected %d\n",
+        fprintf( stderr, "Error: length of host address is %d, expected %zd\n",
 			  local_entry.h_length, sizeof( int )
 	);
 	exit(0);
@@ -638,7 +645,8 @@ int sendacq(int acqpid, char *message)
 	}
  
        /* --- attempt to connect to the named socket --- */
-       if ((result = connect(fgsd,&msgsockname,sizeof(msgsockname))) != 0)
+       if ((result = connect(fgsd,(struct sockaddr *) &msgsockname,
+                      sizeof(msgsockname))) != 0)
        {
           /* --- Is Socket queue full ? --- */
           if (errno != ECONNREFUSED && errno != ETIMEDOUT)
@@ -669,7 +677,7 @@ int sendacq(int acqpid, char *message)
     }
     if (debug)
         fprintf(stderr,"Sendacq(): Connection Established \n");
-    write(fgsd,message,strlen(message));
+    result = write(fgsd,message,strlen(message));
 
     shutdown(fgsd,2);
     close(fgsd);

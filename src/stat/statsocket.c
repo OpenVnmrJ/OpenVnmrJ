@@ -62,7 +62,8 @@ static int sendToVnmrJinit( nodelay, pSD )
 int nodelay;
 Socket *pSD;
 {
-    int i, ival, trys, on=1, buff=DEFAULT_SOCKET_BUFFER_SIZE;
+//    int i, ival, trys, on=1, buff=DEFAULT_SOCKET_BUFFER_SIZE;
+    int i, ival, trys, on=1;
 
     if (pSD == NULL)
       return(-1);
@@ -96,7 +97,7 @@ Socket *pSD;
 
 static int messageSendToVnmrJ(Socket *pSD, char* message, int messagesize)
 {
-   int bytes;
+   int bytes __attribute__((unused));
    bytes = writeSocket( pSD, message, messagesize );
    return(0); /* return(bytes); */
 }

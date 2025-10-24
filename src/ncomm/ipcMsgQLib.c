@@ -405,8 +405,8 @@ void  msgQShow(IPC_MSG_Q_ID msgId)
    DPRINT3(3,"\n\nMsg Q Obj: 0x%lx, Msg Id: %d   Key: 0x%lx\n",
 	   msgId,msgId->msgid,msgQStats.msg_perm.key);
 #endif
-   DPRINT3(3,"%d Queued, %u Bytes in Q, %u Max Allowed Bytes\n",
-	   msgQStats.msg_qnum, msgQStats.msg_cbytes, msgQStats.msg_qbytes);
+//   DPRINT3(3,"%d Queued, %u Bytes in Q, %u Max Allowed Bytes\n",
+//	   msgQStats.msg_qnum, msgQStats.msg_cbytes, msgQStats.msg_qbytes);
    DPRINT2(3,"Proc pid last send: %d, Proc pid last receive: %d\n",
 	   msgQStats.msg_lspid, msgQStats.msg_lrpid);
    DPRINT1(3,"Last Send: %s", ctime(&(msgQStats.msg_stime)));

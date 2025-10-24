@@ -11,9 +11,11 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 
 #if !defined(AIX) && !defined(LINUX)
 #include <sys/filio.h>
@@ -42,6 +44,12 @@
 extern int messocket;   /* message process async socket descriptor */
 extern int    Acqdebug;         /* debugging flag */
 extern messpacket MessPacket;
+extern void block_signals();
+extern void unblock_signals();
+void getmpacket(int fromsocket);
+int receive(int sd, char buffer[], int bufsize);
+int getinttoken(char **strptr);
+int getstrtoken(char *substring, int maxlen, char **strptr);
 
 
 /* may want to do this for Solaris and Linux as well in the future not just Interix */
@@ -75,7 +83,7 @@ extern char vnmrsystem[128];	/* vnmrsystem path */
 |	write the acquisitions pid, and socket port numbers out for
 |	  access by other processes
 +-----------------------------------------------------------------------*/
-wrtacqinfo()
+void wrtacqinfo()
 {
     char filepath[256];
     char hostname[256];
@@ -215,7 +223,6 @@ int processInfoSock()
    fd_set  readfd, writefd;
    Socket  *pAcceptSocket;
    void readAcceptSocket( Socket *pSocket );
-   int     rngBlkIsEmpty (register RINGBLK_ID ringId);
    int sockInQ;
  
    while ((sockInQ = rngBlkNElem(pAcceptQueue)) > 0 )
@@ -346,8 +353,7 @@ GetMessage()
 |
 +-------------------------------------------------------------------*/
 
-int
-make_a_socket()
+int make_a_socket()
 {
 	int	tsd;
 
@@ -358,11 +364,12 @@ make_a_socket()
 	  return( tsd );
 }
 
-int
-setup_a_socket( tsd )
-int tsd;
+int setup_a_socket(int tsd )
 {
-	int	ival, one, pid;
+	int	ival, pid;
+#if !defined( LINUX ) && !defined( __INTERIX)
+	int	one;
+#endif
 
 #ifdef __INTERIX
         ival = fcntl(tsd, F_SETOWN, (int) getpid());
@@ -388,8 +395,8 @@ int tsd;
 	}
 #endif
 
-	one = 1;
 #if !defined( LINUX ) && !defined( __INTERIX)
+	one = 1;
 	ival = setsockopt( tsd, SOL_SOCKET, SO_USELOOPBACK,
 		(char *)&one, sizeof( one ) );
 	if (ival < 0)  {
@@ -407,18 +414,16 @@ int tsd;
 	return( 0 );
 }
 
-int
-render_socket_async( tsd )
-int tsd;
+int render_socket_async(int tsd )
 {
-	int	result, ival, one;
+	int	result, ival;
 
 #ifdef LINUX
         result = fcntl(tsd, F_SETOWN, (int) getpid());
         if ( result == -1 ) {
            perror( "render_socket_async: set ownership" );
                 close( tsd );
-                return( ival );
+                return( result );
         }
         ival = fcntl(tsd, F_GETFL);
         if ( ival == -1 ) {
@@ -431,7 +436,7 @@ int tsd;
         if ( result == -1 ) {
            perror( "render_socket_async: set Flags" );
                 close( tsd );
-                return( ival );
+                return( result );
         }
 #else
 	one = 1;
@@ -439,8 +444,9 @@ int tsd;
 #endif
 	if (result < 0)  {
 		perror( "set nonblocking/asynchronous" );
-		return( ival );
+		return( result );
 	}
+	return( 0 );
 }
 
 
@@ -452,10 +458,10 @@ int tsd;
 |	return(MESSAGE);
 |
 +---------------------------------------------------------------------*/
-GetMessage()
+int GetMessage()
 {
     struct sockaddr from;
-    int fromlen = sizeof(from);
+    socklen_t fromlen = sizeof(from);
     int fromsocket;
     int flags;
 
@@ -498,14 +504,10 @@ GetMessage()
 |	read data from socket and parse information into the message
 |       packet structure
 +------------------------------------------------------------------------*/
-getmpacket(fromsocket)
-int fromsocket;
+void getmpacket(int fromsocket)
 {
     char  buffer[BUFSIZE];
     char *bufptr;
-    char *ptr;
-    char *ptr1;
-    int   nchr;
 
     receive(fromsocket,buffer,sizeof(buffer));
     bufptr = buffer;
@@ -538,10 +540,7 @@ int fromsocket;
 |	receive message from socket
 |
 +--------------------------------------------------------------*/
-receive(sd,buffer,bufsize)
-int sd;
-char buffer[];
-int bufsize;		/* buffer size */
+int receive(int sd, char buffer[], int bufsize)
 {
     char tbuffer[256];
     int  nchr;
@@ -587,17 +586,14 @@ int bufsize;		/* buffer size */
     return(OK);
 }
 
+#ifdef OLD
 /*-----------------------------------------------------------------------
 |
 |       InitRecverAddr()/2
 |       Initialize the socket addresses for display and interactive use
 |
 +-----------------------------------------------------------------------*/
-static
-InitRecverAddr(AcqHost,port,recver)
-int port;
-char *AcqHost;
-struct sockaddr_in *recver;
+static int InitRecverAddr(char *AcqHost, int port, struct sockaddr_in *recver)
 {
     struct hostent *hp;
     extern struct hostent	*this_hp;
@@ -625,7 +621,6 @@ struct sockaddr_in *recver;
     return(OK);
 }
 
-
 /*------------------------------------------------------------
 |
 |    sendasync()/4
@@ -633,11 +628,7 @@ struct sockaddr_in *recver;
 |       then transmit a message to it and disconnect.
 |
 +-----------------------------------------------------------*/
-sendasync(machine,port,acqpid,message)
-char *machine;
-char *message;
-int acqpid;
-int port;
+int sendasync(char *machine, int port, int acqpid, char *message)
 {
     char buffer[256];
     int buflen = 256;
@@ -713,13 +704,11 @@ int port;
     close(fgsd);
     return(1);
 }            
+#endif // OLD
 
 #endif
 
-static char *
-findAchar( strptr, srchptr )
-char *strptr;
-char *srchptr;                  /* string of characters to look for */
+static char * findAchar(char *strptr, char *srchptr )
 {
         char    *tmpptr;
 
@@ -743,8 +732,7 @@ char *srchptr;                  /* string of characters to look for */
         return( NULL );
 }
 
-getinttoken(strptr)
-char **strptr;
+int getinttoken(char **strptr)
 {
     char  buffer[BUFLEN];
     char *ptr1;
@@ -777,10 +765,7 @@ char **strptr;
 }
 
 
-getstrtoken(substring,maxlen,strptr)
-char *substring;
-char **strptr;
-int maxlen;
+int getstrtoken(char *substring, int maxlen, char **strptr)
 {
     char *ptr1;
     int   nchr;
@@ -807,5 +792,6 @@ int maxlen;
     if (Acqdebug > 2)
         fprintf(stdout,"GETSTRTOKEN(): substring: '%s'\n",substring);
     *strptr += nchr+1;
+    return(0);
 }
 

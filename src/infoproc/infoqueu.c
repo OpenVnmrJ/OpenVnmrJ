@@ -49,7 +49,7 @@ struct regval    {
                   char *HostID;     		/* Host name of INET socket */
                   int   UpdatePort;     	/* Inter-Net Port Number */
 		  struct sockaddr_in PortAddr;  /* inter-Net Address */
-                  long  RegSub;       	/* Date and Time of day of submission.*/
+                  int  RegSub;       	/* Date and Time of day of submission.*/
         	};
 typedef struct regval RegValue ;
 
@@ -64,20 +64,25 @@ int	      consoleActive;
 AcqStatBlock  acqinfo;
 extern int    Acqdebug;
 extern char   vnmrsystem[];
+extern int GetMessage();
+extern int getinttoken(char **strptr);
+extern int getstrtoken(char *substring, int maxlen, char **strptr);
+extern int setStatRemTime(int diftime);
+int update_statinfo();
 
-long encodedAcqSample = 0L;   /* encoded AcqSample as comes from console, by consolestatAction() in nddsinfofuncs.c */
+int encodedAcqSample = 0;   /* encoded AcqSample as comes from console, by consolestatAction() in nddsinfofuncs.c */
 
 static RegPacket *Registery = NULL;
 static int    Regsd;
 static int    activePort = 0;
 
-long   PresentTime;     /* present Time and Day */
+static int   PresentTime;     /* present Time and Day */
 messpacket MessPacket;
 
 static void setInfoTimer(int action);
 static void setupInfopoller();
 static RegPacket *getRegPacket(char *username, int pid, char *hostname,
-             int portnum, long datetime, struct hostent *inetent);
+             int portnum, int datetime, struct hostent *inetent);
 static RegPacket *getlastRp();
 
 int initregqueue()
@@ -111,15 +116,12 @@ char *username;
 char *hostname;
 struct hostent *inetent;	/* host entry for system requesting status */
 {
-    RegPacket *getlastRp();
-    RegPacket *getRegPacket();
     RegPacket *p;
     RegPacket *lastp;
     struct timeval clock;
-    struct timezone tzone;
-    long datetime;
+    int datetime;
 
-    gettimeofday(&clock,&tzone);        /* get Time & Date of submission */
+    gettimeofday(&clock, NULL);        /* get Time & Date of submission */
     datetime = PresentTime = clock.tv_sec;
  
     p = Registery;
@@ -174,15 +176,17 @@ static void checkRegQue()
     activePort = 0;
     if (Registery != NULL)
     {   
-	p = Registery;
+        time_t tvsec;
+        p = Registery;
         while (p)
         {   valp = p->valreg;
-	    activePort++;
-            tmtime = localtime(&(valp->RegSub));
+	         activePort++;
+            tvsec = valp->RegSub;
+            tmtime = localtime( &tvsec );
             chrptr = asctime(tmtime);
             strcpy(datetim,chrptr);
             datetim[24] = 0;
-	    if (Acqdebug)
+	         if (Acqdebug)
                 fprintf(stderr,
 	          "User: '%s', PID: %d, Submitted: %s, Host: '%s', InterNet Port : %d \n",
               valp->UserID,valp->UserPid,datetim,valp->HostID,valp->UpdatePort);
@@ -234,23 +238,23 @@ static RegPacket *getlastRp()
 |    int   pid;                 process ID of registering process
 |    char *hostname;            acqfile where data will be stored
 |    int   portnum;             Inter-Net Port number  of the Above
-|    long  datetime;		date & time of registery submission
+|    int   datetime;		date & time of registery submission
 |    struct hostent *inetent;	host entry for system requesting status
 +-------------------------------------------------------------------*/
 static RegPacket *getRegPacket(char *username, int pid, char *hostname,
-             int portnum, long datetime, struct hostent *inetent)
+             int portnum, int datetime, struct hostent *inetent)
 {
     struct sockaddr_in *sinp;
     RegPacket *p;
  
-    if (p = (RegPacket *)malloc(sizeof(RegPacket)))
+    if ( (p = (RegPacket *)malloc(sizeof(RegPacket))) )
     {   p->nextrp = 0L;
-        if ( p->valreg = (RegValue *)malloc(sizeof(RegValue)))
+        if ( (p->valreg = (RegValue *)malloc(sizeof(RegValue))) )
         {   
-	    if (p->valreg->HostID = (char *)malloc(strlen(hostname)+1))
+	    if ( (p->valreg->HostID = (char *)malloc(strlen(hostname)+1)) )
             {   
 		strcpy(p->valreg->HostID,hostname);
-                if (p->valreg->UserID = (char *)malloc(strlen(username)+1))
+                if ( (p->valreg->UserID = (char *)malloc(strlen(username)+1)) )
                 {   
 		    strcpy(p->valreg->UserID,username);
                     p->valreg->UserPid = pid;
@@ -362,7 +366,7 @@ static void SendAcqStat()
     RegPacket *p;
     RegValue  *valp;
     int status;
-    int pos;
+    int pos __attribute__((unused));
 
     if (Acqdebug)
 	fprintf(stderr," SendAcqStat ===>\n");
@@ -437,7 +441,7 @@ char **messptrptr;
         stat_entry.h_length = getinttoken( messptrptr );
         if (stat_entry.h_length > sizeof( int )) {
                 fprintf( stderr,
-           "for remote host %s, received address length of %d, expected %d\n",
+           "for remote host %s, received address length of %d, expected %zd\n",
 		 MessPacket.Hostname, stat_entry.h_length, sizeof( int ));
                 return;
         }
@@ -450,8 +454,7 @@ char **messptrptr;
 }
 
 
-void
-Smessage()
+void Smessage()
 {
     char username[STRLEN];
     char *messptr;
@@ -498,7 +501,7 @@ Smessage()
      }
 }
 
-initinfo()
+void initinfo()
 {
 
     acqinfo.Acqstate = 0;  /* inactive */
@@ -533,7 +536,7 @@ initinfo()
     update_statinfo();
     setupInfopoller();
 }
-static int timecmp(struct timeval t1, struct timeval t2)
+static int timecmp(TIMESTAMP t1, TIMESTAMP t2)
 {
     if (t1.tv_sec != t2.tv_sec) {
 	return t1.tv_sec - t2.tv_sec;
@@ -554,13 +557,11 @@ update_rfinfo(EXP_STATUS_STRUCT *statblock)
 			       100000, 126000, 159000, 200000,
 			       0, 0, 0, 0,
                                0, 0, 600, 800};
-    static struct timeval t;	/* Last time long t.c. power was updated */
+    static TIMESTAMP t;	/* Last time long t.c. power was updated */
     static int ibuf = 0;	/* Where we are in the circular buffers */
     static unsigned int cbuf[4][30]; /* Circular buffers of past 10s values */
     static unsigned int rsum[4]; /* Running sum of long t.c. power */
-    static unsigned int oldsum[4];
     const static int tinc = 10;	/* How often to update long t.c. power (s) */
-    static int oldrf[4] = {-1, -1, -1, -1};
     int rf[4];
     unsigned int limit[4];	/* microwatts */
     unsigned int pwr[4];	/* microwatts */
@@ -599,7 +600,7 @@ update_rfinfo(EXP_STATUS_STRUCT *statblock)
 }
 
 static EXP_STATUS_STRUCT  *statusBlk = NULL;
-static struct timeval lastTime;
+static TIMESTAMP lastTime;
 
 int
 update_statinfo()
@@ -608,11 +609,10 @@ update_statinfo()
     int i;
     struct stat s;
     struct timeval clock;
-    struct timezone tzone;
-    static long   oldClock = 0;
-    static long   deadTime = 0;
+    static int   oldClock = 0;
+    static int   deadTime = 0;
     char   mapfile[128];
-    caddr_t p;
+    void *p;
     FILE   *fd2;
 #ifdef NIRVANA
     int    tmpRem;
@@ -662,15 +662,15 @@ update_statinfo()
 	{
 	   if (Acqdebug)
 	   {
-                fprintf(stderr,"File %s size is %d\n", mapfile, s.st_size);
-		fprintf(stderr," It must be larger than %d.\n", sizeof(EXP_STATUS_STRUCT));
+                fprintf(stderr,"File %s size is %ld\n", mapfile, s.st_size);
+		fprintf(stderr," It must be larger than %zd\n", sizeof(EXP_STATUS_STRUCT));
 	   }
 	   close(fd);
 	   fd = -1;
 	   return(0);
 	}
 
-	if((p = mmap(0,sizeof(EXP_STATUS_STRUCT),PROT_READ, MAP_SHARED,fd,0)) == (caddr_t)-1)
+	if((p = mmap(0,sizeof(EXP_STATUS_STRUCT),PROT_READ, MAP_SHARED,fd,0)) == (void *)-1)
 	{
 	   if (Acqdebug)
         	fprintf(stderr,"Could not map file %s\n", mapfile);
@@ -679,7 +679,7 @@ update_statinfo()
 	   return(0);
 	}
         if (Acqdebug)
-                fprintf(stderr," map addr is %ul \n", p);
+                fprintf(stderr," map addr is %p \n", p);
 	statusBlk = (EXP_STATUS_STRUCT *) p;
 	lastTime.tv_sec = 0;
 	lastTime.tv_usec = 0;
@@ -692,7 +692,7 @@ update_statinfo()
        	fprintf(stderr,"           new time = %d %d\n",
 		statusBlk->TimeStamp.tv_sec, statusBlk->TimeStamp.tv_usec);
     }
-    gettimeofday(&clock,&tzone);
+    gettimeofday(&clock, NULL);
     if ((statusBlk->TimeStamp.tv_sec  == lastTime.tv_sec) &&
         (statusBlk->TimeStamp.tv_usec == lastTime.tv_usec))
     {
@@ -897,7 +897,6 @@ void
 Statuscheck()
 {
     struct timeval clock;
-    struct timezone tzone;
     int		 timeit;
 
 
@@ -911,7 +910,7 @@ Statuscheck()
                 "~~~~~~~~> SIGALRM INTERRUPT PROCESSING STARTING <~~~~~~\n");
     }
 
-    gettimeofday(&clock,&tzone);
+    gettimeofday(&clock, NULL);
     PresentTime = clock.tv_sec;
 
     consoleActive = update_statinfo();

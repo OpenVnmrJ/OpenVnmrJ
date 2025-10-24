@@ -514,7 +514,7 @@ void  ipcKeyDbmShow(IPC_KEY_DBM_ID dbmId)
       DPRINT1(-1, "\n%d Key Entries in Dbm.\n",dbmId->entries);
       key = (IPC_KEY_DBM_DATA *) dbmId->dbmdata->shrmem->mapStrtAddr;
       for(i=0; i < dbmId->entries; i++)
-       DPRINT7(-1,"%d - '%s', pid: %d, active: %d key: %ld (0x%lx), path: '%s'\n",
+       DPRINT7(-1,"%d - '%s', pid: %d, active: %d key: %d (0x%x), path: '%s'\n",
 		i,key[i].idstr, key[i].pid, key[i].pidActive, 
 		key[i].ipcKey, key[i].ipcKey, key[i].path);
    }

@@ -21,7 +21,7 @@
 #include "errLogLib.h"
 #include "mfileObj.h"
 #include "shrMLib.h"
-#include "shrexpinfo.h"
+// #include "shrexpinfo.h"
 #include "expQfuncs.h"
 
 

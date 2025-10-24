@@ -157,6 +157,7 @@
 |    symbols and values match definitions in STAT_DEFS.h,
 |    SCCS category xracq
 +-------------------------------------------------------------------*/
+#ifndef ACQ_INACTIVE
 #define ACQ_INACTIVE 	0
 #define ACQ_REBOOT 	5
 #define ACQ_IDLE 	10
@@ -192,6 +193,7 @@
 #define CONSOLE_400MR_ID 1
 #define CONSOLE_SILKVNMRS_ID 2
 #define CONSOLE_SILK400MR_ID 3
+#endif // ACQ_INACTIVE
 
 /*  VT defines that maybe used in AcqVTSet, AcqVTAct */
 #define VTOFF   30000   /* temp value if VT controller is tobe passive */
@@ -246,7 +248,11 @@ typedef struct _datastat {
 	int	recvGain;
         int	doneCode;
         int	errorCode;
+#ifdef LINUX
+	int	fidAddr;	/* keep struct the same size when compiled as 64-bit */
+#else
 	int*	fidAddr;	/* Fid Memory Address */
+#endif
     /*unsigned int	rcvrIndex; */ 	/* Which rcvr this data is from */
         	         } FID_STAT_BLOCK;
 
@@ -499,16 +505,6 @@ typedef struct	_cdb_msg {
 } CDB_BLOCK;
 
 
-/* --------- ANSI/C++ compliant function prototypes --------------- */
- 
-#if defined(__STDC__) || defined(__cplusplus)
- 
-
-#else
-/* --------- NON-ANSI/C++ prototypes ------------  */
-
-#endif
- 
 #ifdef __cplusplus
 }
 #endif

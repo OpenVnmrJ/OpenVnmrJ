@@ -75,7 +75,6 @@ extern int  is_datastation();
 extern int is_acqproc_active();
 extern char *append_char4Acqi(char *string, char character);
 extern int cmpTimeStamp( TIMESTAMP *ts1, TIMESTAMP *ts2 );
-extern unsigned long getStatElem();
 extern void verifyExpproc();
 extern int getStatLSDV();
 extern int getStatRecvGain();
@@ -221,13 +220,12 @@ end_lockdisplay()
 #endif
 void lock_get_fid()
 {
-   int cmd_argc, cmd_retvec;
+   int cmd_argc;
    char *cmd_argvec[ 3 ];
 	cmd_argvec[ 0 ] = "acqipctst";
 	cmd_argvec[ 1 ] = "locki('data')";
 	cmd_argvec[ 2 ] = NULL;
 	cmd_argc	= 2;
-	cmd_retvec	= 0;
         sleepMilliSeconds(100);
 	acqproc_msge(cmd_argc, &cmd_argvec[ 0 ], 0, NULL);
 }
@@ -240,7 +238,8 @@ kill_nvlocki(int pid)
         fprintf(stderr, " kill locki pid %d \n", pid);
     if (pid > 0 && (pid == nvlockiPid)) {
 	if (lockiFd >= 0) {
-            write(lockiFd, "quit", 4);
+       int ret __attribute__((unused));
+       ret = write(lockiFd, "quit", 4);
 	    close (lockiFd);
 	}
         nvlockiPid = 0;
@@ -286,7 +285,7 @@ sort_nvdata(iptr, optr, size, sum)
 short *iptr;
 int   *optr, size, *sum;
 {
-    register int i;
+    int i;
     size /= 2;
     *sum = 0;
     for ( i=0; i < size; i++,iptr++)
@@ -562,7 +561,8 @@ run_nvlocki()
            nvlockiPid = 0;
 	}
 	else {
-           write(lockiFd, "start", 5);
+      int ret __attribute__((unused));
+      ret = write(lockiFd, "start", 5);
 	   if (verbose)
 	      fprintf(stderr, " nvlocki pid %d  is active. \n", nvlockiPid);
 	   return (1);
@@ -627,7 +627,8 @@ void quit_nvlocki()
    tmp = nvlockiPid;
    if (lockiFd >= 0)
    {
-      write(lockiFd, "quit", 4);
+      int ret __attribute__((unused));
+      ret = write(lockiFd, "quit", 4);
       close(lockiFd);
       lockiFd = -1;
    }
@@ -650,12 +651,13 @@ void quit_nvlocki()
 
 void stop_nvlocki()
 {
+   int ret __attribute__((unused));
 #ifdef WINBRIDGE      // following line added jgw 27 sep 07
    setDefaultRateAndTimeConst();
 #endif
    if (nvlockiPid > 0) {
       if (lockiFd >= 0)
-          write(lockiFd, "stop", 4);
+          ret = write(lockiFd, "stop", 4);
 #ifndef WINBRIDGE      // jgw 27 sep 07
       if (nvlockActive)
 #endif
@@ -782,7 +784,8 @@ nvlocki(int argc, char **argv)
     }
     if (doNext) {
 	if (lockiFd >= 0) {
-	   write(lockiFd, "fake", 4);
+      int ret __attribute__((unused));
+	   ret = write(lockiFd, "fake", 4);
 	}
     }
 }
@@ -1010,7 +1013,8 @@ get_LKdata()
     struct ia_stat statblk;
     char    lock_string[80];
     int    lkdata[512];
-    int     iter,ival,sum;
+    int     iter,sum;
+    int     ival __attribute__((unused));
     float   level;
 
     Wgetgraphicsdisplay(buf, sizeof(buf));
@@ -1218,7 +1222,7 @@ LKcanvas_repaint()
 static void
 sortdata(int *iptr, int *optr, int size, int *sum)
 {
-    register int i;
+    int i;
     size /= 2;
     *sum = 0;
     for (i=0; i < size; i++,iptr++)
@@ -1318,7 +1322,7 @@ insertAuth(msg_for_acq, mfa_len)
     for (iter = 0; iter < mfa_current_len+1; iter++)
 	*(tptrend--) = *(tptrstart--);
 
-    strncpy( msg_for_acq, authInfo, authLen );
+    strncpy( msg_for_acq, authInfo, authLen+1 );
     msg_for_acq[ authLen ] = DELIMITER_2;
 
     release(authInfo);
@@ -1442,7 +1446,7 @@ ipcGetProcName()
 int
 start_lockexp()
 {
-    char		tmpfilename[ MAXPATH ];
+    char		tmpfilename[ 2 * MAXPATH ];
     char		systemdir[ MAXPATH ];
     char		params4cmd[ 122 ];
     char		expproc_reply[ 256 ];
@@ -1451,6 +1455,7 @@ start_lockexp()
     unsigned long	*iaddr;
     SHR_EXP_INFO 	lockentry;
     SHR_EXP_STRUCT      lockStruct;
+    int ret __attribute__((unused));
 
     if (P_getstring(GLOBAL,"systemdir",systemdir,1,MAXPATH))
 	strcpy(systemdir,"/vnmr");
@@ -1469,8 +1474,8 @@ start_lockexp()
     strcpy(lockentry->UsrDirFile, getenv("vnmruser"));
     strcpy(lockentry->UserName, ipcGetUserName());
 
-    sprintf(lockentry->DataFile,
-	    "%s/acqqueue/%s.Data", systemdir, ipcGetProcName());
+    snprintf(lockentry->DataFile,EXPINFO_STR_SIZE,
+	    "%.32s/acqqueue/%.192s.Data", systemdir, ipcGetProcName());
     lockentry->ExpNum = 0;	/* Experiment # to perform processing in */
     lockentry->GoFlag = ACQI_LOCK;
     lockentry->InteractiveFlag = 1;
@@ -1487,7 +1492,7 @@ start_lockexp()
 	     systemdir, ipcGetProcName());
 
     fd = open( &tmpfilename[ 0 ], O_RDWR | O_CREAT | O_TRUNC, 0666 );
-    write( fd, lockentry, sizeof( *lockentry ) );
+    ret = write( fd, lockentry, sizeof( *lockentry ) );
     close( fd );
 
     strcpy( &expinfo[ 0 ], ACQI_EXPERIMENT );

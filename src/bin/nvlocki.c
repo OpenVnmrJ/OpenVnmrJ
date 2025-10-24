@@ -75,8 +75,13 @@ extern RTIBool enableSubscription();
 extern RTIBool disableSubscription();
 #else /* RTI_NDDS_4x */
 /* dummy functions for 4x */
-enableSubscription() { };
-disableSubscription() { };
+extern int initBESubscription(NDDS_ID pNDDS_Obj);
+extern int createSubscription(NDDS_ID pNDDS_Obj);
+extern int nddsSubscriptionDestroy(NDDS_ID pNDDS_Obj);
+extern void attachOnDataAvailableCallback(NDDS_ID pNDDS_Obj,
+           DDS_DataReaderListener_DataAvailableCallback callback, void *pUserData);
+void enableSubscription() { };
+void disableSubscription() { };
 #endif  /* RTI_NDDS_4x */
 
 static int ignoreLockFIDSub = 0;
@@ -199,9 +204,7 @@ void Lock_FIDCallback(void* listener_data, DDS_DataReader* reader)
    struct DDS_SampleInfo* info = NULL;
    struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
    DDS_ReturnCode_t retcode;
-   DDS_Boolean result;
    int i,numIssues;
-   DDS_TopicDescription *topicDesc;
 
 
    struct Lock_FIDSeq data_seq = DDS_SEQUENCE_INITIALIZER;
@@ -214,9 +217,12 @@ void Lock_FIDCallback(void* listener_data, DDS_DataReader* reader)
         return;
    }
 
+#ifdef DEBUG
+   DDS_TopicDescription *topicDesc;
    topicDesc = DDS_DataReader_get_topicdescription(reader);
    DPRINT2(+3,"Console_StatCallback: Type: '%s', Name: '%s'\n",
       DDS_TopicDescription_get_type_name(topicDesc), DDS_TopicDescription_get_name(topicDesc));
+#endif
         retcode = Lock_FIDDataReader_take(Lock_FID_reader,
                               &data_seq, &info_seq,
                               DDS_LENGTH_UNLIMITED, DDS_ANY_SAMPLE_STATE,
@@ -282,7 +288,6 @@ void Lock_FIDCallback(void* listener_data, DDS_DataReader* reader)
 static
 char *gethostIP(char* hname, char *localIP)
 {
-   int ipval;
    struct in_addr in;
    struct hostent *hp;
    char **p;
@@ -309,8 +314,6 @@ char *gethostIP(char* hname, char *localIP)
 ***************************************************************/
 int initiateNDDS(void)
 {
-    sigset_t   blockmask,oldmask;
-    int stat;
     char *data;
     char localIP[80];
     char *get_console_hostname(void);

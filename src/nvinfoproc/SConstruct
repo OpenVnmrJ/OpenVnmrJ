@@ -26,24 +26,15 @@ Import("*")
 # define target file names
 infoProcTarget = 'Infoproc'
 
-## NDDS include/lib paths
-# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
-boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
-if not os.path.exists(boFile):
-   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
-exec(compile(open(boFile).read(), boFile, 'exec'))
-
-print('nvInfoproc NDDS_VERSION ' + boEnv['NDDS_VERSION'])
-
 #NDDS include/lib paths
 #if 'Infoproc4x' in COMMAND_LINE_TARGETS:
 #  generate NDDS home path from NDDS_VERSION
-nddsdir = 'ndds.' + boEnv['NDDS_VERSION']
-print('Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this')
+NDDS_VERSION = '4.2e'
+nddsdir = 'ndds.' + NDDS_VERSION
+print('Compiling NDDS ' + NDDS_VERSION + ' Version')
 infoProcTarget = 'Infoproc'
 nddsHome = os.path.join(ovjtools, 'NDDS', nddsdir)
 nddsGen = 'cd ' + cwd + ' && ' + os.path.join(nddsHome, 'scripts', 'nddsgen')
-nddsJreBin = os.path.join(nddsHome, 'jre', 'i86Linux','bin')
 
 #  ndds header paths
 nddsHdrPathUnix = os.path.join(nddsHome, 'include')
@@ -54,7 +45,7 @@ nddsOpts = ' -language C -notypecode -replace '
 
 # libraries and paths
 #  nddsLibPath = os.path.join(nddsHome, 'lib', 'i86Linux2.6gcc3.4.3')
-nddsLibVer = boEnv['NDDS_LIB_VERSION']
+nddsLibVer = 'x64Linux2.6gcc3.4.5'
 nddsLibPath = os.path.join(nddsHome, 'lib', nddsLibVer )
 
 
@@ -135,10 +126,10 @@ nddsCFileList = [ 'Console_Stat.c',
 #                     'App_HBSupport.c']
 
 # build environment
-infoProcEnv = Environment(CCFLAGS    = '-m32 -g -O -Wno-incompatible-pointer-types -Wno-implicit-function-declaration -Wno-implicit-int -Wno-int-conversion',
+infoProcEnv = Environment(CCFLAGS    = '-g -O -Wall',
                           CPPDEFINES = ['LINUX', 'NODUMMY', 'RTI_UNIX',
-                                        'NOASYNC', 'NIRVANA', 'USE_HTONS', 'DEBUG'],
-                          LINKFLAGS  = '-m32 ',
+                                        'NOASYNC', 'NIRVANA', 'USE_HTONS','DEBUG'],
+                          LINKFLAGS  = '',
                           CPPPATH    = [cwd,
                                         nddsHdrPathUnix,
                                         nddsHdrPathShare])
@@ -150,7 +141,7 @@ infoProcEnv = Environment(CCFLAGS    = '-m32 -g -O -Wno-incompatible-pointer-typ
 buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, acqProcPath, acqProcHdrList)
 buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, vwacqPath, vwacqHdrList)
 buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, expProcPath, expProcHdrList)
-buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, xracqPath, xracqHdrList)
+# buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, xracqPath, xracqHdrList)
 buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, infoProcPath, infoProcFileList)
 buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, expProcPath, expProcFileList)
 buildMethods.makeSymLinks(infoProcEnv, infoProcTarget, cwd, ncommPath, ncommFileList)

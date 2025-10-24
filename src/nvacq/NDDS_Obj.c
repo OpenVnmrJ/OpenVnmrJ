@@ -564,7 +564,7 @@ void NDDS_Shutdown( NDDS_OBJ *pNddsObj )
 }
 
 /* turn on verbose NDDS logggin */
-NDDSLogOn()
+void NDDSLogOn()
 {
     NDDS_Config_Logger_set_verbosity( NDDS_Config_Logger_get_instance(), NDDS_CONFIG_LOG_VERBOSITY_STATUS_ALL);
 }
@@ -662,12 +662,11 @@ DDS_DomainParticipant *initDomain(int domainId, int nddsVerbosity, int multicast
     /* Change the participant liveliness settings, for mriUserByte, GMB  2/12/08  */
     /* ========================================================================== */
     // default is 100 sec lease duration, 30 sec assert period
-    /* Leave this setting to the default, below code was for testing purposes.. GMB  3/5/2008
+    // Leave this setting to the default, below code was for testing purposes.. GMB  3/5/2008
     // pParticipant_qos->discovery_config.participant_liveliness_lease_duration.sec = 2; //1 * 60; // 1 minutes
     // pParticipant_qos->discovery_config.participant_liveliness_lease_duration.nanosec = 0;
     // pParticipant_qos->discovery_config.participant_liveliness_assert_period.sec = 1;  // 1 * 60;
     // pParticipant_qos->discovery_config.participant_liveliness_assert_period.nanosec = 0;
-    /* ========================================================================== */
     /* ========================================================================== */
 
     // DPRINT(-2,"-- set discover options \n");
@@ -744,9 +743,9 @@ DDS_DomainParticipant *initDomain(int domainId, int nddsVerbosity, int multicast
 
     /* ========================================================================== */
     /* Using the zero copy network buffers, resulted in a lock/mutex contention between
-    /* The NDDS Event & Receive tasks in VxWorks.  This resulted in the Evt Task blocking
-    /* the Receive tasks for significant amounts of time (2+ ms) resulting in one mode of
-    /* readMRIUserByte  failure.. Thus we no turn this OFF.   GMB   2/5/2008   */
+     * The NDDS Event & Receive tasks in VxWorks.  This resulted in the Evt Task blocking
+     * the Receive tasks for significant amounts of time (2+ ms) resulting in one mode of
+     * readMRIUserByte  failure.. Thus we no turn this OFF.   GMB   2/5/2008   */
     /* ========================================================================== */
     udpv4_property.no_zero_copy = 1; // turn off network stack zero copy for readMRIUserByte
 
@@ -853,7 +852,7 @@ DDS_Topic *RegisterAndCreateTopic(NDDS_ID pNDDS_Obj)
 
     // (*pNDDS_Obj->TypeRegisterFunc)();
     // retcode = NDDSThroughputTestPacketTypeSupport_register_type(participant, type_name);
-    retcode = (*pNDDS_Obj->TypeRegisterFunc)(pNDDS_Obj->pParticipant, type_name);
+    retcode = (*pNDDS_Obj->TypeRegisterFunc)(pNDDS_Obj->pParticipant, (char *) type_name);
      if (retcode != DDS_RETCODE_OK) {
         errLogRet(LOGIT,debugInfo,"RegisterAndCreateTopic: failed to register type, err: %d\n",retcode); 
         NDDS_Shutdown(pNDDS_Obj);
@@ -873,7 +872,7 @@ DDS_Topic *RegisterAndCreateTopic(NDDS_ID pNDDS_Obj)
     {
          // Narrow the given DDS_TopicDescription pointer to a DDS_Topic pointer.
          topic =  DDS_Topic_narrow(TopicDesc);
-          DPRINT2(2,"Topic already present, desc: 0x%lx, topic: 0x%lx\n",TopicDesc, topic);
+//          DPRINT2(2,"Topic already present, desc: 0x%lx, topic: 0x%lx\n",TopicDesc, topic);
          return topic;
     }
     
@@ -1042,6 +1041,7 @@ char *nddsMetaRecvTaskList[] = { "rR0000", "rR0100", NULL };
 
 static struct RTIClock *_clock; /* A pointer to a high resolution clock */
 static double _HRclock_overhead;
+extern struct RTIClock *RTIHighResolutionClock_new();
 
 static DDS_Boolean calculate_clock_overhead()
 {

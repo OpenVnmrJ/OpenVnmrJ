@@ -27,8 +27,8 @@
 static EXP_STATUS_INFO ExpStatus;
 static SHR_MEM_ID ExpStatusObj;
 
-char *getTimeStr(time_t time, char *timestr,int maxsize);
-char *getTimeDif(time_t time, char *timestr);
+static char *getTimeStr(int time, char *timestr,int maxsize);
+static char *getTimeDif(int time, char *timestr);
 void initConsoleStatus();
 
 #define EXP_STATUS_NAME "/vnmr/acqqueue/ExpStatus"
@@ -36,12 +36,12 @@ void initConsoleStatus();
 /*************************************************************
 *  Some programs to work with Time Stamps
 *
-*    struct timeval {
-*       long	tv_sec;
-*       long	tv_usec;
+*    struct timevalInt {
+*       int	tv_sec;
+*       int	tv_usec;
 *    };
 *
-*    typedef struct timeval TIMESTAMP;
+*    typedef struct timevalInt TIMESTAMP;
 */
 
 int
@@ -127,6 +127,14 @@ void expStatusRelease()
   ExpStatusObj = NULL;
 }
 
+void gettime( TIMESTAMP *ts )
+{
+   struct timeval tmp;
+   gettimeofday( &tmp, NULL);
+   ts->tv_sec = tmp.tv_sec;
+   ts->tv_usec = tmp.tv_usec;
+}
+
 void initConsoleStatus()
 {
    shrmTake(ExpStatusObj);
@@ -152,7 +160,7 @@ void initConsoleStatus()
    ExpStatus->csb.consoleID = -1;
    strcpy(ExpStatus->csb.probeId1,"");
    strcpy(ExpStatus->csb.gradCoilId,"");
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
 }
 
@@ -164,12 +172,12 @@ int setStatCmpltTime(time_t cmplttime)
 {
    ExpStatus->CompletionTime = cmplttime;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
 
-long getStatRemainingTime()
+int getStatRemainingTime()
 {
    return(ExpStatus->RemainingTime);
 }
@@ -181,7 +189,7 @@ int setStatRemTime(int diftime)
 {
    ExpStatus->RemainingTime = diftime;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -194,12 +202,12 @@ int setStatDataTime()
 {
    ExpStatus->DataTime = time(NULL);
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
 
-long getStatExpTime()
+int getStatExpTime()
 {
    return(ExpStatus->ExpTime);
 }
@@ -207,21 +215,21 @@ int setStatExpTime(double duration)
 {
    ExpStatus->ExpTime = (int) (duration + 0.01);
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    ExpStatus->StartTime = ExpStatus->TimeStamp.tv_sec;
    shrmGive(ExpStatusObj);
    return(0);
 }
 
-long getStatInQue()
+int getStatInQue()
 {
    return(ExpStatus->ExpInQue);
 }
-int setStatInQue(long numInQue)
+int setStatInQue(int numInQue)
 {
    ExpStatus->ExpInQue = numInQue;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -234,34 +242,34 @@ int setStatGoFlag(int goflag)
 {
    ExpStatus->GoFlag = goflag;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
 
 
-unsigned long getStatCT()
+unsigned int getStatCT()
 {
    return(ExpStatus->CT);
 }
-int setStatCT(unsigned long ct)
+int setStatCT(unsigned int ct)
 {
    ExpStatus->CT = ct;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
 
-unsigned long getStatElem()
+unsigned int getStatElem()
 {
    return(ExpStatus->FidElem);
 }
-int setStatElem(unsigned long elem)
+int setStatElem(unsigned int elem)
 {
    ExpStatus->FidElem = elem;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -274,7 +282,7 @@ int setSystemVerId(int version)
 {
    ExpStatus->SystemVerId = version;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -287,7 +295,7 @@ int setInterpVerId(int version)
 {
    ExpStatus->InterpVerId = version;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -302,35 +310,35 @@ int setStatAcqState(int status)
 {
    ExpStatus->csb.Acqstate = (short) status;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
 
-long
+int
 getStatAcqFidCnt()
 {
 	return( ExpStatus->csb.AcqFidCnt );
 }
-int setStatAcqFidCnt( long fidCnt )
+int setStatAcqFidCnt( int fidCnt )
 {
 	ExpStatus->csb.AcqFidCnt = fidCnt;
 	shrmTake(ExpStatusObj);
-	gettimeofday( &(ExpStatus->TimeStamp), NULL);
+	gettime( &(ExpStatus->TimeStamp) );
 	shrmGive(ExpStatusObj);
    return(0);
 }
 
-long
+int
 getStatAcqCtCnt()
 {
 	return( ExpStatus->csb.AcqCtCnt );
 }
-int setStatAcqCtCnt( long ctCnt )
+int setStatAcqCtCnt( int ctCnt )
 {
 	ExpStatus->csb.AcqCtCnt = ctCnt;
 	shrmTake(ExpStatusObj);
-	gettimeofday( &(ExpStatus->TimeStamp), NULL);
+	gettime( &(ExpStatus->TimeStamp) );
 	shrmGive(ExpStatusObj);
    return(0);
 }
@@ -343,7 +351,7 @@ int setStatLkLevel(int lklev)
 {
    ExpStatus->csb.AcqLockLevel = (short) lklev;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -356,7 +364,7 @@ int setStatLkGain(int lkval)
 {
    ExpStatus->csb.AcqLockGain = (short) lkval;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    return(0);
 }
 
@@ -368,7 +376,7 @@ int setStatLkPower(int lkval)
 {
    ExpStatus->csb.AcqLockPower = (short) lkval;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -387,7 +395,7 @@ int setStatLkPhase(int lkval)
 {
    ExpStatus->csb.AcqLockPhase = (short) lkval;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -438,7 +446,7 @@ int setStatGradTune(char *axis, char *type, int value)
     if (index >= 0) {
 	ExpStatus->csb.gpaTuning[index] = (short)value;
 	shrmTake(ExpStatusObj);
-	gettimeofday( &(ExpStatus->TimeStamp), NULL);
+	gettime( &(ExpStatus->TimeStamp) );
 	shrmGive(ExpStatusObj);
 	return 0;
     }
@@ -453,7 +461,7 @@ int setStatAcqSample(int sample )
 {
    ExpStatus->csb.AcqSample = sample;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -466,7 +474,7 @@ int setStatRecvGain(int gain)
 {
    ExpStatus->csb.AcqRecvGain = (short) gain;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -485,7 +493,7 @@ int setStatSpinAct(int spin_val)
 {
    ExpStatus->csb.AcqSpinAct = (short) spin_val;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -498,7 +506,7 @@ int setStatShimValue(int dacnum, int value)
 {
    ExpStatus->csb.AcqShimValues[dacnum] = (short) value;
    shrmTake(ExpStatusObj);
-   gettimeofday( &(ExpStatus->TimeStamp), NULL);
+   gettime( &(ExpStatus->TimeStamp) );
    shrmGive(ExpStatusObj);
    return(0);
 }
@@ -578,7 +586,7 @@ int getStatConsoleID()
    return( (int) ExpStatus->csb.consoleID );
 }
 
-long getStatLockFreqAP()
+int getStatLockFreqAP()
 {
    return( ExpStatus->csb.AcqLockFreqAP );
 }
@@ -625,7 +633,7 @@ static int setstatstr(char *arg, char *given)
   {
      strcpy(arg,given);
   }
-  gettimeofday( &(ExpStatus->TimeStamp), NULL);
+  gettime( &(ExpStatus->TimeStamp) );
   shrmGive(ExpStatusObj);
   return(0);
 }
@@ -709,16 +717,16 @@ getStatRcvrNpErr()
 }
 
 void
-getStatTimeStamp(struct timeval *time)
+getStatTimeStamp(TIMESTAMP *time)
 {
    shrmTake(ExpStatusObj);
-   memcpy((char*) time,(char*) &(ExpStatus->TimeStamp),sizeof(struct timeval));
+   memcpy((char*) time,(char*) &(ExpStatus->TimeStamp),sizeof(TIMESTAMP));
    shrmGive(ExpStatusObj);
   return;
 }
 
 int
-isStatTimeStampNew(struct timeval *time)
+isStatTimeStampNew(TIMESTAMP *time)
 {
   int stat;
 
@@ -733,19 +741,20 @@ isStatTimeStampNew(struct timeval *time)
   return(stat);
 }
 
-time_t getTime()
+int getTime()
 {
-    return(time(NULL));
+    return((int) time(NULL));
 }
 
-char *getTimeStr(time_t time, char *timestr,int maxsize)
+static char *getTimeStr(int time, char *timestr,int maxsize)
 {
    struct tm *tmtime;
 
    /* -------- POSIX, ANSI way of getting time of day */
    if (time > 0)
    {
-      tmtime = localtime(&time);
+      time_t tmp = time;
+      tmtime = localtime(&tmp);
       strftime(timestr,maxsize,"%H:%M:%S",tmtime);
    }
    else
@@ -755,7 +764,7 @@ char *getTimeStr(time_t time, char *timestr,int maxsize)
    return(timestr);
 }
 
-char *getTimeDif(time_t time, char *timestr)
+char *getTimeDif(int time, char *timestr)
 {
   int hrs,mins,sec;
 
@@ -830,8 +839,7 @@ void setStatState(int state)
     shrmGive(ExpStatusObj);
 }
 
-int
-receiveConsoleStatusBlock( char *pcsb )
+int receiveConsoleStatusBlock( CONSOLE_STATUS *pcsb )
 {
     int changed;
 
@@ -839,7 +847,7 @@ receiveConsoleStatusBlock( char *pcsb )
 
     changed = memcmp( (char *) &ExpStatus->csb, pcsb, sizeof( ExpStatus->csb ) );
     memcpy( (char *) &ExpStatus->csb, pcsb, sizeof( ExpStatus->csb ) );
-    gettimeofday( &(ExpStatus->TimeStamp), NULL);
+    gettime( &(ExpStatus->TimeStamp) );
     return(changed);
 }
 

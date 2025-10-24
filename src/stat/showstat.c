@@ -12,6 +12,8 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <unistd.h>
+#include <signal.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -19,6 +21,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <time.h>
 #ifdef USE_RPC
 #include <rpc/types.h>
 #include <rpc/rpc.h>
@@ -27,6 +30,15 @@
 
 #include "ACQPROC_strucs.h"
 #include "STAT_DEFS.h"
+void initsocket();
+int initIPCinfo(char *remotehost);
+void acqregister();
+void DoTheChores();
+void unregister();
+int readacqstatblock(AcqStatBlock *statblock);
+void updatestatscrn(AcqStatBlock *statbuf);
+int Ping_Pid();
+int sendacq(int acqpid, char *message);
 
 #define ERROR 1
 #define MAXRETRY 8
@@ -197,12 +209,8 @@ char *hostname;
 
 /*--------------------------------------------------------------------*/
 
-main( argc, argv )
-int argc;
-char *argv[];
+int main(int argc, char *argv[] )
 {
-	int		 ival;
-	struct passwd	*getpwuid();
 	struct passwd	*pasinfo;
 	struct hostent	*local_hp;
 
@@ -223,7 +231,7 @@ char *argv[];
 
 	local_hp = gethostbyname( LocalHost );
 	if (local_hp->h_length > sizeof( int )) {
-		fprintf(stderr, "programming error, size of host address is %d, expected %d\n",
+		fprintf(stderr, "programming error, size of host address is %d, expected %zd\n",
 				 local_hp->h_length, sizeof( int )
 		);
 		exit( 1 );
@@ -271,7 +279,7 @@ char *argv[];
 	}
 }
 
-DoTheChores()
+void DoTheChores()
 {
 	int	ret;
 
@@ -296,10 +304,11 @@ DoTheChores()
 	}
 }
 
-CreateSocket(type)
-int type;
+int CreateSocket(int type)
 {
+#ifndef LINUX
 	int on = 1;
+#endif
 	int sd;	/* socket descriptor */
 	int flags;
 
@@ -321,9 +330,9 @@ int type;
 #endif
 	/*setsockopt(sd,SOL_SOCKET,(~SO_LINGER),&on,sizeof(on));*/
 
-    /* --- We explicitly setup the descriptor as desired because ----*/
-    /*     the notifier remembers the old settings for a file descriptor
-    /* --- even if it was closed, so we take no chances ---- */
+    // --- We explicitly setup the descriptor as desired because ----*/
+    //     the notifier remembers the old settings for a file descriptor
+    // --- even if it was closed, so we take no chances ---- */
 
         if ((flags = fcntl(sd,F_GETFL,0)) == -1) {	/* get mode bits */
 		perror("CreateSocket():  fcntl error, can't get flags");
@@ -339,7 +348,7 @@ int type;
 	return(sd);
 }
 
-initsocket()    
+void initsocket()
 {
 	struct hostent *hp;
 
@@ -361,13 +370,11 @@ initsocket()
 	msgsockname.sin_port = Acqmsgport;
 }
 
-initIPCinfo(remotehost)
-char *remotehost;
+int initIPCinfo(char *remotehost)
 {
 	char filepath[128];
 	char *tmpptr;
 	FILE *stream;
-	extern char *getenv();
  
 #ifdef USE_RPC
 	if ( (remotehost != NULL) &&
@@ -379,7 +386,7 @@ char *remotehost;
 	tmpptr = (char *)getenv("vnmrsystem");            /* vnmrsystem */
 	strcpy(filepath,tmpptr);
 	strcat(filepath,"/acqqueue/acqinfo");
-	if (stream = fopen(filepath,"r")) {
+	if ( (stream = fopen(filepath,"r")) ) {
 		if (fscanf(stream,"%d%s%d%d%d",
 			  &Acqpid,AcqHost,&Acqrdport,&Acqwtport,&Acqmsgport
 		) != 5) {
@@ -400,8 +407,7 @@ char *remotehost;
 	  return(0);
 }
 
-int
-Ping_Pid()
+int Ping_Pid()
 {
 	int ret;
 
@@ -419,10 +425,11 @@ Ping_Pid()
 	}
 }
 
-acqregister()
+void acqregister()
 {
-	char	message[100];
-	int	localaddr, namlen;
+	char	message[512];
+	int	localaddr;
+   socklen_t  namlen;
  
 	statussockname.sin_family = AF_INET;
 	statussockname.sin_addr.s_addr = INADDR_ANY;
@@ -438,18 +445,19 @@ acqregister()
 		exit(1);
 	}
 
-	if (bind(statussocket,(caddr_t)&statussockname,sizeof(statussockname)) != 0)    {
+	if (bind(statussocket,(struct sockaddr *)&statussockname,
+            sizeof(statussockname)) != 0)    {
 		perror("Register(): bind error");
 		exit(0);
 	}
 	namlen = sizeof(statussockname);
-	getsockname(statussocket,&statussockname,&namlen);
+	getsockname(statussocket,(struct sockaddr *)&statussockname,&namlen);
 	if (debug)
 	  fprintf(stderr,"Status Port Number: %d\n",statussockname.sin_port);
  
  
 	if (local_entry.h_length > sizeof( int )) {
-		fprintf( stderr, "Error: length of host address is %d, expected %d\n",
+		fprintf( stderr, "Error: length of host address is %d, expected %zd\n",
 				  local_entry.h_length, sizeof( int )
 		);
 		exit(0);
@@ -467,9 +475,9 @@ acqregister()
 	  fprintf(stderr,"register message unable to be sent\n");
 }
 
-unregister()
+void unregister()
 {
-	char message[100];
+	char message[256];
  
     /* ---- register this status socket with the acquisition process --- */
 
@@ -485,14 +493,14 @@ unregister()
 |       then transmit a message to it and disconnect.
 |
 +-----------------------------------------------------------*/
-sendacq(acqpid,message)
-char *message;
-int acqpid;
+int sendacq(int acqpid, char *message)
 {
 	int fgsd;   /* socket discriptor */
 	int result;
 	int i;
+#ifndef LINUX
 	int on = 1;
+#endif
  
     /* --- try several times then fail --- */
 
@@ -522,7 +530,8 @@ int acqpid;
 
 		if (debug)
 		  printf("sendacq(): send signal that pipe connection is requested.\n");
-		if ((result = connect(fgsd,&msgsockname,sizeof(msgsockname))) != 0) {
+		if ((result = connect(fgsd,(struct sockaddr *) &msgsockname,
+                            sizeof(msgsockname))) != 0) {
           /* --- Is Socket queue full ? --- */
 			if (errno != ECONNREFUSED && errno != ETIMEDOUT) { /* NO, some other error */
 				perror("sendacq():aborting,  connect error");
@@ -545,15 +554,14 @@ int acqpid;
 	}
 	if (debug)
 	  fprintf(stderr,"Sendacq(): Connection Established \n");
-	write(fgsd,message,strlen(message));
+	result = write(fgsd,message,strlen(message));
 
 	shutdown(fgsd,2);
 	close(fgsd);
 	return(0);
 }
 
-readacqstatblock(statblock)
-AcqStatBlock *statblock;
+int readacqstatblock(AcqStatBlock *statblock)
 {
 	int bytes;
 
@@ -570,9 +578,7 @@ AcqStatBlock *statblock;
 /* defined this program before it is used - prevent compiler
    confusion over the value returned by this program.		*/
 
-static char *
-makeStateString( acqstate )
-int acqstate;
+static char *makeStateString(int acqstate )
 {
 	char *tmpaddr, *retaddr;
  
@@ -675,9 +681,7 @@ int acqstate;
 
 /*  i32Log10 serves to count the number of digits in a positive integer  */
 
-static int
-i32Log10( ivalue )
-long ivalue;
+static int i32Log10(int ivalue )
 {
 	if (ivalue < 1)
 	  return( 0 );
@@ -706,11 +710,9 @@ long ivalue;
 #define ABS_TIME_ACQSTAT_INDEX	11
 #define ABS_TIME_ACQSTAT_LENGTH  8
 
-static char *
-formatAbsTimeAcqstat( absTime )
-int absTime;
+static char *formatAbsTimeAcqstat(int absTime )
 {
-	int	 localAbsTime;
+	time_t	 localAbsTime;
 	char	*tmpaddr, *retaddr;
 
 /* If Acqproc sends back an absolute time of 0 or less,
@@ -725,7 +727,7 @@ int absTime;
 	}
 
 	localAbsTime = absTime;
-	tmpaddr = (char *) ctime( &localAbsTime );
+	tmpaddr = ctime( &localAbsTime );
 	retaddr = (char *) malloc( ABS_TIME_ACQSTAT_LENGTH + 1 );
 	if (retaddr == NULL)
 	  return( NULL );
@@ -741,8 +743,7 @@ int absTime;
 #define MIN_HOUR_LEN	2
 
 static char *
-formatDeltaTimeAcqstat( deltaTime )
-int deltaTime;					/* in seconds */
+formatDeltaTimeAcqstat(int deltaTime )		/* in seconds */
 {
 	int	 hours, mins, secs;
 	int	 hlen;
@@ -771,20 +772,19 @@ int deltaTime;					/* in seconds */
 	mins = deltaTime / SECS_PER_MIN;
 	secs = deltaTime % SECS_PER_MIN;
 
-	retaddr = (char *) malloc( hlen + 1 + LENGTH_MIN_SECS + 1 );
+	retaddr = (char *) malloc( hlen + LENGTH_MIN_SECS + 10 );
 	if (retaddr == NULL)
 	  return( NULL );
 
 /*  First arg to sprintf specifies the field width
     (actually precision) for the hour value.		*/
 
-	sprintf( retaddr, "%0.*d:%02d:%02d", hlen, hours, mins, secs );
+	sprintf( retaddr, "%0*d:%02d:%02d", hlen, hours, mins, secs );
 	return( retaddr );
 }
 
 static int
-cvtLockLevelToPercent( lockLevel )
-int lockLevel;
+cvtLockLevelToPercent(int lockLevel )
 {
 	int	lockPercent;
 
@@ -806,8 +806,7 @@ int lockLevel;
     0-length string instead of a numeric value.				*/
 
 static char *
-getVTvalue( vt_val )
-int vt_val;
+getVTvalue(int vt_val )
 {
 	int	 tmplen;
 	char	*retaddr, tmpbuf[ 20 ];
@@ -836,8 +835,7 @@ int vt_val;
 #define NOTPRESENT 3
 
 static char *
-getmode( statval )
-int statval;
+getmode(int statval )
 {
 	int	 msgelen;
 	char	*msgeptr, *retaddr;
@@ -880,8 +878,7 @@ int statval;
 #define  VT_SHIFT	11
 
 static char *
-getLockFromLSDV( lsdv_val )
-int lsdv_val;
+getLockFromLSDV(int lsdv_val )
 {
 	int	lock_val;
 
@@ -890,8 +887,7 @@ int lsdv_val;
 }
 
 static char *
-getSpinFromLSDV( lsdv_val )
-int lsdv_val;
+getSpinFromLSDV(int lsdv_val )
 {
 	int	spin_val;
 
@@ -900,8 +896,7 @@ int lsdv_val;
 }
 
 static char *
-getDecFromLSDV( lsdv_val )
-int lsdv_val;
+getDecFromLSDV(int lsdv_val )
 {
 	int	 dec_val, msgelen;
 	char	*message, *retaddr;
@@ -932,8 +927,7 @@ int lsdv_val;
 }
 
 static char *
-getVTFromLSDV( lsdv_val )
-int lsdv_val;
+getVTFromLSDV(int lsdv_val )
 {
 	int	vt_val;
 
@@ -942,8 +936,7 @@ int lsdv_val;
 }
 
 static char *
-getAirFromLSDV( lsdv_val )
-int lsdv_val;
+getAirFromLSDV(int lsdv_val )
 {
 	int	 air_val, msgelen;
 	char	*message, *retaddr;
@@ -970,8 +963,7 @@ int lsdv_val;
 	return( retaddr );
 }
 
-updatestatscrn(statbuf)
-AcqStatBlock *statbuf;
+void updatestatscrn(AcqStatBlock *statbuf)
 {
 	char	*state, *VTactual, *VTsetting;
 	char	*completeTime, *dataStoreTime, *remainTime;

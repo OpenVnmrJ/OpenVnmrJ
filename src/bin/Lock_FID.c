@@ -59,8 +59,8 @@ extern DDS_ReturnCode_t Lock_FIDTypeSupport_create_data_ex(DDS_Boolean);
 void getLock_FIDInfo(NDDS_OBJ *myStruct)
 {
     strcpy(myStruct->dataTypeName, Lock_FIDTYPENAME);
-    myStruct->TypeRegisterFunc = Lock_FIDTypeSupport_register_type;
-    myStruct->TypeAllocFunc = Lock_FIDTypeSupport_create_data_ex;
+    myStruct->TypeRegisterFunc = (DataTypeRegister) Lock_FIDTypeSupport_register_type;
+    myStruct->TypeAllocFunc = (DataTypeAllocate) Lock_FIDTypeSupport_create_data_ex;
 }
 /* --- End Special Varian Inc Added Template Function  ----- */
 
@@ -76,9 +76,6 @@ RTIBool Lock_FID_initialize(
 RTIBool Lock_FID_initialize_ex(
     Lock_FID* sample,RTIBool allocatePointers)
 {
-
-    void* buffer;                
-    buffer = NULL;        
 
     DDS_ShortSeq_initialize(&sample->lkfid);
                 

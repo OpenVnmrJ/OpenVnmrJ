@@ -59,8 +59,8 @@ extern DDS_ReturnCode_t Console_StatTypeSupport_create_data_ex(DDS_Boolean);
 void getConsole_StatInfo(NDDS_OBJ *myStruct)
 {
     strcpy(myStruct->dataTypeName, Console_StatTYPENAME);
-    myStruct->TypeRegisterFunc = Console_StatTypeSupport_register_type;
-    myStruct->TypeAllocFunc = Console_StatTypeSupport_create_data_ex;
+    myStruct->TypeRegisterFunc = (DataTypeRegister) Console_StatTypeSupport_register_type;
+    myStruct->TypeAllocFunc = (DataTypeAllocate) Console_StatTypeSupport_create_data_ex;
 }
 /* --- End Special Varian Inc Added Template Function  ----- */
 
