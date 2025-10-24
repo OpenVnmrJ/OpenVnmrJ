@@ -126,6 +126,15 @@
                                  */
 
 #include "ACQPROC_strucs.h"
+extern int initStatSocket();
+extern int readacqstatblock(AcqStatBlock *statblock);
+extern int updatestatscrn(AcqStatBlock *statblock);
+extern void reregister();
+extern int initIPCinfo(char *remotehost);
+extern void initsocket();
+extern void acqregister();
+extern int writestatToVnmrJ( char *cmd, char *message );
+extern int Acqproc_ok(char *remotehost);
 
 int debug = 0;
 int canvasOn = 0;
@@ -141,7 +150,7 @@ int StatPortId = -1;
 char User[HOSTLEN];
 char LocalHost[HOSTLEN];
 char RemoteHost[HOSTLEN];
-char *graphics;
+// char *graphics;
 int  Procpid;
 long PresentTime = GETTIMEINTERVAL + 1;
 long IntervalTime;
@@ -157,7 +166,9 @@ static int logging=0;
 struct hostent	 local_entry;
 static char	*local_addr_list[ 2 ] = { NULL, NULL };
 static int	 local_addr;
+#ifdef MOTIF
 static void create_Statuspanel();
+#endif
 static void initDvals();
 static int setup_signal_handlers();
 void DoTheChores(int sig);
@@ -206,7 +217,6 @@ void acqstat_window_loop()
        res = select(input_fd+1, &rfds, 0, 0, 0);
        if (res > 0)
        {
-          int ch;
           if (FD_ISSET(input_fd, &rfds) )
              DoTheChores(0);
        }
@@ -223,10 +233,11 @@ int main(int argc, char *argv[])
 {
 	int n;
 	int pid;
-	int ival;
+	int ival __attribute__((unused));
 	char *d_opt = "-debug";
 	struct passwd *pasinfo;
 	struct hostent *local_hp;
+   FILE *fp __attribute__((unused));
 
 	if (strstr(argv[0], "Infostat"))
 		useInfostat = 0;
@@ -293,10 +304,10 @@ int main(int argc, char *argv[])
 		for (n = 3; n < 20; n++) /* close any inherited open file descriptors */
 			close(n);
 
-	freopen("/dev/null", "r", stdin);
+	fp = freopen("/dev/null", "r", stdin);
 	if (debug == 0 && useInfostat < 0 /* && StatPortId<0 */) {
-		freopen("/dev/console", "a", stdout);
-		freopen("/dev/console", "a", stderr);
+		fp = freopen("/dev/console", "a", stdout);
+		fp = freopen("/dev/console", "a", stderr);
 	}
 
 	ival = setsid(); /* the setsid program will disconnect from */
@@ -314,11 +325,13 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "requested RemoteHost:'%s'\n", RemoteHost);
 
 	acq_ok = 0;
+#ifdef XXX
 	if (useInfostat == 0) {
 		graphics = "sun";
 	} else {
 		graphics = "sun";
 	}
+#endif
 
 	/* get process id */
 	Procpid = getpid();
@@ -335,7 +348,7 @@ int main(int argc, char *argv[])
 	local_hp = gethostbyname(LocalHost);
 	if (local_hp->h_length > sizeof(int)) {
 		fprintf(stderr,
-				"programming error, size of host address is %d, expected %d\n",
+				"programming error, size of host address is %d, expected %ld\n",
 				local_hp->h_length, sizeof(int));
 		exit(1);
 	}
@@ -500,6 +513,7 @@ void DoTheChores(int sig)
                 alarm(IntervalTime);
 	}
 }
+#ifdef XXX
 /*--------------------------------------------------------------------------
 |
 |	Queuedisp()/0
@@ -508,6 +522,7 @@ void DoTheChores(int sig)
 Queuedisp()
 {
 }
+#endif
 
 
 
@@ -667,14 +682,19 @@ static void initDvals()
 int
 Wissun()
 {
+#ifdef XXX
     static int retval = -1;
 
     if ( retval == -1 )
+    {
        if (strcmp(graphics,"sun")==0 || strcmp(graphics,"suncolor")==0)
           retval = 1;
        else
           retval = 0;
+    }
     return retval;
+#endif
+    return 1;
 }
 
 /*  following array MUST end in -1, or a Segmented Violation may occur.
@@ -688,7 +708,8 @@ static int setup_signal_handlers()
 	struct sigaction	intserv;
 	sigset_t		qmask;
 	extern void		exitproc();
-	int			iter, ival, signum;
+	int			iter, signum;
+	int ival __attribute__((unused));
 
 	for (iter = 0; ( (signum = signum_array[ iter ]) != -1 ); iter++) {
 		sigemptyset( &qmask );

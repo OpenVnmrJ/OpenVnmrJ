@@ -6,7 +6,13 @@ import sys
 sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import buildMethods
 
+cwd = os.getcwd()
 ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print("OVJ_TOOLS env not found. Trying default location.")
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
 if not ovjtools:
     print("OVJ_TOOLS env not found.")
     print("For bash and variants, use export OVJ_TOOLS=<path>")
@@ -23,25 +29,16 @@ nvLockiTarget = 'nvlocki'
 # can be called from any other SConstruct file
 cwd = os.getcwd()
 
-javaPath = os.path.join(ovjtools, 'java', 'bin')
-
-## NDDS include/lib paths
-# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
-boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
-if not os.path.exists(boFile):
-   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
-exec(compile(open(boFile).read(), boFile, 'exec'))
-
-print('nvlocki NDDS_VERSION ' + boEnv['NDDS_VERSION'])
+NDDS_VERSION = '4.2e'
+print('nvlocki NDDS_VERSION ' + NDDS_VERSION)
 
 #NDDS include/lib paths
 # if 'nvlocki4x' in COMMAND_LINE_TARGETS:
-nddsdir = 'ndds.' + boEnv['NDDS_VERSION']
-print('Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this')
+nddsdir = 'ndds.' + NDDS_VERSION
+print('Compiling NDDS ' + NDDS_VERSION + ' Version')
 nvLockiTarget = 'nvlocki4x'
 nddsHome = os.path.join(ovjtools,'NDDS', nddsdir)
 nddsGen = os.path.join(nddsHome, 'scripts', 'nddsgen')
-nddsJreBin = os.path.join(nddsHome, 'jre', 'i86Linux', 'bin')
 
 #  ndds header paths
 nddsHdrPathUnix = os.path.join(nddsHome, 'include')
@@ -52,14 +49,17 @@ nddsOpts = ' -language C -notypecode -replace '
    
 # libraries and paths
 # nddsLibPath = os.path.join(nddsHome, 'lib', 'i86Linux2.6gcc3.4.3')
-nddsLibVer = boEnv['NDDS_LIB_VERSION']
+nddsLibVer = 'x64Linux2.6gcc3.4.5'
 nddsLibPath = os.path.join(nddsHome, 'lib', nddsLibVer )
 LibList = [ 'm', 'pthread', 
                'nddscz', 'nddscorez', 'dl' ]
 
 # library dependancies
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
-SConscript(os.path.join(ncommPath, 'SConstruct'))
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
+if not os.path.exists(ncommPath):
+   Execute('cp -r '+os.path.join(cwd,os.pardir,'ncomm') + ' ' + ncommPath+ ';touch '+ncommPath+'/m64')
+   Execute('cd ../ncomm64; scons')
+#SConscript(os.path.join(ncommPath, 'SConstruct'))
 
 # source files
 ncommHdrList = ['errLogLib.h',
@@ -114,10 +114,10 @@ nddsCFileList = [ 'Lock_FID.c',
 # nddsgen of 3x files can not be threaded so for 3x we do the nddsgen during parse time
 
 # build environments
-nvLockiCEnv = Environment(CCFLAGS    = '-O2 -m32 -g -Wno-incompatible-pointer-types -Wno-implicit-function-declaration -Wno-implicit-int -Wno-int-conversion',
+nvLockiCEnv = Environment(CCFLAGS    = '-O2 -g -Wall',
                           CPPDEFINES = ['SUN', 'X11', 'MOTIF', 'NESSIE', 'RTI_UNIX',
                                         'LINUX', 'VNMRJ', 'BSDACQ'],
-                          LINKFLAGS  = '-g -m32 ',
+                          LINKFLAGS  = '-g ',
                           CPPPATH    = [cwd,
                                         nddsHdrPathUnix,
                                         nddsHdrPathShare])
@@ -127,10 +127,10 @@ nvLockiCEnv = Environment(CCFLAGS    = '-O2 -m32 -g -Wno-incompatible-pointer-ty
 ## if 'nvlocki4x' in COMMAND_LINE_TARGETS:
 nvLockiCEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
 
-nvLockiCppEnv = nvLockiCEnv.Clone(CC         = 'g++',
-                                 CCFLAGS    = '-O -g -Wno-deprecated -m32',
+nvLockiCppEnv = nvLockiCEnv.Clone(CC         = 'g++ -Wall',
+                                 CCFLAGS    = '-O -g',
                                  CPPDEFINES = ['LINUX'],
-                                 LINKFLAGS  = '-O -m32 -g -Wl,-rpath,/vnmr/lib ')
+                                 LINKFLAGS  = '-O -g -Wl,-rpath,/vnmr/lib ')
 
 # define Builders
 # nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
@@ -162,7 +162,7 @@ nvlocki = nvLockiCppEnv.Program(target  = nvLockiTarget,
                                 LIBPATH = [cwd,
                                            nddsLibPath,
                                            ncommPath],
-                                LIBS    = ['acqcomm'] + LibList)
+                                LIBS    = ['acqcomm64'] + LibList)
 
 
 # define with absolute path where built files will be copied

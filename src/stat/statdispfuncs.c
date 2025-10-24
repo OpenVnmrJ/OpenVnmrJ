@@ -89,7 +89,7 @@ const char root_end[]="</statlog>\n";
 static void checkLogEntry(int item, char *txt ){
     char name[TXT_LEN]="";
     char file[64]="";
-    char path[256];
+    char path[512];
     struct timeval clock;
     FILE * fp;
     int newfile=0;
@@ -146,13 +146,13 @@ static void checkLogEntry(int item, char *txt ){
     fflush(fp);
     fclose(fp);
 }
+
 void setLogFilePath(char *path){
-    int i;
     logging=0;
-    if(path !=NULL)
+    if (path !=NULL)
         strcpy(statlog,path);
-	if(strlen(statlog)>0)
-	    logging=1;
+	 if(strlen(statlog)>0)
+	     logging=1;
     checkLogEntry(StatusVal,"RESTART");
 }
 
@@ -663,7 +663,7 @@ int updatestatscrn(AcqStatBlock *statblock)
     static int lastFTS = -500;
     static int skipFTS = 0;
     static int lastLocklevel = -1;
-    float damplevel;
+    float damplevel = 0.0;
     int i;
     struct tm *tmtime;
     char  *chrptr;
@@ -1421,38 +1421,6 @@ void showLSDV()
     if (debug)
        fprintf(stderr,"LSDV = 0x%x\n",status);
 
-#ifdef XXX
-    /*  ------------- N o t  U S E D ---------------------------------------
-    switch(stat)
-    {
-	case 0:
-		if (lockchoice != 0)
-		{
-		    panel_set_value(LK_lock_choice,0);
-		    lockchoice = 0;
-		    /*printf("Hardware Lock: OFF  ");*/
-		/*}
-		break;
-	case 1:
-		if (lockchoice != 2)
-		{
-		    panel_set_value(LK_lock_choice,2);
-		    lockchoice = 2;
-		    /*printf("Hardware Lock: AUTO  ");*/
-		/*}
-		break;
-	case 2:
-		if (lockchoice != 1)
-		{
-		    panel_set_value(LK_lock_choice,1);
-		    lockchoice = 1;
-		    /*printf("Hardware Lock: ON  ");*/
-		/*}
-		break;
-    }
-    ----------------------------------------------------------------- */
-#endif
-
     stat = (status >> 2) & 0x0003;
     if (debug)
         fprintf(stderr,"Lockstate = 0x%x\n",stat);
@@ -1486,51 +1454,6 @@ void showLSDV()
           Sampstat = stat;
        }
     }
-
-#ifdef XXX
-/*    if (!stat)
-    {
-	if (Sampstat != 0)
-	{
-	    panel_set_value(LK_sample_choice,0);
-	    sampchoice = Sampstat = 0;
-            if (useInfostat == 0)
-    	      disp_string(AIRVal,"insert"); /* doesn't work? */
-	    /*printf("INSERT  ");*/
-	/*}
-    }
-    else
-    {
-	if (Sampstat != 1)
-	{
-	    panel_set_value(LK_sample_choice,1);
-	    ParameterLine(2,13,YELLOW,"SPIN:EJECTED");
-	    Sampstat = sampchoice = 1;
-            if (useInfostat == 0)
-    	      disp_string(AIRVal,"eject"); /* doesn't work? */
-	    /*printf("EJECT  ");*/
-/*	}
-    }
-    stat = (status >> 7) & 0x0001;
-    if (!stat)
-    {
-	/*printf("Speed  ");*/
-    /*}
-    else
-    {
-	/*printf("Rate  ");*/
-    /*}
-    stat = (status >> 8) & 0x0001;
-    if (!stat)
-    {
-	/*printf("Liquids  ");*/
-    /*}
-    else
-    {
-	/*printf("Solids  ");*/
-    /*}
-   ------------------------------------------------------------  */
-#endif
 
     stat = (status >> 9) & 0x0003;
     if (debug)

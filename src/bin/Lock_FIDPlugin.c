@@ -191,9 +191,6 @@ RTIBool Lock_FIDPlugin_deserialize_key(
     struct RTICdrStream *stream, Lock_FID *sample,
     void *deserialize_option)
 {
-
-    RTICdrUnsignedLong sequence_length = 0;
-
     return RTI_TRUE;
 }
 
@@ -375,10 +372,6 @@ RTIBool Lock_FIDPlugin_instance_to_id(
     DDS_InstanceId_t *id, RTIBool *is_unique,
     const Lock_FID *instance)
 {
-    int idIndex;
-
-    idIndex = 3;
-
     id->value[3] = 0;
     id->value[2] = 0;
     id->value[1] = 0;

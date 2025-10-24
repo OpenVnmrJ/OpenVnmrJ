@@ -26,6 +26,12 @@
 #include <netdb.h>
 #include <setjmp.h>
 
+extern void Smessage();
+extern int initregqueue();
+extern int make_a_socket();
+extern int setup_a_socket(int tsd );
+extern void initinfo();
+extern int render_socket_async(int tsd );
 
 /*-----------------------------------------------------------------------
 |     GLobal definitions
@@ -55,8 +61,11 @@ char vnmrsystem[128];	/* vnmrsystem path */
     The address returned by gethostbyname is kept here.			*/
  
 struct hostent	*this_hp;
-static int initsocket();
+static void initsocket();
 static void setup_sigio();
+void setuppipehandler();
+void setupquithandler();
+void wrtacqinfo();
  
 /*-----------------------------------------------------------------------
 |
@@ -127,7 +136,7 @@ int main(int argc, char *argv[])
     {
        fd_set  rfds;
        int inputfd = 0;
-       int res;
+       int res __attribute__((unused));
 
        FD_ZERO( &rfds );
        res = select(inputfd+1, &rfds, 0, 0, 0);
@@ -141,10 +150,10 @@ int main(int argc, char *argv[])
 |	write the acquisitions pid, and socket port numbers out for
 |	  access by other processes
 +-----------------------------------------------------------------------*/
-wrtacqinfo()
+void wrtacqinfo()
 {
     char filepath[256];
-    char buf[256];
+    char buf[512];
     int fd;
     int bytes;
     int pid;
@@ -189,9 +198,10 @@ wrtacqinfo()
 |		connection instead of waiting for one )
 |
 +-------------------------------------------------------------------*/
-static int initsocket()
+static void initsocket()
 {
     socklen_t namlen;
+    int ival;
 
 
 /*===================================================================*/
@@ -204,8 +214,14 @@ static int initsocket()
 	perror("INITSOCKET(): socket error");
         exit(1);
     }
-    setup_a_socket( messocket );
-    render_socket_async( messocket );
+    ival = setup_a_socket( messocket );
+    if (ival == 0)
+      ival = render_socket_async( messocket );
+    if (ival)
+    {
+	    perror("INITSOCKET(): async socket error");
+       exit(1);
+    }
 
     if (Acqdebug)
       fprintf(stderr,
@@ -240,10 +256,7 @@ static int initsocket()
 
 
 
-static
-make_fd_rmask( maxfd_ptr, readfdp )
-int *maxfd_ptr;
-fd_set *readfdp;
+static int make_fd_rmask(int *maxfd_ptr, fd_set *readfdp )
 {
 	*maxfd_ptr = 0;
 	FD_ZERO( readfdp );
@@ -323,7 +336,7 @@ dontdie()
 |   Setup the interrupt handler for the asyn messages on the message socket
 |
 +--------------------------------------------------------------------------*/
-setuppipehandler()
+void setuppipehandler()
 {
     sigset_t            qmask;
     struct sigaction    intpipe;
@@ -365,7 +378,7 @@ SigQuit()
     exit(1);
 }
 
-setupquithandler()
+void setupquithandler()
 {
     sigset_t		qmask;
     struct sigaction	intquit;
@@ -408,7 +421,7 @@ setupquithandler()
 |   See GNETfuncs.c in SCCS category gacqproc           February 1997
 +--------------------------------------------------------------------------*/
 
-block_signals()
+void block_signals()
 {
 	sigset_t	sigblock_mask;
 
@@ -420,7 +433,7 @@ block_signals()
 	sigprocmask( SIG_BLOCK, &sigblock_mask, NULL );
 }
 
-unblock_signals()
+void unblock_signals()
 {
 	sigset_t	sigblock_mask;
 

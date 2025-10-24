@@ -30,7 +30,21 @@
 
 #include "sockets.h"
 #include "errLogLib.h"
+#include "pthread.h"
 
+extern void initiateNDDS(int debuglevel);
+extern int initExpStatus(int clean);   /* zero out Exp Status */
+extern int initregqueue();
+extern void Statuscheck();
+extern void Smessage();
+extern int make_a_socket();
+extern int setup_a_socket(int tsd);
+extern int render_socket_async(int tsd);
+extern void initinfo();
+extern int initStatusSub();
+extern void DestroyDomain();
+
+void wrtacqinfo();
 /*-----------------------------------------------------------------------
 |     GLobal definitions
 +-----------------------------------------------------------------------*/
@@ -61,7 +75,7 @@ pthread_t main_threadId;
     The address returned by gethostbyname is kept here.			*/
  
 struct hostent	*this_hp;
-static int initsocket();
+static void initsocket();
 static void sigio_irpt();
  
 /*-----------------------------------------------------------------------
@@ -69,14 +83,11 @@ static void sigio_irpt();
 |    Main Acqproc Loop, wait for messages
 |
 +-----------------------------------------------------------------------*/
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
     char *tmpptr;
     int  ival;
     sigset_t   blockmask;
-    extern char  *getenv();
     void asyncMainLoop(sigset_t sigMask);
 
 
@@ -109,9 +120,10 @@ char *argv[];
     /* Acqdebug = 1; */
     if (!Acqdebug)
     {
-     	freopen("/dev/null","r",stdin);
-     	freopen("/dev/console","a",stdout);
-     	freopen("/dev/console","a",stderr);
+      FILE *fp __attribute__((unused));
+     	fp = freopen("/dev/null","r",stdin);
+     	fp = freopen("/dev/console","a",stdout);
+     	fp = freopen("/dev/console","a",stderr);
     }
 		
     /* initialize environment parameter vnmrsystem value */
@@ -200,7 +212,7 @@ char *argv[];
 void asyncMainLoop(sigset_t sigMask)
 {
       sigset_t          oldMask;
-      int stat;
+      int stat __attribute__((unused));
       int signo;
       void processMsge(void*);
       void sigio_irpt(void);
@@ -235,7 +247,7 @@ void asyncMainLoop(sigset_t sigMask)
                case SIGCHLD: /* Child Died Signal */
                     /* DPRINT(-1,"Infoproc: Received SIGCHLD\n"); */
                     /* DPRINT(-1,"Infoproc: Should Never Happen!!\n"); */
-                    /* TheGrimReaper(NULL);  /* Obtain childs status */
+                    // TheGrimReaper(NULL);  /* Obtain childs status */
                     break;
  
                case SIGALRM: /* Alarm */
@@ -278,10 +290,10 @@ void asyncMainLoop(sigset_t sigMask)
 |	write the acquisitions pid, and socket port numbers out for
 |	  access by other processes
 +-----------------------------------------------------------------------*/
-wrtacqinfo()
+void wrtacqinfo()
 {
     char filepath[256];
-    char buf[256];
+    char buf[512];
     int fd;
     int bytes;
     int pid;
@@ -326,7 +338,7 @@ wrtacqinfo()
 |		connection instead of waiting for one )
 |
 +-------------------------------------------------------------------*/
-static int initsocket()
+static void initsocket()
 {
     socklen_t namlen;
 
@@ -377,10 +389,7 @@ static int initsocket()
 
 
 
-static
-make_fd_rmask( maxfd_ptr, readfdp )
-int *maxfd_ptr;
-fd_set *readfdp;
+static int make_fd_rmask(int *maxfd_ptr, fd_set *readfdp )
 {
 	*maxfd_ptr = 0;
 	FD_ZERO( readfdp );
@@ -444,10 +453,10 @@ static void sigio_irpt()
 
 /* now a threaded program, no more async signals handlers. */
 
-block_signals()
+void block_signals()
 {
 }
 
-unblock_signals()
+void unblock_signals()
 {
 }

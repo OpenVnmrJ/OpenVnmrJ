@@ -11,8 +11,10 @@ showstatTarget = 'showstat'
 cwd = os.getcwd()
 
 # library dependancies
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
-SConscript(os.path.join(ncommPath, 'SConstruct'))
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
+if not os.path.exists(ncommPath):
+   Execute('cp -r '+os.path.join(cwd,os.pardir,'ncomm') + ' ' + ncommPath+ ';touch '+ncommPath+'/m64')
+   Execute('cd ../ncomm64; scons')
 
 # source files
 vnmrPath     = os.path.join(cwd, os.pardir, 'vnmr')
@@ -33,8 +35,11 @@ acqProcPath     = os.path.join(cwd, os.pardir, 'acqproc')
 acqProcHdrList  = ['ACQPROC_strucs.h']
 acqProcFileList = ['test4acq.c']
 
-infoServerFileList = ['acqinfo_xdr.c',
-                      'acqinfo_proc.c']
+# If USE_RPC is defined, the following files are needed
+# infoServerFileList = ['acqinfo_xdr.c',
+#                       'acqinfo_proc.c']
+
+infoServerFileList = []
 
 # doesn't appear to be required for present targets, GMB
                       # 'acqinfo_svc.c']
@@ -42,9 +47,9 @@ infoServerFileList = ['acqinfo_xdr.c',
 acqMeterFileList = ['acqmeter_win.c']
 
 # build environment
-statEnv = Environment(CCFLAGS    = '-O2 -m32 -Wno-implicit-function-declaration -Wno-implicit-int -Wno-incompatible-pointer-types',
+statEnv = Environment(CCFLAGS    = '-O2 -Wall',
                       CPPDEFINES = ['ACQSTAT', 'LINUX', 'SUN', 'BSDACQ', 'X11'],
-                      LINKFLAGS  = '-O2 -m32 -Wl,-rpath,/vnmr/lib ',
+                      LINKFLAGS  = '-O2 -Wl,-rpath,/vnmr/lib ',
                       CPPPATH    = [cwd])
 
 # if os.path.exists('/usr/include/tirpc'):
@@ -52,7 +57,7 @@ statEnv = Environment(CCFLAGS    = '-O2 -m32 -Wno-implicit-function-declaration 
 #    LibList = [ 'm', 'acqcomm', 'tirpc' ]
 #    LibList2 = [ 'tirpc' ]
 # else:
-LibList = [ 'm', 'acqcomm' ]
+LibList = [ 'm', 'acqcomm64' ]
 LibList2 = []
 
 buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, xracqPath, xracqHdrList)
@@ -62,7 +67,6 @@ buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, vnmrPath, vnmrFileList)
 # actual builds
 infostat = statEnv.Program(target  = infostatTarget,
                            source  = [acqStatFileList,
-                                      'acqinfo_xdr.c',
                                       vnmrFileList],
                            LIBPATH = [cwd,
                                       ncommPath],

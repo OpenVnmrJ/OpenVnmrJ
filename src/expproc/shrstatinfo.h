@@ -17,7 +17,11 @@
 
 #define EXPSTAT_STR_SIZE 128
 
-typedef struct timeval TIMESTAMP;
+struct timevalInt {
+   int tv_sec;
+   int tv_usec;
+};
+typedef struct timevalInt TIMESTAMP;
 
 /* 
    This is the shared Status Structure of the Acqusition System
@@ -28,16 +32,16 @@ typedef struct timeval TIMESTAMP;
 /*===============================================================*/
 
 typedef struct _statstruct_ {
-		        TIMESTAMP TimeStamp;
-                    	long  CompletionTime;
-                    	long  RemainingTime;
-                    	long  DataTime;
-                    	long  ExpTime;
-                    	long  StartTime;
-                    	long  ExpInQue;
-	       unsigned long  CT;
-               unsigned long  FidElem;
-                    	long  Sample;
+		   TIMESTAMP TimeStamp;
+         int  CompletionTime;
+         int  RemainingTime;
+         int  DataTime;
+         int  ExpTime;
+         int  StartTime;
+         int  ExpInQue;
+	      unsigned int  CT;
+         unsigned int  FidElem;
+         int  Sample;
 			int   GoFlag;
 			int   SystemVerId;
 			int   InterpVerId;
@@ -65,10 +69,6 @@ typedef EXP_STATUS_STRUCT *EXP_STATUS_INFO;
 /*===============================================================*/
 /*===============================================================*/
 
-/* --------- ANSI/C++ compliant function prototypes --------------- */
- 
-#if defined(__STDC__) || defined(__cplusplus)
- 
 extern int initExpStatus(int clean);   /* zero out Exp Status */
 
 extern void getStatTimeStamp(TIMESTAMP *time);
@@ -88,9 +88,10 @@ extern int getStatProcExpId(char *expidstr,int maxsize);
 extern int setStatProcExpId(char *expidstr);
 extern int getStatGoFlag();
 extern int setStatGoFlag(int goflag);
-extern unsigned long getStatCT();
-extern int setStatCT(unsigned long ct);
-extern int setStatElem(unsigned long elem);
+extern unsigned int getStatCT();
+extern unsigned int getStatElem();
+extern int setStatCT(unsigned int ct);
+extern int setStatElem(unsigned int elem);
 extern int setStatDataTime();
 extern int getSystemVerId();
 extern int setSystemVerId(int version);
@@ -99,10 +100,10 @@ extern int setInterpVerId(int version);
 
 extern int getStatAcqState();
 extern int setStatAcqState(int status);
-extern long getStatAcqCtCnt();
-extern int setStatAcqCtCnt( long ctCnt );
-extern long getStatAcqFidCnt();
-extern int setStatAcqFidCnt( long fidCnt );
+extern int getStatAcqCtCnt();
+extern int setStatAcqCtCnt( int ctCnt );
+extern int getStatAcqFidCnt();
+extern int setStatAcqFidCnt( int fidCnt );
 extern int getStatLockFreq1();
 extern int getStatLockFreq2();
 extern int getStatLkLevel();
@@ -126,62 +127,6 @@ extern int getStatPneuSpinner();
 extern int getStatShimValue(int dacnum);
 extern int setStatShimValue(int dacnum, int value);
 extern int getStatShimSet();
-
-#else
-/* --------- NON-ANSI/C++ prototypes ------------  */
-
-extern int initExpStatus();   /* zero out Exp Status */
-
-extern void getStatTimeStamp();
-extern int isStatTimeStampNew();
-
-extern int getStatUserId();
-extern int setStatUserId();
-extern int getStatExpName();
-extern int setStatExpName();
-extern int getStatExpId();
-extern int setStatExpId();
-extern int getStatProcUserId();
-extern int setStatProcUserId();
-extern int getStatProcExpName();
-extern int setStatProcExpName();
-extern int getStatProcExpId();
-extern int setStatProcExpId();
-extern int getStatGoFlag();
-extern int setStatGoFlag();
-extern unsigned long getStatCT();
-extern int setStatCT();
-extern int setStatElem();
-extern int setStatDataTime();
-extern int getSystemVerId();
-extern int setSystemVerId();
-extern int getInterpVerId();
-extern int setInterpVerId();
-
-extern int getStatAcqState();
-extern int setStatAcqState();
-extern long getStatAcqCtCnt();
-extern int setStatAcqCtCnt();
-extern long setStatAcqFidCnt();
-extern int setStatAcqFidCnt();
-extern int getStatLkLevel();
-extern int setStatLkLevel();
-extern int getStatLkGain();
-extern int setStatLkGain();
-extern int getStatLkPower();
-extern int setStatLkPower();
-extern int getStatLkPhase();
-extern int setStatLkPhase();
-extern int getStatSpinAct();
-extern int setStatSpinAct();
-extern int getStatVTAct();
-extern int getStatVTSet();
-
-extern int getStatShimValue();
-extern int setStatShimValue();
-extern int getStatShimSet();
-
-#endif
  
 #ifdef __cplusplus
 }

@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <fcntl.h>
 
@@ -35,6 +36,18 @@
 #include "Console_StatSupport.h"
 #endif  /* RTI_NDDS_4x */
 
+extern char *getHostIP(char* hname, char *localIP);
+extern int initBESubscription(NDDS_ID pNDDS_Obj);
+extern int writeConsolseStatusBlock( char *filename );
+extern int setStatAcqState(int status);
+extern int setStatAcqSample(int sample );
+extern int getStatAcqSample();
+extern int receiveConsoleStatusBlock( CONSOLE_STATUS *pcsb );
+extern int getStatAcqState();
+extern int getStatAcqCtCnt();
+extern int setStatCT(unsigned int ct);
+extern int setStatElem(unsigned int elem);
+
 #define TRUE 1
 #define FALSE 0
 #define FOR_EVER 1
@@ -49,7 +62,6 @@ NDDS_ID NDDS_Domain, pPubObj, pStatSub, pStatusObj;
 
 #ifndef RTI_NDDS_4x
 static NDDSSubscriber CntlrSubscriber = NULL;
-#endif  /* RTI_NDDS_4x */
 
 /* required HB for operation */
 static int Master_HB = -1;   /* OK without the master the status is never to Inforproc, so for consistency */
@@ -58,12 +70,13 @@ static int Expproc_HB = -1;  /* OK Expproc forks Infoproc, so for consistency */
 
 static int totalHB_Subscriptions = 0;
 static int currentHB_Subscriptions = 0;
+#endif  /* RTI_NDDS_4x */
 
 extern char ProcName[256];
 
 extern pthread_t main_threadId;    /* main thread Id, so we can signal just this thread */
 
-extern long encodedAcqSample; /* encoded AcqSample as comes from console, used in  update_statinfo (infoqueu.c) */
+extern int encodedAcqSample; /* encoded AcqSample as comes from console, used in  update_statinfo (infoqueu.c) */
 
 /*     NDDS additions */
 /*---------------------------------------------------------------------------------- */
@@ -100,9 +113,7 @@ void Console_StatCallback(void* listener_data, DDS_DataReader* reader)
    struct DDS_SampleInfo* info = NULL;
    struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
    DDS_ReturnCode_t retcode;
-   DDS_Boolean result;
-   long i,numIssues;
-   DDS_TopicDescription *topicDesc;
+   int i,numIssues;
 
 
    struct Console_StatSeq data_seq = DDS_SEQUENCE_INITIALIZER;
@@ -115,9 +126,12 @@ void Console_StatCallback(void* listener_data, DDS_DataReader* reader)
         return;
    }
 
+#ifdef DEBUG
+   DDS_TopicDescription *topicDesc;
    topicDesc = DDS_DataReader_get_topicdescription(reader);
    DPRINT2(1,"Console_StatCallback: Type: '%s', Name: '%s'\n",
       DDS_TopicDescription_get_type_name(topicDesc), DDS_TopicDescription_get_name(topicDesc));
+#endif
         retcode = Console_StatDataReader_take(Console_Stat_reader,
                               &data_seq, &info_seq,
                               DDS_LENGTH_UNLIMITED, DDS_ANY_SAMPLE_STATE,
@@ -181,7 +195,7 @@ void DestroyDomain()
 #else /* RTI_NDDS_4x */
    if (NDDS_Domain != NULL)
    {
-      DPRINT1(1,"Infoproc: Destroy Domain: 0x%lx\n",NDDS_Domain);
+      DPRINT(1,"Infoproc: Destroy Domain\n");
       NDDS_Shutdown(NDDS_Domain); /* NddsDomainHandleGet(0) */
       usleep(400000);  /* 400 millisec sleep, give time for msge to be sent to NddsManager */
    }
@@ -293,6 +307,7 @@ int initHBSubs()
 #endif  /* RTI_NDDS_4x */
 
 
+#ifdef XXX
 static void
 locateCurrentShims( char *currentShimsFile )
 {
@@ -313,11 +328,12 @@ updateCurrentShims()
         locateCurrentShims( &file[ 0 ] );
         writeConsolseStatusBlock( &file[ 0 ] );
 }
+#endif
 
 void consolestatAction(Console_Stat *data)
 {
    CONSOLE_STATUS *csbPtr;
-   int stat, shimsChanged;
+   int stat;
 
    /* need address past the dataTypeID member to be equivilent to CONSOLE_STATUS */
    csbPtr = (CONSOLE_STATUS *) &(data->AcqCtCnt);
@@ -377,19 +393,17 @@ void consolestatAction(Console_Stat *data)
    /* if (stat != 0 && ActiveExpInfo.ShrExpInfo != NULL &&
     *        ACQ_ACQUIRE == getStatAcqState()) { */
 
-   /* this shows Fid & Ct coming correct even Vnmrj show bizzare values */
-   /* DPRINT2(+6,"Rcvd: Fid: %lu, Ct: %lu\n",(unsigned long)csbPtr->AcqFidCnt,(unsigned long)csbPtr->AcqCtCnt); */
    if (stat != 0 && ACQ_ACQUIRE == getStatAcqState()) 
    {
-       long  ctCnt;
+       int  ctCnt;
                          
        /*  The CT counter is now kept by the console;
            Expproc just transfers the value so Infoproc
            and Acqstat can get at it.  July 1997     */
          
        ctCnt = getStatAcqCtCnt();
-       setStatCT((unsigned long) ctCnt);
-       setStatElem((unsigned long)csbPtr->AcqFidCnt);
+       setStatCT((unsigned int) ctCnt);
+       setStatElem((unsigned int)csbPtr->AcqFidCnt);
   }
  
   if (stat != 0) 
@@ -405,7 +419,7 @@ void consolestatAction(Console_Stat *data)
       sample %= 1000;
       setStatAcqSample( sample );
         
-      /* sigInfoproc();  /* signal Infoproc to check status */
+      // sigInfoproc();  /* signal Infoproc to check status */
 /*
       if (shimsChanged)
       {
@@ -427,6 +441,7 @@ typedef struct node_tag {
    char name[32];
  } node_t;
 
+#ifndef RTI_NDDS_4x
 #define MAX_BRD_TYPE 8
 static char *brdTypeStr[9] = { "master", "rf", "pfg", "gradient" , "lock", "ddr", "reserved1", "reserved2", "Expproc" };
 
@@ -463,10 +478,6 @@ static int cntlrName2TypeNNum(char *id, int *type, int *num)
     return(0);
 }
 
-
-/*---------------------------------------------------------------------------------- */
-
-#ifndef RTI_NDDS_4x
 /* VxWorks controller Node HB subscription callback */
 RTIBool Node_HBCallback(const NDDSRecvInfo *issue, NDDSInstance *instance,               
                              void *callBackRtnParam)

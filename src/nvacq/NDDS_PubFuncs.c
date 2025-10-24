@@ -490,6 +490,7 @@ void Default_OfferedIncompatibleQos(void* listener_data,
                                          DDS_DataWriter* writer,
                                          const struct DDS_OfferedIncompatibleQosStatus *status)
 {
+#ifdef DEBUG
     DDS_TopicDescription *topicDesc;
     DDS_Topic *topic;
 
@@ -497,7 +498,7 @@ void Default_OfferedIncompatibleQos(void* listener_data,
     topicDesc = DDS_Topic_as_topicdescription(topic);
     DPRINT2(-4," ------ OfferedIncompatibleQos:  Type: '%s', Name: '%s' Matched -----------\n",
             DDS_TopicDescription_get_type_name(topicDesc),DDS_TopicDescription_get_name(topicDesc));
-    DPRINT2(-4,"Reason: %d, '%s'\n", status->last_policy_id, getIncompatQosDesc(status->last_policy_id));
+//    DPRINT2(-4,"Reason: %d, '%s'\n", status->last_policy_id, getIncompatQosDesc(status->last_policy_id));
 /*
         DDS_Long 	total_count
  	   Total cumulative number of times the concerned DDS_DataWriter discovered a 
@@ -515,12 +516,14 @@ void Default_OfferedIncompatibleQos(void* listener_data,
            partition with a requested QoS that is incompatible with that offered by 
            the DDS_DataWriter. 
 */
+#endif
 }
 // 	Handles the DDS_LIVELINESS_LOST_STATUS status.
 void Default_LivelinessLost(void* listener_data,
                                          DDS_DataWriter* writer,
                                          const struct DDS_LivelinessLostStatus *status)
 {
+#ifdef DEBUG
     DDS_TopicDescription *topicDesc;
     DDS_Topic *topic;
 
@@ -541,6 +544,7 @@ void Default_LivelinessLost(void* listener_data,
  	The incremental changees in total_count since the last time the listener 
         was called or the status was read. 
 */
+#endif
 
 }
 // 	Handles the DDS_PUBLICATION_MATCHED_STATUS status.
@@ -548,6 +552,7 @@ void Default_PublicationMatched(void* listener_data,
                                          DDS_DataWriter* writer,
                                          const struct DDS_PublicationMatchedStatus *status)
 {
+#ifdef DEBUG
     DDS_TopicDescription *topicDesc;
     DDS_Topic *topic;
 
@@ -563,18 +568,19 @@ void Default_PublicationMatched(void* listener_data,
               status->current_count);
     DPRINT1(+1,"  The change in current_count since the last time the listener was called or the status was read: %d\n",
               status->current_count_change);
-    DPRINT1(+1,"  A handle to the last DDS_DataReader that caused the the DDS_DataWriter's status to change: 0x%lx\n",
-              status->last_subscription_handle);
+//    DPRINT1(+1,"  A handle to the last DDS_DataReader that caused the the DDS_DataWriter's status to change: %p\n",
+//              status->last_subscription_handle);
     DPRINT(+1," ----------------------------------------\n");
+#endif
 }
 
 //  	<<eXtension>> A change has occurred in the writer's cache of unacknowledged samples.
 void Default_ReliableWriterCacheChanged(void* listener_data,DDS_DataWriter* writer, 
 					const struct DDS_ReliableWriterCacheChangedStatus *status)
 {
+    /*
     DDS_TopicDescription *topicDesc;
     DDS_Topic *topic;
-    /*
     * topic = DDS_DataWriter_get_topic(writer);
     * topicDesc = DDS_Topic_as_topicdescription(topic);
     */
@@ -612,6 +618,7 @@ void Default_ReliableWriterCacheChanged(void* listener_data,DDS_DataWriter* writ
 void Default_ReliableReaderActivityChanged(void* listener_data,DDS_DataWriter* writer,
 					const struct DDS_ReliableReaderActivityChangedStatus *status)
 {
+#ifdef DEBUG
     DDS_TopicDescription *topicDesc;
     DDS_Topic *topic;
 
@@ -628,9 +635,10 @@ void Default_ReliableReaderActivityChanged(void* listener_data,DDS_DataWriter* w
               status->active_count_change);
     DPRINT1(+1,"  The most recent change in the number of inactive remote reliable readers: %d\n",
               status->inactive_count_change);
-    DPRINT1(+1,"  The instance handle of the last reliable remote reader to be determined inactive: 0x%lx\n",
-              status->last_instance_handle);
+//    DPRINT1(+1,"  The instance handle of the last reliable remote reader to be determined inactive: %p\n",
+//              status->last_instance_handle);
     DPRINT(+1," ----------------------------------------\n");
+#endif
 }
 
 /*******************************************************/
@@ -682,7 +690,7 @@ void attachDWriterUserData(NDDS_ID pNDDS_Obj, void *pUserdata)
 
 /* ------------------------------------------------------------------------------------*/
 
-initDataWriterListener(NDDS_ID pNDDS_Obj)
+void initDataWriterListener(NDDS_ID pNDDS_Obj)
 {
     struct DDS_DataWriterListener *pWriter_listener = 
               (struct DDS_DataWriterListener*) malloc(sizeof(struct DDS_DataWriterListener));
@@ -714,10 +722,9 @@ void attachDWDiscvryUserData(NDDS_ID pNDDS_Obj, void *pUserdata, long length)
 /*
    initialize the publication Qos for Reliably publication
 */
-initPublication(NDDS_ID pNDDS_Obj)
+int initPublication(NDDS_ID pNDDS_Obj)
 {
     DDS_ReturnCode_t retcode;
-    double requestedNAck;
 
     struct DDS_DataWriterQos *pWriter_qos = (struct DDS_DataWriterQos*) malloc(sizeof(struct DDS_DataWriterQos));
     DDS_DataWriterQos_initialize(pWriter_qos);
@@ -761,7 +768,6 @@ initPublication(NDDS_ID pNDDS_Obj)
         pWriter_qos->ownership_strength.value = pNDDS_Obj->publisherStrength;
     }
 
-    /* RtiNtpTimePackFromNanosec(pProperties->persistence, 0 , 16); /* 16 milliseconds */
     /* the time before a subscriber will switch to a new publisher after last pub from */
     /* a previous publisher */
     /* after 10 sec liveliness loss detected */
@@ -790,7 +796,6 @@ initPublication(NDDS_ID pNDDS_Obj)
 
     pWriter_qos->protocol.push_on_write = DDS_BOOLEAN_TRUE;
 
-    /* RtiNtpTimePackFromMillisec(pProperties->heartBeatTimeout, 1, 0); /*  no-acode bug change  */
     // pWriter_qos->protocol.rtps_reliable_writer.heartbeat_period.sec = 24 * 3600;  // readMRIUserByte test
     pWriter_qos->protocol.rtps_reliable_writer.heartbeat_period.sec = 1; /* no-acode bug change  */
     pWriter_qos->protocol.rtps_reliable_writer.heartbeat_period.nanosec = 0;
@@ -822,7 +827,6 @@ initPublication(NDDS_ID pNDDS_Obj)
     // pWriter_qos->protocol.rtps_reliable_writer.fast_heartbeat_period.sec = 24 * 3600;  // readMRIUserByte test
     // pWriter_qos->protocol.rtps_reliable_writer.fast_heartbeat_period.nanosec = 0;
 
-    /* RtiNtpTimePackFromMillisec(pProperties->heartBeatFastTimeout, 0, 250); /* 250,default 62.5 ms */
     pWriter_qos->protocol.rtps_reliable_writer.fast_heartbeat_period.sec = 0;
     pWriter_qos->protocol.rtps_reliable_writer.fast_heartbeat_period.nanosec = 250000000;
 
@@ -954,7 +958,6 @@ initPublication(NDDS_ID pNDDS_Obj)
 int initBEPublication(NDDS_ID pNDDS_Obj)
 {
     DDS_ReturnCode_t retcode;
-    double requestedNAck;
 
     struct DDS_DataWriterQos *pWriter_qos = (struct DDS_DataWriterQos*) malloc(sizeof(struct DDS_DataWriterQos));
     DDS_DataWriterQos_initialize(pWriter_qos);
@@ -1022,10 +1025,10 @@ int initBEPublication(NDDS_ID pNDDS_Obj)
 }
 
 // enablePublication(NDDS_ID pNDDS_Obj)
-createPublication(NDDS_ID pNDDS_Obj)
+int createPublication(NDDS_ID pNDDS_Obj)
 {
 
-   DPRINT4(+1,"publisher: 0x%lx, tope: 0x%lx, Qos: 0x%lx, Listener: 0x%lx\n",
+   DPRINT4(+1,"publisher: %p, tope: %p, Qos: %p, Listener: %p\n",
                    pNDDS_Obj->pPublisher, pNDDS_Obj->pTopic,pNDDS_Obj->pDWriterQos,pNDDS_Obj->pDWriterListener);
    pNDDS_Obj->pDWriter = DDS_Publisher_create_datawriter(pNDDS_Obj->pPublisher, pNDDS_Obj->pTopic,
                                              pNDDS_Obj->pDWriterQos, /*  &DDS_DATAWRITER_QOS_DEFAULT */
@@ -1043,6 +1046,7 @@ createPublication(NDDS_ID pNDDS_Obj)
         NDDS_Shutdown(pNDDS_Obj);
         return (-1);
     }
+    return 0;
   
 }
 
@@ -1212,11 +1216,13 @@ int nddsPublishData(NDDS_ID pNDDS_Obj)
 *            printf("write error %d\n", result);
 *   }
 */
+   return(0);
 
 }
 
 int nddsPublicationDestroy(NDDS_ID pNDDS_Obj)
 {
+   return(0);
 }
 
 #endif /* RTI_NDDS_4x */

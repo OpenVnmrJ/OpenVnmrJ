@@ -45,13 +45,14 @@ extern COMM_INFO_STRUCT comm_addr[];
 #include "shrstatinfo.h"
 extern int expQaddToTail(int priority, char* expidstr, char* expinfostr);
 extern int expQaddToHead(int priority, char* expidstr, char* expinfostr);
+extern void gettime( TIMESTAMP *ts );
 extern int cmpTimeStamp( TIMESTAMP *ts1, TIMESTAMP *ts2 );
 extern int getStatOpsCompl();
 extern int getStatRecvGain();
 extern int getStatRcvrNpErr();
 extern int getStatNpErr();
 extern int getStatGradTune(char *axis, char *type);
-extern long getStatLockFreqAP();
+extern int getStatLockFreqAP();
 extern int getStatSpinSet();
 extern int SendAsyncInovaVnmr(CommPort to_addr, CommPort from_addr, char *msg);
 extern int InitRecverAddr(char *host, int port, struct sockaddr_in *recver);
@@ -817,7 +818,7 @@ get_ia_stat(char *hostname, char *username )
 	TIMESTAMP	timeStamp, timeStamp2;
 	char		expprocReply[ 122 ];
 
-	gettimeofday( &timeStamp, NULL);
+	gettime( &timeStamp);
 	initOpsCompl = getStatOpsCompl();
 	ival = talk2Acq( hostname, username, READACQHW, "", &expprocReply[ 0 ], sizeof( expprocReply ) );
 	if (ival < 0)
@@ -1557,8 +1558,8 @@ void setMagicVar(int index, varInfo *v, char *name)
 
 int updateMagicVar()
 {
-   register struct _magicVar *ptr;
-   register int index;
+   struct _magicVar *ptr;
+   int index;
    if (numMagicVar == 0)
       return(0);
    memcpy(saveBuf,(char *) sharedTclInfo,sizeof(struct _magicVar) * numMagicVar);
@@ -1573,8 +1574,8 @@ int updateMagicVar()
 
 void unsetMagicVar(varInfo *v)
 {
-   register struct _magicVar *ptr;
-   register int index;
+   struct _magicVar *ptr;
+   int index;
 
    for (index= 0; index < numMagicVar; index++)
    {
@@ -1589,8 +1590,8 @@ void unsetMagicVar(varInfo *v)
 
 void resetMagicVar(varInfo *v, char *name)
 {
-   register struct _magicVar *ptr;
-   register int index;
+   struct _magicVar *ptr;
+   int index;
 
    for (index= 0; index < numMagicVar; index++)
    {

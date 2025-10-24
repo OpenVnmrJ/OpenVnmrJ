@@ -25,7 +25,7 @@
 #define ERROR -1
 #define HOSTLEN 128
 #define MAX_MASTERS 4
-#define MAX_ADDRLEN 126
+#define MAX_ADDRLEN 256
 #define VALL 1
 #define VPID 2
 #define VFILE 3
@@ -42,6 +42,7 @@ static char    ChkStr[] = { 'G','o','d','K','i','n','g','\0' };
 int get_hostname(char *hostname,int namelen)
 {
    FILE    *fpipe;
+   char *ret __attribute__((unused));
 
    fpipe = popen( "uname -n", "r" );
    if (fpipe == NULL)
@@ -49,7 +50,7 @@ int get_hostname(char *hostname,int namelen)
        *hostname = 0;
        return(-1);
     }
-    fgets(tmpstr, 120, fpipe);
+    ret = fgets(tmpstr, 120, fpipe);
     if (debug)
        fprintf(stdout,"get_hostname: '%s'\n",tmpstr);
     strtok(tmpstr,"\n");
@@ -64,14 +65,14 @@ int find_VnmrMaster(int *masterpid, int maxpids)
         char    field1[12], field4[ 20 ], field5[ 122 ];
         char    field6[12],field7[ 12 ], field8[ 12 ], field9[ 126 ], field10[126];
         char    *fields[4];
-        char    *cptr, *proc_name, *ptr;
+        char    *cptr, *ptr;
         int     proc_id, parent_id,ival, len;
-        int     master_id,cnt,i;
+        int     cnt,i;
         int     *pids;
         FILE    *fpipe;
 
 
-        master_id = 0;
+//        master_id = 0;
         pids = masterpid;
 
         fields[0] = field7;
@@ -80,7 +81,7 @@ int find_VnmrMaster(int *masterpid, int maxpids)
         fields[3] = field10;
 
         fpipe = popen( "ps -ef", "r" );
-	proc_name = field9;
+//	proc_name = field9;
 
 	if (fpipe == NULL)
                 return(0);
