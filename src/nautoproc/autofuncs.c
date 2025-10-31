@@ -22,7 +22,6 @@
 #include "errLogLib.h"
 #include "mfileObj.h"
 #include "shrMLib.h"
-#include "shrexpinfo.h"
 #include "asm.h"
 #include "msgQLib.h"
 #include "expQfuncs.h"
@@ -82,8 +81,6 @@ extern pid_t VnmrPid;
 /* Owner uid & gid of enterQ file */
 extern uid_t enter_uid;
 extern gid_t enter_gid;
-
-SHR_EXP_INFO expInfo = NULL;   /* start address of shared Exp. Info Structure */
 
 static pid_t child;
 static char catSampInfo[256];
@@ -180,6 +177,7 @@ static void deletePsgQentry(char *filename,struct sample_info *s)
     char shellcmd[3*MAXPATHL];
     char tmp[91];
     int entryindex;
+    int ret __attribute__((unused));
 
     if (lockfile(filename) == ERROR)    /* lock file for exusive use */
     {
@@ -203,7 +201,7 @@ static void deletePsgQentry(char *filename,struct sample_info *s)
   
     DPRINT1(1,"Autoproc shellcmd to delete psgQ entry:'%s'\n",shellcmd);
  
-    system(shellcmd);           /* remove entry from psgQ sent to Acqproc */
+    ret = system(shellcmd);           /* remove entry from psgQ sent to Acqproc */
  
     unlockfile(filename);       /* remove lock file */
 }
@@ -389,7 +387,8 @@ int moveSampleinfoIntoDoneQ(char *filename, struct sample_info *s_info)
 */
 pid_t StartVnmr()
 {
-    int ret;
+    int ret __attribute__((unused));
+    FILE *fp __attribute__((unused));
  
     /*
      * Common Arguments for NORMAL or AUTOMATION Vnmr Arguments
@@ -416,16 +415,16 @@ pid_t StartVnmr()
          * Running as euid of Vnmr1, therefore must change to root to allow
          * us to the the gid and uid to the proper owner
          */
-        seteuid(getuid());   /* change the effective uid to root from vnmr1 */
+        ret = seteuid(getuid());   /* change the effective uid to root from vnmr1 */
 
         /*
          * let Vnmr speak out, print output to console
          * since we do open /dev/console , you can't logout of the windowing
          * system while automation is running
          */
-        freopen("/dev/null","r",stdin);
-        freopen("/dev/console","a",stdout);
-        freopen("/dev/console","a",stderr);
+        fp = freopen("/dev/null","r",stdin);
+        fp = freopen("/dev/console","a",stdout);
+        fp = freopen("/dev/console","a",stderr);
 
         /* change the user and group ID of the child so that VNMR
          *    will run with those ID's of the Owner of the EnterQ
@@ -794,6 +793,7 @@ int SampleId(char *arg)
                     int tmp_euid;
                     extern uid_t enter_uid;
                     extern gid_t enter_gid;
+                    int ret __attribute__((unused));
 
                     fprintf(bcFile, "%s\n", barcode);
                     fclose(bcFile);
@@ -801,9 +801,9 @@ int SampleId(char *arg)
                     /* change the owner back to the orignal Owner & Group  */
                     /* Since we just wrote it out as root */
                     tmp_euid = geteuid();
-                    seteuid(getuid());
-                    chown(path, enter_uid, enter_gid);
-                    seteuid(tmp_euid);
+                    ret = seteuid(getuid());
+                    ret = chown(path, enter_uid, enter_gid);
+                    ret = seteuid(tmp_euid);
                 }
             }
         }
@@ -953,7 +953,8 @@ int Resume(char *argstr)
       DPRINT(1,"doneQ  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< \n");
       if (DebugLevel)
       {
-        system(catDoneQ);
+        int ret __attribute__((unused));
+        ret = system(catDoneQ);
       }
 #endif
 
@@ -1005,11 +1006,12 @@ int Resume(char *argstr)
 
       if (stat(lastPath, &statbuf) == 0)
       {
+          int ret __attribute__((unused));
           char shellcmd[2*strlen(lastPath)+100];
           sprintf(shellcmd, "tail -n +2 %s > /tmp/entertmp; "
                             "mv -f /tmp/entertmp %s",
                      lastPath, lastPath);
-          system(shellcmd);
+          ret = system(shellcmd);
       }
    }
    DPRINT(1,"Done with Resume ///////////////////  \n");
@@ -1097,9 +1099,10 @@ int markDoneQcmplt( char *arg )
 #ifdef DEBUG
     if (DebugLevel)
     {
+        int ret __attribute__((unused));
         DPRINT(1,"markDoneQcmplt: doneQ  Prior to update "
                  "<<<<<<<<<<<<<<<<<<<<<<<<<< \n");
-        system(catDoneQ);
+        ret = system(catDoneQ);
     }
 #endif
 
@@ -1113,9 +1116,10 @@ int markDoneQcmplt( char *arg )
 #ifdef DEBUG
     if (DebugLevel)
     {
+        int ret __attribute__((unused));
         DPRINT(1,"markDoneQcmplt: doneQ  after update "
                  "<<<<<<<<<<<<<<<<<<<<<<<<<<<<< \n");
-        system(catDoneQ);
+        ret = system(catDoneQ);
     }
 #endif
 

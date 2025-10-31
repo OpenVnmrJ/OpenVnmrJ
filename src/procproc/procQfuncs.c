@@ -18,7 +18,6 @@
 #include "errLogLib.h"
 #include "mfileObj.h"
 #include "shrMLib.h"
-#include "shrexpinfo.h"
 #include "procQfuncs.h"
 
 #ifdef XXX
@@ -52,8 +51,8 @@ static char *procNames[NUM_OF_QUEUES+1] = {
 
 /* This one entry in one of the processing queues */
 typedef struct _procQentry {
-		unsigned long 	fidId;		/* Fid Element, fid# 1,2,3, etc.. */
-		unsigned long 	ctNum;		/* CT */
+		unsigned int 	fidId;		/* Fid Element, fid# 1,2,3, etc.. */
+		unsigned int 	ctNum;		/* CT */
 		int 		doneCode;
 		int 		errorCode;
 		int 		procType;	/* Wexp, Wsu, Werr, Wnt, Wbs */
@@ -64,8 +63,8 @@ typedef struct _procQentry {
 typedef struct _activeQentry {
 		char 		ExpIdStr[EXPID_LEN];	/* Name of ExpInfo File, directory is assumed */
 		int 		procType;	/* Wexp, Wsu, Werr, Wnt, Wbs */
-		unsigned long 	fidId;		/* Fid Element, fid# 1,2,3, etc.. */
-		unsigned long 	ctNum;		/* CT */
+		unsigned int 	fidId;		/* Fid Element, fid# 1,2,3, etc.. */
+		unsigned int 	ctNum;		/* CT */
 		int 		doneCode;
 		int 		errorCode;
 		int		FgBgFlag;	/* Processing being done in Fg or Bg */
@@ -203,7 +202,7 @@ int initProcQs(int clean)
 *
 *       Author Greg Brissey 9/2/94
 */
-int procQadd(int proctype, char* expidstr, long elemId, long ct, int dcode, int ecode)
+int procQadd(int proctype, char* expidstr, int elemId, int ct, int dcode, int ecode)
 {
   procQentry *Qentries;
   procQ *queue;
@@ -242,7 +241,7 @@ int procQadd(int proctype, char* expidstr, long elemId, long ct, int dcode, int 
   if (queue->numInQ == QENTRIES)
   {
      errLogRet(ErrLogOp,debugInfo,
-      "Queue full, %s processing lost for fid %ld, ct %ld (%d %d)!\n",
+      "Queue full, %s processing lost for fid %d, ct %d (%d %d)!\n",
        procNames[proctype],elemId,ct,dcode,ecode);
      sigprocmask(SIG_SETMASK, &savemask, (sigset_t *)NULL);
      return(-1);
@@ -287,8 +286,8 @@ int procQadd(int proctype, char* expidstr, long elemId, long ct, int dcode, int 
       queue->numInQ--;
    }
    Qentries[queue->numInQ].procType = proctype;
-   Qentries[queue->numInQ].fidId = (unsigned long) elemId;
-   Qentries[queue->numInQ].ctNum = (unsigned long) ct;
+   Qentries[queue->numInQ].fidId = elemId;
+   Qentries[queue->numInQ].ctNum = ct;
    Qentries[queue->numInQ].doneCode = dcode;
    Qentries[queue->numInQ].errorCode = ecode;
    strncpy(Qentries[queue->numInQ].ExpIdStr,expidstr,EXPID_LEN-1);
@@ -316,7 +315,7 @@ int procQadd(int proctype, char* expidstr, long elemId, long ct, int dcode, int 
 *
 *       Author Greg Brissey 9/2/94
 */
-int procQget(int* proctype, char* expidstr, long* elemId, long* ct, int* dcode, int* ecode)
+int procQget(int* proctype, char* expidstr, int* elemId, int* ct, int* dcode, int* ecode)
 {
   procQentry *Qentries;
   procQ *queue;
@@ -595,7 +594,7 @@ void procQshow(void )
 	queue->numInQ,Qentries);
      for( j=0; j < queue->numInQ; j++)
      {
-	fprintf(stdout,"     (%d): ExpId: '%s', FID: %ld, CT: %ld Done: %d Error: %d\n",
+	fprintf(stdout,"     (%d): ExpId: '%s', FID: %d, CT: %d Done: %d Error: %d\n",
 		j+1,Qentries[j].ExpIdStr, Qentries[j].fidId, Qentries[j].ctNum,
 		Qentries[j].doneCode, Qentries[j].errorCode);
      }
@@ -651,7 +650,7 @@ int initActiveQ(int clean)
 *
 *       Author Greg Brissey 9/2/94
 */
-int activeQadd(char* expidstr, int proctype, long elemId, long ct, int FgBg, int procpid,
+int activeQadd(char* expidstr, int proctype, int elemId, int ct, int FgBg, int procpid,
            int dcode, int ecode)
 {
   procQ *queue;
@@ -821,7 +820,7 @@ int activeProcQentries()
 *
 *       Author Greg Brissey 9/2/94
 */
-int activeQdelete(int fgbg, long key)
+int activeQdelete(int fgbg, int key)
 {
   int i,entry;
   activeQentry *Qentries;
@@ -917,7 +916,7 @@ int activeQdelete(int fgbg, long key)
 *
 *       Author Greg Brissey 9/2/94
 */
-int activeQtoBG(int oldfgbg, long key, int newfgbg, int procpid)
+int activeQtoBG(int oldfgbg, int key, int newfgbg, int procpid)
 {
   int i,entry;
   activeQentry *Qentries;
@@ -977,7 +976,7 @@ int activeQtoBG(int oldfgbg, long key, int newfgbg, int procpid)
   }
   if (entry == -1)
   {
-     errLogRet(ErrLogOp,debugInfo,"activeQdelete: Entry doen't Exist for key %ld\n",
+     errLogRet(ErrLogOp,debugInfo,"activeQdelete: Entry doen't Exist for key %d\n",
 	key);
      sigprocmask(SIG_SETMASK, &savemask, (sigset_t *)NULL);
      return(-1);
@@ -1004,7 +1003,7 @@ int activeQtoBG(int oldfgbg, long key, int newfgbg, int procpid)
 * 0 , else -1
 *
 */
-int activeQnoWait(int oldproc, long key, int newproc)
+int activeQnoWait(int oldproc, int key, int newproc)
 {
   int i,entry;
   activeQentry *Qentries;
@@ -1159,7 +1158,7 @@ void activeQshow(void)
 	queue->numInQ,Qentries);
   for( j=0; j < queue->numInQ; j++)
   {
-    fprintf(stdout,"     (%d): ExpId: '%s', FID: %ld, CT: %ld, Done: %d, Error: %d, FGproc: %d, PID: %d\n",
+    fprintf(stdout,"     (%d): ExpId: '%s', FID: %d, CT: %d, Done: %d, Error: %d, FGproc: %d, PID: %d\n",
 		j+1,Qentries[j].ExpIdStr, Qentries[j].fidId, Qentries[j].ctNum,
 		Qentries[j].doneCode, Qentries[j].errorCode,
 		Qentries[j].FgBgFlag, Qentries[j].ProcPid);

@@ -9,9 +9,9 @@
 /*
  */
 
-/* #define _POSIX_SOURCE /* defined when source is waited tobe POSIX-compliant */
-/* #define _SYSV_SOURCE /* defined when source is System V */
-/* #ifdef __STDC__ /* used to determine if using an ANSI compiler */
+// #define _POSIX_SOURCE /* defined when source is waited tobe POSIX-compliant */
+// #define _SYSV_SOURCE /* defined when source is System V */
+// #ifdef __STDC__ /* used to determine if using an ANSI compiler */
 
 
 #ifndef INCsysutilsh

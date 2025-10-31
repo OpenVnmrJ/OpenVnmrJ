@@ -47,7 +47,7 @@ RQgroup::RQgroup(string str, int firstFrame, bool show) : RQnode()
 
       // make children only if copy is 0
       // otherwise children will be added later.
-      int p = str.find_last_of(" ");
+      size_t p = str.find_last_of(" ");
       if(p != string::npos && str.substr(p+1) == "0") {
         string path = getPath();
         makeChildren(path.c_str());
@@ -156,7 +156,7 @@ RQgroup::initGroup(string str, bool show)
 
     setDirAndName(str);
 
-    int i1;
+    size_t i1;
     if((i1 = str.find(".fid")) != string::npos) {
       return;
     }
@@ -296,7 +296,7 @@ RQgroup::initSelection(int firstFrame)
 
 bool RQgroup::canSort(string str) {
    if(!doSort || str == "" || str == "no" || getAttribute("rank") == "3" ||
-        getChildren()->size() != getScanSize()) return false;
+        getChildren()->size() != (size_t) getScanSize()) return false;
    else return true; 
 }
 
@@ -319,7 +319,7 @@ RQgroup::makeMaps()
    } else {
     char str[32];
     for(itr=l->begin(); itr != l->end(); ++itr) {
-      sprintf(str, "%d 0 0", dimMap.size()+1);
+      sprintf(str, "%d 0 0", (int) dimMap.size()+1);
       image = (RQimage *)(&(*itr));
       dimMap.insert(map<string, RQnode *>::value_type(string(str), image));
       indexMap.insert(map<int, RQnode *>::value_type(indexMap.size()+1, image));
@@ -340,7 +340,7 @@ RQgroup::makeChildren(const char *path)
     int n;
 
     if(stat(path, &fstat) != 0) {
-        sprintf(str, "%s: \"%.1024s\"", strerror(errno), path);
+        sprintf(str, "%s: \"%.512s\"", strerror(errno), path);
         ib_errmsg(str);
         return;
     }
@@ -381,7 +381,7 @@ RQgroup::makeChildren(const char *path)
       // Open the directory
       n = scandir(path, &namelist, 0, alphasort);
       if(n < 0) {
-        sprintf(str, "%s: \"%.1024s\"", strerror(errno), path);
+        sprintf(str, "%s: \"%.512s\"", strerror(errno), path);
         ib_errmsg(str);
         return;
       }
@@ -438,7 +438,7 @@ RQgroup::getRealFromProcpar(string path, string *pars, double *vals, int n)
     char *strptr;
     char  buf[1024];
 
-    int i = path.find_last_of("/procpar",1);
+    size_t i = path.find_last_of("/procpar",1);
     if(i == string::npos || i < (path.length()-9)) {
       path += "/procpar";
     }
@@ -449,7 +449,7 @@ RQgroup::getRealFromProcpar(string path, string *pars, double *vals, int n)
     while(fgets(buf,sizeof(buf),fp)) {
         strptr = strtok(buf, " ");
 
-        for(i=0; i<n; i++) {
+        for(int i=0; i<n; i++) {
          if(strcmp(strptr, pars[i].c_str()) == 0) {
             fgets(buf,sizeof(buf),fp);
             strptr = strtok(buf, " ");
@@ -470,7 +470,7 @@ RQgroup::setSelection(string str)
     string estr="NA";
     string fstr="NA";
 
-    int p1, p2;
+    size_t p1, p2;
     p2 = 0;
     if((p1 = str.find(" ", 1)+1) != string::npos &&
            (p2 = str.find(" ", p1+1)) != string::npos)
@@ -602,7 +602,7 @@ RQgroup::updateImageList(string str)
     string sstr = "1";
     string astr = "1";
     string estr = "1";
-    int p1, p2;
+    size_t p1, p2;
     if(str == "" || strcasecmp(str.c_str(),"selected") == 0) {
 	istr = getAttribute("images");
 	sstr = getAttribute("slices");
@@ -631,7 +631,6 @@ RQgroup::updateImageList(string str)
     list<int> l;
     l = RQparser::get()->parseImages(istr, getGroupSize());
     list<int>::iterator itr;
-    int i;
     if(l.size() > 0) {
         for (itr = l.begin(); itr != l.end(); ++itr) { 
 	    iitr = indexMap.find(*itr);
@@ -907,7 +906,7 @@ int
 RQgroup::getGnum()
 {
     string gid = getAttribute("group");
-    int pos = gid.find_first_of("(");
+    size_t pos = gid.find_first_of("(");
     if(pos != string::npos && pos > 1)
          return atoi(gid.substr(1,gid.length()-pos).c_str());
     else return -1;
@@ -916,8 +915,8 @@ RQgroup::getGnum()
 // str is the key of an image
 void RQgroup::setDirAndName(string str)
 {
-      int p1 = str.find_first_of(" ");
-      int p2 = str.find(".fdf");
+      size_t p1 = str.find_first_of(" ");
+      size_t p2 = str.find(".fdf");
       string gpath;
       // get group path
       if(p1 != string::npos && p2 != string::npos) { // image key
@@ -1122,7 +1121,7 @@ RQgroup::makeShortNames()
                && (idx = pname->find('/', idx)) != string::npos)
         {
             // Strip trailing ".dat" from any component, if present
-            if (idx > junklen && pname->substr(idx - junklen, junklen) == junk) {
+            if ((int) idx > junklen && pname->substr(idx - junklen, junklen) == junk) {
                 pname->erase(idx - junklen, junklen);
                 idx -= junklen;
             }
@@ -1132,7 +1131,7 @@ RQgroup::makeShortNames()
             int j;
             for (i = idx - 1; i >= 0 && isdigit(pname->at(i)); --i);
             ++i;
-            for (j = i; j < idx - 1 && pname->at(j) == '0'; ++j);
+            for (j = i; j < (int) idx - 1 && pname->at(j) == '0'; ++j);
             if (j > i) {
                 pname->erase(i, j - i);
                 idx -= j - i;

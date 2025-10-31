@@ -11,8 +11,10 @@ atprocTarget = 'Atproc'
 cwd = os.getcwd()
 
 # library dependancies
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
-SConscript(os.path.join(ncommPath, 'SConstruct'))
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
+if not os.path.exists(ncommPath):
+   Execute('cp -r '+os.path.join(cwd,os.pardir,'ncomm') + ' ' + ncommPath+ ';touch '+ncommPath+'/m64')
+   Execute('cd ../ncomm64; scons')
 
 # source files
 atprocFileList = ['atcmds.c',
@@ -38,9 +40,9 @@ vnmrHdrList = [ 'asm.h']
 vnmrFileList = ['asmfuncs.c']
 
 # build environment
-env = Environment(CCFLAGS    = '-m32 -O2',
+env = Environment(CCFLAGS    = '-O2 -Wall',
                   CPPDEFINES = ['LINUX', 'DEBUG'],
-                  LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                  LINKFLAGS  = '-Wl,-rpath,/vnmr/lib',
                   CPPPATH    = [cwd])
 
 buildMethods.makeSymLinks(env, atprocTarget, cwd, expprocPath, expprocFileList)
@@ -55,7 +57,7 @@ atprocProg = env.Program(target  = atprocTarget,
                          source  = [atprocFileList,
                                     expprocFileList,
                                     vnmrFileList],
-                         LIBS    = ['acqcomm'])
+                         LIBS    = ['acqcomm64'])
 
 # define with absolute path where built files will be copied
 vnmrPath = os.path.join(cwd, os.pardir, os.pardir,

@@ -31,9 +31,9 @@
 #pragma GCC diagnostic warning "-Wimplicit-function-declaration"
 #endif
 
-#define MAXPATHL 256
+#define MAXPATH 256
 
-char ProcName[256];
+char ProcName[MAXPATH];
 
 MSG_Q_ID pRecvMsgQ;
 MSG_Q_ID pExpMsgQ;
@@ -42,16 +42,16 @@ char MsgInbuf[PROC_MSG_SIZE];
 
 pid_t VnmrPid = 0;
 
-char autodir[MAXPATHL];         /* automation directory */
-char enterpath[MAXPATHL];       /* path to enter file */
-char samplepath[MAXPATHL];      /* path to sampleinfo file */
-char psgQpath[MAXPATHL];        /* path to psg Queue directory */
-char doneQpath[MAXPATHL];        /* path to done Queue directory */
+char autodir[MAXPATH];         /* automation directory */
+char enterpath[MAXPATH+16];       /* path to enter file */
+char samplepath[MAXPATH];      /* path to sampleinfo file */
+char psgQpath[MAXPATH];        /* path to psg Queue directory */
+char doneQpath[MAXPATH];        /* path to done Queue directory */
 
 /* Used by locksys.c  routines from vnmr */
-char systemdir[MAXPATHL];       /* vnmr system directory */
-char userdir[MAXPATHL];         /* vnmr user system directory */
-char curexpdir[MAXPATHL];       /* current experiment path */
+char systemdir[MAXPATH];       /* vnmr system directory */
+char userdir[MAXPATH];         /* vnmr user system directory */
+char curexpdir[MAXPATH];       /* current experiment path */
 
 /* Owner uid & gid of enterQ file */
 uid_t enter_uid;
@@ -62,21 +62,24 @@ extern int parser(char* str);
 extern void setupexcepthandler();
 extern int shutdownComm(void);
 extern int initCmdParser();
+extern int read_info_file(char *autodir);
 
 static void set_output()
 {
    int fd;
    int tmp_euid;
+   int res __attribute__((unused));
+   FILE *fp __attribute__((unused));
 
    tmp_euid = geteuid();
-   seteuid(getuid());   /* change the effective uid to root from vnmr1 */
-   freopen("/dev/null","r",stdin);
-   freopen("/dev/console","a",stdout);
-   freopen("/dev/console","a",stderr);
+   res = seteuid(getuid());   /* change the effective uid to root from vnmr1 */
+   fp = freopen("/dev/null","r",stdin);
+   fp = freopen("/dev/console","a",stdout);
+   fp = freopen("/dev/console","a",stderr);
 
    for (fd=3; fd < NOFILE; fd++)
      close(fd);
-   seteuid(tmp_euid);   /* change the effective uid back to vnmr1 */
+   res = seteuid(tmp_euid);   /* change the effective uid back to vnmr1 */
 }
 
 /*
@@ -144,6 +147,7 @@ int main(int argc, char *argv[])
    void TheGrimReaper(void*);
    void processMsge(void*);
    void set_output();
+   int res __attribute__((unused));
  
    strncpy(ProcName,argv[0],256);
    ProcName[255] = '\0';
@@ -260,7 +264,7 @@ int main(int argc, char *argv[])
    /* switch to root here so that autoproc will have permission to lock and unlock the 
       various Qs it uses
    */
-   seteuid(getuid());
+   res = seteuid(getuid());
    DPRINT4(1,"uid: %d, euid: %d, gid: %d, egid: %d\n",getuid(),geteuid(),getgid(),getegid());
 
    /*
@@ -301,7 +305,7 @@ void processMsge(void *notin)
 	   /* if we got a message then go ahead and parse it */
 	   if (rtn > 0)
 	   {
-	      DPRINT2(1,"received %d bytes, MsgInbuf len %d bytes\n",rtn,strlen(MsgInbuf));
+	      DPRINT2(1,"received %d bytes, MsgInbuf len %zd bytes\n",rtn,strlen(MsgInbuf));
 	      parser(MsgInbuf);
 	      MsgInbuf[0] = '\0';
 	   }
