@@ -63,9 +63,9 @@ extern "C" {
 
  
 extern	int  initProcQs(int clean);
-extern	int  procQadd(int proctype, char* expidstr, long elemId, long ct,
+extern	int  procQadd(int proctype, char* expidstr, int elemId, int ct,
                       int dcode, int ecode);
-extern  int  procQget(int* proctype, char* expidstr, long* elemId, long* ct,
+extern  int  procQget(int* proctype, char* expidstr, int* elemId, int* ct,
                       int* dcode, int* ecode);
 extern  int  procQentries(void);
 extern	int  procQdelete(int proctype, int entry);
@@ -73,11 +73,11 @@ extern	int  procQclean(void);
 extern  void procQRelease(void);
 extern	void procQshow(void);
 extern  int  initActiveQ(int clean);
-extern  int  activeQadd(char* expidstr, int proctype, long elemId, long ct, int FgBg,
+extern  int  activeQadd(char* expidstr, int proctype, int elemId, int ct, int FgBg,
                         int procpid, int dcode, int ecode);
 extern  int  activeQget(int* proctype, char* expidstr, int* fgbg, int* pid, int* dcode);
 extern  int  activeProcQentries(void);
-extern  int  activeQdelete(int fgbg, long key);
+extern  int  activeQdelete(int fgbg, int key);
 extern  int  activeQclean(void);
 extern  void activeQRelease(void);
 extern  void  activeQshow(void);

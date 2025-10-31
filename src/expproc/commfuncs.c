@@ -119,7 +119,7 @@ chanConItrp(int signal)
   /* Place the SIGUSR1 interrupt & msgID onto the eventQ, the non-
     interrupt function (processMsge) will be called with msgId as an argument */
 
-  processNonInterrupt( SIGALRM, (void*) Chan_Num );
+  processNonInterrupt( SIGALRM, (void*) ((long)Chan_Num) );
   return;
 }
 static void
@@ -129,7 +129,7 @@ chanErrItrp(int signal)
   /* Place the SIGUSR1 interrupt & msgID onto the eventQ, the non-
     interrupt function (processMsge) will be called with msgId as an argument */
 
-  processNonInterrupt( SIGPIPE, (void*) Chan_Num );
+  processNonInterrupt( SIGPIPE, (void*) ((long)Chan_Num) );
   return;
 }
 

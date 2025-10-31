@@ -11,7 +11,6 @@ nautoProcTarget = 'Autoproc'
 cwd = os.getcwd()
 
 # library dependancies
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
 ncommHdrList = [ 'chanLib.h',
                  'chanLibP.h',
                  'errLogLib.h',
@@ -28,15 +27,17 @@ ncommHdrList = [ 'chanLib.h',
                  'shrMLib.h',
                  'sockets.h' ]
 
-SConscript(os.path.join(ncommPath, 'SConstruct'))
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
+if not os.path.exists(ncommPath):
+   Execute('cp -r '+os.path.join(cwd,os.pardir,'ncomm') + ' ' + ncommPath+ ';touch '+ncommPath+'/m64')
+   Execute('cd ../ncomm64; scons')
 
 # source files
 expProcPath     = os.path.join(cwd,os.pardir,'expproc')
 expProcHdrList = [ 'expQfuncs.h',
                    'commfuncs.h',
                    'parser.h',
-                   'hostMsgChannels.h',
-                   'shrexpinfo.h' ]
+                   'hostMsgChannels.h']
 expProcFileList = ['excepthandler.c',
                    'commfuncs.c',
                    'parser.c',
@@ -62,9 +63,9 @@ nautoFileList = ['autoproc.c',
 
 
 # build environment
-nautoProcEnv = Environment(CCFLAGS    = '-O2 -m32 -Wall',
+nautoProcEnv = Environment(CCFLAGS    = '-O2 -Wall',
                            CPPDEFINES = ['LINUX','DEBUG'],
-                           LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                           LINKFLAGS  = '-Wl,-rpath,/vnmr/lib',
                            CPPPATH    = [cwd])
 
                                          # expProcPath,
@@ -81,7 +82,7 @@ nautoproc = nautoProcEnv.Program(target  = nautoProcTarget,
                                             vnmrFileList],
                                  LIBPATH = [cwd,
                                             ncommPath],
-                                 LIBS    = ['acqcomm'])
+                                 LIBS    = ['acqcomm64'])
 
 buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, vwacqPath, vwacqHdrList)
 buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, ncommPath, ncommHdrList)

@@ -52,11 +52,11 @@ RQparser::parseStatement(string str)
     replaceVariables(str);
     toLowercase(str);
 
-    int i = str.find("g", 0);
+    size_t i = str.find("g", 0);
 
     string s;
     if(i != string::npos && i > 0) {
-        int j = str.find("(", 0);
+        size_t j = str.find("(", 0);
 	if(j == string::npos) j = str.find("i", 0);
 	if(j == string::npos) j = str.find("s", 0);
 	if(j == string::npos) j = str.find("e", 0);
@@ -67,7 +67,7 @@ RQparser::parseStatement(string str)
 	   glist.push_back(parseSentence(str.substr(0,i)));
 	} 
     } else if(i == string::npos) {
-        int j = str.find("(", 0);
+        size_t j = str.find("(", 0);
 	if(j == string::npos) j = str.find("i", 0);
 	if(j == string::npos) j = str.find("s", 0);
 	if(j == string::npos) j = str.find("e", 0);
@@ -79,7 +79,7 @@ RQparser::parseStatement(string str)
 	}
     } 
 
-    int l;
+    size_t l;
     while(i != string::npos) {
 	if((l = str.find("g", i+1)) == string::npos) {
 	   l = str.length(); 
@@ -113,7 +113,7 @@ RQparser::parseSentence(string str)
     string slices = "";
     string array = "";
     string echoes = "";
-    int i,s,e,a,f;
+    size_t i,s,e,a,f;
 
     if(str[0] == 'g') {
         
@@ -282,16 +282,16 @@ RQparser::replaceVariables(string &str)
     char value[MAXSTR];
     strcpy(value, "all");
 
-    int i = str.find("ns", 0);
+    size_t i = str.find("ns", 0);
     while(i != string::npos) {
-	sprintf(value, "%d", getReal("ns", 1));
+	sprintf(value, "%d", (int) getReal("ns", 1));
 	str.replace(i,2,value);
 	i = str.find("ns",i+1);
     }
 
     i = str.find("ne", 0);
     while(i != string::npos) {
-	sprintf(value, "%d", getReal("ne", 1));
+	sprintf(value, "%d", (int) getReal("ne", 1));
 	str.replace(i,2,value);
 	i = str.find("ne",i+1);
     }
@@ -313,7 +313,7 @@ RQparser::toLowercase(string &str)
 {
     // replace G, S, E, A, C, R and F with lowercase
 
-    int i = str.find("G", 0);
+    size_t i = str.find("G", 0);
     while(i != string::npos) {
 	str.replace(i,1,"g");
 	i = str.find("G",i+1);
@@ -365,7 +365,7 @@ RQparser::toLowercase(string &str)
 void
 RQparser::trimStr(string &str)
 {
-    int i = str.find(" ", 0);
+    size_t i = str.find(" ", 0);
     while(i != string::npos) {
 	str.erase(i,1);
 	i = str.find(" ",i);
@@ -420,8 +420,8 @@ RQparser::parseSelections(string str)
     list<int> slist; 
     if(str.length() <=0) return slist;
   
-    int i = 0;
-    int l;
+    size_t i = 0;
+    size_t l;
     while(i != string::npos && i < str.length()) {
 	if((l = str.find(",", i+1)) == string::npos) {
            l = str.length();
@@ -449,10 +449,10 @@ RQparser::parseSelection(string str)
   
     string s;
     int step = -1;
-    int i = str.find(":", 0);
+    size_t i = str.find(":", 0);
     if (i != string::npos) {
 	i++;
-	int l = str.length() - i; 
+	size_t l = str.length() - i; 
 	if(l > 0) {
 	   s = str.substr(i,l);
 	   step = replaceMath(s);
@@ -472,7 +472,7 @@ RQparser::parseSelection(string str)
 	  lower = replaceMath(s);
 	} else lower = 1;
 	i++;
-	int l = str.length() - i;
+	size_t l = str.length() - i;
 	if(l > 0) {
 	   s = str.substr(i,l);
 	   upper = replaceMath(s);
@@ -484,7 +484,7 @@ RQparser::parseSelection(string str)
 
     if(step == 0) step = 1;
     if(lower > upper) step = -step;
-    for(i=lower; (step>0 && i<=upper) || (step<0 && i>=upper); i+=step) {
+    for(i=lower; (step>0 && (int) i <=upper) || (step<0 && (int) i >=upper); i+=step) {
 	slist.push_back(i);
     }
     return slist;
@@ -501,9 +501,9 @@ RQparser::parseGroups(string str, int ng)
     if(strcasecmp(str.c_str(), "all") == 0) {
 	for(int i=0; i<ng; i++) slist.push_back(i+1);
     } else {
-	int i = str.find("-", 0); 
+	size_t i = str.find("-", 0); 
 	if(i != string::npos) {
-	  int j = str.find(":", 0); 
+	  size_t j = str.find(":", 0); 
 	  if(j != string::npos && j>i && (j-i)==1) {
 	     char cs[MAXSTR];
 	     sprintf(cs, "%d",ng);
@@ -530,9 +530,9 @@ RQparser::parseImages(string str, int ni)
     if(strcasecmp(str.c_str(), "all") == 0) {
 	for(int i=0; i<ni; i++) slist.push_back(i+1);
     } else {
-	int i = str.find("-", 0); 
+	size_t i = str.find("-", 0); 
 	if(i != string::npos) {
-	  int j = str.find(":", 0); 
+	  size_t j = str.find(":", 0); 
 	  if(j != string::npos && j>i && (j-i)==1) {
 	     char cs[MAXSTR];
 	     sprintf(cs, "%d",ni);
@@ -561,9 +561,9 @@ RQparser::parseSlices(string str, int ni)
 	strcasecmp(str.c_str(), "all") == 0) {
 	for(int i=0; i<ni; i++) slist.push_back(i+1);
     } else {
-	int i = str.find("-", 0); 
+	size_t i = str.find("-", 0); 
 	if(i != string::npos) {
-	  int j = str.find(":", 0); 
+	  size_t j = str.find(":", 0); 
 	  if(j != string::npos && j>i && (j-i)==1) {
 	     char cs[MAXSTR];
 	     sprintf(cs, "%d",ni);
@@ -592,11 +592,11 @@ RQparser::parseFrames(string str, int rows, int cols, int ni)
 
     int n = rows*cols;
 
-    int r = str.find("r", 0);
-    int c = str.find("c", 0);
+    size_t r = str.find("r", 0);
+    size_t c = str.find("c", 0);
     if(r != string::npos) {
       r++;
-      int l;
+      size_t l;
       list<int> il;
       list<int>::iterator itr;
       while(r != string::npos && r < str.length()) {
@@ -618,7 +618,7 @@ RQparser::parseFrames(string str, int rows, int cols, int ni)
       }
     } else if(c != string::npos) {
       c++;
-      int l;
+      size_t l;
       list<int> il;
       list<int>::iterator itr;
       while(c != string::npos && c < str.length()) {
@@ -641,10 +641,10 @@ RQparser::parseFrames(string str, int rows, int cols, int ni)
     } else if(strcasecmp(str.c_str(), "all") == 0) {
 	for(int i=0; i<n; i++) slist.push_back(i+1);
     } else {
-	int i = str.find("-", 0); 
+	size_t i = str.find("-", 0); 
 	if(i != string::npos) {
 	  int first = atoi(str.substr(0,i).c_str()) - 1;
-	  int j = str.find(":", 0); 
+	  size_t j = str.find(":", 0); 
 	  if(j != string::npos && j>i && (j-i)==1) {
 	     char cs[MAXSTR];
 	     sprintf(cs, "%d",ni + first);
@@ -668,8 +668,8 @@ RQparser::replaceMath(string str)
 {
    if(str.length() < 1) return 0;
   
-   int i = 0;
-   int l;
+   size_t i = 0;
+   size_t l;
    int v1 = 0;
    while(i != string::npos && i < str.length()) {
 	if((l = str.find("-", i+1)) == string::npos) {
@@ -679,7 +679,7 @@ RQparser::replaceMath(string str)
  
 	if(l > 0) {
            string s1 = str.substr(i,l);
-	   int j = 0;
+	   size_t j = 0;
            int v2 = 0;
 	   while(j != string::npos && j < s1.length()) {
 	      if((l = s1.find("+", j+1)) == string::npos) {
@@ -689,7 +689,7 @@ RQparser::replaceMath(string str)
 
               if(l > 0) {
 		string s2 = s1.substr(j,l);
-                int k = 0;
+                size_t k = 0;
 		int v3 = 0;
                 while(k != string::npos && k < s2.length()) {
                    if((l = s2.find("/", k+1)) == string::npos) {
@@ -699,7 +699,7 @@ RQparser::replaceMath(string str)
 
                    if(l > 0) {
 		      string s3 = s2.substr(k,l);
-                      int m = 0;
+                      size_t m = 0;
 		      int v4 = 1;
                       while(m != string::npos && m < s3.length()) {
                          if((l = s3.find("*", m+1)) == string::npos) {
