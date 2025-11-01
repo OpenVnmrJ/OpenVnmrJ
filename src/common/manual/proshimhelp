@@ -1,3 +1,9 @@
+ProShim is not a new shimming method, but rather an umbrella
+that allows one to control all kinds of different shimming
+techniques, and there are a couple of very elegant features
+in ProShim that allows one to set up very sample-specific
+shimming methods. 
+
 Proshim uses a sophisticated curve-fitting technique to
 optimize shim values.  By default proshim will make
 adjustments using the method defined in  the parameter "method".
@@ -8,7 +14,7 @@ If the parameter method='z1z2', which is the old default value for
 lock simplex shimming, the proshim family of macros will replace this
 with a method called "touchup".  
 
-There is a menu and and entry box located in the group with the
+There is a menu and an entry box located in the group with the
 Proshim Now button. The menu lists several provided methods that are
 described in more detail below. If the user creates their own method
 by adding a file inside a local ~/vnmrsys/proshimmethods directory
@@ -21,7 +27,7 @@ The format for proshimmethods files is very simple: One line each
 containing the name of the DAC that is to be adjusted. Proshim simply
 goes through the list from top to bottom. Blank lines or invalid DAC
 names are simply skipped. Inside of proshimmethods the word "spin"
-is treated as a special case and when encounted the spinner is set
+is treated as a special case and when encountered the spinner is set
 as defined in the line.  For example: spin=0 or spin=20.
 
 An example method (xyz_extended) is shown below:
@@ -60,10 +66,9 @@ is complete.  To do this type proshim on the commandline.  To abort
 such a foreground macro click the Cancel Command button on the toolbar.
 
 In all cases proshim will begin by adjusting lock parameters unless the 
-ignore lock box is checked. This
-is done to ensure that lockpower and lockphase are correct. The 
-adjustment of lock parameters is done by a call to a macro called
-set_lockpars.
+ignore lock box is checked. This is done to ensure that lockpower and
+lockphase are correct. The adjustment of lock parameters is done by a
+call to a macro called set_lockpars.
 
 There are additional factors involved in any shimming method based on lock
 which are the delay between steps and the step sizes associated with
@@ -74,16 +79,16 @@ equal to acetone, methanol, benzene, or cd2cl2.
 
 The time required for proshim to execute is reasonably predictable. 
 A time of right at 1 minute per DAC in the method should be expected
-for solvents with the long delay time. This time reduces to about 25 
+for solvents with a long delay time. This time reduces to about 25 
 seconds per DAC for all other solvents. 
 
-Also located on the Proshim panel is a is a group that is shown if an
+Also located on the Proshim panel is a group that is shown if an
 autosampler of any type is present. This group contains the shim scheduler 
 and it provides tools to easily define a sample location for the
-lineshape sample and chose a shim maintenance method. Once this has
+lineshape sample and choose a shim maintenance method. Once this has
 been done the bottom part of the Shim Scheduler allows the act of 
-maintenence shimming to be scheduled. Note that this Shim_Scheduler
-has it's very own help button.
+maintenance shimming to be scheduled. Note that this Shim_Scheduler
+has its very own help button.
 
 The menu in the shim_scheduler offers three choices for lineshape
 maintenance.  One is simply "Lineshape" which records a lineshape
@@ -104,9 +109,9 @@ Both of the provided lineshape shim maintenance methods provided in the
 Service tab in the experiment selector that are listed in the shim_scheduler
 method menu are built as userStudies with a combination of submissions
 of Lineshape (with reshim option checked by customization) interspersed
-with submissions of comman protocols of shimming macros.
+with submissions of command protocols of shimming macros.
 
-The lineshape sample is perhaps the best choice to refined maintenance
+The lineshape sample is perhaps the best choice for maintenance
 shimming. A good 2nd choice might be the 19F signal to noise sample.
 Absolutely avoid any doped d2o samples because they are not responsive
 enough to yield good shimming results. 
@@ -125,3 +130,96 @@ Please remember that the parameter method is at this time shared between
 both proshim and the traditional lock simplex autoshim.  Keeping the names
 for methods in each world unique is not strictly required but is a good idea.
 
+The ProShim interface:
+
+The "Method" section of the interface defines the shim dacs that will 
+be optimized. One can define 10 sets of shims to be optimized by a
+single shim method. These correspond, from top to bottom in the interface,
+to the menus. Each menu gives a choice of various shim styles. The entry
+box to the right of the menu lists the shim dacs to be optimized by the
+style selected in the menu. The available styles are: 
+
+lock  -  optimize the shims as a group using a simplex method and the lock
+level as the measure of the goodness of the field.
+
+lock1d - optimize the shims independently in the listed order using the lock
+level as the measure of the goodness of the field.
+
+fid - optimize the shims as a group using a simplex method and the FID area as
+the measure of the goodness of the field.
+
+fid1d - optimize the shims independently in the listed order using the FID
+area as the measure of the goodness of the field.
+
+pfg - Optimize using the default PFG method.
+
+pfg & lock, pfg & lock1d, pfg & fid, pfg & fid1d - first optimize using the
+default PFG method and follow that with one of the lock, lock1d, fid, or fid1d
+methods described above.
+
+gxyz - Optimize using 3D gradient shimming.
+
+FID pars - This choice does not cause a shimming operation to occur but allows
+one to alter parameters for subsequent fid or fid1d shimming. For FID
+shimming, the parameters in the current experiment are used. These may be
+modified with the "FID pars" entry line.
+
+When shims are optimized as a group, a simplex method is used. The
+implementation of the simplex is based on the Nelder-Mead algorithm.
+The Range entry at the top of the panel specifies how large to make the
+initial simplex.  It is a measure of how welled shimmed the field is at
+the start of the optimization. Larger numbers make a larger simplex,
+corresponding to a larger region of parameter space (i.e., a less
+well-shimmed field). The default is the range of the z1 dac (32767 or
+2048 depending on the type of shims) divided by 150.
+
+The Range entry has a similar meaning when the shims are optimized
+independently (i.e., styles lock1d and fid1d).  For this optimization, the
+shim dac is moved by the value of Range.  As long of the optimization measure
+improves (either lock level or FID area), the optimizer continues to move the
+shim dac in steps of Range. Once the shim dac passes the best value, the
+optimizer measures some points around the best value and then fits a curve to
+those data points. The minimum of the curve is the best value for that shim.
+
+The Tol entry at the top of the panel specifies the exit criterion for the
+simplex method. To understand the Tol, it helps to understand the simplex
+method. A simplex is a geometrical figure in N dimensions with N+1 vertices,
+where N is the number of parameters to be optimized. In our case, N is the
+number of shim dacs. The first vertex is the current values of the shims. Each
+of the other vertices are generated by adding or subtracting a random number
+between 1 and Range/2 to the values of the shims in the first vertex. After
+each iteration of the optimization, the maximum difference among corresponding
+shim dacs at each vertex is determined. If this maximum difference is less
+than or equal to Tol, the simplex has converged. Smaller Tol numbers mean the
+simplex will work harder to get the best possible field. The default is 100
+(or 10 if the shims only have a total range of 2048). Setting Tol to 2 may
+take a fair amount of time, but it should eventually converge.
+
+The Tol entry is not used when the shims are optimized independently (lock1d
+and fid1d).
+
+The Steps entry is used when the shims are optimized independently. It is not
+used when the simplex method is used. The Steps entry defines the number of
+Steps or data points to take around the best value found by making steps of
+size Range. This "Steps" number of data points are then used to fit a
+third-order polynomial curve to find the minimum for that shim dac.
+The default value is 5.
+
+The Delay value is only used if "Lock" shimming is used. It defines the amount
+of time to wait after setting shims but before measuring the lock level.
+
+The default values for Range and Delay for lock shimming are specified by the
+shiminfo macro. This macro contains an empirical list of ranges and delays
+needed to achieve a 10% drop in the lock level.
+
+The Spin entry allows one to control the spinning speed for each of the 10
+possible shimming steps.
+
+Finally, for the fid1d and fid shimming style, the default is to measure the
+FID area and use that as the optimization criterion. By defining a
+"methodname"+'_shimmethod'  macro, one can define any measure based on the FID
+or the spectrum, or both. One could measure the linewidths and 0.55% and 0.11%
+with dres and combine that with a penalty function based on whether a peak is
+split (using nll).  Ratios of integrals could be used. There are many
+possibilities. The shimdss_shimmethod macro has a commented section that
+gives an example of how this can be done.
