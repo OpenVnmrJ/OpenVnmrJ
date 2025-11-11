@@ -19,7 +19,7 @@
 #include <tcl.h>
 
 #ifndef GILSCRIPT
-#include "shrexpinfo.h"
+// #include "shrexpinfo.h"
 #include "msgQLib.h"
 #include "hrm_errors.h"
 #endif
@@ -48,8 +48,6 @@ int AbortRobo = 0;       /* SIGUSR2 will set this to abort sample change */
 
 static Tcl_Interp *TclInterp = NULL;
 
-static char TclResultMsges[256];
-
 static char *ErrMsge;
 
 static char tclErrCode[12];
@@ -60,10 +58,13 @@ static double VolumeInSyringe = 0.0;
 static int lastSample = 0;
 static int lastZone = 0;
 static RACKOBJ_ID pLastRack;
+
+#ifdef XXX
 static double lastVolume;
 static double lastFlowRate;
 static double lastZspeed;
 static double lastVol2ZTravel;
+#endif
 
 extern char SampleInfoFile[512];   /* sourced in by tcl scripts */
 extern int rackDelta[GIL_MAX_RACKS][2];
@@ -140,9 +141,9 @@ static double safevolume(double volume, int direction)
     /* If Volume passed in is -1, an Async syringe operation occurred
      *    so read it after the operation has completed.
      */
-    int result;
 
     if (VolumeInSyringe == -1.0) {
+        int result __attribute__((unused));
         result = gilsonStoppedAll(pGilObjId);
     }
 
@@ -178,8 +179,6 @@ static double safevolume(double volume, int direction)
 +---------------------------------------------------------------------------*/
 int InitTclInterp(void)
 {
-   int status;
-
    /* Create TCL Interpreter */
    if (TclInterp == NULL)
    {
@@ -191,6 +190,7 @@ int InitTclInterp(void)
      }
      else
      {
+       int status __attribute__((unused));
        status = Tcl_AppInit(TclInterp);  /* initialize the gilson Specific TCL commands */
        if (*TclInterp->result != 0)
        {
@@ -243,7 +243,7 @@ int InterpScript(char *tclScriptFile)
     int code,errorCode;
     char *errorStr;
 
-    DPRINT2(1,"Tcl_EvalFile: 0x%lx, Script: '%s'\n", TclInterp,tclScriptFile);
+    DPRINT2(1,"Tcl_EvalFile: 0x%p, Script: '%s'\n", TclInterp,tclScriptFile);
     if (InitTclInterp() == -1)
     {
       return(-1);
@@ -296,7 +296,6 @@ int InterpScript(char *tclScriptFile)
 static int ChkLimits(Tcl_Interp *interp, char *FuncName, int rackloc, int zone, int sample) 
 {
    RACKOBJ_ID pRackId;
-   char errorcode[12];
    int maxzone,maxsample;
 
   /* 1. is rackloc a valid range */
@@ -394,11 +393,7 @@ int gDisplayAbort(void)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gWriteDisplay(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gWriteDisplay(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     char message[10];
 
@@ -436,11 +431,7 @@ int gWriteDisplay(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gMoveZ2Top(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gMoveZ2Top(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     /* check for abort, if SO then just return */
     if (AbortRobo != 0) 
@@ -470,11 +461,7 @@ int gMoveZ2Top(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gMove2RinseStation(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gMove2RinseStation(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     DPRINT(1,"gMove2RinseStation \n");
     if (AbortRobo != 0) 
@@ -503,14 +490,13 @@ int gMove2RinseStation(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gFlush(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+//    ClientData dummy;                   /* Not used. */
+//    Tcl_Interp *interp;                 /* Current interpreter. */
+//    int argc;                           /* Number of arguments. */
+//    char **argv;                        /* Argument strings. */
+int gFlush(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     double RinseVol,InFlowRate,OutFlowRate,TmpVol;
-    double tInFlow,tOutFLow; 
 
     if (argc != 4)
     {
@@ -585,11 +571,7 @@ int gFlush(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gMove2InjectorPort(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gMove2InjectorPort(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     DPRINT(1,"gMove2InjectorPort \n");
     if (AbortRobo != 0) 
@@ -619,11 +601,7 @@ int gMove2InjectorPort(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gDelayMsec(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gDelayMsec(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int count;
     if (argc != 2)
@@ -655,11 +633,7 @@ int gDelayMsec(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gSetContacts(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gSetContacts(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int relay, on;
 
@@ -702,11 +676,7 @@ int gSetContacts(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gGetInputs(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gGetInputs(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int relay, on;
 
@@ -753,11 +723,7 @@ int gGetInputs(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gGetContacts(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gGetContacts(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int relay, on;
 
@@ -942,13 +908,9 @@ int AspirateVol(double Volume, double FlowRate, double zSpeed,
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gAspirate(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gAspirate(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    double Volume,FlowRate,zSpeed,zTravel;
+    double Volume,FlowRate,zSpeed;
     int result;
 
     if (argc != 4)
@@ -982,13 +944,9 @@ int gAspirate(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gAspirateAsync(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gAspirateAsync(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    double Volume,FlowRate,zSpeed,zTravel;
+    double Volume,FlowRate,zSpeed;
     int result;
 
     if (argc != 4)
@@ -1155,11 +1113,7 @@ int DispenseVol(double Volume, double FlowRate, double zSpeed,
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gDispense(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gDispense(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     double Volume, FlowRate, zSpeed;
     int result;
@@ -1190,11 +1144,7 @@ int gDispense(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gDispenseAsync(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gDispenseAsync(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     double Volume,FlowRate,zSpeed;
     int result;
@@ -1226,11 +1176,7 @@ int gDispenseAsync(dummy, interp, argc, argv)
 *
 +------------------------------------------------------------------*/
         			/* ARGSUSED */
-int gStopTestAll(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gStopTestAll(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int result;
 
@@ -1248,14 +1194,9 @@ int gStopTestAll(dummy, interp, argc, argv)
     return TCL_OK;
 }
 
-int gTubeX(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gTubeX(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    int xAxis,yAxis;
-    int sampZtop,sampZbottom;
+    int xAxis;
     RACKOBJ_ID pSampRack;
     int rackloc,sample,zone,xcenter,ycenter;
 
@@ -1288,14 +1229,9 @@ int gTubeX(dummy, interp, argc, argv)
     return TCL_OK;
 }
 
-int gTubeY(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gTubeY(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    int xAxis,yAxis;
-    int sampZtop,sampZbottom;
+    int yAxis;
     RACKOBJ_ID pSampRack;
     int rackloc,sample,zone;
 
@@ -1318,22 +1254,18 @@ int gTubeY(dummy, interp, argc, argv)
 
     yAxis = rackGetY(pSampRack, zone, sample);
     sprintf(interp->result,"%d",yAxis);  /* return value to TCL script */
-    DPRINT1(1,"gTubeY Loc: %d\n",xAxis);
+    DPRINT1(1,"gTubeY Loc: %d\n",yAxis);
 
     return TCL_OK;
 }
 
 
 /*----------------------------------------------------
-/*   gMoveZ Z_location(mm)
+ *   gMoveZ Z_location(mm)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gMoveZ(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gMoveZ(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int Zloc;
 
@@ -1368,15 +1300,11 @@ int gMoveZ(dummy, interp, argc, argv)
 }
 
 /*----------------------------------------------------
-/*   gMoveZLQ Z_location(mm)
+ *   gMoveZLQ Z_location(mm)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gMoveZLQ(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gMoveZLQ(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int Zloc;
 
@@ -1412,7 +1340,6 @@ int gMoveZLQ(dummy, interp, argc, argv)
 static int Move2Sample( int rackloc, int zone, int sample )
 {
     int xAxis,yAxis,result;
-    int sampZtop,sampZbottom;
     RACKOBJ_ID pSampRack;
     int xcenter,ycenter;
 
@@ -1431,7 +1358,7 @@ static int Move2Sample( int rackloc, int zone, int sample )
         {
             if (g215Bed.DefinedRacks[i].pRackObj == pSampRack)
             {
-                DPRINT2(1,"Move2Sample()  Rack: 0x%lx, Type:,'%s'\n",
+                DPRINT2(1,"Move2Sample()  Rack: %p, Type:,'%s'\n",
                 pSampRack,g215Bed.DefinedRacks[i].IdStr);
                 break;
             }
@@ -1478,15 +1405,8 @@ static int Move2Sample( int rackloc, int zone, int sample )
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gMove2Sample(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gMove2Sample(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    int xAxis,yAxis;
-    int sampZtop,sampZbottom;
-    RACKOBJ_ID pSampRack;
     int rackloc,sample,zone,error;
 
     if (argc != 4)
@@ -1538,11 +1458,7 @@ int gMove2Sample(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gInjector2Load(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gInjector2Load(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     DPRINT(1,"gInjector2Load \n");
     if (AbortRobo != 0) 
@@ -1571,11 +1487,7 @@ int gInjector2Load(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gInjector2Inject(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gInjector2Inject(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     DPRINT(1,"gInjector2Inject \n");
     if (AbortRobo != 0) 
@@ -1606,11 +1518,7 @@ int gInjector2Inject(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gInitSyringe(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gInitSyringe(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 {
     int size, result;
 
@@ -1658,11 +1566,7 @@ int gInitSyringe(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gCurrentSyrVol(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gCurrentSyrVol(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     double Cvolume;
 
@@ -1695,11 +1599,7 @@ int gCurrentSyrVol(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gSetUnitId(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gSetUnitId(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int unit,oldUnit;
 
@@ -1735,11 +1635,7 @@ int gSetUnitId(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gSetPumpId(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gSetPumpId(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int pump, oldPump;
 
@@ -1770,11 +1666,7 @@ int gSetPumpId(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gSetInjectId(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gSetInjectId(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     int unit,oldUnit;
 
@@ -1832,9 +1724,6 @@ static int Go2LiqLevel(int rackloc, int zone, int sample,
 {
     RACKOBJ_ID pSampRack;
     int samptop, sampbot, liqtop, depthlevel;
-    int result;
-
-    result = 0;
 
     pSampRack = g215Bed.LoadedRacks[rackloc];
 
@@ -1910,16 +1799,9 @@ static int Go2LiqLevel(int rackloc, int zone, int sample,
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gMove2LiqLevel(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gMove2LiqLevel(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    int i, xAxis, yAxis;
-    int sampZtop,sampZbottom;
-    RACKOBJ_ID pSampRack;
-    int rackloc,sample,zone,times,height,depth;
+    int rackloc,sample,zone,height,depth;
 
     if (argc != 6)
     {
@@ -1971,15 +1853,9 @@ int gMove2LiqLevel(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gMix(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gMix(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    int i, xAxis, yAxis;
-    int sampZtop,sampZbottom;
-    RACKOBJ_ID pSampRack;
+    int i;
     int rackloc,sample,zone,times,height;
     double volume,flowrate;
     int error;
@@ -2074,15 +1950,8 @@ int gMix(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gTransfer(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gTransfer(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    int xAxis,yAxis;
-    int sampZtop,sampZbottom;
-    RACKOBJ_ID pSrcRack,pDstRack;
     int racksrc,samplesrc,zonesrc,heightsrc;
     int rackdst,sampledst,zonedst,heightdst;
     double volume,volleft,flowsrc,flowdst;
@@ -2258,14 +2127,8 @@ int gTransfer(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gZSpeed(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gZSpeed(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    int xAxis,yAxis;
-    int sampZtop,sampZbottom;
     RACKOBJ_ID pSampRack;
     int rackloc,sample,zone,error;
     double flowrate,zSpeed;
@@ -2315,11 +2178,7 @@ int gZSpeed(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gResumeAcq(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gResumeAcq(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     extern void reportRobotStat(int robstat);
     if (argc != 1)
@@ -2343,14 +2202,10 @@ int gResumeAcq(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gRackLocTypeMap(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gRackLocTypeMap(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     char racktype[80];
-    int rackloc,i,index,failed;
+    int rackloc,i,failed;
 
     if (argc != 3)
     {
@@ -2480,15 +2335,11 @@ static int decodeOrder(char* startloc, char* pattern)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gRackZoneSequenceOrder(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gRackZoneSequenceOrder(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     char startloc[80], pattern[80];
     RACKOBJ_ID pSampRack;
-    int rackloc,sample,zone,order;
+    int rackloc,zone,order;
 
     if (argc != 5)
     {
@@ -2521,15 +2372,11 @@ int gRackZoneSequenceOrder(dummy, interp, argc, argv)
 *
 +----------------------------------------------------*/
         			/* ARGSUSED */
-int gRackSequenceOrder(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gRackSequenceOrder(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
     char startloc[80], pattern[80];
     RACKOBJ_ID pSampRack;
-    int rackloc,sample,order;
+    int rackloc,order;
 
     if (argc != 4)
     {
@@ -2555,14 +2402,8 @@ int gRackSequenceOrder(dummy, interp, argc, argv)
     return TCL_OK;
 }
 
-int gPuts(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gPuts(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 { 
-    char *msge;
-
     if (argc != 2)
     {
         Tcl_AppendResult(interp, "gPuts wrong # args: should be \"", argv[0],
@@ -2579,11 +2420,7 @@ int gPuts(dummy, interp, argc, argv)
 /*  direct commands to the gilson family of equipment */
 /*  Immediate and Buffer command routines callable	*/
 /*  from the tcl scripts				*/
-int gCommand(dummy, interp, argc, argv)
-    ClientData dummy;                   /* Not used. */
-    Tcl_Interp *interp;                 /* Current interpreter. */
-    int argc;                           /* Number of arguments. */
-    char **argv;                        /* Argument strings. */
+int gCommand(ClientData dummy, Tcl_Interp *interp, int argc, char **argv)
 {
     int UnitID;
     char *Cmd;
@@ -2678,9 +2515,7 @@ int *tclDummyMathPtr = (int *) matherr;
  */
 
 int
-main(argc, argv)
-    int argc;			/* Number of command-line arguments. */
-    char **argv;		/* Values of command-line arguments. */
+main(int argc,  char **argv)
 {
     Tcl_Main(argc, argv, Tcl_AppInit);
     return 0;			/* Needed only to prevent compiler warning. */
@@ -2706,9 +2541,7 @@ main(argc, argv)
  *----------------------------------------------------------------------
  */
 
-int
-Tcl_AppInit(interp)
-    Tcl_Interp *interp;		/* Interpreter for application. */
+int Tcl_AppInit(Tcl_Interp *interp)
 {
 
     /*
@@ -2978,7 +2811,7 @@ runSample()
   fprintf(stderr,"Z Travel: %lf (mm), Speed: %lf (mm/sec), flow time: %lf\n (sec)",
 	ztravel,zspeed, Volume / ((Flowrate * 1000.0) / 60.0));
 
-  /* ExtraVol =  5.0 * (((double)MaxVolume)/100.0);	/* 5% of maxvolume */
+  // ExtraVol =  5.0 * (((double)MaxVolume)/100.0);	/* 5% of maxvolume */
 
   error = gilSetContacts(pGilObjId, 2, 0 );
   fprintf(stderr,"Samples %d thru %d, vol: %0.1lf\n",SampStrt,SampEnd,Volume);

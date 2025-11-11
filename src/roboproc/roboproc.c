@@ -190,7 +190,9 @@ int main(int argc, char *argv[])
 */
 
     /* initialize the shared Exp Status */
+#ifdef MAPEXP
     initExpStatus(0);
+#endif
 
     /* initialize command parser */
     initCmdParser();
@@ -253,7 +255,7 @@ void processMsge(void *notin)
         /* If we got a message then go ahead and parse it */
         if (rtn > 0)
         {
-            DPRINT2(2, "received %d bytes, MsgInbuf len %d bytes\n",
+            DPRINT2(2, "received %d bytes, MsgInbuf len %zd bytes\n",
                     rtn, strlen(MsgInbuf));
             parser(MsgInbuf);
             MsgInbuf[0] = '\0';

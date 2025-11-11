@@ -23,8 +23,10 @@
 
 #include "errLogLib.h"
 #include "mfileObj.h"
+#ifdef MAPEXP
 #include "shrMLib.h"
 #include "shrexpinfo.h"
+#endif
 #include "shrstatinfo.h"
 #include "msgQLib.h"
 #include "acquisition.h"
@@ -44,8 +46,10 @@ extern FILE *logFD;
 /************************************************************************
  * Declarations for routines that have no include file for us to use.
  ************************************************************************/
+#ifdef MAPEXP
 extern int getStatAcqSample(void);                   /* statfuncs.c     */
 extern void expStatusRelease(void);                  /* statfuncs.c     */
+#endif
 extern int InterpScript(char *tclScriptFile);        /* tclfuncs.c      */
 extern int racksBeenRead(void);                      /* robofuncs.c     */
 extern void shutdownComm(void);                      /* roboproc.c      */
@@ -86,8 +90,13 @@ static char period = (char) 46; /* '.'  */
 #endif
 
 /**************************** GLOBAL VARIABLES ******************************/
+
+#ifdef MAPEXP
 /* Start addr of shared Exp. Info Structure */
 SHR_EXP_INFO expInfo = NULL;
+/* Shared Memory Object */
+static SHR_MEM_ID  ShrExpInfo = NULL;
+#endif
 
 /* if abort is active */
 extern int abortActive;
@@ -98,8 +107,6 @@ extern char roboErrLog[];
 
 
 /****************************** STATIC GLOBALS ******************************/
-/* Shared Memory Object */
-static SHR_MEM_ID  ShrExpInfo = NULL;
 
 /* -99 = uninitialized, -1 = no samp in mag */
 #ifdef XXX
@@ -303,7 +310,8 @@ int writePort( int smpnum )
 {
     char  charbuf[20];
     char   *ptr;
-    int   wbyte, stat;
+    int   wbyte __attribute__((unused));
+    int   stat;
     
     sprintf(charbuf,"%d", smpnum);
     ptr = charbuf;
@@ -450,7 +458,8 @@ int startRobot( char cmd, int smpnum )
 {
     char *ptr;
     char  chrbuf[20];
-    int   wbyte, stat;
+    int   wbyte __attribute__((unused));
+    int   stat;
 
     /* Check for abort, if so then just return */
     if (AbortRobo != 0) 
@@ -802,8 +811,8 @@ int sendToAS(char *cmd, char *retMsg, int retLen, int timeout)
          }
          else
          {
-            write(smsDev, cmd, strlen(cmd));
-            write(smsDev, "\n", 1);
+            res = write(smsDev, cmd, strlen(cmd));
+            res = write(smsDev, "\n", 1);
          }
       }
    }
@@ -1412,7 +1421,7 @@ int putAsSample(char *str)
     if ( (sample >= 1) && (sample <= 96) )
     {
        int res;
-       int spnstat;
+       int spnstat __attribute__((unused));
        char cmd[64];
        char returnMsg[1024];
        struct timespec req;
@@ -1792,6 +1801,7 @@ int getGilSample(char *str)
         }
     }
 
+#ifdef MAPEXP
 #ifndef STDALONE
     sample = getStatAcqSample();
 
@@ -1799,6 +1809,7 @@ int getGilSample(char *str)
     getStatUserId(UserName, UNAMESIZE);
 
     DPRINT2(1,"User: '%s', Get Sample %d from Magnet\n", UserName, sample);
+#endif
 #endif
 
     /* At this point, argSample is more likely the right one */
@@ -1888,6 +1899,7 @@ int putGilSample(char *str)
         return(-1);
     }
 
+#ifdef MAPEXP
 #ifndef STDALONE
     sample = getStatAcqSample();
 
@@ -1895,6 +1907,7 @@ int putGilSample(char *str)
     getStatUserId(UserName, UNAMESIZE);
 
     DPRINT2(1,"User: '%s', Put Sample %d into Magnet\n", UserName, sample);
+#endif
 #endif
 
     /* At this point argSample is more likely the right one */
@@ -1952,11 +1965,13 @@ void getZySample(char *str)
     argSample = atoi(value);
     DPRINT1(1,"Get Sample %d from Magnet\n",argSample);
 
+#ifdef MAPEXP
     sample = getStatAcqSample();
 
     /* Get user name for Spinner() cmds */
     getStatUserId(UserName, UNAMESIZE);
     DPRINT2(1,"User: '%s', Get Sample %d from Magnet\n", UserName, sample);
+#endif
 
     /* At this point argSample is more likely the right one */
     sample = argSample;
@@ -2447,7 +2462,7 @@ int userCmd(char *str)
        fclose(outFD);
        chmod(outfile2, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH );
        unlink(outfile);
-       link(outfile2,outfile);
+       ret = link(outfile2,outfile);
        unlink(outfile2);
     }
     else
@@ -2504,7 +2519,9 @@ void ShutDownProc(void)
 {
     extern GILSONOBJ_ID pGilObjId;
 
+#ifdef MAPEXP
     expStatusRelease();
+#endif
     shutdownComm();
     gilsonDelete(pGilObjId);
     /* resetRoboproc(char *str) */
@@ -2540,6 +2557,7 @@ int debugLevel(char *str)
 
 int mapIn(char *str)
 {
+#ifdef MAPEXP
     char* filename;
 
     filename = strtok(NULL," ");
@@ -2568,6 +2586,9 @@ int mapIn(char *str)
 #endif
 
     expInfo = (SHR_EXP_INFO) shrmAddr(ShrExpInfo);
+#else
+    DPRINT(1,"mapIn: map Shared Memory Segment\n");
+#endif
 
     return(0);
 }
@@ -2582,12 +2603,16 @@ int mapOut(char *str)
     DPRINT1(1,"mapOut: unmap Shared Memory Segment: '%s'\n",filename);
 */
 
+#ifdef MAPEXP
     if (ShrExpInfo != NULL)
     {
         shrmRelease(ShrExpInfo);
         ShrExpInfo = NULL;
         expInfo = NULL;
     }
+#else
+    DPRINT(1,"mapOut: unmap Shared Memory Segment\n");
+#endif
     return(0);
 }
 

@@ -23,8 +23,8 @@
 
 #ifndef GILSCRIPT
 #include "mfileObj.h"
-#include "shrMLib.h"
-#include "shrexpinfo.h"
+// #include "shrMLib.h"
+// #include "shrexpinfo.h"
 #include "msgQLib.h"
 #include "acquisition.h"
 #include "acqcmds.h"
@@ -40,6 +40,10 @@
 #define  ERROR -1
 
 extern char systemdir[];    /* vnmr system directory */
+extern int gilsonReset(GILSONOBJ_ID pGilId);
+extern int gilsonMaxVolume(GILSONOBJ_ID pGilId);
+extern int rackCenter(RACKOBJ_ID pRackId, int X, int Y);
+extern int gClearVolume(void);
 
 int rackDelta[GIL_MAX_RACKS][2] = {
     {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}
@@ -62,7 +66,7 @@ int initGilson215(char *devName, int gilunit, int injunit, int pumpunit)
 #ifndef STDALONE
     if (pGilObjId == NULL)
     {
-        DPRINT2(1,"Initializing Gilson: Id: 0x%lx, Dev: '%s'\n",
+        DPRINT2(1,"Initializing Gilson: Id: %p, Dev: '%s'\n",
                 pGilObjId, devName);
         pGilObjId = gilsonCreate(devName, gilunit, injunit, pumpunit);
         if (pGilObjId == NULL)
@@ -104,11 +108,7 @@ int initGilson215(char *devName, int gilunit, int injunit, int pumpunit)
 int gilSampleSetup(unsigned int sampleloc, char *sampleDir)
 {
    
-    int racktype,zone,rackLoc,sampType,loc;
-    int sampIndex,rackIndex;
-    int maxzone,maxsample;
-
-    double zspeed;
+    int zone,rackLoc,loc;
 
     /* if haven't malloc space for SampleInfoFile yet then do so */
     if (SampleInfoFile == NULL)
@@ -207,15 +207,16 @@ int readRacks(char *rackpath)
 {
     FILE *stream;
     struct stat s;
-    char eolch;
     char textline[256],buffer[256],path[256];
     char *rackstype,*racktype,*filepath,*port_rack,*X,*Y,*Z;
     char *rackIdStr,*chrptr;
-    int status,line,j,t,typefound,len;
-    int portnum, xcenter, ycenter, bot;
+    int line  __attribute__((unused));
+    int j,typefound,len;
+    int portnum = 0;
+    int bot = 0;
+    int xcenter, ycenter;
     int xAxis,yAxis;
     int rackType,rackIndex;
-    int sampType,sampIndex;
     int numSRacks;
     
 
@@ -427,14 +428,13 @@ int readRacks(char *rackpath)
 
 int gilShow(int level)
 {
-    int location, type;
-    int i,j;
+    int j;
 
     DPRINT(0,"Defined Racks: \n");
     for(j=0;j<g215Bed.NumRacks;j++)
     {
 
-        DPRINT4(0,"Rack[%d]: 0x%lx, Id: '%s', Type: %d\n", j,
+        DPRINT4(0,"Rack[%d]: %p, Id: '%s', Type: %d\n", j,
             g215Bed.DefinedRacks[j].pRackObj,
             g215Bed.DefinedRacks[j].IdStr,
             g215Bed.DefinedRacks[j].type);
@@ -454,7 +454,7 @@ int gilShow(int level)
     {
 
         if (g215Bed.LoadedRacks[j] != NULL)
-            DPRINT2(0,"Rack[%d]: 0x%lx \n", j, g215Bed.LoadedRacks[j]);
+            DPRINT2(0,"Rack[%d]: %p \n", j, g215Bed.LoadedRacks[j]);
     }
 
     return 0;

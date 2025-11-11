@@ -30,6 +30,7 @@ extern int bypassInit;
 extern GILSONOBJ_ID pGilObjId;
 extern void setupAbortRobot();
 extern void start_timer();
+extern void gilsonDelete(GILSONOBJ_ID pGilId);
 
 /******************* TYPE DEFINITIONS AND CONSTANTS *************************/
 #define MAXPATHL 256
@@ -42,7 +43,7 @@ int   smsDev = -1;
 int   verbose = 1;
 
 /**************************** STATIC GLOBALS ********************************/
-static char path[MAXPATHL];
+static char path[MAXPATHL*2];
 
 int main (int argc, char *argv[])
 {

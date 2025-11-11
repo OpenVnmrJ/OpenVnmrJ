@@ -7,7 +7,6 @@
  * For more information, see the LICENSE file.
  */
 
-/* #define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
 #include <stdio.h>
 #include <stdlib.h>
 #include  <unistd.h>
@@ -18,6 +17,7 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <ctype.h>
 #include "termhandler.h"
 
 
@@ -26,12 +26,12 @@ static char lf = (char) 10;
 static char ack = (char) 6;
 static char stx = (char) 2;
 static char etx = (char) 3;
-static char period = (char) 46;
-static char Mesg[256];
-static char Respon[512];
-static char Resp[512];
-static char gErrorMsge[160];
-static char *ErrorMessage;
+// static char period = (char) 46;
+// static char Mesg[256];
+// static char Respon[512];
+// static char Resp[512];
+// static char gErrorMsge[160];
+// static char *ErrorMessage;
 
 static int              timer_went_off;
 static struct itimerval orig_itimer;
@@ -40,12 +40,12 @@ static sigset_t         orig_sigmask;
 
 /* X Y motor accel/deccel ramp in Hz/sec, 10000 Hz/s standard */
 /* X motor speed in Hz, 3500 slow, 12000 standard, 18000 fast */
-static int Xfreq = 3500;
+// static int Xfreq = 3500;
 /* Y motor speed in Hz, 3500 slow, 12000 standard, 15000 fast */
 /* at present Y is always at 15000 Hz */
 
 static double ISOCenter[2] = { 0.0, 0.0 };
-static double xyMinMax[4],MaxXYSpeed[2];
+// static double xyMinMax[4],MaxXYSpeed[2];
 static double SoftLimitXY[4] = { 0.0, 0.0, 0.0, 0.0 };
 static double Landmark[2] = { 0.0, 0.0 };
 
@@ -86,30 +86,35 @@ char *StatusVals[] = { "Program Running ",
 		"SRQ",
 		"Ready to Receive" };
 
-int wait4Axis2Stop(char axis);
+void wait4Axis2Stop(char axis);
+void delayMsec(int time);
+void SoftLimits();
+void PrintSet();
+int Send_Cmd(char *cmd, char *responce);
+int MoveAxis(char *Cmd);
+int XYPos(int axisIndex);
+int Status();
 static int setup_ms_timer(int ms_interval );
 static void cleanup_from_timeout();
 
 static int verbose;
 static char *statusCmd = "ST";
 
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
   int done;
   int status;
   char buffer[256];
   char responce[256];
   char *bptr;
-  char *cmdline;
   int buflen = 1;
   int firstentry = 1;
-  int chars;
   char cmdchar;
  
   if (argc < 2)
   {
     fprintf(stdout,"usage:  %s <devicename> (i.e. /dev/term/b)\n", argv[0]);
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   verbose = 0;
@@ -217,21 +222,21 @@ main (int argc, char *argv[])
    
         case 'Q':
                 done = 0;
-                return;
+                exit(EXIT_SUCCESS);
                 break;
     }
   }
-
+  exit(EXIT_SUCCESS);
 }
-  MoveAxis(char *Cmd)
-  {
+
+int MoveAxis(char *Cmd)
+{
      /* xMA x+100 xMD */
      char mcmd[40],wcmd[32],dcmd[32];
      char responce[255];
-     char *cptr;
      char axis;
      char direction;
-     int nchars;
+     int nchars __attribute__((unused));
 
      axis = toupper(*Cmd++);
      direction = *Cmd++;
@@ -264,7 +269,7 @@ main (int argc, char *argv[])
      return ( 0 );
  }
      
-PrintSet()
+void PrintSet()
 {
    fprintf(stdout,"\n");
    fprintf(stdout,"ISO Center:  X = %lf, Y = %lf \n",
@@ -276,11 +281,11 @@ PrintSet()
    fflush(stdout);
 }
 
-XYPos(int axisIndex)
+int XYPos(int axisIndex)
 {
    char responce[255];
    char *cmd,*cmdlandmark;
-   int nchars;
+   int nchars __attribute__((unused));
    float xpos, landmarkpos;
    float dist2ISO, LaserRef2ISO;
 
@@ -322,11 +327,12 @@ XYPos(int axisIndex)
    return(0);
 }
 
-Status()
+int Status()
 {
    char *cmd = "ST";
    char responce[255];
-   int status,bit,nchars;
+   int status,bit;
+   int nchars __attribute__((unused));
    float ypos, xpos, landmarkXpos, landmarkYpos, Xdist2ISO, Ydist2ISO, laser2ISO, laserYref;
 
    nchars = Send_Cmd(cmd, responce);
@@ -377,11 +383,10 @@ Status()
    return(0);
 }
 
-SoftLimits()
+void SoftLimits()
 {
-   char *cmd;
    char responce[255];
-   int nchars;
+   int nchars __attribute__((unused));
 
    /* get status and clear up error bits */
    Send_Cmd(statusCmd, responce);
@@ -423,12 +428,13 @@ SoftLimits()
  Note: Ack is sent when the unit starts to execute the command NOT
        when the moter comes to a stop !!!
 */
-Send_Cmd(char *cmd, char *responce)
+int Send_Cmd(char *cmd, char *responce)
 {
    char msg[255];
    char rchar;
    char *rptr;
-   int wbyte,rbyte;
+   int rbyte;
+   int wbyte __attribute__((unused));
    int cnt,slen,ackrecv;
 
    sprintf(msg,"%c%s%c%c%c",stx,cmd,etx,cr,lf);
@@ -476,21 +482,23 @@ Send_Cmd(char *cmd, char *responce)
 }
 
 
-delayMsec(int time)
+void delayMsec(int time)
 {
+    sigset_t        emptymask;
+    sigemptyset( &emptymask );
     timer_went_off = 0;
     setup_ms_timer(time);  /* in msec */
     while (!timer_went_off)
-       sigpause(0);
+	    sigsuspend( &emptymask );	/* Wait for a signal */
     cleanup_from_timeout();
 }
 
 
-wait4Axis2Stop(char axis)
+void wait4Axis2Stop(char axis)
 {
    char cmd[25];
    char responce[40];
-   int nchars;
+   int nchars __attribute__((unused));
 
    sprintf(cmd,"%c=H\n",axis);
 
@@ -514,8 +522,7 @@ wait4Axis2Stop(char axis)
 *       SIGALRM interrupt handler (used for timeout)
 *
 */
-static void
-sigalrm_irpt()
+static void sigalrm_irpt()
 {
         sigset_t                qmask;
         struct sigaction        sigalrm_action;
