@@ -173,7 +173,7 @@ extern int rackSampBottom(RACKOBJ_ID pRackId, int Zone, int sample);
 extern int rackInvalidZone(RACKOBJ_ID pRackId, int zone);
 extern int rackInvalidSample(RACKOBJ_ID pRackId, int zone,int sample);
 extern int rackWellOrder(RACKOBJ_ID pRackId, int Order);
-extern int rackZoneWellOrder(RACKOBJ_ID pRackId, int Zone,int Order);
+extern void rackZoneWellOrder(RACKOBJ_ID pRackId, int Zone,int Order);
 
 #else
 /* --------- NON-ANSI/C++ prototypes ------------  */

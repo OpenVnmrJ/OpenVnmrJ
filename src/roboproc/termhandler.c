@@ -7,7 +7,7 @@
  * For more information, see the LICENSE file.
  */
 
-#define _POSIX_SOURCE 1
+#define _POSIX_C__SOURCE 1
 
 #include <termios.h>
 #include <stdio.h>
@@ -39,7 +39,6 @@ int initPort(char *device, int robotype)
 {
     struct termios t;
     struct stat buf;
-    mode_t mode;
     int old_euid;
 
     /* fprintf(stderr,"dev: '%s', type = %d\n",device,robotype); */
@@ -53,12 +52,13 @@ int initPort(char *device, int robotype)
                                    /* this is a device file, */
                                    /* caution required       */
     {
+        int res __attribute__((unused));
         /* Just OR in the bits needed, "read/write by other" */
         buf.st_mode |= (S_IROTH | S_IWOTH);
 
         /* Change to real ID, from effective user id */
         old_euid = geteuid();
-        seteuid( getuid() );
+        res = seteuid( getuid() );
 
         /* Don't care if it doesn't work */
         /*
@@ -68,7 +68,7 @@ int initPort(char *device, int robotype)
          */
 
         /* Go back to effective user Id */
-        seteuid( old_euid );
+        res = seteuid( old_euid );
     }
 
 #ifdef MASPROC
@@ -108,7 +108,7 @@ int initPort(char *device, int robotype)
                                */
         /* Serial Input Control Bits */
         t.c_iflag &= ~(BRKINT        /* ignore break
-             | IGNPAR | PARMRK       /* Ignore parity        */
+             | IGNPAR | PARMRK        * Ignore parity        */
              | INPCK  |              /* Ignore parity        */
                ISTRIP |              /* DOn't mask to 7 bits */
                INLCR | IGNCR | ICRNL /* no ,cr. of <lf>      */
@@ -235,8 +235,8 @@ int initPort(char *device, int robotype)
              | PAREXT                /* Ext parity for mark & space parity */
              | CRTSXOFF              /* Enable inbound h/w flow control */
              | CRTSCTS               /* Enable outbound h/w flow control */
-/*           | CBAUDEXT              /* Indicates output speed > B38400 */
-/*           | CIBAUDEXT             /* Indicates input speed > B38400 */
+/*           | CBAUDEXT               * Indicates output speed > B38400 */
+/*           | CIBAUDEXT              * Indicates input speed > B38400 */
 #endif
              );                      /* we control speed by separate call */
 
@@ -343,8 +343,8 @@ int initPort(char *device, int robotype)
              | PAREXT                /* Ext parity for mark & space parity */
              | CRTSXOFF              /* Enable inbound h/waflow control */
              | CRTSCTS               /* Enable outbound h/w flow control */
-/*           | CBAUDEXT              /* Indicates output speed > B38400 */
-/*           | CIBAUDEXT             /* Indicates input speed > B38400 */
+/*           | CBAUDEXT               * Indicates output speed > B38400 */
+/*           | CIBAUDEXT              * Indicates input speed > B38400 */
 #endif
              );                      /* we control speed by separate call */
 
@@ -420,7 +420,4 @@ int restorePort(int sPort)
 
     return(0);
 }
-
-/* write(sPort,buf,bufsize); tcdrain(sPort);   /* wait to all char are sent */
-/* read(sPort,buf,bufsize); */
 

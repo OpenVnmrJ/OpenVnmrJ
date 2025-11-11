@@ -67,7 +67,7 @@ static char User[128];
 static mode_t umask4Vnmr;
 int recheckFG = 1;
 
-void BeginProcessing(ExpInfoEntry* pProcExpInfo, int proctype, long fid, long ct,
+void BeginProcessing(ExpInfoEntry* pProcExpInfo, int proctype, int fid, int ct,
                      int dCode, int eCode);
 
 void initQExpInfo()
@@ -81,7 +81,7 @@ int procQTask()
    char ProcId[EXPID_LEN];
    char ActiveId[EXPID_LEN];
    int proctype,activetype,fgbg,pid;
-   long fid,ct;
+   int fid,ct;
    int dCode,eCode;
    int activeDcode;
 
@@ -222,7 +222,7 @@ int procQTask()
 |                               Author Greg Brissey 9/7/94
 |
 +-----------------------------------------------------------------------*/
-void BeginProcessing(ExpInfoEntry* pProcExpInfo, int proctype, long fid, long ct,
+void BeginProcessing(ExpInfoEntry* pProcExpInfo, int proctype, int fid, int ct,
                      int dCode, int eCode)
 {
     char cmdstring[1024];
@@ -280,15 +280,15 @@ void BeginProcessing(ExpInfoEntry* pProcExpInfo, int proctype, long fid, long ct
  */
     if ( (pProcExpInfo->ExpInfo->ExpFlags & VPMODE_BIT) &&
          (pProcExpInfo->ExpInfo->ExpFlags & AUTOMODE_BIT) )
-       sprintf(msgestring,"acqsend(5,'%d',0,%d,'vpa',%d,%d,%lu,%lu,'%s')\n",
+       sprintf(msgestring,"acqsend(5,'%d',0,%d,'vpa',%d,%d,%d,%d,'%s')\n",
                         (int)FGkey, process2do,dCode,eCode, fid, ct,
                         pProcExpInfo->ExpInfo->DataFile);
     else if (pProcExpInfo->ExpInfo->ExpFlags & VPMODE_BIT)
-       sprintf(msgestring,"acqsend(5,'%d',0,%d,'vp',%d,%d,%lu,%lu,'%s')\n",
+       sprintf(msgestring,"acqsend(5,'%d',0,%d,'vp',%d,%d,%d,%d,'%s')\n",
                         (int)FGkey, process2do,dCode,eCode, fid, ct,
                         pProcExpInfo->ExpInfo->DataFile);
     else
-       sprintf(msgestring,"acqsend(5,'%d',%d,%d,'exp%d',%d,%d,%lu,%lu)\n",
+       sprintf(msgestring,"acqsend(5,'%d',%d,%d,'exp%d',%d,%d,%d,%d)\n",
                         (int)FGkey,pProcExpInfo->ExpInfo->ExpNum,
 			process2do,pProcExpInfo->ExpInfo->ExpNum,dCode,eCode, fid, ct);
     /* ---  If FG Vnmr is in Process Exp#  & Wexp Not Processing in FG, --- */
@@ -320,14 +320,14 @@ void BeginProcessing(ExpInfoEntry* pProcExpInfo, int proctype, long fid, long ct
 
         char vnmrmode[20];
         char expnum[16];
-        char fidpath[128];
-        char userpath[128];
-        char host[128];
+        char fidpath[256+4];
+        char userpath[256+4];
+        char host[256+4];
         char vnmr_acqid[16];
         int ret;
-        int len;
         int uid;
         int gid;
+        FILE *fp __attribute__((unused));
 
         /* Be Absolutely sure there is a Vnmr out there to RUN */
         if ( access(Vnmrpath,R_OK | X_OK) != 0)
@@ -378,7 +378,7 @@ void BeginProcessing(ExpInfoEntry* pProcExpInfo, int proctype, long fid, long ct
 
            sprintf(vnmrmode,"-mauto");
 
-           len = strlen(fidpath);
+           // len = strlen(fidpath);
             /* Test Auto_Pid ? */
            /* if acquisition in automode and go neither a go(nowait)  */
            /*  or Werror issue a resume to autoproc prior to processing */
@@ -416,10 +416,10 @@ void BeginProcessing(ExpInfoEntry* pProcExpInfo, int proctype, long fid, long ct
                will run with those ID's */
 	    getUserUid(User, &uid, &gid);
  
-            seteuid(getuid());
-            freopen("/dev/null","r",stdin);
-            freopen("/dev/console","a",stdout);
-            freopen("/dev/console","a",stderr);
+            ret = seteuid(getuid());
+            fp = freopen("/dev/null","r",stdin);
+            fp = freopen("/dev/console","a",stdout);
+            fp = freopen("/dev/console","a",stderr);
             if ( setgid(gid) )
             {
                   DPRINT(1,"BGprocess:  cannot set group ID\n");
@@ -458,13 +458,14 @@ int sendproc2BG(ExpInfoEntry* pProcExpInfo, int proctype, char *cmdstring)
 
         char vnmrmode[20];
         char expnum[16];
-        char fidpath[128];
-        char userpath[128];
-        char host[128];
+        char fidpath[256+4];
+        char userpath[256+4];
+        char host[256+4];
         char vnmr_acqid[16];
         int ret;
         int uid;
         int gid;
+        FILE *fp __attribute__((unused));
 
         /* Be Absolutely sure there is a Vnmr out there to RUN */
         if ( access(Vnmrpath,R_OK | X_OK) != 0)
@@ -501,10 +502,10 @@ int sendproc2BG(ExpInfoEntry* pProcExpInfo, int proctype, char *cmdstring)
                will run with those ID's */
 	    getUserUid(User, &uid, &gid);
  
-            seteuid(getuid());
-            freopen("/dev/null","r",stdin);
-            freopen("/dev/console","a",stdout);
-            freopen("/dev/console","a",stderr);
+            ret = seteuid(getuid());
+            fp = freopen("/dev/null","r",stdin);
+            fp = freopen("/dev/console","a",stdout);
+            fp = freopen("/dev/console","a",stderr);
             if ( setgid(gid) )
             {
                   DPRINT(1,"BGprocess:  cannot set group ID\n");

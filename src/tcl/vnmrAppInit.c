@@ -42,6 +42,33 @@ EXTERN int		Tktest_Init _ANSI_ARGS_((Tcl_Interp *interp));
 #endif /* TK_TEST */
 
 
+extern int initVnmrComm(char *addr);
+extern int openVnmrInfo(char *dir);
+extern int closeVnmrInfo();
+extern int closeTclInfo();
+extern int sendToVnmr(char *msge );
+extern char *varVal(int index);
+extern int getInfoSpinOnOff();
+extern int getInfoSpinSetSpeed();
+extern int getInfoSpinUseRate();
+extern int getInfoSpinSetRate();
+extern int getInfoSpinSelect();
+extern int getInfoSpinSwitchSpeed();
+extern int getInfoSpinSpeed();
+extern int getInfoSpinner();
+extern int getInfoSpinExpControl();
+extern int getInfoSpinErrorControl();
+extern int getInfoInsertEjectExpControl();
+extern int getInfoTempOnOff();
+extern int getInfoTempSetPoint();
+extern int getInfoTempExpControl();
+extern int getInfoTempErrorControl();
+extern void getTclInfoFileName(char tmp[], char addr[]);
+extern int readTclInfo(char *filename, int num);
+
+void makeItaDaemon();
+
+
 static char VnmrID[128];
 static char MagicVar[128];
 static int listArgc = 0;
@@ -117,9 +144,6 @@ Vnmr_SendCmd(dummy, interp, argc, argv)
     int argc;				/* Number of arguments. */
     char **argv;			/* Argument strings. */
 {
-    int length;
-    char c;
-
     if (argc != 2)
     {
 	Tcl_AppendResult(interp, "wrong # args: should be \"", argv[0],
@@ -137,8 +161,7 @@ Tcl_Interp *interp;			/* Current interpreter. */
 char *name1, *name2;
 int flags;
 {
-    extern char *varVal();
-    int index = (int) dummy;
+    int index = (int) (long) dummy;
 
     Tcl_SetVar2(interp, name1, name2, varVal(index), 0);
     return TCL_OK;
@@ -153,8 +176,8 @@ int flags;
     extern char *getMagicVarAttr();
     int type, active, size, dgroup;
     double max, min, step;
-    char *varValue;
-    int index = (int) dummy;
+    char *varValue __attribute__((unused));;
+    int index = (int) (long) dummy;
 
     varValue = getMagicVarAttr(index, &type, &active, &size, &dgroup,
                &max, &min, &step);
@@ -171,8 +194,8 @@ int flags;
     extern char *getMagicVarAttr();
     int type, active, size, dgroup;
     double max, min, step;
-    char *varValue;
-    int index = (int) dummy;
+    char *varValue __attribute__((unused));;
+    int index = (int) (long) dummy;
     char dst[64];
 
     varValue = getMagicVarAttr(index, &type, &active, &size, &dgroup,
@@ -191,8 +214,8 @@ int flags;
     extern char *getMagicVarAttr();
     int type, active, size, dgroup;
     double max, min, step;
-    char *varValue;
-    int index = (int) dummy;
+    char *varValue __attribute__((unused));;
+    int index = (int) (long) dummy;
     char dst[64];
 
     varValue = getMagicVarAttr(index, &type, &active, &size, &dgroup,
@@ -211,8 +234,8 @@ int flags;
     extern char *getMagicVarAttr();
     int type, active, size, dgroup;
     double max, min, step;
-    char *varValue;
-    int index = (int) dummy;
+    char *varValue __attribute__((unused));;
+    int index = (int) (long) dummy;
     char dst[64];
 
     varValue = getMagicVarAttr(index, &type, &active, &size, &dgroup,
@@ -231,8 +254,8 @@ int flags;
     extern char *getMagicVarAttr();
     int type, active, size, dgroup;
     double max, min, step;
-    char *varValue;
-    int index = (int) dummy;
+    char *varValue __attribute__((unused));;
+    int index = (int) (long) dummy;
     char dst[64];
 
     varValue = getMagicVarAttr(index, &type, &active, &size, &dgroup,
@@ -307,37 +330,37 @@ Vnmr_GetMagicVars(dummy, interp, argc, argv)
        sprintf(tmp,"%s,val",listArgv[i]);
        Tcl_SetVar2(interp,MagicVar, tmp, varValue, 0);
        Tcl_TraceVar2(interp,MagicVar, tmp, TCL_TRACE_READS,
-                    VnmrVal, (ClientData) i);
+                    (Tcl_VarTraceProc *)VnmrVal, (ClientData) (long) i);
 
        sprintf(tmp,"%s,on",listArgv[i]);
        Tcl_SetVar2(interp,MagicVar, tmp, (active) ? "y" : "n", 0);
        Tcl_SetVar2(interp,MagicVar, tmp, dst, 0);
        Tcl_TraceVar2(interp,MagicVar, tmp, TCL_TRACE_READS,
-                    VnmrAct, (ClientData) i);
+                    (Tcl_VarTraceProc *)VnmrAct, (ClientData) (long) i);
 
        sprintf(tmp,"%s,size",listArgv[i]);
        sprintf(dst,"%d",size);
        Tcl_SetVar2(interp,MagicVar, tmp, dst, 0);
        Tcl_TraceVar2(interp,MagicVar, tmp, TCL_TRACE_READS,
-                    VnmrSize, (ClientData) i);
+                    (Tcl_VarTraceProc *)VnmrSize, (ClientData) (long) i);
 
        sprintf(tmp,"%s,dgroup",listArgv[i]);
        sprintf(dst,"%d",dgroup);
        Tcl_SetVar2(interp,MagicVar, tmp, dst, 0);
        Tcl_TraceVar2(interp,MagicVar, tmp, TCL_TRACE_READS,
-                    VnmrDgroup, (ClientData) i);
+                    (Tcl_VarTraceProc *)VnmrDgroup, (ClientData) (long) i);
 
        sprintf(tmp,"%s,max",listArgv[i]);
        Tcl_PrintDouble(interp, max, dst);
        Tcl_SetVar2(interp,MagicVar, tmp, dst, 0);
        Tcl_TraceVar2(interp,MagicVar, tmp, TCL_TRACE_READS,
-                    VnmrMax, (ClientData) i);
+                    (Tcl_VarTraceProc *)VnmrMax, (ClientData) (long) i);
 
        sprintf(tmp,"%s,min",listArgv[i]);
        Tcl_PrintDouble(interp, min, dst);
        Tcl_SetVar2(interp,MagicVar, tmp, dst, 0);
        Tcl_TraceVar2(interp,MagicVar, tmp, TCL_TRACE_READS,
-                    VnmrMin, (ClientData) i);
+                    (Tcl_VarTraceProc *)VnmrMin, (ClientData) (long) i);
     }
     return TCL_OK;
 }
@@ -427,12 +450,9 @@ Vnmr_InfoCmd(dummy, interp, argc, argv)
 	sprintf(interp->result, "%d", getInfoTempErrorControl());
 	return TCL_OK;
     }
-    if (argc != 2)
-    {
-	Tcl_AppendResult(interp, "unknown option # args: should be \"", argv[0],
-		" option \"", (char *) NULL);
+	Tcl_AppendResult(interp, "unknown option: should be \"", argv[0],
+		" option \"", argv[1]);
 	return TCL_ERROR;
-    }
 }
 
 /*
@@ -567,12 +587,14 @@ Tcl_AppInit(interp)
 * void 
 *
 */
-makeItaDaemon()
+void makeItaDaemon()
 {
-   int childpid, fd, strtfd;
-   struct sigaction    intserv;
-   sigset_t            qmask;
+   int childpid;
+   int strtfd __attribute__((unused));
+//   struct sigaction    intserv;
+//   sigset_t            qmask;
    void sig_child();
+   FILE *res  __attribute__((unused));
 
    strtfd = 0;	/* fd to start when closing file descriptors */
 
@@ -583,10 +605,10 @@ makeItaDaemon()
      goto skipstuff;
 
    /* Ignore Terminal Signals */
-    sigemptyset( &qmask );
-    intserv.sa_handler = SIG_IGN;
-    intserv.sa_mask = qmask;
-    intserv.sa_flags = 0;
+//    sigemptyset( &qmask );
+//    intserv.sa_handler = SIG_IGN;
+//    intserv.sa_mask = qmask;
+//    intserv.sa_flags = 0;
    /*
 	if not started in the background then fork and let parent exit.
 	This guarantees the 1st child is not a process group
@@ -617,8 +639,8 @@ makeItaDaemon()
 
   skipstuff:
 
-   freopen("/dev/console","a",stdout);
-   freopen("/dev/console","a",stderr);
+   res = freopen("/dev/console","a",stdout);
+   res = freopen("/dev/console","a",stderr);
    strtfd = 3;
 
    errno = 0;	/* clear error from any above close() calls */

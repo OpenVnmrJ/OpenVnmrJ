@@ -147,7 +147,7 @@ int SendAsyncInova(CommPort to_addr, CommPort from_addr, char *msg)
 #ifndef LINUX
 	int	one = 1;
 #endif
-        long     msgsize;
+        int     msgsize;
 
         (void) from_addr;
 	if (to_addr->port == -1 || to_addr->pid == -1)
@@ -228,7 +228,7 @@ int SendAsyncInovaVnmr(CommPort to_addr, CommPort from_addr, char *msg)
 #ifndef LINUX
 	int	one = 1;
 #endif
-        long     msgsize;
+        int     msgsize;
 
         (void) from_addr;
 	if (to_addr->port == -1 || to_addr->pid == -1)
@@ -597,7 +597,9 @@ int get_comm(int index, int attr, char *val)
         if ( (ptr->pid > 0) && ! strcmp(ptr->host,val) )
         {
 	   if ( ! kill(ptr->pid,0) || (errno != ESRCH) )
+      {
               return(1);
+      }
         }
 	ival = getAcqProcParam(ptr);	/* To send stuff to acq process */
 #endif

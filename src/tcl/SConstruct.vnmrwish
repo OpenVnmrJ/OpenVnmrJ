@@ -24,16 +24,18 @@ if not os.path.exists(ovjtools):
 vnmrwishTarget = 'vnmrwish'
 
 # library dependancies
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
-SConscript(os.path.join(ncommPath, 'SConstruct'))
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
+if not os.path.exists(ncommPath):
+   Execute('cp -r '+os.path.join(cwd,os.pardir,'ncomm') + ' ' + ncommPath+ ';touch '+ncommPath+'/m64')
+   Execute('cd ../ncomm64; scons')
 
 # source files
 tclCSrcFileList = ['vnmrAppInit.c']
 
 # build environment
-env = Environment(CCFLAGS    = '-fPIC -g -c -Wall -O -m32 -Wno-incompatible-pointer-types -Wno-implicit-int -Wno-implicit-function-declaration',
+env = Environment(CCFLAGS    = '-fPIC -g -c -Wall -O',
                   CPPDEFINES = ['LINUX', 'NESSIE'],
-                  LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                  LINKFLAGS  = '-Wl,-rpath,/vnmr/lib',
                   CPPPATH    = [cwd,
                                 os.path.join(ovjtools, 'tcl', 'srcTcl'),
                                 os.path.join(ovjtools, 'tcl', 'srcTk')])
@@ -45,7 +47,7 @@ vnmrwish = env.Program(target  = vnmrwishTarget,
                                   os.path.join(ovjtools, 'tcl', 'srcTcl'),
                                   os.path.join(os.sep, 'vnmr', 'lib' )],
                        source  = [tclCSrcFileList],
-                       LIBS    = ['tk8.4', 'tcl8.4', 'acqcomm', 'm'])
+                       LIBS    = ['tk8.4', 'tcl8.4', 'acqcomm64', 'm'])
 
 # define with absolute path where built files will be copied
 installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'tcl', 'bin')
@@ -70,7 +72,7 @@ if not os.path.exists(libInstallPath):
 env.AddPostAction(vnmrwish,
                   Action(Copy(libInstallPath, os.path.join(ovjtools, 'tcl','srcBlt','libBLT24.so.8.4'))))
 env.AddPostAction(vnmrwish,
-                  Action('ln -sf libBLT24.so.8.4 libBLT.so', chdir=libInstallPath ))
+                  Action('mv libBLT24.so.8.4 libBLT.so', chdir=libInstallPath ))
 env.AddPostAction(vnmrwish,
                   Action(Copy(libInstallPath, os.path.join(ovjtools, 'tcl','srcTcl','libtcl8.4.so'))))
 env.AddPostAction(vnmrwish,

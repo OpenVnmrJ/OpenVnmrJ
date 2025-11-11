@@ -137,7 +137,7 @@ static int numLanDevices = 0;
 
 int open_hermes(int blocking, int async, char *ip, int port)
 {
-    int one, ival, pid, flags;
+    int ival, pid, flags;
     int optlen, rcvbuff, sendbuff;
     int sock, result;
     struct sockaddr_in sin;
@@ -161,8 +161,8 @@ int open_hermes(int blocking, int async, char *ip, int port)
     }
 #endif
 
-    one = 1;
 #ifndef LINUX
+    int one = 1;
     if ((ival = setsockopt( sock, SOL_SOCKET, SO_USELOOPBACK,
                             (char *) &one, sizeof( one ) )) < 0) {
         errLogSysRet(ErrLogOp, debugInfo, "use loopback" );
@@ -784,30 +784,49 @@ ioDev *setupSmsComms(char *smsPortPath)
     }
     else
     {
+       int index;
+       for (index=0; index < 3; index++)
+          *(devName+index) = *(type+index);
+       devName[3] = '_';
        if ( ! strcmp( portchr, "a" ) || ! strcmp (portchr, "b") )
        {
-           strncpy(devName, type, 3);
-           strncpy(devName+3, "_TTY", 4);
+           // strncpy(devName, type, 3);
+           // strncpy(devName+3, "_TTY", 4);
+           devName[4] = 'T';
+           devName[5] = 'T';
+           devName[6] = 'Y';
            devName[7] = toupper(*portchr);
            devName[8] = '\0';
        }
        else if ( ! strcmp( portchr, "c1" ) )
        {
-           strncpy(devName, type, 3);
-           strncpy(devName+3, "_COM", 4);
+           // strncpy(devName, type, 3);
+           // strncpy(devName+3, "_COM", 4);
+           devName[4] = 'C';
+           devName[5] = 'O';
+           devName[6] = 'M';
            devName[7] = *(portchr+1);
            devName[8] = '\0';
        }
        else if ( ! strcmp( portchr, "E" ) || ! strcmp( portchr, "e" ) )
        {
            /* Ethernet only applicable to Hermes Robot */
-           strncpy(devName, type, 3);
-           strncpy(devName+3, "_ROBOT", 7);
+           // strncpy(devName, type, 3);
+           // strncpy(devName+3, "_ROBOT", 7);
+           devName[4] = 'R';
+           devName[5] = 'O';
+           devName[6] = 'B';
+           devName[7] = 'O';
+           devName[8] = 'T';
+           devName[9] = '\0';
        }
        else
        {
-           strncpy(devName, type, 3);
-           strncpy(devName+3, "_DEV", 4);
+           // strncpy(devName, type, 3);
+           // strncpy(devName+3, "_DEV", 4);
+           devName[4] = 'D';
+           devName[5] = 'E';
+           devName[6] = 'V';
            devName[7] = '\0';
            strcpy(devPort, "/dev/");
            strcat(devPort, portchr);

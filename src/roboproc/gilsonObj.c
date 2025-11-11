@@ -9,7 +9,7 @@
 
 /* --------------------- gilsonObj.c ----------------------------- */
 
-/* #define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
+// #define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -56,11 +56,13 @@ DESCRIPTION
 static char cr = (char) 13; 
 static char lf = (char) 10;
 static char ack = (char) 6;
+#ifdef XXX
 static char eom = (char) 3;
 static char period = (char) 46;
 static char Mesg[256];
 static char Respon[512];
 static char Resp[512];
+#endif
 static char gErrorMsge[512];
 static char *ErrorMessage;
 
@@ -176,8 +178,9 @@ int gilsonReset(GILSONOBJ_ID pGilId)
 int gilsonGetXYZMinMax(GILSONOBJ_ID pGilId)
 {
     char resp[256];
-    char *answer, *strval1,*strval2;
-    int stat, data, complete, axisflag, cnt, min, max;
+    char *strval1,*strval2;
+    int complete, axisflag, cnt, min, max;
+    int stat __attribute__((unused));
 
     if (pGilId == NULL)
         return(-1);
@@ -452,7 +455,7 @@ int gilsonStopped(GILSONOBJ_ID pGilId,int X,int Y,int Z,int P)
 {
     char resp[256];
     int  Xstop,Ystop,Zstop,Pstop,stop;
-    int  Xerr,Yerr,Zerr,Perr,err;
+    int  Xerr,Yerr,Zerr,Perr;
     int  stat;
 
     if (pGilId == NULL)
@@ -795,7 +798,6 @@ int gilEmptyDiluter(GILSONOBJ_ID pGilId)
 *****************************************************************************/
 int gilsonHome(GILSONOBJ_ID pGilId)
 {
-    char resp[256];
     int result;
     int Xpos, Ypos;
 
@@ -1110,8 +1112,6 @@ int gilMoveXYAsync(GILSONOBJ_ID pGilId,int Xmm, int Ymm)
 *****************************************************************************/
 int gilMove2Rinse(GILSONOBJ_ID pGilId)
 {
-    char cmd[30];
-    char resp[256];
     int  result;
     int  Xmax,Xmin,Ymax,Ymin;
 
@@ -1185,8 +1185,6 @@ int gilMove2Rinse(GILSONOBJ_ID pGilId)
 *****************************************************************************/
 int gilMove2Inj(GILSONOBJ_ID pGilId)
 {
-    char cmd[30];
-    char resp[256];
     int  result;
 
     if (pGilId == NULL)
@@ -1519,7 +1517,7 @@ int gilPump(GILSONOBJ_ID pGilId, char Dir, double vol,
     char cmd[30];
     char tmp[30];
     char resp[256];
-    int  result;
+    int  result = 0;
     int  volume;
 
     if (pGilId == NULL)
@@ -1642,7 +1640,7 @@ int gilsonCurrentVolume(GILSONOBJ_ID pGilId)
 int gilsonAspirate(GILSONOBJ_ID pGilId, double volume /*ul */,
                    double Speed, int Zspeed, int Zlimit)
 {
-    int Zmm,result;
+    int result;
 
     if (pGilId == NULL)
         return(-1);
@@ -1689,7 +1687,7 @@ int gilsonAspirate(GILSONOBJ_ID pGilId, double volume /*ul */,
 int gilsonAspirateAsync(GILSONOBJ_ID pGilId, double volume /*ul */,
                         double Speed, int Zspeed, int Zlimit)
 {
-    int Zmm,result;
+    int result;
 
     if (pGilId == NULL)
         return(-1);
@@ -1712,7 +1710,7 @@ int gilsonAspirateAsync(GILSONOBJ_ID pGilId, double volume /*ul */,
 int gilsonDispense(GILSONOBJ_ID pGilId, double volume /*ul */,
                    double Speed, int Zspeed, int Zlimit)
 {
-    int Zmm,result;
+    int result;
 
     if (pGilId == NULL)
         return(-1);
@@ -2217,7 +2215,7 @@ int gilLoad(GILSONOBJ_ID pGilId)
 int gilGetInjectValveLoc(GILSONOBJ_ID pGilId,char *loc)
 {
     char resp[256];
-    int stop, result;
+    int result;
 
     *loc = 'E';
     if (pGilId == NULL)
@@ -2257,7 +2255,6 @@ int gilGetInjectValveLoc(GILSONOBJ_ID pGilId,char *loc)
 *****************************************************************************/
 int gilGetXY(GILSONOBJ_ID pGilId,int *XYmm)
 {
-    char cmd[30];
     char resp[256];
     char *val;
     int  result;
@@ -2300,7 +2297,6 @@ int gilGetXY(GILSONOBJ_ID pGilId,int *XYmm)
 *****************************************************************************/
 int gilGetZ(GILSONOBJ_ID pGilId,int *Zmm)
 {
-    char cmd[30];
     char resp[256];
     char *val;
     int  result;
@@ -2386,7 +2382,7 @@ static int gilsonGetRStation(GILSONOBJ_ID pGilId)
 *****************************************************************************/
 int gilsonSetRStation(GILSONOBJ_ID pGilId,int X, int Y, int Z)
 {
-    int rX,rY,rZ,stat;
+    int stat;
 
     if (pGilId == NULL)
         return(-1);
@@ -2480,8 +2476,6 @@ int gilsonGetZTop(GILSONOBJ_ID pGilId)
 *****************************************************************************/
 int gilGetZTop(GILSONOBJ_ID pGilId)
 {
-    int ztop;
-
     if (pGilId == NULL)
         return(-1);
 
@@ -2724,7 +2718,7 @@ int gilsonPumpPowered(GILSONOBJ_ID pGilId)
 *****************************************************************************/
 int gilWriteDisplay(GILSONOBJ_ID pGilId,char *msge)
 {
-    int  result,len;
+    int  result;
     char msg[24];
     char resp[256];
 
@@ -2771,7 +2765,6 @@ int gilClearError(GILSONOBJ_ID pGilId)
 *****************************************************************************/
 char *gilErrorMsge(GILSONOBJ_ID pGilId)
 {
-    char cmd[30];
     char resp[256];
     char *tmp;
     int  result,errorcode;
@@ -2999,7 +2992,8 @@ static int Char_Cmd(GILSONOBJ_ID pGilId, char *cmd, char *resp)
 {
     char recvbuf[20];
     char *sptr,*rptr;
-    int wbyte,rbyte;
+    int rbyte;
+    int wbyte __attribute__((unused));
     int cnt, max, tmout;
 
     /*  if (*(cmd+2) == '\n')
@@ -3162,7 +3156,7 @@ static int gilsonICmd(GILSONOBJ_ID pGilId, short unitId,
 {
     char msg[255];
     char *mptr;
-    int i,nAcks,stat;;
+    int stat;;
 
     mptr = msg;
 
@@ -3240,7 +3234,6 @@ static int gilsonBCmd(GILSONOBJ_ID pGilId, short unitId,
 int gilCommand(GILSONOBJ_ID pGilId, int UnitId, char *Cmd,
                char *CmdType, char *resp)
 {
-    char  cmd[30];
     int result;
     short unit;
 

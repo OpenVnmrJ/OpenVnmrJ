@@ -56,9 +56,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include  <unistd.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#include <ctype.h>
 
 #include "errLogLib.h"
 #include "rackObj.h"
@@ -79,10 +80,22 @@ modification history
 BLOCK_ID findBlockReference(BLOCK_LIST *pTheBlockList, char* blockName);
 
 #endif
+int readtray4(RACKOBJ_ID pRackId,char* filename);
+static int readGeometryBlock(FILE *tray_file, BLOCK_ID block, BLOCK_LIST *pTheBlockList);
+void rackShow(RACKOBJ_ID pRackId, int level);
+void sumGeoValues(GEO_LINE_ID source, GEO_LINE_ID result);
+void genRowColumnInfo(RACKOBJ_ID pRackId);
+void getTotalSamples(BLOCK_ID block, int *total );
+void rackGetXYLoc2(RACKOBJ_ID pRackId, int Zone, int sample,GEO_LINE_ID  resultLine);
+void printBlockRef(BLOCK_ID block, int level);
+void printBlock(BLOCK_ID pBlock,int indent);
+int getSummedVals(BLOCK_ID blockId, int sample, int iterProduct, GEO_LINE_ID ResultLine);
+int getRowsColumns(BLOCK_ID block, int *rows, int *columns);
+int getAdjSampleNum(int sample,int Ordering,int rows,int columns, int totalSamples);
 
 /*
 DESCRIPTION
-/* ------------------- Rack Object Structure ------------------- */
+ * ------------------- Rack Object Structure ------------------- */
 RACKOBJ_ID rackCreate(char *filename)
 {
   RACKOBJ_ID pRackObj;
@@ -125,10 +138,9 @@ RACKOBJ_ID rackCreate(char *filename)
   return(pRackObj);
 }
 
-readline(FILE *stream,char* textline,int *data,char *label)
+int readline(FILE *stream,char* textline,int *data,char *label)
 {
     char workline[256];
-    char eolch;
     char *chrptr,*bracket,*val;
     int len,digit;
     int stat;
@@ -181,7 +193,7 @@ readline(FILE *stream,char* textline,int *data,char *label)
     return(stat);
 }
 
-extractVals(char *textline, int *values)
+int extractVals(char *textline, int *values)
 {
    char workline[256];
    int len;
@@ -208,20 +220,13 @@ extractVals(char *textline, int *values)
    return(numVals);
 }
 
-rackCenter(RACKOBJ_ID pRackId, int X,int Y)
+void  rackCenter(RACKOBJ_ID pRackId, int X,int Y)
 {
-   int i;
-   int rackNum;
-   int column,row;
-   int xmm,ymm;
-    int XY[2];
-
    pRackId->rackCenter[0] = X;
    pRackId->rackCenter[1] = Y;
-   return(0);
 }
 
-rackCentered(RACKOBJ_ID pRackId)
+int rackCentered(RACKOBJ_ID pRackId)
 {
     if (pRackId == NULL)
       return(-1);
@@ -230,7 +235,7 @@ rackCentered(RACKOBJ_ID pRackId)
 
 #ifdef NEW_TRAY_ROUTINES
 
-rackWellOrder(RACKOBJ_ID pRackId, int Order)
+int rackWellOrder(RACKOBJ_ID pRackId, int Order)
 {
    int Zone,zones;
 
@@ -250,17 +255,17 @@ rackWellOrder(RACKOBJ_ID pRackId, int Order)
    return(0);
 }
 
-rackZoneWellOrder(RACKOBJ_ID pRackId, int Zone,int Order)
+void rackZoneWellOrder(RACKOBJ_ID pRackId, int Zone,int Order)
 {
-   int zones,zoneNum;
+   int zones;
    ZONE_INFO_ID zoneInfo;
 
    if(pRackId == NULL)
-      return(-1);
+      return;
 
    /* if ( (Order < 0) || (Order > ORDERINGMAX) ) */
    if ( (Order != BACKLEFT2RIGHT) && (Order != LEFTBACK2FRONT) )
-       return(-1);
+       return;
 
    zones = pRackId->numZoneInfo;
 
@@ -272,18 +277,18 @@ rackZoneWellOrder(RACKOBJ_ID pRackId, int Zone,int Order)
    }
    else
    {
-     return(-1);
+     return;
    }
 }
 
-rackGetX(RACKOBJ_ID pRackId, int Zone,int sample)
+int rackGetX(RACKOBJ_ID pRackId, int Zone,int sample)
 {
   GEO_LINE resultLine;
   rackGetXYLoc2(pRackId, Zone, sample, &resultLine);
   return(resultLine.xval);
 }
 
-rackGetY(RACKOBJ_ID pRackId, int Zone,int sample)
+int rackGetY(RACKOBJ_ID pRackId, int Zone,int sample)
 {
   GEO_LINE resultLine;
   rackGetXYLoc2(pRackId, Zone, sample, &resultLine);
@@ -371,7 +376,7 @@ int rackSampBottom(RACKOBJ_ID pRackId, int Zone, int sample)
 }
 
 
-rackInvalidZone(RACKOBJ_ID pRackId, int zone)
+int rackInvalidZone(RACKOBJ_ID pRackId, int zone)
 {
    int zones;
 
@@ -388,7 +393,7 @@ rackInvalidZone(RACKOBJ_ID pRackId, int zone)
    }
 }
 
-rackInvalidSample(RACKOBJ_ID pRackId, int zone,int sample)
+int rackInvalidSample(RACKOBJ_ID pRackId, int zone,int sample)
 {
    int maxnum;
    ZONE_INFO_ID zoneInfo;
@@ -413,25 +418,16 @@ rackInvalidSample(RACKOBJ_ID pRackId, int zone,int sample)
 */
 
 #define MAX_TEXT_LEN 256
-readtray4(RACKOBJ_ID pRackId,char* filename)
+int readtray4(RACKOBJ_ID pRackId,char* filename)
 {
-    FILE *tray_file,*tmp_file;
+    FILE *tray_file;
     char textline[256];
-    char workline[256];
     char label[256];
-    int done;
     int dataline;
-    int i, ref_num, ref_entries;
-    int nVals, values[6];
-    int line,axis,index;
-    int curLabel,curRefNum,prevEntries;
-    int ZoneCnt, curZone;
-    int len,stat,rackNum;
+    int i;
+    int len,stat;
     BLOCK_ID block;
-    int XYLoc[2];
  
-    GEO_LINE_ID resultLine;
-    
     tray_file = fopen(filename,"r");
     if (tray_file == NULL)
     {
@@ -439,9 +435,6 @@ readtray4(RACKOBJ_ID pRackId,char* filename)
        return(-1); 
     }
 
-    line = 0;
-
-    curLabel = 0;
 
     len = strlen(filename);
     for (i=len; i > 0; i--)
@@ -469,6 +462,7 @@ readtray4(RACKOBJ_ID pRackId,char* filename)
     pRackId->ZoneBlock = block;
     genRowColumnInfo(pRackId);
     fclose(tray_file);
+    return(0); 
 }
 
 BLOCK_ID findBlockReference(BLOCK_LIST *pTheBlockList, char* blockName)
@@ -482,13 +476,12 @@ BLOCK_ID findBlockReference(BLOCK_LIST *pTheBlockList, char* blockName)
    return(NULL);
 }
 
-readGeometryBlock(FILE *tray_file, BLOCK_ID block, BLOCK_LIST *pTheBlockList)
+static int readGeometryBlock(FILE *tray_file, BLOCK_ID block, BLOCK_LIST *pTheBlockList)
 {
    char textline[256],label[256];
    int dataline;
-   int labelIndex;
    int nVals, values[6];
-   int line,axis,index;
+   int line,axis;
    int stat;
    BLOCK_ID  embeddedBlock;
    GEO_LINE_ID geoline;
@@ -501,14 +494,28 @@ readGeometryBlock(FILE *tray_file, BLOCK_ID block, BLOCK_LIST *pTheBlockList)
 	{
 	     if (strlen(block->Label) < 2)
              {
-	       strncpy(block->Label,label,79);
+	       // strncpy(block->Label,label,79);
+                int i = 0;
+                while ( (i < 29) && ( *(label+i) != '\0') )
+                {
+                   block->Label[i] = *(label+i);
+                   i++;
+                }
+                block->Label[i] = '\0';
 	     }
 	     else if (strcmp(block->Label,label) != 0)
 	     {
 	       /* create new geometry block */
 	       embeddedBlock = (BLOCK_OBJ*) malloc(sizeof(BLOCK_OBJ));
   	       memset(embeddedBlock,0,sizeof(BLOCK_OBJ));
-               strncpy(embeddedBlock->Label,label,79);
+              // strncpy(embeddedBlock->Label,label,79);
+                int i = 0;
+                while ( (i < 79) && ( *(label+i) != '\0') )
+                {
+                   embeddedBlock->Label[i] = *(label+i);
+                   i++;
+                }
+                embeddedBlock->Label[i] = '\0';
 	       
                /* put the block on the blockList */
                pTheBlockList->geoblocks[pTheBlockList->nBlocks++] = embeddedBlock;
@@ -538,7 +545,7 @@ readGeometryBlock(FILE *tray_file, BLOCK_ID block, BLOCK_LIST *pTheBlockList)
 		else
 		   block->columns = 1;
 
-		return;
+		return(stat);
 	     }
 	}
 	else  /* its a data line */
@@ -600,23 +607,14 @@ readGeometryBlock(FILE *tray_file, BLOCK_ID block, BLOCK_LIST *pTheBlockList)
 }
 
 /* rackGetGeoInfo(RACKOBJ_ID pRackId, int Zone, int sample,GEO_LINE_ID  resultLine) */
-rackGetXYLoc2(RACKOBJ_ID pRackId, int Zone, int sample,GEO_LINE_ID  resultLine)
+void rackGetXYLoc2(RACKOBJ_ID pRackId, int Zone, int sample,GEO_LINE_ID  resultLine)
 {
-   int i,zoneNum;
-   int rackNum;
-   int column,row,orgrow,orgcolumn;
    int xmm,ymm;
-   int zones;
-   char *pRefLab,*pLabel;
-   int XYVals[2];
-   int sampeLoc;
    int iterProduct;
    int adjsample;
 
-   BLOCK_ID block;
-   GEO_LINE_ID zoneLine,geoline;
+   GEO_LINE_ID zoneLine;
    ZONE_INFO_ID zoneInfo;
-   char *ref;
 
    /* select zone, which will be one of the branches of this tree node */
    if (Zone > pRackId->numZoneInfo)
@@ -649,7 +647,7 @@ rackGetXYLoc2(RACKOBJ_ID pRackId, int Zone, int sample,GEO_LINE_ID  resultLine)
   }
 }
 
-getAdjSampleNum(int sample,int Ordering,int rows,int columns, int totalSamples)
+int getAdjSampleNum(int sample,int Ordering,int rows,int columns, int totalSamples)
 {
    int adjsample,val;
    /* int totalSamples = rows * columns; */
@@ -710,7 +708,7 @@ getAdjSampleNum(int sample,int Ordering,int rows,int columns, int totalSamples)
 
 
 
-sumGeoValues(GEO_LINE_ID source, GEO_LINE_ID result)
+void sumGeoValues(GEO_LINE_ID source, GEO_LINE_ID result)
 {
       result->xval += source->xval;
       result->yval += source->yval;
@@ -721,12 +719,10 @@ sumGeoValues(GEO_LINE_ID source, GEO_LINE_ID result)
       result->thetaAngle += source->thetaAngle;
 }
 /* OK we can go depth 1st or level 1st */
-getSummedVals(BLOCK_ID blockId, int sample, int iterProduct, GEO_LINE_ID ResultLine)
+int getSummedVals(BLOCK_ID blockId, int sample, int iterProduct, GEO_LINE_ID ResultLine)
 {
 
-   int nBranches,branchIndex,i;
-   int sampleHigh;
-   int index;
+   int i;
    int nGeoLines;
    int max,min,line,result;
    int presentIterProd;
@@ -760,7 +756,7 @@ getSummedVals(BLOCK_ID blockId, int sample, int iterProduct, GEO_LINE_ID ResultL
               if ((sample <= max) && (sample >= min))
 	      {
 		 /* calc geoline */
-                 /* line = min % (blockId->nentries + 1); /* value must be 0 - nentries */
+                 // line = min % (blockId->nentries + 1); /* value must be 0 - nentries */
                  line = sample - min;
                  sumGeoValues(blockId->geoLine[line],ResultLine);
                  return 1;
@@ -776,7 +772,7 @@ getSummedVals(BLOCK_ID blockId, int sample, int iterProduct, GEO_LINE_ID ResultL
    return 0;
 }
 
-genRowColumnInfo(RACKOBJ_ID pRackId)
+void genRowColumnInfo(RACKOBJ_ID pRackId)
 {
    BLOCK_ID block,zblock;
    int i,rows,columns,total;
@@ -829,7 +825,7 @@ genRowColumnInfo(RACKOBJ_ID pRackId)
    } 
 }
 
-getRowsColumns(BLOCK_ID block, int *rows, int *columns)
+int getRowsColumns(BLOCK_ID block, int *rows, int *columns)
 {
    BLOCK_ID blockref;
    /* based on 1st entry (i.e. geoLine[0]), assuming all lines ref same block */
@@ -861,7 +857,7 @@ getRowsColumns(BLOCK_ID block, int *rows, int *columns)
    return 0;
 }
 
-getTotalSamples(BLOCK_ID block, int *total )
+void getTotalSamples(BLOCK_ID block, int *total )
 {
    BLOCK_ID blockref;
    int i,entries;
@@ -885,23 +881,22 @@ getTotalSamples(BLOCK_ID block, int *total )
 }
 
 
-printTray(RACKOBJ_ID pRackObj)
+void printTray(RACKOBJ_ID pRackObj)
 {
- int nblocks,i,level;
  BLOCK_ID block;
  BLOCK_LIST *pTheBlockList = pRackObj->blockList;
- nblocks = pTheBlockList->nBlocks;
   
     block = findBlockReference(pTheBlockList,"RackZones");
     printBlockRef(block,0);
 }
 
-printBlockRef(BLOCK_ID block, int level)
+void printBlockRef(BLOCK_ID block, int level)
 {
      int i;
      BLOCK_ID blockref,prevBlock;
      printBlock(block,level);
      
+     prevBlock = NULL;
      for(i=0; i < block->nentries; i++)
      {
         blockref = block->geoLine[i]->geoBlockRef;
@@ -916,10 +911,10 @@ printBlockRef(BLOCK_ID block, int level)
     }
 }
 
-printBlock(BLOCK_ID pBlock,int indent)
+void printBlock(BLOCK_ID pBlock,int indent)
 {
   char spaces[40];
-  int i,k,axis;
+  int i,axis;
 
   int value;
   GEO_LINE_ID geoline;
@@ -988,842 +983,33 @@ printBlock(BLOCK_ID pBlock,int indent)
 */
 
 #define MAX_TEXT_LEN 256
-readtray3(RACKOBJ_ID pRackId,char* filename)
-{
-    FILE *tray_file,*tmp_file;
-    char textline[256];
-    char workline[256];
-    char label[256];
-    int done;
-    int dataline;
-    int i, ref_num, ref_entries;
-    int nVals, values[6];
-    int line,axis,index;
-    int curLabel,curRefNum,prevEntries;
-    int ZoneCnt, curZone;
-    int len,stat,rackNum;
-    
-    tray_file = fopen(filename,"r");
-    if (tray_file == NULL)
-    {
-       errLogSysRet(ErrLogOp,debugInfo,"racktray: couldn't open; '%s':",filename);
-       return(-1); 
-    }
-
-    line = 0;
-
-    curLabel = 0;
-
-    len = strlen(filename);
-    for (i=len; i > 0; i--)
-    {
-       if (filename[i] == '/')
-         break;
-    }
-    strcpy(pRackId->pRackIdStr,&(filename[i+1]));
-    
-    readline(tray_file,textline,&dataline,label); /* skip 1st line */
-
-    stat = 0;
-    while( stat != EOF)
-    {
-        pRackId->numZones++;
-	sprintf(label,"Zone%d",pRackId->numZones);
-        curZone = pRackId->numZones - 1;
-        pRackId->pZones[curZone] = (ZONE_OBJ *) calloc(1,sizeof(ZONE_OBJ));
-        pRackId->pZones[curZone]->Ordering = NW_2_E;
-	strncpy(pRackId->pZones[curZone]->ZoneIdStr,label,79);
-	DPRINT2(1,"Num Zones(s): %d, %s \n",
-		pRackId->numZones,pRackId->pZones[curZone]->ZoneIdStr);
-	pRackId->pZones[curZone]->pLabelId = (LABEL_OBJ*) calloc(1,sizeof(LABEL_OBJ));
-	stat = readLabel(pRackId->pZones[curZone]->pLabelId,tray_file,0);
-    }
-
-    for (i=0; i < pRackId->numZones; i++)
-    {
-	if (strcmp(pRackId->pZones[i]->pLabelId->Label,"Rack") == 0)
-        {
-	  rackNum = i;
-	  break;
-	}
-    }
-    for (i=0; i < rackNum; i++)
-    {
-	pRackId->pZones[i]->Columns = pRackId->pZones[i]->pLabelId->nentries;
-
-        if (pRackId->pZones[i]->pLabelId->RefLabel == NULL)
-	   /* pRackId->pZones[i]->Rows = pRackId->pZones[i]->pLabelId->nentries; */
-	   pRackId->pZones[i]->Rows = 1;
-        else
-	   pRackId->pZones[i]->Rows = getRows(pRackId->pZones[i]->pLabelId->RefLabel);
-    }
-
-    fclose(tray_file);
-}
-
-readLabel(LABEL_OBJ *pLabel,FILE *tray_file, int indx )
-{
-   char textline[256],label[256];
-   int dataline;
-   int labelIndex;
-   int nVals, values[6];
-   int line,axis,index;
-   int stat;
-
-   line = 0;
-    while((stat = readline(tray_file,textline,&dataline,label)) != EOF)
-    {
-	if (!dataline)
-	{
-	     if (strlen(pLabel->Label) < 2)
-             {
-	       strncpy(pLabel->Label,label,79);
-	     }
-	     else if (strcmp(pLabel->Label,label) != 0)
-	     {
-	       pLabel->RefLabel = (LABEL_OBJ*) calloc(1,sizeof(LABEL_OBJ));
-	       strncpy(pLabel->RefLabel->Label,label,79);
-	       readLabel(pLabel->RefLabel,tray_file,indx );
-	     }
-	     else
-	     {
-		return;
-	     }
-	}
-	else  /* its a data line */
-	{
-
-	   /* is there a Label, if not then this must be the full Rack */
-	   if (strlen(pLabel->Label) < 2)
-             {
-	       strncpy(pLabel->Label,"Rack",79);
-	     }
-	   /* is there a reference */
-	   if (strlen(label) != 0)
-	   {
-		strcpy(&pLabel->RefLab[line][0],label);
-	   }
-
-	   nVals = extractVals(textline, &values[0]);
-	   for (axis = 0; axis < nVals; axis++)
-           {
-	      pLabel->xyloc[line][axis] = values[axis];
-	   }
-	    pLabel->nentries++;
-	   line++;
-	}
-    }
-    return(stat);
-}
-
+int readtray3(RACKOBJ_ID pRackId,char* filename)
+int readLabel(LABEL_OBJ *pLabel,FILE *tray_file, int indx )
 getRows(LABEL_OBJ* pLabelId)
-{
-   int rows = 0;
-   if (pLabelId->RefLabel != NULL)
-   {
-     rows =  getRows(pLabelId->RefLabel);
-     rows = rows * pLabelId->nentries;
-   }
-   else
-     rows = pLabelId->nentries;
-
-   return(rows);
-}
-
 rackWellOrder(RACKOBJ_ID pRackId, int Order)
-{
-   int Zone,zones;
-
-   if(pRackId == NULL)
-      return(-1);
-
-   if ( (Order < 0) || (Order > ORDERINGMAX) )
-       return(-1);
-
-   zones = pRackId->pZones[pRackId->numZones-1]->pLabelId->nentries;
-   for(Zone=1; Zone <= zones; Zone++)
-   {
-     rackZoneWellOrder(pRackId, Zone, Order);
-   }
-   return(0);
-}
-
 rackZoneWellOrder(RACKOBJ_ID pRackId, int Zone,int Order)
-{
-   int i,zones,zoneNum;
-   char *pRefLab,*pLabel;
-
-   LABEL_OBJ* pZonesTrays;
-
-   if(pRackId == NULL)
-      return(-1);
-
-   if ( (Order < 0) || (Order > ORDERINGMAX) )
-       return(-1);
-
-   zones = pRackId->pZones[pRackId->numZones-1]->pLabelId->nentries;
-
-   Zone--;
-   if ( (Zone >= 0) && (Zone < zones) )
-   {
-     pZonesTrays = pRackId->pZones[pRackId->numZones-1]->pLabelId; 
-     for (i=0; i < pRackId->numZones; i++)
-     {
-	pRefLab = &(pZonesTrays->RefLab[Zone][0]);
-        pLabel = pRackId->pZones[i]->pLabelId->Label;
-	if (strcmp(pRefLab,pLabel) == 0)
-        {
-	   zoneNum = i;
-           break;
-        }
-     }
-     pRackId->pZones[zoneNum]->Ordering = Order;
-  }
-  else
-  {
-    return(-1);
-  }
-}
-
-rackGetX(RACKOBJ_ID pRackId, int Zone,int sample)
-{
-  int XY[2];
-  rackGetXYLoc(pRackId, Zone,sample,XY);
-    return(XY[0]);
-}
-
-rackGetY(RACKOBJ_ID pRackId, int Zone,int sample)
-{
-  int XY[2];
-  rackGetXYLoc(pRackId, Zone,sample,XY);
-    return(XY[1]);
-}
-
-/**************************************************************************
-*  
-* rackGetColRow - Get the COlumn and Row of Sample for a Zone
-*
-*   Returns:
-*	Zone Reference Index
-*
-*/
+int rackGetX(RACKOBJ_ID pRackId, int Zone,int sample)
 int rackGetColRow(RACKOBJ_ID pRackId, int Zone, int sample, int *Col, int *Row)
-{
-   int i,zoneNum;
-   int rackNum;
-   int column,row,orgrow,orgcolumn;
-   int xmm,ymm;
-   int zones;
-   char *pRefLab,*pLabel;
-
-   LABEL_OBJ* pZonesTrays;
-   zones = pRackId->pZones[pRackId->numZones-1]->pLabelId->nentries;
-
-   Zone--;
-   if ( (Zone >= 0) && (Zone < zones) )
-   {
-     pZonesTrays = pRackId->pZones[pRackId->numZones-1]->pLabelId; 
-     for (i=0; i < pRackId->numZones; i++)
-     {
-	pRefLab = &(pZonesTrays->RefLab[Zone][0]);
-        pLabel = pRackId->pZones[i]->pLabelId->Label;
-        DPRINT2(2,"rackGetColRow(): pRefLab: '%s', pLabel: '%s'\n",pRefLab,pLabel);
-	if (strcmp(pRefLab,pLabel) == 0)
-        {
-	   zoneNum = i;
-           break;
-        }
-     }
-     switch ( pRackId->pZones[zoneNum]->Ordering )
-     {
-      case BACKLEFT2RIGHT:
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case BACKLEFT2RIGHTZIGZAG:
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	/* odd rows go backwards */
-	if ( row % 2)
-	   column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case BACKRIGHT2LEFT:
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case BACKRIGHT2LEFTZIGZAG:
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	/* even rows go forwards */
-	if ( !(row % 2) )
-	   column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case LEFTBACK2FRONT:
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case LEFTBACK2FRONTZIGZAG:
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	/* odd columns go backwards */
-	if ( column % 2)
-	   row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case LEFTFRONT2BACK:
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case LEFTFRONT2BACKZIGZAG:
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	/* even columns go backwards */
-	if ( !(column % 2) )
-	   row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-
-      case FRONTLEFT2RIGHT:
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case FRONTLEFT2RIGHTZIGZAG:
-	orgrow = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	row = pRackId->pZones[zoneNum]->Rows - orgrow - 1;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	/* odd rows go backwards */
-	if ( orgrow % 2)
-	   column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case FRONTRIGHT2LEFT:
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	row = pRackId->pZones[zoneNum]->Rows - row - 1;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case FRONTRIGHT2LEFTZIGZAG:
-	orgrow = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	row = pRackId->pZones[zoneNum]->Rows - orgrow - 1;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	/* even rows go forwards */
-	if ( !(orgrow % 2) )
-	   column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-
-
-      case RIGHTBACK2FRONT:
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case RIGHTBACK2FRONTZIGZAG:
-	orgcolumn = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	column = pRackId->pZones[zoneNum]->Columns - orgcolumn - 1;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	/* odd columns go backwards */
-	if ( orgcolumn % 2)
-	   row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case RIGHTFRONT2BACK:
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	column = pRackId->pZones[zoneNum]->Columns - column - 1;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case RIGHTFRONT2BACKZIGZAG:
-	orgcolumn = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	column = pRackId->pZones[zoneNum]->Columns - orgcolumn - 1;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	/* even columns go backwards */
-	if ( !(orgcolumn % 2) )
-	   row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      default:
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-	break;
-     }
-     *Col = column;
-     *Row = row;
-     DPRINT3(2,"Columns: %d, Rows: %d, zoneIndex: %d\n",pRackId->pZones[zoneNum]->Columns,
-		pRackId->pZones[zoneNum]->Rows,zoneNum);
-     return(zoneNum);
-   }
-   else
-     return(-1);
-}
-
 rackGetXYLoc(RACKOBJ_ID pRackId, int Zone, int sample,int *XY)
-{
-   int i,zoneNum;
-   int rackNum;
-   int column,row,orgrow,orgcolumn;
-   int xmm,ymm;
-   int zones;
-   char *pRefLab,*pLabel;
-
-   LABEL_OBJ* pZonesTrays;
-
-   zones = pRackId->pZones[pRackId->numZones-1]->pLabelId->nentries;
-
-   Zone--;
-   if ( (Zone >= 0) && (Zone < zones) )
-   {
-     pZonesTrays = pRackId->pZones[pRackId->numZones-1]->pLabelId; 
-     for (i=0; i < pRackId->numZones; i++)
-     {
-	pRefLab = &(pZonesTrays->RefLab[Zone][0]);
-        pLabel = pRackId->pZones[i]->pLabelId->Label;
-	if (strcmp(pRefLab,pLabel) == 0)
-        {
-	   zoneNum = i;
-           break;
-        }
-     }
-     switch ( pRackId->pZones[zoneNum]->Ordering )
-     {
-      case BACKLEFT2RIGHT:
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case BACKLEFT2RIGHTZIGZAG:
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	/* odd rows go backwards */
-	if ( row % 2)
-	   column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case BACKRIGHT2LEFT:
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case BACKRIGHT2LEFTZIGZAG:
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	/* even rows go forwards */
-	if ( !(row % 2) )
-	   column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case LEFTBACK2FRONT:
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case LEFTBACK2FRONTZIGZAG:
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	/* odd columns go backwards */
-	if ( column % 2)
-	   row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case LEFTFRONT2BACK:
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case LEFTFRONT2BACKZIGZAG:
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	/* even columns go backwards */
-	if ( !(column % 2) )
-	   row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-
-      case FRONTLEFT2RIGHT:
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case FRONTLEFT2RIGHTZIGZAG:
-	orgrow = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	row = pRackId->pZones[zoneNum]->Rows - orgrow - 1;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	/* odd rows go backwards */
-	if ( orgrow % 2)
-	   column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case FRONTRIGHT2LEFT:
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	row = pRackId->pZones[zoneNum]->Rows - row - 1;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case FRONTRIGHT2LEFTZIGZAG:
-	orgrow = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-	row = pRackId->pZones[zoneNum]->Rows - orgrow - 1;
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	/* even rows go forwards */
-	if ( !(orgrow % 2) )
-	   column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-
-
-      case RIGHTBACK2FRONT:
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	column = pRackId->pZones[zoneNum]->Columns - column - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case RIGHTBACK2FRONTZIGZAG:
-	orgcolumn = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	column = pRackId->pZones[zoneNum]->Columns - orgcolumn - 1;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	/* odd columns go backwards */
-	if ( orgcolumn % 2)
-	   row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case RIGHTFRONT2BACK:
-	column = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	column = pRackId->pZones[zoneNum]->Columns - column - 1;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-      case RIGHTFRONT2BACKZIGZAG:
-	orgcolumn = (sample-1) / pRackId->pZones[zoneNum]->Rows;
-	column = pRackId->pZones[zoneNum]->Columns - orgcolumn - 1;
-	row = (sample-1) % pRackId->pZones[zoneNum]->Rows;
-	/* even columns go backwards */
-	if ( !(orgcolumn % 2) )
-	   row = pRackId->pZones[zoneNum]->Rows - row - 1;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-		break;
-
-
-
-      default:
-	column = (sample-1) % pRackId->pZones[zoneNum]->Columns;
-	row = (sample-1) / pRackId->pZones[zoneNum]->Columns;
-        /* printf("Column: %d, Row: %d\n",column,row); */
-	break;
-     }
-     xmm = pRackId->pZones[zoneNum]->pLabelId->xyloc[column][0];
-     if ( pRackId->pZones[zoneNum]->pLabelId->RefLabel != NULL)
-       ymm = getYmm(pRackId->pZones[zoneNum]->pLabelId->RefLabel,&row);
-     else
-       ymm = 0;
-     ymm += pRackId->pZones[zoneNum]->pLabelId->xyloc[column][1];
-
-     xmm = xmm + pRackId->pZones[pRackId->numZones-1]->pLabelId->xyloc[Zone][0];
-     ymm = ymm + pRackId->pZones[pRackId->numZones-1]->pLabelId->xyloc[Zone][1];
-     xmm = ((xmm % 10) > 5) ? (xmm + 10)/10 : (xmm / 10);
-     ymm = ((ymm % 10) > 5) ? (ymm + 10)/10 : (ymm / 10);
-     /* printf("Xmm: %ld, Ymm: %ld\n",xmm,ymm); */
-  
-     xmm = xmm + pRackId->rackCenter[0];
-     ymm = ymm + pRackId->rackCenter[1];
-     /* printf("Xmm: %ld, Ymm: %ld\n",xmm,ymm); */
-     XY[0] = xmm;
-     XY[1] = ymm;
-   }
-   return(0); 
-}
-
 getYmm(LABEL_OBJ* pLabelId,int *row)
-{
-  int ymm,xmm,mmIndex;
-
-  if (pLabelId->RefLabel != NULL)
-  {
-     ymm = getYmm(pLabelId->RefLabel,row);
-     mmIndex = *row % pLabelId->nentries;
-     ymm += pLabelId->xyloc[mmIndex][1];
-  }
-  else
-  {
-    mmIndex = *row % pLabelId->nentries;
-    ymm = pLabelId->xyloc[mmIndex][1];
-    *row = *row / pLabelId->nentries;
-  }
-  return(ymm) ;
-}
-
-/*******************************************************************
-*
-*
-*   Vol(cm*cm*cm) =  Area(cm*cm) * Z(cm)
-*   Vol(ml) = Area(10mm*10mm) * Z(10mm)
-*   Vol(1000ul) = 100 * Area(mm*mm) * 10 * Z(mm)
-*   1000 * Vol(ul) = 1000 * (Area(mm*mm) * Z(mm))
-*   Z(mm) * Area(mm*mm) = Vol(ul)
-*   Z(mm) = (Vol(ul) / Area(mm*mm)
-*
-*	
-*     Z(mm) = Vol (ul) / (Pi * square(Diameter(mm)/2.0))
-*
-*/
 double rackVol2ZTrail(RACKOBJ_ID pRackId, double Vol, int Zone, int sample)
-{
-   int i,zoneIndex,mmIndex;
-   int column,row;
-   int diam,bot,top;
-   double Diam,Ztravel;
-   int ztravel;
-   extern double sqrt(double);
-
-   LABEL_OBJ* pZonesTrays;
-
-   zoneIndex = rackGetColRow(pRackId, Zone, sample, &column, &row);
-
-
-
-   if ( pRackId->pZones[zoneIndex]->pLabelId->RefLabel != NULL)
-   {
-      getSampDims(pRackId->pZones[zoneIndex]->pLabelId->RefLabel,&row,&diam,&bot,&top);
-   }
-   else
-   {
-      mmIndex = row % pRackId->pZones[zoneIndex]->pLabelId->nentries;
-      diam = pRackId->pZones[zoneIndex]->pLabelId->xyloc[mmIndex][2];
-   }
-
-   Diam = ((double) diam) / 100.0;
-
-   Ztravel = Vol / (M_PI * pow(Diam /2.0,2.0));
-
-   return(Ztravel);
-}
-
-/*******************************************************************
-*
-* Flow in ml/min, Dia in mm, return speed in mm/sec	
-*
-*/
 double rackFlow2Zspeed(RACKOBJ_ID pRackId, double Flow, int Zone, int sample)
-{
-    double  mlz;
-
-    mlz = rackVol2ZTrail(pRackId,1000.0,Zone,sample);  /* 1000 uL per ml */
-    return((Flow/60.0) * mlz);
-}
-
-/*******************************************************************
-*
-*	
-*     Top of Sample Tray 
-*
-*/
 int rackSampTop(RACKOBJ_ID pRackId, int Zone, int sample)
-{
-   int i,zoneIndex,mmIndex;
-   int column,row;
-   int diam,bot,top;
-
-   LABEL_OBJ* pZonesTrays;
-
-   zoneIndex = rackGetColRow(pRackId, Zone, sample, &column, &row);
-
-   if ( pRackId->pZones[zoneIndex]->pLabelId->RefLabel != NULL)
-      getSampDims(pRackId->pZones[zoneIndex]->pLabelId->RefLabel,&row,&diam,&bot,&top);
-     else
-     {
-      mmIndex = row % pRackId->pZones[zoneIndex]->pLabelId->nentries;
-      top = pRackId->pZones[zoneIndex]->pLabelId->xyloc[mmIndex][4];
-     }
-
-   return(top/10);
-}
-
-/*******************************************************************
-*
-*	
-*     Bottom of Sample Tray 
-*
-*/
 int rackSampBottom(RACKOBJ_ID pRackId, int Zone, int sample)
-{
-   int i,zoneIndex,mmIndex;
-   int column,row;
-   int diam,bot,top;
-
-   LABEL_OBJ* pZonesTrays;
-
-   zoneIndex = rackGetColRow(pRackId, Zone, sample, &column, &row);
-
-
-   if ( pRackId->pZones[zoneIndex]->pLabelId->RefLabel != NULL)
-      getSampDims(pRackId->pZones[zoneIndex]->pLabelId->RefLabel,&row,&diam,&bot,&top);
-     else
-     {
-      mmIndex = row % pRackId->pZones[zoneIndex]->pLabelId->nentries;
-      bot = pRackId->pZones[zoneIndex]->pLabelId->xyloc[mmIndex][3];
-     }
-
-   bot /= 10;
-   /* if bottom > 1000 mm then do not add safety margin of 1 mm */
-   if (bot > 10000)
-      bot -= 20000;
-   else
-       bot += 10;
-
-   return(bot);
-}
-
-
-/**************************************************************************
-*
-*  getSampDims - Obtains Sample Dimensions
-*
-*	Note: values need to be divided by 100 to obtain mm units
-*
-*/
 getSampDims(LABEL_OBJ* pLabelId,int *row,int *Diameter, int *Bottom, int *Top)
-{
-  int ymm,xmm,mmIndex;
-
-  if (pLabelId->RefLabel != NULL)
-  {
-     getSampDims(pLabelId->RefLabel,row,Diameter,Bottom,Top);
-     mmIndex = *row % pLabelId->nentries;
-     *Diameter = (pLabelId->xyloc[mmIndex][2] != 0) ? pLabelId->xyloc[mmIndex][2] : *Diameter;
-     *Bottom = (pLabelId->xyloc[mmIndex][3] != 0) ? pLabelId->xyloc[mmIndex][3] : *Bottom;
-     *Top = (pLabelId->xyloc[mmIndex][4] != 0) ? pLabelId->xyloc[mmIndex][4] : *Top;
-     ymm += pLabelId->xyloc[mmIndex][1];
-  }
-  else
-  {
-    mmIndex = *row % pLabelId->nentries;
-    *Diameter = pLabelId->xyloc[mmIndex][2];
-    *Bottom = pLabelId->xyloc[mmIndex][3];
-    *Top = pLabelId->xyloc[mmIndex][4];
-    *row = *row / pLabelId->nentries;
-  }
-  return(0);
-}
-
 rackInvalidZone(RACKOBJ_ID pRackId, int zone)
-{
-   int zones;
-
-   LABEL_OBJ* pZonesTrays;
-
-   zones = pRackId->pZones[pRackId->numZones-1]->pLabelId->nentries;
-
-   zone--;
-   if ( (zone >= 0) && (zone < zones) )
-   {
-      return(0);
-   }
-   else
-   {
-      return(zones);
-   }
-}
-
 rackInvalidSample(RACKOBJ_ID pRackId, int zone,int sample)
-{
-   int zoneIndex,column,row,maxnum;
-
-   zoneIndex = rackGetColRow(pRackId, zone, sample, &column, &row);
-   maxnum = pRackId->pZones[zoneIndex]->Columns * pRackId->pZones[zoneIndex]->Rows;
-   if ((sample > 0) && (sample <= maxnum))
-   {
-     return(0);
-   }
-   else
-   {
-     return(maxnum);
-   }
-}
-
 printEntries(LABEL_OBJ* pLabelId,int indent)
-{
-  char spaces[40];
-  int i,k,axis;
-
-  for (i=0;i<indent;i++) spaces[i] = ' '; 
-  spaces[i]='\0'; 
-
-  diagPrint(0,"%s Label: '%s', %d entries\n",spaces,pLabelId->Label,
-		pLabelId->nentries);
-
-  for (i=0;i<pLabelId->nentries; i++)
-  {
-     diagPrint(0,"%s   ",spaces);
-     for (axis=0; axis < 5; axis++)
-     {
-	if ( (axis > 1) && (pLabelId->xyloc[i][axis] == 0))
-	   continue;
-        diagPrint(0,"%6d    ", pLabelId->xyloc[i][axis]);
-     }
-     if ( strlen(&pLabelId->RefLab[i][0]) > 2)
-	diagPrint(0," Reference: '%s'",&pLabelId->RefLab[i][0]);
-     diagPrint(0,"\n");
-  }
-  if (pLabelId->RefLabel != NULL)
-     printEntries(pLabelId->RefLabel,indent + 4);
-}
-
-
 #endif  /* NEW_TRAY_ROUTINES & ORIGINAL ROUTINES */
 
-rackShow(RACKOBJ_ID pRackId, int level)
+void rackShow(RACKOBJ_ID pRackId, int level)
 {
-   int i,k,axis;
+   int i;
+#ifndef NEW_TRAY_ROUTINES
+   int axis;
    int entries;
    LABEL_OBJ* pLabelId;
+#endif
 
    DPRINT2(0,"\n------------- rackShow Obj: 0x%p, level: %d   \n\n",
 			pRackId,level);

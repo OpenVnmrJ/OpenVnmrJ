@@ -20,6 +20,7 @@
 #include <pwd.h>
 #include <signal.h>
 #include <errno.h>
+#include <time.h>
 
 #include "errLogLib.h"
 #include "timerfuncs.h"
@@ -30,12 +31,6 @@ int                     timer_went_off;
 static struct itimerval orig_itimer;
 static struct sigaction orig_sigalrm;
 static sigset_t         orig_sigmask;
-
-/* Interix/SFU does not support nanosleep so here we make up are own using usleep */
-
-#ifdef __INTERIX
-#define nanosleep(x, y) usleep( ((x)->tv_sec)*1000000 + ((x)->tv_nsec)/1000 )
-#endif /* __INTERIX */
 
 /*****************************************************************************
  *  Remember!  These programs may be running in response to a SIGALRM
@@ -143,6 +138,7 @@ int cleanup_from_timeout()
     sigprocmask( SIG_SETMASK, &orig_sigmask, NULL );    
     sigaction( SIGALRM, &orig_sigalrm, NULL );
     setitimer( ITIMER_REAL, &orig_itimer, NULL );
+    return(0);
 }
  
 /*****************************************************************************
@@ -153,10 +149,12 @@ int cleanup_from_timeout()
 void delayAwhile(int time)
 {
     if ((smsDevEntry != NULL) && (strncmp(smsDevEntry->devName, "HRM_", 4))) {
+        sigset_t        emptymask;
+        sigemptyset( &emptymask );
         timer_went_off = 0;
         setup_ms_timer(time*1000);  /* in msec */
         while (!timer_went_off)
-            sigpause(0);
+	         sigsuspend( &emptymask );	/* Wait for a signal */
         cleanup_from_timeout();
     }
     else {
@@ -200,10 +198,12 @@ void delayAwhile(int time)
 void delayMsec(int time)
 {
     if ((smsDevEntry != NULL) && (strncmp(smsDevEntry->devName, "HRM_", 4))) {
+        sigset_t        emptymask;
+        sigemptyset( &emptymask );
         timer_went_off = 0;
         setup_ms_timer(time);  /* in msec */
         while (!timer_went_off)
-            sigpause(0);
+	         sigsuspend( &emptymask );	/* Wait for a signal */
         cleanup_from_timeout();
     }
     else {

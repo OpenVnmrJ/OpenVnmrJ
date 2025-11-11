@@ -7,7 +7,6 @@
  * For more information, see the LICENSE file.
  */
 
-/* #define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +19,7 @@
 #include <pwd.h>
 #include  <sys/time.h>
 #include <signal.h>
+#include <ctype.h>
 #include <errno.h>
 
 #include "errLogLib.h"
@@ -61,12 +61,17 @@ int robot(char, int);
 int startRobot( char , int );
 static int setup_ms_timer(int ms_interval );
 static void cleanup_from_timeout();
+void delayAwhile(int time);
+void delayMsec(int time);
+int readPort( int serialPort, int type, int timeout );
+int writePort( int serialPort, int smpnum );
+int cmdAck (int serialPort, int timeout);
  
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
   char buffer[256];
   char *bptr;
-  int i, val;
+  int val;
   int buflen = 1;
   int done = 1;
   int verbose = 1;
@@ -75,7 +80,7 @@ main (int argc, char *argv[])
   if (argc < 2)
   {
     fprintf(stdout,"usage:  %s <devicename> (i.e. /dev/term/b)\n", argv[0]);
-    exit(1);
+    exit(EXIT_FAILURE);
   }
  
   if (argc > 2)
@@ -86,7 +91,7 @@ main (int argc, char *argv[])
   /* serialPort = initPort("/dev/term/a",SMS_SERIAL_PORT); */
   serialPort = initPort(argv[1],SMS_SERIAL_PORT);
 
-  write(serialPort, "\r",1);         /* is NMS ready? */
+  stat = write(serialPort, "\r",1);         /* is NMS ready? */
 
   stat = cmdAck(serialPort,6);
   if (stat == SMPTIMEOUT) 
@@ -165,7 +170,7 @@ main (int argc, char *argv[])
                    close(serialPort);
                    fprintf(stdout,"BYE\n");
                    fflush(stdout);
-	           exit(0);
+	           exit(EXIT_SUCCESS);
 	           break;
 
          default:
@@ -174,6 +179,7 @@ main (int argc, char *argv[])
 
 
   }
+  exit(EXIT_SUCCESS);
 }    
  
 /************************************************************
@@ -183,14 +189,14 @@ int robot( char cmd, int index )
 {
   int stat;
   
-  if (stat = startRobot( cmd, index ))
+  if ( (stat = startRobot( cmd, index )) )
   {
      fprintf(stdout,"ERROR%d\n", stat);
      fflush(stdout);
      return (stat);
   }
 
-  if (stat = cmdAck(serialPort,600))   /* 10 min to timeout */
+  if ( (stat = cmdAck(serialPort,600)) )   /* 10 min to timeout */
   {
      fprintf(stdout,"ERROR%d\n", stat);
      fflush(stdout);
@@ -208,8 +214,8 @@ int startRobot( char cmd, int smpnum )
 {
   char *ptr;
   char  chrbuf[20];
-  char  chrbuf1[128];
-  int   i, wbyte, rbyte, stat;
+  int   stat;
+  int wbyte __attribute__((unused));
 
   tcflush(serialPort,TCIFLUSH);    /* clear serial port */
 
@@ -227,10 +233,10 @@ int startRobot( char cmd, int smpnum )
   /*-- these commands require a parameter --*/
   if (cmd == 'F' || cmd == 'M' || cmd == 'A' || cmd == 'V')
   {
-     writePort(serialPort,smpnum);
+     stat = writePort(serialPort,smpnum);
   }
 
-  write(serialPort, "\r",1);         /*  Sending "cr" , The end of command  */
+  stat = write(serialPort, "\r",1);         /*  Sending "cr" , The end of command  */
   
   return (0);
 }
@@ -343,7 +349,8 @@ int writePort( int serialPort, int smpnum )
 {
   char  charbuf[20];
   char   *ptr;
-  int   wbyte, stat;
+  int stat;
+  int wbyte __attribute__((unused));
 
   sprintf(charbuf,"%d", smpnum);
   ptr = charbuf;
@@ -450,20 +457,26 @@ static void cleanup_from_timeout()
     or may be running on a system with a separate interval timer.   */
         
 
-delayAwhile(int time)
+void delayAwhile(int time)
 {
+    sigset_t        emptymask;
+    sigemptyset( &emptymask );
+
     timer_went_off = 0;
     setup_ms_timer(time*1000);  /* in msec */
     while (!timer_went_off)
-       sigpause(0);
+       sigsuspend( &emptymask );
     cleanup_from_timeout();
 }
 
-delayMsec(int time)
+void delayMsec(int time)
 {
+    sigset_t        emptymask;
+    sigemptyset( &emptymask );
+
     timer_went_off = 0;
     setup_ms_timer(time);  /* in msec */
     while (!timer_went_off)
-       sigpause(0);
+       sigsuspend( &emptymask );
     cleanup_from_timeout();
 }

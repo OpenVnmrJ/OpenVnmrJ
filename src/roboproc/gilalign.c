@@ -7,7 +7,7 @@
  * For more information, see the LICENSE file.
  */
 
-#define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
+#define _POSIX_C__SOURCE 1 /* defined when source is to be POSIX-compliant */
 #include <stdio.h>
 #include <stdlib.h>
 #include  <unistd.h>
@@ -17,6 +17,7 @@
 #include "rackObj.h"
 #include "termhandler.h"
 #include "iofuncs.h"
+#include "ctype.h"
 
 extern int DebugLevel;
 
@@ -28,6 +29,50 @@ extern int DebugLevel;
 
 /**************************** GLOBAL VARIABLES ******************************/
 extern int   AbortRobo;
+extern int rackCenter(RACKOBJ_ID pRackId, int X, int Y);
+extern void rackShow(RACKOBJ_ID pRackId, int level);
+extern int gilsonMaxVolume(GILSONOBJ_ID pGilId);
+extern int gilPump215SW(GILSONOBJ_ID pGilId, char Dir, double vol,
+                 double flow, int Zspeed, int Zlimit);
+extern int gilInitSyringe(GILSONOBJ_ID pGilId, int size);
+extern int gilHomeDiluter(GILSONOBJ_ID pGilId);
+extern int gilsonSetRStation(GILSONOBJ_ID pGilId,int X, int Y, int Z);
+extern int gilGetInputs(GILSONOBJ_ID pGilId, int bits, int *on_off);
+extern int gilGetXY(GILSONOBJ_ID pGilId, int *XYmm);     /* gilsonObj.c     */
+extern int gilGetZ(GILSONOBJ_ID pGilId, int *Zmm);       /* gilsonObj.c     */
+extern int gilsonReset(GILSONOBJ_ID pGilId);
+extern void gilsonDelete(GILSONOBJ_ID pGilId);       /* gilsonObj.c     */
+extern int gilsonGetZTop(GILSONOBJ_ID pGilId);
+extern int gilsonTestMode(GILSONOBJ_ID pGilId,int mode);
+extern void delayMsec(int time /* milliseconds */);
+extern int gilCommand(GILSONOBJ_ID pGilId, int unit,     /* gilsonObj.c     */
+                      char *cmd, char *type, char *rsp);
+extern int gilPump(GILSONOBJ_ID pGilId, char Dir, double vol,
+            double speed, int Zspeed, int Zlimit);
+
+
+
+void gotoHome();
+void PumpReplace();
+void RinseAlignment();
+void InjectAlignment();
+void TrayAlignment();
+void AjustXYZ();
+void chkRack();
+void chkLQZ();
+int reportRobotStat(int stat);
+void GilsonTransparentMode();
+void PrintSet();
+void SaveParameter();
+void DefineRack();
+void setArmHeight();
+void setValve();
+void setOutputs();
+void getInputs();
+void setInjector();
+void setCenters();
+void PrimePump();
+
 char  systemdir[MAXPATHL];       /* vnmr system directory */
 ioDev *smsDevEntry = NULL;
 int   smsDev = -1;
@@ -36,7 +81,6 @@ int   smsDev = -1;
 static  GILSONOBJ_ID pGilObjId;
 static  RACKOBJ_ID inject;
 static  RACKOBJ_ID rack = NULL;
-static  RACKOBJ_ID rack2,rack3;
 
 static int RackCenter[2] = { 546, 1872 };
 static int SampleTop = 1013;
@@ -62,26 +106,24 @@ static int xyzMinMax[6];
 
 static char path[MAXPATHL];
 
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
     int done;
     char buffer[256];
-    char msge[10];
     char *bptr, *tmpptr;
     char Current_InjectValve_Loc;
     int  CurrentXYmm[2],CurrentZmm,Current_AirValve_Loc,CurrentVol;
     int xAxis,yAxis;
-    int i,maxflow;
-    int sampZtop,sampZbottom;
+    int sampZtop __attribute__((unused));
+    int sampZbottom __attribute__((unused));
     /* int xyzMinMax[6]; */
-    double flowrate, zspeed,ztravel;
     int buflen = 1;
 
     if (argc < 2)
     {
         fprintf(stdout, "usage:  %s <devicename> (i.e. /dev/term/b)\n",
                 argv[0]);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (argc > 2)
@@ -110,7 +152,7 @@ main (int argc, char *argv[])
         fprintf(stderr,
                 "\nSystem failed to init '%s'\n", path);
         fprintf(stderr,"\ngilalign Aborted.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     rackCenter(inject, 5582 ,38);  /* 558.2, 3.8,  84.2 Gilson position */
@@ -127,7 +169,7 @@ main (int argc, char *argv[])
     {
         fprintf(stderr,"\nSystem failed to init '%s'\n", path);
         fprintf(stderr,"\ngilalign Aborted.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     rackCenter(rack, 546,1872);
     if (verbose)
@@ -160,7 +202,7 @@ main (int argc, char *argv[])
         fprintf(stderr,"\nFailure to initialize Gilson '%s'\n", argv[1]);
         fprintf(stderr,"\nCheck that the i/o cable is properly attached.\n");
         fprintf(stderr,"\ngilalign Aborted.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
 
@@ -301,7 +343,6 @@ main (int argc, char *argv[])
             case 'Q':
                 done = 0;
                 gilsonDelete(pGilObjId);
-                return;
                 break;
 
             case 'S':       /* Store alignment parameters */
@@ -326,13 +367,14 @@ main (int argc, char *argv[])
 
         }
     }
+    exit(EXIT_SUCCESS);
 }
 
 /*--------------------------------------------------------
   Set the Arm Height as read by the scale into the Non-Volatile Memory
   in the Gilson 215 Liquid Handler
 */
-setArmHeight()
+void setArmHeight()
 {
     char buffer[256];
     char *bptr;
@@ -367,7 +409,7 @@ setArmHeight()
     }
 }
 
-DefineRack()
+void DefineRack()
 {
     char buffer[256];
     char *bptr;
@@ -394,7 +436,7 @@ DefineRack()
     rackCenter(rack, RackCenter[0],RackCenter[1]);
 }
 
-SaveParameter()
+void SaveParameter()
 {
     char buffer[256];
     char *bptr;
@@ -440,7 +482,7 @@ SaveParameter()
                           RinseStation[1], RinseStationZ);
 }
 
-PrintSet()
+void PrintSet()
 {
     fprintf(stdout,"\n");
     fprintf(stdout,"Center of Rack:  X = %d, Y = %d Z = %d\n",
@@ -453,7 +495,7 @@ PrintSet()
     fflush(stdout);
 }
 
-setValve()
+void setValve()
 {
     char buffer[256];
     char *bptr;
@@ -481,7 +523,7 @@ setValve()
 }
 
 
-setOutputs()
+void setOutputs()
 {
     char buffer[256];
     char *bptr;
@@ -516,7 +558,7 @@ setOutputs()
     }
 }
 
-getInputs()
+void getInputs()
 {
     char buffer[256];
     char *bptr;
@@ -549,7 +591,7 @@ getInputs()
     }
 }
 
-setInjector()
+void setInjector()
 {
     char buffer[256];
     char *bptr;
@@ -585,7 +627,7 @@ setInjector()
  * Allow TCL front end to send Injector & Rack Center information
  *   to override defaults
  */
-setCenters()
+void setCenters()
 {
     char buffer[256];
     char *bptr;
@@ -625,9 +667,10 @@ setCenters()
     }
 }
 
-PrimePump()
+void PrimePump()
 {
-    int sampZtop,sampZbottom,i;
+    int sampZtop __attribute__((unused));
+    int i;
 
     /* Rinse Needle */
     sampZtop = rackSampTop(rack,ZONE1,1);
@@ -647,21 +690,20 @@ PrimePump()
     gilWriteDisplay(pGilObjId,""); /* max of 8 chars */
 }
 
-gotoHome()
+void gotoHome()
 {
     gilMoveZ2Top(pGilObjId);
     /* gilMoveXY(pGilObjId,20,20); */
     gilMoveXY(pGilObjId,xyzMinMax[0]+20,xyzMinMax[2]+20);
 }
  
-PumpReplace()
+void PumpReplace()
 {
     char buffer[256];
-    char resp[256];
     char *bptr;
-    char *cmd;
+    char *cmd __attribute__((unused));
     double maxflow;
-    int result;
+    int result __attribute__((unused));
     int pumptype,pumpvol;
 
     if (verbose)
@@ -702,11 +744,11 @@ PumpReplace()
 
             case 'D':
                 result = gilPump(pGilObjId, 'R', (double)
-                                 pGilObjId->pumpVolume, maxflow, 0);
-                result = gilPump(pGilObjId, 'N',(double) -1.0, maxflow, 0);
+                                 pGilObjId->pumpVolume, maxflow, 0, 0);
+                result = gilPump(pGilObjId, 'N',(double) -1.0, maxflow, 0, 0);
                 break;
             case 'O':
-                result = gilInitSyringe(pGilObjId);
+                result = gilInitSyringe(pGilObjId, pGilObjId->pumpVolume);
                 break;
             case 'Q':
                 return;
@@ -725,8 +767,8 @@ PumpReplace()
 
   /* down */
     result = gilPump(pGilObjId, 'R',(double) pGilObjId->pumpVolume,
-                     maxflow, 0);
-    result = gilPump(pGilObjId, 'N',(double) -1.0, maxflow, 0);
+                     maxflow, 0, 0);
+    result = gilPump(pGilObjId, 'N',(double) -1.0, maxflow, 0, 0);
   
     if (verbose)
     {
@@ -760,11 +802,10 @@ PumpReplace()
 #endif
 }
 
-RinseAlignment()
+void RinseAlignment()
 {
     char buffer[256];
     char *bptr;
-    int LastZ;
 
     if (verbose)
     {
@@ -781,7 +822,7 @@ RinseAlignment()
  */
 
     fflush(stdout);
-    LastZ = pGilObjId->RinseStation[2];
+    // LastZ = pGilObjId->RinseStation[2];
 
     /* Don't want needle to come down yet */
     pGilObjId->RinseStation[2] = pGilObjId->ZTopClamp;
@@ -844,13 +885,12 @@ RinseAlignment()
     }
 }
 
-InjectAlignment()
+void InjectAlignment()
 {
     char buffer[256];
     char *bptr;
-    int X,Y,Z;
-    int LastX,LastY,LastZ;
-    int Xdelta,Ydelta,Zdelta;
+    int LastX,LastY;
+    int Xdelta,Ydelta;
     int xAxis,yAxis;
     int portnum = 1;
 
@@ -873,7 +913,7 @@ InjectAlignment()
 
     LastX = pGilObjId->InjectStation[0];
     LastY = pGilObjId->InjectStation[1];
-    LastZ = pGilObjId->InjectStation[2];
+    // LastZ = pGilObjId->InjectStation[2];
 
     fflush(stdout);
 
@@ -943,9 +983,9 @@ InjectAlignment()
     }
 }
 
-TrayAlignment()
+void TrayAlignment()
 {
-    int X,Y,Z;
+    int X,Y;
     int LastX,LastY;
     int Xdelta,Ydelta;
     char buffer[256];
@@ -1029,15 +1069,12 @@ TrayAlignment()
     }
 }
 
-AjustXYZ()
+void AjustXYZ()
 {
     char buffer[256];
     char *bptr;
-    int XY[2],Z;
-    int X,Y;
     int incrVal;
     int len = 1;
-    float vol;
     int done = 0;
 
     if (verbose)
@@ -1159,16 +1196,16 @@ AjustXYZ()
 }
 
 
-chkRack()
+void chkRack()
 {
     char buffer[256],filepath[256];
     char *bptr;
     char *cmd;
     char msge[10];
     int xAxis,yAxis;
-    int i,a,j,maxflow;
+    int i,j;
     int sampZtop,sampZbottom;
-    int error;
+    int error __attribute__((unused));
     int startZone,endZone,SampStrt,SampEnd;
     int startOrder,endOrder,o;
     int lower,Delay;
@@ -1247,7 +1284,7 @@ chkRack()
     if (bptr == NULL)
         return;
     if (toupper(buffer[0]) != 'Y')
-        return(0);
+        return;
     fprintf(stderr,"\n\nRunning through Rack Positions for "
                    "Verification.\n\n");
     for(o=startOrder; o <= endOrder; o++)
@@ -1298,7 +1335,7 @@ chkRack()
     gilWriteDisplay(pGilObjId,"Complete"); /* max of 8 chars */
 }
 
-chkLQZ()
+void chkLQZ()
 {
     /* display Liquid Sensing Frequency on the Gilson Display */
     gilsonTestMode(pGilObjId,3);
@@ -1306,12 +1343,12 @@ chkLQZ()
 
 
 /* dummy function to satisfy tclfuncs.c */
-reportRobotStat(int stat)
+int reportRobotStat(int stat)
 {
     return(0);
 }
 
-GilsonTransparentMode()
+void GilsonTransparentMode()
 {
     /* guide: any single letter command is an Immediate command except
      *        '9' can be both, does different things depending on mode used

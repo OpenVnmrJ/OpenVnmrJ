@@ -199,6 +199,12 @@ int hermes_clear_extraction_station();
 void StartBatch();
 void EndBatch();
 
+#pragma GCC diagnostic ignored "-Wformat-overflow"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+
+
 char * GetAcqErrMsg(int errCode)
 {
     extern struct codeWithMsg acqerrMsgTable[];
@@ -760,7 +766,7 @@ typedef struct _t_HRM_ROBOT_CMD {
 
 void HrmSendRobotCmd(HRM_ROBOT_CMD *cmd)
 {
-    int result,i=0,tmr;
+    int result,i=0;
     char tbuf[48];
     time_t t;
     extern int AbortRobo;
@@ -1081,7 +1087,6 @@ void DisplaySchedule()
     struct schedItem *nPtr;
     time_t t;
     char tbuf[48];
-    MYTIMER *ptr;
 
     /* Display Sample Map for the User */
     DPRINT(0, "SCHEDULE MAP:\r\n");
@@ -2015,7 +2020,7 @@ int TransferVial(int bcrSec, int rack, int zone, int well, int pcsPos)
 
 int EjectSample(int smp)
 {
-    int i, stat, rack, zone, well;
+    int i, stat;
 
     /* Search for this Sample in the Queue */
     if ((i = GetAssignedPcsSlot(smp)) != -1) {
@@ -2027,9 +2032,9 @@ int EjectSample(int smp)
         }
 
         /* Now we can eject the sample from the magnet */
-        rack = (smp / 1000000L);
-        zone = (smp / 10000L % 100);
-        well = (smp % 1000);
+        // rack = (smp / 1000000L);
+        // zone = (smp / 10000L % 100);
+        // well = (smp % 1000);
 
         if ((stat = EjectMagnet()) != HRM_SUCCESS) {
             DPRINT1(0, "EjectSample error: %d.\r\n", stat);
@@ -2212,6 +2217,7 @@ void read_settings()
                     fname);
         }
         else {
+            int res __attribute__((unused));
             DPRINT1(0, "Reading config file %s.\r\n", fname);
             gilPreScript[0] = gilPostScript[0] = '\0';
             /* Read Barcode/PCS Parameters from Configuration File */
@@ -2223,46 +2229,53 @@ void read_settings()
                 (fscanf(configFile,"Override Exp Time: %d\r\n", &tmp2)==1) &&
                 (fscanf(configFile,"Exp Time: %d\r\n", &expTime)==1) &&
                 (fscanf(configFile,"Use Liquid Handler: %d\r\n",&tmp3)==1)) {
-                int t;
 
-                fscanf(configFile,"Pre-Experiment Liquids Script: %[^\n]\n",
+                res = fscanf(configFile,"Pre-Experiment Liquids Script: %[^\n]\n",
                     gilPreScript);
                 if (strncmp(gilPreScript, "Pre-Script Execution Time:",
 			    strlen("Pre-Script Execution Time:")) == 0) {
-                    sscanf(gilPreScript, "Pre-Script Execution Time: %d\n",
+                    res = sscanf(gilPreScript, "Pre-Script Execution Time: %d\n",
                            &gilPreTime);
 		    gilPreScript[0] = '\0';
                 }
                 else
-                    fscanf(configFile,"Pre-Script Execution Time: %d\n",
+                    res = fscanf(configFile,"Pre-Script Execution Time: %d\n",
                            &gilPreTime);
 
-                fscanf(configFile,"Post-Experiment Liquids Script: %[^\n]\n",
+                res = fscanf(configFile,"Post-Experiment Liquids Script: %[^\n]\n",
                     gilPostScript);
                 if (strncmp(gilPostScript, "Post-Script Execution Time:",
 			    strlen("Post-Script Execution Time:")) == 0) {
-                    sscanf(gilPostScript, "Post-Script Execution Time: %d\n",
+                    res = sscanf(gilPostScript, "Post-Script Execution Time: %d\n",
                            &gilPostTime);
 		    gilPostScript[0] = '\0';
                 }
                 else
-                    fscanf(configFile,"Post-Script Execution Time: %d\n",
+                    res = fscanf(configFile,"Post-Script Execution Time: %d\n",
                            &gilPostTime);
 
                 barcodeUse = tmp1;
                 if (!barcodeUse)
+                {
                     DPRINT(0, "NOT using barcodes.\r\n");
+                }
                 else
+                {
                     DPRINT2(0, "Using barcodes. Timeout=%d seconds. "
                                "On read error: %s\r\n",
                                 barcodeTimeout, bcrErrAction);
+                }
                 overrideExpTime = tmp2;
                 if (!overrideExpTime)
+                {
                     DPRINT(0, "Using experiment times provided by Vnmr.\r\n");
+                }
                 else
+                {
                     DPRINT1(0, "Overriding Vnmr provided experiment time "
                                "to be %d seconds for ALL samples.\r\n",
                                 expTime);
+                }
                 useGilson = tmp3;
                 if (!useGilson) {
                     DPRINT(0, "NOT using liquid handler.\r\n");
@@ -2531,14 +2544,14 @@ int schedule_item(int startTime, int len, int slot, int smp, char *desc)
 void run_scheduler(int slot, int rack, int zone, int well,
                    int magSec, int pcsSec)
 {
-    int i, bcrSec, startLoc, endLoc, minMagTime;
+    int bcrSec, startLoc, endLoc, minMagTime;
     int magnetEmpty, priorSample;
     int xferTime, xferLen, doneTime, doneLen, clrTime, clrLen;
-    int prepTime=0, prepLen=0, postTime=0, postLen=0;
+    int prepTime=0, prepLen=0, postLen=0;
     int found=0, size=0, start=-1;
     int done=0, doneLeft=0, donePrep=0;
     int gapLeftNeeded, gapRightNeeded, gapPrepNeeded, gapMargin;
-    int leftStart, rightStart, prepStart;
+    int leftStart, rightStart=0, prepStart=0;
 
     if (!scheduler_initialized)
         init_scheduler();
@@ -2729,13 +2742,11 @@ void run_scheduler(int slot, int rack, int zone, int well,
          *  to the rack, it may need to be post-processed by
          *  the liquid handler.
          */
-        postTime = clrTime + clrLen;
         postLen = gilPostTime;
     }
     else {
         clrTime = doneTime + doneLen;
         clrLen = 0;
-        postTime = clrTime + clrLen;
         postLen = 0;
     }
 
@@ -3037,7 +3048,7 @@ void UpdateTurbineStatus()
         return;
     }
 
-    fprintf(statFile, statBuf);
+    fprintf(statFile, "%s",  statBuf);
     fclose(statFile);
 
     /* Now Write Each Turbine's Individual Status */
@@ -3086,7 +3097,7 @@ void UpdateTurbineStatus()
                     tbuf1, tbuf2);
         }
 
-        fprintf(statFile, statBuf);
+        fprintf(statFile, "%s",  statBuf);
         smp = (smp+1) % MAX_PCS_SLOTS;
     }
 
@@ -3467,7 +3478,6 @@ int hermes_clear_robot()
 int check_timers()
 {
     int rack, zone, well, slot, stat, i, errorCode, result, loadedElsewhere;
-    time_t tBefore, tAfter;
     extern int rack768AS, zone768AS, well768AS;
     extern int InterpScript(char *tclScriptFile);
     extern GILSONOBJ_ID pGilObjId;
@@ -3779,8 +3789,7 @@ int hermes_clear_extraction_station()
  */
 int hermes_get_sample(int smp, int pcsSlot)
 {
-    int bcrSec, pcsSec, rack, zone, well, magSec;
-    int delay, stat, pcs, result;
+    int delay, stat, pcs;
     char tbuf[48];
     time_t t;
 
@@ -3795,9 +3804,9 @@ int hermes_get_sample(int smp, int pcsSlot)
         robotError = HRM_SUCCESS;
     }
 
-    rack = (smp / 1000000L);
-    zone = (smp / 10000L % 100);
-    well = (smp % 1000);
+    // rack = (smp / 1000000L);
+    // zone = (smp / 10000L % 100);
+    // well = (smp % 1000);
 
     /* Read settings at beginning of each batch */
     if (newBatch) {
@@ -3936,9 +3945,9 @@ int hermes_get_sample(int smp, int pcsSlot)
             return robotError;
         }
         smp = sampleInMagnet;
-        rack = (smp / 1000000L);
-        zone = (smp / 10000L % 100);
-        well = (smp % 1000);
+        // rack = (smp / 1000000L);
+        // zone = (smp / 10000L % 100);
+        // well = (smp % 1000);
     }
 
     pcs = GetAssignedPcsSlot(smp);
@@ -4083,8 +4092,8 @@ int hermes_get_sample(int smp, int pcsSlot)
  */
 int hermes_put_sample(int smp, int *pcsSlot)
 {
-    int bcrSec, pcsSec, magSec, rack, zone, well;
-    int i, pcs, stat, loc, prepping, early;
+    int rack, zone, well;
+    int pcs, stat, loc, prepping, early;
     MYTIMER *rdyPtr;
     SAMPLE *waitPtr;
     char tbuf[48];
