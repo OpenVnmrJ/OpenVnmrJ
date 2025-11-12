@@ -105,6 +105,7 @@
 
 #define AM_SIZE		 3		/* no. of bytes in AM "int" */
 #define X32_SIZE	 4		/* no. of bytes in X32 "int" */
+#define NEO_SIZE	 8		/* no. of bytes in NEO "double" */
 #define MSB_FIRST	 0		/* most-significant byte first */
 #define LSB_FIRST	 1		/* least-significant byte first */
 
@@ -146,6 +147,7 @@ typedef struct {
 	    skip_words,	/* if DATA_ONLY, # of words to skip at start of file */
 	    data_format,	/* TPPI or ABS */
 	    overwrite_flag,	/* TRUE to overwrite existing file */
+	    ascii_flag,	/* TRUE to write ascii values of data */
 	    spectrometer,	/* type of spectrometer (AM_SPEC or AMX_SPEC) */
 	    twod,		/* TRUE if 2d data set */
 	    aqmod;		/* = 2 if simultaneously acquired data
@@ -201,23 +203,53 @@ int	debug = TRUE;
 int	debug = FALSE;
 #endif
 
-extern double	atof();
+int  parse_args(int argc, char *argv[], file_info_struct *file_info);
+void init_file_info(file_info_struct *file_info);
+int get_file_format(file_info_struct *file_info);
+int convertfile(file_info_struct *file_info, data_struct *data);
+int make_stext(file_info_struct *file_info, data_struct *data);
+int write_stext(file_info_struct *file_info, data_struct *data);
+int read_am_header(file_info_struct *file_info, data_struct *data);
+int read_amx_header(file_info_struct *file_info, data_struct *data);
+int write_amx_stext(file_info_struct *file_info, data_struct *data);
 
+static void convertNuc(char *in, char *out)
+{
+   char *ptr;
+   char *ptr2;
+
+   ptr = in;
+   ptr2 = out;
+   if ( (in[0] >= '0') && (in[0] <= '9') )
+   {
+      while ((*ptr >= '0') && (*ptr <= '9'))
+         ptr++;
+      *ptr2++ = toupper( *ptr++ );
+      while (*ptr)
+         *ptr2++ = tolower( *ptr++ );
+      ptr = in;
+      while ((*ptr >= '0') && (*ptr <= '9'))
+         *ptr2++ = *ptr++;
+      *ptr2 = '\0';
+   } 
+   else
+   {
+      *ptr2++ = toupper( *ptr++ );
+      while (*ptr)
+         *ptr2++ = tolower( *ptr++ );
+      *ptr2 = '\0';
+   }
+}
 
 /*---------------------------------------
 |					|
 |		main()/2		|
 |					|
 +--------------------------------------*/
-int  main(argc, argv)
-int	argc;
-char	*argv[];
+int  main(int argc, char *argv[])
 {
    file_info_struct *file_info;
-   char buf[100010];
-   FILE *fp;
-   int i;
-   data_struct *data;
+   data_struct *data = NULL;
 
    file_info = (file_info_struct *)malloc(sizeof(file_info_struct));
    init_file_info(file_info);
@@ -241,7 +273,8 @@ char	*argv[];
 		file_info->hdr_blocks*(HDR_SIZE+file_info->hdr_shift));
        }
      else
-       printf("AMX data.\n");
+        if (file_info->word_size == NEO_SIZE)
+           printf("AMX data.\n");
      if ((data = (data_struct *)malloc(sizeof(data_struct))) == NULL)  {
        printf("convertbru: Error - could not malloc space for data\n");
        rmdir(file_info->out_dir);
@@ -260,12 +293,13 @@ char	*argv[];
      }
    printf("Conversion Complete.\n");
    printf("\n");
+   free(file_info);
+   free(data);
 
    return( OK_EXIT );
 }
 
-init_file_info(file_info)
-file_info_struct *file_info;
+void init_file_info(file_info_struct *file_info)
 {
     file_info->in_file[0] = '\0';
     file_info->out_dir[0] = '\0';
@@ -277,6 +311,7 @@ file_info_struct *file_info;
     file_info->skip_words = FILE_INFO_UNSET;
     file_info->data_format = FILE_INFO_UNSET;
     file_info->overwrite_flag = FILE_INFO_UNSET;
+    file_info->ascii_flag = FILE_INFO_UNSET;
     file_info->dec_frq = FILE_INFO_UNSET;
     file_info->spectrometer = FILE_INFO_UNSET;
     file_info->twod = FILE_INFO_UNSET;
@@ -456,7 +491,7 @@ file_info_struct *file_info;
 |		convert_power()		|
 |					|
 +--------------------------------------*/
-int convert_power(buf, pos, file_info, pwrlevel)
+void convert_power(buf, pos, file_info, pwrlevel)
 char *buf;
 int	pos;
 file_info_struct *file_info;
@@ -510,11 +545,9 @@ file_info_struct *file_info;
 | since parameter files are small,	|
 | we can live with it.			|
 +--------------------------------------*/
-find_string(fp,str)
-FILE *fp;
-char *str;
+int find_string(FILE *fp, char *str)
 {
-    int i, len, temp, found;
+    int i, len, found;
     char buf[MAXPATHL], tmpstr[MAXPATHL];
 
     len = strlen(str);
@@ -555,11 +588,11 @@ FILE *fp;
 char *str;
 {
     int temp;
-    char ch;
+    int ret __attribute__((unused));
 
     fseek(fp,0,0);	/* go to beginning of file */
     if (find_string(fp,str))  {
-      fscanf(fp,"%d",&temp);
+      ret = fscanf(fp,"%d",&temp);
       return(temp);
       }
     else
@@ -577,11 +610,11 @@ FILE *fp;
 char *str;
 {
     double temp;
-    char ch;
+    int ret __attribute__((unused));
 
     fseek(fp,0,0);	/* go to beginning of file */
     if (find_string(fp,str))  {
-      fscanf(fp,"%lf",&temp);
+      ret = fscanf(fp,"%lf",&temp);
       return(temp);
       }
     else
@@ -593,19 +626,17 @@ char *str;
 |		read_amx_string()	|
 |					|
 +--------------------------------------*/
-char *read_amx_string(fp, str)
-FILE *fp;
-char *str;
+char *read_amx_string(FILE *fp, char *str)
 {
     int i, done;
-    double temp;
     char ch;
     char tmp_str[MAX_PAR_LEN], *tmp_ptr;
+    int ret __attribute__((unused));
 
     fseek(fp,0,0);	/* go to beginning of file */
     if (find_string(fp,str))  {
       while (((ch = getc(fp)) != '<') && (ch != EOF)) {}
-      fscanf(fp,"%s",tmp_str);
+      ret = fscanf(fp,"%s",tmp_str);
       i = strlen(tmp_str)-1;
       while ((i >= 0) && (tmp_str[i--] != '>')) {}
       i++;
@@ -623,7 +654,7 @@ char *str;
       return(tmp_ptr);
       }
     else
-      return((char *)NULL);
+      return("");
 }
 
 /*---------------------------------------
@@ -636,22 +667,24 @@ FILE *fp;
 char *str;
 {
    double delay;
-   int i, d_num, temp;
-   char ch, line[MAXPATHL];
+   int i, d_num;
+   char line[MAXPATHL];
+   int ret __attribute__((unused));
+   char *retch __attribute__((unused));
 
    fseek(fp,0,0);	/* go to beginning of file */
    if (((str[1] == 'D') || (str[1] == 'P')) && (!isdigit(str[2])))  {
      find_string(fp,str);
-     fscanf(fp,"%lf",&delay);
+     ret = fscanf(fp,"%lf",&delay);
      return(delay);
      }
    else if ((str[1] == 'D') && (isdigit(str[2])))  {
      find_string(fp,"$D=");
-     fgets(line,MAXPATHL-1,fp);
+     retch = fgets(line,MAXPATHL-1,fp);
      }
    else if ((str[1] == 'P') && (isdigit(str[2])))  {
      find_string(fp,"$P=");
-     fgets(line,MAXPATHL-1,fp);
+     retch = fgets(line,MAXPATHL-1,fp);
      }
    else  {
      fprintf(stderr,"read_amx_delay: unknown delay \"%s\"\n",str);
@@ -661,7 +694,7 @@ char *str;
    line[1] = '\0';
    sscanf(line,"%d",&d_num);
    for (i=0;i<=d_num;i++)
-     fscanf(fp,"%lf",&delay);
+     ret = fscanf(fp,"%lf",&delay);
    return(delay);
 }
 
@@ -670,23 +703,25 @@ char *str;
 |		read_amx_power()	|
 |					|
 +--------------------------------------*/
-int read_amx_power(fp, str, pwrlevel)
+void read_amx_power(fp, str, pwrlevel)
 FILE *fp;
 char *str;
 int *pwrlevel;
 {
-   int i, p_num, temp;
-   char ch, line[MAXPATHL];
+   int i, p_num;
+   char line[MAXPATHL];
+   int ret __attribute__((unused));
+   char *retch __attribute__((unused));
 
    fseek(fp,0,0);	/* go to beginning of file */
    if ((str[1] == 'S') && (isdigit(str[2])))  {
      find_string(fp,"$S=");
-     fgets(line,MAXPATHL-1,fp);
+     retch = fgets(line,MAXPATHL-1,fp);
      line[0] = str[2];
      line[1] = '\0';
      sscanf(line,"%d",&p_num);
      for (i=0;i<=p_num;i++)
-       fscanf(fp,"%d",pwrlevel);
+       ret = fscanf(fp,"%d",pwrlevel);
      if (*pwrlevel < AMX_HIGHPOWER) {
        pwrlevel++;
        *pwrlevel = TRUE;
@@ -699,9 +734,9 @@ int *pwrlevel;
      }
    else if ((str[1] != 'S') || (!isdigit(str[2])))  {
      find_string(fp,str);
-     fgets(line,MAXPATHL-1,fp);
+     retch = fgets(line,MAXPATHL-1,fp);
      if (strchr(line,'('))
-       fscanf(fp,"%d",pwrlevel);
+       ret = fscanf(fp,"%d",pwrlevel);
      else
        sscanf(line,"%d",pwrlevel);
      if (*pwrlevel < AMX_HIGHPOWER) {
@@ -741,14 +776,13 @@ int *pwrlevel;
 	1) if first or last of every 4 byte word is 0x00 or 0xFF.
 	2) if DR makes sense with the chosen byte order (6 < DR < 12)
 	3) if the file size is correct, given the values of NP and NI */
-int get_file_format(file_info)
-file_info_struct *file_info;
+int get_file_format(file_info_struct *file_info)
 {
     FILE *fp;
     u_char buf[(HDR_SIZE+HDR_SHIFT)*X32_SIZE];
     int format_found, hdr_found, i, ival, np, ni, read_size, dr;
     struct stat	unix_fab; /* unix_fab.st_size is file size */
-    double sfrq,dfrq;
+    double sfrq;
 
     if (!(fp = fopen(file_info->in_file,"r")))  {
       printf("get_file_format: Error - file \"%s\" not found\n",
@@ -913,15 +947,13 @@ file_info_struct *file_info;
 |	      parse_args()/3		|
 |					|
 +--------------------------------------*/
-int  parse_args(argc,argv,file_info)
-int argc;
-char *argv[];
-file_info_struct *file_info;
+int  parse_args(int argc, char *argv[], file_info_struct *file_info)
 {
-    int i, j, itmp, n;
+    int i, itmp, n;
     float ftmp;
     struct stat	unix_fab; /* unix_fab.st_size is file size */
     char str[MAXPATHL], *char_ptr;
+    char *retch __attribute__((unused));
 
     if (argc < 2)  {
       printf("parse_args: Error - no file name specified\n");
@@ -949,7 +981,7 @@ file_info_struct *file_info;
         }
       }
     /* make output file go to cwd */
-    getcwd(file_info->out_dir, sizeof(file_info->out_dir));
+    retch = getcwd(file_info->out_dir, sizeof(file_info->out_dir));
     char_ptr = strrchr(str,'/');
     if (char_ptr == NULL)
       char_ptr = str;
@@ -966,6 +998,9 @@ file_info_struct *file_info;
     for (i=2;i<argc;i++)  {
       if (strncmp(argv[i],"-f",2) == 0)  {
 	file_info->overwrite_flag = TRUE;
+	}
+      else if (strncmp(argv[i],"-a",2) == 0)  {
+	file_info->ascii_flag = TRUE;
 	}
       else if (strncmp(argv[i],"-d",2) == 0)  {	/* decoupler frequency */
 	if (sscanf(argv[i]+2,"%f",&ftmp) != 1)  {
@@ -1097,6 +1132,8 @@ file_info_struct *file_info;
       file_info->file_type = HDR_AND_DATA;
     if (file_info->overwrite_flag == FILE_INFO_UNSET)
       file_info->overwrite_flag = FALSE;
+    if (file_info->ascii_flag == FILE_INFO_UNSET)
+      file_info->ascii_flag = FALSE;
     if (file_info->data_format == FILE_INFO_UNSET)
       file_info->data_format = TPPI;
     if (file_info->spectrometer == AMX_SPEC)  {
@@ -1134,8 +1171,7 @@ file_info_struct *file_info;
 |	      write_header()		|
 |					|
 +--------------------------------------*/
-int  write_header(file_info)
-file_info_struct *file_info;
+int  write_header(file_info_struct *file_info)
 {
     FILE *fp;
     u_char buf[(HDR_SIZE+HDR_SHIFT)*X32_SIZE];
@@ -1231,9 +1267,7 @@ convert_real(buf2,i,file_info));
 |		make_stext()		|
 |					|
 +--------------------------------------*/
-int  make_stext(file_info,data)
-file_info_struct *file_info;
-data_struct *data;
+int make_stext(file_info_struct *file_info, data_struct *data)
 {
 
     if (file_info->spectrometer == AMX_SPEC)  {
@@ -1261,8 +1295,7 @@ typedef struct {
 #define DOUBLE_MASK	0x400
 #define CHAR_MASK	0x800
 
-swap_bytes(a)
-int *a;
+void swap_bytes(void *a)
 {
     char temp, *tempptr;
 
@@ -1275,8 +1308,7 @@ int *a;
     tempptr[2] = temp;
 }
 
-swap_words(a)
-double *a;
+void swap_words(double *a)
 {
     int temp, *tempptr;
 
@@ -1286,30 +1318,30 @@ double *a;
     tempptr[1] = temp;
 }
 
-amx_bin_to_ascii_header(ifp, ofp)
-FILE *ifp, *ofp;
+void amx_bin_to_ascii_header(FILE *ifp, FILE *ofp)
 {
     param_struct params;
     char c_data[9], *char_ptr, str[133];
     int done, i_data, dummy, num_p, i;
     float f_data;
     double d_data;
+    int ret __attribute__((unused));
 
     done = FALSE;
     while (!done)  {
-      fread(params.str,sizeof(char),8,ifp);
+      ret = fread(params.str,sizeof(char),8,ifp);
       params.str[8] = '\0';
       if (strcmp(params.str,"ZZ00") == 0)
 	done = TRUE;
-      fread(&params.num_bytes,sizeof(int),1,ifp);
+      ret = fread(&params.num_bytes,sizeof(int),1,ifp);
       swap_bytes(&params.num_bytes);
-      fread(&params.class,sizeof(int),1,ifp);
-      fread(&params.other,sizeof(int),1,ifp);
+      ret = fread(&params.class,sizeof(int),1,ifp);
+      ret = fread(&params.other,sizeof(int),1,ifp);
       /* must check float before int because float is 0x300 and int is 0x100 */
       if ((params.class & FLOAT_MASK) == FLOAT_MASK)  {
-	fread(&f_data,sizeof(float),1,ifp);
+	ret = fread(&f_data,sizeof(float),1,ifp);
 	swap_bytes(&f_data);
-	fread(&dummy,sizeof(int),1,ifp);
+	ret = fread(&dummy,sizeof(int),1,ifp);
 	if (params.num_bytes <= 8)  {
 	  if ((fabs(f_data) < 1.0) && (fabs(f_data) > 0.0))
 	    fprintf(ofp,"##$%s= %.7g\n",params.str,f_data);
@@ -1318,16 +1350,16 @@ FILE *ifp, *ofp;
 	  }
 	}
       else if ((params.class & INTEGER_MASK) == INTEGER_MASK)  {
-	fread(&i_data,sizeof(int),1,ifp);
+	ret = fread(&i_data,sizeof(int),1,ifp);
 	swap_bytes(&i_data);
-	fread(&dummy,sizeof(int),1,ifp);
+	ret = fread(&dummy,sizeof(int),1,ifp);
 	if ((strcmp(params.str,"A000")!=0)&&(strcmp(params.str,"ZZ00")!=0))  {
 	  if (params.num_bytes <= 8)
 	    fprintf(ofp,"##$%s= %d\n",params.str,i_data);
 	  }
 	}
       else if ((params.class & DOUBLE_MASK) == DOUBLE_MASK)  {
-	fread(&d_data,sizeof(double),1,ifp);
+	ret = fread(&d_data,sizeof(double),1,ifp);
 	swap_bytes(&d_data);
 	char_ptr = (char *)&d_data;
 	char_ptr += 4;
@@ -1337,7 +1369,7 @@ FILE *ifp, *ofp;
 	  fprintf(ofp,"##$%s= %.7f\n",params.str,d_data);
 	}
       else if ((params.class & CHAR_MASK) == CHAR_MASK)  {
-	fread(c_data,sizeof(char),8,ifp);
+	ret = fread(c_data,sizeof(char),8,ifp);
 	c_data[8] = '\0';
 	if ((params.num_bytes <= 8) && (strcmp(c_data,"ZZ00") != 0))
 	  fprintf(ofp,"##$%s= %s\n",params.str,c_data);
@@ -1345,20 +1377,20 @@ FILE *ifp, *ofp;
       }
     done = FALSE;
     while (!done)  {
-      fread(params.str,sizeof(char),8,ifp);
+      ret = fread(params.str,sizeof(char),8,ifp);
       params.str[8] = '\0';
       if (strcmp(params.str,"ENDE") == 0)
 	done = TRUE;
-      fread(&params.num_bytes,sizeof(int),1,ifp);
+      ret = fread(&params.num_bytes,sizeof(int),1,ifp);
       swap_bytes(&params.num_bytes);
-      fread(&params.class,sizeof(int),1,ifp);
-      fread(&params.other,sizeof(int),1,ifp);
+      ret = fread(&params.class,sizeof(int),1,ifp);
+      ret = fread(&params.other,sizeof(int),1,ifp);
       /* must check float before int because float is 0x300 and int is 0x100 */
       if ((params.class & FLOAT_MASK) == FLOAT_MASK)  {
 	num_p = params.num_bytes/sizeof(float);
 	fprintf(ofp,"##$%s= (0..%d)\n",params.str,num_p-1);
 	for (i=0;i<num_p;i++)  {
-	  fread(&f_data,sizeof(float),1,ifp);
+	  ret = fread(&f_data,sizeof(float),1,ifp);
 	  swap_bytes(&f_data);
 	  if ((fabs((double)f_data) < 1.0) && (fabs((double)f_data) > 0.0))
 	    fprintf(ofp," %.7g",f_data);
@@ -1374,7 +1406,7 @@ FILE *ifp, *ofp;
 	num_p = params.num_bytes/sizeof(int);
 	fprintf(ofp,"##$%s= (0..%d)\n",params.str,num_p-1);
 	for (i=0;i<num_p;i++)  {
-	  fread(&i_data,sizeof(float),1,ifp);
+	  ret = fread(&i_data,sizeof(float),1,ifp);
 	  swap_bytes(&i_data);
 	  fprintf(ofp," %d",i_data);
 	  if (((i+1) % 8) == 0)
@@ -1387,7 +1419,7 @@ FILE *ifp, *ofp;
 	num_p = params.num_bytes/sizeof(double);
 	fprintf(ofp,"##$%s= (0..%d)\n",params.str,num_p-1);
 	for (i=0;i<num_p;i++)  {
-	  fread(&d_data,sizeof(double),1,ifp);
+	  ret = fread(&d_data,sizeof(double),1,ifp);
 	  swap_bytes(&d_data);
 	  char_ptr = (char *)&d_data;
 	  char_ptr += 4;
@@ -1402,7 +1434,7 @@ FILE *ifp, *ofp;
 	}
       else if ((params.class & CHAR_MASK) == CHAR_MASK)  {
 	num_p = params.num_bytes/sizeof(char);
-	fread(str,sizeof(char),num_p,ifp);
+	ret = fread(str,sizeof(char),num_p,ifp);
 	str[num_p] = '\0';
 	fprintf(ofp,"##$%s= <%s>\n",params.str,str);
 	}
@@ -1415,10 +1447,7 @@ FILE *ifp, *ofp;
 |		read_acqu()		|
 |					|
 +--------------------------------------*/
-read_acqu(fp,data,file_info)
-FILE *fp;
-data_struct *data;
-file_info_struct *file_info;
+void read_acqu(FILE *fp, data_struct *data, file_info_struct *file_info)
 {
 	/* number of transients:	NS */
    data->nt = read_amx_int(fp,"$NS=");
@@ -1429,10 +1458,7 @@ file_info_struct *file_info;
 |		read_acqus()		|
 |					|
 +--------------------------------------*/
-read_acqus(fp,data,file_info)
-FILE *fp;
-data_struct *data;
-file_info_struct *file_info;
+void read_acqus(FILE *fp, data_struct *data, file_info_struct *file_info)
 {
    char *temp_str;
 
@@ -1448,6 +1474,8 @@ file_info_struct *file_info;
 *   simultaneously acquired data			*
 ********************************************************/
    file_info->aqmod = read_amx_int(fp,"$AQ_mod=");
+   if ( read_amx_int(fp,"$DTYPA=") == 2)
+      file_info->word_size = NEO_SIZE;
 
 /**********************************************
 *  Read in basic NMR acquisition parameters.  *
@@ -1506,9 +1534,13 @@ file_info_struct *file_info;
    data->date = read_amx_int(fp,"$DATE=");
    data->rg = read_amx_int(fp,"$RG=");
    temp_str = read_amx_string(fp,"$NUCLEUS=");
-   strcpy(data->tn,temp_str);
+   if ( ! strcmp(temp_str,"") || !strcmp(temp_str,"off") )
+      temp_str = read_amx_string(fp,"$NUC1=");
+   convertNuc(temp_str, data->tn);
    temp_str = read_amx_string(fp,"$DECNUC=");
-   strcpy(data->dn ,temp_str);
+   if ( ! strcmp(temp_str,"") )
+      temp_str = read_amx_string(fp,"$NUC2=");
+   convertNuc(temp_str, data->dn);
    temp_str  = read_amx_string(fp,"$PULPROG=");
    strcpy(data->seqfil,temp_str);
    data->at = data->dw*data->np/1.0e+6;
@@ -1519,10 +1551,7 @@ file_info_struct *file_info;
 |		read_acqu2s()		|
 |					|
 +--------------------------------------*/
-read_acqu2s(fp,data,file_info)
-FILE *fp;
-data_struct *data;
-file_info_struct *file_info;
+void read_acqu2s(FILE *fp, data_struct *data, file_info_struct *file_info)
 {
 	/* number of t1 increments:	NE */
      data->ni = read_amx_int(fp,"$TD=");
@@ -1535,9 +1564,7 @@ file_info_struct *file_info;
 |		read_amx_header()	|
 |					|
 +--------------------------------------*/
-int  read_amx_header(file_info,data)
-file_info_struct *file_info;
-data_struct *data;
+int read_amx_header(file_info_struct *file_info, data_struct *data)
 {
    FILE		*f1,*f2,*f3;
    int		done, lb_count, ch_count, bin_file;
@@ -1707,7 +1734,7 @@ data_struct *data;
 |	convert_all_params()		|
 |					|
 +--------------------------------------*/
-convert_all_params(f1,f2,file_info,data)
+void convert_all_params(f1,f2,file_info,data)
 FILE *f1,*f2;
 file_info_struct *file_info;
 data_struct *data;
@@ -1717,6 +1744,8 @@ data_struct *data;
     char param_name[MAX_PAR_LEN],param_string[MAX_LINE];
     double double_num;
     int is_varian_param(), is_skip_param();
+    int ret __attribute__((unused));
+    char *retch __attribute__((unused));
 
   while (fgets(line,MAX_LINE,f1) != NULL)  {
     ptr = line;
@@ -1742,7 +1771,7 @@ data_struct *data;
           while (*ptr != '>') {
             if (*ptr == '\0')
             {
-               fgets(line,MAX_LINE,f1);
+               retch = fgets(line,MAX_LINE,f1);
                ptr = line;
             }
             if (i < MAX_LINE)
@@ -1759,7 +1788,7 @@ data_struct *data;
 	      }
 	    i++;
 	    }
-	  fprintf(f2,"%s\"18Y\" = %s\n",param_name,param_string);
+	  fprintf(f2,"%.12s\"18Y\" = %s\n",param_name,param_string);
 	  }
         else if (*ptr == '(')  {
 	  if ((strncmp(param_name,"routwd1",7)==0)||
@@ -1774,12 +1803,12 @@ data_struct *data;
 	  while (*ptr == '.')  ptr++;
 	  sscanf(ptr,"%d",&end);
 	  for (i=beg;i<=end;i++)  {
-	    fscanf(f1,"%lf",&double_num);
+	    ret = fscanf(f1,"%lf",&double_num);
 	    sprintf(param_string,"%s%d",param_name,i);
             if (!is_varian_param(param_string,data))
               fprintf(f2,"%s  = %g\n",param_string,double_num);
 	    }
-	  fgets(line,MAX_LINE,f1);
+	  retch = fgets(line,MAX_LINE,f1);
 	  }
         else  {
 	  sscanf(ptr,"%lf",&double_num);
@@ -1795,14 +1824,12 @@ data_struct *data;
 |		write_amx_stext()	|
 |					|
 +--------------------------------------*/
-write_amx_stext(file_info,data)
-file_info_struct *file_info;
-data_struct *data;
+int write_amx_stext(file_info_struct *file_info, data_struct *data)
 {
    char outname[MAXPATHL], filename[MAXPATHL];
    FILE *f1, *f2;
    int i;
-   struct tm *time_struct;
+   struct tm *time_struct = {0};
    char timebuf[MAX_LINE+1], datebuf[MAX_LINE+1], line[MAX_LINE+1];
 
 /*******************************************
@@ -1856,7 +1883,7 @@ data_struct *data;
 /* read any text from "info" file and put it into stext */
    strcpy(filename,file_info->in_file);
    strcat(filename,"/info");
-   if (f1 = fopen(filename,"r"))  {
+   if ( (f1 = fopen(filename,"r")) )  {
      while (fgets(line,MAX_LINE,f1))
        fputs(line,f2);
      fclose(f1);
@@ -1864,9 +1891,10 @@ data_struct *data;
    fprintf(f2, "#PARAMETERS:\n");
    fprintf(f2, "seqfil    = %s\n",data->seqfil);
    fprintf(f2, "pslabel   = %s\n",data->seqfil);
-   time_struct = localtime((long*)&(data->date));
+   time_t val = (time_t) data->date;
+   time_struct = localtime(&(val));
    strftime(datebuf,MAX_LINE,"%m%d%y",time_struct);
-   strftime(timebuf,MAX_LINE,"%R:%S",time_struct);
+   strftime(timebuf,MAX_LINE,"%T",time_struct);
    fprintf(f2, "date      = %s\n",datebuf);
    fprintf(f2, "time\"18Y\" = %s\n",timebuf);
    fprintf(f2, "file      = %s\n", file_info->out_dir);
@@ -1963,15 +1991,12 @@ data_struct *data;
 |		read_am_header()	|
 |					|
 +--------------------------------------*/
-int  read_am_header(file_info,data)
-file_info_struct *file_info;
-data_struct *data;
+int  read_am_header(file_info_struct *file_info, data_struct *data)
 {
    char		dirname[MAXPATHL],
 		buf[(HDR_SIZE+HDR_SHIFT)*X32_SIZE];
    FILE		*f1;
-   int		i, dummy;
-   char		*char_ptr;
+   int		i;
    struct stat	unix_fab; /* unix_fab.st_size is file size */
 
 
@@ -2159,9 +2184,7 @@ data_struct *data;
 |		write_stext()		|
 |					|
 +--------------------------------------*/
-write_stext(file_info,data)
-file_info_struct *file_info;
-data_struct *data;
+int write_stext(file_info_struct *file_info, data_struct *data)
 {
    char outname[MAXPATHL];
    FILE *f2;
@@ -2345,12 +2368,11 @@ data_struct *data;
 |            convertfile()/1            |
 |                                       |
 +--------------------------------------*/
-int  convertfile(file_info, data)
-file_info_struct *file_info;
-data_struct *data;
+int  convertfile(file_info_struct *file_info, data_struct *data)
 {
    char outname[MAXPATHL], data_file[MAXPATHL],
 	*buf;
+   char outnamexy[MAXPATHL];
    int  outbuffer[OUT_BLOCK_SIZE],
         cntr,
         i,
@@ -2359,16 +2381,21 @@ data_struct *data;
         done,
 	totpts,
 	factor;
+   int doDouble;
+   double dbuf;
+   double  doutbuffer[OUT_BLOCK_SIZE];
    FILE *f1,
         *f2;
+   FILE *f3;
+   int ret __attribute__((unused));
  
    strcpy(outname, file_info->out_dir);
-#ifdef VMS
-   strcat(outname, "sdata");
-#else
    strcat(outname, "/sdata");
-#endif
+   strcpy(outnamexy, file_info->out_dir);
+   strcat(outnamexy, "/sdataxy");
+   ret = unlink(outnamexy);
 
+   doDouble = (file_info->word_size == NEO_SIZE);
    strcpy(data_file,file_info->in_file);
    if (file_info->spectrometer == AMX_SPEC)  {
      if (file_info->twod)
@@ -2388,6 +2415,15 @@ data_struct *data;
       printf("Cannot not open %s\n", outname);
       fclose(f1);
       return(ERROR);
+   }
+   if (file_info->ascii_flag)
+   {
+      if ((f3 = fopen(outnamexy, "w")) == 0)
+      {
+         printf("Cannot not open %s\n", outnamexy);
+         fclose(f1);
+         return(ERROR);
+      }
    }
  
  if (file_info->spectrometer == AM_SPEC)  {
@@ -2461,17 +2497,32 @@ data_struct *data;
    factor = 1;
    while ((!done) && (cntr < OUT_BLOCK_SIZE))
    {
-      if (fread(&ibuf,file_info->word_size,1,f1) != 1)
-	done = TRUE;
+      if (doDouble)
+      {
+         if (fread(&dbuf,file_info->word_size,1,f1) != 1)
+         {
+	         done = TRUE;
+         }
+      }
+      else
+      {
+         if (fread(&ibuf,file_info->word_size,1,f1) != 1)
+	         done = TRUE;
+      }
       if (!done)  {
 	if (file_info->spectrometer == AM_SPEC)
 	  ix = convert_int((char *)(&ibuf), 0, file_info );
 	else  {
-	  ix = ibuf;
-	  if (file_info->byte_order == LSB_FIRST)
-	    swap_bytes(&ix);
-	  }
-	outbuffer[cntr] = (factor > 0) ? ix : -ix;
+      if (doDouble)
+         doutbuffer[cntr] = (factor > 0) ? dbuf : -dbuf;
+      else
+      {
+	      ix = ibuf;
+	      if (file_info->byte_order == LSB_FIRST)
+	        swap_bytes(&ix);
+	      outbuffer[cntr] = (factor > 0) ? ix : -ix;
+	   }
+     }
 	cntr++;
 	totpts++;
 	if (((totpts+data->np) % (2*data->np)) == 0)
@@ -2485,25 +2536,73 @@ data_struct *data;
       if ((cntr == OUT_BLOCK_SIZE) || done) {
 	if ((file_info->spectrometer == AM_SPEC)||(file_info->aqmod ==
 			SEQUENTIAL_DATA))
-          for (i = 0; i < cntr; i = i + 4) {
+   {
+       for (i = 0; i < cntr; i = i + 4) {
             putw(outbuffer[i], f2);
             putw(-outbuffer[i + 1], f2);
             putw(-outbuffer[i + 2], f2);
             putw(outbuffer[i + 3], f2);
 	    }
+       if (file_info->ascii_flag)
+          for (i = 0; i < cntr; i = i + 4) {
+            fprintf(f3, "%d ", outbuffer[i]);
+            fprintf(f3, "%d\n", -outbuffer[i + 1]);
+            fprintf(f3, "%d ", -outbuffer[i + 2]);
+            fprintf(f3, "%d\n",outbuffer[i + 3]);
+	       }
+   }
 	else
+      if (doDouble)
+      {
+          for (i = 0; i < cntr; i = i + 4) {
+             int tmp;
+             tmp = doutbuffer[i];
+             fwrite((int *) &tmp, sizeof(int), 1, f2);
+             tmp = -doutbuffer[i+1];
+             fwrite((int *) &tmp, sizeof(int), 1, f2);
+             tmp = doutbuffer[i+2];
+             fwrite((int *) &tmp, sizeof(int), 1, f2);
+             tmp = -doutbuffer[i+3];
+             fwrite((int *) &tmp, sizeof(int), 1, f2);
+          }
+          if (file_info->ascii_flag)
+             for (i = 0; i < cntr; i = i + 4) {
+                float tmp;
+                tmp = doutbuffer[i];
+                fprintf(f3,"%g ", tmp);
+                tmp = -doutbuffer[i+1];
+                fprintf(f3,"%g\n", tmp);
+                tmp = doutbuffer[i+2];
+                fprintf(f3,"%g ", tmp);
+                tmp = -doutbuffer[i+3];
+                fprintf(f3,"%g\n", tmp);
+             }
+	    }
+      else
+      {
           for (i = 0; i < cntr; i = i + 4) {
             putw(outbuffer[i], f2);
             putw(-outbuffer[i + 1], f2);
             putw(outbuffer[i + 2], f2);
             putw(-outbuffer[i + 3], f2);
-	    }
-        cntr = 0;
-        }
-     }
+          if (file_info->ascii_flag)
+             for (i = 0; i < cntr; i = i + 4) {
+               fprintf(f3, "%d ", outbuffer[i]);
+               fprintf(f3, "%d\n", -outbuffer[i + 1]);
+               fprintf(f3, "%d ", outbuffer[i + 2]);
+               fprintf(f3, "%d\n", -outbuffer[i + 3]);
+	          }
+	       }
+      }
+          cntr = 0;
+
+      }
+   }
  
    fclose(f1);
    fclose(f2);
+   if (file_info->ascii_flag)
+      fclose(f3);
  
    return(OK);
 }
