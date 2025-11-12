@@ -2,9 +2,10 @@
 convertbru filename <options>     -  from UNIX shell
 convertbru('filename'<,options>)  -  from Vnmr
 
-	This is a C program for converting 32-bit Bruker AMX FID data and
-	24- and 32-bit Bruker AM FID data into a 32-bit format compatible
-	with Varian's Sread program.  For AMX data the filename given
+	This is a C program for converting 32-bit Bruker AMX FID data,
+	24- and 32-bit Bruker AM FID data, and floating-point Bruker NEO
+   data into a 32-bit format compatible with Varian's Sread program.
+   For AMX and NEO data, the filename given
 	to convertbru should be the name of the directory which contains
 	the acqus, acqu2s, and fid or ser files.  For AM data the filename
 	given to convertbru should be the file containing the AM data.
@@ -12,6 +13,11 @@ convertbru('filename'<,options>)  -  from Vnmr
 	does, the '.bru' extension is stripped before creating the output
 	file.  The output file is called 'filename.cv' and will be written
 	in the current working directory unless the "-c" option is present.
+
+   The sread program can only handle integer data. The NEO floating
+   point data will be converted to integer in the sdata file. A new
+   -a option is added to output an ascii file of the data. This file
+   can be used by makefid to read in the floating point numbers.
 
 	For AMX data and AM data containing the "-1" (parameter) sector,
 	the following options will usually NOT be necessary, but can be
@@ -105,11 +111,17 @@ convertbru('filename'<,options>)  -  from Vnmr
 	found in either the user or system parlib directory, sread
 	will abort with an appropriate error message.
 
+   For NEO data, the three step process would be:
+	     convertbru('filename','-a')
+	     sread('filename.cv', <'parameter template name'>)
+        makefid('filename.cv/sdataxy',0,'float')
+        
+
 	The data can then be processed normally.  The parameters "proc"
 	and "proc1" are set appropriately by sread, so that wft or wft2da
 	will correctly process the data.
 
-	Bruker AM and AMX parameters are converted to Varian parameters as
+	Bruker parameters are converted to Varian parameters as
 	described below.
 
 	AM Parameter Conversion :
@@ -149,7 +161,7 @@ convertbru('filename'<,options>)  -  from Vnmr
 		assumes that data is TPPI in both dimensions).
 
 
-	AMX Parameter Conversion :
+	AMX and NEO Parameter Conversion :
 	   Bruker Parameter	  Varian Parameter
 
 		ns (from acqu)		nt
@@ -174,8 +186,8 @@ convertbru('filename'<,options>)  -  from Vnmr
 		ro			spin
 		date			date
 		date			time
-		nucleus			tn
-		decnuc			dn
+		nucleus (or NUC1)	tn
+		decnuc  (or NUC2) dn
 		pulprog			pslabel
 		pulprog			seqfil
 
