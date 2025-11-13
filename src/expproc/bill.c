@@ -100,6 +100,7 @@ void bill_done(SHR_EXP_INFO  ExpInfo)
     time_t lockSecs = 2; /* default lock timeout */
     char    t_format[] = "%a %b %d %T %Z %Y";
     FILE    *xmlFd;
+    time_t  secs;
 
     if (ExpInfo->Billing.wroteRecord != 0) return;
 
@@ -140,7 +141,8 @@ void bill_done(SHR_EXP_INFO  ExpInfo)
     n=sizeof(tmpStr);
 
 //    strncpy(tmpStr,ctime(&(ExpInfo->Billing.submitTime)),n-1);
-    strftime(tmpStr,n-1, t_format, localtime(&(ExpInfo->Billing.submitTime)));
+    secs = ExpInfo->Billing.submitTime;
+    strftime(tmpStr,n-1, t_format, localtime(&secs));
     tmpPtr = tmpStr;		// remove <lf> from submitTime
     while ( *tmpPtr != '\0' && i<n)
     {  if ( *tmpPtr == '\n')
@@ -151,7 +153,8 @@ void bill_done(SHR_EXP_INFO  ExpInfo)
     fprintf(xmlFd,"       submit=\"%s\"\n",tmpStr);
 
 //    strncpy(tmpStr,ctime(&(ExpInfo->Billing.startTime)),n-1);
-    strftime(tmpStr,n-1, t_format, localtime(&(ExpInfo->Billing.startTime)));
+    secs = ExpInfo->Billing.startTime;
+    strftime(tmpStr,n-1, t_format, localtime(&secs));
     tmpPtr = tmpStr;
     // remove <lf> from startTime
     i=0;
@@ -162,10 +165,11 @@ void bill_done(SHR_EXP_INFO  ExpInfo)
        i++;
     }
     fprintf(xmlFd,"       start=\"%s\"\n",tmpStr);
-    fprintf(xmlFd,"       startsec=\"%ld\"\n",ExpInfo->Billing.startTime);
+    fprintf(xmlFd,"       startsec=\"%d\"\n",ExpInfo->Billing.startTime);
 
 //    strncpy(tmpStr,ctime( &(ExpInfo->Billing.doneTime)),n-1);
-    strftime(tmpStr,n-1, t_format, localtime(&(ExpInfo->Billing.doneTime)));
+    secs = ExpInfo->Billing.doneTime;
+    strftime(tmpStr,n-1, t_format, localtime(&secs));
     tmpPtr = tmpStr;		// remove <lf> from doneTime
     i=0;
     while ( *tmpPtr != '\0' && i<n )
@@ -174,7 +178,7 @@ void bill_done(SHR_EXP_INFO  ExpInfo)
        i++;
     }
     fprintf(xmlFd,"       end=\"%s\"\n",tmpStr);
-    fprintf(xmlFd,"       endsec=\"%ld\"\n",ExpInfo->Billing.doneTime);
+    fprintf(xmlFd,"       endsec=\"%d\"\n",ExpInfo->Billing.doneTime);
 
     // Write optional params
     /* - Open file .../[go_id].loginfo */
