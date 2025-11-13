@@ -122,9 +122,6 @@ typedef struct _expinfo {
         int	InteractiveFlag; /* acode set for acqi */
 	
 
-	long	DateSub;	/* Date & Time Exp. Submitted to run */
-	long	DateStrt;	/* Date & Time Exp. was Started */
-	long	DateFin;	/* Date & Time Exp. was FInished */
 
         int     DspGainBits;    /* DSP gain increase (real-time only) */
 
@@ -136,9 +133,7 @@ typedef struct _expinfo {
         double  DspOslsfrq;     /* DSP Oversampling lsfrq */
         char    DspFiltFile[EXPINFO_STR_SIZE]; /* DSP filter file */
 
-	pid_t	InetPid;	/* Vnmr pid, return address */
 	int	InetPort;	/* Socket Port */
-	long	InetAddr;	/* Inet Address */
 	char	MachineID[EXPINFO_STR_SIZE];	/* Vnmr Host Name*/
 
 	char	InitCodefile[EXPINFO_STR_SIZE];	/* Init stage codes */
@@ -169,9 +164,9 @@ typedef struct _expinfo {
         struct  bill {  /* info used by accounting package */
            int    enabled;      /* write the file or not */
            int    wroteRecord;	/* ensure record is written only once */
-           long   submitTime;
-           long   startTime;    /* sec since UTC Jan 1, 1970, 00:00:00 */
-           long   doneTime;
+           int   submitTime;
+           int   startTime;    /* sec since UTC Jan 1, 1970, 00:00:00 */
+           int   doneTime;
            char   goID[EXPINFO_STR_SIZE];      /* ID string */
            char   Operator[EXPINFO_STR_SIZE];   /* the name of the operator */
            char   account[EXPINFO_STR_SIZE];
