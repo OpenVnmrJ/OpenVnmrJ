@@ -84,7 +84,7 @@ extern ExpInfoEntry ProcExpInfo;
 extern int mapOutExp(ExpInfoEntry *expid);
 extern int deliverMessage( char *interface, char *message );
 extern void bgProcComplt(char *expIdStr, int proctype, int dCode, int pid);
-extern int activeQtoBG(int oldfgbg, long key, int newfgbg, int procpid);
+extern int activeQtoBG(int oldfgbg, int key, int newfgbg, int procpid);
 extern int sendproc2BG(ExpInfoEntry* pProcExpInfo, int proctype, char *cmdstring);
 extern int procQTask();
 extern int parser(char* str);

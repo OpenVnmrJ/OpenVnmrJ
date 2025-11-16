@@ -20,7 +20,6 @@ vnmrHdrList = [ 'locksys.h',
 vwacqPath = os.path.join(cwd, os.pardir, 'vwacq')
 vwacqHdrList = [ 'hostAcqStructs.h' ]
 
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
 ncommHdrList = [ 'chanLib.h',
                  'chanLibP.h',
                  'errLogLib.h',
@@ -37,7 +36,10 @@ ncommHdrList = [ 'chanLib.h',
                  'shrMLib.h',
                  'sockets.h' ]
 
-SConscript(os.path.join(ncommPath, 'SConstruct'))
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
+if not os.path.exists(ncommPath):
+   Execute('cp -r '+os.path.join(cwd,os.pardir,'ncomm') + ' ' + ncommPath+ ';touch '+ncommPath+'/m64')
+   Execute('cd ../ncomm64; scons')
 
 # source files
 expprocPath     = os.path.join(cwd, os.pardir, 'expproc')
@@ -60,9 +62,9 @@ procprocFileList = ['proccmds.c',
                     'procQfuncs.c']
 
 # build environment
-env = Environment(CCFLAGS    = '-O2 -m32 -Wall',
+env = Environment(CCFLAGS    = '-O2 -g -Wall',
                   CPPDEFINES = ['LINUX', 'DEBUG'],
-                  LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib' ,
+                  LINKFLAGS  = '-Wl,-rpath,/vnmr/lib' ,
                   CPPPATH    = [cwd])
 
                                 # ncommPath,
@@ -77,7 +79,7 @@ procprocProg = env.Program(target  = procprocTarget,
                                       expprocFileList],
                            LIBPATH = [cwd,
                                       ncommPath],
-                           LIBS    = ['ncomm'])
+                           LIBS    = ['ncomm64'])
 
 buildMethods.makeSymLinks(env, procprocTarget, cwd, vwacqPath, vwacqHdrList)
 buildMethods.makeSymLinks(env, procprocTarget, cwd, vnmrPath, vnmrHdrList)

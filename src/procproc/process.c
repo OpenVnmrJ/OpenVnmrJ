@@ -704,9 +704,3 @@ void KillProcess(int pid)
 /*    logprint(STDERR,expid,ProcKillMsge,"ID = %d\n",expid); */
     kill(pid,SIGQUIT); /* kill active lower priority process */
 }
-
-int sendasync(long inaddr, int port, int pid, char *msge)
-{
-    /* sendMsg(keyId,PROCPROC,MsgInbuf,MSGQ_NORMAL,WAIT_FOREVER); */
-    return(1);
-}
