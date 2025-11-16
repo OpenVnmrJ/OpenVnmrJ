@@ -47,20 +47,6 @@ SHR_EXP_INFO expInfo = NULL;   /* start address of shared Exp. Info Structure */
 
 static SHR_MEM_ID  ShrExpInfo = NULL;  /* Shared Memory Object */
 
-/* dummy struct for now */
-typedef struct  {
-			long np;
-			long ct;
-			long bs;
-			long elemid;
-			long v1;
-			long v2;
-			long v4;
-			long v5[10];
-		  } lc;
-
-/* char tmp[IBUF_SIZE+1]; */
-
 /**************************************************************
 *
 *  expId -  set expId for following conditional process queueing
@@ -146,7 +132,7 @@ int wExp(char *argstr)
 {
 #ifdef TODO
    char *value;
-   unsigned long  fid,ct;
+   unsigned int  fid,ct;
    value = strtok(NULL," ");
    fid = atol(value);
    value = strtok(NULL," ");
@@ -163,13 +149,13 @@ int wExp(char *argstr)
       {
          if (ActiveExpInfo.ExpInfo->ProcWait > 0)   /* au(wait) or just au */
          {
-            DPRINT3(1,"wExp(wait): Queue Exp Processing on Exp: '%s', FID: %ld, CT: %ld\n",
+            DPRINT3(1,"wExp(wait): Queue Exp Processing on Exp: '%s', FID: %d, CT: %d\n",
 		ActiveExpInfo.ExpId, fid, ct);
             procQadd(WEXP_WAIT, ActiveExpInfo.ExpId, fid, ct);
          }
          else
          {
-            DPRINT3(1,"wExp: Queue Exp Processing on Exp: '%s', FID: %ld, CT: %ld\n",
+            DPRINT3(1,"wExp: Queue Exp Processing on Exp: '%s', FID: %d, CT: %d\n",
 		ActiveExpInfo.ExpId, fid, ct);
             procQadd(WEXP, ActiveExpInfo.ExpId, fid, ct);
          }
@@ -198,7 +184,7 @@ int wNt(char *argstr)
 #ifdef TODO
    char *value;
    int stat;
-   unsigned long  fid,ct;
+   unsigned int  fid,ct;
    value = strtok(NULL," ");
    fid = atol(value);
    value = strtok(NULL," ");
@@ -216,7 +202,7 @@ int wNt(char *argstr)
          stat = procQadd(WFID, ActiveExpInfo.ExpId, fid, ct);
          if (stat != SKIPPED)
          {
-           DPRINT3(1,"wNt: Queue FID Processing on Exp: '%s', FID: %ld, CT: %ld\n",
+           DPRINT3(1,"wNt: Queue FID Processing on Exp: '%s', FID: %d, CT: %d\n",
 		ActiveExpInfo.ExpId, fid, ct);
   	 }
          else
@@ -248,7 +234,7 @@ int wBs(char *argstr)
 #ifdef TODO
    char *value;
    int stat;
-   unsigned long  fid,ct;
+   unsigned int  fid,ct;
    value = strtok(NULL," ");
    fid = atol(value);
    value = strtok(NULL," ");
@@ -266,7 +252,7 @@ int wBs(char *argstr)
          stat = procQadd(WBS, ActiveExpInfo.ExpId, fid, ct);
          if (stat != SKIPPED)
          {
-           DPRINT3(1,"wBs: Queue BlockSize Processing on Exp: '%s', FID: %ld, CT: %ld\n",
+           DPRINT3(1,"wBs: Queue BlockSize Processing on Exp: '%s', FID: %d, CT: %d\n",
 		ActiveExpInfo.ExpId, fid, ct);
   	 }
          else
@@ -296,7 +282,7 @@ int wError(char *argstr)
 {
 #ifdef TODO
    char *value;
-   unsigned long  fid,ct;
+   unsigned int  fid,ct;
    value = strtok(NULL," ");
    fid = atol(value);
    value = strtok(NULL," ");
@@ -311,7 +297,7 @@ int wError(char *argstr)
    {
       if ( ActiveExpInfo.ExpInfo->ProcMask & WHEN_ERR_PROC )
       {
-         DPRINT3(1,"wError: Queue Error Processing on Exp: '%s', FID: %ld, CT: %ld\n",
+         DPRINT3(1,"wError: Queue Error Processing on Exp: '%s', FID: %d, CT: %d\n",
 		ActiveExpInfo.ExpId, fid, ct);
          procQadd(WERR, ActiveExpInfo.ExpId, fid, ct);
       }
@@ -334,7 +320,7 @@ int wError(char *argstr)
 int qError(char *argstr)
 {
    char *value;
-   unsigned long  fid,ct;
+   unsigned int  fid,ct;
    int   dcode, ecode;
    char *expid;
 
@@ -348,7 +334,7 @@ int qError(char *argstr)
    value = strtok(NULL," ");
    ecode = atol(value);
    DPRINT(1,"qError: When Error Processing\n");
-   DPRINT5(1,"Queue Error for Exp: '%s', FID: %ld, CT: %ld Donecode= %d Errorcode= %d\n",
+   DPRINT5(1,"Queue Error for Exp: '%s', FID: %d, CT: %d Donecode= %d Errorcode= %d\n",
 		expid, fid, ct, dcode, ecode);
    procQadd(WERR, expid, fid, ct, dcode, ecode);
 
@@ -361,7 +347,7 @@ int qError(char *argstr)
    }
    else
    {
-      DPRINT5(1,"Queue Error for Exp: '%s', FID: %ld, CT: %ld Donecode= %d Errorcode= %d\n",
+      DPRINT5(1,"Queue Error for Exp: '%s', FID: %d, CT: %d Donecode= %d Errorcode= %d\n",
 		expid, fid, ct, dcode, ecode);
       procQadd(WERR, expid, fid, ct, dcode, ecode);
    }
