@@ -13,7 +13,8 @@
 #endif
 #include <pthread.h>
 
-#define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
+// #define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
+  
 #include "errLogLib.h"
 #ifndef RTI_NDDS_4x
 #include "Data_UploadCustom3x.h"
@@ -22,6 +23,8 @@
 #endif  /* RTI_NDDS_4x */
 /* #include "ndds/ndds_cpp.h" */
 #include "flowCntrlObj.h"
+
+extern int send2DDR(NDDS_ID pPub, int cmd, int arg1, int arg2, int arg3);
 
 /*
 modification history
@@ -36,29 +39,9 @@ DESCRIPTION
 
 */
 
-#ifdef XXXXX
-#define MAX_SUBSCRIPTIONS 64
-
-typedef struct _flow_ {
-        int     maxXferLimit; /* maximum transfer limit */
-        int     HighH2OMark; /* at this count send msg to publisher to continue */
-        unsigned long AtIncreNum;
-        int     numPubs;
-        int     matchNum;
-        NDDS_ID  pubs[MAX_SUBSCRIPTIONS];
-        int     idIndex[MAX_SUBSCRIPTIONS];  /*  active Id indexs for this run */
-        int     incrementVals[MAX_SUBSCRIPTIONS];
-        int     numPubsAtHiH2oMark;
-        int     timesReplySent;
-        RTINtpTime _timeStarted;
-        RTINtpTime _timeDuration;
-        pthread_mutex_t     mutex;          /* Mutex for protection of variable data */
-} FlowContrlObj;
-#endif
-
 FlowContrlObj *flowCntrlCreate()
 {
-  int status;
+  int status __attribute__((unused));
   FlowContrlObj *pFlowCntrl;
 
   pFlowCntrl = (FlowContrlObj *) malloc(sizeof(FlowContrlObj)); /* create structure */
@@ -93,7 +76,7 @@ void initFlowCntrl(FlowContrlObj *pFlowCntrl, int Id, char *cntlrId, NDDS_ID Pub
 {
     /* Id will range 1-n, thus subtract one for 0-n */
     Id--;
-    DPRINT5(+2,"initFlowCntrl: Id: %d, Idstr: '%s', Pub: 0x%lx, max & hih2o: %d, %d\n",Id,cntlrId,PubId,maxLimit,xferHiH2OLimit);
+//    DPRINT5(+2,"initFlowCntrl: Id: %d, Idstr: '%s', Pub: 0x%lx, max & hih2o: %d, %d\n",Id,cntlrId,PubId,maxLimit,xferHiH2OLimit);
     pFlowCntrl->cntlrId[Id] = cntlrId;
     pFlowCntrl->idIndex[pFlowCntrl->numPubs] = Id;
     pFlowCntrl->pubs[pFlowCntrl->numPubs] = PubId;
@@ -106,7 +89,8 @@ void initFlowCntrl(FlowContrlObj *pFlowCntrl, int Id, char *cntlrId, NDDS_ID Pub
 
 void publishIncremFlowMsg(FlowContrlObj *pFlowCntrl)
 {
-    int i,status;
+    int i;
+    int status __attribute__((unused));
     for (i = 0; i < pFlowCntrl->numPubs; i++ )
     {
        status = send2DDR(pFlowCntrl->pubs[i], C_RECVPROC_CONTINUE_UPLINK, i, pFlowCntrl->AtIncreNum, 0);
@@ -123,9 +107,6 @@ void publishIncremFlowMsg(FlowContrlObj *pFlowCntrl)
  */
 void IncrementTransferLoc(FlowContrlObj *pFlow, int Id)
 {
-   RTINtpTime endTime;
-   RTINtpTime duration;
-
     /* Id will range 1-n, thus subtract one for 0-n */
     Id--;
 
@@ -160,7 +141,7 @@ int  AllAtIncrementMark(FlowContrlObj *pFlow, int Id)
     /* Id will range 1-n, thus subtract one for 0-n */
     Id--;
 
-   DPRINT5(+2,"'%s': TAS; Increment: %lu, High H2O Mark: %d, # At Mark: %d, matchNum: %d\n",pFlow->cntlrId[Id],
+   DPRINT5(+2,"'%s': TAS; Increment: %u, High H2O Mark: %d, # At Mark: %d, matchNum: %d\n",pFlow->cntlrId[Id],
                  (pFlow->AtIncreNum + pFlow->HighH2OMark), pFlow->HighH2OMark, pFlow->numPubsAtHiH2oMark, pFlow->matchNum);
 
    /* have all the publishers reach the high water mark */

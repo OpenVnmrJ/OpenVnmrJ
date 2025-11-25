@@ -74,7 +74,7 @@ typedef struct _rcvrDesc_ {
     RINGBLK_ID     pOutputQ;	    /* Work Output Q for the thread handling this DDR's data */
     WORKQ_ID       pWorkQObj;	    /* pointer to work Object */
     WORKQ_ENTRY_ID activeWrkQEntry; /* A work Q entry used only be the NDDS callback, work q entries are then passed along */
-    unsigned long  prevElemId;      /* used to checking lost issues */
+    unsigned int  prevElemId;      /* used to checking lost issues */
     void           *pParam;         /* shared experiment info structure */
     void           *pFidBlockHeader;/* point to aunqiue fid block head for this DDR */
     PFIV           pCallbackFunc;   /* routine that thread calls to do actually work of this stage */

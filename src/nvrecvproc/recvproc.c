@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 #ifndef LINUX
 #include <thread.h>
@@ -42,6 +43,16 @@
 
 #include "flowCntrlObj.h"
 
+extern int parser(char* str);
+extern void  excepthandler(int signo);
+extern int recvFidsCmplt(void);
+extern void cntlrDataUploadPatternSub();
+extern int initCmdParser();
+extern int initActiveExpQ(int clean);
+extern void initiateNDDS(int debuglevel);
+extern void buildProcPipeStage(void *pParam);
+extern int barrierInit(barrier_t *barrier, int count);
+
 MSG_Q_ID pRecvMsgQ;
 
 char ProcName[256];
@@ -60,14 +71,9 @@ FlowContrlObj *pTheFlowObj;
 long long systemFreeRAM;
 long long systemTotalRAM;
 
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
-   int rtn,stat,signo;
-   char MsgInbuf[RECV_MSG_SIZE];
-   sigset_t   blockmask,newmask,oldmask,zeromask;
-   MSG_Q_ID msgId;
+   sigset_t   blockmask;
    void processMsge(void*);
    void asyncMainLoop(sigset_t sigMask);
    long long getFreeSystemRamSize();
@@ -95,12 +101,16 @@ char *argv[];
    pthread_sigmask(SIG_BLOCK,&blockmask,NULL);
 
    DebugLevel = -3;
+   if ( ! access("/vnmr/acqbin/Recvlog",F_OK) )
+   {
+      DebugLevel = 1;
+   }
 
    umask(000); /* clear file creation mode mask,so that open has control */
 
 #ifdef THREADED
   /* for threads */
-   /* initCrew(&TheRecvCrew);  /* initialize the pthread crew structures */
+   // initCrew(&TheRecvCrew);  /* initialize the pthread crew structures */
    barrierInit(&TheBarrier, 2);  /* count will be reset as controllers subscribe */
    memset((char*) &TheSharedData,0,sizeof(SHARED_DATA));
    initMemBarrier(&TheMemBarrier, (void *) &TheSharedData);
@@ -235,7 +245,7 @@ char *argv[];
 void asyncMainLoop(sigset_t sigMask)
 {
       sigset_t		oldMask;
-      int stat;
+      int stat __attribute__((unused));
       int signo;
       void processMsge(void*);
 
@@ -265,7 +275,7 @@ void asyncMainLoop(sigset_t sigMask)
 	       case SIGCHLD: /* Child Died Signal */
                     DPRINT(+1,"Recvproc: Received SIGCHLD\n");
                     DPRINT(+1,"Recvproc: Should Never Happen!!\n");
-                    /* TheGrimReaper(NULL);  /* Obtain childs status */
+                    // TheGrimReaper(NULL);  /* Obtain childs status */
 		    break;
 
 	       case SIGALRM: /* Alarm */
@@ -321,8 +331,8 @@ void processMsge(void *notin)
        /* if we got a message then go ahead and parse it */
        if (rtn > 0)
        {
-         DPRINT3(1,"received %d bytes, MsgInbuf len %d bytes, Msge: '%s'\n",rtn,strlen(MsgInbuf),
-		((strlen(MsgInbuf) > 2) ? MsgInbuf : ""));
+//         DPRINT3(1,"received %d bytes, MsgInbuf len %d bytes, Msge: '%s'\n",rtn,strlen(MsgInbuf),
+//		((strlen(MsgInbuf) > 2) ? MsgInbuf : ""));
          parser(MsgInbuf);
          MsgInbuf[0] = '\0';
        }
@@ -334,8 +344,8 @@ void processMsge(void *notin)
 
 long long getSystemRamSize()
 {
-    long numAvailablePages, numPages, pageSize;
-    long long totalRAM, FreeRAM, UsedRAM;
+    long numPages, pageSize;
+    long long totalRAM;
     /* Note: Multiplying sysconf(_SC_PHYS_PAGES)  or
      * sysconf(_SC_AVPHYS_PAGES) by sysconf(_SC_PAGESIZE) to deter-
      * mine memory amount in bytes can exceed  the  maximum  values
@@ -349,19 +359,19 @@ long long getSystemRamSize()
 
 long long getFreeSystemRamSize()
 {
-    long numAvailablePages, numPages, pageSize;
-    long long totalRAM, FreeRAM, UsedRAM;
+    long numAvailablePages, pageSize;
+    long long FreeRAM;
     /* Note: Multiplying sysconf(_SC_PHYS_PAGES)  or
      * sysconf(_SC_AVPHYS_PAGES) by sysconf(_SC_PAGESIZE) to deter-
      * mine memory amount in bytes can exceed  the  maximum  values
      * representable in a long or unsigned long.
      */
      numAvailablePages = sysconf(_SC_AVPHYS_PAGES);
-     numPages = sysconf(_SC_PHYS_PAGES);
+     // numPages = sysconf(_SC_PHYS_PAGES);
      pageSize = sysconf(_SC_PAGESIZE);
-     totalRAM = (long long) numPages * (long long) pageSize;
+     // totalRAM = (long long) numPages * (long long) pageSize;
      FreeRAM = (long long) numAvailablePages * (long long) pageSize;
-     UsedRAM = totalRAM - FreeRAM;
+     // UsedRAM = totalRAM - FreeRAM;
      /* printf(" numPages: %ld, available Pages: %ld, Used Pages: %ld, pageSize: %d\n", 
 	numPages,numAvailablePages, numPages-numAvailablePages,pageSize); */
      /* printf("totalRAM: %llu, Free: %llu, Used: %llu\n",totalRAM,FreeRAM,UsedRAM); */

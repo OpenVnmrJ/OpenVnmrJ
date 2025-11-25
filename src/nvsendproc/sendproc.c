@@ -12,9 +12,9 @@
 #define _POSIX_PTHREAD_SEMANTICS
 
 #include <stdio.h>
-/*
-#include <string.h>
-#include <sys/types.h> */
+// #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 #ifndef LINUX
 #include <thread.h>
@@ -37,6 +37,13 @@
 #include "threadfuncs.h"
 */
 
+extern void  excepthandler(int signo);
+extern int parser(char* str);
+extern void initCodeDownldSub();
+extern int initCmdParser();
+extern int barrierInit(barrier_t *barrier, int count);
+extern void initiateNDDS(int debugLevel);
+
 MSG_Q_ID pRecvMsgQ;
 
 char ProcName[256];
@@ -44,13 +51,9 @@ char ProcName[256];
 cntlr_crew_t TheSendCrew;
 barrier_t TheBarrier;
 
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
-   int rtn,stat,signo;
-   char MsgInbuf[SEND_MSG_SIZE];
-   sigset_t   blockmask,zeromask,newmask,oldmask;
+   sigset_t   blockmask;
    void processMsge(void*);
    void asyncMainLoop(sigset_t sigMask);
 
@@ -77,6 +80,10 @@ char *argv[];
    /* sigaddset( &blockmask, SIGUSR2 );  ABort signal should not be masked */
 
    DebugLevel = -3;
+   if ( ! access("/vnmr/acqbin/Sendlog",F_OK) )
+   {
+      DebugLevel = 1;
+   }
 
    umask(000); /* clear file creation mode mask,so that open has control */
 
@@ -201,7 +208,7 @@ char *argv[];
 void asyncMainLoop(sigset_t sigMask)
 {
 	sigset_t		oldMask;
-        int stat;
+        int stat __attribute__((unused));
         int signo;
    void TheGrimReaper(void*);
    void processMsge(void*);
@@ -228,7 +235,7 @@ void asyncMainLoop(sigset_t sigMask)
 	       case SIGCHLD: /* Child Died Signal */
                     DPRINT(+1,"Sendproc: Received SIGCHLD\n");
                     DPRINT(+1,"Sendproc: SHould Never Happen!!\n");
-                    /* TheGrimReaper(NULL);  /* Obtain childs status */
+                    // TheGrimReaper(NULL);  /* Obtain childs status */
 		    break;
 
 	       case SIGALRM: /* Alarm */
@@ -283,7 +290,7 @@ void processMsge(void *notin)
        /* if we got a message then go ahead and parse it */
        if (rtn > 0)
        {
-         DPRINT3(1,"processMsge(): received %d bytes, MsgInbuf len %d bytes, Msge: '%s'\n",rtn,strlen(MsgInbuf),
+         DPRINT3(1,"processMsge(): received %d bytes, MsgInbuf len %zd bytes, Msge: '%s'\n",rtn,strlen(MsgInbuf),
 			((strlen(MsgInbuf) > 2) ? MsgInbuf : ""));
          parser(MsgInbuf);
          MsgInbuf[0] = '\0';

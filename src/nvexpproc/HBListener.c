@@ -33,7 +33,7 @@
 #ifdef RTI_NDDS_4x
 /* HB are not used any more even for 3X so for 4X except for this function everything is ifdef'd out */
 /* are nodes HB being recieved, Note if HB are not subscribe too then return true */
-areNodesActive()
+int areNodesActive()
 {
      return ( 1 );
 }
@@ -284,7 +284,7 @@ NDDS_ID createAppHB_BESubscription(char *subName, void *callbackRoutine, void *c
     pSubObj->MulticastSubIP[0] = 0;   /* use UNICAST */
 #endif
 
-    /* pSubObj->MulticastSubIP[0] = 0;   /* use UNICAST */
+    // pSubObj->MulticastSubIP[0] = 0;   /* use UNICAST */
     pSubObj->BE_UpdateMinDeltaMillisec = 1000;   /* max rate once a second */
     pSubObj->BE_DeadlineMillisec = 6000; /* no HB in 6 sec then it's gone.. */
     createBESubscription(pSubObj);

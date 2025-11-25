@@ -35,6 +35,9 @@ For additional description see rngLib.
 
 */
 
+int 	rngLNElem (RINGL_ID ringId);
+int 	rngLFreeElem (RINGL_ID ringId);
+
 /**************************************************************
 *
 *  rngLCreate - Creates an empty ring buffer 
@@ -54,7 +57,6 @@ RINGL_ID rngLCreate(int nelem,char* idstr)
 /* int nelem;  size in elements of ring buffer */
 {
   RINGL_ID pLRng;
-  char tmpstr[80];
 
   pLRng = (RINGL_ID) malloc(sizeof(RING_LONG));  /* create structure */
   if (pLRng == NULL) 
@@ -92,7 +94,7 @@ RINGL_ID rngLCreate(int nelem,char* idstr)
 *
 *		Author Greg Brissey 5/26/94
 */
-void rngLDelete(register RINGL_ID rngd)
+void rngLDelete(RINGL_ID rngd)
 /* RINGL_ID rngd;  long ring buffer to delete */
 {
   free(rngd->rBuf);
@@ -113,10 +115,9 @@ void rngLDelete(register RINGL_ID rngd)
 *
 *	Author Greg Brissey 5/26/94
 */
-void rngLFlush(register RINGL_ID rngd)
+void rngLFlush(RINGL_ID rngd)
 /* RINGL_ID rngd; Long ring buffer to initialize */
 {
-  int npend,pAry[4];
   rngd->pToBuf = rngd->pFromBuf = 0;
 }
 
@@ -134,15 +135,14 @@ void rngLFlush(register RINGL_ID rngd)
 *
 *	Author Greg Brissey 5/26/94
 */
-int rngLPut(register RINGL_ID rngd,register long* buffer,register int size)
+int rngLPut(RINGL_ID rngd,long* buffer,int size)
 /* RINGL_ID rngd;	long ring buffer to put data into */
 /* long*      buffer;   buffer to get data from */
 /* int	      size;     number of elements to put */
 {
-   register int fromP;
+   int fromP;
    int nelem;
-   int npend,pAry[4];
-   register int result,i;
+   int i;
 
    nelem = 0;
    for (i = 0; i < size; i++)
@@ -168,13 +168,12 @@ int rngLPut(register RINGL_ID rngd,register long* buffer,register int size)
 *
 *	Author Greg Brissey 5/26/94
 */
-int rngLGet(register RINGL_ID rngd,long* buffer,int size)
+int rngLGet(RINGL_ID rngd,long* buffer,int size)
 /* RINGL_ID rngd;	long ring buffer to get data from */
 /* char*      buffer;   point to buffer to receive data */
 /* int	      size;     number of elements to get */
 {
-   register int fromP;
-   int nelem;
+   int fromP;
    int i,items;
 
    /* items = RNG_LONG_GET(rngd, buffer,fromP); */
@@ -199,20 +198,19 @@ int rngLGet(register RINGL_ID rngd,long* buffer,int size)
 *
 *	Author Greg Brissey 8/9/93
 */
-void rngLShow(register RINGL_ID rngd,int level)
+void rngLShow(RINGL_ID rngd,int level)
 /* RINGL_ID rngd;	long ring buffer to get data from */
 /* int	      level;    level of information display */
 {
     int used,nfree,total;
-    int npend,pAry[4];
     int i;
 
    used = rngLNElem (rngd);
    nfree = rngLFreeElem (rngd);
    total = used + nfree;
 
-   printf("Blk Ring BufferID:  0x%lx\n",rngd);
-   printf("Buffer Addr: 0x%lx, Size: %d (0x%x)\n",rngd->rBuf, rngd->bufSize,rngd->bufSize);
+   printf("Blk Ring BufferID:  %p\n",rngd);
+   printf("Buffer Addr: %p, Size: %d (0x%x)\n",rngd->rBuf, rngd->bufSize,rngd->bufSize);
    printf("Entries  Used: %d, Free: %d, Total: %d\n", used, nfree, total);
 
    printf("Buffer Put Index: %d (0x%x), Get Index: %d (0x%x)\n",
@@ -242,7 +240,7 @@ void rngLShow(register RINGL_ID rngd,int level)
 }
 
 
-void rngLShwResrc(register RINGL_ID rngd, int indent )
+void rngLShwResrc(RINGL_ID rngd, int indent )
 {
    int i;
    char spaces[40];
@@ -251,7 +249,7 @@ void rngLShwResrc(register RINGL_ID rngd, int indent )
    spaces[i]='\0';
 
    /* printf("\n%sBlk Ring BufferID: '%s', 0x%lx\n",spaces,rngd->pRngIdStr,rngd); */
-   printf("\n%sBlk Ring BufferID: 0x%lx\n",spaces,rngd);
+   printf("\n%sBlk Ring BufferID: %p\n",spaces,rngd);
 }
 
 /**************************************************************
@@ -268,9 +266,9 @@ void rngLShwResrc(register RINGL_ID rngd, int indent )
 *
 *	Author Greg Brissey 5/26/94
 */
-int 	rngLFreeElem (register RINGL_ID ringId)
+int 	rngLFreeElem (RINGL_ID ringId)
 {
-   register int result;
+   int result;
 
    return( ( (result = ((ringId->pFromBuf - ringId->pToBuf) - 1)) < 0) ? 
 	   result + ringId->bufSize : result );
@@ -289,9 +287,9 @@ int 	rngLFreeElem (register RINGL_ID ringId)
 *
 *	Author Greg Brissey 5/26/94
 */
-int 	rngLNElem (register RINGL_ID ringId)
+int 	rngLNElem (RINGL_ID ringId)
 {
-   register int result;
+   int result;
 
    return( ( (result = (ringId->pToBuf - ringId->pFromBuf)) < 0) ? 
 	   result + ringId->bufSize : result );
@@ -309,7 +307,7 @@ int 	rngLNElem (register RINGL_ID ringId)
 *
 *	Author Greg Brissey 5/26/94
 */
-int 	rngLIsEmpty (register RINGL_ID ringId)
+int 	rngLIsEmpty (RINGL_ID ringId)
 {
     return ( (ringId->pToBuf == ringId->pFromBuf) ? 1 : 0 );
 }
@@ -328,7 +326,7 @@ int 	rngLIsEmpty (register RINGL_ID ringId)
 */
 int 	rngLIsFull (RINGL_ID ringId)
 {
-    register int result;
+    int result;
 
     if ( (result = ((ringId->pToBuf - ringId->pFromBuf) + 1)) == 0)
     {

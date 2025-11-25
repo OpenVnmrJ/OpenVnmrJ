@@ -40,6 +40,8 @@
 extern int createDataUploadPub(cntlr_t *pCntlrThr,char *pubName);
 extern int createDataUploadSub(cntlr_t *pCntlrThr,char *subName);
 extern int createAppHB_BESub(cntlr_t *pCntlrThr,char *subName);
+extern int rngBlkGet(RINGBLK_ID rngd,long* buffer,int size);
+extern int rngBlkPut(RINGBLK_ID rngd,long* buffer,int size);
 void pThreadBlockAllSigs(void);
 
 extern barrier_t TheBarrier;
@@ -57,10 +59,10 @@ cntlr_status_t CntlrStatus;
 
 #define CREW_SIZE 1
 
-#define MAX_IPv4_UDP_SIZE_BYTES 65535   /* IPv4 UDP max Packet size */
+// #define MAX_IPv4_UDP_SIZE_BYTES 65535   /* IPv4 UDP max Packet size */
  
 #ifndef RTI_NDDS_4x
-/* extern char databuf[MAX_IPv4_UDP_SIZE_BYTES]; 8/
+/* extern char databuf[MAX_IPv4_UDP_SIZE_BYTES]; */
 
 /*
      Reliable Publication Status call back routine.
@@ -134,7 +136,7 @@ int findCntlr( char *cntlrName)
  */
 void buildProcPipeStage(void *pParam)
 {
-     int index,status;
+     int status;
      RCVR_DESC_ID pRcvrDesc;
      void *worker_routine (void *arg);
      int  processFid(void *);
@@ -142,7 +144,6 @@ void buildProcPipeStage(void *pParam)
      pRcvrDesc = &ProcessThread;
      memset(pRcvrDesc,0,sizeof(RCVR_DESC));
      strncpy(pRcvrDesc->cntlrId,"ProcessStage",32);
-     /* pRcvrDesc->pInputQ = rngBlkCreate(QUEUE_LENGTH,"ProcInputQ", 1); /* me->pPipeStages[1]->pOutputQ; */
      pRcvrDesc->pInputQ = rngBlkCreate(1024,"ProcInputQ", 1); /* me->pPipeStages[1]->pOutputQ; */
      pRcvrDesc->pOutputQ = NULL;
      pRcvrDesc->pParam = pParam;
@@ -165,7 +166,7 @@ void buildProcPipeStage(void *pParam)
  */
 int addCntrlThread(RCVR_DESC_ID pRcvrDesc, char *cntlrName)
 {
-   int index,status;
+   int status;
    void *worker_routine (void *arg);
    int  recvFid(void *);
 
@@ -189,7 +190,7 @@ int addCntrlThread(RCVR_DESC_ID pRcvrDesc, char *cntlrName)
 /*
  *   initialize the thread status mutex,conditaion variable, etc.
  */
-initCntlrStatus()
+int initCntlrStatus()
 {
    int status,i;
    cntlr_status_t *pCntlrStatus;
@@ -220,7 +221,7 @@ initCntlrStatus()
 /*
  *  reset predicates of conditional variable
  */
-resetCntlrStatus()
+int resetCntlrStatus()
 {
    int status;
    cntlr_status_t *pCntlrStatus;
@@ -241,7 +242,7 @@ resetCntlrStatus()
 /*
  * As each thread recvFid() start to work it increments the number threads active  
  */
-incrActiveCntlrStatus(char *cntlrId)
+int incrActiveCntlrStatus(char *cntlrId)
 {
     int status;
    cntlr_status_t *pCntlrStatus;
@@ -263,7 +264,7 @@ incrActiveCntlrStatus(char *cntlrId)
 /*
  * As each thread recvFid() finishs it's work it decrements the number threads active  
  */
-decActiveCntlrStatus(char *cntlrId)
+int decActiveCntlrStatus(char *cntlrId)
 {
     int status;
    cntlr_status_t *pCntlrStatus;
@@ -282,7 +283,7 @@ decActiveCntlrStatus(char *cntlrId)
        DPRINT1(+2,"decActiveCntlrStatus: wait4done: %d\n",pCntlrStatus->waiting4Done);
        /* the usage of waiting4Done never worked properly occassional ending up never
         * broadcasting the conditiona variable */
-       /* if ( pCntlrStatus->waiting4Done == 1)		/* thread waiting for done */
+       // if ( pCntlrStatus->waiting4Done == 1)		/* thread waiting for done */
        /* {  */
          DPRINT(+2,"decActiveCntlrStatus: count Zero, and someone waiting broadcast to show all done\n");
          pCntlrStatus->wrkdone = 1;
@@ -304,7 +305,7 @@ decActiveCntlrStatus(char *cntlrId)
  *  timeout.tv_nsec =  (tp.tv_usec * 1000) + 500000000;   .50 sec
  * But this never worked.
  */
-wait4DoneCntlrStatus()
+int wait4DoneCntlrStatus()
 {
     int status, cancel, temp;
     cntlr_status_t *pCntlrStatus;
@@ -374,7 +375,6 @@ void *worker_routine (void *arg)
    int status;
    WORKQ_ENTRY_ID  pWrkQentry;
    RCVR_DESC_ID pRcvrDesc;
-   WORKQINVARIENT_ID pWrkqInvar;
    int inQueue;
    int processThreadFlag;
    char *CntlrId;
@@ -386,8 +386,8 @@ void *worker_routine (void *arg)
       processThreadFlag = 0;
 
    CntlrId = pAccessWrkDesc->cntlrId;
-   DPRINT3(+2,"'%s':  threadId: 0x%lx, RCVR_DESC_ID: 0x%lx,  starting\n", 
-         CntlrId,pAccessWrkDesc->threadID,pAccessWrkDesc);
+//   DPRINT3(+2,"'%s':  threadId: 0x%lx, RCVR_DESC_ID: 0x%lx,  starting\n", 
+//         CntlrId,pAccessWrkDesc->threadID,pAccessWrkDesc);
 
     pThreadBlockAllSigs();   /* block most signals here */
 
@@ -396,7 +396,7 @@ void *worker_routine (void *arg)
     while (1) {
 
 	/* obtain work from the pipe line Q, if non the thread blocks */
-        rngBlkGet(pAccessWrkDesc->pInputQ, &pWrkQentry,1);
+        rngBlkGet(pAccessWrkDesc->pInputQ, (long *) &pWrkQentry,1);
 
         if (!processThreadFlag)
            incrActiveCntlrStatus(CntlrId);
@@ -404,7 +404,7 @@ void *worker_routine (void *arg)
         pRcvrDesc = (RCVR_DESC_ID) pWrkQentry->pInvar->pRcvrDesc;
 
 
-        DPRINT2(+2,"'%s': Got workQ: 0x%lx\n", pRcvrDesc->cntlrId, pWrkQentry);
+        DPRINT2(+2,"'%s': Got workQ: %p\n", pRcvrDesc->cntlrId, pWrkQentry);
         inQueue = rngBlkNElem(pRcvrDesc->pInputQ);
         DPRINT2(+2,"'%s': work still in Q: %d\n", pRcvrDesc->cntlrId, inQueue);
 
@@ -414,7 +414,7 @@ void *worker_routine (void *arg)
              pRcvrDesc->p4Diagnostics->pipeHighWaterMark = inQueue;
 #endif
 
-        DPRINT2(+2,"'%s': Got workQ: 0x%lx\n", pAccessWrkDesc->cntlrId, pAccessWrkDesc);
+        DPRINT2(+2,"'%s': Got workQ: %p\n", pAccessWrkDesc->cntlrId, pAccessWrkDesc);
         DPRINT2(+2,"'%s': work still in Q: %d\n", pAccessWrkDesc->cntlrId, rngBlkNElem(pAccessWrkDesc->pInputQ));
 
         status = (pAccessWrkDesc->pCallbackFunc)(pWrkQentry);
@@ -426,9 +426,9 @@ void *worker_routine (void *arg)
         DPRINT2(+2,"'%s': CallBack Returned: %d\n", pRcvrDesc->cntlrId, status);
         if (status  >= 0)
         {
-           DPRINT2(+2,"'%s': Done,  Send WorkQ onto Processing Thread: 0x%lx\n", 
+           DPRINT2(+2,"'%s': Done,  Send WorkQ onto Processing Thread: %p\n", 
 		pRcvrDesc->cntlrId, pRcvrDesc);
-           rngBlkPut(pAccessWrkDesc->pOutputQ, &pWrkQentry,1);
+           rngBlkPut(pAccessWrkDesc->pOutputQ, (long *) &pWrkQentry,1);
         }
         if (!processThreadFlag)
            decActiveCntlrStatus(CntlrId);

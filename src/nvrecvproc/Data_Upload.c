@@ -59,8 +59,8 @@ extern DDS_ReturnCode_t Data_UploadTypeSupport_create_data_ex(DDS_Boolean);
 void getData_UploadInfo(NDDS_OBJ *myStruct)
 {
     strcpy(myStruct->dataTypeName, Data_UploadTYPENAME);
-    myStruct->TypeRegisterFunc = Data_UploadTypeSupport_register_type;
-    myStruct->TypeAllocFunc = Data_UploadTypeSupport_create_data_ex;
+    myStruct->TypeRegisterFunc = (DataTypeRegister) Data_UploadTypeSupport_register_type;
+    myStruct->TypeAllocFunc = (DataTypeAllocate) Data_UploadTypeSupport_create_data_ex;
 }
 /* --- End Special Varian Inc Added Template Function  ----- */
 
@@ -76,10 +76,6 @@ RTIBool Data_Upload_initialize(
 RTIBool Data_Upload_initialize_ex(
     Data_Upload* sample,RTIBool allocatePointers)
 {
-
-    void* buffer;                
-    buffer = NULL;        
-
     if (!RTICdrType_initLong(&sample->key)) {
         return RTI_FALSE;
     }                

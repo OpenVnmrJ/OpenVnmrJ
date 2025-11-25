@@ -62,7 +62,7 @@ typedef struct pipe_stage {
     struct cntlr_thread    *pThisCrew;	/* reference back to crew, for unforseen needs */
     void                   *pParam;
     void                   *pFidBlockHeader;
-    unsigned long           prevElemId;   /* used to checking lost issues */
+    unsigned int           prevElemId;   /* used to checking lost issues */
  }  PIPE_STAGE_OBJECT, *PIPE_STAGE_ID;
 
 /*
@@ -91,7 +91,6 @@ typedef struct cntlr_thread {
 } cntlr_t, *pCntlr_t;
 
 /* notes:
-/*
  * The external "handle" for a work crew. Contains the
  * crew synchronization state and staging area.
  */
@@ -99,7 +98,7 @@ typedef struct cntlr_crew {
     NDDS_ID		domainID;
     int                 crew_size;      /* Size of array */
     cntlr_t             crew[MAX_CREW_SIZE];/* Crew members */
-    long                work_count;     /* Count of work items */
+    int                work_count;     /* Count of work items */
     int			cmd[MAX_CREW_SIZE];	/* cmd to each thread threads */
     pthread_mutex_t     mutex;          /* Mutex for crew data */
     pthread_cond_t      done;           /* Wait for crew done */

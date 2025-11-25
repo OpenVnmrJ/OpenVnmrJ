@@ -21,7 +21,7 @@ typedef struct barrier_tag {
    int    threshold;        /* number thread require to continue */
    int     counter;         /* current number of threads waiting */
    int    resetThreshold;
-   unsigned long cycle;            /* cycle count */
+   unsigned int cycle;            /* cycle count */
    int    forcedRelease;    /* abnormal release from barrier, i.e. abort condition */
  } barrier_t;
 

@@ -23,7 +23,7 @@
 #include "expDoneCodes.h"
 #include "errorcodes.h"
 #include "acqerrmsges.h"
-#include "config.h"
+// #include "config.h"
 #include "prochandler.h"
 #include "shrstatinfo.h"
 #include "acqcmds.h"
@@ -57,15 +57,15 @@ extern int startATask(int task);
 extern int chkExpQ(char *argstr);
 extern int isExpActive(void);
 extern int parser(char* str);
-extern int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, long len);
+extern int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, size_t len);
 
 
 
 char *getAcqErrMsge( int wcode );
 void roboCmd(char *cmd);
 void sendProcMsg(int elem, int ctval, int donecode, int errorcode);
-void acqHandler( int donecode, int errorcode, int arg3,
-                 char *msgstr, unsigned long msglen );
+static void acqHandler( int donecode, int errorcode, int arg3,
+                 char *msgstr);
 
 int locateConfFile( char *confFile )
 {
@@ -101,7 +101,7 @@ locateCurrentShims( char *currentShimsFile )
 
 #ifdef XXXX
 static int
-receiveConsoleDebugBlock( long *data )
+receiveConsoleDebugBlock( int *data )
 {
 	int	cdb_fd, ival;
 	char	file[MAXPATHL];
@@ -114,7 +114,7 @@ receiveConsoleDebugBlock( long *data )
 		return( -1 );
 	}
 
-	ival = write( cdb_fd, data, sizeof( CDB_BLOCK ) - sizeof( long ) );
+	ival = write( cdb_fd, data, sizeof( CDB_BLOCK ) - sizeof( int ) );
 	close( cdb_fd );
 
 	return( ival );
@@ -145,6 +145,7 @@ updateCurrentShims()
 void downloadShims()
 {
    char	downloadCmd[ CONSOLE_MSGE_SIZE ];
+   char	shimstr[ 32 ];
    int	val, shimIndex;
 
    val = getStatShimSet();
@@ -160,16 +161,20 @@ void downloadShims()
    {
       sprintf(downloadCmd,"%d",4*3);
       val = getStatShimValue(shimIndex);
-      sprintf(downloadCmd,"%s,%d,%d,%d",downloadCmd,SHIMDAC,shimIndex,val);
+      sprintf(shimstr,",%d,%d,%d",SHIMDAC,shimIndex,val);
+      strcat(downloadCmd, shimstr);
       shimIndex++;
       val = getStatShimValue(shimIndex);
-      sprintf(downloadCmd,"%s,%d,%d,%d",downloadCmd,SHIMDAC,shimIndex,val);
+      sprintf(shimstr,",%d,%d,%d",SHIMDAC,shimIndex,val);
+      strcat(downloadCmd, shimstr);
       shimIndex++;
       val = getStatShimValue(shimIndex);
-      sprintf(downloadCmd,"%s,%d,%d,%d",downloadCmd,SHIMDAC,shimIndex,val);
+      sprintf(shimstr,",%d,%d,%d",SHIMDAC,shimIndex,val);
+      strcat(downloadCmd, shimstr);
       shimIndex++;
       val = getStatShimValue(shimIndex);
-      sprintf(downloadCmd,"%s,%d,%d,%d\n",downloadCmd,SHIMDAC,shimIndex,val);
+      sprintf(shimstr,",%d,%d,%d",SHIMDAC,shimIndex,val);
+      strcat(downloadCmd, shimstr);
       shimIndex++;
       send2Monitor(XPARSER, 0,0,0,downloadCmd, strlen(downloadCmd) );
    }
@@ -205,12 +210,12 @@ void downloadShims()
 *       Author Greg Brissey 9/6/94
 */
 void processChanMsge(int cmd, int arg1, int arg2, int arg3,
-                     char *msgstr, unsigned long len)
+                     char *msgstr)
 {
 #ifdef XXXX
   int   rtn,stat, shimsChanged;
-  long *data;
-  long  consoleMsge[ CONSOLE_MSGE_SIZE/sizeof( long ) ];
+  int *data;
+  int  consoleMsge[ CONSOLE_MSGE_SIZE/sizeof( int ) ];
 #endif
 
  /* Keep reading the Msg Q until no further Messages */
@@ -233,7 +238,7 @@ void processChanMsge(int cmd, int arg1, int arg2, int arg3,
 			break;
            case CASE:
 			DPRINT(2,"acqHandler\n");
-         		acqHandler( arg1, arg2, arg3, msgstr, len );
+         		acqHandler( arg1, arg2, arg3, msgstr);
 			break;
 
 #ifdef XXXX
@@ -267,14 +272,14 @@ void processChanMsge(int cmd, int arg1, int arg2, int arg3,
 			);
 			if (stat != 0 && ActiveExpInfo.ShrExpInfo != NULL &&
 					ACQ_ACQUIRE == getStatAcqState()) {
-				long		ctCnt;
+				int		ctCnt;
 
 			  /*  The CT counter is now kept by the console;
 			      Expproc just transfers the value so Infoproc
 			      and Acqstat can get at it.  July 1997	*/
 
 				ctCnt = getStatAcqCtCnt();
-				setStatCT((unsigned long) ctCnt);
+				setStatCT(ctCnt);
 			}
 
 			if (stat != 0) {
@@ -408,8 +413,8 @@ void processChanMsge(int cmd, int arg1, int arg2, int arg3,
   return;
 }
 
-void acqHandler( int donecode, int errorcode, int arg3,
-                 char *msgstr, unsigned long msglen )
+static void acqHandler( int donecode, int errorcode, int arg3,
+                 char *msgstr)
 {
 
    switch( donecode )
@@ -676,7 +681,7 @@ void sendProcMsg(int elemId, int ctval, int donecode, int errorcode)
       pProcMsgQ = openMsgQ("Procproc");
       if (pProcMsgQ != NULL)
       {
-         sprintf(msgestr,"seterr %s %d %d %d %d\n",
+         sprintf(msgestr,"seterr %.230s %d %d %d %d\n",
      	                   ActiveExpInfo.ExpId,
      	                   elemId, ctval,
                            donecode,errorcode);

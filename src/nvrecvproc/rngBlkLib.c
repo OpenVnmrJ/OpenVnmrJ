@@ -21,7 +21,9 @@
 #endif
 #include <pthread.h>
 
+#ifndef _POSIX_SOURCE
 #define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
+#endif
 
 #else /* VNMRS_WIN32 */
 
@@ -52,6 +54,7 @@ For additional description see rngLib.
 */
 static char *RngBlkID ="Blking Ring Buffer";
 static int  IdCnt;
+int 	rngBlkFreeElem (RINGBLK_ID ringId);
 
 
 #ifndef VNMRS_WIN32
@@ -79,7 +82,7 @@ RINGBLK_ID rngBlkCreate(int nelem,char* idstr, int blklevel)
 {
   RINGBLK_ID pBlkRng;
   char tmpstr[80];
-  int stat;
+  int stat __attribute__((unused));
 
   pBlkRng = (RINGBLK_ID) malloc(sizeof(RING_BLKING));  /* create structure */
   if (pBlkRng == NULL) 
@@ -162,7 +165,7 @@ RINGBLK_ID rngBlkCreate(int nelem,char* idstr, int blklevel)
 *
 *		Author Greg Brissey 5/26/94
 */
-void rngBlkDelete(register RINGBLK_ID rngd)
+void rngBlkDelete(RINGBLK_ID rngd)
 /* RINGBLK_ID rngd;  blocking ring buffer to delete */
 {
   free(rngd->pRngIdStr);
@@ -184,10 +187,9 @@ void rngBlkDelete(register RINGBLK_ID rngd)
 *
 *	Author Greg Brissey 5/26/94
 */
-int rngBlkFlush(register RINGBLK_ID rngd)
+int rngBlkFlush(RINGBLK_ID rngd)
 /* RINGBLK_ID rngd; Blocking ring buffer to initialize */
 {
-  int npend,pAry[4];
   int status;
   status = pthread_mutex_lock(&rngd->mutex);
   if (status != 0)
@@ -226,15 +228,14 @@ int rngBlkFlush(register RINGBLK_ID rngd)
 *
 *	Author Greg Brissey 5/26/94
 */
-int rngBlkPut(register RINGBLK_ID rngd,register long* buffer,register int size)
+int rngBlkPut(RINGBLK_ID rngd,long* buffer,int size)
 /* RINGBLK_ID rngd;	blocking ring buffer to put data into */
 /* long*      buffer;   buffer to get data from */
 /* int	      size;     number of elements to put */
 {
-   register int fromP;
+   int fromP;
    int status, fbytes;
-   int npend,pAry[4];
-   register int result,i;
+   int result,i;
 
    status = pthread_mutex_lock(&rngd->mutex);
    if (status != 0)
@@ -308,14 +309,13 @@ int rngBlkPut(register RINGBLK_ID rngd,register long* buffer,register int size)
 *
 *	Author Greg Brissey 5/26/94
 */
-int rngBlkGet(register RINGBLK_ID rngd,long* buffer,int size)
+int rngBlkGet(RINGBLK_ID rngd,long* buffer,int size)
 /* RINGBLK_ID rngd;	blocking ring buffer to get data from */
 /* char*      buffer;   point to buffer to receive data */
 /* int	      size;     number of elements to get */
 {
-   register int fromP;
-   int status, bytes;
-   int npend,pAry[4];
+   int fromP;
+   int status;
 
    status = pthread_mutex_lock(&rngd->mutex);
    if (status != 0)
@@ -375,15 +375,14 @@ void rngBlkShow(RINGBLK_ID rngd,int level)
 /* int	      level;    level of information display */
 {
     int used,free,total;
-    int npend,pAry[4];
     int i;
 
    used = rngBlkNElem (rngd);
    free = rngBlkFreeElem (rngd);
    total = used + free;
 
-   printf("Blk Ring BufferID: '%s', 0x%lx\n",rngd->pRngIdStr,rngd);
-   printf("Buffer Addr: 0x%lx, Size: %d (0x%x), UnBlocking Trigger Level: %d entries\n",rngd->rBuf,
+   printf("Blk Ring BufferID: '%s', %p\n",rngd->pRngIdStr,rngd);
+   printf("Buffer Addr: %p, Size: %d (0x%x), UnBlocking Trigger Level: %d entries\n",rngd->rBuf,
 		rngd->bufSize,rngd->bufSize,rngd->triggerLevel+1);
    printf("Entries  Used: %d, Free: %d, Total: %d\n", used, free, total);
 
@@ -419,9 +418,9 @@ void rngBlkShow(RINGBLK_ID rngd,int level)
 *
 *	Author Greg Brissey 5/26/94
 */
-int 	rngBlkFreeElem (register RINGBLK_ID ringId)
+int 	rngBlkFreeElem (RINGBLK_ID ringId)
 {
-   register int result;
+   int result;
 
    return( ( (result = ((ringId->pFromBuf - ringId->pToBuf) - 1)) < 0) ? 
 	   result + ringId->bufSize : result );
@@ -441,9 +440,9 @@ int 	rngBlkFreeElem (register RINGBLK_ID ringId)
 *
 *	Author Greg Brissey 5/26/94
 */
-int 	rngBlkNElem (register RINGBLK_ID ringId)
+int 	rngBlkNElem (RINGBLK_ID ringId)
 {
-   register int result;
+   int result;
 
    return( ( (result = (ringId->pToBuf - ringId->pFromBuf)) < 0) ? 
 	   result + ringId->bufSize : result );
@@ -461,7 +460,7 @@ int 	rngBlkNElem (register RINGBLK_ID ringId)
 *
 *	Author Greg Brissey 5/26/94
 */
-int 	rngBlkIsEmpty (register RINGBLK_ID ringId)
+int 	rngBlkIsEmpty (RINGBLK_ID ringId)
 {
     return ( (ringId->pToBuf == ringId->pFromBuf) ? 1 : 0 );
 }
@@ -480,7 +479,7 @@ int 	rngBlkIsEmpty (register RINGBLK_ID ringId)
 */
 int 	rngBlkIsFull (RINGBLK_ID ringId)
 {
-    register int result;
+    int result;
 
     if ( (result = ((ringId->pToBuf - ringId->pFromBuf) + 1)) == 0)
     {
@@ -506,7 +505,7 @@ int 	rngBlkIsFull (RINGBLK_ID ringId)
 *
 *	Author Greg Brissey 5/26/94
 */
-int 	rngBlkIsGetPended (register RINGBLK_ID ringId)
+int 	rngBlkIsGetPended (RINGBLK_ID ringId)
 {
    return ( (ringId->readBlocked == TRUE) ? 1 : 0 );
 }
@@ -523,7 +522,7 @@ int 	rngBlkIsGetPended (register RINGBLK_ID ringId)
 *
 *	Author Greg Brissey 5/26/94
 */
-int 	rngBlkIsPutPended (register RINGBLK_ID ringId)
+int 	rngBlkIsPutPended (RINGBLK_ID ringId)
 {
    return ( (ringId->writeBlocked == TRUE) ? 1 : 0 );
 }
@@ -755,14 +754,14 @@ int rngBlkFlush(RINGBLK_ID rngd)
 *
 *	Author Greg Brissey 5/26/94
 */
-int rngBlkPut(RINGBLK_ID rngd,register long* buffer,register int size)
+int rngBlkPut(RINGBLK_ID rngd,long* buffer,int size)
 /* RINGBLK_ID rngd;	blocking ring buffer to put data into */
 /* long*      buffer;   buffer to get data from */
 /* int	      size;     number of elements to put */
 {
-   register int fromP;
+   int fromP;
    int fbytes;
-   register int result,i;
+   int result,i;
 
    DWORD winStatus;
    winStatus = WaitForSingleObject(rngd->hMutex, INFINITE);
@@ -837,7 +836,7 @@ rngBlkGet(RINGBLK_ID rngd,long* buffer,int size)
 /* char*      buffer;   point to buffer to receive data */
 /* int	      size;     number of elements to get */
 {
-   register int fromP;
+   int fromP;
    DWORD winStatus;
    
    winStatus = WaitForSingleObject(rngd->hMutex, INFINITE);
@@ -941,7 +940,7 @@ void rngBlkShow(RINGBLK_ID rngd,int level)
 */
 int 	rngBlkFreeElem (RINGBLK_ID ringId)
 {
-   register result;
+   int result;
 
    return( ( (result = ((ringId->pFromBuf - ringId->pToBuf) - 1)) < 0) ? 
 	   result + ringId->bufSize : result );
@@ -963,7 +962,7 @@ int 	rngBlkFreeElem (RINGBLK_ID ringId)
 */
 int 	rngBlkNElem (RINGBLK_ID ringId)
 {
-   register result;
+   int result;
 
    return( ( (result = (ringId->pToBuf - ringId->pFromBuf)) < 0) ? 
 	   result + ringId->bufSize : result );
@@ -1000,7 +999,7 @@ int 	rngBlkIsEmpty (RINGBLK_ID ringId)
 */
 int 	rngBlkIsFull (RINGBLK_ID ringId)
 {
-    register int result;
+    int result;
 
     if ( (result = ((ringId->pToBuf - ringId->pFromBuf) + 1)) == 0)
     {

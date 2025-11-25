@@ -33,7 +33,7 @@ typedef struct _flow_ {
         char    *cntlrId[MAX_SUBSCRIPTIONS];
         int     maxXferLimit; /* maximum transfer limit */
         int     HighH2OMark; /* at this count send msg to publisher to continue */
-        unsigned long AtIncreNum;
+        unsigned int AtIncreNum;
         int     numPubs;
         int     matchNum;
         NDDS_ID  pubs[MAX_SUBSCRIPTIONS];

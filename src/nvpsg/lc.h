@@ -50,7 +50,11 @@ typedef struct _lc {		/* word allocation of the "acode" data set */
 	int	nt;		/* number of transients */
 	int	ct;		/* completed transients */
 	int	dpts;		/* total data points */
-	struct	autod	*autop;	/* pointer to auto structure (set by apint) */
+#ifdef VXWORKS
+   struct   autod *autop;  /* pointer to auto structure (set by apint) */
+#else
+	int	autop;	/* use int for 64-bit compatibility */
+#endif
   int     il_incr;              /* what interleave increment? used by nvacq-il */
   int     il_incrBsCnt;         /* block count increment? used by nvacq-il */
   int     ra_fidnum;            /* which fid to start ??? */

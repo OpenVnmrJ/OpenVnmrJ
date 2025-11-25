@@ -34,6 +34,27 @@
 #include "REV_NUMS.h"
 
 #include "sysUtils.h"
+extern int semClean();
+extern void initiateNDDS(int debuglevel);
+extern int initExpStatus(int clean);
+extern int initActiveExpQ(int clean);
+extern int initCmdParser();
+extern int initExpprocSocket();
+extern int initExpQs(int clean);
+extern void initiatePubSub();
+extern void initConsoleStatus();
+extern void killTasks();
+extern void delacqinfo2();
+extern void resetState();
+extern void expQclean(void);
+extern int  activeExpQclean(void);
+extern void restartTasks();
+extern void wrtacqinfo2();
+extern int processExpSock();
+extern void processMonitorCmd(int *pipeFd);
+extern void  excepthandler(int signo);
+extern int parser(char* str);
+extern void expQTask();
 
 MSG_Q_ID pRecvMsgQ;
 
@@ -258,8 +279,8 @@ int main(int argc, char *argv[])
 void asyncMainLoop(sigset_t sigMask)
 {
 	sigset_t		oldMask;
-        int stat;
-        int signo;
+   int stat __attribute__((unused));
+   int signo;
    void TheGrimReaper(void*);
    void processMsge(void*);
    extern int MonCmdPipe[2];
@@ -342,8 +363,8 @@ void processMsge(void *notin)
        /* if we got a message then go ahead and parse it */
        if (rtn > 0)
        {
-         DPRINT2(1,"received %d bytes, MsgInbuf len %d bytes\n",rtn,strlen(MsgInbuf));
-	 DPRINT1(1,"Expproc received command: %s\n", &MsgInbuf[ 0 ] );
+         DPRINT2(1,"received %d bytes, MsgInbuf len %ld bytes\n",rtn,strlen(MsgInbuf));
+         DPRINT1(1,"Expproc received command: %s\n", &MsgInbuf[ 0 ] );
          parser(MsgInbuf);
          MsgInbuf[0] = '\0';
        }

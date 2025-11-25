@@ -59,10 +59,11 @@ extern DDS_ReturnCode_t Codes_DownldTypeSupport_create_data_ex(DDS_Boolean);
 void getCodes_DownldInfo(NDDS_OBJ *myStruct)
 {
     strcpy(myStruct->dataTypeName, Codes_DownldTYPENAME);
-    myStruct->TypeRegisterFunc = Codes_DownldTypeSupport_register_type;
-    myStruct->TypeAllocFunc = Codes_DownldTypeSupport_create_data_ex;
+    myStruct->TypeRegisterFunc = (DataTypeRegister) Codes_DownldTypeSupport_register_type;
+    myStruct->TypeAllocFunc = (DataTypeAllocate) Codes_DownldTypeSupport_create_data_ex;
 }
 /* --- End Special Varian Inc Added Template Function  ----- */
+
 
 
     
@@ -76,10 +77,6 @@ RTIBool Codes_Downld_initialize(
 RTIBool Codes_Downld_initialize_ex(
     Codes_Downld* sample,RTIBool allocatePointers)
 {
-
-    void* buffer;                
-    buffer = NULL;        
-
     if (!RTICdrType_initLong(&sample->key)) {
         return RTI_FALSE;
     }                

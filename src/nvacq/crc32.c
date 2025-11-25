@@ -14,7 +14,7 @@
     Added a routine to calc CRC checksum of a buffer in incremental chunks
     so that the whole file/buffer need not be completely resident in memory
 
-    tcrc addbfcrcinc (register char *buf, register int size, tcrc *prevcrc)
+    tcrc addbfcrcinc (char *buf, int size, tcrc *prevcrc)
 
     e.g.
      if (1st time -  give 3rd arg as null )
@@ -152,36 +152,23 @@ tcrc crctab[] = { /* CRC polynomial 0xedb88320 */
 /* ::[[ @(#) addbfcrc.c 1.10 89/07/08 10:34:48 ]]:: */
 /* Adapted from zmodem source code, which contained Gary Brown's code */
 
-#if defined(__STDC__) || defined(__cplusplus) || defined(c_plusplus)
-tcrc addbfcrc (register char *buf, register int size)
-#else
-tcrc addbfcrc (register char *buf, register int size)
-// register char *buf;
-// register int size;
-#endif
+tcrc addbfcrc (char *buf, int size)
 {
-   register tcrc crccode = INITCRC;
-   register int i;
+   tcrc crccode = INITCRC;
+   int i;
 
    for (i = 0; i < size; ++i, ++buf)
    {
       crccode = crctab [(int) ((crccode) ^ (*buf)) & 0xff] ^
-                (((crccode) >> 8) & 0x00FFFFFFL);
+                (((crccode) >> 8) & 0x00FFFFFF);
    }
    return crccode;
 }
 
-#if defined(__STDC__) || defined(__cplusplus) || defined(c_plusplus) 
-tcrc addbfcrcinc (register char *buf, register int size, tcrc *prevcrc)
-#else
-tcrc addbfcrcinc (buf, size,prevcrc)
- register char *buf;
- register int size;
- tcrc *prevcrc;
-#endif
+tcrc addbfcrcinc (char *buf, int size, tcrc *prevcrc)
 {
-   register tcrc crccode = INITCRC;
-   register int i;
+   tcrc crccode = INITCRC;
+   int i;
 
    if (prevcrc != (tcrc*) 0)
       crccode = *prevcrc;
@@ -189,7 +176,7 @@ tcrc addbfcrcinc (buf, size,prevcrc)
    for (i = 0; i < size; ++i, ++buf)
    {
       crccode = crctab [(int) ((crccode) ^ (*buf)) & 0xff] ^
-                (((crccode) >> 8) & 0x00FFFFFFL);
+                (((crccode) >> 8) & 0x00FFFFFF);
    }
    return crccode;
 }

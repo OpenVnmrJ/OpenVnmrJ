@@ -16,13 +16,16 @@
 #endif
 #include <pthread.h>
 
-#define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
+// #define _POSIX_C_SOURCE 1
 #include "errLogLib.h"
 #include "rngBlkLib.h"
 #include "hostAcqStructs.h"
 #include "fileObj.h"
 #include "mfileObj.h"
 #include "workQObj.h"
+
+extern int rngBlkGet(RINGBLK_ID rngd,long* buffer,int size);
+extern int rngBlkPut(RINGBLK_ID rngd,long* buffer,int size);
 
 /*
 modification history
@@ -44,7 +47,6 @@ WORKQ_ID workQCreate(void *pWorkDesc, int maxWorkQentries)
   WORKQINVARIENT_ID pWrkQInvar;
   WORKQ_ENTRY_ID wkrQAddrs;
   FID_STAT_BLOCK *fidStatAddr;
-  char *tmpptr, *tmpptr2;
   int i,sizebytes;
 
   pWorkQ = (WORKQ_ID) malloc(sizeof(WORKQ_OBJECT)); /* create structure */
@@ -67,7 +69,7 @@ WORKQ_ID workQCreate(void *pWorkDesc, int maxWorkQentries)
   pWorkQ->numWorkQs = 0;   /* calc and created in workQDataBufsInit() */
 
   /* maximum allowed memory usage for data buffers */
-  /* pWorkQ->maxDataBufMem = 1048576 * dataBufMemLimit_MB;  /* now in bytes */
+  // pWorkQ->maxDataBufMem = 1048576 * dataBufMemLimit_MB;  /* now in bytes */
 
   /* blocking ring buffer that will hold workQ entry addresses */
   pWorkQ->pBlkRng = rngBlkCreate(pWorkQ->maxWorkQs,"Work Queue", 1);
@@ -76,13 +78,13 @@ WORKQ_ID workQCreate(void *pWorkDesc, int maxWorkQentries)
   sizebytes = maxWorkQentries * sizeof(WORKQ_ENTRY);
   pWorkQ->pWrkQBuffs = (WORKQ_ENTRY_ID) malloc( sizebytes);
   memset(pWorkQ->pWrkQBuffs,0,sizebytes);
-  DPRINT1(1,"workQCreate: workQ malloc: %ld\n", sizebytes);
+  DPRINT1(1,"workQCreate: workQ malloc: %d\n", sizebytes);
 
   /*  malloc memory for all the Fid Stat BLocks */
   sizebytes = maxWorkQentries * sizeof(FID_STAT_BLOCK);
   pWorkQ->pFidStatBufs = (FID_STAT_BLOCK*) malloc( sizebytes );
   memset(pWorkQ->pFidStatBufs,0,sizebytes);
-  DPRINT1(1,"workQCreate: FID StstaBlock malloc: %ld\n", sizebytes);
+  DPRINT1(1,"workQCreate: FID StstaBlock malloc: %d\n", sizebytes);
 
   wkrQAddrs = pWorkQ->pWrkQBuffs;
   fidStatAddr = pWorkQ->pFidStatBufs;
@@ -95,7 +97,7 @@ WORKQ_ID workQCreate(void *pWorkDesc, int maxWorkQentries)
        wkrQAddrs->pFidStatBlk = fidStatAddr;
        wkrQAddrs->pWorkQObj = pWorkQ;     /* reference back to the workQObj */
        wkrQAddrs->pInvar = pWrkQInvar;     /* reference back to the workQ Invarients */
-       rngBlkPut(pWorkQ->pBlkRng,&wkrQAddrs,1);
+       rngBlkPut(pWorkQ->pBlkRng, (long *) &wkrQAddrs,1);
        wkrQAddrs++;
        fidStatAddr++;
   }
@@ -104,7 +106,7 @@ WORKQ_ID workQCreate(void *pWorkDesc, int maxWorkQentries)
 }
 
 
-setMaxWorkQMemoryUsage(WORKQ_ID pWorkQ, long long maxMemoryUsageBytes)
+void setMaxWorkQMemoryUsage(WORKQ_ID pWorkQ, long long maxMemoryUsageBytes)
 {
    pWorkQ->maxFidDataMemUsage = maxMemoryUsageBytes;
 }
@@ -115,10 +117,11 @@ int workQFree(WORKQ_ID pWorkQ, WORKQ_ENTRY_ID workQEntry)
    return( rngBlkPut(pWorkQ->pBlkRng,(long*) &workQEntry,1) );
 }
 
-int maxWorkQSize(WORKQ_ID pWorkQ, int numActiveDDRs, long long memSize, long fidSizeBytes, long nf)
+#ifdef XXX
+static int maxWorkQSize(WORKQ_ID pWorkQ, int numActiveDDRs, long long memSize, int fidSizeBytes, int nf)
 {
-    unsigned long sizebytes,calc_nbufs;
-    unsigned long FidSize_NF_Corrected;
+    unsigned int calc_nbufs;
+    unsigned int FidSize_NF_Corrected;
 
    /* note we divide by nf since packing happens in Recvproc not console */
    /* i.e. each NF is recieved as a FID, which is subsequitely pack into the 'one fid' block */
@@ -126,16 +129,15 @@ int maxWorkQSize(WORKQ_ID pWorkQ, int numActiveDDRs, long long memSize, long fid
 
     /* note we divid by nf since packing happens in Recvproc not console */
     /*     also max mem is total so divided that amoung all active receivers */
-    calc_nbufs = (long) ((memSize / numActiveDDRs)   / FidSize_NF_Corrected);
+    calc_nbufs = (int) ((memSize / numActiveDDRs)   / FidSize_NF_Corrected);
 
-    DPRINT2(3,"maxQueueSize: Memory: %llu, calc nbufs: %d\n",memSize,calc_nbufs);
+//    DPRINT2(3,"maxQueueSize: Memory: %llu, calc nbufs: %lu\n",memSize,calc_nbufs);
     return calc_nbufs;
 }
 
-long long workQrequiredMemory(WORKQ_ID pWorkQ, int numActiveDDRs, int qSize, long fidSizeBytes, long nf)
+static long long workQrequiredMemory(WORKQ_ID pWorkQ, int numActiveDDRs, int qSize, int fidSizeBytes, int nf)
 {
-    unsigned long sizebytes,calc_nbufs;
-    unsigned long FidSize_NF_Corrected;
+    unsigned int FidSize_NF_Corrected;
     long long MemoryRequired;
 
    /* note we divide by nf since packing happens in Recvproc not console */
@@ -150,15 +152,16 @@ long long workQrequiredMemory(WORKQ_ID pWorkQ, int numActiveDDRs, int qSize, lon
     DPRINT1(3,"requiredMemory: %llu\n",MemoryRequired);
     return(MemoryRequired);
 }
+#endif
 
-workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  long fidSizeBytes, long nf, int ddrPos, int numActiveDDRs,PSTMF stmFunc)
+void workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  int fidSizeBytes, int nf, int ddrPos, int numActiveDDRs,PSTMF stmFunc)
 {
-    unsigned long sizebytes,calc_nbufs;
+    unsigned int sizebytes,calc_nbufs;
     WORKQ_ENTRY_ID wkrQAddrs;
     FID_STAT_BLOCK *fidStatAddr;
     int i;
     char *pDataBuf;
-    unsigned long FidSize_NF_Corrected, maxAllowedMem_ActiveRcvrs_COrrected;
+    unsigned int FidSize_NF_Corrected;
 
 
    pWorkQ->pInvar->fiddatafile =  fiddata;   /* mmap object wrapper */
@@ -172,15 +175,15 @@ workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  long fidSizeBytes,
     if (ddrPos == -1)
        FidSize_NF_Corrected = 1024; /* This DDR is not used so make the size something small */
     else
-       FidSize_NF_Corrected = ((unsigned long) fidSizeBytes) / nf;
+       FidSize_NF_Corrected = ((unsigned int) fidSizeBytes) / nf;
 
-   DPRINT4(1,"workQDataBufsInit: ddrPos: %d, fidsize: %lu, nf: %d. corrected fid size: %lu\n",
+   DPRINT4(1,"workQDataBufsInit: ddrPos: %d, fidsize: %u, nf: %d. corrected fid size: %u\n",
        ddrPos, fidSizeBytes,nf, FidSize_NF_Corrected);
 
     /* note we divid by nf since packing happens in Recvproc not console */
     /*     also max mem is total so divided that amoung all active receivers */
     /* calc_nbufs = (pWorkQ->maxDataBufMem / numActiveDDRs)   / FidSize_NF_Corrected; */
-    calc_nbufs = (unsigned long) ((pWorkQ->maxFidDataMemUsage / (long long) numActiveDDRs)   / FidSize_NF_Corrected);
+    calc_nbufs = (unsigned int) ((pWorkQ->maxFidDataMemUsage / (long long) numActiveDDRs)   / FidSize_NF_Corrected);
 
     DPRINT1(2,"workQDataBufsInit: calc nbufs: %d\n",calc_nbufs);
 
@@ -199,14 +202,14 @@ workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  long fidSizeBytes,
 
     sizebytes = pWorkQ->numWorkQs * FidSize_NF_Corrected;
 
-    DPRINT4(1,"workQDataBufsInit: buffers: calc: %d, max: %d, memusage: %lu, maxallowed: %llu\n",
-	pWorkQ->numWorkQs,pWorkQ->maxWorkQs,sizebytes, pWorkQ->maxFidDataMemUsage / (long long) numActiveDDRs);
+//    DPRINT4(1,"workQDataBufsInit: buffers: calc: %d, max: %d, memusage: %lu, maxallowed: %llu\n",
+//	pWorkQ->numWorkQs,pWorkQ->maxWorkQs,sizebytes, pWorkQ->maxFidDataMemUsage / (long long) numActiveDDRs);
 
    /* for interleave or RA/SA summing added a buffer if using regular file IO */
    /* free the IL summing buffers, they will malloc is need below  */
    if (pWorkQ->pFidSummingBuf != NULL)
    {
-      DPRINT1(1,"workQDataBufsInit: FREE Regular File I/O IL summing buffer: Addr: 0x%lx\n", pWorkQ->pFidSummingBuf);
+      DPRINT1(1,"workQDataBufsInit: FREE Regular File I/O IL summing buffer: Addr: %p\n", pWorkQ->pFidSummingBuf);
       free(pWorkQ->pFidSummingBuf);
       pWorkQ->pFidSummingBuf = NULL;
    }
@@ -216,7 +219,7 @@ workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  long fidSizeBytes,
        if (ddrPos != -1)
        {
           pWorkQ->pFidSummingBuf = (char*) malloc(FidSize_NF_Corrected);
-          DPRINT2(1,"workQDataBufsInit: malloc Regular File I/O IL summing buffer: Addr: 0x%lx, size: %lu\n", 
+          DPRINT2(1,"workQDataBufsInit: malloc Regular File I/O IL summing buffer: Addr: %p, size: %u\n", 
                     pWorkQ->pFidSummingBuf, FidSize_NF_Corrected);
        }
    }
@@ -234,12 +237,11 @@ workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  long fidSizeBytes,
        */
       pWorkQ->pFidDataBufs = (char*) malloc( sizebytes );
       pWorkQ->FidDataBufSize = sizebytes;
-      DPRINT1(1,"workQDataBufsInit: malloc %ld for FIDBufs\n",sizebytes);
+      DPRINT1(1,"workQDataBufsInit: malloc %u for FIDBufs\n",sizebytes);
    }
    else if ( (pWorkQ->pFidDataBufs != NULL) &&     /* size is greater or less by at least 5 MB then realloc */
            ( ( sizebytes > pWorkQ->FidDataBufSize) || ( (sizebytes + 5242880) < pWorkQ->FidDataBufSize) ) )
    {
-       /* long tmp; */
       /* printf("free & re malloc space\n"); */
       /* tmp = pWorkQ->pFidDataBufs; */
       free(pWorkQ->pFidDataBufs);
@@ -265,7 +267,7 @@ workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  long fidSizeBytes,
        wkrQAddrs->pInvar = pWorkQ->pInvar;  /* reference back to the workQ Invarients */
        wkrQAddrs->pFidStatBlk = fidStatAddr;
        wkrQAddrs->pFidData = pDataBuf;
-       rngBlkPut(pWorkQ->pBlkRng,&wkrQAddrs,1);
+       rngBlkPut(pWorkQ->pBlkRng, (long *) &wkrQAddrs,1);
        /* printf("workQDataBufsInit: wrkQaddr: 0x%lx, statBlkAddr: 0x%lx\n",wkrQAddrs,pDataBuf); */
        wkrQAddrs++;
        fidStatAddr++;
@@ -282,6 +284,7 @@ int workQFreeDataBufs(WORKQ_ID pWorkQ)
        free( pWorkQ->pFidDataBufs );
        pWorkQ->pFidDataBufs = NULL;
     }
+    return(0);
 }
 
 int workQReset(WORKQ_ID pWorkQ)
@@ -297,9 +300,10 @@ int workQReset(WORKQ_ID pWorkQ)
   for(i=0; i<pWorkQ->numWorkQs; i++)
   {
        /* printf("wrkQaddr: 0x%lx, statBlkAddr: 0x%lx\n",wkrQAddrs,fidStatAddr); */
-       rngBlkPut(pWorkQ->pBlkRng,&wkrQAddrs,1);
+       rngBlkPut(pWorkQ->pBlkRng, (long *) &wkrQAddrs,1);
        wkrQAddrs++;
   }
+  return(0);
 }
 
 int workQGetWillPend(WORKQ_ID pWorkQ)
@@ -315,9 +319,9 @@ int numAvailWorkQs(WORKQ_ID pWorkQ)
 
 WORKQ_ENTRY_ID workQGet(WORKQ_ID pWorkQ)
 {
-   int stat;
+   int stat __attribute__((unused));
    long tmpptr;
-   stat = rngBlkGet(pWorkQ->pBlkRng, (long*) &tmpptr,1);
+   stat = rngBlkGet(pWorkQ->pBlkRng, &tmpptr,1);
    /* printf("bufaddr: 0x%lx\n",bufAddr); */
    return( (WORKQ_ENTRY_ID)tmpptr );
 }
@@ -366,7 +370,7 @@ WORKQ_ENTRY_ID workQGet(WORKQ_ID pWorkQ)
 *
 *  /* if (pWorkQ->pInvar->fiddatafile != NULL) */
 *     /* free(pWorkQ->pInvar->fiddatafile); */
-*  /* pWorkQ->pInvar->fiddatafile =  NULL;   /* mmap object wrapper */
+*  // pWorkQ->pInvar->fiddatafile =  NULL;   /* mmap object wrapper */
 *  pWorkQ->pInvar->NumFids =  1;	    /* NF */
 *  pWorkQ->pInvar->numActiveRcvrs =  1;  /* number of active receivers */
 *  return(0);
@@ -505,8 +509,8 @@ int isFidDataActive(WORKQ_ID pWorkQ)
 char *getWorkQFidBlkHdrPtr(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry)
 {
      char *fidblkhdrSpot;
-     int status;
-     unsigned long fidNum, traceNum, fidSizeBytes;
+     int status __attribute__((unused));
+     unsigned int fidNum, traceNum, fidSizeBytes;
 
 #ifdef XXX
      fidNum = pWorkQEntry->pFidStatBlk->elemId;  /* FID number */
@@ -525,9 +529,9 @@ char *getWorkQFidBlkHdrPtr(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry)
      /* pWorkQEntry->rcvrPos + 1 is because rcvrPos starts at zero */
      pWorkQEntry->trueElemId = ((fidNum-1)  * pWorkQEntry->pInvar->numActiveRcvrs) + pWorkQEntry->pInvar->rcvrPos + 1;
 
-     DPRINT4(2,"getWorkQFidBlkHdrPtr: elemId: %lu, nf: %lu, ---> fidNum %lu, Trace: %lu\n",
+     DPRINT4(2,"getWorkQFidBlkHdrPtr: elemId: %u, nf: %u, ---> fidNum %u, Trace: %u\n",
               pWorkQEntry->pFidStatBlk->elemId, pWorkQEntry->pInvar->NumFids, fidNum,traceNum);
-     DPRINT4(2,"getWorkQFidBlkHdrPtr: elemId: %lu, rcvrPos: %lu, numActiveRcvrs: %lu, ---> True ElemId %lu \n",
+     DPRINT4(2,"getWorkQFidBlkHdrPtr: elemId: %u, rcvrPos: %u, numActiveRcvrs: %u, ---> True ElemId %u \n",
               pWorkQEntry->pFidStatBlk->elemId,pWorkQEntry->pInvar->rcvrPos, pWorkQEntry->pInvar->numActiveRcvrs,pWorkQEntry->trueElemId);
 
      /* (FID size * nf ) + blockheader in bytes */
@@ -558,8 +562,8 @@ char *getWorkQFidBlkHdrPtr(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry)
 char *getWorkQFidPtr(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry)
 {
      char *dataPtr;
-     int status;
-     unsigned long fidNum, fidSizeBytes,traceNum;
+     int status __attribute__((unused));
+     unsigned int fidNum, fidSizeBytes,traceNum;
 
 #ifdef XXX
      fidNum = pWorkQEntry->pFidStatBlk->elemId;  /* FID number */
@@ -590,9 +594,9 @@ char *getWorkQFidPtr(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry)
           traceNum, pWorkQEntry->NumFids, pWorkQEntry->pFidStatBlk->elemId);
      */
 
-     DPRINT4(2,"getWorkQFidPtr: elemId: %lu, nf: %lu, ---> fidNum %lu, Trace: %lu\n",
+     DPRINT4(2,"getWorkQFidPtr: elemId: %u, nf: %u, ---> fidNum %u, Trace: %u\n",
               pWorkQEntry->pFidStatBlk->elemId, pWorkQEntry->pInvar->NumFids, fidNum,traceNum);
-     DPRINT4(2,"getWorkQFidPtr: elemId: %lu, rcvrPos: %lu, numActiveRcvrs: %lu, ---> True ElemId %lu \n",
+     DPRINT4(2,"getWorkQFidPtr: elemId: %u, rcvrPos: %u, numActiveRcvrs: %u, ---> True ElemId %u \n",
               pWorkQEntry->pFidStatBlk->elemId,pWorkQEntry->pInvar->rcvrPos, pWorkQEntry->pInvar->numActiveRcvrs,pWorkQEntry->trueElemId);
 
      /* (FID size * nf ) + blockheader in bytes */
@@ -638,9 +642,9 @@ int writeWorkQFidHeader2File(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry, void *p
 {
     int bytes;
     /* get proper offset into file */
-   DPRINT2(2,"\nwriteWorkQFidHeader2File: HeaderAddr: 0x%lx, len: %d\n", pHeader, bytelen);
+   DPRINT2(2,"\nwriteWorkQFidHeader2File: HeaderAddr: %p, len: %d\n", pHeader, bytelen);
    getWorkQFidBlkHdrPtr(pWorkQEntry->pWorkQObj,pWorkQEntry);
-   DPRINT4(2,"writeWorkQFidHeader2File: fd: %d, data: 0x%lx, len: %d, offset: %llu\n",
+   DPRINT4(2,"writeWorkQFidHeader2File: fd: %d, data: %p, len: %d, offset: %llu\n",
 	pWorkQEntry->pInvar->fiddatafile->pFile->fd, pHeader,  bytelen, pWorkQEntry->RW_FileOffset);
    bytes = fFileWrite(pWorkQEntry->pInvar->fiddatafile->pFile, pHeader,  bytelen, pWorkQEntry->RW_FileOffset);
    /* DPRINT(2,"\n\n"); */
@@ -657,9 +661,9 @@ int readWorkQFidHeaderFromFile(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry, void 
 {
     int bytes;
     /* get proper offset into file */
-   DPRINT2(2,"\nreadWorkQFidHeaderFromFile: HeaderAddr: 0x%lx, len: %d\n", pHeader, bytelen);
+   DPRINT2(2,"\nreadWorkQFidHeaderFromFile: HeaderAddr: %p, len: %d\n", pHeader, bytelen);
    getWorkQFidBlkHdrPtr(pWorkQEntry->pWorkQObj,pWorkQEntry);
-   DPRINT4(2,"readWorkQFidHeaderFromFile: fd: %d, data: 0x%lx, len: %d, offset: %llu\n",
+   DPRINT4(2,"readWorkQFidHeaderFromFile: fd: %d, data: %p, len: %d, offset: %llu\n",
 	pWorkQEntry->pInvar->fiddatafile->pFile->fd, pHeader,  bytelen, pWorkQEntry->RW_FileOffset);
    bytes = fFileRead(pWorkQEntry->pInvar->fiddatafile->pFile, pHeader,  bytelen, pWorkQEntry->RW_FileOffset);
    /* DPRINT(2,"\n\n"); */
@@ -677,10 +681,10 @@ int writeWorkQFid2File(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry, int bytelen)
 {
     int bytes;
     /* get proper offset into file */
-   DPRINT2(2,"\n\nwriteWorkQFid2File: FidAddr: 0x%lx, len: %d\n", pWorkQEntry->pFidData, bytelen);
+   DPRINT2(2,"\n\nwriteWorkQFid2File: FidAddr: %p, len: %d\n", pWorkQEntry->pFidData, bytelen);
    getWorkQFidPtr(pWorkQ,pWorkQEntry);
-   DPRINT4(2,"writeWorkQFid2File: fd: %d, data: 0x%lx, len: %d, offset: %llu\n",
-        pWorkQEntry->pInvar->fiddatafile->pFile, pWorkQEntry->pFidData,  bytelen, pWorkQEntry->RW_FileOffset);
+//   DPRINT4(2,"writeWorkQFid2File: fd: %d, data: 0x%lx, len: %d, offset: %llu\n",
+//        pWorkQEntry->pInvar->fiddatafile->pFile, pWorkQEntry->pFidData,  bytelen, pWorkQEntry->RW_FileOffset);
    bytes = fFileWrite(pWorkQEntry->pInvar->fiddatafile->pFile, pWorkQEntry->pFidData,  bytelen, pWorkQEntry->RW_FileOffset);
    /* DPRINT(-12,"\n\n"); */
    return( bytes );   
@@ -696,10 +700,10 @@ int readWorkQFidFromFile(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry, char* pFidB
 {
     int bytes;
     /* get proper offset into file */
-   DPRINT2(2,"\nreadWorkQFidFromFile: FidAddr: 0x%lx, len: %d\n", pFidBuffer, bytelen);
+   DPRINT2(2,"\nreadWorkQFidFromFile: FidAddr: %p, len: %d\n", pFidBuffer, bytelen);
    getWorkQFidPtr(pWorkQ,pWorkQEntry);
-   DPRINT4(2,"readWorkQFidFromFile: fd: %d, data: 0x%lx, len: %d, offset: %llu\n",
-        pWorkQEntry->pInvar->fiddatafile->pFile, pWorkQEntry->pFidData,  bytelen, pWorkQEntry->RW_FileOffset);
+//   DPRINT4(2,"readWorkQFidFromFile: fd: %d, data: 0x%lx, len: %d, offset: %llu\n",
+//        pWorkQEntry->pInvar->fiddatafile->pFile, pWorkQEntry->pFidData,  bytelen, pWorkQEntry->RW_FileOffset);
    bytes = fFileRead(pWorkQEntry->pInvar->fiddatafile->pFile, pFidBuffer,  bytelen, pWorkQEntry->RW_FileOffset);
    /* DPRINT(-12,"\n\n"); */
    return( bytes );   
@@ -728,6 +732,7 @@ int sumWorkQFidData(WORKQ_ID pWorkQ,WORKQ_ENTRY_ID pWorkQEntry,int bytelen,int n
    return( overflow );
 }
 
+#ifdef XXX
 void workQShow(WORKQ_ID pWorkQ)
 {
    int i;
@@ -748,6 +753,7 @@ void workQShow(WORKQ_ID pWorkQ)
 
     return;
 }
+#endif
 
 /* ------------------------------------------------------------------------------------------ */
 #ifdef  WORK_IN_PROCESS

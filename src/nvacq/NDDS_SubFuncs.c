@@ -822,7 +822,7 @@ int initSubscription(NDDS_ID pNDDS_Obj)
 int initBESubscription(NDDS_ID pNDDS_Obj)
 {
     DDS_ReturnCode_t retcode;
-    long seconds,nanosec;
+    int seconds,nanosec;
 
     struct DDS_DataReaderQos *pReader_qos = (struct DDS_DataReaderQos*) malloc(sizeof(struct DDS_DataReaderQos));
     DDS_DataReaderQos_initialize(pReader_qos);
@@ -881,7 +881,7 @@ int initBESubscription(NDDS_ID pNDDS_Obj)
     /* subscriber update rate,  20 milliseconds */
     seconds = pNDDS_Obj->BE_UpdateMinDeltaMillisec  / 1000;
     nanosec = (pNDDS_Obj->BE_UpdateMinDeltaMillisec % 1000) * 1000000;
-    DPRINT2(+1,"BE: minimumSeparation: secs: %ld, millisec: %ld\n",seconds,nanosec/1000000);
+    DPRINT2(+1,"BE: minimumSeparation: secs: %d, millisec: %d\n",seconds,nanosec/1000000);
     if ( (seconds == 0) && (nanosec <= 0) )
       nanosec = 10000;
     pReader_qos->time_based_filter.minimum_separation.sec = seconds;

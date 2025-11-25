@@ -39,21 +39,28 @@
 
 extern cntlr_crew_t TheSendCrew;
 extern barrier_t TheBarrier;
+extern int nddsBufMngrInitBufs(NDDSBUFMNGR_ID pBufMngrId);
+extern int wait4DoneCntlrStatus(cntlr_crew_t *crew);
+extern int sendXferCmplt(NDDS_ID pubId);
+extern int sendXferStartwArgs(NDDS_ID pubId,int timeout,int arg2);
+extern int shutdownComm(void);
 
+#ifdef XXX
 typedef struct _ptrNsize_ {
 		     char *pCode;
-	             unsigned long cSize;
+	             unsigned int cSize;
 	           } CODEENTRY;
 
 typedef CODEENTRY *CODELIST;
+#endif
 
 		    
 extern int chanId;	/* Channel Id */
 SHR_EXP_INFO expInfo = NULL;   /* start address of shared Exp. Info Structure */
 
-static char command[256];
-static char response[256];
-static char dspdlstat[256];
+// static char command[256];
+// static char response[256];
+// static char dspdlstat[256];
 #ifndef SENDTEST
 static SHR_MEM_ID  ShrExpInfo = NULL;
 ExpEntryInfo ActiveExpInfo;
@@ -61,14 +68,27 @@ ExpEntryInfo ActiveExpInfo;
 
 /* global info retained for acode shipping to console */
 static char labelBase[81];
-static long nAcodes;
+// static long nAcodes;
 static MFILE_ID mapAcodes = NULL;
-static CODELIST CodeList = NULL;
+// static CODELIST CodeList = NULL;
 static int AbortXfer = 0;	/* SIGUSR2 will set this to abort transfer, no longer used  */
 
 static double total_timeout_val = 0.0;  /* total timeout for downloading acodes/pattern, etc. */
 
 char *genLabel(ComboHeader *globalHeader,char *baselabel,char* label);
+static int xferLcAndTables(MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
+                    /* int *subPipeFd, */ char *labelName, int *numOfSubs);
+static int xferPatterns(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName,
+                 NDDS_ID pubId, /* int *subPipeFd, */ char *labelName, int *numOfSubs);
+static int xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName,
+               NDDS_ID pubId, void *subPipeFd, char *labelName, int *numOfSubs);
+int mapInExp(ExpEntryInfo *expid);
+int mapOutExp(ExpEntryInfo *expid);
+void resetState();
+int xferFile(SHR_EXP_INFO expInfo, int initPSflag, char *CntlrName,
+             NDDS_ID pubId, void *subPipeFd, char *filename, char *labelName,
+             int *numOfSubs);
+static int sendTable(char *fname, int tab_nbr, char *tname);
 
 #ifndef SENDTEST
 /***************************************************************
@@ -78,19 +98,18 @@ char *genLabel(ComboHeader *globalHeader,char *baselabel,char* label);
 *	    2. Basename for Named Buffers (Exp1, Exp1rt,Exp1f1,Exp1t1,etc.)
 *
 */
-sendCodes(char *argstr)
+int sendCodes(char *argstr)
 {
     char *bufRootName;
-    char *expinfofile;
     char *filename;
-    int i, result, status;
+    int i, status;
     cntlr_crew_t *crew;
-    SHR_EXP_INFO pExpInfo;
+//    SHR_EXP_INFO pExpInfo;
     off_t xferAggSize,acodeSize;
     off_t getXferFileSizes(char *filename);
     off_t determineAggregateSizes( SHR_EXP_INFO expInfo, char *cntlrName);
     double pattime, codetime, min_timeout, time_out;
-    char cntlrFileName[256];
+    char cntlrFileName[256+16];
 
 
     crew = &TheSendCrew;
@@ -130,7 +149,7 @@ sendCodes(char *argstr)
 	return(-1);
     }
 
-    pExpInfo = ActiveExpInfo.ExpInfo;
+    // pExpInfo = ActiveExpInfo.ExpInfo;
 
     if (ActiveExpInfo.ExpInfo->InteractiveFlag == 1)
        ActiveExpInfo.ExpInfo->ExpState = 0;
@@ -186,6 +205,7 @@ sendCodes(char *argstr)
     pthread_mutex_unlock (&crew->mutex);
 
     /* return immediate to be able to process next message */
+	return(0);
 }
 #endif
 
@@ -211,16 +231,13 @@ sendCodes(char *argstr)
  *
  * 5. Done return.
  */
-downLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName)
+int downLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName)
 {
-    int freeNamedBufs;
     int result,initPSflag;
     SHR_EXP_INFO  expInfo;
-    char cntlrFileName[256];
-    off_t xferAggSize,acodeSize;
+    char cntlrFileName[256+64];
     off_t getXferFileSizes(char *filename);
     off_t determineAggregateSizes( SHR_EXP_INFO expInfo, char *cntlrName);
-    double pattime, codetime, min_timeout, time_out;
 
     /* ActiveExpInfo = (ExpEntryInfo*) expinfo; */
     expInfo = (SHR_EXP_INFO) expinfo;
@@ -239,7 +256,8 @@ downLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName)
      /* the files we need to check are pattern and tables acodes */
      /* sendXferStart(pWrker->PubId, numberof pat, timeout); */
 
-     DPRINT3(+4,"'%s': acode_1_size: %ld, acode_max_size: %ld\n", pWrker->cntlrId, expInfo->acode_1_size,expInfo->acode_max_size);
+//   DPRINT3(+4,"'%s': acode_1_size: %ld, acode_max_size: %ld\n",
+//           pWrker->cntlrId, expInfo->acode_1_size,expInfo->acode_max_size);
 
 #ifdef XXXX  // now down in main thread for a total of all controller file transfer 
      xferAggSize = determineAggregateSizes(expInfo, pWrker->cntlrId);
@@ -282,7 +300,7 @@ downLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName)
     {
        initPSflag = 0;
        DPRINT1(1,"'%s': downLoadExpData: Send LC Params.\n",pWrker->cntlrId);
-       result = xferFile(expInfo,initPSflag,pWrker->cntlrId,pWrker->PubId,pWrker->pNddsBufMngr /*pWrker->SubPipeFd*/,
+       result = xferFile(expInfo,initPSflag,pWrker->cntlrId,pWrker->PubId,(void *) pWrker->pNddsBufMngr /*pWrker->SubPipeFd*/,
 				expInfo->AcqRTTablefile,pWrker->label,&(pWrker->numSubcriber4Pub));
        if (result < 0)
        {
@@ -386,7 +404,7 @@ downLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName)
  * Called by the last thread that finishes, which will unmap the files
  *
  */
-unMapDownLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName)
+void unMapDownLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName)
 {
        DPRINT2(+1,"'%s': Unmapping files for '%s'.\n",pWrker->cntlrId,bufRootName);
 #ifndef SENDTEST
@@ -409,7 +427,7 @@ off_t getXferFileSizes(char *filename)
 
 off_t determineAggregateSizes( SHR_EXP_INFO expInfo, char *cntlrName)
 {
-    char patternfile[256];
+    char patternfile[256+16];
     off_t total_size;
 
     total_size = (off_t) 0;
@@ -429,13 +447,12 @@ off_t determineAggregateSizes( SHR_EXP_INFO expInfo, char *cntlrName)
 }
 
 int xferFile(SHR_EXP_INFO expInfo, int initPSflag, char *CntlrName,
-             NDDS_ID pubId, int *subPipeFd, char *filename, char *labelName,
+             NDDS_ID pubId, void *subPipeFd, char *filename, char *labelName,
              int *numOfSubs)
 {
    int stat;
    MFILE_ID ifile;
    ComboHeader *globalHeader;
-   uint64_t size;
 
    if ( access(filename, R_OK) )
    {
@@ -445,13 +462,13 @@ int xferFile(SHR_EXP_INFO expInfo, int initPSflag, char *CntlrName,
       return(-2);
    }
    ifile = mOpen(filename,0,O_RDONLY);
-   DPRINT3(+1,"'%s': xferRTFile(): mOpen: '%s', fileHdl: 0x%lx\n",CntlrName,filename,ifile);
+// DPRINT3(+1,"'%s': xferRTFile(): mOpen: '%s', fileHdl: 0x%lx\n",CntlrName,filename,ifile);
    if (ifile == NULL)
    {
      errLogSysRet(LOGOPT,debugInfo,"could not open %s",filename);
      return(-1);
    }
-   DPRINT3(+1,"'%s': xferRTFile(): mOpen: '%s', bytes: %lld\n",CntlrName,filename,ifile->byteLen);
+// DPRINT3(+1,"'%s': xferRTFile(): mOpen: '%s', bytes: %lld\n",CntlrName,filename,ifile->byteLen);
    if (ifile->byteLen == 0)
    {
      /* DPRINT(+1,"size was zero\n"); */
@@ -465,18 +482,21 @@ int xferFile(SHR_EXP_INFO expInfo, int initPSflag, char *CntlrName,
    {
        case INITIALHEADER:
 	    DPRINT1(+1,"'%s': Initital Header\n",CntlrName);
-            stat = xferLcAndTables(ifile, CntlrName, pubId, subPipeFd, labelName, numOfSubs);
+            stat = xferLcAndTables(ifile, CntlrName, pubId,
+                    /* subPipeFd, */ labelName, numOfSubs);
 	    break;
        case ACODEHEADER:
 	   DPRINT1(+1,"'%s': Acode Header\n",CntlrName);
            if (initPSflag == 1)
-              stat = xferPatterns(expInfo, ifile, CntlrName, pubId, subPipeFd, labelName, numOfSubs);
+              stat = xferPatterns(expInfo, ifile, CntlrName, pubId,
+                     /* subPipeFd, */ labelName, numOfSubs);
            else
               stat = xferAcodes(expInfo, ifile, CntlrName, pubId, subPipeFd, labelName, numOfSubs);
 	   break;
        case PATTERNHEADER:
 	   DPRINT1(+1,"'%s': Pattern Header\n",CntlrName);
-           stat = xferPatterns(expInfo, ifile, CntlrName, pubId, subPipeFd, labelName, numOfSubs);
+           stat = xferPatterns(expInfo, ifile, CntlrName, pubId,
+                  /* subPipeFd, */ labelName, numOfSubs);
 	   break;
 
        case TABLEHEADER:
@@ -497,18 +517,19 @@ int xferFile(SHR_EXP_INFO expInfo, int initPSflag, char *CntlrName,
     return(stat);
 }
 
-xferLcAndTables(MFILE_ID ifile, char *CntlrName, NDDS_ID pubId, int *subPipeFd, char *labelName, int *numOfSubs)
+static int xferLcAndTables(MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
+                    /* int *subPipeFd, */ char *labelName, int *numOfSubs)
 {
-   char cmdstr[256];
    char label[30];
-   int lcsize,bytes,stat,tblnum,tblsize;
+   int lcsize,stat,tblnum,tblsize;
+   int bytes __attribute__((unused));
    uint64_t size,sizeleft;
    ComboHeader *globalHeader;
   /*  Format:Cmd BufType Label(base) Size(max) number start_number  */
 
   stat = 0;
   sizeleft = size = ifile->byteLen;
-  DPRINT2(+1,"'%s': xferLcAndTables: file size: %lld\n",CntlrName,size);
+//DPRINT2(+1,"'%s': xferLcAndTables: file size: %lld\n",CntlrName,size);
 
   globalHeader = (ComboHeader *) ifile->offsetAddr;
   /* send the combo header down to console too */
@@ -526,7 +547,8 @@ xferLcAndTables(MFILE_ID ifile, char *CntlrName, NDDS_ID pubId, int *subPipeFd, 
 
   /* sprintf(label,"%slc",labelName); */
   genLabel(globalHeader,labelName,label);
-  DPRINT4(+1,"'%s': xferLcAndTables: LC Addr 0x%lx, lcsize: %d,labelKey: '%s'\n",CntlrName,ifile->offsetAddr, lcsize,label);
+// DPRINT4(+1,"'%s': xferLcAndTables: LC Addr 0x%lx, lcsize: %d,labelKey: '%s'\n",
+//         CntlrName,ifile->offsetAddr, lcsize,label);
 
 
   /* DPRINT(+1,"call writeToConsole()\n"); */
@@ -549,7 +571,7 @@ xferLcAndTables(MFILE_ID ifile, char *CntlrName, NDDS_ID pubId, int *subPipeFd, 
   tblsize = 0;
   while (sizeleft >= sizeof(ComboHeader))
   {
-     DPRINT3(+1,"'%s': xferTables: size: %lld, sizeleft: %lld\n",CntlrName,ifile->byteLen,sizeleft);
+//   DPRINT3(+1,"'%s': xferTables: size: %lld, sizeleft: %lld\n",CntlrName,ifile->byteLen,sizeleft);
      ifile->offsetAddr += tblsize;
      globalHeader = (ComboHeader *) ifile->offsetAddr;
      /* printCombo(globalHeader); */
@@ -559,7 +581,7 @@ xferLcAndTables(MFILE_ID ifile, char *CntlrName, NDDS_ID pubId, int *subPipeFd, 
      /* ifile->offsetAddr += sizeof(ComboHeader); */
 
      tblnum = htonl(globalHeader->comboID_and_Number) & 0x0ffff; /* pattern number */
-     tblsize = htonl(globalHeader->sizeInBytes) + sizeof(ComboHeader);
+     tblsize = htonl(globalHeader->sizeInBytes) + (int) sizeof(ComboHeader);
 
      /* sprintf(label,"%st%d",labelName,patnum); */
      genLabel(globalHeader,labelName,label);
@@ -580,7 +602,9 @@ xferLcAndTables(MFILE_ID ifile, char *CntlrName, NDDS_ID pubId, int *subPipeFd, 
   return(stat);
 }
 
-getPatternInfo(MFILE_ID ifile, char *CntlrName, unsigned long *numPats, unsigned long *maxsize, unsigned long *totalsize)
+#ifdef XXX
+int getPatternInfo(MFILE_ID ifile, char *CntlrName, unsigned int *numPats,
+                   unsigned int *maxsize, unsigned int *totalsize)
 {
    int lcsize,bytes,stat,comboHeaderSize;
    uint64_t sizeleft;
@@ -614,16 +638,17 @@ getPatternInfo(MFILE_ID ifile, char *CntlrName, unsigned long *numPats, unsigned
 
    return(*numPats);
 }
+#endif
 
-xferPatterns(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId, int *subPipeFd, char *labelName, int *numOfSubs)
+static int xferPatterns(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName,
+                 NDDS_ID pubId, /*  int *subPipeFd, */ char *labelName, int *numOfSubs)
 {
-   char cmdstr[256];
    char label[30];
-   int lcsize,bytes,stat,comboHeaderSize;
+   int bytes __attribute__((unused));
+   int stat,comboHeaderSize;
    uint64_t sizeleft;
    int patsize,patnum;
    ComboHeader *globalHeader;
-   unsigned long numPats, maxsize, totalsize;
 
   /*  Format:Cmd BufType Label(base) Size(max) number start_number  */
 
@@ -651,7 +676,8 @@ xferPatterns(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubI
   patsize = 0;
   while (sizeleft >= comboHeaderSize)
   {
-     DPRINT4(+1,"'%s': xferPatterns(): size: %lld, sizeleft: %lld, combosize: %d\n",CntlrName,ifile->byteLen,sizeleft,comboHeaderSize);
+//   DPRINT4(+1,"'%s': xferPatterns(): size: %lld, sizeleft: %lld, combosize: %d\n",
+//           CntlrName,ifile->byteLen,sizeleft,comboHeaderSize);
      ifile->offsetAddr += patsize;
      globalHeader = (ComboHeader *) ifile->offsetAddr;
      /* printCombo(globalHeader); */
@@ -692,19 +718,17 @@ xferPatterns(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubI
 }
 
 
-xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId, int *subPipeFd, char *labelName, int *numOfSubs)
+static int xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName,
+               NDDS_ID pubId, void *subPipeFd, char *labelName, int *numOfSubs)
 {
    char label[30];
-   int k,bytes,status;
-   int codesize,codenum;
-   long acqBufsFree;
+   int k=0,bytes,status;
+   int codesize;
+   int acqBufsFree;
    int ntimes, nTimes2sendAcodes, startAcode;
    int abortSent;
-   long nAcodes, nFIDs;	/* number of Fids or ArrayDim */
+   int nAcodes, nFIDs;	/* number of Fids or ArrayDim */
    int JpsgFlag; 
-   uint64_t fileSize;
-   uint64_t sizeleft;
-   char *code_ptr;
    ComboHeader *globalHeader;
    int ackInterval;
    int barrierStatus;
@@ -721,8 +745,8 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
    nFIDs = ExpInfo->ArrayDim;	/* Total Elements of this Exp. */
    startAcode = ExpInfo->CurrentElem;
    /* maxSize = ExpInfo->acode_max_size; */
-   DPRINT5(+1,"'%s': xferAcodes: Num Acodes: %d, FIDs: %d, Jpsg flag: %d, startAcode: %d\n",
-	CntlrName,nAcodes,nFIDs,JpsgFlag,startAcode);
+// DPRINT5(+1,"'%s': xferAcodes: Num Acodes: %d, FIDs: %d, Jpsg flag: %d, startAcode: %d\n",
+//         CntlrName,nAcodes,nFIDs,JpsgFlag,startAcode);
 
    DPRINT5(4,"'%s': xferAcodes: Num Acodes: %d, FIDs: %d, startAcode: %d, maxSize: %d\n",
 	CntlrName,nAcodes,nFIDs,startAcode,ExpInfo->acode_max_size);
@@ -751,7 +775,7 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
 
    codesize = 0;
 
-   fileSize = ifile->byteLen;
+   // fileSize = ifile->byteLen;
 
    /* nAcodes + 1 (extra one for the stat block sent down for abort or complete */
    /* sprintf(cmdstr,"downLoad Fixed %s %d %d %d",bufRootName,maxSize, nAcodes+1,startAcode); */
@@ -761,7 +785,7 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
    DPRINT2(1,"'%s': xferAcodes: Initial freeNamedBufs: %d\n",CntlrName,acqBufsFree);
    if (acqBufsFree == -99)
    {
-   	DPRINT(+1,"'%s': getXferSize() abort returned, end transfer\n");
+   	DPRINT(+1,"getXferSize() abort returned, end transfer\n");
 	abortSent = 1;
      	status = -99;
 	return(-99);
@@ -784,7 +808,7 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
 	if (((ExpInfo->NumTrans - ExpInfo->CurrentTran) % ExpInfo->NumInBS) > 0)
 	    nTimes2sendAcodes++;
 		
-        DPRINT3(2,"'%s': xferAcodes: nAcodes: %lu < acqBufsFree: %lu\n",CntlrName,nAcodes,acqBufsFree);
+//      DPRINT3(2,"'%s': xferAcodes: nAcodes: %lu < acqBufsFree: %lu\n",CntlrName,nAcodes,acqBufsFree);
         /* Interleaving & can fit all acodes down in console, only send once then */
         if ( nAcodes <= acqBufsFree )
         { 
@@ -813,7 +837,7 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
    	DPRINT2(+1,"'%s': xferAcodes: Sending %d Fids\n",CntlrName,nAcodes);
         bytes = 0;
 
-        DPRINT3(+1,"'%s': xferAcodes: offset: 0x%lx, StrtAddr: 0x%lx \n",CntlrName,ifile->offsetAddr,ifile->mapStrtAddr);
+//      DPRINT3(+1,"'%s': xferAcodes: offset: 0x%lx, StrtAddr: 0x%lx \n",CntlrName,ifile->offsetAddr,ifile->mapStrtAddr);
         /* Back to beginning of File */
         ifile->offsetAddr = ifile->mapStrtAddr;
 
@@ -837,11 +861,11 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
            if ( acqBufsFree <= 0)
            {
                 DPRINT1(1,"'%s': Request new numFree\n",CntlrName);
-                /* acqBufsFree =  getXferSize(pubId, subPipeFd);  /* if it's zero will hang */
+                // acqBufsFree =  getXferSize(pubId, subPipeFd);  /* if it's zero will hang */
                 acqBufsFree =  getXferSize(pubId, pNddsBufMngr);
                 if (acqBufsFree == -99)
                 {
-   	           DPRINT(+1,"'%s': getXferSize() abort returned, end transfer\n");
+   	           DPRINT(+1,"getXferSize() abort returned, end transfer\n");
 	           abortSent = 1;
      	           status = -99;
 	           return(-99);
@@ -852,8 +876,8 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
            globalHeader = (ComboHeader *) ifile->offsetAddr;
            /* send combo header to console too. */
            /* ifile->offsetAddr += sizeof(ComboHeader); */
-           code_ptr = (char*) ifile->offsetAddr;
-           codenum = htonl(globalHeader->comboID_and_Number) & 0x0ffff; /* Acode number */
+           // code_ptr = (char*) ifile->offsetAddr;
+           // codenum = htonl(globalHeader->comboID_and_Number) & 0x0ffff; /* Acode number */
            codesize = htonl(globalHeader->sizeInBytes) + sizeof(ComboHeader);
 
 
@@ -864,16 +888,16 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
               genLabel(globalHeader,labelName,label);
 
    	      /* DPRINT6(+1,"'%s': xferAcodes: fid: '%s', adr: 0x%lx, size %d, sn: %d, ackInterval: %d\n",CntlrName,label,code_ptr,codesize,k+1,ackInterval); */
-   	      DPRINT5(1,"'%s': xferAcodes: fid: '%s', adr: 0x%lx, size %d, sn: %d\n",CntlrName,label,code_ptr,codesize,k+1);
+// 	      DPRINT5(1,"'%s': xferAcodes: fid: '%s', adr: 0x%lx, size %d, sn: %d\n",CntlrName,label,code_ptr,codesize,k+1);
               status = writeToConsole(CntlrName, pubId, label, ifile->offsetAddr, codesize, k+1, ackInterval );
 
               /* All threads stay to gether */
               barflag = (((k - startAcode)+1) % 32);
-              DPRINT4(+3,"'%s': (k=%d - startAcode=%d)+1  % 32 = barflag = %d\n",CntlrName,k,startAcode,barflag);
+//            DPRINT4(+3,"'%s': (k=%d - startAcode=%d)+1  % 32 = barflag = %d\n",CntlrName,k,startAcode,barflag);
               DPRINT2(+1,"'%s': Wait at barrier if Zero: barflag = %d\n",CntlrName,barflag);
               if ( (((k - startAcode)+1) % 32) == 0)
               {
-   	         DPRINT2(1,"'%s': Acode: %ld, Wait on Barrier\n",CntlrName,k);
+// 	         DPRINT2(1,"'%s': Acode: %ld, Wait on Barrier\n",CntlrName,k);
                  barrierStatus = barrierWait( &TheBarrier );
                  if (barrierStatus == -99)
                  {
@@ -949,8 +973,7 @@ xferAcodes(SHR_EXP_INFO ExpInfo, MFILE_ID ifile, char *CntlrName, NDDS_ID pubId,
 *	    2n)	  Order in file of nth table to send.
 *	    2n+1) Name to give nth table
 */
-int
-sendTables(char *argstr)
+int sendTables(char *argstr)
   /* NOTE:
    * The "argstr" argument has been processed with strtok()--resulting in
    * a null being substituted for the first delimiter.
@@ -960,7 +983,6 @@ sendTables(char *argstr)
    * or if another call to strtok() occurs between these two.
    */
 {
-    char *args;
     char *filename;
     int rtn;
     char *sn;
@@ -974,7 +996,7 @@ sendTables(char *argstr)
 
     /* Send all the tables specified in the arg list */
     while ((sn=strtok(NULL, " ")) && (tblname=strtok(NULL," "))){
-	if (rtn=sendTable(filename, atoi(sn), tblname)){
+	if ( (rtn=sendTable(filename, atoi(sn), tblname)) ){
 	    /* If error, send no more tables */
 	    break;
 	}
@@ -1006,7 +1028,6 @@ sendDelTables(char *argstr)
    * or if another call to strtok() occurs between these two.
    */
 {
-    char *args;
     char *filename;
     int rtn;
     char *sn;
@@ -1020,7 +1041,7 @@ sendDelTables(char *argstr)
 
     /* Send all the tables specified in the arg list */
     while ((sn=strtok(NULL, " ")) && (tblname=strtok(NULL," "))){
-	if (rtn=sendTable(filename, atoi(sn), tblname)){
+	if ( (rtn=sendTable(filename, atoi(sn), tblname)) ){
 	    /* If error, send no more tables */
 	    break;
 	}
@@ -1029,10 +1050,12 @@ sendDelTables(char *argstr)
     return rtn;
 }
 
-sendTable(char *fname,		/* Name of table file */
-	  int tab_nbr,		/* Position in file of table to download */
-	  char *tname)		/* Name to give the downloaded table */
+// int sendTable(char *fname,		/* Name of table file */
+// 	  int tab_nbr,		/* Position in file of table to download */
+// 	  char *tname)		/* Name to give the downloaded table */
+static int sendTable(char *fname, int tab_nbr, char *tname)
 {
+   return(0);
 }
 
 /****************************************************/
@@ -1047,6 +1070,7 @@ struct _compr_
    int size;
 } ref_table[NCBFX];
 
+#ifdef XXX
 static void
 init_compressor()
 {
@@ -1057,6 +1081,7 @@ init_compressor()
     ref_table[i].size   = 0;
   }
 }
+#endif
 
 int decompress(unsigned char *dest, unsigned char *src,
                unsigned char *ref, int num)
@@ -1087,7 +1112,7 @@ int decompress(unsigned char *dest, unsigned char *src,
    return(xcnt);
 }
       
-install_ref(int size,int bufn,unsigned char *ptr)
+void install_ref(int size,int bufn,unsigned char *ptr)
 {
    /* test is programming error test */
    if (ref_table[bufn].size != 0) 
@@ -1120,10 +1145,8 @@ unsigned char *get_ref(int num)
 unsigned char *
 send_code(unsigned char *addr, unsigned char *tmpptr, int codesize, int buf_num)
 {
-    int bytes;
     int index_x;
     unsigned char *codes;
-    long codeoffset;
     int action;
     int full_size;
     unsigned char *pp1;
@@ -1133,7 +1156,7 @@ send_code(unsigned char *addr, unsigned char *tmpptr, int codesize, int buf_num)
     /***************************************************/
 
     action= 0x0c0 & buf_num;
-    full_size = ((unsigned long) (0xffffff00 & buf_num)) >> 8;
+    full_size = ((unsigned int) (0xffffff00 & buf_num)) >> 8;
     buf_num  &= 0x03f; 
     codes = addr;
     DPRINT3(1,"send_code(): action= %d full_size= %d buffer= %d\n",
@@ -1168,14 +1191,16 @@ send_code(unsigned char *addr, unsigned char *tmpptr, int codesize, int buf_num)
      }
     return(codes);
 }
+ #ifdef XXX
 static void
 get_code_info(unsigned char *addr, unsigned char *out)
 {
    int i;
 
-   for (i=0; i < 2 * sizeof(long); i++)
+   for (i=0; i < 2 * sizeof(int); i++)
       *out++ = *addr++;
 }
+#endif
 
 /****************************************************/
 /****************************************************/
@@ -1183,45 +1208,48 @@ get_code_info(unsigned char *addr, unsigned char *out)
 /****************************************************/
 
 #ifndef SENDTEST
-abortCodes(char *str)
+int abortCodes(char *str)
 {
    DPRINT(1,"abortCodes: \n");
    return(0);
 }
 
-terminate(char *str)
+int terminate(char *str)
 {
-   extern int shutdownMsgQ();
+   // extern int shutdownMsgQ();
    DPRINT(1,"terminate: \n");
    /* shutdownComm();  in commfuncs.c which is not used by nirvana */
    exit(0);
 }
 
-ShutDownProc()
+void ShutDownProc()
 {
    shutdownComm();  /* shutdown ndds subscriptions & publications */
    resetState();
 }
 
-resetState()
+
+void resetState()
 {
-  labelBase[0] = (char) NULL;
-  nAcodes = 0;
+  labelBase[0] = '\0';
+//  nAcodes = 0;
   if (mapAcodes != NULL)
   {
      mClose(mapAcodes);
   }
+#ifdef XXX
   if ( CodeList != NULL)
   {
      free(CodeList);
   }
+#endif
   if ((int) strlen(ActiveExpInfo.ExpId) > 1)
   {
     mapOutExp(&ActiveExpInfo);
   }
 }
 
-debugLevel(char *str)
+int debugLevel(char *str)
 {
     extern int DebugLevel;
     char *value;
@@ -1234,7 +1262,7 @@ debugLevel(char *str)
 }
 
 
-mapInExp(ExpEntryInfo *expid)
+int mapInExp(ExpEntryInfo *expid)
 {
     DPRINT1(2,"mapInExp: map Shared Memory Segment: '%s'\n",expid->ExpId);
 
@@ -1266,7 +1294,7 @@ mapInExp(ExpEntryInfo *expid)
     return(0);
 }
 
-mapOutExp(ExpEntryInfo *expid)
+int mapOutExp(ExpEntryInfo *expid)
 {
     DPRINT1(2,"mapOutExp: unmap Shared Memory Segment: '%s'\n",expid->ExpId);
 
@@ -1281,7 +1309,7 @@ mapOutExp(ExpEntryInfo *expid)
     return(0);
 }
 
-mapIn(char *str)
+int mapIn(char *str)
 {
     char* filename;
 
@@ -1306,7 +1334,7 @@ mapIn(char *str)
     return(0);
 }
 
-mapOut(char *str)
+int mapOut(char *str)
 {
     char* filename;
 
@@ -1323,14 +1351,14 @@ mapOut(char *str)
 
 /* dummy the SIGUSR2 routines, now use shrexpinfo.h ExpState to determine aborts, etc. */
 
-blockAbortTransfer() { return(0); }
+int blockAbortTransfer() { return(0); }
 
-unblockAbortTransfer() { return(0); }
+int unblockAbortTransfer() { return(0); }
 
-setupAbortXfer() { return(0); }
+int setupAbortXfer() { return(0); }
 
 
-sendVME(char *argstr )
+int sendVME(char *argstr )
 {
     errLogRet(LOGOPT,debugInfo,"sendVME: not consistent with Nirvana\n");
     /* deliverMessage( "Expproc", "dwnldComplete  \nBad Parameters\n0x00eeeeee\n"); */
@@ -1339,9 +1367,10 @@ sendVME(char *argstr )
 
 #endif
 
-printCombo(ComboHeader *globalHeader)
+void printCombo(ComboHeader *globalHeader)
 {
-    DPRINT2(+1,"ComboID_Number: 0x%lx, size: %d\n", htonl(globalHeader->comboID_and_Number), htonl(globalHeader->sizeInBytes) );
+//  DPRINT2(+1,"ComboID_Number: 0x%lx, size: %d\n",
+//          htonl(globalHeader->comboID_and_Number), htonl(globalHeader->sizeInBytes) );
     switch( htonl(globalHeader->comboID_and_Number) & 0xf0000000)
     {
        case INITIALHEADER:

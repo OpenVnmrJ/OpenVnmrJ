@@ -349,8 +349,6 @@ RTIBool Codes_DownldPlugin_deserialize_key(
     void *deserialize_option)
 {
 
-    RTICdrUnsignedLong sequence_length = 0;
-
     if (!RTICdrStream_deserializeLong(
         stream, &sample->key)) {
         return RTI_FALSE;

@@ -57,6 +57,10 @@
 #include "sockets.h"
 #include "msgQLib.h"
 #include "nddsbufmngr.h"
+extern char *getHostIP(char *hostname, char *localIP);
+extern int nddsSubscriptionDestroy(NDDS_ID pNDDS_Obj);
+extern int areNodesActive();
+extern void processChanMsge(int cmd, int arg1, int arg2, int arg3, char *msgstr);
 
 #ifndef DEBUG_HEARTBEAT
 #define DEBUG_HEARTBEAT	(9)
@@ -87,7 +91,9 @@ int MonCmdPipe[2];
 #endif
 
 NDDS_ID pMonitorPub, pMonitorSub;
+#ifndef RTI_NDDS_4x
 static int numMonCmdSubcriber4Pub = 0;
+#endif
 
 static NDDSBUFMNGR_ID  pMonitor_CmdBufMngr = NULL;
 
@@ -209,9 +215,7 @@ RTIBool Monitor_CmdCallback(const NDDSRecvInfo *issue, NDDSInstance *instance,
 int getNextMonitorCmd(NDDSBUFMNGR_ID pBufMngr, Monitor_Cmd* issue, char* msgeBuffer)
 {
      int bytes;
-     long nleft;
      int msgeSize;
-     long  totalMsgeSize;
      char *pBufPtr;
      char *pMsgPtr;
 
@@ -246,7 +250,6 @@ int getNextMonitorCmd(NDDSBUFMNGR_ID pBufMngr, Monitor_Cmd* issue, char* msgeBuf
 */
 void processMonitorCmd(int *pipeFd)
 {
-   void processChanMsge(int cmd, int arg1, int arg2, int arg3, char *msgstr, unsigned long len);
    Monitor_Cmd  cmdIssue;
    char msgeStr[CMD_MAX_STR_SIZE];
     int bytes;
@@ -255,7 +258,7 @@ void processMonitorCmd(int *pipeFd)
    {
       DPRINT2(1,"processMonitorCmd():  bytes: %d, cmd: %d\n",bytes,cmdIssue.cmd);
       processChanMsge(cmdIssue.cmd, cmdIssue.arg1, cmdIssue.arg2, cmdIssue.arg3, 
-			cmdIssue.msgstr.val, cmdIssue.msgstr.len);
+			cmdIssue.msgstr.val);
    }
 
 }
@@ -271,11 +274,10 @@ void Monitor_CmdCallback(void* listener_data, DDS_DataReader* reader)
    char *bufptr;
 
    DDS_ReturnCode_t retcode;
-   DDS_Boolean result;
    struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
    struct Monitor_CmdSeq data_seq = DDS_SEQUENCE_INITIALIZER;
    struct DDS_SampleInfo* info = NULL;
-   long i,numIssues,len;
+   int i,numIssues,len;
    Monitor_CmdDataReader *MonitorCmd_reader = NULL;
 
    pBufMngr = (NDDSBUFMNGR_ID) listener_data;
@@ -310,7 +312,7 @@ void Monitor_CmdCallback(void* listener_data, DDS_DataReader* reader)
       {
           recvIssue = Monitor_CmdSeq_get_reference(&data_seq,i);
 
-          DPRINT6(1,"Monitor_CmdCallback() - Cmds: %ld, arg1: %ld, arg2: %ld, arg3: %ld, crc: 0x%lx, msgstr: '%s'\n",
+          DPRINT6(1,"Monitor_CmdCallback() - Cmds: %d, arg1: %d, arg2: %d, arg3: %d, crc: 0x%x, msgstr: '%s'\n",
             recvIssue->cmd, recvIssue->arg1, recvIssue->arg2, recvIssue->arg3, recvIssue->crc32chksum, recvIssue->msgstr);
 
           bufferAddr = msgeBufGet(pBufMngr);
@@ -349,10 +351,6 @@ void Monitor_CmdCallback(void* listener_data, DDS_DataReader* reader)
 
 int getNextMonitorCmd(NDDSBUFMNGR_ID pBufMngr, Monitor_Cmd* issue, char* msgeBuffer)
 {
-     int bytes;
-     long nleft;
-     int msgeSize;
-     long  totalMsgeSize;
      char *pBufPtr;
      char *pMsgPtr;
      int len;
@@ -390,7 +388,6 @@ int getNextMonitorCmd(NDDSBUFMNGR_ID pBufMngr, Monitor_Cmd* issue, char* msgeBuf
 */
 void processMonitorCmd(int *pipeFd)
 {
-   void processChanMsge(int cmd, int arg1, int arg2, int arg3, char *msgstr, unsigned long len);
    Monitor_Cmd  cmdIssue;
    char msgeStr[CMD_MAX_STR_SIZE];
     int bytes;
@@ -399,7 +396,7 @@ void processMonitorCmd(int *pipeFd)
    {
       DPRINT2(1,"processMonitorCmd():  bytes: %d, cmd: %d\n",bytes,cmdIssue.cmd);
       processChanMsge(cmdIssue.cmd, cmdIssue.arg1, cmdIssue.arg2, cmdIssue.arg3, 
-			msgeStr,  strlen(msgeStr) + 1);
+			msgeStr);
    }
 
 }
@@ -427,7 +424,6 @@ void initiateNDDS(int debuglevel)
  
 NDDS_ID  createMonitorCmdsSub(char *subName)
 {
-    void processChanMsge();
     NDDS_ID pSubObj;
  
     /* Build Data type Object for both publication and subscription to Expproc */
@@ -463,7 +459,7 @@ NDDS_ID  createMonitorCmdsSub(char *subName)
     /* NDDS issue callback routine */
 #ifndef RTI_NDDS_4x
     pSubObj->callBkRtn = Monitor_CmdCallback;
-    pSubObj->callBkRtnParam = pMonitor_CmdBufMngr; /* MonCmdPipe; /* pCntlrThr->SubPipeFd;    write end of pipe */
+    pSubObj->callBkRtnParam = pMonitor_CmdBufMngr; // MonCmdPipe; /* pCntlrThr->SubPipeFd;    write end of pipe */
 #endif /* RTI_NDDS_4x */
 
     pSubObj->MulticastSubIP[0] = 0;   /* use UNICAST */
@@ -483,7 +479,6 @@ NDDS_ID  createMonitorCmdsSub(char *subName)
 
 NDDS_ID  createMonitorCmdsPub(char *pubName)
 {
-     int result;
      NDDS_ID pPubObj;
 
     /* Build Data type Object for both publication and subscription to Expproc */
@@ -582,7 +577,7 @@ void DestroyDomain()
 */
 
 #ifndef RTI_NDDS_4x
-int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, long len)
+int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, size_t len)
 {
     Monitor_Cmd *issue;
      RTINtpTime                maxWait    = {10,0};
@@ -598,7 +593,7 @@ int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, long len)
 }
 #else /* RTI_NDDS_4x */
 
-int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, long len)
+int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, size_t len)
 {
    DDS_ReturnCode_t result;
    DDS_InstanceHandle_t instance_handle = DDS_HANDLE_NIL;
@@ -671,7 +666,7 @@ int print_hbtime_diff( char *msg, struct timeval *newtime )
 *
 *       Author Greg Brissey 8/4/94
 */
-int shutdownComm(void)
+void shutdownComm(void)
 {
 #ifndef RTI_NDDS_4x
      HBExit();
@@ -827,7 +822,7 @@ verifyInterface( char *interface )
 {
 	char		tmpstring[ 256 ];
 	int		ival1, ival2;
-	int		ival, mlen;
+	int		ival;
 	MSG_Q_ID	tmpMsgQ;
 
 	if (interface == NULL)
@@ -892,7 +887,6 @@ char *path;
 int wallMsge(char *fmt, ...)
 {
    va_list  vargs;
-   FILE *ptr;
    char msge[512];
    char cmd[1024];
 
