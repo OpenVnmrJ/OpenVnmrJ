@@ -6,7 +6,16 @@ import sys
 sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
 import buildMethods
 
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+cwd = os.getcwd()
+
 ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print("OVJ_TOOLS env not found. Trying default location.")
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
 if not ovjtools:
     print("OVJ_TOOLS env not found.")
     print("For bash and variants, use export OVJ_TOOLS=<path>")
@@ -19,31 +28,23 @@ Import("*")
 # define target file names
 nvSendProcTarget = 'Sendproc'
 
-# we need to specify an absolute path so this SConstruct file
-# can be called from any other SConstruct file
-cwd = os.getcwd()
-
-javaPath = os.path.join(ovjtools, 'java', 'bin')
-
 # get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
 boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
 if not os.path.exists(boFile):
    boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
 exec(compile(open(boFile).read(), boFile, 'exec'))
 
-print('nvSendproc NDDS_VERSION ' + boEnv['NDDS_VERSION'])
-
+NDDS_VERSION = '4.2e'
 
 # binary paths
 #if 'Sendproc4x' in COMMAND_LINE_TARGETS:
 #  generate NDDS home path from NDDS_VERSION
-nddsdir = 'ndds.' + boEnv['NDDS_VERSION']
-print('Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this')
+nddsdir = 'ndds.' + NDDS_VERSION
+print('Compiling NDDS ' + NDDS_VERSION + ' Version')
    ## 4x NDDS
 nvSendProcTarget = 'Sendproc'
 nddsHome = os.path.join(ovjtools, 'NDDS', nddsdir)
 nddsGen = 'cd ' + cwd + ' && ' + os.path.join(nddsHome, 'scripts', 'nddsgen')
-nddsJreBin = os.path.join(nddsHome, 'jre', 'i86Linux','bin')
 
 #  ndds header paths
 nddsHdrPathUnix = os.path.join(nddsHome, 'include')
@@ -54,7 +55,7 @@ nddsOpts = ' -language C -notypecode -replace '
 
 # libraries and paths
 #  nddsLibPath = os.path.join(nddsHome, 'lib', 'i86Linux2.6gcc3.4.3')
-nddsLibVer = boEnv['NDDS_LIB_VERSION']
+nddsLibVer = 'x64Linux2.6gcc3.4.5'
 nddsLibPath = os.path.join(nddsHome, 'lib', nddsLibVer )
 LibList = [ 'pthread', 'nddscz', 'nddscorez', 'dl' ]
 
@@ -100,8 +101,7 @@ ncommFileList = ['errLogLib.c',
                  'shrMLib.c']
 
 nvExpProcPath     = os.path.join(cwd, os.pardir, 'nvexpproc')
-nvExpProcFileList = ['HBthread.c',
-                     'exceptHandler.c']
+nvExpProcFileList = ['exceptHandler.c']
 
 expProcPath     = os.path.join(cwd, os.pardir, 'expproc')
 expProcHdrList = [ 'expentrystructs.h',
@@ -153,10 +153,10 @@ nvPsgHdrList = ['lc.h',
                 'PSGFileHeader.h']
 
 # build environment
-nvSendProcEnv = Environment(CCFLAGS    = '-m32 -O -Wno-incompatible-pointer-types -Wno-implicit-function-declaration -Wno-implicit-int -Wno-int-conversion -Wno-return-mismatch',
+nvSendProcEnv = Environment(CCFLAGS    = '-O -Wall',
                             CPPDEFINES = ['LINUX', 'NODUMMY', 'RTI_UNIX',
                                           'NIRVANA', 'DEBUG'],
-                            LINKFLAGS  = '-m32',
+                            LINKFLAGS  = '',
                             CPPPATH    = [cwd,
                                           nddsHdrPathUnix,
                                           nddsHdrPathShare])

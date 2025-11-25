@@ -26,6 +26,12 @@
 #include <signal.h>
 #include "rngBlkLib.h"
 
+extern int bindSocketAnyAddr( Socket *pSocket );
+extern int acceptSocket_r( Socket *pSocket, Socket *pAcceptSocket );
+extern int rngBlkPut(RINGBLK_ID rngd,long* buffer,int size);
+extern int rngBlkGet(RINGBLK_ID rngd,long* buffer,int size);
+extern int parser(char* str);
+
 
 #define  NOT_OPEN		-1	/* taken from sockets.c */
 #define  MAX_SIMUL_CONNECTIONS	10
@@ -60,7 +66,7 @@ void delacqinfo2()
 
 void wrtacqinfo2()
 {
-	char	LocalAcqHost[256], buf[ 256 ], filepath[256];
+	char	LocalAcqHost[256], buf[ 256+128 ], filepath[256];
 	int	bytes, fd;
 
 	gethostname( LocalAcqHost, sizeof( LocalAcqHost ) );
@@ -99,7 +105,8 @@ void wrtacqinfo2()
  */
 int initExpprocSocket()
 {
-	int	status, ival;
+	int	ival;
+	int	status __attribute__((unused));
 	int	applPort;
         void *AcceptConnection( void *arg);
 
@@ -168,8 +175,8 @@ void *AcceptConnection( void *arg)
 	}
         else
         {
-		DPRINT2(+3,"AcceptConnection: 0x%lx, fd: %d\n", pAcceptSocket,pAcceptSocket->sd);
-		rngBlkPut(pAcceptQueue, &pAcceptSocket, 1);
+		DPRINT2(+3,"AcceptConnection: %p, fd: %d\n", pAcceptSocket,pAcceptSocket->sd);
+		rngBlkPut(pAcceptQueue, (long *) &pAcceptSocket, 1);
                 pthread_kill(main_threadId,SIGIO); /* signal console socket msg arrival to main thread */
                 /* kill(getpid(), SIGIO); */
         }
@@ -183,7 +190,7 @@ int processExpSock()
    fd_set  readfd;
    Socket  *pAcceptSocket;
    void readAcceptSocket( Socket *pSocket );
-   int     rngBlkIsEmpty (register RINGBLK_ID ringId);
+   // int     rngBlkIsEmpty (RINGBLK_ID ringId);
    int sockInQ;
    /* Start by building a mask of possible active file descriptors  */
 
@@ -193,14 +200,12 @@ int processExpSock()
    {
      
      DPRINT1(1,"Accepted Sockets in Queue: %d\n",sockInQ);
-     rngBlkGet(pAcceptQueue, &pAcceptSocket, 1);
-     DPRINT2(+3,"processExpSock: 0x%lx, fd: %d\n", pAcceptSocket,pAcceptSocket->sd);
+     rngBlkGet(pAcceptQueue, (long *) &pAcceptSocket, 1);
+     DPRINT2(+3,"processExpSock: %p, fd: %d\n", pAcceptSocket,pAcceptSocket->sd);
 
      FD_ZERO( &readfd );
      FD_SET( pAcceptSocket->sd, &readfd);
    
-     DPRINT1(+3,"readfd mask: 0x%lx\n",readfd);
-
    /* who's got input ? */
   try_again:
      if ( (nfound = select( pAcceptSocket->sd+1, &readfd, 0, 0, 0 ) ) < 0)
@@ -210,8 +215,6 @@ int processExpSock()
         else
            errLogSysRet(ErrLogOp,debugInfo, "select Error:\n" );
      }
-     DPRINT1(+3,"select: readfd mask: 0x%lx\n",readfd);
-
      if (nfound < 1)  /* Nobody */
      {
         /*fprintf( stderr, "SIGIO received, but nothing active was found\n" );*/
@@ -243,11 +246,11 @@ void readAcceptSocket( Socket *pSocket )
         char*			allocbuffer = NULL;
         char*			buffer = NULL;
 	char	 		constbuf[ 4096 ];
-        long			msgeSize;
+        int			msgeSize;
 	int	 		bcount;
 
 	/* registerSocketNonAsync( pSocket ); */
-	bcount = readSocketNonblocking( pSocket, (char*) &msgeSize, sizeof( long ) );
+	bcount = readSocketNonblocking( pSocket, (char*) &msgeSize, sizeof( int ) );
         DPRINT2(+2,"processAcceptSocket: bcount: %d, msgesize:  %d\n",bcount,msgeSize);
         if (bcount > 0)
         {
@@ -288,7 +291,7 @@ void readAcceptSocket( Socket *pSocket )
           /* If a buffer was malloc'ed then it's time to free it */
           if (allocbuffer != NULL)
           {
-            DPRINT1(1,"processAcceptSocket: Freeing Malloc buffer (0x%lx).\n",allocbuffer);
+            DPRINT1(1,"processAcceptSocket: Freeing Malloc buffer (%p).\n",allocbuffer);
 	    free(allocbuffer);
           }
 

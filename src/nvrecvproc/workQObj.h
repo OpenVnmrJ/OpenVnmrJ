@@ -43,13 +43,13 @@ typedef struct _mfileWapper_ {
 
 
 /* The Sum-To-Memory Function for summing the data on the Host Computer */
-typedef int (*PSTMF)(void* dstadr, void* srdadr, unsigned long np);
+typedef int (*PSTMF)(void* dstadr, void* srdadr, unsigned int np);
 
 #define USE_MALLOC_BUFS
 
 /*************************************************************/
 typedef struct _Work_Q_Invarients {
-       long  		NumFids;  /* NF */
+       int  		NumFids;  /* NF */
        int  		rcvrPos;	/* the positional order of this multiple recvr FID with the FID file */
        int  		numActiveRcvrs; /* the positional order of this multiple recvr FID with the FID file */
        RINGBLK_ID 	pFidBufIndices; /* block ring buffer of free data buffers indices, for buffering fid data  */
@@ -65,12 +65,12 @@ typedef struct _Work_Q_Entry {
        struct _workqobj_ 	*pWorkQObj; 
        struct _Work_Q_Invarients *pInvar;
        int 			statBlkType;		/* FID, Warning, Error */
-       unsigned long  		statBlkCRC;
+       unsigned int  		statBlkCRC;
        FID_STAT_BLOCK* 		pFidStatBlk;
-       unsigned long  		dataCRC;
+       unsigned int  		dataCRC;
        int      		bufferIndex;
-       long 			cf;		/* current fid trace */
-       long 			trueElemId;
+       int 			cf;		/* current fid trace */
+       int 			trueElemId;
        char 			*FidStrtAddr; /* used only by NDDS Data_Upload.c  Custom Deserializer */
        char 			*pFidData;	 /* data buffer */
        long long		RW_FileOffset;   /* offset into file, used for regular file I/O */
@@ -90,7 +90,7 @@ typedef struct _workqobj_   /* FID Stat Block Buffer Object */
        WORKQ_ENTRY_ID   pWrkQBuffs;
        FID_STAT_BLOCK*  pFidStatBufs;
        char 		*pFidDataBufs;
-       unsigned long 	FidDataBufSize;
+       unsigned int 	FidDataBufSize;
        struct _Work_Q_Invarients *pInvar;
        char             *pFidSummingBuf;  /* for IL & RA Fid summing when using regular File IO rather than MMAP */
     } WORKQ_OBJECT;
@@ -106,8 +106,8 @@ typedef WORKQ_OBJECT  *WORKQ_ID;
 
  
 extern WORKQ_ID workQCreate(void *pWorkDesc, int maxWorkQentries);
-extern int setMaxWorkQMemoryUsage(WORKQ_ID pWorkQ, long long maxMemorySize);
-extern int workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  long fidSizeBytes, long nf, int ddrPos, int numActiveDDRs,PSTMF stmFunc);
+extern void setMaxWorkQMemoryUsage(WORKQ_ID pWorkQ, long long maxMemorySize);
+extern void workQDataBufsInit(WORKQ_ID pWorkQ, MFILE_ID_WRAPPER fiddata,  int fidSizeBytes, int nf, int ddrPos, int numActiveDDRs,PSTMF stmFunc);
 extern WORKQ_ENTRY_ID workQGet(WORKQ_ID pWorkQ);
 extern int workQReset(WORKQ_ID pWorkQ);
 extern int workQFree(WORKQ_ID pWorkQ, WORKQ_ENTRY_ID workQEntry);

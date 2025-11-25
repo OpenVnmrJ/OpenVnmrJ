@@ -42,13 +42,15 @@
 extern int createCodeDownldPublication(cntlr_t *pCntlrThr,char *pubName);
 extern int createCodeDownldSubscription(cntlr_t *pCntlrThr,char *subName);
 extern int createAppHB_BESubscription(cntlr_t *pCntlrThr,char *subName);
+extern int downLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName);
+extern void unMapDownLoadExpData(cntlr_t *pWrker,  void *expinfo, char *bufRootName);
 void pThreadBlockAllSigs(void);
 
 extern barrier_t TheBarrier;
 
 #define CREW_SIZE 1
 
-#define MAX_IPv4_UDP_SIZE_BYTES 65535   /* IPv4 UDP max Packet size */
+// #define MAX_IPv4_UDP_SIZE_BYTES 65535   /* IPv4 UDP max Packet size */
  
 /* extern char databuf[MAX_IPv4_UDP_SIZE_BYTES]; */
 
@@ -110,20 +112,20 @@ void MyThreadPubStatusRtn(NDDSPublicationReliableStatus *status,
  */
 int initCrew(cntlr_crew_t *pCrew)
 {
-   int stat;
+   int stat __attribute__((unused));
 
-   DPRINT1(+1,"Crew Struct Addr: 0x%lx\n",pCrew);
+//   DPRINT1(+1,"Crew Struct Addr: %p\n",pCrew);
 
    /* clear complete structure */
    memset(pCrew,0,sizeof(cntlr_crew_t));
 
    pCrew->crew_size = 0;
    stat = pthread_mutex_init(&pCrew->mutex,NULL);  /* assign defaults to mutex */
-   DPRINT2(+1,"stat: %d, Mutex: 0x%lx\n",stat,pCrew->mutex);
+//   DPRINT2(+1,"stat: %d, Mutex: 0x%lx\n",stat,pCrew->mutex);
    stat = pthread_cond_init(&pCrew->cmdgo,NULL);
-   DPRINT2(+1,"stat: %d, Cmd cond: 0x%lx\n",stat,pCrew->cmdgo);
+//   DPRINT2(+1,"stat: %d, Cmd cond: 0x%lx\n",stat,pCrew->cmdgo);
    stat = pthread_cond_init(&pCrew->done,NULL);
-   DPRINT2(+1,"stat: %d, done cond: 0x%lx\n",stat,pCrew->done);
+//   DPRINT2(+1,"stat: %d, done cond: 0x%lx\n",stat,pCrew->done);
    return 0;
 }
  
@@ -242,7 +244,7 @@ int initCntrlThread(cntlr_crew_t *pCrew, char *cntlrName)
     return (index);
 }
 
-int createCntrlThread(cntlr_crew_t *pCrew, int theadIndex, NDDSBUFMNGR_ID pNddsBufMngr)
+void createCntrlThread(cntlr_crew_t *pCrew, int theadIndex, NDDSBUFMNGR_ID pNddsBufMngr)
 {
    cntlr_t   *pCntlrThr;
    int status;
@@ -281,7 +283,7 @@ void *worker_routine (void *arg)
    int status;
    int state;
 
-    DPRINT3(+2,"'%s': Crew %d, thrdId: %d,  starting\n", mine->cntlrId,mine->threadId,mine->index);
+// DPRINT3(+2,"'%s': Crew %d, thrdId: %d,  starting\n", mine->cntlrId,mine->threadId,mine->index);
 
     /* DPRINT1(+1,"crew mutex: addr to: 0x%lx, actual addr: 0x%lx\n",&crew->mutex,crew->mutex); */
     pThreadBlockAllSigs();   /* block most signals here */
@@ -324,8 +326,8 @@ void *worker_routine (void *arg)
         if (status != 0)
             errLogSysQuit(LOGOPT,debugInfo,"Could not unlock mutex for controller '%s'",mine->cntlrId);
 
-        DPRINT5(+2,"'%s': Crew %d woke,a Cmd: %d, work cnt: %d, subcriber: %d\n",
-                  mine->cntlrId, mine->index, mine->cmd, crew->work_count,mine->numSubcriber4Pub);
+//      DPRINT5(+2,"'%s': Crew %d woke,a Cmd: %d, work cnt: %d, subcriber: %d\n",
+//                mine->cntlrId, mine->index, mine->cmd, crew->work_count,mine->numSubcriber4Pub);
  
 
         /*
@@ -384,8 +386,8 @@ void *worker_routine (void *arg)
  
         crew->work_count--;
 
-        DPRINT3(+2,"'%s': Crew %d decremented work to %d\n", mine->cntlrId, mine->index,
-                  crew->work_count);
+//      DPRINT3(+2,"'%s': Crew %d decremented work to %d\n", mine->cntlrId, mine->index,
+//                crew->work_count);
 
         /* if this is the last thread to finish, then a few items must be done */
         /* 1. Unmap any files that were used */
@@ -417,7 +419,7 @@ void *worker_routine (void *arg)
  * method that the main thread calls to be sure all controller threads
  * have reached their idle state
  */
-wait4DoneCntlrStatus(cntlr_crew_t *crew)
+int wait4DoneCntlrStatus(cntlr_crew_t *crew)
 {
     int status, cancel, temp;
     struct timespec timeout;
@@ -426,7 +428,7 @@ wait4DoneCntlrStatus(cntlr_crew_t *crew)
     if (status != 0)
        return -1;
 
-    DPRINT1(+2,"wait4DoneCntlrStatus: work  is %d\n",crew->work_count);
+//    DPRINT1(+2,"wait4DoneCntlrStatus: work  is %d\n",crew->work_count);
     if (crew->work_count == 0)
     {
        DPRINT(+2,"wait4DoneCntlrStatus: count is Zero, Just return\n");
@@ -443,8 +445,8 @@ wait4DoneCntlrStatus(cntlr_crew_t *crew)
         * Wait until workcount == 0 which means that all
         * sending threads have return to there idle state 
         */
-       DPRINT1(+2,"wait4DoneCntlrStatus: active: %d, wait on conditional\n",
-                crew->work_count);
+//     DPRINT1(+2,"wait4DoneCntlrStatus: active: %d, wait on conditional\n",
+//              crew->work_count);
 
        while(crew->work_count > 0)
        {

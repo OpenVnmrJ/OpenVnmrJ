@@ -62,8 +62,10 @@
 #define  MULTICAST_DISABLE 0  /* disable multicasting for NDDS */
 #define  NDDS_DBUG_LEVEL 3
 static char  *ConsoleHostName = "wormhole";
+int createCodeDownldPublication(cntlr_t *pCntlrThr,char *pubName);
 
 extern char *getHostIP(char* hname, char *localIP);
+extern int nddsSubscriptionDestroy(NDDS_ID pNDDS_Obj);
 
 extern cntlr_crew_t TheSendCrew;
 
@@ -201,7 +203,7 @@ static void safeRead(int fd, char *buf, size_t len)
 
 int readBlkingMsgePipe(int *pipeFd, char* msgeBuffer)
 {
-     long msgSize;
+     size_t msgSize;
 
      /* DPRINT2(+1,"readBlkingMsgePipe: pipeFd[0]: %d, pipeFd[1]: %d\n",pipeFd[0],pipeFd[1]); */
 
@@ -215,7 +217,7 @@ int readBlkingMsgePipe(int *pipeFd, char* msgeBuffer)
 int readBlkingMsgePipe(int *pipeFd, char* msgeBuffer)
 {
      int bytes;
-     long nleft;
+     int nleft;
      int msgeSize;
      int totalMsgeSize;
 
@@ -266,8 +268,7 @@ void Codes_DownldCallback(void* listener_data, DDS_DataReader* reader)
    struct DDS_SampleInfo* info = NULL;
    struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
    DDS_ReturnCode_t retcode;
-   DDS_Boolean result;
-   long i,numIssues;
+   int i,numIssues;
    DDS_TopicDescription *topicDesc;
 
    // pBufMngr = (NDDSBUFMNGR_ID *) listener_data;
@@ -431,7 +432,7 @@ void PublicationListener_on_subscription_matched(
 void PublicationListener_on_data_available( void* listener_data,
     DDS_DataReader* reader)
 {
-    char pubtopic[128];
+    char pubtopic[128*2];
     struct DDS_PublicationBuiltinTopicDataSeq data_seq = DDS_SEQUENCE_INITIALIZER;
     struct DDS_PublicationBuiltinTopicData *regular_data;
     struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
@@ -439,7 +440,6 @@ void PublicationListener_on_data_available( void* listener_data,
     int i;
     struct DDS_PublicationBuiltinTopicDataDataReader* builtin_reader = 
 	(struct DDS_PublicationBuiltinTopicDataDataReader*) reader;
-    struct DDS_SampleInfo *info_data = NULL;
     unsigned char *user_data = NULL; 
     
     /* take the latest publication found */
@@ -466,7 +466,7 @@ void PublicationListener_on_data_available( void* listener_data,
                  (strcmp(CNTLR_CODES_DOWNLD_PUB_M21_STR, regular_data->topic_name) == 0)  )
             {
               int len, threadIndex;
-              char cntlrName[128];
+              DDS_Octet cntlrName[128];
 	      /* see if there is user data */
               len = DDS_OctetSeq_get_length(&(regular_data->user_data.value));
 	      if (len == 0)
@@ -481,12 +481,12 @@ void PublicationListener_on_data_available( void* listener_data,
                          "\"%s\".\n", regular_data->topic_name, regular_data->type_name);
               DPRINT1(-1,"User_data: '%s'\n",user_data);
               DPRINT1(-1,"CntrlName: '%s'\n",cntlrName);
-              threadIndex = initCntrlThread(&TheSendCrew,cntlrName);
+              threadIndex = initCntrlThread(&TheSendCrew, (char *)cntlrName);
               DPRINT1(-1,"thread Index: %d\n",threadIndex);
               if (threadIndex != -1)
               { 
                 NddsBufMngrs[threadIndex] = nddsBufMngrCreate(100,sizeof(Codes_Downld));
-                DPRINT1(-1,"nddsBufMngrCreate: 0x%lx\n", NddsBufMngrs[threadIndex]);
+                DPRINT1(-1,"nddsBufMngrCreate: %p\n", NddsBufMngrs[threadIndex]);
                 sprintf(pubtopic,HOST_PUB_TOPIC_FORMAT_STR,cntlrName);
                 DPRINT1(-1,"Topic name: '%s'\n",pubtopic);
                 createCodeDownldPublication(&(TheSendCrew.crew[threadIndex]),pubtopic);
@@ -507,7 +507,7 @@ void PublicationListener_on_data_available( void* listener_data,
     }
 }
 
-createDiscoveryCallback(NDDS_ID pNDDS_Obj)
+void createDiscoveryCallback(NDDS_ID pNDDS_Obj)
 {
     DDS_Subscriber                             *builtinSubscriber;
     DDS_PublicationBuiltinTopicDataDataReader *builtinDataReader;
@@ -518,13 +518,13 @@ createDiscoveryCallback(NDDS_ID pNDDS_Obj)
     // printf("get builtin_subscriber\n");
     if (builtinSubscriber == NULL) {
         errLogRet(LOGIT,debugInfo," failed to create built-in subscriber\n");
-	     return 0;
+	     return;
     }
     // printf("get builtin_datareader \n");
     builtinDataReader = (DDS_PublicationBuiltinTopicDataDataReader *)DDS_Subscriber_lookup_datareader(builtinSubscriber, DDS_PUBLICATION_TOPIC_NAME);
     if (builtinDataReader == NULL) {
        errLogRet(LOGIT,debugInfo," failed to create built-in subscriber data reader\n");
-	    return 0;
+	    return;
     }
 
     /* Setup data reader listener */
@@ -560,19 +560,15 @@ void CodeDownld_RequestedLivelinessChanged(void* listener_data, DDS_DataReader* 
    DPRINT1(-1,"The total count of currently not_alive DDS_DataWriter entities: %d\n",status->not_alive_count);
    DPRINT1(-1,"The change in the alive_count: %d\n",status->alive_count_change);
    DPRINT1(-1,"The change in the not_alive_count: %d\n", status->not_alive_count_change);
-   DPRINT1(-1,"handle to the last remote writer to change its liveliness: 0x%lx\n",status->last_publication_handle);
+//   DPRINT1(-1,"handle to the last remote writer to change its liveliness: %ld\n",status->last_publication_handle);
 }
 
 void CodeDownld_SubscriptionMatched(void* listener_data, DDS_DataReader* reader,
                         const struct DDS_SubscriptionMatchedStatus *status)
 {
-    char cntrlName[128];
-    char *chrptr;
-    int len, threadIndex;
-    cntlr_t   *me;
-    DDS_ReturnCode_t retcode;
+//    DDS_ReturnCode_t retcode;
     DDS_TopicDescription *topicDesc;
-    struct DDS_DataWriterQos DWQos = DDS_DataWriterQos_INITIALIZER;
+//    struct DDS_DataWriterQos DWQos = DDS_DataWriterQos_INITIALIZER;
 /*
     DDS_Long    total_count
         The total cumulative number of times the concerned DDS_DataReader
@@ -697,7 +693,6 @@ int createCodeDownldPublication(cntlr_t *pCntlrThr,char *pubName)
     return(0);
 }
  
-static int callbackParam = 1;
 
 #ifndef RTI_NDDS_4x
 /*
@@ -707,6 +702,7 @@ static int callbackParam = 1;
  *
  *                                      Author Greg Brissey 4-26-04
  */
+static int callbackParam = 1;
 NDDSSubscription Cntlr_CodeDwnldPatternSubCreate( const char *nddsTopic, const char *nddsType,
                   void *callBackRtnParam)
 {
@@ -761,7 +757,7 @@ int cntlrCodeDwnldPatternSub()
 #endif /* RTI_NDDS_4x */
 
 #ifdef RTI_NDDS_4x
-initCodeDownldSub()
+void initCodeDownldSub()
 {
    createDiscoveryCallback(NDDS_Domain);
    createCodeDownldSubscription(NULL,HOST_CODES_DOWNLD_SUB_M21_STR);
@@ -937,7 +933,7 @@ int wait4ConsoleSub(NDDS_ID pubId)
 int writeToConsole(char *cntlrId, NDDS_ID pubId, char *name, char* bufAdr,int size, int serialNum, int ackItr )
 {
   Codes_Downld *issue = pubId->instance;
-  int i,xfrsize,tbytes;
+  int xfrsize,tbytes;
   int bytesleft;
 /*
 #ifdef LINUX
@@ -957,7 +953,7 @@ int writeToConsole(char *cntlrId, NDDS_ID pubId, char *name, char* bufAdr,int si
 
   tbytes = 0;
 
-  i = 1;
+  // i = 1;
   issue->totalBytes = size;
   issue->dataOffset = 0;
   bytesleft = size;
@@ -972,9 +968,9 @@ int writeToConsole(char *cntlrId, NDDS_ID pubId, char *name, char* bufAdr,int si
      /* printf("memcpy(0x%lx,0x%lx,%ld)\n",issue->data.val,bufAdr,xfrsize); */
      memcpy(issue->data.val,bufAdr,xfrsize);
 #else  /* RTI_NDDS_4x */
-     DDS_OctetSeq_from_array(&(issue->data),bufAdr,xfrsize);
+     DDS_OctetSeq_from_array(&(issue->data),(const DDS_Octet *)bufAdr,xfrsize);
 #endif /* RTI_NDDS_4x */
-     DPRINT5(+2,"'%s' - writeToConsole: name: '%s', sn: %d, pub xfrsize: %d, crc32: 0x%lx\n",cntlrId, issue->label,issue->sn, xfrsize,issue->crc32chksum);
+     DPRINT5(+2,"'%s' - writeToConsole: name: '%s', sn: %d, pub xfrsize: %d, crc32: %d\n",cntlrId, issue->label,issue->sn, xfrsize,issue->crc32chksum);
      /* blockAllEvents();    thread already has most signal blocked */
      /* nddsPublishData(pPubObj); */
 #ifndef RTI_NDDS_4x
@@ -1030,8 +1026,8 @@ int initPS(cntlr_crew_t *crewList)
 
 int shutdownComm(void)
 {
-   int i, numOfSubs;
 #ifdef JUST_DELETE_DOMAIN
+   int i, numOfSubs;
    numOfSubs = TheSendCrew.crew_size;      /* Size of array */
    for (i=0; i < numOfSubs; i++)
    {

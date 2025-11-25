@@ -1,0 +1,90 @@
+from __future__ import print_function
+import os
+import glob
+import sys
+import string
+sys.path.append(os.path.join(os.getcwd(), 'patch'))
+import myShutil # for better copytree()
+
+swDir = os.path.join(os.getcwd(),os.pardir)
+
+# ---------------   copy files and create the patch build ---------------------
+
+# get envirnment
+env = Environment(ENV = os.environ)
+
+# define the patch name
+patchTarget = '3.2_LNX_ANY_510'
+readmeFile = 'Readme.x64_10'
+
+
+# patchDir = os.path.join(swDir,os.pardir,pardir,os.pardir,
+patchDirParent = os.path.join(swDir,os.pardir,os.pardir,
+                         'patches',patchTarget)
+
+cmd = 'rm -rf ' + patchDirParent
+Execute(cmd);
+os.makedirs(patchDirParent)
+
+dest = os.path.join(patchDirParent,'patchmake')
+src  = os.path.join(swDir,'scripts','patchmake.sh')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0o755))
+
+patchDir = os.path.join(patchDirParent,'patch')
+os.makedirs(patchDir)
+
+# src = os.path.join(swDir,'patch','p_required');
+# dest = os.path.join(patchDir,'p_required')
+# Execute(Copy(dest,src))
+# Execute(Chmod(dest,0o644))
+
+dest = os.path.join(patchDir,'Readme')
+src  = os.path.join(swDir,'patch',readmeFile)
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0o644))
+dest = os.path.join(patchDirParent,patchTarget+'.Readme')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0o644))
+#
+# ---------------   Patch specific addition need to go here --------
+# You can add tiems here or create a separate SConstruct.105
+# eg: SConscript('SConstruct.105')
+# create any neccessary vnmr-subdirectories inside the patch directory
+# eg: binDir    = os.path.join(patchDir,'bin')
+#     if not os.path.exists(binDir):
+#         os.makedirs(binDir)
+#
+#---------------------------------------------------------------------
+#
+
+acqbinDir = os.path.join(patchDir,'acqbin')
+if not os.path.exists(acqbinDir):
+   os.makedirs(acqbinDir)
+
+binSrc = os.path.join(swDir,'nvexpproc')
+dest = os.path.join(acqbinDir,'Expproc')
+src  = os.path.join(binSrc,'Expproc')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0o755))
+
+binSrc = os.path.join(swDir,'nvsendproc')
+dest = os.path.join(acqbinDir,'Sendproc')
+src  = os.path.join(binSrc,'Sendproc')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0o755))
+
+binSrc = os.path.join(swDir,'nvrecvproc')
+dest = os.path.join(acqbinDir,'Recvproc')
+src  = os.path.join(binSrc,'Recvproc')
+Execute(Copy(dest,src))
+Execute(Chmod(dest,0o755))
+
+# vnmrbgSrc = os.path.join(swDir,'vnmrbg')
+# dest = os.path.join(binDir,'Vnmrbg')
+# src  = os.path.join(vnmrbgSrc,'Vnmrbg')
+# Execute(Copy(dest,src))
+# Execute(Chmod(dest,0o755))
+
+cmd = 'cd ' + patchDirParent + ';./patchmake patch ' + patchTarget + '; rm -f patchmake'
+Execute(cmd);

@@ -73,7 +73,7 @@ typedef struct cntlr_crew {
     NDDS_ID		domainID;
     int                 crew_size;      /* Size of array */
     cntlr_t             crew[MAX_CREW_SIZE];/* Crew members */
-    long                work_count;     /* Count of work items */
+    int                work_count;     /* Count of work items */
     int			cmd[MAX_CREW_SIZE];	/* cmd to each thread threads */
     pthread_mutex_t     mutex;          /* Mutex for crew data */
     pthread_cond_t      done;           /* Wait for crew done */
@@ -88,7 +88,7 @@ extern int initCrew(cntlr_crew_t *pCrew);
 extern int addCntrlThread(cntlr_crew_t *pCrew, char *cntlrName);
 #else  /* RTI_NDDS_4x */
 extern int initCntrlThread(cntlr_crew_t *pCrew, char *cntlrName);
-extern int createCntrlThread(cntlr_crew_t *pCrew, int theadIndex, NDDSBUFMNGR_ID pNddsBufMngr);
+extern void createCntrlThread(cntlr_crew_t *pCrew, int theadIndex, NDDSBUFMNGR_ID pNddsBufMngr);
 #endif /* RTI_NDDS_4x */
 
 #ifdef __cplusplus

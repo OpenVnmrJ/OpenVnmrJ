@@ -50,7 +50,7 @@ void killEmDead(int first2Die,int last2Die);
 
 pid_t startTask(char *taskname, char *filepath)
 {
-    int ret;
+    int ret __attribute__((unused));;
     char testpath[512];
     int setmask,isSendorRecvproc,isStat;
     sigset_t		omask, qmask;
@@ -94,7 +94,7 @@ pid_t startTask(char *taskname, char *filepath)
 int startAutoproc(char *autodir, char *autoDoneQ)  /* if not started then start it */
 {
    char testpath[512];
-   int ret;
+   int ret __attribute__((unused));
 
    DPRINT1(1,"startAutoproc: Test Access for: %s\n", taskList[AUTOPROC].procPath);
    if (taskList[AUTOPROC].taskPid != -1)

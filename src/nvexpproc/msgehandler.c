@@ -54,7 +54,7 @@ extern int deliverMessage(char *interface, char *msg); /*   commfuncs.c */
 extern int resetExpproc(void);                         /*   commfuncs.c */
 extern int isExpActive(void);                          /*   commfuncs.c */
 /* extern int connectChan(int chan_no);                   commfuncs.c */
-extern int setStatInQue(long numInQue);                /*   statfuncs.c */
+extern int setStatInQue(int numInQue);                /*   statfuncs.c */
 extern int setStatExpTime(double duration);            /*   statfuncs.c */
 extern int getStatOpsCmpltFlags(void);                 /*   statfuncs.c */
 extern int mapInExp(ExpEntryInfo *expid);              /*    expfuncs.c */
@@ -65,7 +65,7 @@ extern int abortSampChange(void);                      /* prochandler.c */
 extern int startAutoproc(char *autodir, char *doneQ);  /* prochandler.c */
 extern int startATask(int task);                       /* prochandler.c */
 extern int chkTaskActive(int task);                    /* prochandler.c */
-extern int activeQnoWait(int oldproc, long key,        /*  procQfuncs.c */
+extern int activeQnoWait(int oldproc, int key,        /*  procQfuncs.c */
                          int newproc);
 extern int expQshow(void);                             /*   expQfuncs.c */
 extern int expQaddToHead(int priority, char* expidstr, /*   expQfuncs.c */
@@ -126,7 +126,7 @@ static int abort_in_progress = 0;
 static int lastExp = 0;
 static char lastUser[256];
 
-extern int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, long len);
+extern int send2Monitor(int cmd, int arg1, int arg2, int arg3, char *msgstr, size_t len);
 void roboTerminate();
 
 /*  These program assist with console access authorization records  */
@@ -489,7 +489,7 @@ int ipctst(char *argv)
 {
     char  Msge[512];
     char *returnInterface, *token;
-    long strsize;
+    size_t strsize;
 
 #ifdef MSG_DEBUG
     DPRINT( 1, "ipc console test called in Nessie expproc\n" );
@@ -533,7 +533,7 @@ int chkExpQ(char *argstr)
   int sendProcMsg(int elem, int ctval, int donecode, int errorcode);
 /*  char  Msge[512]; */
   char recvmsg[128];
-  char sndmsge[128];
+  char sndmsge[128*2];
   char msgestr[256];
   char ExpN[25];
   int totalq;
@@ -585,7 +585,7 @@ int chkExpQ(char *argstr)
 	if (mapInExp(&ActiveExpInfo) != -1)
         {
 
-          int strsize;
+          size_t strsize;
           unsigned int Acodes2WaitFor;
 
 	    /* Mark the Experiment as Started */
@@ -600,12 +600,12 @@ int chkExpQ(char *argstr)
 		(pSndMsgQ->MsgQDbmEntry.pidActive > 0) )
            {
 #endif
-	      sprintf(recvmsg,"recv %s",ActiveExpInfo.ExpId);
+	      sprintf(recvmsg,"recv %.120s",ActiveExpInfo.ExpId);
   	      DPRINT1(1,"Send Recvproc: '%s'\n",recvmsg);
 	      sendMsgQ(pRcvMsgQ,recvmsg,strlen(recvmsg),MSGQ_NORMAL,
 				WAIT_FOREVER);
 
-	      sprintf(sndmsge,"send %s %s",ActiveExpInfo.ExpId,
+	      sprintf(sndmsge,"send %.120s %.128s",ActiveExpInfo.ExpId,
 				ActiveExpInfo.ExpInfo->AcqBaseBufName);
   	      DPRINT1(1,"Send Sendproc: '%s'\n",sndmsge);
 	      sendMsgQ(pSndMsgQ,sndmsge,strlen(sndmsge),MSGQ_NORMAL,
@@ -640,7 +640,7 @@ int chkExpQ(char *argstr)
                     Acodes2WaitFor++;   /* add one to account for the f0 acode sent besides f1-fn */
 
               strsize = strlen(ActiveExpInfo.ExpInfo->AcqBaseBufName) + 1;
-              DPRINT5(1,"send2Monitor(APARSER,NumAcodes: %u, NumTables: %u, startFID: %u, AcqBaseBufName: '%s', strlen: %d\n",
+              DPRINT5(1,"send2Monitor(APARSER,NumAcodes: %u, NumTables: %u, startFID: %u, AcqBaseBufName: '%s', strlen: %zd\n",
 			Acodes2WaitFor /*ActiveExpInfo.ExpInfo->NumAcodes*/, ActiveExpInfo.ExpInfo->NumTables, 
 			startFID, ActiveExpInfo.ExpInfo->AcqBaseBufName,  strsize);
 
@@ -1018,20 +1018,21 @@ int acqHalt2(char *args)
                  ( (int) strlen(returnInterface) > 1) );
    if (isExpActive() == 0) 
    {
+      int ret __attribute__((unused));
       sprintf(msge,"(umask 0; cat /dev/null > %s/acqqueue/psg_abort)\n",systemdir);
-      system(msge);
+      ret = system(msge);
       if (reply_ok)
       {
-	sprintf(msge, "write('error','No Experiment Active.')\n");
-	deliverMessage( returnInterface, msge );
+	      sprintf(msge, "write('error','No Experiment Active.')\n");
+	      deliverMessage( returnInterface, msge );
       }
       return 0;
    }
    if (interactive_pid >= 0) {
       if (reply_ok)
       {
-	sprintf(msge, "write('error','No Abort Acq when system is in interactive mode.')\n");
-	deliverMessage( returnInterface, msge );
+	      sprintf(msge, "write('error','No Abort Acq when system is in interactive mode.')\n");
+	      deliverMessage( returnInterface, msge );
       }
       return 0;
    }
@@ -1042,7 +1043,7 @@ int acqHalt2(char *args)
         sprintf(msge,
                 "write('error','Halt denied, %s already has Exp. present.')\n",
 				userName);
-	deliverMessage( returnInterface, msge );
+	      deliverMessage( returnInterface, msge );
       }
       return 0;
    }
@@ -1053,7 +1054,7 @@ int acqHalt2(char *args)
       if (reply_ok)
       {
         sprintf(msge, "write('error','Abort Acquisition already in progress')\n");
-	deliverMessage( returnInterface, msge );
+      	deliverMessage( returnInterface, msge );
       }
       return 0;
    }
@@ -1099,8 +1100,9 @@ int acqHalt(char *args)
                  ( (int) strlen(returnInterface) > 1) );
    if (isExpActive() == 0) 
    {
+      int ret __attribute__((unused));
       sprintf(msge,"(umask 0; cat /dev/null > %s/acqqueue/psg_abort)\n",systemdir);
-      system(msge);
+      ret = system(msge);
       if (reply_ok)
       {
 	sprintf(msge, "write('error','No Experiment Active.')\n");
@@ -1178,8 +1180,9 @@ int acqAbort(char *args)
                  ( (int) strlen(returnInterface) > 1) );
    if (isExpActive() == 0) 
    {
+      int ret __attribute__((unused));
       sprintf(msge,"(umask 0; cat /dev/null > %s/acqqueue/psg_abort)\n",systemdir);
-      system(msge);
+      ret = system(msge);
       if (reply_ok)
       {
 	sprintf(msge, "write('error','No Experiment Active.')\n");
@@ -1240,7 +1243,8 @@ int acqAbort(char *args)
 
 int acqDebug(char *args)
 {
-   char	*returnInterface, *tmpstr;
+   char	*returnInterface __attribute__((unused));
+   char  *tmpstr;
    char	 msge[CONSOLE_MSGE_SIZE];
    char	 procmsge[128];
    int dlevel;
@@ -1336,7 +1340,7 @@ int acqStop(char *args)
    char	 msge[CONSOLE_MSGE_SIZE];
    int saType,expnum,acqstopped;
    int totalq;
-   unsigned long saMod,saMode;
+   unsigned int saMod,saMode;
    ExpEntryInfo SaExpInfo;
 
    returnInterface = strtok( NULL, "\n" );
@@ -1350,7 +1354,7 @@ int acqStop(char *args)
    expnum = atoi(&expName[3]);  /* in form of exp1, exp2,exp3, etc.... */
    /* At present valid SA types: BS, FID, IL */
    DPRINT5(1,
-    "User %s wants to Stop experiment %s \n 'Type: %d, Mod:%lu' using %s to acknowledge\n",
+    "User %s wants to Stop experiment %s \n 'Type: %d, Mod:%u' using %s to acknowledge\n",
          userName, expName, saType, saMod, returnInterface);
 
    acqstopped = 0;
@@ -1472,7 +1476,7 @@ int acqDequeue(char *args)
           unlink(tmpStr);
           sprintf(tmpStr,"rm -rf %s/acqqueue/acq/%s",file2,file);
           DPRINT1(1,"acqDequeue: exec  '%s'\n", tmpStr);
-          system(tmpStr);
+          res = system(tmpStr);
           res = 1;
       }
       else
@@ -1496,7 +1500,8 @@ void acqQ(char *args)
 /* change Wexp,etc. values */
 int parmChg(char *args)
 {
-   char	*returnInterface, *userName, *token;
+   char	*returnInterface __attribute__((unused));
+   char *userName, *token;
    int mask, on_off;
 
    returnInterface = strtok( NULL, "\n" );
@@ -1542,7 +1547,7 @@ int autoMode(char *args)
    autodir[255] = '\0';
    DPRINT2(1,"autoMode: return Addr: '%s', autodir: '%s'\n",returnInterface,
 		autodir);
-   sprintf(autoDoneQ,"%s/DoneQ",autodir);
+   sprintf(autoDoneQ,"%.248s/DoneQ",autodir);
    /* Used to send a resume when starting Autoproc. Now, the resume is down explicitly by Autoproc */
    if ( ! startAutoproc(autodir,autoDoneQ))  /* if not started then start it */
    {
@@ -1581,7 +1586,7 @@ int autoMode(char *args)
 /* Go into non-automation mode */
 int normalMode(char *args)
 {
-   char *returnInterface;
+   char*returnInterface __attribute__((unused));
    char *token;
 
    DPRINT(1,"normalMode: telling  Autoproc to ignore resumes\n");
@@ -1688,26 +1693,26 @@ void acqHardwareRead(char *args)
 int qQuery(char *args)
 {
 	char	*returnInterface;
-        char    Msge[512];
-        char    tmpstr[256];
-        int     index;
-        int     numQ;
-        int     len;
+   char    Msge[512];
+   char    tmpstr[256];
+   int     index;
+   int     numQ;
+   int     len;
 
 	DPRINT( 1, "queue Query called in Nessie expproc\n" );
 	returnInterface = strtok( NULL, "\n" );
 
 	if (returnInterface == NULL) {
-        	errLogRet(ErrLogOp,debugInfo,"qQuery: No return interface\n" );
+      errLogRet(ErrLogOp,debugInfo,"qQuery: No return interface\n" );
 		return( -1 );
 	}
 	if ((int) strlen( returnInterface ) < 1) {
-        	errLogRet(ErrLogOp,debugInfo,"qQuery: 0-length return interface\n" );
+      errLogRet(ErrLogOp,debugInfo,"qQuery: 0-length return interface\n" );
 		return( -1 );
 	}
 	DPRINT1( 1, "return address is %s\n",returnInterface );
-        if ((int) strlen(ActiveExpInfo.ExpId) > 1)
-        {
+   if ((int) strlen(ActiveExpInfo.ExpId) > 1)
+   {
     /* Report back what kind of experiment is progress as well (GoFlag).  */
            if (ActiveExpInfo.ExpInfo->ExpFlags & AUTOMODE_BIT)
               sprintf(Msge,"%d auto %d\n", ActiveExpInfo.ExpInfo->ExpNum,
@@ -1721,7 +1726,7 @@ int qQuery(char *args)
                   ActiveExpInfo.ExpInfo->GoFlag);
            len = strlen(Msge);
            numQ =  expQentries();
-	   DPRINT1( 1, "active exp. num in Q is %d\n",numQ );
+	        DPRINT1( 1, "active exp. num in Q is %d\n",numQ );
            index = 0;
            while (index < numQ)
            {
@@ -1731,7 +1736,7 @@ int qQuery(char *args)
                  len += strlen(tmpstr) + 1;
                  if (len < 512)
                     strcat(Msge,tmpstr);
-                    strcat(Msge,"\n");
+                 strcat(Msge,"\n");
               }
            }
         }
@@ -1763,7 +1768,7 @@ int qQuery(char *args)
            }
            len = strlen(Msge);
            numQ =  expQentries();
-	   DPRINT1( 1, "active exp. num in Q is %d\n",numQ );
+	        DPRINT1( 1, "active exp. num in Q is %d\n",numQ );
            index = 0;
            while (index < numQ)
            {
@@ -1773,10 +1778,10 @@ int qQuery(char *args)
                  len += strlen(tmpstr) + 1;
                  if (len < 512)
                     strcat(Msge,tmpstr);
-                    strcat(Msge,"\n");
+                 strcat(Msge,"\n");
               }
            }
-        }
+   }
 	DPRINT1( 1, "exp Q is %s\n",Msge );
 	deliverMessage( returnInterface, Msge );
 	return 0;
@@ -1792,10 +1797,10 @@ void reconRequest(char *args)
 {
 }
 
-int
-setStatBlockIntv(char *args)
+int setStatBlockIntv(char *args)
 {
-	char	*returnInterface, *token;
+   char	*returnInterface __attribute__((unused));
+	char	*token;
 	char	 consoleMsg[ CONSOLE_MSGE_SIZE ];
 	int	 interval;
 
@@ -1885,10 +1890,10 @@ static struct _consoleAccess {
 	authRecord	authRec;
 	int		level;
 	int		count;
-} interactiveAccess[ NUMBER_OF_LEVELS ] = {
-	{ 0, NONE, 0 },
-	{ 0, NONE, 0 },
-};
+} interactiveAccess[ NUMBER_OF_LEVELS ] = {};
+//   { 0, NONE, 0 },
+//   { 0, NONE, 0 }
+//};
 
 void showAuthRecord(void)
 {
@@ -2774,7 +2779,7 @@ completeStartLock()
 {
 	char	 msge[CONSOLE_MSGE_SIZE], recvmsg[128];
 
-	sprintf(recvmsg,"startI %s",ActiveExpInfo.ExpId);
+	sprintf(recvmsg,"startI %.118s",ActiveExpInfo.ExpId);
   	DPRINT1(1,"Send Recvproc: '%s'\n",recvmsg);
 	deliverMessage( "Recvproc", recvmsg );
 
@@ -2787,17 +2792,17 @@ completeStartLock()
 static int
 completeStartFID()
 {
-	char	msge[CONSOLE_MSGE_SIZE], recvmsg[128], sndmsge[128];
+	char	msge[CONSOLE_MSGE_SIZE], recvmsg[128], sndmsge[128*2];
 
 	DPRINT( 1, "complete start FID called\n" );
 
 /* Send Recvproc its message first  */
 
-	sprintf(recvmsg,"startI %s",ActiveExpInfo.ExpId);
+	sprintf(recvmsg,"startI %.118s",ActiveExpInfo.ExpId);
   	DPRINT1(1,"Send Recvproc: '%s'\n",recvmsg);
 	deliverMessage( "Recvproc", recvmsg );
 
-	sprintf( &sndmsge[ 0 ], "send %s %s",
+	sprintf( &sndmsge[ 0 ], "send %.118s %.128s",
 		  ActiveExpInfo.ExpId, ActiveExpInfo.ExpInfo->AcqBaseBufName);
   	DPRINT1(1,"Send Sendproc: '%s'\n", &sndmsge[ 0 ] );
 	deliverMessage( "Sendproc", sndmsge );
@@ -3266,7 +3271,7 @@ void rmPsgFiles(SHR_EXP_INFO ExpInfo)
       
       if ((int) strlen(ExpInfo->InitCodefile) > 1)
       {
-         char fileName[256];
+         char fileName[256+16];
          char dirName[256];
          int i;
 
@@ -3285,7 +3290,7 @@ void rmPsgFiles(SHR_EXP_INFO ExpInfo)
             sprintf(fileName,"%s.ps.pat.%s", dirName, cntrl[i]);
             unlink(fileName);
          }
-	 unlink(ExpInfo->AcqRTTablefile);
+	      unlink(ExpInfo->AcqRTTablefile);
          unlink(ExpInfo->RTParmFile);
          if (strlen(ExpInfo->WaveFormFile) )
          {
@@ -3500,12 +3505,13 @@ int dwnldComplete( char *args )
 	}
         else
         {
+           int ret __attribute__((unused));
 	  errLogRet( ErrLogOp, debugInfo, "Error: Dsp %d SW Download '%s', VME: '%s', ApAddr: 0x%x\n",
 			index+1, dwnldStatus, dwnldVmeAddress,DSP_apreg );
 	  sprintf(wallstr,
                  "echo 'Error: Dsp %d SW Download '%s', VME: '%s', ApAddr: 0x%x' | /usr/sbin/wall -a",
                                 index+1, dwnldStatus, dwnldVmeAddress,DSP_apreg );
-          system(wallstr);
+          ret = system(wallstr);
 
         }
 	downloadInfo.type[index] = NO_DOWNLOAD;
@@ -3592,7 +3598,7 @@ int roboClear(char *args)
 int robotMessage(char *args)
 {
    char *returnInterface;
-   char *authInfo;
+   char *authInfo __attribute__((unused));
    char *token;
    char delimiter_2[ 2 ];
    char msg[256];

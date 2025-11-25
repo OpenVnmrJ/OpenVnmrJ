@@ -52,7 +52,7 @@ extern int wait4ConsoleSub(NDDS_ID pubId);
 extern int writeToConsole(char *cntlrId, NDDS_ID pubId, char *name, char* bufAdr,int size, int serialNum, int ackItr );
 extern int readBlkingMsgePipe(int *pipeFd, char* msgeBuffer);
 #else  /* RTI_NDDS_4x */
-extern void initiateNDDS(void);
+extern void initiateNDDS(int debugLevel);
 extern int createCodeDownldSubscription(cntlr_t *pCntlrThr,char *subName);
 extern int createCodeDownldPublication(cntlr_t *pCntlrThr,char *pubName);
 extern int createAppHB_BESubscription(cntlr_t *pCntlrThr,char *subName);

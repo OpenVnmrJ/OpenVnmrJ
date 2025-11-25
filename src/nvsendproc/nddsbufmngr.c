@@ -9,7 +9,7 @@
 /* 
  */
 
-/* #define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
+// #define _POSIX_SOURCE /* defined when source is to be POSIX-compliant */
 #include <stdlib.h>
 #include <string.h>
 #include "rngBlkLib.h"
@@ -37,6 +37,9 @@ The it up to this thread to return the buffer that was obtain in the callback.
 
 */
  
+int nddsBufMngrInitBufs(NDDSBUFMNGR_ID pBufMngrId);
+extern int rngBlkPut(RINGBLK_ID rngd,long* buffer,int size);
+extern int rngBlkGet(RINGBLK_ID rngd,long* buffer,int size);
 /**************************************************************
 *
 *  nddsBufMngrCreate - Creates a Pool of Buffers for the NDDS callback to copy issues to
@@ -60,7 +63,6 @@ NDDSBUFMNGR_ID nddsBufMngrCreate(int nBuffers, int bufSize)
   NDDSBUFMNGR_ID pBufMngrId;
   long sizeNBytes;
   char *startAddr;
-  int i;
  
   pBufMngrId = (NDDSBUFMNGR_ID) malloc(sizeof(NDDSBUFMNGR_OBJ));  /* create structure */
 
@@ -118,7 +120,8 @@ NDDSBUFMNGR_ID nddsBufMngrCreate(int nBuffers, int bufSize)
 int nddsBufMngrInitBufs(NDDSBUFMNGR_ID pBufMngrId)
 {
    char *startAddr;
-   int i, stat, toP;
+   int i, toP;
+   int stat __attribute__((unused));
   /* clear ring buffers */
   rngBlkFlush(pBufMngrId->msgeList);
   rngLFlush(pBufMngrId->freeList);
@@ -200,7 +203,7 @@ int msgePost(NDDSBUFMNGR_ID pBufMngrId, char *item)
 {
     int stat;
     /* printf("msgePost(0x%lx): address: 0x%lx\n",pBufMngrId,item); */
-    stat = rngBlkPut(pBufMngrId->msgeList,&item,1);
+    stat = rngBlkPut(pBufMngrId->msgeList,(long *) &item,1);
     return(stat);
 }
 
@@ -221,7 +224,7 @@ char *msgeGet(NDDSBUFMNGR_ID pBufMngrId)
     char *msgPtr;
     int stat;
 
-    stat = rngBlkGet(pBufMngrId->msgeList,&msgPtr,1);
+    stat = rngBlkGet(pBufMngrId->msgeList,(long *) &msgPtr,1);
     /* printf("msgeGet(0x%lx): address: 0x%lx\n",pBufMngrId,msgPtr); */
     if (stat == 1)
       return(msgPtr);

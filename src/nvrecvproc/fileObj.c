@@ -132,6 +132,7 @@ FILE_ID fFileOpen(char *filename, uint64_t size, int permit)
    FILE_ID fileObj;
    int fd,result;
    mode_t old_umask;
+   int ret __attribute__((unused));
 
    if (permit != O_RDONLY)
    {
@@ -143,7 +144,7 @@ FILE_ID fFileOpen(char *filename, uint64_t size, int permit)
       {
          if (old_euid == -1)
             old_euid = geteuid();
-         seteuid( old_uid );
+         ret = seteuid( old_uid );
       }
    }
    /* open file, thus checking most error possibilities of file create, etc. */
@@ -155,7 +156,7 @@ FILE_ID fFileOpen(char *filename, uint64_t size, int permit)
                   filename,strerror(errno) );
      umask(old_umask);  /* restore umask control over open. */
      if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-       seteuid( old_euid );
+       ret = seteuid( old_euid );
      return (NULL);
    }
 
@@ -190,7 +191,7 @@ FILE_ID fFileOpen(char *filename, uint64_t size, int permit)
      errLogSysRet(ErrLogOp,debugInfo,"fOpen: malloc of Object struct failed\n");
      close(fd);
      if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-        seteuid( old_euid );
+        ret = seteuid( old_euid );
      return(NULL);
    }
 
@@ -202,7 +203,7 @@ FILE_ID fFileOpen(char *filename, uint64_t size, int permit)
    {
      close(fd);
      if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-        seteuid( old_euid );
+        ret = seteuid( old_euid );
      free(fileObj);
      return(NULL);
    }
@@ -210,7 +211,7 @@ FILE_ID fFileOpen(char *filename, uint64_t size, int permit)
 
 
    if ( (permit != O_RDONLY) && (old_uid == ROOT_UID) )
-      seteuid( old_euid );
+      ret = seteuid( old_euid );
 
    DPRINT2(2,"fFileOpen(): fd = %d, filepath: '%s' \n", fileObj->fd,fileObj->filePath);
 
@@ -228,7 +229,7 @@ FILE_ID fFileOpen(char *filename, uint64_t size, int permit)
    {
        /* DPRINT(-5,"seek to filesize end\n"); */
        lseek(fd,size-4,SEEK_SET);
-       write(fd,&fd,4);
+       ret = write(fd,&fd,4);
        lseek(fd,0,SEEK_SET);
    }
 
@@ -292,8 +293,8 @@ long long fFidSeek(FILE_ID md, int fidNum, int headerSize, unsigned long bbytes)
 
     md->offsetAddr = fidoffset;
 
-    DPRINT3(2,"fFidSeek(): fid# = %lu, offset = %llu, 0x%llx\n",
-		fidNum, fidoffset, fidoffset);
+//    DPRINT3(2,"fFidSeek(): fid# = %lu, offset = %llu, 0x%llx\n",
+//		fidNum, fidoffset, fidoffset);
 
     return(fidoffset);
 }
@@ -313,8 +314,8 @@ int fFileWrite(FILE_ID md,char *data, int bytelen, long long offset)
      return(-1);
 
    /* bytes = pwrite(md->fd,(const void*) data,(size_t) bytelen, (off_t) md->offsetAddr); */
-   DPRINT4(1,"fFileWrite(fd: %d, dataAddr: 0x%lx, len: %d, offset: %lld\n",
-		md->fd,data,bytelen, offset);
+//   DPRINT4(1,"fFileWrite(fd: %d, dataAddr: 0x%lx, len: %d, offset: %lld\n",
+//		md->fd,data,bytelen, offset);
 
    bytes = pwrite(md->fd,(const void*) data,(size_t) bytelen, offset);
  
@@ -336,8 +337,8 @@ int fFileRead(FILE_ID md,char *data, int bytelen, long long offset)
      return(-1);
 
    /* bytes = pread(md->fd,(void*) data,(size_t) bytelen, (off_t) md->offsetAddr); */
-   DPRINT4(1,"fFileRead(fd: %d, dataAddr: 0x%lx, len: %d, offset: %lu\n",
-		md->fd,data,bytelen,(unsigned long) offset);
+//   DPRINT4(1,"fFileRead(fd: %d, dataAddr: 0x%lx, len: %d, offset: %lu\n",
+//		md->fd,data,bytelen,(unsigned long) offset);
 
    bytes = pread(md->fd,(void*) data,(size_t) bytelen, offset);
  

@@ -13,13 +13,14 @@
 
 #include "errLogLib.h"
 
+extern void ShutDownProc();
 extern char ProcName[];
 
-#define MASTER 2
-#define DONT_TRUNCATE 0
-static char wall[256];
-static char wallpath[256] = { '\0' };
-typedef void (*PFV)();		/* Pointer to Function returning a Void */
+// #define MASTER 2
+// #define DONT_TRUNCATE 0
+// static char wall[256];
+// static char wallpath[256] = { '\0' };
+// typedef void (*PFV)();		/* Pointer to Function returning a Void */
 
 /*-------------------------------------------------------------------
 |
@@ -34,12 +35,12 @@ SpanishInquisition()
     /* terminate Sendproc, Recvproc, Procproc, ????? */
 
     /* write out buffer */
-    /* FlushMasterLog(DONT_TRUNCATE);	/* write Master Log out to disk */
+    // FlushMasterLog(DONT_TRUNCATE);	/* write Master Log out to disk */
 
     /* abort any acquisitions in progress if possible*/
  
     /* shellcmd(wall); */
-    /*system(wall);	/* inform users system wide of failure */
+    //system(wall);	/* inform users system wide of failure */
     abort();
 }
 
@@ -51,9 +52,6 @@ SpanishInquisition()
 static void
 terminated()
 {
-    int blockmask = 0;  /* interrupt blocking mask */
-    int savemask = 0;    /* saved mask */
-
     /* logprint(MASTER,0,AcqProcDied,"\n"); */
 
     ShutDownProc();  /* This routine will tiddy up, any loose ends */
@@ -61,13 +59,8 @@ terminated()
     /* Terminate Sendproc, Recvproc, Procproc ???? */
  
     /* write out buffer */
-    /* FlushMasterLog(DONT_TRUNCATE);	/* write Master Log out to disk */
+    // FlushMasterLog(DONT_TRUNCATE);	/* write Master Log out to disk */
 
-    /*
-    sprintf(wall,
-      "echo 'Acquisition Daemon Terminated.' | %s",wallpath);
-    /*system(wall);*/
-    /* shellcmd(wall); */
     exit(1);
 }
 /*--------------------------------------------------------------------------------
@@ -80,8 +73,8 @@ Segment()
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Segmentation Violation\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Segmentation Violation\n"); */
-    sprintf(wall,
-      "echo '%s: Segmentation Violation, Core Dumped.' | %s",ProcName,wallpath);
+//     sprintf(wall,
+//       "echo '%s: Segmentation Violation, Core Dumped.' | %s",ProcName,wallpath);
     SpanishInquisition();
 }
 static void
@@ -89,8 +82,8 @@ Ill_instr()
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Illegal Instruction.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Illegal Instruction.\n"); */
-    sprintf(wall,
-      "echo '%s: Illegal Instruction, Core Dumped.' | %s",ProcName,wallpath);
+//     sprintf(wall,
+//       "echo '%s: Illegal Instruction, Core Dumped.' | %s",ProcName,wallpath);
     SpanishInquisition();
 }
 static void
@@ -98,8 +91,8 @@ FPexcept()
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Arithmetic Exception.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Arithmetic Exception.\n"); */
-    sprintf(wall,
-      "echo '%s: Arithmetic Exception, Core Dumped.' | %s",ProcName,wallpath);
+//     sprintf(wall,
+//       "echo '%s: Arithmetic Exception, Core Dumped.' | %s",ProcName,wallpath);
     SpanishInquisition();
 }
 static void
@@ -107,8 +100,8 @@ BusErr()
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Bus Error.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Bus Error.\n"); */
-    sprintf(wall,
-      "echo '%s: Bus Error, Core Dumped.' | %s",ProcName,wallpath);
+//     sprintf(wall,
+//       "echo '%s: Bus Error, Core Dumped.' | %s",ProcName,wallpath);
     SpanishInquisition();
 }
 
@@ -117,8 +110,8 @@ CpuLim()
 { 
     errLogRet(ErrLogOp,debugInfo, "%s: Exceeded CPU Time Limit.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Exceeded CPU Time Limit.\n"); */
-    sprintf(wall, 
-    "echo '%s: Exceeded CPU Time Limit, Core Dumped.' | %s",ProcName,wallpath); 
+//     sprintf(wall, 
+//     "echo '%s: Exceeded CPU Time Limit, Core Dumped.' | %s",ProcName,wallpath); 
     SpanishInquisition(); 
 }
 static void
@@ -126,8 +119,8 @@ FsLim()
 {  
     errLogRet(ErrLogOp,debugInfo, "%s: Exceeded File Size Limit.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Exceeded File Size Limit.\n");  */
-    sprintf(wall, 
-    "echo '%s: Exceeded File Size Limit, Core Dumped.' | %s",ProcName,wallpath);
+//     sprintf(wall, 
+//     "echo '%s: Exceeded File Size Limit, Core Dumped.' | %s",ProcName,wallpath);
     SpanishInquisition();  
 } 
 static void
@@ -135,8 +128,8 @@ SigQuit()
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Quit Signal.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Quit Signal.\n");*/
-    sprintf(wall,
-    "echo '%s: Quit Signal, Core Dumped.' | %s",ProcName,wallpath);
+//     sprintf(wall,
+//     "echo '%s: Quit Signal, Core Dumped.' | %s",ProcName,wallpath);
     SpanishInquisition();
 }
 static void
@@ -144,8 +137,8 @@ Trap()
 { 
     errLogRet(ErrLogOp,debugInfo, "%s: Trace Trap.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Trace Trap.\n"); */
-    sprintf(wall, 
-    "echo '%s: Trace Trap, Core Dumped.' | %s",ProcName,wallpath);
+//     sprintf(wall, 
+//     "echo '%s: Trace Trap, Core Dumped.' | %s",ProcName,wallpath);
     SpanishInquisition();
 }
 /*--------------- Commented Out ------------------------
@@ -164,8 +157,8 @@ EMTtrap()
 {   
     errLogRet(ErrLogOp,debugInfo, "%s: EMT Trap.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", EMT Trap.\n");   */
-    sprintf(wall,  
-    "echo '%s: EMT Trap, Core Dumped.' | %s",ProcName,wallpath);  
+//     sprintf(wall,  
+//     "echo '%s: EMT Trap, Core Dumped.' | %s",ProcName,wallpath);  
     SpanishInquisition();  
 }
 #endif
@@ -175,21 +168,25 @@ SYStrap()
     errLogRet(ErrLogOp,debugInfo, 
 		"%s: Bad Argument to a System Call.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Bad Argument to a System Call.\n"); */
-    sprintf(wall,  
-    "echo '%s: Bad Argument to a System Call, Core Dumped.' | %s",
-       ProcName,wallpath);   
+//     sprintf(wall,  
+//     "echo '%s: Bad Argument to a System Call, Core Dumped.' | %s",
+//        ProcName,wallpath);   
     SpanishInquisition();   
 }
+
+#ifdef XXX
 static void
 ResLost()
 {    
     errLogRet(ErrLogOp,debugInfo, "%s: Resource Lost Exception.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Resource Lost Exception.\n");    */
-    sprintf(wall,  
-    "echo '%s: Resource Lost Exception, Core Dumped.' | %s",
-	ProcName,wallpath);   
+//     sprintf(wall,  
+//     "echo '%s: Resource Lost Exception, Core Dumped.' | %s",
+// 	ProcName,wallpath);   
     SpanishInquisition();   
 }
+#endif
+
 /*
  * The threaded varient this routine is called from a sigwait returning
  * for signo the app doesn't want to handle. Most of these are terminating or'

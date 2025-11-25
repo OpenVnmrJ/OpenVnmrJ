@@ -35,9 +35,9 @@
  */
 int initMemBarrier(pMembarrier_t pMemBarrier, void *pSharedData)
 {
-   int stat;
+   int stat __attribute__((unused));
 
-   DPRINT1(+1,"Shared Struct Addr: 0x%lx\n",pSharedData);
+   DPRINT1(+1,"Shared Struct Addr: %p\n",pSharedData);
 
    /* clear complete structure */
    memset(pMemBarrier,0,sizeof(membarrier_t));

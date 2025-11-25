@@ -313,9 +313,6 @@ RTIBool Data_UploadPlugin_deserialize_key(
     struct RTICdrStream *stream, Data_Upload *sample,
     void *deserialize_option)
 {
-
-    RTICdrUnsignedLong sequence_length = 0;
-
     if (!RTICdrStream_deserializeLong(
         stream, &sample->key)) {
         return RTI_FALSE;

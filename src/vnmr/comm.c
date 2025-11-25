@@ -47,8 +47,8 @@ extern int getStatAcqSample();
 extern int getStatLSDV();
 extern int getStatConsoleID();
 extern void expStatusRelease();
-extern long getStatRemainingTime();
-extern long getStatInQue();
+extern int getStatRemainingTime();
+extern int getStatInQue();
 
 #undef DEBUG
 

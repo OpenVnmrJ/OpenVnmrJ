@@ -12,19 +12,19 @@
 #ifndef CRC_H_DEFINED
 #define CRC_H_DEFINED
 
-typedef unsigned long tcrc;      /* type of crc value -- same as in brik.c */
+typedef unsigned int tcrc;      /* type of crc value -- same as in brik.c */
 
-#define INITCRC 0xFFFFFFFFL
+#define INITCRC 0xFFFFFFFF
 
 #if defined(__STDC__) && ! defined (__cplusplus) && ! defined (c_plusplus)
 
-extern tcrc addbfcrc (register char *buf, register int size);
-extern tcrc addbfcrcinc (register char *buf, register int size, tcrc *prevcrc);
+extern tcrc addbfcrc (char *buf, int size);
+extern tcrc addbfcrcinc (char *buf, int size, tcrc *prevcrc);
 
 #elif defined(__cplusplus) || defined(c_plusplus)
 
-extern "C" tcrc addbfcrc (register char *buf, register int size);
-extern "C" tcrc addbfcrc (register char *buf, register int size, tcrc *prevcrc);
+extern "C" tcrc addbfcrc (char *buf, int size);
+extern "C" tcrc addbfcrc (char *buf, int size, tcrc *prevcrc);
 
 #else
 

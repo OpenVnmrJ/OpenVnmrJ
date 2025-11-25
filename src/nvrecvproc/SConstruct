@@ -25,25 +25,16 @@ Import("*")
 # define target file names
 nvRecvProcTarget = 'Recvproc'
 
-javaPath = os.path.join(ovjtools, 'java', 'bin')
-
-# get options settings, use parameter to determine NDDS 3x, 4x, 4.2d varients
-boFile=os.path.join(cwd,os.pardir,os.pardir,'buildoptions.py')
-if not os.path.exists(boFile):
-   boFile=os.path.join(cwd,os.pardir,os.pardir,'scripts','buildoptions.py')
-exec(compile(open(boFile).read(), boFile, 'exec'))
-
-print('nvRecvproc NDDS_VERSION ' + boEnv['NDDS_VERSION'])
+NDDS_VERSION = '4.2e'
+print('nvRecvproc NDDS_VERSION ' + NDDS_VERSION)
 
 # NDDS include/lib paths
 # if 'Recvproc4x' in COMMAND_LINE_TARGETS:
 #  generate NDDS home path from NDDS_VERSION
-nddsdir = 'ndds.' + boEnv['NDDS_VERSION']
-print('Compiling NDDS ' + boEnv['NDDS_VERSION'] + ' Version, insure that a clean was done prior to this')
-nvRecvProcTarget = 'Recvproc4x'
+nddsdir = 'ndds.' + NDDS_VERSION
+print('Compiling NDDS ' + NDDS_VERSION + ' Version')
 nddsHome = os.path.join(ovjtools, 'NDDS', nddsdir)
 nddsGen = os.path.join(nddsHome, 'scripts', 'nddsgen')
-nddsJreBin = os.path.join(nddsHome, 'jre', 'i86Linux','bin')
 
 #  ndds header paths
 nddsHdrPathUnix = os.path.join(nddsHome, 'include')
@@ -54,7 +45,7 @@ nddsOpts = ' -language C -notypecode -replace '
 
 # libraries and paths
 #  nddsLibPath = os.path.join(nddsHome, 'lib', 'i86Linux2.6gcc3.4.3')
-nddsLibVer = boEnv['NDDS_LIB_VERSION']
+nddsLibVer = 'x64Linux2.6gcc3.4.5'
 nddsLibPath = os.path.join(nddsHome, 'lib', nddsLibVer )
 LibList = [ 'm', 'pthread', 'nddscz', 'nddscorez', 'dl' ]
 
@@ -71,17 +62,12 @@ nvRecvProcFileList = ['rngBlkLib.c' ,
                       'fileObj.c',
                       'recvproc.c']
 
-# if 'Recvproc4x' not in COMMAND_LINE_TARGETS:
-if boEnv['NDDS_VERSION'] == '3x':
-   nvRecvProcFileList.append("Data_UploadCustom3x.c")
-
 #
 # these headers and source files are symlink'd from their GIT location to the local directory for compilation
 #
 recvProcPath     = os.path.join(cwd, os.pardir, 'recvproc')
-recvProcHdrList = ['dspfuncs.h' ]
-recvProcFileList = ['dspfuncs.c' ,
-                    'recvcmds.c']
+# recvProcHdrList = ['dspfuncs.h' ]
+recvProcFileList = ['recvcmds.c']
 
 nvSendProcPath     = os.path.join(cwd, os.pardir, 'nvsendproc')
 nvSendProcHdrList = ['barrier.h']
@@ -126,8 +112,7 @@ expProcFileList = ['statfuncs.c',
                    'daemon.c']
 
 nvExpProcPath     = os.path.join(cwd, os.pardir, 'nvexpproc')
-nvExpProcFileList = ['HBthread.c',
-                     'exceptHandler.c']
+nvExpProcFileList = ['exceptHandler.c']
 
 procProcPath     = os.path.join(cwd, os.pardir, 'procproc')
 procProcHdrList = [ 'procQfuncs.h' ]
@@ -167,12 +152,11 @@ nddsCFileList = ['Data_Upload.c',
 
 
 # Environment for building nvRecvproc
-nvRecvProcEnv = Environment(CCFLAGS    = '-m32 -O -g -ggdb -Wno-incompatible-pointer-types -Wno-implicit-int -Wno-implicit-function-declaration -Wno-int-conversion',
-                            CPPDEFINES = ['HAVE_LARGEFILE_SUPPORT', '_FILE_OFFSET_BITS=64',
-                                          '_LARGEFILE_SOURCE', 'LINUX', 'NODUMMY',
+nvRecvProcEnv = Environment(CCFLAGS    = '-O -g -Wall',
+                            CPPDEFINES = [ 'LINUX', 'NODUMMY',
                                           '_FORTIFY_SOURCE=2',
                                           'RTI_UNIX', 'NIRVANA', 'THREADED', 'DEBUG'],
-                            LINKFLAGS  = '-m32',
+                            LINKFLAGS  = '',
                             CPPPATH    = [cwd,
                                           nddsHdrPathUnix,
                                           nddsHdrPathShare])
@@ -200,7 +184,7 @@ nvRecvProcEnv.Append(BUILDERS = {'NddsGen' : nddsBld})
 
 buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, vwacqPath, vwacqHdrList)
 buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, vnmrHdrPath, vnmvHdrList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, recvProcPath, recvProcHdrList)
+# buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, recvProcPath, recvProcHdrList)
 buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, recvProcPath, recvProcFileList)
 buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, nvSendProcPath, nvSendProcHdrList)
 buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, nvSendProcPath, nvSendProcFileList)

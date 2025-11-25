@@ -26,7 +26,7 @@ int barrierInit(barrier_t *barrier, int count)
    int status;
    
    barrier->threshold = barrier->counter = count;
-   barrier->cycle = 0L;
+   barrier->cycle = 0;
    barrier->forcedRelease = 0;
    status = pthread_mutex_init( &barrier->mutex, NULL );
    if (status != 0)
@@ -47,7 +47,7 @@ int barrierInit(barrier_t *barrier, int count)
  */
 int barrierSetCount(barrier_t *barrier,int count)
 {
-    int status, cancel, temp, cycle;
+    int status;
 
     if (barrier->valid != BARRIER_VALID)
           return -42;
@@ -125,7 +125,7 @@ int barrierWaitAbort(barrier_t *barrier)
         return status;
 
     /* Not even going to bother with this test, just always braodcast it */
-    /* if (barrier->counter != barrier->threshold)  /* somebody is waiting */
+    // if (barrier->counter != barrier->threshold)  /* somebody is waiting */
 
     DPRINT(+2,"barrierAbortWait: force waiting threads to continue, broadcast to restart thread\n");
     barrier->forcedRelease = 1;
@@ -137,9 +137,9 @@ int barrierWaitAbort(barrier_t *barrier)
     return status;     /* error, -1 for waker, or 0 */
 }
 
-int barrier_destory(barrier_t *barrier)
-{
-}
+// int barrier_destory(barrier_t *barrier)
+// {
+// }
 
 /*
  * forces thread to wait until all members of a barrier, reach the barrier.

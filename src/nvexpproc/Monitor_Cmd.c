@@ -59,8 +59,8 @@ extern DDS_ReturnCode_t Monitor_CmdTypeSupport_create_data_ex(DDS_Boolean);
 void getMonitor_CmdInfo(NDDS_OBJ *myStruct)
 {
     strcpy(myStruct->dataTypeName, Monitor_CmdTYPENAME);
-    myStruct->TypeRegisterFunc = Monitor_CmdTypeSupport_register_type;
-    myStruct->TypeAllocFunc = Monitor_CmdTypeSupport_create_data_ex;
+    myStruct->TypeRegisterFunc = (DataTypeRegister) Monitor_CmdTypeSupport_register_type;
+    myStruct->TypeAllocFunc = (DataTypeAllocate) Monitor_CmdTypeSupport_create_data_ex;
 }
 /* --- End Special Varian Inc Added Template Function  ----- */
 

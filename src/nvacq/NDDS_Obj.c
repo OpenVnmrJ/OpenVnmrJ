@@ -622,7 +622,7 @@ DDS_DomainParticipant *initDomain(int domainId, int nddsVerbosity, int multicast
         "builtin.udpv4://127.0.0.1",
         "builtin.shmem://"
     };
-    const long NDDS_DISCOVERY_INITIAL_PEERS_LENGTH =
+    const DDS_Long NDDS_DISCOVERY_INITIAL_PEERS_LENGTH =
                  sizeof(NDDS_DISCOVERY_INITIAL_PEERS)/sizeof(const char*);
 
 

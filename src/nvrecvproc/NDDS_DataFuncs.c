@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <errno.h>
 #include <time.h>	/* nanosleep() */
 
@@ -45,6 +46,8 @@
 
 /* #define DIAG_TIMESTAMP */
 
+int getCntlrNum(char *id);
+int createDataUploadPub(RCVR_DESC_ID pRcvrDesc,char *pubName);
 
 #define NDDS_DBUG_LEVEL 1
 #define MULTICAST_ENABLE 1
@@ -58,6 +61,10 @@ extern membarrier_t TheMemBarrier;
 extern RCVR_DESC ProcessThread;
 extern void *createFidBlockHeader();
 extern NDDS_ID createHBListener(char *subtopic, void *pParam );
+extern int 	rngBlkIsFull (RINGBLK_ID ringId);
+extern int rngBlkPut(RINGBLK_ID rngd,long* buffer,int size);
+extern int workQGetWillPend(WORKQ_ID pWorkQ);
+extern int numAvailWorkQs(WORKQ_ID pWorkQ);
 
 /*
 * NDDS_ISSUE_DESC_ID  pNddsIssueList[128];
@@ -84,11 +91,6 @@ extern int AbortFlag;
 
 RCVR_DESC_ID ddrSubList[64];
 int numSubs = 0;
-
-static NDDS_ID pDataSubList[64];
-static int numDataSubs = 0;
-
-static int numDataUploadReplySubcribers = 0;
 
 #ifndef RTI_NDDS_4x
 /*
@@ -234,7 +236,7 @@ RTIBool Data_UploadCallback(const NDDSRecvInfo *issue, NDDSInstance *instance,
                   {
                      errLogRet(ErrLogOp,debugInfo,"'%s': Data_UpldCallBack() - Going to block putting entry into ProcessThread pipe stage\n",CntlrName);
                   }
-                  rngBlkPut(ProcessThread.pInputQ, &pWorkQEntry,1);
+                  rngBlkPut(ProcessThread.pInputQ, (long *) &pWorkQEntry,1);
                   DPRINT1(-1,"'%s': Data_UpldCallBack() - ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",CntlrName);
 	       break;
 
@@ -245,7 +247,7 @@ RTIBool Data_UploadCallback(const NDDSRecvInfo *issue, NDDSInstance *instance,
                 {
                    errLogRet(ErrLogOp,debugInfo,"'%s': Data_UpldCallBack() - Going to block putting entry into pipe stage\n",CntlrName);
                 }
-                rngBlkPut(pRcvrDesc->pInputQ, &pWorkQEntry,1);
+                rngBlkPut(pRcvrDesc->pInputQ, (long *) &pWorkQEntry,1);
                 DPRINT1(-1,"'%s': Data_UpldCallBack() - ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",CntlrName);
 	       break;
 
@@ -270,7 +272,7 @@ RTIBool Data_UploadCallback(const NDDSRecvInfo *issue, NDDSInstance *instance,
              {
                    errLogRet(ErrLogOp,debugInfo,"'%s': Data_UpldCallBack() - Going to block putting entry into pipe stage\n",CntlrName);
              }
-             rngBlkPut(pRcvrDesc->pInputQ, &pWorkQEntry,1);
+             rngBlkPut(pRcvrDesc->pInputQ, (long *) &pWorkQEntry,1);
 
               /*         testing       */
 /*
@@ -351,7 +353,7 @@ void PublicationListener_on_subscription_matched(
 void PublicationListener_on_data_available( void* listener_data,
     DDS_DataReader* reader)
 {
-    char pubtopic[128];
+    char pubtopic[128*2];
     struct DDS_PublicationBuiltinTopicDataSeq data_seq = DDS_SEQUENCE_INITIALIZER;
     struct DDS_PublicationBuiltinTopicData *regular_data;
     struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
@@ -359,7 +361,6 @@ void PublicationListener_on_data_available( void* listener_data,
     int i,cntlrNum;
     struct DDS_PublicationBuiltinTopicDataDataReader* builtin_reader =
         (struct DDS_PublicationBuiltinTopicDataDataReader*) reader;
-    struct DDS_SampleInfo *info_data = NULL;
     unsigned char *user_data = NULL;
 
     /* take the latest publication found */
@@ -385,9 +386,9 @@ void PublicationListener_on_data_available( void* listener_data,
             if ( (strcmp(Data_UploadTYPENAME, regular_data->type_name) == 0) &&
                  (strcmp(DATA_UPLOAD_M21TOPIC_STR, regular_data->topic_name) == 0)  )
             {
-              int len, threadIndex,threadid;
+              int len;
+              int threadid __attribute__((unused));
               char cntlrName[128];
-              char subtopic[128];
               RCVR_DESC_ID pRcvrDesc;
               extern RCVR_DESC_ID pTheRcvrDesc;
               /* see if there is user data */
@@ -398,7 +399,8 @@ void PublicationListener_on_data_available( void* listener_data,
                  continue;
               }
 
-              DDS_OctetSeq_to_array(&(regular_data->user_data.value),cntlrName,len);
+              DDS_OctetSeq_to_array((struct DDS_OctetSeq *) &(regular_data->user_data.value),
+                                    (DDS_Octet *) cntlrName,len);
               user_data = DDS_OctetSeq_get_reference(&(regular_data->user_data.value), 0);
               DPRINT3(+1,"'%s': Discvry Found type: '%s', topic: '%s'\n", cntlrName, Data_UploadTYPENAME,DATA_UPLOAD_M21TOPIC_STR);
               DPRINT2(+1,"'%s': Discvry User_data: '%s'\n",cntlrName,user_data);
@@ -454,7 +456,7 @@ void PublicationListener_on_data_available( void* listener_data,
     }
 }
 
-createDiscoveryCallback(NDDS_ID pNDDS_Obj)
+void createDiscoveryCallback(NDDS_ID pNDDS_Obj)
 {
     DDS_Subscriber                             *builtinSubscriber;
     DDS_PublicationBuiltinTopicDataDataReader *builtinDataReader;
@@ -465,13 +467,13 @@ createDiscoveryCallback(NDDS_ID pNDDS_Obj)
     DPRINT(0,"createDiscoveryCallback: get builtin_subscriber\n");
     if (builtinSubscriber == NULL) {
         printf("***Error: failed to create built-in subscriber\n");
-        return 0;
+        return;
     }
     DPRINT(0,"createDiscoveryCallback: get builtin_datareader \n");
     builtinDataReader = (DDS_PublicationBuiltinTopicDataDataReader *)DDS_Subscriber_lookup_datareader(builtinSubscriber, DDS_PUBLICATION_TOPIC_NAME);
     if (builtinDataReader == NULL) {
          DPRINT(-5,"***Error: failed to create built-in subscription data reader\n");
-        return 0;
+        return;
     }
 
     /* Setup data reader listener */
@@ -499,16 +501,13 @@ createDiscoveryCallback(NDDS_ID pNDDS_Obj)
 /* NDDS 4x Callback  */
 #define MAX_RCVRDESC 128
 
-static RCVR_DESC_ID  NddsRecvDescs[MAX_RCVRDESC];
-static int numOfNddsNddsRecvDescs = 0;
-
-handleData(Data_Upload *recvIssue, RCVR_DESC_ID pRcvrDesc)
+void handleData(Data_Upload *recvIssue, RCVR_DESC_ID pRcvrDesc)
 {
    char *CntlrName;
-   WORKQ_ID   pWorkQId;
+//   WORKQ_ID   pWorkQId;
    WORKQ_ENTRY_ID pWorkQEntry;
    int eventFlag;
-   long dataLength;
+   int dataLength;
    SHARED_DATA_ID pSharedData;
    int copyDataIntoWorkQBufs(RCVR_DESC_ID pRcvrDesc, Data_Upload *pIssue);
    int fillInWorkQ(Data_Upload *pIssue, WORKQ_ENTRY_ID pWorkQEntry);
@@ -517,18 +516,18 @@ handleData(Data_Upload *recvIssue, RCVR_DESC_ID pRcvrDesc)
    CntlrName = pRcvrDesc->cntlrId;
 
    /* dereference pointers for ease */
-   pWorkQId = pRcvrDesc->pWorkQObj;
+//   pWorkQId = pRcvrDesc->pWorkQObj;
    pWorkQEntry = pRcvrDesc->activeWrkQEntry;
 
    copyDataIntoWorkQBufs(pRcvrDesc, recvIssue);
 
-   pWorkQId = pRcvrDesc->pWorkQObj;
+//   pWorkQId = pRcvrDesc->pWorkQObj;
    pWorkQEntry = pRcvrDesc->activeWrkQEntry;
 
    eventFlag = fillInWorkQ(recvIssue, pWorkQEntry);
 
     dataLength = DDS_OctetSeq_get_length(&recvIssue->data);
-    DPRINT4(+3,"'%s': handleData() - type: %d (DATAUPLOAD_FID=%d), dataLength: %ld\n",
+    DPRINT4(+3,"'%s': handleData() - type: %d (DATAUPLOAD_FID=%d), dataLength: %d\n",
               pRcvrDesc->cntlrId,recvIssue->type,DATAUPLOAD_FID,dataLength);
     if ( (recvIssue->type == DATAUPLOAD_FID) && ((recvIssue->dataOffset+dataLength) == recvIssue->totalBytes) )
     {
@@ -567,7 +566,7 @@ handleData(Data_Upload *recvIssue, RCVR_DESC_ID pRcvrDesc)
    if (pWorkQEntry == NULL)
    {
       DPRINT(+2,"pWorkQEntry is NULL\n");
-      return RTI_TRUE;
+      return;
    }
      
    /* if flag == 1 then fid statblock and FID data have been serialized and completed */
@@ -584,7 +583,7 @@ handleData(Data_Upload *recvIssue, RCVR_DESC_ID pRcvrDesc)
                   {
                      errLogRet(ErrLogOp,debugInfo,"'%s': Data_UpldCallBack() - Going to block putting entry into ProcessThread pipe stage\n",CntlrName);
                   }
-                  rngBlkPut(ProcessThread.pInputQ, &pWorkQEntry,1);
+                  rngBlkPut(ProcessThread.pInputQ, (long *) &pWorkQEntry,1);
                   DPRINT1(+2,"'%s': Data_UpldCallBack() - ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",CntlrName);
 	       break;
 
@@ -595,16 +594,16 @@ handleData(Data_Upload *recvIssue, RCVR_DESC_ID pRcvrDesc)
                 {
                    errLogRet(ErrLogOp,debugInfo,"'%s': Data_UpldCallBack() - Going to block putting entry into pipe stage\n",CntlrName);
                 }
-                rngBlkPut(pRcvrDesc->pInputQ, &pWorkQEntry,1);
+                rngBlkPut(pRcvrDesc->pInputQ, (long *) &pWorkQEntry,1);
                 DPRINT1(+2,"'%s': Data_UpldCallBack() - ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",CntlrName);
 	       break;
 
         case DATA_BLK:
              DPRINT1(+2,"'%s': Data_UpldCallBack() - VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV\n",CntlrName);
-             DPRINT4(+2,"'%s': Data_UpldCallBack() - FID elemId: %lu, trueElemId: %lu, prev ElemId: %lu \n",
-			CntlrName,(unsigned long) pWorkQEntry->pFidStatBlk->elemId,(unsigned long) pWorkQEntry->trueElemId,(unsigned long) pRcvrDesc->prevElemId);
-             DPRINT2(+2,"'%s': Data_UpldCallBack() - Fid Xfer Cmplt, Send workQEntry (0x%lx) to next stage\n",
-			CntlrName,(unsigned long) pWorkQEntry);
+             DPRINT4(+2,"'%s': Data_UpldCallBack() - FID elemId: %u, trueElemId: %u, prev ElemId: %u \n",
+			CntlrName, pWorkQEntry->pFidStatBlk->elemId, pWorkQEntry->trueElemId, pRcvrDesc->prevElemId);
+             DPRINT2(+2,"'%s': Data_UpldCallBack() - Fid Xfer Cmplt, Send workQEntry (%p) to next stage\n",
+			CntlrName, pWorkQEntry);
              /* send this workQ on to the next stage of the pipe line */
              /* this doesn't work for nfmod=0. need diff>nfmod not 1*/
              /*
@@ -620,7 +619,7 @@ handleData(Data_Upload *recvIssue, RCVR_DESC_ID pRcvrDesc)
              {
                    errLogRet(ErrLogOp,debugInfo,"'%s': Data_UpldCallBack() - Going to block putting entry into pipe stage\n",CntlrName);
              }
-             rngBlkPut(pRcvrDesc->pInputQ, &pWorkQEntry,1);
+             rngBlkPut(pRcvrDesc->pInputQ, (long *) &pWorkQEntry,1);
 
               /*         testing       */
 /*
@@ -663,10 +662,9 @@ int copyDataIntoWorkQBufs(RCVR_DESC_ID pRcvrDesc, Data_Upload *pIssue)
    // RCVR_DESC_ID pRcvrDesc;
    WORKQ_ID   pWorkQId;
    WORKQ_ENTRY_ID pWorkQEntry;
-   SHARED_DATA_ID pSharedData;
    int retval,workQsAv;
    char *pXferData;
-   long dataLength;
+   int dataLength;
 
 
    // pRcvrDesc = (RCVR_DESC_ID) objp->pPrivateIssueData;
@@ -678,7 +676,7 @@ int copyDataIntoWorkQBufs(RCVR_DESC_ID pRcvrDesc, Data_Upload *pIssue)
 
    if (pIssue->type == DATAUPLOAD_FIDSTATBLK)
    {
-        long doneCode,fidBytes,elemID;
+        int doneCode,fidBytes,elemID;
 #ifdef DESERIALIZER_DEBUG
          DPRINT1(+2,"'%s': getNewDataValPtr() - Statblock Transfer\n",pRcvrDesc->cntlrId);
 #endif
@@ -690,7 +688,7 @@ int copyDataIntoWorkQBufs(RCVR_DESC_ID pRcvrDesc, Data_Upload *pIssue)
         pRcvrDesc->activeWrkQEntry = workQGet(pWorkQId);
 
         /* Copy into FidStatBlk WorkQ buffer */
-        pXferData = DDS_OctetSeq_get_contiguous_bufferI(&pIssue->data);
+        pXferData = (char *) DDS_OctetSeq_get_contiguous_bufferI(&pIssue->data);
         dataLength = DDS_OctetSeq_get_length(&pIssue->data);
         memcpy(pRcvrDesc->activeWrkQEntry->pFidStatBlk, pXferData, dataLength);
 
@@ -701,7 +699,7 @@ int copyDataIntoWorkQBufs(RCVR_DESC_ID pRcvrDesc, Data_Upload *pIssue)
         {
             elemID = ntohl(pRcvrDesc->activeWrkQEntry->pFidStatBlk->elemId);
             fidBytes = ntohl(pRcvrDesc->activeWrkQEntry->pFidStatBlk->dataSize);
-            DPRINT2(+2,"EXP_FIDZERO_CMPLT:  ElemID: %ld, memset ZERO fidBytes: %ld\n", elemID, fidBytes);
+            DPRINT2(+2,"EXP_FIDZERO_CMPLT:  ElemID: %d, memset ZERO fidBytes: %d\n", elemID, fidBytes);
             // Zero FID actually sends no data, thus fill the data with zeros
             memset(pRcvrDesc->activeWrkQEntry->pFidData, 0, fidBytes);
         }
@@ -725,7 +723,7 @@ int copyDataIntoWorkQBufs(RCVR_DESC_ID pRcvrDesc, Data_Upload *pIssue)
            pWorkQEntry->FidStrtAddr = pRcvrDesc->activeWrkQEntry->pFidData;
 
            /* Copy beginning data into FidData WorkQ buffer */
-           pXferData = DDS_OctetSeq_get_contiguous_bufferI(&pIssue->data);
+           pXferData = (char *) DDS_OctetSeq_get_contiguous_bufferI(&pIssue->data);
            dataLength = DDS_OctetSeq_get_length(&pIssue->data);
            memcpy(pRcvrDesc->activeWrkQEntry->pFidData, pXferData, dataLength);
            // DPRINT1(-7,"DATAUPLOAD_FID:  copy fidBytes: %ld\n", dataLength);  // SEND_ZERO_FID DIAG
@@ -751,7 +749,7 @@ int copyDataIntoWorkQBufs(RCVR_DESC_ID pRcvrDesc, Data_Upload *pIssue)
            // pIssue->data.val = (pWorkQEntry->FidStrtAddr + pIssue->dataOffset);
 
            /* Copy sucessive pieces of data into FidData WorkQ buffer */
-           pXferData = DDS_OctetSeq_get_contiguous_bufferI(&pIssue->data);
+           pXferData = (char *) DDS_OctetSeq_get_contiguous_bufferI(&pIssue->data);
            dataLength = DDS_OctetSeq_get_length(&pIssue->data);
            memcpy((pWorkQEntry->FidStrtAddr + pIssue->dataOffset), pXferData, dataLength);
 
@@ -767,7 +765,6 @@ int copyDataIntoWorkQBufs(RCVR_DESC_ID pRcvrDesc, Data_Upload *pIssue)
 *   if (pSharedData == NULL)
 *       errLogSysQuit(LOGOPT,debugInfo,"getNewDataValPtr: Could not lock memory barrier mutex");
 *
-*     /* just incase data file not open and NULL was returned */
 *     if ( ( pIssue->data.val == NULL) || (pSharedData->discardIssues == 1) )
 *        pIssue->data.val = failsafeAddr;
 *
@@ -854,14 +851,11 @@ int fillInWorkQ(Data_Upload *pIssue, WORKQ_ENTRY_ID pWorkQEntry)
 void Data_UploadCallback(void* listener_data, DDS_DataReader* reader)
 {
    Data_Upload *recvIssue;
-   char *CntlrName;
-   RCVR_DESC_ID pRcvrDesc;
 
    struct DDS_SampleInfo* info = NULL;
    struct DDS_SampleInfoSeq info_seq = DDS_SEQUENCE_INITIALIZER;
    DDS_ReturnCode_t retcode;
-   DDS_Boolean result;
-   long i,numIssues;
+   int i,numIssues;
    DDS_TopicDescription *topicDesc;
 
 
@@ -896,7 +890,7 @@ void Data_UploadCallback(void* listener_data, DDS_DataReader* reader)
                  errLogRet(LOGIT,debugInfo,"Data_UploadCallback: take next instance error %d\n",retcode);
         }
         numIssues =  Data_UploadSeq_get_length(&data_seq);
-        DPRINT1(+2,"Data_UploadCallback: numIssues: %ld\n",numIssues);
+        DPRINT1(+2,"Data_UploadCallback: numIssues: %d\n",numIssues);
 
         for (i=0; i < numIssues; i++)
         {
@@ -968,7 +962,6 @@ int send2DDR(NDDS_ID pPub, int cmd, int arg1, int arg2, int arg3)
 {
      int result;
      Data_Upload *issue;
-     RTINtpTime                maxWait    = {10,0};
 
 #ifndef RTI_NDDS_4x
      if (DebugLevel > 2)
@@ -1025,14 +1018,14 @@ int wait4Send2Cmplt(int timeoutsec,int qlevel)
    return result;
 }
 
-setDiscardIssues()
+void setDiscardIssues()
 {
    SHARED_DATA_ID pSharedData;
    pSharedData = (SHARED_DATA_ID) lockSharedData(&TheMemBarrier);
     if (pSharedData == NULL)
        errLogSysQuit(LOGOPT,debugInfo,"setDiscardIssues: Could not lock memory barrier mutex");
 
-       pSharedData->discardIssues = 1;
+    pSharedData->discardIssues = 1;
 
     unlockSharedData(&TheMemBarrier);
 
@@ -1046,7 +1039,7 @@ void clearDiscardIssues()
     if (pSharedData == NULL)
        errLogSysQuit(LOGOPT,debugInfo,"clearDiscardIssues: Could not lock memory barrier mutex");
 
-       pSharedData->discardIssues = 0;
+    pSharedData->discardIssues = 0;
 
     unlockSharedData(&TheMemBarrier);
 
@@ -1285,7 +1278,7 @@ NDDSSubscription Data_UploadPatternSubCreate( const char *nddsTopic, const char 
      numDataSubs++;
      /* internal deserializer pointer to RcvrDesc */
      issue = pRcvrDesc->SubId->instance;
-     issue->pPrivateIssueData = (unsigned long) pRcvrDesc;
+     issue->pPrivateIssueData = (unsigned int) pRcvrDesc;
      pSub = pRcvrDesc->SubId->subscription;
  
      return pSub;
@@ -1408,7 +1401,7 @@ cntlrDataUploadPatternSub()
 
 RCVR_DESC_ID pTheRcvrDesc;
 
-cntlrDataUploadPatternSub()
+void cntlrDataUploadPatternSub()
 {
   createDiscoveryCallback(NDDS_Domain);
   
@@ -1496,6 +1489,7 @@ void shutdownComm()
 
 }
 
+#ifdef DIAG_TIMESTAMP
 int printTimeStamp(char *cntlrId, char *where, struct timeval *pPrevTS, int threshold)
 {
     struct timeval tp;                                                     
@@ -1522,3 +1516,4 @@ int printTimeStamp(char *cntlrId, char *where, struct timeval *pPrevTS, int thre
     memcpy(pPrevTS,&tp,sizeof(tp));
     return ( usdif );
 }
+#endif

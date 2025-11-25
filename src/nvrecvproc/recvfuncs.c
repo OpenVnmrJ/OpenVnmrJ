@@ -32,7 +32,7 @@
 #include "expQfuncs.h"
 #include "procQfuncs.h"
 #include "data.h"
-#include "dspfuncs.h"
+// #include "dspfuncs.h"
 #include "crc32.h"
 #ifndef RTI_NDDS_4x
 #include "Data_UploadCustom3x.h"
@@ -91,7 +91,7 @@ extern int numAvailWorkQs(WORKQ_ID pWorkQ);
 extern int send2DDR(NDDS_ID pPub, int cmd, int arg1, int arg2, int arg3);
 extern int send2AllDDRs(int cmd, int arg1, int arg2, int arg3);
 extern int wait4Send2Cmplt(int timeoutsec,int qlevel);
-extern int rngBlkFreeElem (register RINGBLK_ID ringId);
+extern int rngBlkFreeElem (RINGBLK_ID ringId);
 extern void shutdownComm();
 extern void expStatusRelease();
 
@@ -163,16 +163,17 @@ static void processBS(FID_STAT_BLOCK *pFidStatBlk);
 *		calculations taken from apintfunc.c (nschk).
 *
 */
+#ifdef XXX
 static
-void calcDCoffset(long *noisedata, int length, double *realdcoffset, 
+void calcDCoffset(int *noisedata, int length, double *realdcoffset, 
 			double *imagdcoffset, int dp)
 {
-   register int  nscnt; 
-   register int	dispctr;	/* lock display data counter */
-   register int val;
-   register int	*dispptr;	/* lock display data pointer */
-   register short *sdispptr;
-   register double rsum,isum;	/* real & imaginary sum      */
+   int  nscnt; 
+   int	dispctr;	/* lock display data counter */
+   int val;
+   int	*dispptr;	/* lock display data pointer */
+   short *sdispptr;
+   double rsum,isum;	/* real & imaginary sum      */
 
 	isum = rsum = 0.0;
 	nscnt = (int) (length >> 1); /* check 128 points in noise check */
@@ -215,8 +216,9 @@ void calcDCoffset(long *noisedata, int length, double *realdcoffset,
         *realdcoffset = rsum / (double) nscnt;
         *imagdcoffset = isum / (double) nscnt;
 }
+#endif
 
-unsigned long maxFidsRecv;
+unsigned int maxFidsRecv;
 
 
 
@@ -230,21 +232,16 @@ int recvData(char *argstr)
 {
 
   int uid,gid;
-  int datastat,stat;
   char fidpath[512];
-  char expCmpCmd[256];
   char *pInfoFile;
-  unsigned long totalDataSize, tempbufsize,nbufs;
   void resetState();
-  RINGBLK_ID pFreeBufIndex = NULL;
-  MFILE_ID bufferIfile = NULL;
   PSTMF  sumFunc = NULL;
   MFILE_ID_WRAPPER pIfileWrap,pBufFileWrap;
   SHARED_DATA_ID pSharedData;
   long long maxBufferMemoryUsage;
 
-  int status,i,index;
-  cntlr_crew_t *crew;
+  int i;
+  cntlr_crew_t *crew __attribute__((unused));
   membarrier_t *pmembar;
   int ddrThrdIndexPos[64],ddrIndex,ddrNum;
   char *pToken, *pDDRName;
@@ -307,7 +304,7 @@ int recvData(char *argstr)
      char addr[1024];
      char node[128];
      procQadd(WERR, ShrExpInfo->MemPath, 0, 0, EXP_STARTED, expInfo->GoFlag |
-           expInfo->ExpFlags & RESUME_ACQ_BIT);
+           (expInfo->ExpFlags & RESUME_ACQ_BIT));
      sendMsgQ(pProcMsgQ,"chkQ",strlen("chkQ"),MSGQ_NORMAL,NO_WAIT);
      sscanf(expInfo->VpMsgID,"%[^;]; %s",addr,node);
      sprintf(str,"ipccontst %s\n vpMsg('%s',%d)\n",
@@ -346,7 +343,6 @@ int recvData(char *argstr)
        {
           ffile = fFileOpen(fidpath,expInfo->DataSize,O_RDWR | O_CREAT | O_TRUNC);
           ifile = NULL;
-          DPRINT1(1,"ffile: 0x%lx\n",(unsigned long) ffile);
           /* DPRINT2(-5,"fOpen(): fd = %d, filepath: '%s' \n", ffile->fd,ffile->filePath); */
        }
      }
@@ -372,7 +368,6 @@ int recvData(char *argstr)
      }
      if (Use_FileIO_Flag == 0)
      {
-       DPRINT1(+1,"recvData;  ifile: 0x%lx\n",(unsigned long) ifile);
        DPRINT1(+1,">>>>> mmap adder for datafile: 0x%lx\n",(unsigned long) ifile->mapStrtAddr);
      }
      else
@@ -545,11 +540,11 @@ int recvData(char *argstr)
     if (pSharedData == NULL)
        errLogSysQuit(LOGOPT,debugInfo,"recvData: Could not lock memory barrier mutex");
 
-       /* pSharedData->pMapBufFile = bufferIfile; always buffering now */
-       pSharedData->pMapFidFile = ifile;
-       pSharedData->pFidFile = ffile;
-       pSharedData->AbortFlag = 0;
-       pSharedData->discardIssues = 0;
+    /* pSharedData->pMapBufFile = bufferIfile; always buffering now */
+    pSharedData->pMapFidFile = ifile;
+    pSharedData->pFidFile = ffile;
+    pSharedData->AbortFlag = 0;
+    pSharedData->discardIssues = 0;
 
     unlockSharedData(pmembar);
 
@@ -667,13 +662,11 @@ int recvData(char *argstr)
 /* int recvFidsCmplt(WORKQ_ENTRY_ID pWorkQEntry) */
 int recvFidsCmplt(void)
 {
-  int datastat,stat,i;
+  int stat,i;
   char expCmpCmd[256];
   FID_STAT_BLOCK *pStatBlk;
   char *CntlrName;
-  cntlr_crew_t *crew;
   RCVR_DESC_ID pRcvrDesc;
-  WORKQINVARIENT_ID pWrkqInvar;
   SHR_EXP_INFO pExpInfo = NULL;   /* start address of shared Exp. Info Structure */
   SHARED_DATA_ID pSharedData;
   membarrier_t *pmembar;
@@ -711,9 +704,9 @@ int recvFidsCmplt(void)
      if ( ((Use_FileIO_Flag == 0) && (pWorkQEntry->pInvar->fiddatafile->pMapFile != NULL)) )
      {
    
-        DPRINT3(+1,"'%s': recvFidsCmplt: ifile: opened file size: %llu, new file size: %llu\n", 
-           CntlrName,pWorkQEntry->pInvar->fiddatafile->pMapFile->byteLen, 
-           pWorkQEntry->pInvar->fiddatafile->pMapFile->newByteLen);
+//        DPRINT3(+1,"'%s': recvFidsCmplt: ifile: opened file size: %llu, new file size: %llu\n", 
+//           CntlrName,pWorkQEntry->pInvar->fiddatafile->pMapFile->byteLen, 
+//           pWorkQEntry->pInvar->fiddatafile->pMapFile->newByteLen);
         mClose(pWorkQEntry->pInvar->fiddatafile->pMapFile);
         pSharedData->pMapFidFile = NULL;
         pWorkQEntry->pInvar->fiddatafile->pMapFile = NULL;
@@ -864,13 +857,10 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
 {
     tcrc calcCRC;
     FID_STAT_BLOCK *pStatBlk;
-    short status;
-    long fidNum,fidSizeBytes;
-    char *dataPtr, *fidblkhdrSpot, *dataSrcPtr;
+    char *dataPtr = NULL, *fidblkhdrSpot = NULL;
     char *CntlrName;
     int doProcFlag;
     RCVR_DESC_ID pRcvrDesc;
-    WORKQINVARIENT_ID pWrkqInvar;
     SHR_EXP_INFO pExpInfo = NULL;   /* start address of shared Exp. Info Structure */
     struct datablockhead *pBlockHeader = NULL;
     SHARED_DATA_ID pSharedData;
@@ -1001,9 +991,9 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
       DPRINT4(1,"'%s': dataPtr: %p, buffer: %p, size bytes: %u\n", CntlrName, dataPtr, pWorkQEntry->pFidData, pStatBlk->dataSize);
     }
 
-    DPRINT3(1,"'%s': recvFid:  elemId: %u, trueElemId: %ld \n", CntlrName,pStatBlk->elemId, pWorkQEntry->trueElemId);
+    DPRINT3(1,"'%s': recvFid:  elemId: %u, trueElemId: %d \n", CntlrName,pStatBlk->elemId, pWorkQEntry->trueElemId);
 
-    DPRINT4(+1,"'%s': recvFid:  FidAddr: %p, given CRC: 0x%lx, calc CRC: 0x%lx\n",
+    DPRINT4(+1,"'%s': recvFid:  FidAddr: %p, given CRC: 0x%x, calc CRC: 0x%x\n",
       CntlrName,dataPtr, pWorkQEntry->dataCRC, calcCRC);
 
     /* check the console to Recvproc transfer CRC */
@@ -1011,7 +1001,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
     {
         /* errLogRet(ErrLogOp,debugInfo, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"); */
         errLogRet(ErrLogOp,debugInfo,
-                  "recvFid: FID CRC Checksums do NOT match: Given: 0x%lx != Calc: 0x%lx\n",pWorkQEntry->dataCRC,calcCRC);
+                  "recvFid: FID CRC Checksums do NOT match: Given: 0x%x != Calc: 0x%x\n",pWorkQEntry->dataCRC,calcCRC);
         /* errLogRet(ErrLogOp,debugInfo, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"); */
     }
 
@@ -1048,7 +1038,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
         * if (ct/bs) <= 1 then memcpy (i.e. 1st BS) */
 
        DPRINT3(+2,"'%s': NumInBS: %u, ct: %u\n",CntlrName, pExpInfo->NumInBS,pStatBlk->ct);
-       First_Bs =  (pExpInfo->NumInBS >= 1) ? (((long)pStatBlk->ct <= pExpInfo->NumInBS)) : 1;
+       First_Bs =  (pExpInfo->NumInBS >= 1) ? ((pStatBlk->ct <= pExpInfo->NumInBS)) : 1;
 
        /* if Interleave and elements 1st BS then memcpy not add */
 
@@ -1070,11 +1060,11 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
       }
       else
       {
-          int overflow,bytes;
+          int overflow;
           // using stat block np was NOT right for imaging with nfmod  e.g. np=256 with nfmod=128 np really equals 32768, not 256
           // unsigned long np = pStatBlk->np * expInfo->NFmod;  another pssible way of calc np
           // opted for the nfmod unaware model, datalength / bytes in data point, e.g.  131072 / 4 = 32768 for np
-          unsigned long np = pStatBlk->dataSize / expInfo->DataPtSize;
+          unsigned int np = pStatBlk->dataSize / expInfo->DataPtSize;
           if (Use_FileIO_Flag == 0)
           {
              DPRINT4(+2,"'%s': IL Summing: pStmFunc(%p,%p,%u)\n",CntlrName, dataPtr, pWorkQEntry->pFidData, pStatBlk->np);
@@ -1176,7 +1166,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
    pStatBlk->elemId = pWorkQEntry->trueElemId;
    if (pStatBlk->elemId > maxFidsRecv)
        maxFidsRecv = pStatBlk->elemId;
-   DPRINT2(+1,"'%s': revFid:  Update Max received FIDs (trueElemId) to: %lu\n",CntlrName,maxFidsRecv);
+   DPRINT2(+1,"'%s': revFid:  Update Max received FIDs (trueElemId) to: %u\n",CntlrName,maxFidsRecv);
 
    DPRINT4(+1,"'%s': recvFid:  elemId: %u, blockAddr: %p, DataAddr: %p\n",
       CntlrName,pWorkQEntry->pFidStatBlk->elemId, fidblkhdrSpot, dataPtr);
@@ -1200,15 +1190,15 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
         /* Since all active Receivers have completed (via barrier wait) prior to processing */
         /* we need to set the ElemId to the max elemid in the active Receiver Elemid group */
         /* GMB 11/03/2009 */
-        DPRINT3(+1,"'%s': recvFid: Return from Barrrier, CF: %ld ,  NF/NFmod: %ld \n",CntlrName,pWorkQEntry->cf+1,pWorkQEntry->pInvar->NumFids);
+        DPRINT3(+1,"'%s': recvFid: Return from Barrrier, CF: %d ,  NF/NFmod: %d \n",CntlrName,pWorkQEntry->cf+1,pWorkQEntry->pInvar->NumFids);
         if (pWorkQEntry->cf+1 == pWorkQEntry->pInvar->NumFids)
         {
-            long div,mod,mult,mxElemId;
+            int div,mod,mult,mxElemId;
             /* if (pStatBlk->elemId <  maxFidsRecv) */
             //  if ( (pStatBlk->elemId <  maxFidsRecv) &&  ((expInfo->IlFlag == 1) && last interleave cycle)
             // last interleave cycle;  CT == NT  
             // if ( (pStatBlk->elemId <  maxFidsRecv) && (expInfo->IlFlag != 1))
-            DPRINT5(+1,"'%s': recvFid:  elemID: %u ,  maxFidsRecv: %ld, CT: %u, NT: %u \n",
+            DPRINT5(+1,"'%s': recvFid:  elemID: %u ,  maxFidsRecv: %d, CT: %u, NT: %u \n",
                  CntlrName,pStatBlk->elemId, maxFidsRecv, pStatBlk->ct, pExpInfo->NumTrans);
             div = pStatBlk->elemId / pWorkQEntry->pInvar->numActiveRcvrs;
             mod = pStatBlk->elemId % pWorkQEntry->pInvar->numActiveRcvrs;
@@ -1216,7 +1206,7 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
             mxElemId = pWorkQEntry->pInvar->numActiveRcvrs * mult;
             // DPRINT7(-51,"elemId(%ld) / ActiveRcvrs(%ld) = %ld, elemId %% ActiveRcvrs = %ld,  ActiveRvcrs(%ld) * mult(%ld) = %ld (mxElemId)\n",
             //       pStatBlk->elemId, pWorkQEntry->pInvar->numActiveRcvrs, div, mod, pWorkQEntry->pInvar->numActiveRcvrs, mult, mxElemId);
-            DPRINT4(+1,"'%s': recvFid: Change elemId: %u, to max ElemId: %ld, base on number of ActiveRcvrs: %u, for proper processing \n",
+            DPRINT4(+1,"'%s': recvFid: Change elemId: %u, to max ElemId: %d, base on number of ActiveRcvrs: %u, for proper processing \n",
                     CntlrName,pStatBlk->elemId, mxElemId, pWorkQEntry->pInvar->numActiveRcvrs); 
             pStatBlk->elemId = mxElemId;
 
@@ -1258,18 +1248,13 @@ int recvFid(WORKQ_ENTRY_ID pWorkQEntry)
 
 int processFid(WORKQ_ENTRY_ID pWorkQEntry)
 {        
-    tcrc crcChkSum, calcCRC;
     FID_STAT_BLOCK *pStatBlk;
-     int status,stat;
-    long fidNum,fidSizeBytes;
-    char *dataPtr,*fidblkhdrSpot;
+    int status __attribute__((unused));
+    int fidSizeBytes;
     int return_status;
     char *CntlrName;
-    cntlr_crew_t *crew;
     RCVR_DESC_ID pRcvrDesc;
-    WORKQINVARIENT_ID pWrkqInvar;
     SHR_EXP_INFO pExpInfo = NULL;   /* start address of shared Exp. Info Structure */
-    SHARED_DATA_ID pSharedData;
  
     pRcvrDesc = (RCVR_DESC_ID) pWorkQEntry->pInvar->pRcvrDesc;
 
@@ -1286,7 +1271,7 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
                 CntlrName,pStatBlk->elemId, pStatBlk->dataSize, pStatBlk->ct,
                 pStatBlk->np, pStatBlk->doneCode,(pStatBlk->doneCode & 0xFFFF));
 
-    DPRINT3(+1,"'%s': >>>>>>> CF: %ld ,  NF/NFmod: %ld \n",CntlrName,pWorkQEntry->cf+1,pWorkQEntry->pInvar->NumFids);
+    DPRINT3(+1,"'%s': >>>>>>> CF: %d ,  NF/NFmod: %d \n",CntlrName,pWorkQEntry->cf+1,pWorkQEntry->pInvar->NumFids);
     if ( ExpCmplted(pWorkQEntry) == 1)
     {
        DPRINT(+1,"Experiment Already completed, Ignore Processing\n");
@@ -1323,11 +1308,10 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
 
      }
 
-     /* return_status = processDoneCode(pExpInfo,pStatBlk); /* does not do FID Cmplt processing */
+     // return_status = processDoneCode(pExpInfo,pStatBlk); /* does not do FID Cmplt processing */
 
      /* return the workQEntry to the free list */
     /* workQFree(pWorkQEntry->pWorkQObj, pWorkQEntry); */
-    DPRINT2(+1,"'%s': processFid:  processDoneCode stat: %d\n",CntlrName,return_status);
     DPRINT(+1,"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
    switch( (pStatBlk->doneCode & 0xFFFF) )
    {
@@ -1389,7 +1373,7 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
                 status =  mFidSeek(pWorkQEntry->pInvar->fiddatafile->pMapFile, 1L, sizeof(struct datafilehead), fidSizeBytes);
                 pdatafilehead = (struct datafilehead *) pWorkQEntry->pInvar->fiddatafile->pMapFile->mapStrtAddr;
               mMutexUnlock(pWorkQEntry->pInvar->fiddatafile->pMapFile);
-              DPRINT2(+1,"'%s': processFid:  Update Fid File's received FIDs to: %lu\n",CntlrName,maxFidsRecv);
+              DPRINT2(+1,"'%s': processFid:  Update Fid File's received FIDs to: %u\n",CntlrName,maxFidsRecv);
 	      pdatafilehead->nblocks = htonl(maxFidsRecv);
            }
            else
@@ -1400,11 +1384,11 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
                 fFileWrite(pWorkQEntry->pInvar->fiddatafile->pFile, (char*) &DataFileHead, sizeof(struct datafilehead), (off_t) 0LL);
            }
        }
-       done = (return_status != EXP_FID_CMPLT);
-       DPRINT4(+1,"'%s': processFid:  return_status(%d) != EXP_FID_CMPLT(%d) = %d\n",
+    done = (return_status != EXP_FID_CMPLT);
+    DPRINT4(+1,"'%s': processFid:  return_status(%d) != EXP_FID_CMPLT(%d) = %d\n",
 		CntlrName,return_status,EXP_FID_CMPLT,done);
-       done = (return_status == EXP_FID_CMPLT) && (pWorkQEntry->cf+1 == pWorkQEntry->pInvar->NumFids);
-       DPRINT6(+1,"'%s': processFid:  return_status(%d) == EXP_FID_CMPLT(%d) && (cf+1 (%ld) == nf (%ld)) = %d\n",
+    done = (return_status == EXP_FID_CMPLT) && (pWorkQEntry->cf+1 == pWorkQEntry->pInvar->NumFids);
+    DPRINT6(+1,"'%s': processFid:  return_status(%d) == EXP_FID_CMPLT(%d) && (cf+1 (%d) == nf (%d)) = %d\n",
 		CntlrName,return_status,EXP_FID_CMPLT,pWorkQEntry->cf+1, pWorkQEntry->pInvar->NumFids,done);
        /* if ( (return_status != EXP_FID_CMPLT) || ((return_status == EXP_FID_CMPLT) && 
             (pWorkQEntry->cf+1 == pWorkQEntry->pInvar->NumFids)) ) */
@@ -1450,14 +1434,14 @@ int processFid(WORKQ_ENTRY_ID pWorkQEntry)
 
 
 
-#ifdef LINUX
-static void byteSwap(void *data, register int num, int isShort)
+#ifdef XXX
+static void byteSwap(void *data, int num, int isShort)
 {
    /* byte-swap data to Linux format */
-   register int cnt;
+   int cnt;
    if (isShort)
    {
-      register short *sPtr;
+      short *sPtr;
       sPtr = (short *) data;
       for (cnt = 0; cnt < num; cnt++)
       {
@@ -1467,7 +1451,7 @@ static void byteSwap(void *data, register int num, int isShort)
    }
    else
    {
-      register int *iPtr;
+      int *iPtr;
       iPtr = (int *) data;
       for (cnt = 0; cnt < num; cnt++)
       {
@@ -1743,8 +1727,6 @@ static void initBlockHeader(struct datablockhead *pFidBlockHeader, SHR_EXP_INFO 
 }
 
 /**************************************************************
-}
-/**************************************************************
 *
 *  InitialFileHeaders - initial the static file & block headers 
 *
@@ -1773,7 +1755,6 @@ int InitialFileHeaders()
     /* decfactor = *( (int *)getDSPinfo(DSP_DECFACTOR) ); */
 
 
-        /* fidfileheader.nblocks   = expInfo->ArrayDim / expInfo->NumFids; /* n fids, testing */
         fidfileheader.nblocks   = expInfo->ArrayDim; /* n fids*/
         fidfileheader.ntraces   = expInfo->NumFids; /* NF */;
         /* fidfileheader.np  	= ( dspflag ? np / decfactor : np ); */
@@ -1811,7 +1792,7 @@ int InitialFileHeaders()
         fidblockheader.status = fidfileheader.status;
         fidblockheader.index = (short) 0;
         fidblockheader.mode = (short) 0;
-        fidblockheader.ctcount = (long) 0;
+        fidblockheader.ctcount = 0;
         fidblockheader.lpval = (float) 0.0;
         fidblockheader.rpval = (float) 0.0;
         fidblockheader.lvl = (float) 0.0;
@@ -1946,7 +1927,7 @@ static void processBS(FID_STAT_BLOCK *pFidStatBlk)
 
 static void processWarning(FID_STAT_BLOCK *pFidStatBlk)
 {
-    int stat,qstat;
+    int stat;
 
      /* if hard error already process no need for addition thread to do processing */
      if ( HardErrorFlag == 1)
@@ -1969,7 +1950,7 @@ static void processWarning(FID_STAT_BLOCK *pFidStatBlk)
 
 static void processWNT(FID_STAT_BLOCK *pFidStatBlk)
 {
-    int stat,qstat;
+    int stat, qstat;
 
      /* if hard error already process no need for addition thread to do processing */
      if ( HardErrorFlag == 1)
@@ -1998,7 +1979,7 @@ static void processWNT(FID_STAT_BLOCK *pFidStatBlk)
 
 int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 {
-    int return_status,stat,qstat;
+    int return_status = 0,stat;
 
      /* if hard error already process no need for addition thread to do processing */
      if ( HardErrorFlag == 1)
@@ -2130,7 +2111,7 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 		   }
       		}
                 return_status = EXP_HALTED;
-		/* return(EXP_ABORTED);	/* result of ABORT Experiment */
+		// return(EXP_ABORTED);	/* result of ABORT Experiment */
 		break;
 
 	   case HARD_ERROR:
@@ -2155,7 +2136,7 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 		   }
       		}
                 return_status = EXP_HALTED;
-		/* return(EXP_HALTED);	/* result of HARD_ERROR. RPNZ */
+		// return(EXP_HALTED);	/* result of HARD_ERROR. RPNZ */
 		break;
 
 	   case SETUP_CMPLT:
@@ -2177,7 +2158,6 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
 
 	   case EXP_FID_CMPLT:
                 {
-                   long fidNum;
                    /* Wexp test */
                    /* fidNum = ((pFidStatBlk->elemId - 1) / expInfo->NumFids) + 1; */
                    /* pFidStatBlk->elemId has ben changed to the true elemId */
@@ -2275,8 +2255,8 @@ int processDoneCode(SHR_EXP_INFO pExpInfo,FID_STAT_BLOCK *pFidStatBlk)
          }
 
       	/* --- Update Current CT & Current Element ----- */
-      	/* pExpInfo->CurrentTran = pFidStatBlk->ct;	/* Current Transient */
-      	/* pExpInfo->Celem = pFidStatBlk->elemId;       /* Current Element */
+      	// pExpInfo->CurrentTran = pFidStatBlk->ct;	/* Current Transient */
+      	// pExpInfo->Celem = pFidStatBlk->elemId;       /* Current Element */
 
         return(return_status);
 
@@ -2429,7 +2409,6 @@ int recvInteract()
 long long calcMaxMemory4BuffersMB(int numActiveDDrs)
 {
     long long alottedMemory;
-    long long desiredMemory;
     long long allowedMemory;
      
     /* calc Total RAM to be allowed to used based on Ram of system and number of Active DDRs */

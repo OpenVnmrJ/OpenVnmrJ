@@ -72,8 +72,8 @@
 struct _hw_config
 {
 #ifndef ALCYON 
-	void	*dspDownLoadAddr;  /* Unity INOVA only */
-	void	*dspDownLoadAddrs[6];  /* added for multi-receiver configuration where */
+	int	 dspDownLoadAddr;  /* Unity INOVA only */
+	int	 dspDownLoadAddrs[6];  /* added for multi-receiver configuration where */
 				       /* more than 1 DSP needs software downloaded.  */
 #else
 	char	*dspDownLoadAddr;  /* Unity INOVA only, alcyon compiler doesn't know void  
