@@ -278,6 +278,7 @@ int i_ft(int argc, char *argv[], int setstatus, int checkstatus, int flag2d,
  
    if (flag2d)
    {
+      char msge[MAXSTR];
  
 /**************************
 *  Initialize parameters  *
@@ -285,7 +286,18 @@ int i_ft(int argc, char *argv[], int setstatus, int checkstatus, int flag2d,
  
       ftpar->ptype = FALSE;	/* defaults to N-type processing	*/
       ftpar->f2select = FALSE;	/* defaults to full F1 processing	*/
-      ftpar->t2dc = FALSE;	/* defaults to no t2 DC correction	*/
+      if (P_getstring(CURRENT, "dc1d", msge, 1, MAXSTR-1) == 0)
+      {
+         ftpar->t2dc = (msge[0] == 'y') ? TRUE : FALSE;
+      }
+      else if (P_getstring(GLOBAL, "dc1d", msge, 1, MAXSTR-1) == 0)
+      {
+         ftpar->t2dc = (msge[0] == 'y') ? TRUE : FALSE;
+      }
+      else
+      {
+         ftpar->t2dc = FALSE;	/* defaults to no t2 DC correction	*/
+      }
       ftpar->t1dc = FALSE;	/* defaults to no t1 DC correction	*/
 
       ftpar->sspar.zfsflag = FALSE;
@@ -362,6 +374,10 @@ int i_ft(int argc, char *argv[], int setstatus, int checkstatus, int flag2d,
          else if (strcmp(argv[arg_no], "t2dc") == 0)
          {
             ftpar->t2dc = TRUE;
+         }   
+         else if (strcmp(argv[arg_no], "not2dc") == 0)
+         {
+            ftpar->t2dc = FALSE;
          }   
          else if (strcmp(argv[arg_no], "t1dc") == 0)
          {
