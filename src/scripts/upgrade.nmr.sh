@@ -82,21 +82,6 @@ if [[ $# -gt 0 ]]; then
             cp "$vnmrsystem"/acqbin/bootpd.service $sysdDir/bootpd.service
         fi
     fi
-    if [ -f /etc/debian_version ]; then
-       if [ "$(dpkg --get-selections openjdk-8-jre 2>&1 |
-         grep -w 'install' > /dev/null;echo $?)" != "0" ]
-       then
-          echo "Updating java"
-          apt-get -y install openjdk-8-jre > /dev/null 2>&1
-       fi
-    else
-       if [ "$(rpm -q java-1.8.0-openjdk |
-             grep 'not installed' > /dev/null;echo $?)" = "0" ]
-       then
-          echo "Updating java"
-          yum -y install java-1.8.0-openjdk > /dev/null 2>&1
-       fi
-    fi
     exit 0
 fi
 
@@ -258,6 +243,8 @@ doUpgrade () {
         code/tarfiles/jre.tar
         code/tarfiles/fidlib.tar
         code/tarfiles/spinapi.tar
+        code/tarfiles/propulse.tar
+        code/tarfiles/vnmrs.tar
         )
     ignoreFiles="
         acq/info
@@ -312,6 +299,21 @@ doUpgrade () {
                 dir=$content
                 continue
             fi
+	    if [[ $File = code/tarfiles/ddr.tar ]]; then
+		echo $content | grep -qw download >& /dev/null
+		if [[ $? -eq 0 ]]; then
+		    # echo "skip console software"
+		    continue
+		fi
+	    fi
+	    if [[ $File = code/tarfiles/inova.tar ]] ||
+	       [[ $File = code/tarfiles/mercury.tar ]]; then
+		echo $content | grep -qw acq >& /dev/null
+		if [[ $? -eq 0 ]]; then
+		    # echo "skip console software"
+		    continue
+		fi
+	    fi
             if [[ -L $upgrade_temp_dir/$content ]]; then
                 if [[ -e $vnmrsystem/$content ]]; then
                     continue
@@ -511,20 +513,6 @@ if [[ -f "$vnmrsystem"/acqbin/acqpresent ]]; then
             doAcq=1
         fi
     fi
-fi
-
-if [ -f /etc/debian_version ]; then
-   if [ "$(dpkg --get-selections openjdk-8-jre 2>&1 |
-         grep -w 'install' > /dev/null;echo $?)" != "0" ]
-   then
-      doAcq=1
-   fi
-else
-   if [ "$(rpm -q java-1.8.0-openjdk |
-         grep 'not installed' > /dev/null;echo $?)" = "0" ]
-   then
-      doAcq=1
-   fi
 fi
 
 if [[ $doAcq -eq 1 ]]; then
