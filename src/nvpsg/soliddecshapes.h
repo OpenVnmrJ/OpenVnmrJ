@@ -1108,71 +1108,63 @@ DSEQ setdseq2(char *name, char *seq)
 
 
 //==================================================================
-// Underscore Function to adjust the delays before and after a DSEQ
+// Underscore Functions to adjust the delays before and after a DSEQ
 //==================================================================
+
+void adjust_bc(double a, double pw, double ph, double *b, double *c, double strtdelay, double offstdelay, double apdelay, int lp2) {
+
+   if ((lp2 == 0) || (lp2 == 1)) {
+  
+      if (a > 0.0) {
+
+         if ((pw > 0.5e-6) && (ph > 0.0)) {
+
+            *b = *b - strtdelay - apdelay - offstdelay;
+         }
+         else {
+
+            *b = *b - apdelay;
+         }
+
+         *c = *c - apdelay;
+      }
+   }
+
+   if (*b < 0.0) *b = 0.0;
+
+   if (*c < 0.0) *c = 0.0;
+}
 
 DSEQ adj_dseq(DSEQ a, double *b, double *c, int lp1, int lp2)
 {
-   double strtdelay;
-   double offstdelay;
-   double apdelay;
-   if (!strcmp(a.seq,"spinal")) {
-      strtdelay = a.s.strtdelay;
-      offstdelay = a.s.offstdelay;
-      apdelay = a.s.apdelay;
+   if (!strcmp(a.seq,"paris")) {
+      a.p.preset1 = lp1;
+      a.p.preset2 = lp2;
+      adjust_bc(a.p.a, a.p.pw, 0.0, b, c, a.p.strtdelay, a.p.offstdelay, a.p.apdelay, lp2);
    }
-   else {
-      strtdelay = a.t.strtdelay;
-      offstdelay = a.t.offstdelay;
-      apdelay = a.t.apdelay;
-   }
-
-   if (!strcmp(a.seq,"spinal")) {
+   else if (!strcmp(a.seq,"spinal")) {
       a.s.preset1 = lp1;
       a.s.preset2 = lp2;
+      adjust_bc(a.s.a, a.s.pw, a.s.ph, b, c, a.s.strtdelay, a.s.offstdelay, a.s.apdelay, lp2);
    }
-   else {
+   else if (!strcmp(a.seq,"spinal2")) {
+      a.r.preset1 = lp1;
+      a.r.preset2 = lp2;
+      adjust_bc(a.r.a, a.r.pw, a.r.ph, b, c, a.r.strtdelay, a.r.offstdelay, a.r.apdelay, lp2);
+   }
+   else if (!strcmp(a.seq,"tppm")) {
       a.t.preset1 = lp1;
       a.t.preset2 = lp2;
+      adjust_bc(a.t.a, a.t.pw, a.t.ph, b, c, a.t.strtdelay, a.t.offstdelay, a.t.apdelay, lp2);
    }
-
-   if ((lp1 == 0) || (lp1 == 1)) {
-      if (!strcmp(a.seq,"spinal")) {
-         if (a.s.a > 0.0) {
-            if ((a.s.pw > 0.5e-6) && (a.s.ph > 0.0)) {
-               *b = *b - strtdelay - apdelay - offstdelay;
-            }
-            else {
-               *b = *b - apdelay;
-            }
-         }
-      }
-      else {       
-         if (a.t.a > 0.0) {
-            if ((a.t.pw > 0.5e-6) && (a.t.ph > 0.0)) {
-               *b = *b - strtdelay - apdelay - offstdelay;
-            }
-            else {
-               *b = *b - apdelay;
-            }
-         }
-      }
+   else if (!strcmp(a.seq,"waltz")) {
+      a.w.preset1 = lp1;
+      a.w.preset2 = lp2;
+      adjust_bc(a.w.a, a.w.pw, a.w.ph, b, c, a.w.strtdelay, a.w.offstdelay, a.w.apdelay, lp2);
    }
-
-   if ((lp2 == 0) || (lp2 == 1)) {
-      if (!strcmp(a.seq,"spinal")) {
-         if (a.s.a > 0.0) {
-            *c = *c - apdelay;
-         }
-      }
-      else {
-         if (a.t.a > 0.0) {
-            *c = *c - apdelay;
-         }
-      }
+   else {
+      abort_message("adj_dseq(): unknown decoupler sequence (%s)", a.seq);
    }
-   if (*b < 0.0) *b = 0.0;
-   if (*c < 0.0) *c = 0.0;
 
    return a;
 }
