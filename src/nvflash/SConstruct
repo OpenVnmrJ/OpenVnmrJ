@@ -1,0 +1,170 @@
+#!
+from __future__ import print_function
+import os
+import sys
+sys.path.append(os.path.join(os.getcwd(), os.pardir, os.pardir, 'scripts'))
+import buildMethods
+
+cwd = os.getcwd()
+
+ovjtools=os.getenv('OVJ_TOOLS')
+if not ovjtools:
+# If not defined, try the default location
+    print("OVJ_TOOLS env not found. Trying default location.")
+    ovjtools = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'ovjTools')
+
+if not os.path.exists(ovjtools):
+    print("OVJ_TOOLS env not found.")
+    print("For bash and variants, use export OVJ_TOOLS=<path>")
+    print("For csh and variants,  use setenv OVJ_TOOLS <path>")
+    sys.exit(1)
+
+
+#import variables  and environment from SConstruct
+Import("*")
+
+# define target file names
+nvFlashTarget = 'consoledownload42x'
+nvFlashIATarget = 'flashia42x'
+nvTestConfTarget = 'testconf42x'
+# we need to specify an absolute path so this SConstruct file
+# can be called from any other SConstruct file
+
+
+NDDS_VERSION = '4.2e'
+
+print('nvflash NDDS_VERSION ' + NDDS_VERSION)
+
+# binary paths
+## 4x NDDS
+nddsdir = 'ndds.' + NDDS_VERSION
+nddsHome = os.path.join(ovjtools,'NDDS', nddsdir)
+
+#  ndds header paths
+nddsHdrPathUnix = os.path.join(nddsHome, 'include')
+nddsHdrPathShare = os.path.join(nddsHome, 'include', 'ndds')
+
+# libraries and paths
+# nddsLibPath = os.path.join(nddsHome, 'lib', 'i86Linux2.6gcc3.4.3')
+nddsLibVer = 'x64Linux2.6gcc3.4.5'
+nddsLibPath = os.path.join(nddsHome, 'lib', nddsLibVer )
+LibList = ['m', 'pthread',
+               'nddscz', 'nddscorez', 'dl']
+
+# source files
+nvTestCheckSrcList = ['testconfig.c', 
+                      'nddsconffuncs.c' ]
+
+nvFlashIaSrcList = ['testflash.c']
+
+nvFlashDwnldSrcList = ['consoledownload.c']
+
+nvFlashFuncSrcList = ['nddsflashfuncs.c']
+
+ncommPath     = os.path.join(cwd, os.pardir, 'ncomm')
+ncommHdrList  = ['errLogLib.h']
+ncommFileList = ['errLogLib.c']
+
+nvacqPath     = os.path.join(cwd, os.pardir, 'nvacq')
+nvacqHdrList  = ['crc32.h',
+                 'md5.h',
+                 'NDDS_Obj.h',
+                 'NDDS_PubFuncs.h',
+                 'NDDS_SubFuncs.h']
+nvacqFileList = ['crc32.c',
+                 'md5.c',
+                 'sysUtils.c',
+                 'NDDS_Obj.c',
+                 'NDDS_PubFuncs.c',
+                 'NDDS_SubFuncs.c']
+
+nddsPath = os.path.join(cwd, os.pardir, 'nvacq')
+nddsFileList = [ 'Monitor_Cmd',
+                 'Console_Conf',
+                 'Flash_Downld']
+
+nddsCFileList = [ 'Monitor_Cmd.c',
+                 'Monitor_CmdPlugin.c',
+                 'Monitor_CmdSupport.c',
+                 'Console_Conf.c',
+                 'Console_ConfPlugin.c',
+                 'Console_ConfSupport.c',
+                 'Flash_Downld.c',
+                 'Flash_DownldPlugin.c',
+                 'Flash_DownldSupport.c']
+
+nvFlashEnv = Environment(CCFLAGS    = '-O -g -Wall',
+                         CPPDEFINES = ['LINUX', 'BSDACQ', 'NOASYNC', 'NESSIE',
+                                       'RTI_UNIX', 'DEBUG'],
+                         LINKFLAGS  = '-O -g -Wl,-rpath,/vnmr/lib ',
+                         CPPPATH    = [cwd,
+                                       nddsHdrPathUnix,
+                                       nddsHdrPathShare])
+
+# buildMethods.symLinkNow(nvFlashEnv, cwd, nddsPath, nddsIdlFileList)
+
+buildMethods.makeSymLinks(nvFlashEnv, nvFlashTarget, cwd, ncommPath, ncommFileList)
+buildMethods.makeSymLinks(nvFlashEnv, nvFlashTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(nvFlashEnv, nvFlashTarget, cwd, nvacqPath, nvacqFileList)
+buildMethods.makeSymLinks(nvFlashEnv, nvFlashTarget, cwd, nvacqPath, nvacqHdrList)
+
+# for NDDS 4x define
+nvFlashEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
+
+# for testconf4x 42x
+nvFlashEnv.Append(CPPDEFINES = 'QUERY_NDDS_COMP')
+
+# actual builds
+nvFlashFuncObjs = nvFlashEnv.StaticObject(nvFlashFuncSrcList)
+ncommObjs = nvFlashEnv.StaticObject(ncommFileList)
+nddsCObjs = nvFlashEnv.StaticObject(nddsCFileList)
+nvacqObjs = nvFlashEnv.StaticObject(nvacqFileList)
+
+nvflash = nvFlashEnv.Program(target  = nvFlashTarget,
+                             source  = [nvFlashDwnldSrcList,
+                                        nvFlashFuncObjs,
+                                        ncommObjs,
+                                        nddsCObjs,
+                                        nvacqObjs],
+                             LIBPATH = [cwd,
+                                        nddsLibPath],
+                             LIBS    = [ LibList ])
+ 
+flashia = nvFlashEnv.Program(target  = nvFlashIATarget,
+                             source  = [nvFlashIaSrcList,
+                                        nvFlashFuncObjs,
+                                        ncommObjs,
+                                        nddsCObjs,
+                                        nvacqObjs],
+                             LIBPATH = [cwd,
+                                        nddsLibPath],
+                             LIBS    = [ LibList ])
+
+testconf = nvFlashEnv.Program(target  = nvTestConfTarget,
+                             source  = [nvTestCheckSrcList,
+                                        nvFlashFuncObjs,
+                                        ncommObjs,
+                                        nddsCObjs,
+                                        nvacqObjs],
+                             LIBPATH = [cwd,
+                                        nddsLibPath],
+                             LIBS    = [ LibList ])
+
+# define with absolute path where built files will be copied
+vnmrPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', 'ddr', 'acqbin')
+
+# make sure the path(s) exist
+if not os.path.exists(vnmrPath):
+   os.makedirs(vnmrPath)
+
+# actions to be performed after targets are built
+nvFlashEnv.AddPostAction(nvflash,
+                         Action(Copy(vnmrPath, os.path.join(cwd, nvFlashTarget))))
+
+nvFlashEnv.AddPostAction(flashia,
+                         Action(Copy(vnmrPath, os.path.join(cwd, nvFlashIATarget))))
+
+nvFlashEnv.AddPostAction(testconf,
+                         Action(Copy(vnmrPath, os.path.join(cwd, nvTestConfTarget))))
+
+
