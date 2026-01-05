@@ -17,7 +17,7 @@
 
 typedef char c68char;
 typedef short c68int;
-typedef long c68long;
+typedef int c68long;
 
 #endif
 

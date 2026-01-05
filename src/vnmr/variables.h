@@ -77,6 +77,7 @@ struct _vInfo   { short		active;    /* 1-active  0-not active */
 		  short		Esize;     /*  size of enumeration array */
 		  int		size;      /*  size of array */
 		  int		prot;      /*  protection  bits */
+		  int		dum1;      /*  added for 32 / 64 bit alignment */
 		  double	minVal;
 		  double 	maxVal;
 		  double	step;
