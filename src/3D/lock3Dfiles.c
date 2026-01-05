@@ -38,9 +38,9 @@ int removelock(char *filepath);
 +--------------------------------------*/
 int checkforanylocks(char *datadirpath, int ndatafd)
 {
-   char	lockprimary[MAXPATHL],
+   char	lockprimary[MAXPATHL*2],
 	maindatafilepath[MAXPATHL],
-	fext[10];
+	fext[32];
    int	i;
 
 
