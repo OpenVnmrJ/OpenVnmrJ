@@ -178,7 +178,7 @@ WinMath::math_insert(char *text, int isimage)
 
 	// Trap for caret position beyond end.  This can happen is spaces are
 	// at the end of the string.
-	if(expCaretPos > expression.length())
+	if(expCaretPos > (int) expression.length())
 	    expCaretPos = expression.length();
 
 	// Check to see if there is a "#" before the insertion point,
@@ -377,8 +377,6 @@ WinMath::make_c_expression(const char *cmd)
     const char *pc;
     const char *pp;
     char *rtn = NULL;
-    char frame[20];		// Holds frame nbr parsed from command
-    int frameno;
 
     if (isDebugBit(DEBUGBIT_8)) {
         STDERR_1("make_c_expression(\"%s\")\n", cmd);
@@ -392,7 +390,7 @@ WinMath::make_c_expression(const char *cmd)
     pc++;
 
     // Replace all "#<frame>" strings with "img[<name>][indx]"
-    for (i=0; pp = strchr(pc, '#'); i++){
+    for (i=0; (pp = strchr(pc, '#')); i++){
 	rtn = append_string(rtn, pc, pp-pc);
 	pc = pp + 1;		// Skip the '#'
         n = strspn(pc, "0123456789"); // Skip the frame number
@@ -414,7 +412,6 @@ char *
 WinMath::func2progname(const char *cmd)
 {
     const char *pin;
-    char *pout;
     char *rtn = NULL;
     int n;
 
@@ -604,7 +601,7 @@ WinMath::exec_string(const char *incmd)
     ib_msgline("Math: Parsing...\n");
 
     /* Change New-Lines to Spaces */
-    while (pc=strchr(cmd, '\n')){
+    while ( (pc=strchr(cmd, '\n')) ){
 	*pc = ' ';
     }
 
@@ -668,7 +665,7 @@ WinMath::exec_string(const char *incmd)
 	DDLSymbolTable *st = (DDLSymbolTable *)vst;
 	getIntParm(dst_frames, &frame, i);
 	if (isDebugBit(DEBUGBIT_8)) {
-	    STDERR_2("st=0x%x, frame=%d\n", st, frame);
+	    STDERR_2("st=%p, frame=%d\n", st, frame);
 	}
 	if (st && frame){
 	    char *fname;
@@ -711,7 +708,6 @@ WinMath::parse_lhs(const char *cmd, ParmList *framelist)
 {
     int nframes = 0;
     char *tbuf;
-    int pid = getpid();
 
     tbuf = strdup(cmd);
     if (!tbuf) return 0;
@@ -750,7 +746,6 @@ WinMath::parse_rhs(const char *cmd,
     int n;
     const char *pc;
     char *tbuf;
-    ParmList frames;
     ParmList pl;
     void *pv;
     spImgInfo_t img;
@@ -839,7 +834,6 @@ WinMath::get_program(const char *cmd)
 	(void)init_get_env_name(progpath);	/* Get the directory path */
 	strcat(progpath, "/math/expressions/bin/");
 	strcat(progpath, progname);
-	int tstfd;
 	// NB: *** NEED TO CHECK IF PROGRAM IS UP TO DATE
 	if (access(progpath, X_OK) == 0){
 	    // Already have the program
@@ -871,7 +865,7 @@ WinMath::get_program(const char *cmd)
 	    char protopath[MAXPATHLEN];
 	    (void)init_get_env_name(protopath);
 	    strcat(protopath, "/math/expressions/src/mathproto.c");
-	    char srcpath[MAXPATHLEN];
+	    char srcpath[128];
 	    sprintf(srcpath,"%s/%d_c_code.c", dir, pid);
 	    if (!sub_string_in_file(protopath, srcpath,
 				    "IB_EXPRESSION", c_expr)){
@@ -883,41 +877,19 @@ WinMath::get_program(const char *cmd)
 	    free(c_expr);
 
 	    // Compile program into math directory
-	    char cccmd[2048];
-	    char vnmrlib[1024];
-	    char gnuinc[1024];
-	    char srcinc[1024];
-	    char ccprog[1024];
-#ifdef LINUX
-	    char libs[] = "-lddl -lnsl -lm";
-#else
-	    char libs[] = "-lddl -lnsl -lC -lm";
-#endif
-	    const char *pc;
-	    int no_gcc;
+	    char cccmd[2048*2];
+	    char gnuinc[16];
+	    char srcinc[512];
+	    char ccprog[8];
+	    char libs[] = "-lm";
 
 	    (void)init_get_env_name(srcinc);
 	    strcat(srcinc,"/math/expressions/src");
-	    if (!(pc=getenv("vnmrsystem"))){
-		pc = "/vnmr";
-	    }
-	    sprintf(vnmrlib,"%s/lib", pc);
-	    sprintf(ccprog,"%s/gnu/bin/cc", pc); // Use Gnu cc if we have it ...
-	    if ((no_gcc = access(ccprog, X_OK)) != 0){
-		strcpy(ccprog, "cc"); // ... otherwise, whatever we find.
-	    }
-	    if (!(pc=getenv("GCC_EXEC_PREFIX"))){
-		pc = "./";
-		const char *msg=
-		    "Environment variable \"GCC_EXEC_PREFIX\" undefined";
-		if (!no_gcc){
-		    ib_errmsg(msg);
-		}
-	    }
-	    sprintf(gnuinc,"%sinclude", pc);
+		 strcpy(ccprog, "cc");
+	    strcpy(gnuinc,"./include");
 
-	    char makeexpr[1024];
-	    char makestr[1024];
+	    char makeexpr[512+16];
+	    char makestr[512];
 	    sprintf(makeexpr,"%s/makeexpr", srcinc);
 	    FILE *fd = fopen(makeexpr, "r");
 	    makestr[0] = '\0';
@@ -933,13 +905,9 @@ WinMath::get_program(const char *cmd)
 	    }
 
 	    sprintf(cccmd,
-#ifdef LINUX
-		    "%s %s -s -shared -I%s -I%s -L. -L%s -fPIC -m32 -Wl,-rpath,./ -Wl,-rpath,%s %s -o '%s' %s",
-#else
-		    "%s %s -s -G -I%s -I%s -L. -L%s -R. -R%s %s -o '%s' %s",
-#endif
+		    "%s %s -s -shared -I%s -I%s -fPIC %s -o '%s' %s",
 		    ccprog, makestr, srcinc, gnuinc,
-		    vnmrlib, vnmrlib, srcpath, progpath, libs);
+		    srcpath, progpath, libs);
 	    if (isDebugBit(DEBUGBIT_8)) {
 	        STDERR_1("cccmd=\"%s\"\n", cccmd);
 	    }
@@ -985,7 +953,7 @@ WinMath::exec_program(const char *path, ParmList parmtree, ParmList *out)
     // NB: Compiler does not like casts from "pointer-to-void" to
     // "pointer-to-function".  Hence, first cast to "long", then to
     // "pointer-to-function"!
-    func = (MathFunc_t)(long)dlsym(dlhandle, "mathexpr");    
+    func = (MathFunc_t) dlsym(dlhandle, "mathexpr");    
     if (!func){
 	ib_errmsg(dlerror());
 	dlclose(dlhandle);
@@ -1044,7 +1012,7 @@ WinMath::get_imagevector_list(const char *name, char *cmd)
     spGframe_t gf;
 
     plp = allocParm(name, PL_PARM, 0);
-    while (plf=get_framevector("framevec", &cmd)){ // "cmd" pointer gets updated
+    while ( (plf=get_framevector("framevec", &cmd)) ){ // "cmd" pointer gets updated
 	// Convert framevector to imagevector
 	n = countParm(plf);	// n will be positive
 	pli = allocParm("imagevec", PL_PTR, n);
@@ -1080,9 +1048,7 @@ WinMath::get_imagevector_list(const char *name, char *cmd)
 ParmList
 WinMath::get_framevector(const char *name, char **cmd)
 {
-    int i;
     int j;
-    int n;
     int brange;
     int erange;
     char *p;
@@ -1092,7 +1058,7 @@ WinMath::get_framevector(const char *name, char **cmd)
 
     /* Load up the list of frames */
     pl = 0;
-    if (p=strchr(*cmd, '#')){	// p --> first #
+    if ( (p=strchr(*cmd, '#')) ){	// p --> first #
 	pl = allocParm(name, PL_INT, 0);
 	pp = ++p;		// Mark spot to delete frame numbers
 	if (*p == '#'){
@@ -1119,7 +1085,7 @@ WinMath::get_framevector(const char *name, char **cmd)
 	    }
 	}else if (*p == '('){
 	    pl = parse_frame_spec(p, pl);
-	    if (ppp=strchr(p, ')')){
+	    if ( (ppp=strchr(p, ')')) ){
 		p = ppp;
 	    }else{
 		p += strlen(p);
@@ -1136,7 +1102,7 @@ WinMath::get_framevector(const char *name, char **cmd)
 	}
 	/* Consolidate string--replacing image spec with "#" */
 	ppp = pp;
-	while (*pp++ = *p++);
+	while ( (*pp++ = *p++) );
 	*cmd = ppp;
 
 	if (countParm(pl) == 0){
@@ -1226,7 +1192,8 @@ WinMath::get_stringlist(const char *name, char *cmd)
             term = *pc; //
             *pc++ = '\0'; // Replace terminator with NULL
             i = (int)strtod(pcc, &pccc); // Test numeric conversion
-            if (*pcc == '#' || (pccc - pcc == strlen(pcc))) {
+            if (*pcc == '#' || ( (int) (pccc - pcc) == (int) strlen(pcc))) {
+
                 // It's a number or "#"
                 if (term == '\0') {
                     *--pc = term;

@@ -152,7 +152,7 @@ DataManager::dataCheck()
     DataMap::iterator pd;
     int i;
     for (i=0, pd=dataMap->begin(); pd != dataMap->end(); ++pd, ++i) {
-        long n = *pd->second.pn;
+        int n = *pd->second.pn;
         //fprintf(stderr,"dataCheck: i=%d, n=%d\n", i, n);
         if (n < 0 || n > 10) {
             fprintf(stderr,"dataCheck FAILED: i=%d, n=%d\n", i, n);
@@ -944,7 +944,7 @@ DataManager::addToRQ(const char *path)
     // data will be displayed after loading if is "DoubleClick"
 
     const int BUFLEN = 1024;
-    char str[BUFLEN];
+    char str[512];
     char cmd[BUFLEN];
 
     if(P_getstring(GLOBAL, "rqactiontype", str, 1, sizeof(str))) 

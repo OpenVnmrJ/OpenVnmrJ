@@ -828,7 +828,7 @@ static char *whatoffsetparam(int rfchan)
 -------------------------------------------------------------------*/
 
 /*  FreqObj actually the address of a Frequency Object */
-void tune_from_freq_obj(char *FreqObj, int dev_channel )
+void tune_from_freq_obj(void *FreqObj, int dev_channel )
 {
    (void) FreqObj;
    Werrprintf( "SET_VALUE called for Frequency Object for channel %d", dev_channel );
@@ -1244,7 +1244,7 @@ int tune(int argc, char *argv[], int retc, char *retv[])
 /*----------------------------------------------------------------------*/
 /* putgtab - dummy routine for now.					*/
 /*----------------------------------------------------------------------*/
-void putgtab(int table, short word)
+void putgtab(int table, c68int  word)
 {
    (void) table;
    (void) word;

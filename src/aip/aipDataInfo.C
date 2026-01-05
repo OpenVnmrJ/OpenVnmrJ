@@ -30,7 +30,7 @@ using namespace std;
 
 spDataInfo_t nullData = spDataInfo_t(NULL);
 
-unsigned long DataInfo::nextIndex = 0;
+unsigned int DataInfo::nextIndex = 0;
 
 extern "C" {
     int tensor2eulerView(float* theta, float* psi, float* phi, float* orientation);
@@ -785,7 +785,7 @@ bool DataInfo::setDataStructureFromSymbolTable(dataStruct_t *ds,
 	if (st->GetValue("ordinate", pc) || st->GetValue("ordinate", pc, 0)) {
 		strncpy(ds->ordinate, pc, sizeof(ds->ordinate));
 	}
-	unsigned long buflen = ds->bits / 8; // Bytes per word
+	unsigned int buflen = ds->bits / 8; // Bytes per word
 	for (int i=0; i<ds->rank; i++) {
 		if (!st->GetValue("matrix", ds->matrix[i], i)) {
 			ok = false;

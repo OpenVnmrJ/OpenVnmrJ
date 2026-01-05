@@ -120,9 +120,9 @@ public:
     void calcBodyToMagnetRotation();
 
 private:
-    static unsigned long nextIndex;
+    static unsigned int nextIndex;
 
-    unsigned long index;        // Order data was loaded in
+    unsigned int index;        // Order data was loaded in
     int relativeIndex;          // Counting only currently loaded data
     string key;
     string shortName;
