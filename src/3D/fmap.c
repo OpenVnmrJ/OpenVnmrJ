@@ -120,11 +120,6 @@ int createFIDmap()
 +--------------------------------------*/
 int mapFIDblock(int block_no)
 {
-   int	newblock_no;
-
-
-   newblock_no = block_no;
-   /*return(newblock_no);*/
    return(block_no);	/* temporary addition */
 }
 
