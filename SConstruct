@@ -156,7 +156,6 @@ acqBuildList = """
                          atproc
                          bootpd.rh51
                          cgl
-                         ddl
                          dicom_fdf
                          expproc
                          ib
@@ -167,6 +166,7 @@ acqBuildList = """
                          mercury
                          nautoproc
                          nvexpproc
+                         nvflash
                          nvinfoproc 
                          nvrecvproc
                          nvsendproc

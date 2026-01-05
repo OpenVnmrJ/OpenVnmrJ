@@ -361,11 +361,11 @@ printParm(ParmList p)
 		break;
 	      case PL_PTR:
 		getPtrParm(p, &pp, i);
-		fprintf(stderr,"0x%x ", pp);
+		fprintf(stderr,"%p ", pp);
 		break;
 	      case PL_PARM:
 		getParmParm(p, &parm, i);
-		fprintf(stderr,"0x%x ", parm);
+		fprintf(stderr,"%p ", parm);
 		break;
 	    }
 	}
