@@ -335,7 +335,8 @@ int updateSvfdirIcon()
 /******************/
 {
     int i;
-    string dir, str;
+    string dir;
+    char str[512];
 
     if(!part11System) return(-1);
 
@@ -464,7 +465,7 @@ void p11_writeCmdHistory(char* buf)
     /* don't save jFunc, vnmrjcmd, and empty lines to cmdHistory */
 
     if(debug)
-	fprintf(stderr, "p11_writeCmdHistory: %d %s", strlen(str), str);
+	fprintf(stderr, "p11_writeCmdHistory: %d %s", (int) strlen(str), str);
 
     if(strlen(str) == 0 || strcmp(str, "\n") == 0 ||
        (strncmp(str, "jFunc", 5) == 0 && strncmp(str, "jFunc(7,", 8) != 0) || 
@@ -1367,10 +1368,10 @@ int readPart11Config()
 /* sysOwnedSafecp sets the owner of the destination file as */
 /* the owner of sysOwnedSafecp, which is the system (vnmr1). */
  
-    char path[MAXPATHL];
+    char path[MAXPATH];
     char  buf[BUFSIZE];
     FILE* fp;
-    string words[MAXWORDS];
+    string words[MAXWORDS] = {};
     int i, nwords;
     string str, tmpstrs[MAXWORDS]; 
 
@@ -2568,7 +2569,7 @@ static int copy_fid(char* curr, char* rec)
 {
  
     int ival = 1;
-    char path[MAXSTR], recpath[MAXSTR];
+    char path[MAXSTR+16], recpath[MAXSTR+16];
 
     if(!strEndsWith(curr, "/")) strcat(curr, "/");
     if(!strEndsWith(rec, "/")) strcat(rec, "/");
@@ -5081,11 +5082,9 @@ static void getStrValues(char* buf, string* words, int* n, char* delimiter)
     char  str[BUFSIZE];
 
     /* remove newline if exists */
-    if(buf[strlen(buf)-1] == '\n') {
-        strcpy(str, "");
-        strncat(str, buf, strlen(buf)-1);
-    } else
-        strcpy(str, buf);
+    strcpy(str, buf);
+    if(str[strlen(str)-1] == '\n')
+       str[strlen(str)-1] = '\0';
 
     strptr = str;
     *n = 0;
@@ -5185,15 +5184,15 @@ void getFileStat(string file, string key, string value)
         } else if(strcmp(key,"size") == 0) {
             sprintf(value, "%d", (int) stat_path.st_size);
         } else if(strcmp(key,"mtime") == 0) {
-            strftime(value, MAXSTR, t_format, localtime((long*)&(stat_path.st_mtime)));
+            strftime(value, MAXSTR, t_format, localtime(&(stat_path.st_mtime)));
         } else if(strcmp(key,"atime") == 0) {
-            strftime(value, MAXSTR,  t_format, localtime((long*)&(stat_path.st_atime)));
+            strftime(value, MAXSTR,  t_format, localtime(&(stat_path.st_atime)));
         } else if(strcmp(key,"ctime") == 0) {
-            strftime(value,  MAXSTR, t_format, localtime((long*)&(stat_path.st_ctime)));
+            strftime(value,  MAXSTR, t_format, localtime(&(stat_path.st_ctime)));
         } else if(strcmp(key,"rdev") == 0) {
             sprintf(value, "%d", (int) stat_path.st_rdev);
         } else if(strcmp(key,"nlink") == 0) {
-            sprintf(value, "%d", stat_path.st_nlink);
+            sprintf(value, "%d", (int) stat_path.st_nlink);
         } else if(strcmp(key,"uid") == 0) {
             sprintf(value, "%d", stat_path.st_uid);
         } else if(strcmp(key,"gid") == 0) {

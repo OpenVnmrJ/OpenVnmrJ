@@ -196,11 +196,14 @@ ObjectNew(Functionp dispatch, char *name)
 |       tablesize - size of array or structure in Bytes.
 |                               Author Greg Brissey 8/9/88
 +-------------------------------------------------------------------*/
-int ClearTable(register char *tableptr, register long tablesize)
+int ClearTable(void *ptr, size_t tablesize)
 {
-   register long   i;
+   size_t   i;
+   char *tableptr;
 
-   for (i = 0L; i < tablesize; i++)
+   tableptr = (char *) ptr;
+
+   for (i = 0; i < tablesize; i++)
       *tableptr++ = 0;
    return(0);
 }

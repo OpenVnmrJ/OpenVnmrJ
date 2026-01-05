@@ -25,7 +25,6 @@
 #include <unistd.h>
 #include <math.h>
 
-#ifdef UNIX
 #include <pwd.h>		/* Not present or needed on VMS */
 #include <errno.h>
 #include <fcntl.h>
@@ -35,7 +34,6 @@
 #include <sys/resource.h>
 #include <signal.h>
 #include <setjmp.h>
-#endif 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <arpa/inet.h>
@@ -180,7 +178,7 @@ int acqproc_msge(int argc, char *argv[], int retc, char *retv[])
 
    char            file[MAXPATHL];
    char            user[MAXPATHL];
-   char            message[MAXPATHL];
+   char            message[MAXPATHL*2];
    int             cmdval;
    int             buglevel, len;
    int             ival __attribute__((unused));
@@ -876,7 +874,7 @@ save_acqi_pars()
 /**************/
 {
    char path[MAXPATHL];
-   char syscall[MAXPATHL];
+   char syscall[MAXPATHL+16];
 
    P_treereset(TEMPORARY);
    if (copy_acqi_pars())
@@ -1552,14 +1550,14 @@ int setfrq(int argc, char *argv[], int retc, char *retv[])
 static void
 get_nuctab_name(double h1freq, char rftype, char *nuctable)
 {
-    char suffix[16];
+    char suffix[8];
 
     if (fabs(h1freq - 127) < 10){
 	strcpy(suffix, "3T");
     }else if (fabs(h1freq - 170) < 10){
 	strcpy(suffix, "4T");
     }else{
-	sprintf(suffix, "%d", (int)h1freq / 100);
+	sprintf(suffix, "%hd", (short)h1freq / 100);
     }
     sprintf(nuctable, "nuctab%s%c", suffix, rftype);
 }	
@@ -1936,7 +1934,6 @@ int numActiveRcvrs(char *rcvrstring)
 int get_username(char *username_addr, int username_len )
 {
 
-#ifdef UNIX
 	int		 ulen;
 	struct passwd	*pasinfo;
 
@@ -1951,48 +1948,6 @@ int get_username(char *username_addr, int username_len )
 	}
 	else
 	  strcpy(username_addr, pasinfo->pw_name);
-
-#else 
-#define  JPI$_USERNAME	0x0202
-
-	int		ulen;
-        long int        cur_pid, istat;
-        char            user_name[14];
-        char            *tptr;
-
-        extern long int SYS$GETJPI(), SYS$WAITFR();
-
-        struct {
-                short int       buf_len;
-                short int       item_code;
-                int             *buf_adr;
-                int             *ret_len_adr;
-        } req_item[2] = 
-          {
-                { 12,  JPI$_USERNAME, &user_name[0],  NULL },
-                { 0,   0,             NULL,           NULL },
-          };
-
-        cur_pid = getpid();
-        istat = SYS$GETJPI( 1, &cur_pid, 0, &req_item[0], 0, 0, 0 );
-        if ( (istat & 3) != 1 )
-          return( -1 );
-        istat = SYS$WAITFR( 1 );
-        if ( (istat & 3) != 1 )
-          return( -1 );
-
-        user_name[ 12 ] = user_name[ 13 ] = '\0';
-        tptr = strchr( &user_name[ 0 ], ' ' );
-        if (tptr != NULL)
-          *tptr = '\0';
-        ulen = strlen( &user_name[ 0 ] );
-	if (ulen >= username_len) {
-		strncpy( username_addr, &user_name[ 0 ], username_len-1 );
-		username_addr[ username_len-1 ] = '\0';
-	}
-	else
-	  strcpy(username_addr, &user_name[ 0 ]);
-#endif 
 
 	return( 0 );
 }
@@ -2326,7 +2281,7 @@ static long getOneAtTime(int *hr, int *min)
 
    gettimeofday(&clock, NULL);
    clock.tv_sec += *hr;
-   local = localtime((long*) &(clock.tv_sec));
+   local = localtime(&(clock.tv_sec));
    *hr = local->tm_hour;
    *min = local->tm_min;
    return(clock.tv_sec);
@@ -2340,7 +2295,7 @@ static long getAtTime(int hr, int min, char *timespec, int *repeatAt)
    int days[7];
 
    gettimeofday(&clock, NULL);
-   local = localtime((long*) &(clock.tv_sec));
+   local = localtime(&(clock.tv_sec));
    *repeatAt = 0;
    if (strlen(timespec) )
    {
@@ -2496,7 +2451,7 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
          RETURN;
       }
       gettimeofday(&clock, NULL);
-      local = localtime((long*) &(clock.tv_sec));
+      local = localtime(&(clock.tv_sec));
       doCmd = 0;
       strcpy(timespec,"");
       while ( (res = fscanf(fd,"%ld %d %d %d %s %s %s %d:%d%[^;]; %[^\n]\n",

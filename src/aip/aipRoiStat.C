@@ -598,9 +598,7 @@ RoiStat::show(RoiDataList statlist, RoiData tot_stat)
 	    //win_stat_update_panel(&tot_stat, nstats);
 	} else if (user_var.find_first_not_of(" \t") != string::npos) {
 	    // We didn't find "user_var", and it's not all white space.
-	    char tbuf[1024];
-	    sprintf(tbuf,"User parameter \"%s\" not found.\n", user_var.c_str());
-	    fprintf(stderr, tbuf);
+	    fprintf(stderr,"User parameter \"%s\" not found.\n", user_var.c_str());
 	}
 
 	//XFlush(Gframe::gdev->xdpy);
@@ -850,7 +848,7 @@ RoiStat::writeStats(const char *fname, const char *mode, int header)
     if (nstats > 0) {
         // Header line if requested   
         if(header) {
-            fprintf(fd,"%s%*s  Pixels ", title, namelen-strlen(title), "Name");
+            fprintf(fd,"%s%*s  Pixels ", title, (int) (namelen-strlen(title)), "Name");
             fprintf(fd,
                     "Area       Min        Max        Median     Mean       Sdv\n");
         }

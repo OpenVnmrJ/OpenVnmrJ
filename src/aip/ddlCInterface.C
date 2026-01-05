@@ -357,9 +357,3 @@ is_fdf_magic_number(const char *filename, const char *magic_string_list[])
     f.close();
     return rtn;
 }
-
-double
-quiet_nan(long)
-{
-    return strtod("NaN",NULL);
-}

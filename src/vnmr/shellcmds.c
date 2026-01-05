@@ -1842,7 +1842,7 @@ void currentDate(char *cstr, int len )
   struct timeval clock;
 
   gettimeofday(&clock, NULL);
-  strftime(tmpstr, MAXPATH, t_format,  localtime((long*)&(clock.tv_sec)));
+  strftime(tmpstr, MAXPATH, t_format,  localtime(&(clock.tv_sec)));
   strncpy(cstr, tmpstr, len);
 }
 
@@ -1852,7 +1852,7 @@ char *currentDateLocal(char *cstr, int len )
   struct timeval clock;
 
   gettimeofday(&clock, NULL);
-  strftime(tmpstr, MAXPATH, "%Y\%m\%dT%H\%M\%SX%I\%p\%a%b",  localtime((long*)&(clock.tv_sec)));
+  strftime(tmpstr, MAXPATH, "%Y\%m\%dT%H\%M\%SX%I\%p\%a%b",  localtime(&(clock.tv_sec)));
   strncpy(cstr, tmpstr, len);
   return(cstr);
 }
@@ -1872,8 +1872,8 @@ char *currentDateSvf(char *cstr, int len )
   else
      strcpy(timestr, t_format);
   gettimeofday(&clock, NULL);
-  if (strftime(tmpstr, MAXPATH, timestr,  localtime((long*)&(clock.tv_sec))) == 0)
-    strftime(tmpstr, MAXPATH, t_format,  localtime((long*)&(clock.tv_sec)));
+  if (strftime(tmpstr, MAXPATH, timestr,  localtime(&(clock.tv_sec))) == 0)
+    strftime(tmpstr, MAXPATH, t_format,  localtime(&(clock.tv_sec)));
   strncpy(cstr, tmpstr, len);
   return(cstr);
 }
@@ -1926,7 +1926,7 @@ int unixtime(int argc, char *argv[], int retc, char *retv[])
         char tmpstr[MAXPATH];
 
 	gettimeofday( &clock, NULL );
-        strftime(tmpstr, MAXPATH, argv[1],  localtime((long*)&(clock.tv_sec)));
+        strftime(tmpstr, MAXPATH, argv[1],  localtime(&(clock.tv_sec)));
 	if (retc)
 	   retv[ 0 ] = newString( tmpstr );
         else
@@ -1938,7 +1938,7 @@ int unixtime(int argc, char *argv[], int retc, char *retv[])
         if (isReal(argv[2]) )
         {
            clock.tv_sec = atoi(argv[2]);
-           strftime(tmpstr, MAXPATH, argv[1],  localtime((long*)&(clock.tv_sec)));
+           strftime(tmpstr, MAXPATH, argv[1],  localtime(&(clock.tv_sec)));
 	   if (retc)
 	      retv[ 0 ] = newString( tmpstr );
            else

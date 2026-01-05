@@ -76,8 +76,8 @@ extern int      debug1;
 
 extern void Wturnoff_buttons();
 extern int init_wt1(struct wtparams *wtpar, int fdimname);
-extern int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
-             register int n, int rftflag, int fdimname, double fpmult, int rdwtflag);
+extern int init_wt2(struct wtparams *wtpar, float  *wtfunc,
+             int n, int rftflag, int fdimname, double fpmult, int rdwtflag);
 extern int datapoint(double freq, double sw, int fn);
 extern void ls_ph_fid(char *lsfname, int *lsfval, char *phfname, double *phfval,
                       char *lsfrqname, double *lsfrqval);
@@ -208,8 +208,8 @@ int dim1count()
 +--------------------------------------*/
 void zeroimag(float *dataptr, int np, int dispflag)
 {
-  register int		i;
-  register float	*inptr,
+  int		i;
+  float	*inptr,
 			zero;
 
   inptr = dataptr + 1;
@@ -1271,8 +1271,8 @@ static int firstft(int fullft, ftparInfo *ftpar, dfilehead *fidhead, int ftflag)
 
               if (ftpar->dspar.dsflag)
               {
-	        register float *ptr1, *ptr2;
-                register int index, count;
+	        float *ptr1, *ptr2;
+                int index, count;
 
                 if (downsamp(&(ftpar->dspar), outp, npadj/2, 0,
                            ftpar->fn0, ftpar->procstatus&REAL_t2))
@@ -2424,7 +2424,7 @@ int ft2d(int argc, char *argv[], int retc, char *retv[])
 
   if (do_ds == FALSE)
   {
-     register int i, npt;
+     int i, npt;
      extern float *gettrace();
      extern int	fn1;
 
@@ -2463,11 +2463,11 @@ int readf1(int argc, char *argv[], int retc, char *retv[])
    dblockhead   fidblockheader;
    char		filepath[MAXPATH];
    char		fidpath[MAXPATH];
-   register int npt;
+   int npt;
    int outRe;
    int outIm = 0;
    int *bptr;
-   register int *optr;
+   int *optr;
    typedef union 
    {
       float  f;
@@ -2508,7 +2508,7 @@ int readf1(int argc, char *argv[], int retc, char *retv[])
             ABORT;
          }
          npt = datahead.np / datahead.nbheaders;
-         read(outRe, & fidhead, sizeof(dfilehead) );
+         r = read(outRe, & fidhead, sizeof(dfilehead) );
          DATAFILEHEADER_CONVERT_HTON( &fidhead );
          if ( (fidhead.nblocks != datahead.nblocks * datahead.ntraces) ||
               (fidhead.np != npt) ||
@@ -2536,7 +2536,7 @@ int readf1(int argc, char *argv[], int retc, char *retv[])
                }
                ABORT;
             }
-            read(outIm, & fidhead, sizeof(dfilehead) );
+            r = read(outIm, & fidhead, sizeof(dfilehead) );
             DATAFILEHEADER_CONVERT_HTON( &fidhead );
             if ( (fidhead.nblocks != datahead.nblocks * datahead.ntraces) ||
                  (fidhead.np != npt) ||
@@ -2556,8 +2556,8 @@ int readf1(int argc, char *argv[], int retc, char *retv[])
          for (cblock=0; cblock<datahead.nblocks; cblock++)
          {
             int j;
-            register int cnt;
-            register float *ptr;
+            int cnt;
+            float *ptr;
 
             if ( (r = D_getbuf(D_DATAFILE, datahead.nblocks, cblock, &inblock)) )
             {
@@ -2578,8 +2578,8 @@ int readf1(int argc, char *argv[], int retc, char *retv[])
                if (outIm)
                {
                   /* Real F2 component */
-                  read(outRe, & fidblockheader, sizeof(dblockhead) );
-                  read(outRe, bptr, sizeof(float)*npt );
+                  r = read(outRe, & fidblockheader, sizeof(dblockhead) );
+                  r = read(outRe, bptr, sizeof(float)*npt );
                   ptr = (float *) inblock.data+(j*npt*2);
                   optr = bptr;
                   for (cnt=0; cnt< npt/2; cnt++)
@@ -2595,8 +2595,8 @@ int readf1(int argc, char *argv[], int retc, char *retv[])
                   }
 
                   /* Imaginary F2 component */
-                  read(outIm, & fidblockheader, sizeof(dblockhead) );
-                  read(outIm, bptr, sizeof(float)*npt );
+                  r = read(outIm, & fidblockheader, sizeof(dblockhead) );
+                  r = read(outIm, bptr, sizeof(float)*npt );
                   ptr = (float *) inblock.data+(j*npt*2);
                   ptr++;
                   optr = bptr;
@@ -2614,8 +2614,8 @@ int readf1(int argc, char *argv[], int retc, char *retv[])
                }
                else
                {
-                  read(outRe, & fidblockheader, sizeof(dblockhead) );
-                  read(outRe, bptr, sizeof(float)*npt );
+                  r = read(outRe, & fidblockheader, sizeof(dblockhead) );
+                  r = read(outRe, bptr, sizeof(float)*npt );
                   ptr = (float *) inblock.data+(j*npt);
                   optr = bptr;
                   for (cnt=0; cnt< npt/2; cnt++)
@@ -2675,12 +2675,12 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
    dblockhead   fidblockheader;
    char		filepath[MAXPATH];
    char		fidpath[MAXPATH];
-   register int npt;
+   int npt;
    int tbytes;
    int outRe;
    int outIm = 0;
    int *bptr;
-   register int *optr;
+   int *optr;
    typedef union 
    {
       float  f;
@@ -2730,12 +2730,12 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
 
          sprintf(fidpath,"%s/fidf1r",curexpdir);
          outRe = open(fidpath, O_CREAT|O_WRONLY|O_TRUNC, 0666);
-         write(outRe, & fidhead, sizeof(dfilehead) );
+         r = write(outRe, & fidhead, sizeof(dfilehead) );
          fidpath[strlen(fidpath)-1] = 'i';
          if (datahead.nbheaders == 2)
          {
             outIm = open(fidpath, O_CREAT|O_WRONLY|O_TRUNC, 0666);
-            write(outIm, & fidhead, sizeof(dfilehead) );
+            r = write(outIm, & fidhead, sizeof(dfilehead) );
          }
          else
          {
@@ -2746,7 +2746,7 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
          fidblockheader.status = S_DATA | S_FLOAT | S_COMPLEX | S_DDR;/* init status to fid*/
          fidblockheader.index = (short) 0;
          fidblockheader.mode = (short) 0;
-         fidblockheader.ctcount = (long) 1;
+         fidblockheader.ctcount = 1;
          fidblockheader.lpval = (float) 0.0;
          fidblockheader.rpval = (float) 0.0;
          fidblockheader.lvl = (float) 0.0;
@@ -2757,8 +2757,8 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
          for (cblock=0; cblock<datahead.nblocks; cblock++)
          {
             int j;
-            register int cnt;
-            register float *ptr;
+            int cnt;
+            float *ptr;
 
             if ( (r = D_getbuf(D_DATAFILE, datahead.nblocks, cblock, &inblock)) )
             {
@@ -2780,7 +2780,7 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
 
                if (outIm)
                {
-                  write(outRe, & fidblockheader, sizeof(dblockhead) );
+                  r = write(outRe, & fidblockheader, sizeof(dblockhead) );
                   /* Real F2 component */
                   ptr = (float *) inblock.data+(j*npt*2);
                   optr = bptr;
@@ -2794,10 +2794,10 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
                      ptr += 2;
                   }
                   ptr = (float *) inblock.data+(j*npt*2);
-                  write(outRe, bptr, tbytes );
+                  r = write(outRe, bptr, tbytes );
 
                   /* Imaginary F2 component */
-                  write(outIm, & fidblockheader, sizeof(dblockhead) );
+                  r = write(outIm, & fidblockheader, sizeof(dblockhead) );
                   ptr = (float *) inblock.data+(j*npt*2);
                   ptr++;
                   optr = bptr;
@@ -2811,11 +2811,11 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
                      ptr += 2;
                   }
                   ptr = (float *) inblock.data+(j*npt*2);
-                  write(outIm, bptr, tbytes );
+                  r = write(outIm, bptr, tbytes );
                }
                else
                {
-                  write(outRe, & fidblockheader, sizeof(dblockhead) );
+                  r = write(outRe, & fidblockheader, sizeof(dblockhead) );
                   ptr = (float *) inblock.data+(j*npt);
                   optr = bptr;
                   for (cnt=0; cnt< npt/2; cnt++)
@@ -2828,7 +2828,7 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
                      ptr++;
                   }
                   ptr = (float *) inblock.data+(j*npt);
-                  write(outRe, bptr, tbytes );
+                  r = write(outRe, bptr, tbytes );
                }
             }
             D_release(D_DATAFILE, cblock);
@@ -2874,9 +2874,9 @@ int writef1(int argc, char *argv[], int retc, char *retv[])
 +--------------------------------------*/
 void driftcorrect_fid(float *outp, int np, int lsfid, int datamult)
 {
-   register int		i,
+   int		i,
 			j;
-   register float	*pntr,
+   float	*pntr,
 			ftmp1,
 			ftmp2,
 			ftmp3,

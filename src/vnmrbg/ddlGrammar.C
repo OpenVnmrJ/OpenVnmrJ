@@ -386,7 +386,7 @@ int ddl_yyparse(void)
 int ddl_yyparse()
 #endif
 {
-	register YYSTYPE *yypvt = 0;	/* top of value stack for $vars */
+	YYSTYPE *yypvt = 0;	/* top of value stack for $vars */
 
 #if defined(__cplusplus) || defined(lint)
 /*
@@ -424,10 +424,10 @@ int ddl_yyparse()
 #endif
 
 	{
-		register YYSTYPE *yy_pv;	/* top of value stack */
-		register int *yy_ps;		/* top of state stack */
-		register int yy_state;		/* current state */
-		register int  yy_n;		/* internal state number info */
+		YYSTYPE *yy_pv;	/* top of value stack */
+		int *yy_ps;		/* top of state stack */
+		int yy_state;		/* current state */
+		int  yy_n;		/* internal state number info */
 	goto yystack;	/* moved from 6 lines above to here to please C++ */
 
 		/*
@@ -465,7 +465,7 @@ int ddl_yyparse()
 		*/
 		if ( ddl_yydebug )
 		{
-			register int yy_i;
+			int yy_i;
 
 			printf( "State %d, token ", yy_state );
 			if ( ddl_yychar == 0 )
@@ -490,9 +490,9 @@ int ddl_yyparse()
 			** reallocate and recover.  Note that pointers
 			** have to be reset, or bad things will happen
 			*/
-			long yyps_index = (yy_ps - ddl_yys);
-			long yypv_index = (yy_pv - ddl_yyv);
-			long yypvt_index = (yypvt - ddl_yyv);
+			int yyps_index = (yy_ps - ddl_yys);
+			int yypv_index = (yy_pv - ddl_yyv);
+			int yypvt_index = (yypvt - ddl_yyv);
 			int yynewmax;
 #ifdef YYEXPAND
 			yynewmax = YYEXPAND(yymaxdepth);
@@ -549,7 +549,7 @@ int ddl_yyparse()
 #if YYDEBUG
 		if ( ddl_yydebug && ddl_yytmp )
 		{
-			register int yy_i;
+			int yy_i;
 
 			printf( "Received token " );
 			if ( ddl_yychar == 0 )
@@ -591,7 +591,7 @@ int ddl_yyparse()
 #if YYDEBUG
 			if ( ddl_yydebug && ddl_yytmp )
 			{
-				register int yy_i;
+				int yy_i;
 
 				printf( "Received token " );
 				if ( ddl_yychar == 0 )
@@ -618,7 +618,7 @@ int ddl_yyparse()
 			** look through exception table
 			*/
 			{
-				register const int *yyxi = ddl_yyexca;
+				const int *yyxi = ddl_yyexca;
 
 				while ( ( *yyxi != -1 ) ||
 					( yyxi[1] != yy_state ) )
@@ -704,7 +704,7 @@ int ddl_yyparse()
 				*/
 				if ( ddl_yydebug )
 				{
-					register int yy_i;
+					int yy_i;
 
 					printf( "Error recovery discards " );
 					if ( ddl_yychar == 0 )
@@ -753,7 +753,7 @@ int ddl_yyparse()
 		/*
 		** Look in goto table for next state
 		** Sorry about using yy_state here as temporary
-		** register variable, but why not, if it works...
+		** variable, but why not, if it works...
 		** If ddl_yyr2[ yy_n ] doesn't have the low order bit
 		** set, then there is no action to be done for
 		** this reduction.  So, no saving & unsaving of
@@ -764,7 +764,7 @@ int ddl_yyparse()
 		*/
 		{
 			/* length of production doubled with extra bit */
-			register int yy_len = ddl_yyr2[ yy_n ];
+			int yy_len = ddl_yyr2[ yy_n ];
 
 			if ( !( yy_len & 01 ) )
 			{

@@ -973,21 +973,11 @@ fgPipeIsReady(fd)
 int             fd;
 {
    char            IObuffer[MAXREAD];
-   long            n, len;
-#ifdef __INTERIX
-   struct stat     sinfo;
-#endif
+   int            n, len;
 
    DPRINT0("fgPipeIsReady:starting\n");
-#ifdef __INTERIX
-   if (fstat(fd, &sinfo) >= 0)
-#else
    if (0 <= ioctl(fd, FIONREAD, &n))
-#endif
    {
-#ifdef __INTERIX
-      n = sinfo.st_size;
-#endif
       while (n > 0)
       {
 	 len = n;

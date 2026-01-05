@@ -51,14 +51,20 @@ extern int      bgflag;
 #pragma GCC diagnostic warning "-Wimplicit-function-declaration"
 #endif
 
-extern char    *ObjError(), *ObjCmd();
-
 #define DPRTLEVEL 2
 
 typedef struct
 {
 #include "ap_device.p"
 }               AP_Object;
+
+
+extern int Device(void *this, Message msg, void *param, void *result);
+extern char *ObjError(int wcode);
+extern char *ObjCmd(int wcode);
+extern int ClearTable(void *ptr, size_t tablesize);
+extern void putcode(c68int arg);
+extern void putgtab(int table, c68int  word);
 
 /* base class dispatcher */
 #define Base(this,msg,par,res)    Device(this,msg,par,res)
@@ -229,7 +235,7 @@ static int set_attr(AP_Object *this, Msg_Set_Param *param, Msg_Set_Result *resul
 	   putcode((c68int) (RTVAR_BIT | this->ap_bytes));
            putcode((c68int) 0xffff);	/* max value */
            putcode((c68int) 0);	/* offset */
-	   putcode((c68int) (c68long) param->value); 
+	   putcode((c68int) (int) param->value); 
 	break;
       default:
 	 error = UNKNOWN_AP_ATTR;

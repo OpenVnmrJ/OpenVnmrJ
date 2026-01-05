@@ -114,8 +114,8 @@ extern void ls_ph_fid(char *lsfname, int *lsfval, char *phfname, double *phfval,
 extern void     Wturnoff_buttons();
 extern int datapoint(double freq, double sw, int fn);
 extern int init_wt1(struct wtparams *wtpar, int fdimname);
-extern int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
-             register int n, int rftflag, int fdimname, double fpmult, int rdwtflag);
+extern int init_wt2(struct wtparams *wtpar, float  *wtfunc,
+             int n, int rftflag, int fdimname, double fpmult, int rdwtflag);
 extern int setlppar(lpstruct *parLPinfo, int dimen, int pstatus,
              int nctdpts, int ncfdpts, int mode, char *memId);
 extern int set_mode(char *m_name);
@@ -1022,14 +1022,11 @@ static int save3Dprocpar(char *info3Ddir)
 +--------------------------------------*/
 void removeinfo3D(char *info3Ddir)
 {
+   int ret __attribute__((unused));
    char	syscmd[MAXPATHL];
 
-#ifdef UNIX
    sprintf(syscmd, "rm -rf %s\n", info3Ddir);
-#else 
-   sprintf(syscmd, "rm_recur %s\n", info3Ddir);
-#endif 
-   system(syscmd);
+   ret = system(syscmd);
 }
 
 

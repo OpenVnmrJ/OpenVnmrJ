@@ -490,7 +490,7 @@ void AspDisRegion::calcBaseMask(spAspFrame_t frame) {
 
    // fill regionList
    regionList->clearList();
-   bool base=false;
+//   bool base=false;
    double freq, amp;
    int j;
    for(int i=0; i<npts; i++) {
@@ -508,9 +508,9 @@ void AspDisRegion::calcBaseMask(spAspFrame_t frame) {
         spAspRegion_t region = spAspRegion_t(new AspRegion(regionList->getSize(),freq,amp));
         region->dataID = trace->getKeyInd();
         regionList->addRegion(region->index, region);	
-	base=true;
+//	base=true;
       }
-      if(baseMask[i] ==0) base=false;
+//      if(baseMask[i] ==0) base=false;
    }
 
    calcBCModel(trace);

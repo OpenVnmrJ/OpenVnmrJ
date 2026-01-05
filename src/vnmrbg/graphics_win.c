@@ -3320,12 +3320,11 @@ void send_hourglass_cursor()
 {
         TIME_NODE  *tnode;
         struct timeval clock;
-        struct timezone tzone;
         long   sec, usec;
 
         tnode = timeOut_list;
         if (tnode != NULL) {
-            gettimeofday(&clock,&tzone);
+            gettimeofday(&clock,NULL);
             while (tnode != NULL) {
                 if (tnode->active > 0) {
                    sec = clock.tv_sec - tnode->sec;
@@ -4266,7 +4265,7 @@ void vj_dstring(char *s, int x, int y)
 void sun_dvstring(char *str)
 {
 #ifdef MOTIF
-  register int i,j,index;
+  int i,j,index;
   int	  k, len;
   unsigned long  pixel;
   XImage  *tmp_image;
@@ -5530,13 +5529,13 @@ aip_ybars(int dfpnt, int depnt,
 
 /*******************************************/
 void
-sun_ybars(register int dfpnt, register int depnt,
-          register struct ybar *out, int vertical,
+sun_ybars(int dfpnt, int depnt,
+          struct ybar *out, int vertical,
           int maxv, int minv)  /* draws a spectrum */
 /*******************************************/
 {
 #ifdef MOTIF
-  register int i;
+  int i;
 #endif
   int index1, index2;
 
@@ -8272,12 +8271,12 @@ refresh_graf()
 /***************************/
 int sunColor_change_contrast(double a, double b)
 /***************************/
-{ register int i,k, m, jred, jgrn, jblu;
-  register double temp_red,temp_grn,temp_blu;
-  register double slope_red,slope_grn,slope_blu;
+{ int i,k, m, jred, jgrn, jblu;
+  double temp_red,temp_grn,temp_blu;
+  double slope_red,slope_grn,slope_blu;
   int fg_red, fg_grn, fg_blu;
   int bg_red, bg_grn, bg_blu;
-  register int maxred,minred,maxgrn,mingrn,maxblu,minblu;
+  int maxred,minred,maxgrn,mingrn,maxblu,minblu;
   jtabcolor *jtable = NULL;
   /* a is center and b is gain  NUM_GRAY_COLORS/2,1.0 is standard */
   /*  if colormap can't be changed  */
@@ -10212,7 +10211,7 @@ dump_raster_image()
 { 
   int   bytes,mx;
   unsigned char *b,*b0;
-  register int   n,i,j,bm1,bm2,out;
+  int   n,i,j,bm1,bm2,out;
 
   unsigned char    *temp1[] = {NULL, NULL, NULL, NULL};
   unsigned char    *temp2[] = {NULL, NULL, NULL, NULL};
@@ -10917,7 +10916,7 @@ void
 raster_ybars(int dfpnt, int depnt, struct ybar *out,
              int vertical, int maxv, int minv)  /* draws a spectrum */
 /**********************************************/
-{ register int i;
+{ int i;
 
   /* first check vertical limits */
   if (maxv) 
@@ -13951,7 +13950,6 @@ XtIntervalId aip_addTimeOut(unsigned long msec, void (*func)(), char *retPtr)
     int n;
     struct itimerval timeval;
     TIME_NODE  *tnode, *pnode;
-    struct timezone tzone;
     struct timeval clock;
 
     if (!useXFunc) {
@@ -13988,7 +13986,7 @@ XtIntervalId aip_addTimeOut(unsigned long msec, void (*func)(), char *retPtr)
         }
         tnode->tv_sec = msec / 1000;
         tnode->tv_usec = (msec - tnode->tv_sec * 1000) * 1000;
-        gettimeofday(&clock,&tzone);
+        gettimeofday(&clock,NULL);
         tnode->sec = clock.tv_sec;
         tnode->usec = clock.tv_usec;
         tnode->active = 1;
