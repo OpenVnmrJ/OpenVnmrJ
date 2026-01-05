@@ -15,6 +15,8 @@
 #include "imagemath.h"
 #undef IMAGEMATH_MAIN
 
+extern int mathfunc(void);
+
 /*
  * Memory allocation management
  */
