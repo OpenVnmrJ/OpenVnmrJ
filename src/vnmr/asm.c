@@ -359,6 +359,7 @@ int autogo(int argc, char *argv[], int retc, char *retv[])
 /*  The argument vector and return vector are used to call the
     "auto" and "autora" commands of VNMR.				*/
 
+	int ret __attribute__((unused));
 	char	enterfile[ MAXPATH ], newautodir[ MAXPATH ],
 		macdir[MAXPATH], cp_autoq_cmd[ MAXPATH*2+4 ];
 	char	*cmd_argvec[ 3 ];
@@ -469,12 +470,12 @@ int autogo(int argc, char *argv[], int retc, char *retv[])
 
 	sprintf( &cp_autoq_cmd[ 0 ], "cp %s %s/enterQ",
 		&enterfile[ 0 ], &newautodir[ 0 ]);
-	system( &cp_autoq_cmd[ 0 ] );
+	ret = system( &cp_autoq_cmd[ 0 ] );
         if (macdir[0] != '\0')
         {
 	   sprintf( &cp_autoq_cmd[ 0 ], "cp -rf %s %s/enterQ.macdir",
 		&macdir[ 0 ], &newautodir[ 0 ]);
-	   system( &cp_autoq_cmd[ 0 ] );
+	   ret = system( &cp_autoq_cmd[ 0 ] );
         }
 
 	cmd_argvec[ 0 ] = "autogo";

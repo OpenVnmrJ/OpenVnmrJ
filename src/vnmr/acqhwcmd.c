@@ -1845,7 +1845,8 @@ static int return_hw_values(int retc, char *retv[] )
 {
 	const char	*param_name;
 	char	 readhw_report[ 120 ], tmpbuf[ 20 ];
-	int	 iter, ival, pval, rspace, tlen;
+	int	 iter, pval=0, rspace, tlen;
+	int	 ival __attribute__((unused));
 
 /*  `retc' should not be less than 0, but let's be sure.  */
 
@@ -1978,7 +1979,7 @@ static int count_sethw_complete()
 static int store_hw_values()
 {
 	const char	*param_name;
-	int	 cur_tree, iter, ival, pval, type_of_entry;
+	int	 cur_tree, iter, ival, pval=0, type_of_entry;
 	double	 dval = 0.0;
 
 	for (iter = 0; iter < cur_req_num; iter++) {
@@ -2353,10 +2354,11 @@ int sethw(int argc, char *argv[], int retc, char *retv[] )
            if ( ! access(path,R_OK) )
            {
                FILE *fd;
+	       int ret __attribute__((unused));
 
                strcpy(msg,"");
                fd = fopen(path,"r");
-               fscanf(fd, "%d %[^\n]\n", &res, msg);
+               ret = fscanf(fd, "%d %[^\n]\n", &res, msg);
                fclose(fd);
                unlink(path);
                if (msg[strlen(msg)-1] == '\r')
@@ -2758,7 +2760,7 @@ int is_data_present(int this_expnum )
 
 int ok_to_acquire()
 {
-	int	ival;
+	int	ival __attribute__((unused));
 	char	quick_msg[ 20 ];
 
 	if (is_acqproc_active() == 0)
@@ -3280,6 +3282,7 @@ int allowJpsgUpdate()
 /* JPSG varient of the above */
 int jacqupdt(int argc, char *argv[], int retc, char *retv[])
 {
+#ifdef XXX
    FILE *sd;
     int port;
     int i,tree;
@@ -3408,6 +3411,7 @@ int jacqupdt(int argc, char *argv[], int retc, char *retv[])
       }
       closeSocket(tSocket);
 
+#endif
    RETURN;
 }
 

@@ -173,9 +173,9 @@ Edgelist::update_ybucket(
 	int nyedges,		// number array of yedge
 	int dist)		// distance to be updated
 {
-   register Edgelist *xptr;	// pointer to the current edgelist item
-   register int i;		// loop counter
-   register int rdist=dist;	// distance to be updated
+   Edgelist *xptr;	// pointer to the current edgelist item
+   int i;		// loop counter
+   int rdist=dist;	// distance to be updated
 
    if ((yedge == NULL) || (dist == 0))
       return;
@@ -250,7 +250,7 @@ Edgelist::build_line_points(LpointList& lpnt, // Point list to be filled
 			    short px1, short py1, // Start point of line
 			    short px2, short py2) // End point of line
 {
-    int y, endy, yinc; 
+    int endy, yinc; 
     double rx = px1;
     double dx = (double)(px2 - px1) / abs(py2 - py1);
 
@@ -436,7 +436,7 @@ Edgelist::check_straight_line(
 	    }
 	    if (!xptr){
 		fprintf(stderr,"No x_edge found at x=%d, y=%d",
-			small_x, gpnt[v].y);
+			small_x, (int) gpnt[v].y);
 	    }
 	}
     }
@@ -451,7 +451,7 @@ Edgelist::remove_one_edge(
 	Edgelist *&edge,	// yedge list at specific y position
 	short x)		// point to be tested
 {
-   register Edgelist *xptr, *prev_xptr;	// traversed pointers
+   Edgelist *xptr, *prev_xptr;	// traversed pointers
 
    xptr = edge;
    if (xptr->x_edge == x) 		// FIRST item
@@ -513,12 +513,12 @@ Edgelist::free_ybucket(
 	Edgelist **yedge, 	// edge list
 	int nyedges)		// number of array of yedge
 {
-   register Edgelist *xptr;	// list pointer
-   register int i;		// loop counter
+   Edgelist *xptr;	// list pointer
+   int i;		// loop counter
 
    for (i=0; i<nyedges; i++)
    {
-      while (xptr = yedge[i])
+      while ( (xptr = yedge[i]) )
       {
 	 yedge[i] = xptr->next;
 	 delete xptr;

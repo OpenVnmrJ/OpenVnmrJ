@@ -14,7 +14,7 @@
 extern "C" {
 #include "variables.h"          // For T_REAL, T_STRING
 #include "group.h" 
-   extern void *allocateWithId(register size_t n, const char *id);
+   extern void *allocateWithId(size_t n, const char *id);
    extern void release(void *p);
    extern void scfix1(float *frompntr, int fromincr, float mult, short *topntr, int toincr, int npnts);
    void aip_drawString(const char *str, int x, int y, int clear, int color);
@@ -562,7 +562,7 @@ void AspUtil::getFirstLastStep(char *str, int maxInd, int &first, int &last, int
         strcpy(str,tokptr);
         strptr = (char *) 0;
         if((tokptr = (char*) strtok(strptr, ":")) != (char *) 0) step = atoi(tokptr);
-     } else strcpy(str,str);
+     } //  else strcpy(str,str);
      strptr = str;
      if((tokptr = (char*) strtok(strptr, "-")) != (char *) 0) {
         first = atoi(tokptr);

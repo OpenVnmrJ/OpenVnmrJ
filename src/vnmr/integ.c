@@ -395,9 +395,9 @@ static void BaseLineCorrection(int n, float *data, int datatype, int aScale, dou
 void integ2(float *frompntr, int fpnt, int npnt, float *value, int offset)
 /***************************************/
 {
-  register int		i,
+  int		i,
 			o;
-  register float	v,
+  float	v,
 			*p;
 
 /*********************************************
@@ -411,10 +411,10 @@ void integ2(float *frompntr, int fpnt, int npnt, float *value, int offset)
 
 
 /*********************/
-void integ(register float  *fptr, register float  *tptr, register int npnt)
+void integ(float  *fptr, float  *tptr, int npnt)
 /*********************/
 {
-  register float	tmp;
+  float	tmp;
 
   *tptr++ = tmp = *fptr++;
   while (--npnt)
@@ -423,10 +423,10 @@ void integ(register float  *fptr, register float  *tptr, register int npnt)
 
 
 /***************************/
-void maxfloat(register float  *datapntr, register int npnt, register float  *max)
+void maxfloat(float  *datapntr, int npnt, float  *max)
 /***************************/
 {
-  register float	tmp,
+  float	tmp,
 			maxval,
 			tmp2;
 
@@ -449,10 +449,10 @@ void maxfloat(register float  *datapntr, register int npnt, register float  *max
 
 
 /***************************/
-void maxfloat2(register float  *datapntr, register int npnt, register float  *max)
+void maxfloat2(float  *datapntr, int npnt, float  *max)
 /***************************/
 {
-  register float	tmp,
+  float	tmp,
 			maxval;
 
   maxval = *datapntr;
@@ -472,9 +472,9 @@ void maxfloat2(register float  *datapntr, register int npnt, register float  *ma
 void leveltilt(float *ptr, int offset, double oldlvl, double oldtlt)
 /***********************************/
 {
-  register int		npts,
+  int		npts,
 			o;
-  register float	start,
+  float	start,
 			*p,
 			incr;
 
@@ -498,9 +498,9 @@ void leveltilt(float *ptr, int offset, double oldlvl, double oldtlt)
 void dodc_correction(float *ptr, double newlvl, double newtlt, int pts, int offset)
 /*********************************************/
 {
-  register int		npts,
+  int		npts,
 			off;
-  register float	start,
+  float	start,
 			*p,
 			incr;
 
@@ -558,7 +558,7 @@ void dodc(float *ptr, int offset, double oldlvl, double oldtlt)
 {
   int		spacing,
 		le;
-  register int	num,
+  int	num,
 		i;
   float		avl,
 		avr,
@@ -1096,17 +1096,14 @@ static int readcoefs(int *order, double coef[])
 {
    char	filename[MAXPATHL];
    int	i;
+   int ret __attribute__((unused));
 
 /***********************************
 *  The path to bc.out is defined.  *
 ***********************************/
 
    strcpy(filename, curexpdir);
-#ifdef UNIX
    strcat(filename, "/bc.out");
-#else 
-   vms_fname_cat(filename, "bc.out");
-#endif 
 
 /************************************************
 *  The bc.out text file is opened with read     *
@@ -1120,18 +1117,18 @@ static int readcoefs(int *order, double coef[])
    if (textfile == 0)
       return(ERROR);
 
-   fscanf(textfile, "      Order\n");
-   fscanf(textfile, "      -----\n");
-   fscanf(textfile, "\n");
-   fscanf(textfile, "%d\n", order);
+   ret = fscanf(textfile, "      Order\n");
+   ret = fscanf(textfile, "      -----\n");
+   ret = fscanf(textfile, "\n");
+   ret = fscanf(textfile, "%d\n", order);
 
-   fscanf(textfile, "\n");
-   fscanf(textfile, "\n");
-   fscanf(textfile, "   Coefficients\n");
-   fscanf(textfile, "   ------------\n");
-   fscanf(textfile, "\n");
+   ret = fscanf(textfile, "\n");
+   ret = fscanf(textfile, "\n");
+   ret = fscanf(textfile, "   Coefficients\n");
+   ret = fscanf(textfile, "   ------------\n");
+   ret = fscanf(textfile, "\n");
    for (i = 1; i <= *order; i++)
-      fscanf(textfile, "%lf\n", &coef[i]);
+      ret = fscanf(textfile, "%lf\n", &coef[i]);
 
    fclose(textfile);
    return(COMPLETE);
@@ -1359,12 +1356,12 @@ static struct base *getfunction(int *numpts, int minpts, int minbcpts, int order
 |		dobc()/5		|
 |					|
 +--------------------------------------*/
-static void dobc(register float *specptr, register int npt, register double coef[],
-                 register int order, int dtype)
+static void dobc(float *specptr, int npt, double coef[],
+                 int order, int dtype)
 {
-   register int		point,
+   int		point,
 			num;
-   register double	incr,
+   double	incr,
 			xpt,
 			d,
 			dd,

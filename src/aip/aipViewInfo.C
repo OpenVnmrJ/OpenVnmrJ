@@ -224,7 +224,7 @@ ViewInfo::updateViewData()
     }
     if (rebinnedData.data == NULL) {
         fprintf(stderr,
-                "ViewInfo::updateViewData(): out of memory getting %d bytes\n",
+                "ViewInfo::updateViewData(): out of memory getting %ld bytes\n",
                 pixwd * pixht * sizeof(float));
 	delete[] ibuf; 
         return false;

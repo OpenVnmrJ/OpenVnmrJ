@@ -67,8 +67,8 @@ static struct block *last  = nil;
 *
 *******************************************************************************/
 
-void *allocateWithId(register size_t n, const char *id)
-{  register struct block *p;
+void *allocateWithId(size_t n, const char *id)
+{  struct block *p;
 
    if ( (p=(struct block *)malloc(sizeof(struct block)+(n-1)+1)) )
    {  ((char *)&(p->data))[n] = UNIQUE;
@@ -92,8 +92,8 @@ void *allocate(size_t n)
 }
 
 int blocksAllocated(int n)
-{  register int           count;
-   register struct block *p;
+{  int           count;
+   struct block *p;
 
    count = 0;
    p     = first;
@@ -106,8 +106,8 @@ int blocksAllocated(int n)
 }
 
 int blocksAllocatedTo(const char *id)
-{  register int           count;
-   register struct block *p;
+{  int           count;
+   struct block *p;
 
    count = 0;
    p     = first;
@@ -120,8 +120,8 @@ int blocksAllocatedTo(const char *id)
 }
 
 int blocksAllocatedToOfSize(const char *id, int n)
-{  register int           count;
-   register struct block *p;
+{  int           count;
+   struct block *p;
 
    count = 0;
    p     = first;
@@ -134,8 +134,8 @@ int blocksAllocatedToOfSize(const char *id, int n)
 }
 
 int charsAllocated(int n)
-{  register int           count;
-   register struct block *p;
+{  int           count;
+   struct block *p;
 
    count = 0;
    p     = first;
@@ -148,8 +148,8 @@ int charsAllocated(int n)
 }
 
 int charsAllocatedTo(const char *id)
-{  register int           count;
-   register struct block *p;
+{  int           count;
+   struct block *p;
 
    count = 0;
    p     = first;
@@ -162,8 +162,8 @@ int charsAllocatedTo(const char *id)
 }
 
 int charsAllocatedToOfSize(const char *id, int n)
-{  register int           count;
-   register struct block *p;
+{  int           count;
+   struct block *p;
 
    count = 0;
    p     = first;
@@ -200,8 +200,8 @@ void release(void *p)
 }
 
 void releaseAll()
-{  register struct block *p;
-   register struct block *q;
+{  struct block *p;
+   struct block *q;
 
    p = first;
    while (p)
@@ -259,7 +259,7 @@ void releaseAllWithId(const char *id)
 
 void *scanFor(const char *id, char **p, int *n, const char **i)
 {  long                   o;
-   register struct block *q;
+   struct block *q;
    struct block           s;
 
    if (*p == nil)
@@ -375,8 +375,8 @@ void skyrelease(void *p)
 }
 
 void skyreleaseAll()
-{  register struct block *p;
-   register struct block *q;
+{  struct block *p;
+   struct block *q;
 
    if (Eflag)
      fprintf(stderr,"skyReleaseAll... ");
@@ -418,7 +418,7 @@ void skyreleaseAllWithId(const char *id)
 }
 
 void renameAllocation(const char *oldmac, const char *newmac)
-{  register struct block *p;
+{  struct block *p;
 
    p = first;
    while (p)
@@ -429,8 +429,8 @@ void renameAllocation(const char *oldmac, const char *newmac)
 }
 
 void releaseWithId(const char *id)
-{  register struct block *p;
-   register struct block *q;
+{  struct block *p;
+   struct block *q;
 
    p = first;
    while (p)

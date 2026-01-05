@@ -88,8 +88,8 @@ int downsamp(dsparInfo *dspar, float *data, int ncdpts,
     double		*dfilter,
 			*buffer,
 			 fpmult = 1;
-    register float	*tmpdata, *tmpdatabuffer;
-    register double	*tmpbuffer;
+    float	*tmpdata, *tmpdatabuffer;
+    double	*tmpbuffer;
     dspar2Info		 dspar2;
     vInfo		 info;
 
@@ -327,10 +327,10 @@ printf("  fill_dsp=%d fill_ph=%d show_fid=%d fake_data=%d dspar->lp=%g\n",
 +--------------------------------------*/
 void ds_digfilter(double *dbuffer, double decfactor, int ntaps, int norm)
 {
-   register int         i,
+   int         i,
                         j,
 			nfullpts;
-   register double      *tmpfilter,
+   double      *tmpfilter,
 			*tmpfilter2,
                         wc,
                         hd,
@@ -384,10 +384,10 @@ void ds_digfilter(double *dbuffer, double decfactor, int ntaps, int norm)
 +--------------------------------------*/
 void ds_digfilter_new(double *dbuffer, double decfactor, int ntaps, int norm)
 {
-   register int         i,
+   int         i,
                         j,
 			nfullpts;
-   register double      *tmpfilter,
+   double      *tmpfilter,
 			*tmpfilter2,
                         wc,
                         hd,
@@ -448,10 +448,10 @@ void ds_digfilter_new(double *dbuffer, double decfactor, int ntaps, int norm)
 +--------------------------------------*/
 void ds_calcchargeup(double *dbuffer, double decfactor, int ntaps, int norm)
 {
-   register int         i,
+   int         i,
                         pts;
-   register double      *tmpfilter;
-   register double      val,
+   double      *tmpfilter;
+   double      val,
                         arg1,
                         argi;
 
@@ -484,9 +484,9 @@ void ds_calcchargeup(double *dbuffer, double decfactor, int ntaps, int norm)
 static void fill_chargeup(float *buffer, int dataskip,
                    dsparInfo *dspar, dspar2Info *dspar2) 
 {
-   int			ntaps,
-                        decfact;
-   register int         i, k;
+   int			ntaps;
+     //                    decfact;
+   int         i, k;
    int                  tshift, offset, fill_dsp;
    double		*tmpdfilter;
    float                *tmpbuffer,
@@ -497,7 +497,7 @@ static void fill_chargeup(float *buffer, int dataskip,
    double		*chargeup;
 
    ntaps = dspar->dscoeff;
-   decfact = dspar->dsfactor;
+   // decfact = dspar->dsfactor;
    tmpbuffer = buffer;
    chargeup = dspar2->chargeup;
    tmpdfilter = chargeup;
@@ -1282,7 +1282,7 @@ static void interp2_phase(float *xpass, float *ypass)
 /* xpass, ypass;  x,y input; x=cos2p,y=sin2p output */
 static void interp3_phase(float *xpass, float *ypass)
 {
-  float x0, y0, xyabs, xfactor, yy, aa, aa2, aa3;
+  float x0, y0, xyabs, xfactor, yy, aa;
 
 /*	x0 = (double)(*xpass); y0 = (double)(*ypass); */
 	x0 = *xpass; y0 = *ypass;
@@ -1311,8 +1311,8 @@ static void interp3_phase(float *xpass, float *ypass)
 	}
 /*	printf("... reduced aa=%g xfactor=%g\n",aa,xfactor); */
 	aa -= 1;
-	aa2 = aa*aa;
-	aa3 = aa*aa*aa;
+	// aa2 = aa*aa;
+	// aa3 = aa*aa*aa;
 	/* yy is approx of 1/(1+aa) */
 /*	yy = 1 - aa + aa2 - aa3 + aa2*aa2 - aa2*aa3 + aa3*aa3 - aa2*aa2*aa3 + aa2*aa3*aa3 - aa3*aa3*aa3;
 	yy += aa2*aa2*aa3*aa3 - aa2*aa3*aa3*aa3 + aa3*aa3*aa3*aa3;
@@ -1386,7 +1386,7 @@ static void fill_fakeoutput(dspar2Info *dspar2, int ncdpts, double *buffer)
   int fake_data = dspar2->fake_data;
   int dsp_out_np = ncdpts;
   double ph0, ph1, ph2, ph3, ph4, phc, phs;
-  register double *fdata;
+  double *fdata;
   int i, j, ctval;
 
 /* printf("fakeoutput: dscoeff=%d dsfactor=%d fake_data=%d dsp_out_np=%d\n",
@@ -1558,7 +1558,7 @@ static void fill_fakeinput(dsparInfo *dspar, dspar2Info *dspar2,
   int npwords = 2 * ncdpts;
   int dsfactor = dspar->dsfactor;
   double ph0, ph1, ph2, ph3, ph4, phc, phs;
-  register float *fdata;
+  float *fdata;
   int i, j;
 
 /* printf("fake: dscoeff=%d dsfactor=%d fake_data=%d npwords=%d\n",
@@ -1753,10 +1753,10 @@ static void ds_filterfid_old(dsparInfo *dspar, float *data, double *buffer,
 {
    int			ntaps,
 			decfact;
-   register int         i,
+   int         i,
                         j;
-   register float       *tmpdata;
-   register double	*tmpdfilter,
+   float       *tmpdata;
+   double	*tmpdfilter,
 			*tmpbuffer,
                         sum;
 
@@ -1825,9 +1825,9 @@ static void ds_filterfid(dsparInfo *dspar, float *buffer, double *data,
 			ntaps,
                         decfact,
                         buffskip;
-   register int         j, k;
-   register float       *tmpbuffer;
-   register double      *tmpdfilter,
+   int         j, k;
+   float       *tmpbuffer;
+   double      *tmpdfilter,
                         *tmpdata;
    double               *tmpdfilter2;
 

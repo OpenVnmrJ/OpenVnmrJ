@@ -42,7 +42,6 @@ extern "C" {
     extern double get_object_depth(DDLSymbolTable *st);
     extern int is_fdf_magic_number(const char *filename,
                                    const char *magic_string_list[]);
-    extern double quiet_nan(long);
 }
 
 #endif /* DDL_C_INTERFACE_H */

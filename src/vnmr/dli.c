@@ -79,9 +79,9 @@ extern int debug1;
 
 extern int currentindex();
 extern void disp_status_OnOff(int onOff);
-extern void maxfloat2(register float  *datapntr, register int npnt, register float  *max);
+extern void maxfloat2(float  *datapntr, int npnt, float  *max);
 extern void integ2(float *frompntr, int fpnt, int npnt, float *value, int offset);
-extern void integ(register float  *fptr, register float  *tptr, register int npnt);
+extern void integ(float  *fptr, float  *tptr, int npnt);
 extern void get_label(int direction, int style, char *label);
 extern void Wturnoff_buttons();
 extern int  rel_spec();
@@ -722,10 +722,10 @@ static float regpnt(int index)
 static int findregion(int *sindex, int npt, float (*getpnt)() )
 /***************************************/
 {
-  register int peak;
-  register int eindex;
-  register int na;
-  register int n;
+  int peak;
+  int eindex;
+  int na;
+  int n;
 
   n = npt - 1;
   peak = FALSE;
@@ -889,9 +889,9 @@ static void put_resets(int regions, int retc)
 static float findthresh(float *specptr, int np, double xcdev, int incr)
 /**************************************/
 {
-  register int n;
-  register float sigx = 32768.0;
-  register float sigxx = -32768.0;
+  int n;
+  float sigx = 32768.0;
+  float sigxx = -32768.0;
   float  value;
 
   n = np/ 20;
@@ -1229,7 +1229,7 @@ static double angle(double num, double denom)
 static void submitpavco(double *alpha, double *beta, double *delta, int regions)
 /**************************************/
 {
-  register double c,s,cc,ss,ccc,sss;
+  double c,s,cc,ss,ccc,sss;
   double bottom,test,test1;
 
   c   =  sigc1   + sigc2;
@@ -1242,7 +1242,7 @@ static void submitpavco(double *alpha, double *beta, double *delta, int regions)
   }
   else
   {
-    register double fval1, fval2, fval3;
+    double fval1, fval2, fval3;
     cc  = -sigcp1  + sigcp2;
     ss  =  sigsp1  + sigsp2;
     ccc = -sigcdp1 - sigcdp2;
@@ -1387,7 +1387,7 @@ static int peakok(double x, double y, double wx, double wy, double *frq, int ind
 static void sumcentroid(double *x, double *y, double *wx, double *wy, int index)
 /********************************/
 {
-  register int i,num;
+  int i,num;
   float *ptr;
   float tmp;
 
@@ -1420,14 +1420,14 @@ static void make_centroids(int *regions)
 {
   double re,im,wre,wim,frq;
   int    i,num;
-  float ph;
+  // float ph;
 
   i = 1;
   num = 0;
   while (i <= *regions)
   {
     sumcentroid(&re,&im,&wre,&wim,i);
-    ph=angle(re,-im)*DEG;
+    // ph=angle(re,-im)*DEG;
 
     DPRINT5("x= %g, y= %g, wx= %g, wy= %g index=%d\n",re,im,wre,wim,i);
     if (peakok(re,im,wre,wim,&frq,i))
@@ -1528,8 +1528,9 @@ int do_aph(int argc, char *argv[], int first, int last,
 static int fail_1(double *new_rp, double *new_lp, double thlp, int  npts)
 /**********************************************/
 {
- int fail, i, n, bpp, app;
- float  x, y, xn, nps, bps, aps, xav;
+ // int fail, i, n, bpp, app;
+ int fail, i;
+ float  x, y, xn, nps, bps, aps;
  float ph, ph0, std, lpv;
 
  fail=FALSE;
@@ -1587,8 +1588,8 @@ else
  aps = amax;
  bps = aps = xxmi;
  lpv = *new_lp /(float)npts;
- xav = 0.0;
- n = 0;
+ // xav = 0.0;
+ // n = 0;
 
 while (i<xxmi)
  { 
@@ -1596,7 +1597,7 @@ while (i<xxmi)
   x = *(phase_data + i*2);
   y = *(phase_data + i*2+1);
   xn = x*cos(ph/DEG)+y*sin(ph/DEG);
-  if (xn < bps) { bps = xn; bpp = i;}
+  if (xn < bps) { bps = xn;}
 /*  if (sqrt(x*x+y*y)<=thresh) { xav += xn; n++;}  */
   i++;		
  }
@@ -1619,7 +1620,7 @@ while (i<xxmi)
   x = *(phase_data + i*2);
   y = *(phase_data + i*2+1);
   xn = x*cos(ph/DEG)+y*sin(ph/DEG);
-  if (xn < aps) {aps = xn; app = i;}
+  if (xn < aps) {aps = xn;}
 /*  if (sqrt(x*x+y*y)<=thresh) { xav += xn; n++;}  */
   i++;	
  }
@@ -3390,7 +3391,7 @@ static int adjust_ph(int r, float *phase, int *phasep, float *xmax,
 /******************************************************************/
 {
 
-int ok, i, cn, stop, j1, j2,php,app,bpp,ss,chgstd,ff,sstt, separate;
+int i, cn, stop, j1, j2,php,app,bpp,ss,chgstd,ff,sstt, separate;
 float x, y, xn,xm, xp, bps,bns,aps,ans, old_bps, old_aps;
 float dph, old_dph, ph, old_ph0, ph0, std, std1, step;
 
@@ -3413,7 +3414,6 @@ if (speakB[r].amax<xdev)  return(FALSE);
  stop=FALSE;
  php=speakB[r].php;
  ph0=0.0;
- ok=TRUE;
  dph=old_dph=0.0;
  app = bpp = 0;
  old_aps = old_bps = old_ph0 = 0.0;
@@ -3593,7 +3593,7 @@ if (speakB[r].amax<xdev)  return(FALSE);
     ph0 += dph;
     cn++;
 
-    if (cn>30) {stop=TRUE; ok=FALSE;}
+    if (cn>30) {stop=TRUE;}
  
 
  
@@ -4798,12 +4798,10 @@ void getStrTok(char *buf, string *toks, int *n, char *delimiter) {
 
     size = *n;
 
+    strcpy(str, buf);
     /* remove newline if exists */
-    if(buf[strlen(buf)-1] == '\n') {
-        strcpy(str, "");
-        strncat(str, buf, strlen(buf)-1);
-    } else
-       strcpy(str, buf);
+    if(str[strlen(str)-1] == '\n')
+       str[strlen(str)-1] = '\0';
 
     strptr = str;
     *n = 0;
