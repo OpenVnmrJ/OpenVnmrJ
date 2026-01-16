@@ -601,6 +601,7 @@ main(int argc, char *argv[])
    fprintf(fout, "#pragma GCC diagnostic ignored \"-Wextra\"\n");
    fprintf(fout, "#pragma GCC diagnostic ignored \"-Wunused\"\n");
    fprintf(fout, "#pragma GCC diagnostic ignored \"-Wuninitialized\"\n");
+   fprintf(fout, "#pragma GCC diagnostic ignored \"-Wunused-variable\"\n");
 #ifndef MACOS
    fprintf(fout, "#pragma GCC diagnostic ignored \"-Wunused-but-set-variable\"\n");
 #endif
