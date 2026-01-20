@@ -103,7 +103,7 @@ int pifchr(int port)
 {
    int  status;
    int  nBytesUnread;
-   status = ioctl( port, FIONREAD, (int) &nBytesUnread );
+   status = ioctl( port, FIONREAD, &nBytesUnread );
    /*printf( "ARE THERE ANYTHING ON THE PORT?: %d\n", nBytesUnread );*/
    return( (status) ? 0 : nBytesUnread );
 }
