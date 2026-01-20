@@ -69,7 +69,8 @@ int   smsDev = -1;
 
 void shutdownComm(void)
 {
-   smsDevEntry->close(smsDev);
+   if (smsDevEntry != NULL)
+      smsDevEntry->close(smsDev);
    smsDev = -1;
    smsDevEntry = NULL;
 
@@ -212,7 +213,7 @@ void processMsge(void *notin)
         /* If we got a message then go ahead and parse it */
         if (rtn > 0)
         {
-            DPRINT2(2, "received %d bytes, MsgInbuf len %d bytes\n",
+            DPRINT2(2, "received %d bytes, MsgInbuf len %zd bytes\n",
                     rtn, strlen(MsgInbuf));
             parser(MsgInbuf);
             MsgInbuf[0] = '\0';
