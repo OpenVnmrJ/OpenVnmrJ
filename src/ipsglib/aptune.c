@@ -7,7 +7,6 @@
 
 #include "acodes.h"
 
-extern int putcode(codeint word);
 void pre_fidsequence()
 {
     int chan;

@@ -101,13 +101,13 @@ int device;
 # define	ptsboar	7
 
 setSISPTS(base,offset,device,setoop)
-long base,offset;	/*base in 100KHz, offset in .1Hz*/
+int base,offset;	/*base in 100KHz, offset in .1Hz*/
 int setoop,device;	/*setoop: set offset or both: 0 only offset*/
 			/*1 Main PTS + Offset*/
 			/*device: 1=trans, 2=decoupler*/
 {
     if (bgflag)
-      fprintf(stderr, "setSISPTS: mainpts = %ld, ifreq = %ld , device = %d, setpts = %d\n",
+      fprintf(stderr, "setSISPTS: mainpts = %d, ifreq = %d , device = %d, setpts = %d\n",
 	      base , offset, device, setoop);
 	if (device == 1) {
 		apcodes(ptsboar,obsofs,ptsofs(offset/10));
@@ -123,7 +123,7 @@ int setoop,device;	/*setoop: set offset or both: 0 only offset*/
 
 apcodes(boardadd,breg,longw)
 int boardadd, breg;
-long longw; /*is already the 32 bits to write into AP-Chip*/
+int longw; /*is already the 32 bits to write into AP-Chip*/
 {
 int init, seq1, seq2, seq3, seq4;
 
@@ -147,8 +147,7 @@ return;
 
 /* 1.0	10/7/87 */
 
-long ptsconv(value)
-int value;
+int ptsconv(int value)
 /* conversion program to convert a int number (10 <= x =< 4999) into
    the form for the pts output. Returned value is of type long, BCD coded
    32bit coded
@@ -161,7 +160,7 @@ int value;
 */
 {
 int II, valueint;
-long ptsbcd;
+int ptsbcd;
 	{
 		ptsbcd = 0;
 		for (II=0; II<=3; II++) {
@@ -171,8 +170,7 @@ long ptsbcd;
 	return(ptsbcd);
 }}
 
-long ptsofs(ofsint)
-long ofsint;
+int ptsofs(int ofsint)
 /* subroutine to convert an integer number in Hz (offset) into a bcd AP
    Bus chip form. Returned value is long.
    The bits have to be set as followed:
@@ -188,7 +186,7 @@ long ofsint;
 */
 {
 int II;
-long ptsobcd = 0;
+int ptsobcd = 0;
 	{
 		for (II=0; II<=6; II++) {
 		ptsobcd = ptsobcd + (ofsint%10) * lngpow(2,(II*4));
@@ -198,12 +196,11 @@ long ptsobcd = 0;
 	}
 }
 
-long lngpow(a,b)
-int a,b;
+int lngpow(int a, int b)
 /* function to calculate power (pow)
 */
 {
-long respow = 1;
+int respow = 1;
 int II;
 	if (b==0) return(respow);
 	for (II=1; II <= b; II++) 

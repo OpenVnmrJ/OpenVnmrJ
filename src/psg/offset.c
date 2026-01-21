@@ -25,12 +25,13 @@
 extern double   getval();
 extern double   setoffsetsyn();
 extern double   rfchan_getfreqstep();
+#ifdef DOIPA
 extern void write_to_acqi(char *label, double value, double units,
                    int min, int max, int type, int scale,
                    codeint counter, int device);
-extern int okinhwloop();
 extern void insertIPAcode();
 extern int	acqiflag;
+#endif
 extern int      ap_ovrride;	/* ap delay overide flag */
 extern int	newacq;
 extern char *ObjError(int wcode);
@@ -151,7 +152,8 @@ G_Offset( int firstkey, ... )
 	struct offset_struct	offset_s;
 	double			scale_val;
 	va_list			ptr_to_args;
-	int			no_freq, no_min_or_max, keyword, device_type;
+	int			no_freq, no_min_or_max, keyword;
+	int			device_type __attribute__((unused));
 	int	counter;	/* Offset into A-code sequence where
 				   the desired frequency is set.     */
 
@@ -263,6 +265,7 @@ G_Offset( int firstkey, ... )
         return(-1);
     }
 
+#ifdef DOIPA
 	if (strcmp( offset_s.label, "" ) != 0 && acqiflag ) {
 		write_to_acqi( offset_s.label,
 			       offset_s.freq,
@@ -275,6 +278,7 @@ G_Offset( int firstkey, ... )
 			       offset_s.device
 		);
 	}
+#endif
 	return( 0 );
 }
 
@@ -327,8 +331,10 @@ int offsetter(double offset_freq, int device)
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
    counter = (int) (Codeptr - Aacode);
+#ifdef DOIPA
    if (newacq && acqiflag)
 	 insertIPAcode(counter);
+#endif
 
    SetRFChanAttr(
 	RF_Channel[device],

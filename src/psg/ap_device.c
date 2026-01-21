@@ -76,14 +76,11 @@ static int set_attr(AP_Object *this, Msg_Set_Param *param, Msg_Set_Result *resul
 | AP_Device()/4 - Message Handler for ap_devices.
 |			Author: Greg Brissey  8/18/88
 +-------------------------------------------------------------*/
-int 
-AP_Device(this, msg, param, result)
-AP_Object      *this;
-Message         msg;
-caddr_t         param;
-caddr_t         result;
+int AP_Device(void *thisv, Message msg, void *param, void *result)
 {
    int             error = 0;
+   AP_Object *this;
+   this = (AP_Object *)thisv;
 
    switch (msg)
    {

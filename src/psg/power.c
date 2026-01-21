@@ -203,6 +203,7 @@ G_Power(int firstkey, ...)
    }
 
 /* do we want interactive control? */
+#ifdef DOIPA
    if ( strcmp(pwrs.label, "")  && acqiflag )
    {
       if (setrtval && newacq)
@@ -226,4 +227,5 @@ G_Power(int firstkey, ...)
 	 }
       }
    }
+#endif
 }

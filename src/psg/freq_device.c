@@ -22,7 +22,6 @@
 #include <string.h>
 #include <math.h>
 #include <stdarg.h>
-#include <sys/types.h>		/* for caddr_t */
 
 #include "rfconst.h"
 #include "acodes.h"
@@ -74,6 +73,8 @@ extern void tune_from_freq_obj(void *FreqObj, int dev_channel );
 extern int validate_imaging_config(char *callname);
 extern void formXLwords();
 extern void formPTSwords();
+extern int lockfreqtab_read(char *lkfilename, int h1freq, double *synthif,
+                     char *lksense, double *lockref);
 
 #define DPRTLEVEL 1
 
@@ -109,12 +110,7 @@ void setlkdecfrq(Freq_Object *device);
 | Freq_Device()/4 - Message Handler for Freq_devices.
 |			Author: Greg Brissey  6/14/89
 +-------------------------------------------------------------*/
-int
-Freq_Device(this, msg, param, result)
-Freq_Object    *this;
-Message         msg;
-caddr_t         param;
-caddr_t         result;
+int Freq_Device(Freq_Object *this, Message msg, void *param, void *result)
 {
    int             error = 0;
 
@@ -780,7 +776,6 @@ static int get_attr(Freq_Object *this, Msg_Set_Param *param, Msg_Set_Result *res
 int SetFreqAttr(Object obj, ...)
 {
    va_list         vargs;
-   char            msge[128];
    int             error = 0;
    int             error2 = 0;
    Msg_Set_Param   param;
@@ -818,9 +813,8 @@ int SetFreqAttr(Object obj, ...)
 	    error2 = Send(obj, MSG_SET_DEV_ATTR_pr, &param, &result);
 	    if (error2 < 0)
 	    {
-	       sprintf(msge, "%s : %s  '%s'\n", obj->objname, ObjError(error),
+	       text_error("%s : %s  '%s'\n", obj->objname, ObjError(error),
 		       ObjCmd(param.setwhat));
-	       text_error(msge);
 	       error = error2;
 	       break;
 	    }
@@ -1535,11 +1529,10 @@ static void calcfixedoffset(Freq_Object *device)
 +----------------------------------------------------------------------*/
 static int initswpfreq(Freq_Object *device)
 {
-   char msge[128];
    int i,idx,cnt,mask,highband;
    double lbandmax_freq,dtmp;
    double maxptswidth,maxbandwidth;
-   unsigned long ltmp;
+   unsigned int ltmp;
    Freq_Object    swpobj;	/* temporary sweep freq object */
    Freq_Object    *swpptr;
 
@@ -1557,8 +1550,7 @@ static int initswpfreq(Freq_Object *device)
    /* determine if trans freq is in high band or low band */
    if ( (swpptr->rftype != DIRECTSYN) && (device->rftype != DIRECT_NON_DBL) )
    {
-     sprintf(msge, "%s : Only Direct synthesis RF supported.\n", device->objname);
-     text_error(msge);
+     text_error("%s : Only Direct synthesis RF supported.\n", device->objname);
      return(ERROR_ABORT);
    }
 
@@ -1612,13 +1604,13 @@ static int initswpfreq(Freq_Object *device)
 
    /* if pts 155223964.05  dtmp = 15.0 */
    dtmp = swpptr->pts_freq / 1.0e7; /*  15  100,10 Mhz */
-   ltmp = (long) dtmp;
-   putcode( (int) ltmp);  /* 100,10 MHz */
+   ltmp = (int) dtmp;
+   putcode( ltmp);  /* 100,10 MHz */
 
    dtmp = swpptr->pts_freq - (double) (ltmp * 10000000);
-   ltmp = (long) dtmp;
-   putcode( (int) (ltmp >> 16));  /* upper word 5223964 Hz */
-   putcode( (int) (ltmp & 0xffff)); /* lower word 5223964 Hz */
+   ltmp = (int) dtmp;
+   putcode( (ltmp >> 16));  /* upper word 5223964 Hz */
+   putcode( (ltmp & 0xffff)); /* lower word 5223964 Hz */
    
    cnt = swpptr->codecnt;
    if (swpptr->ptsoptions & (1 << LATCH_PTS))
@@ -1660,11 +1652,9 @@ static int incrswpfreq(Freq_Object *device)
       }
       else
       {
-	char msge[128];
-        sprintf(msge, 
+        text_error(
         "%s: Sweep increment too large, decrease sweep width or increase np.\n",
 	   device->objname);
-        text_error(msge);
         return(ERROR_ABORT);
       }
    }

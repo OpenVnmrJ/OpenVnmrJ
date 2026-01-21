@@ -41,20 +41,19 @@ extern int	newacq;
 extern int      dps_flag;
 
 extern codeint	t60;
-extern int okinhwloop();
 extern int SetRFChanAttr(Object obj, ...);
 extern void HSgate(int ch, int state);
-extern int putcode();
-extern void notinhwloop(char *name);
 extern void rgradient(char axis, double value);
 extern int isBlankOn(int device);
 extern void APsetreceiver();
 
+#ifdef DOIPA
 void write_to_acqi(char *label, double value, double units,
                    int min, int max, int type, int scale,
                    codeint counter, int device);
 
 FILE	*sliderfile = 0;
+#endif
 
 struct pulsestruct
 {
@@ -76,11 +75,11 @@ struct pulsestruct
 
 static int pulser(struct pulsestruct *pulses, int do_0_pulse);
 
-int pulse_phase_type(int val)
+int pulse_phase_type(long val)
 {
    return((0 <= val && val <= t60) ? PULSE_PHASE : PULSE_PHASE_TABLE);
 }
-int phase_var_type(int val)
+int phase_var_type(long val)
 {
    return((0 <= val && val <= t60) ? SET_RTPHASE90 : SET_PHASE90);
 }
@@ -194,12 +193,14 @@ G_Pulse(int firstkey, ...)
 /* using the old pulse subroutines already present in PSG */
    counter = pulser (&pulses, (strcmp(pulses.label,"") && acqiflag) );
 /* do we want interactive control? */
+#ifdef DOIPA
    if ( strcmp(pulses.label, "")  && acqiflag )
    {
       write_to_acqi(pulses.label, pulses.pw, pulses.units, pulses.min,
 		    pulses.max, TYPE_PULSE, pulses.scale, counter*2,
 		    pulses.device );
    }
+#endif
    if (isSSHAPselected() && isSSHAactive())
    {
       turnOffSSHA();
@@ -312,8 +313,10 @@ int             device = pulses->device;
       delayer(rx1,FALSE);		/* rx1  (e.g., rof1)  */
       SetRFChanAttr(RF_Channel[device], SET_XMTRGATE, ON, 0);
       count = (int) (Codeptr - Aacode);	/* offset into Acodes */
+#ifdef DOIPA
       if (newacq && acqiflag)
-	 insertIPAcode(count);
+	      insertIPAcode(count);
+#endif
       delayer(pulsewidth,do_0_pulse);	/* pulsewidth  (e.g., pw)  */
       SetRFChanAttr(RF_Channel[device], SET_XMTRGATE, OFF, 0);
       delayer(rx2,FALSE);		/* wait rx2 (e.g., rof2) */
@@ -759,6 +762,7 @@ double	pw1,		/* pulse length for first RF channel		*/
 |
 | Mod. 4/16/91 to include device or rf channel  Greg B.
 +------------------------------------------------------------------*/
+#ifdef DOIPA
 void write_to_acqi(char *label, double value, double units,
                    int min, int max, int type, int scale,
                    codeint counter, int device)
@@ -790,6 +794,7 @@ char	tmplabel[8];
 	fprintf(sliderfile,"%6s %g %g %d %d %d %d %d %d\n", tmplabel, value,
 				units, min, max, type, scale, counter, device);
 }
+#endif
 
 #define MAX_RFCHAN_NUM	6
 void 
@@ -1316,8 +1321,8 @@ void tabsetreceiver(char arg[])
 
 void setreceiver(void *phaseptr)
 {
-   if (phase_var_type((int) phaseptr) == SET_RTPHASE90)
-      APsetreceiver((int) phaseptr);
+   if (phase_var_type((long) phaseptr) == SET_RTPHASE90)
+      APsetreceiver((int) (long) phaseptr);
    else
       tabsetreceiver((char *)phaseptr);
 }

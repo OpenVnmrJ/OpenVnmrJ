@@ -18,16 +18,19 @@
 #include "rfconst.h"
 #include "abort.h"
 
+#ifdef DOIPA
 extern void write_to_acqi(char *label, double value, double units,
                    int min, int max, int type, int scale,
                    codeint counter, int device);
+extern FILE *sliderfile;
+extern int acqiflag;
+#endif
+
 extern int HSlines;
 extern int curfifocount;
-extern int acqiflag;
 extern int bgflag;
 extern char *ObjError(int wcode);
 
-extern FILE *sliderfile;
 
 static int init_frqswp_offset[MAX_RFCHAN_NUM+1] = { 0, 0, 0, 0 };
 
@@ -49,7 +52,9 @@ struct freqstruct
 void sweep_setup(int device, double center, double width,
                  double frqsteps, char *string);
 void stepfreq(int device);
+#ifdef DOIPA
 void write_to_acqi_swp(double center, double width, double np, double mode);
+#endif
 
 /*-------------------------------------------------------------------
 |
@@ -156,6 +161,7 @@ void G_Sweep(int firstkey, ...)
 	   NULL );
 
      /* Center Freq. needs only change the INITFREQ acode */
+#ifdef DOIPA
      if ( strcmp(freqs.label, "")  && acqiflag )
      {
         write_to_acqi(freqs.label, freqs.centerfreq, freqs.units, 
@@ -164,6 +170,7 @@ void G_Sweep(int firstkey, ...)
 		      (int) freqs.device);
         write_to_acqi_swp(freqs.centerfreq, freqs.sweepwidth, freqs.np, 0.0);
      }
+#endif
      init_frqswp_offset[freqs.device] = counter;
    }
    else
@@ -172,6 +179,7 @@ void G_Sweep(int firstkey, ...)
            SET_INCRSWEEP,	0.0, 
 	   NULL );
 
+#ifdef DOIPA
      if ( strcmp(freqs.label, "")  && acqiflag )
      {
         Msg_Set_Param param;
@@ -215,6 +223,7 @@ void G_Sweep(int firstkey, ...)
 		      (int)freqs.min, (int)freqs.max, TYPE_FREQSWPWIDTH, 
 		      (int)freqs.scale, counter*2, (int) freqs.device );
      }
+#endif
    }
 }
 
@@ -224,6 +233,7 @@ void G_Sweep(int firstkey, ...)
 |
 |				Author Greg Brissey 4/3/91
 +------------------------------------------------------------------*/
+#ifdef DOIPA
 void write_to_acqi_swp(double center, double width, double np, double mode)
 {
 char    filename[80];
@@ -238,6 +248,7 @@ char    filename[80];
    }
    fprintf(sliderfile,"%.12lg %.12lg %lg %lg\n", center, width, np, mode);
 }
+#endif
 
 /*-------------------------------------------------------------------
 |

@@ -17,9 +17,7 @@
 #include "abort.h"
 
 extern int ap_interface;
-extern int okinhwloop();
 extern int SetRFChanAttr(Object obj, ...);
-extern int putcode();
 extern void decouplerattn(int mode);
 extern void HSgate(int ch, int state);
 

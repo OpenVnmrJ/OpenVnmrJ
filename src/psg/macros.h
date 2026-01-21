@@ -1138,8 +1138,8 @@ extern void S_oblique_gradpulse(double level1, double level2, double level3,
                 double ang1, double ang2, double ang3, double gdelay);
 extern void S_oblique_gradient(double level1,double level2,double level3,
                         double ang1,double ang2,double ang3);
-extern int pulse_phase_type(int val);
-extern int phase_var_type(int val);
+extern int pulse_phase_type(long val);
+extern int phase_var_type(long val);
 extern void stepsize(double stepsiz, int device);
 extern void rlpwrf(double value, int device);
 extern int SetRFChanAttr(Object obj, ...);

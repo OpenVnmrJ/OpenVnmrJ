@@ -213,13 +213,13 @@ typedef struct _apTbl {
 	} apTbl;
 
 typedef struct _phasetbl {
-		long	phase90[4];
-		long	phasebits;
-		long	phasequad;
-		long	phasestep;
-		long	phaseprecision;
-		long	apaddr;
-		long	apdelay;
+		int	phase90[4];
+		int	phasebits;
+		int	phasequad;
+		int	phasestep;
+		int	phaseprecision;
+		int	apaddr;
+		int	apdelay;
 	} phasetbl;
 
 #define MAXTABLES	20
@@ -485,7 +485,7 @@ static union {
 static int
 rcvrActive(short n)
 {
-   extern long rt_tab[];
+   extern int rt_tab[];
     int mask;
     int rtn;
 
@@ -577,7 +577,7 @@ int	 *retsize;
 		num++;
 	     }
 	}
-	*retsize = ((long)ncodeptr - (long)newstartptr);
+	*retsize = (int)(ncodeptr - newstartptr);
 	cleanupaptableinfo();
 	return(mallocptr);
 }
@@ -1692,7 +1692,7 @@ n_noise(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-   extern long rt_tab[];
+   extern int rt_tab[];
 
 	if (acqiflag) return;
 /*
@@ -1918,7 +1918,7 @@ codeint  *data;
 int   num;
 {
 	codeint   len;
-	long tword1,tword2;
+	int tword1,tword2;
 
 	/* printf("n_loadshim: add Sync Parser Acode\n");  */
         *ncodeptr++ = SYNC_PARSER;
@@ -2055,7 +2055,7 @@ codeint  *data;
 int   num;
 {
 	codeint   len;
-	long tword1,tword2;
+	int tword1,tword2;
 
 	/* printf("n_isetshim: add Sync Parser Acode\n");  */
 	*ncodeptr++ = SYNC_PARSER;
@@ -3010,7 +3010,7 @@ n_seticm(addr,num)
 codeint  *addr;
 int      num;
 {
-   extern long rt_tab[];
+   extern int rt_tab[];
 	/* Set Receiver phase cycle Opcode */
 	*ncodeptr++ = trTable[num].newCode;
 	*ncodeptr++ = 3;
@@ -3096,7 +3096,7 @@ n_enableovrflow(addr,num)
 codeint  *addr;
 int      num;
 {
-   extern long rt_tab[];
+   extern int rt_tab[];
 #ifdef XXXX
    if (HS_Dtm_Adc == 0)
    {
@@ -3150,7 +3150,7 @@ codeint  *addr;
 int      num;
 {
 
-   extern long rt_tab[];
+   extern int rt_tab[];
 #ifdef XXXX
    if (HS_Dtm_Adc == 0)
    {
@@ -3191,7 +3191,7 @@ n_nsc(addr,num)
 codeint  *addr;
 int      num;
 {
-   extern long rt_tab[];
+   extern int rt_tab[];
 
 	if (num_nsc < 12)
 	{
@@ -3384,7 +3384,9 @@ codeint	 num;
 	newaddr = ncodeptr - newstartptr;
 	addr++;
 	oldaddr = *addr++;
+#ifdef DOIPA
 	change_ipalocation(oldaddr,newaddr);
+#endif
 }
 
 n_lock_seq(addr, num)
@@ -3442,8 +3444,8 @@ static int *createphasetable(codeint channeldev)
    /* IXPRINT1("createphasetable dev: %d.\n",channeldev); */
    tblnum = createtable( sizeof(tblhdr)+sizeof(phasetbl) );
    th = (tblhdr *) tblptr[tblnum];
-   th->num_entries = sizeof(phasetbl)/sizeof(long);
-   th->size_entry = sizeof(long);
+   th->num_entries = sizeof(phasetbl)/sizeof(int);
+   th->size_entry = sizeof(int);
    th->mod_factor = 1;
    phasetablenum[channeldev] = tblnum;
    return((int *)tblptr[tblnum]);

@@ -40,9 +40,10 @@ extern void HSgate(int ch, int state);
 extern int SetRFChanAttr(Object obj, ...);
 extern int S_getarray (const char *parname, double array[], int arraysize);
 extern int get_filter_max_bandwidth();
+extern void apsetbyte(int value, int addrreg);
 
 int rcvr2nt = 0;
-static long  blank_is_on = 0xffffffff;
+static int  blank_is_on = 0xffffffff;
 		/*
 		   bit pattern to show channel is blanked off 
 		   must be initialized for all receiver lines to be on
@@ -121,11 +122,9 @@ void recoff()
 
 void blankon(int device)
 {
-char	msge[80];
    if ( (device<0) || (device>NUMch) )
-   {  sprintf(msge,"blankon(): device #%d is not within bounds of 1 - %d\n",
+   {  abort_message("blankon(): device #%d is not within bounds of 1 - %d\n",
 		device, NUMch);
-      abort_message(msge);
    }
    if (ap_interface!=4)
    {  
@@ -147,11 +146,9 @@ char	msge[80];
 
 void blankoff(int device)
 {
-char	msge[80];
    if ( (device<0) || (device>NUMch) )
-   {  sprintf(msge,"blankoff(): device #%d is not within bounds of 1 - %d\n",
+   {  abort_message("blankoff(): device #%d is not within bounds of 1 - %d\n",
 		device, NUMch);
-      abort_message(msge);
    }
    if (ap_interface!=4)
    {  

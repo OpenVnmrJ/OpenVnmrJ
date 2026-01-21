@@ -66,10 +66,7 @@ static void carry(int index, int ticks[]);
 +----------------------------------------------------------------------*/
 #define DTICK	1.25e-8		/* 12.5 nanoseconds */
 #define MAX_EVENT1 2.5		/* Max EVENT1 delay */
-timerwords(time,tword1,tword2)
-register double  time;
-int  *tword1;
-int  *tword2;
+void timerwords(double time, int *tword1, int *tword2)
 {
   if (newacq) /* 10 ns timing */
   {
@@ -182,7 +179,7 @@ int  *tword2;
     |
     |					Author:  Greg Brissey  12/16/87
     +----------------------------------------------------------------------*/
-    register int  word0,word1;	/* I feel the need for speed */
+    int  word0,word1;	/* I feel the need for speed */
 
     if (bgflag)
         fprintf(stderr,"time delay: %17.12lf \n",time);
@@ -281,14 +278,12 @@ int  *tword2;
 |   return timerwords in the array twords in the order nsec - sec .
 |				Author: Greg Brissey   1/15/91
 +---------------------------------------------------------------------*/
-rttimerwords(time,twords)
-double time;
-int twords[4];
+void rttimerwords(double time, int twords[4])
 {
     int ticks[4];
-    register int i;	
-    register struct _timebase *tbptr;
-    register struct _timebase *tbptr1;
+    int i;	
+    struct _timebase *tbptr;
+    struct _timebase *tbptr1;
     void carry();
 
     if (bgflag)
@@ -424,8 +419,8 @@ int twords[4];
 +-----------------------------------------------------------------*/
 static void carry(int index, int ticks[])
 {
-    register struct _timebase *tbptr;
-    register struct _timebase *tbptr1;
+    struct _timebase *tbptr;
+    struct _timebase *tbptr1;
 
     tbptr = &pulsecntrler.clkbase[index];
     tbptr1 = &pulsecntrler.clkbase[index+1];
@@ -452,10 +447,9 @@ static void carry(int index, int ticks[])
 |	   250/25 = 10; etc.
 |				Author: Greg Brissey   1/15/91
 +--------------------------------------------------------------------------*/
-absolutecnt(timerword)
-int timerword;
+int absolutecnt(int timerword)
 {
-    register struct _timebase *tbptr;
+    struct _timebase *tbptr;
     int timercnt;
 
     timercnt = timerword & 0x0fff;
@@ -507,7 +501,7 @@ struct _pcntrl pulsecntrler = { 200.0e-9, 2,
 void
 inittimerconst()
 {
-    register struct _timebase *tbptr;
+    struct _timebase *tbptr;
    if (fifolpsize > 64)
    {
        pulsecntrler.minpulse = 200.0e-9;

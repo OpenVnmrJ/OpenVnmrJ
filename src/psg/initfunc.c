@@ -31,7 +31,6 @@ extern void formXLwords(double value, int num, int digoffset,
                  int device, int *words);
 extern void formXL16words(double value, int num, int digoffset,
                  int device, int *words);
-extern int putcode();
 extern int getlkfreqapword(double lockfreq, int h1freq );
 extern void oneLongToTwoShort(int lval, short *sval );
 

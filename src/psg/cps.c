@@ -65,7 +65,9 @@
 
 #define DQD_IL_FACTOR	4
 
+#ifdef DOIPA
 extern FILE *sliderfile;
+#endif
 extern double sign_add();
 extern double whatiffreq();
 extern void pulsesequence();
@@ -125,7 +127,7 @@ static union {
       } endianSwap;
 
 static void write_Acodes(int act);
-int putcode(codeint word);
+void putcode(codeint word);
 void putval(char *paramname, double paramvalue);
 void updt_interfiddelay(double updttime);
 static void init_interfiddelay();
@@ -522,7 +524,9 @@ void createPS()
 *  Start pulsesequence and table section  *
 ******************************************/
 
+#ifdef DOIPA
     sliderfile = 0;	/* make sure it is zero, i.e. not open */
+#endif
     loadtablecall = -1;	/* initializes loadtablecall variable */
     inittablevar();	/* initialize all internal table variables */
 
@@ -557,10 +561,12 @@ void createPS()
 *         table pointer are not freed explicitly.  They are  *
 *         released when PSG exits.  I know this is sloppy.   *
 *************************************************************/
+#ifdef DOIPA
     if (!newacq)
     {
 	if (sliderfile) fclose(sliderfile);
     }
+#endif
 /****************************************
 *  End pulsesequence and table section  *
 ****************************************/
@@ -615,7 +621,9 @@ void createPS()
 
     if (newacq)
     {
+#ifdef DOIPA
 	if (sliderfile) flush_ipalist(sliderfile);
+#endif
         if ( HS_Dtm_Adc == 1 )
 	   check5MhzFoo();		/* check for possible FOO on 5MHz DTM/ADC */
     }
@@ -1785,8 +1793,8 @@ void initparms()
      * and is an array of 4 values */
     if ((traymax == 96) || (traymax == (8*96)))  /* test for Gilson/Hermes */
     {
-       long trayloc = 0;
-       long trayzone = 0;
+       int trayloc = 0;
+       int trayzone = 0;
 
        if ( P_getreal(GLOBAL, "vrack", &tmpval, 1) >= 0 )
           trayloc = (int) (tmpval + 0.5);
@@ -1797,7 +1805,7 @@ void initparms()
        /* rrzzllll */
        loc = loc + (10000 * trayzone) + (1000000 * trayloc);
        if (bgflag)
-          fprintf(stderr,"GILSON: ----- vrack: %ld, vzone: %ld, Encoded Loc = %d\n",trayloc,trayzone,loc);
+          fprintf(stderr,"GILSON: ----- vrack: %d, vzone: %d, Encoded Loc = %d\n",trayloc,trayzone,loc);
     }
 
     getstr("alock",alock);
@@ -2141,7 +2149,7 @@ double arg2;
 |	puts integer word into Codes array, increments pointer
 |
 +------------------------------------------------------------------*/
-int putcode(codeint word)
+void putcode(codeint word)
 {
     if (bgflag)
 	fprintf(stderr,"Code(%p) = %d(dec) or %4x(hex) \n",
@@ -2151,16 +2159,12 @@ int putcode(codeint word)
     /* test for acodes overflowing malloc acode memory */
     if ((long)Codeptr >= CodeEnd)  
     {    
-        char msge[128];
-	sprintf(msge,"Too many Acodes.");
-	text_error(msge);
-	psg_abort(0);
+	     abort_message("Too many Acodes.");
     }
-    return(0);
 }
 /*-----------------------------------------------------------------
 |       putLongCode()/1
-|       puts long integer word into short interger Codes array
+|       puts integer word into short interger Codes array
 |
 +------------------------------------------------------------------*/
 void putLongCode(unsigned int longWord)
@@ -2550,8 +2554,7 @@ void putval(char *paramname, double paramvalue)
    stat = -1;
    if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
    {
-	sprintf(addr,"putval: cannot get Vnmr address for %s.\n",paramname);
-        text_error(addr);
+	     text_error("putval: cannot get Vnmr address for %s.\n",paramname);
    }
    else
    {
@@ -2560,8 +2563,7 @@ void putval(char *paramname, double paramvalue)
    	stat = deliverMessageSuid(addr,message);
 	if (stat < 0)
 	{
-	   sprintf(addr,"putval: Error in parameter: %s.\n",paramname);
-           text_error(addr);
+	   text_error("putval: Error in parameter: %s.\n",paramname);
 	}
    }
    
@@ -2581,8 +2583,7 @@ void putstr(char *paramname,char *paramstring)
    stat = -1;
    if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
    {
-	sprintf(addr,"putval: cannot get Vnmr address for %s.\n",paramname);
-        text_error(addr);
+	     text_error("putval: cannot get Vnmr address for %s.\n",paramname);
    }
    else
    {
@@ -2591,8 +2592,7 @@ void putstr(char *paramname,char *paramstring)
    	stat = deliverMessageSuid(addr,message);
 	if (stat < 0)
 	{
-	   sprintf(addr,"putval: Error in parameter: %s.\n",paramname);
-           text_error(addr);
+	   text_error("putval: Error in parameter: %s.\n",paramname);
 	}
    }
    

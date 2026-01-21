@@ -25,7 +25,7 @@
 extern int homospoil_bit;
 extern int  bgflag;	/* debug flag */
 extern int  newacq;	/* inova flag */
-extern int putcode();
+extern void putcode(codeint arg);
 extern void HSgate(int ch, int state);
 
 #define ERROR 1

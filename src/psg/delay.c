@@ -31,8 +31,6 @@ extern int acqiflag;
 extern int bgflag;
 extern int newacq;
 
-extern int putcode();
-
 #define OK 0
 #define MINDELAY 0.195e-6
 #define INOVAMINDELAY 0.0995e-6
@@ -147,17 +145,21 @@ void G_Delay(int firstkey, ...)
    else
    {
    	counter = (int) (Codeptr - Aacode);
+#ifdef DOIPA
 	if (newacq && acqiflag)
 	   insertIPAcode(counter);
+#endif
    	delayer(delays.time, (strcmp(delays.label,"") && acqiflag) );
    }
 
 /* do we want interactive control? */
+#ifdef DOIPA
    if ( strcmp(delays.label, "")  && acqiflag )
    {
       write_to_acqi(delays.label, delays.time, delays.units, delays.min,
 		    delays.max, TYPE_DELAY, delays.scale, counter*2, 0);
    }
+#endif
 
    if (isSSHAselected() && isSSHAactive())
    {

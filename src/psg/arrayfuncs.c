@@ -20,6 +20,7 @@
 #include "shims.h"
 #include "CSfuncs.h"
 #include "abort.h"
+#include "cps.h"
 
 #define DPRTLEVEL 1
 #define MAXGLOBALS 135
@@ -66,9 +67,13 @@ extern double  d2_init;         /* Initial value of d2 delay, used in 2D/3D/4D e
 extern double  d3_init;         /* Initial value of d3 delay, used in 2D/3D/4D experiments */
 extern double  d4_init;         /* Initial value of d4 delay, used in 2D/3D/4D experiments */
 
-extern double getval();
-extern double sign_add();
+extern double getval(const char *variable);
 extern double   preacqtime;
+extern void reset();
+extern int A_getreal(int tree, const char *name, double **valaddr, int index);
+extern int A_getstring(int tree, const char *name, char **straddr, int index);
+extern void check_for_abort();
+extern void set_lacqvar(codeint index, int val);
 
 /*-----------------------------------------------------------------------
 |  structure loopelemt:
@@ -228,8 +233,8 @@ int parse(char *string, int *narrays)
       fprintf(stderr, "parse(): string: '%s' -----\n", string);
    /* ---  test the variables as we parse them --- */
    /*
-    * ---  This is a 4 state parser, 0-1: separate variables /* ---
-    * 2-4: diagonal set variables /* ---
+    * ---  This is a 4 state parser, 0-1: separate variables
+    * 2-4: diagonal set variables
     * --
     */
    while (1)
@@ -423,17 +428,14 @@ static void setup(char *varptr, int lpindex, int varindex)
    int             index;
    int             type;
    int             ret;
-   char            mess[MAXSTR];
    vInfo           varinfo;	/* variable information structure */
 
    /* --- variable info  --- */
-   if (ret = P_getVarInfo(CURRENT, varptr, &varinfo))
+   if ( (ret = P_getVarInfo(CURRENT, varptr, &varinfo)) )
    {
-      sprintf(mess, "Cannot find the variable: '%s'", varptr);
-      text_error(mess);
       if (bgflag)
-	 P_err(ret, varptr, ": ");
-      psg_abort(1);
+	     P_err(ret, varptr, ": ");
+      abort_message("Cannot find the variable: '%s'", varptr);
    }
 
    type = varinfo.basicType;
@@ -441,36 +443,35 @@ static void setup(char *varptr, int lpindex, int varindex)
    index = find(varptr);
    if (index == NOTFOUND)
    {
-      sprintf(mess, "variable '%s' does not exist.", varptr);
-      text_error(mess);
-      psg_abort(1);
+      abort_message("variable '%s' does not exist.", varptr);
    }
    if (bgflag)
       fprintf(stderr,
-	      "SETUP: variable: '%s', lpindex = %d, varindex = %d, &varindex = %lx, index = %d \n",
+	      "SETUP: variable: '%s', lpindex = %d, varindex = %d, &varindex = %p, index = %d \n",
 	      varptr, lpindex, varindex, &varindex, index);
 
    if (bgflag)
+   {
       if (type == ST_REAL)
       {
 	 fprintf(stderr,
-	  "SETUP: cname[%d]: '%s', cvals[%d] = %5.2lf, &cvals[%d] = %lx \n",
-	  index, cnames[index], index, *cvals[index], index, &cvals[index]);
+	  "SETUP: cname[%d]: '%s', cvals[%d] = %5.2lf\n",
+	  index, cnames[index], index, *cvals[index]);
       }
       else
       {
 	 fprintf(stderr,
-	    "SETUP: cname[%d]: '%s', cvals[%d] = '%s', &cvals[%d] = %lx \n",
-	   index, cnames[index], index, cvals[index], index, &cvals[index]);
+	    "SETUP: cname[%d]: '%s'\n",
+	   index, cnames[index]);
       }
+   }
 
    if ( ! lpel[lpindex] )
    {
       if ( (lpel[lpindex] = (loopelemt *) malloc(MAXLOOPS * sizeof(loopelemt))) == 0L)
       {
-         text_error("insuffient memory for loop elements.");
          reset();
-         psg_abort(1);
+         abort_message("insuffient memory for loop elements.");
       }
    }
 
@@ -505,25 +506,25 @@ static void setup(char *varptr, int lpindex, int varindex)
       if (type == ST_REAL)
       {
 	fprintf(stderr,
-	"SETUP: #var = %d  var type: %d  var name: '%s', value = %5.2lf, &value = 0x%lx \n",
+	"SETUP: #var = %d  var type: %d  var name: '%s', value = %5.2lf, &value = %p \n",
 		 lpel[lpindex]->numvar, lpel[lpindex]->vartype[varindex],
 		 lpel[lpindex]->lpvar[varindex],
 		 *(*((double **) lpel[lpindex]->varaddr[varindex])),
 		 (lpel[lpindex]->varaddr[varindex]));
 	fprintf(stderr,
-	 "SETUP: global index: %d, gobal var addr: 0x%lx, gobal var func: 0x%lx \n",
+	 "SETUP: global index: %d, global var addr: %p, global var func: %p \n",
 	   gindx,glblvars[gindx].glblvalue, glblvars[gindx].funcptr);
       }
       else
       {
 	 fprintf(stderr,
-	  "SETUP: #var = %d  var type: %d  var name: '%s', value = '%s', &value = 0x%lx \n",
+	  "SETUP: #var = %d  var type: %d  var name: '%s', value = '%s', &value = %p \n",
 		 lpel[lpindex]->numvar, lpel[lpindex]->vartype[varindex],
 		 lpel[lpindex]->lpvar[varindex],
 		 *((char **) lpel[lpindex]->varaddr[varindex]),
 		 (lpel[lpindex]->varaddr[varindex]));
 	fprintf(stderr,
-	 "SETUP: global index: %d, gobal var addr: 0x%lx, gobal var func: 0x%lx \n",
+	 "SETUP: global index: %d, global var addr: %p, global var func: %p \n",
 	   gindx,glblvars[gindx].glblvalue, glblvars[gindx].funcptr);
       }
    }
@@ -558,9 +559,7 @@ int get_curarrayindex()
    return(curarrayindex);
 }
 
-arrayPS(index, numarrays)
-int             index;
-int             numarrays;
+void arrayPS(int index, int numarrays)
 {
    char           *name;
    char          **parmptr;
@@ -608,13 +607,11 @@ int             numarrays;
          curarrayindex = valindx - 1;
 	 if (lpel[index]->vartype[varindx] != T_STRING)
 	 {
-	    if ((ret = A_getreal(CURRENT, name, parmptr, valindx)) < 0)
+	    if ((ret = A_getreal(CURRENT, name, (double **) parmptr, valindx)) < 0)
 	    {
-	       sprintf(mess, "Cannot find the variable: '%s'", name);
-	       text_error(mess);
 	       if (bgflag)
-		  P_err(ret, name, ": ");
-	       psg_abort(1);
+		       P_err(ret, name, ": ");
+	       abort_message("Cannot find the variable: '%s'", name);
 	    }
 	    gindx = lpel[index]->glblindex[varindx];
 	    if (gindx >= 0) {
@@ -628,11 +625,9 @@ int             numarrays;
 	 {
 	    if ((ret = A_getstring(CURRENT, name, parmptr, valindx)) < 0)
 	    {
-	       sprintf(mess, "Cannot find the variable: '%s'", name);
-	       text_error(mess);
 	       if (bgflag)
-		  P_err(ret, name, ": ");
-	       psg_abort(1);
+		       P_err(ret, name, ": ");
+	       abort_message("Cannot find the variable: '%s'", name);
 	    }
 	    gindx = lpel[index]->glblindex[varindx];
 	    if (gindx >= 0) {
@@ -647,14 +642,14 @@ int             numarrays;
 	    if (lpel[index]->vartype[varindx] != T_STRING)
 	    {
 	       fprintf(stderr,
-		 "Loop Element %d, Variable[%d] '%s', value[%d] = %10.4lf, g_addr: 0x%lx, g_func: 0x%lx\n", 
+		 "Loop Element %d, Variable[%d] '%s', value[%d] = %10.4lf, g_addr: %p, g_func: %p\n", 
 		       index, varindx, name, valindx, (double) *temptr, 
 	               glblvars[gindx].glblvalue, glblvars[gindx].funcptr);
 	    }
 	    else
 	    {
 	       fprintf(stderr,
-		    "Loop Element %d, Variable[%d] '%s', value[%d] = '%s', g_addr: 0x%lx, g_func: 0x%lx\n",
+		    "Loop Element %d, Variable[%d] '%s', value[%d] = '%s', g_addr: %p, g_func: %p\n",
 		       index, varindx, name, valindx, (char *) temptr,
 			glblvars[gindx].glblvalue, glblvars[gindx].funcptr);
 	    }
@@ -731,23 +726,25 @@ void setGlobalDouble(const char *name, double val)
 |  functions call for parameters effecting
 |  frequencies .
 +--------------------------------------------------*/
-static
+static int
 func4sfrq(value)
 double 		value;
 {
   if ( SetRFChanAttr(RF_Channel[OBSch],SET_OVRUNDRFLG,0.0,
                    SET_SPECFREQ,value,NULL) < 0 )
 	psg_abort(1);
+   return (0);
 }
-static
+static int
 func4dfrq(value)
 double 		value;
 {
   if ( SetRFChanAttr(RF_Channel[DECch],SET_OVRUNDRFLG,0.0,
                    SET_SPECFREQ,value,NULL) < 0 )
 	psg_abort(1);
+   return (0);
 }
-static
+static int
 func4dfrq2(value)
 double          value;
 {
@@ -759,8 +756,9 @@ double          value;
   }
   else if (ix < 2)
      text_error("WARNING: dfrq2 arrayed, but no 3rd channel present.\n");
+   return (0);
 }
-static
+static int
 func4dfrq3(value)
 double          value;
 {
@@ -772,8 +770,9 @@ double          value;
   }
   else if (ix < 2)
      text_error("WARNING: dfrq3 arrayed, but no 4th channel present.\n");
+   return (0);
 }
-static
+static int
 func4dfrq4(value)
 double          value;
 {
@@ -785,24 +784,27 @@ double          value;
   }
   else if (ix < 2)
      text_error("WARNING: dfrq4 arrayed, but no 5th channel present.\n");
+   return (0);
 }
-static
+static int
 func4tof(value)
 double 		value;
 {
   if ( SetRFChanAttr(RF_Channel[OBSch],SET_OVRUNDRFLG,0.0,
                    SET_OFFSETFREQ,value,NULL) < 0 )
 	psg_abort(1);
+   return (0);
 }
-static
+static int
 func4dof(value)
 double 		value;
 {
   if ( SetRFChanAttr(RF_Channel[DECch],SET_OVRUNDRFLG,0.0,
                    SET_OFFSETFREQ,value,NULL) < 0 )
 	psg_abort(1);
+   return (0);
 }
-static
+static int
 func4dof2(value)
 double          value;
 {
@@ -814,8 +816,9 @@ double          value;
   }
   else if (ix < 2)
      text_error("WARNING: dof2 arrayed, but no 3rd channel present.\n");
+   return (0);
 }
-static
+static int
 func4dof3(value)
 double          value;
 {
@@ -827,8 +830,9 @@ double          value;
   }
   else if (ix < 2)
      text_error("WARNING: dof3 arrayed, but no 4th channel present.\n");
+   return (0);
 }
-static
+static int
 func4dof4(value)
 double          value;
 {
@@ -840,35 +844,40 @@ double          value;
   }
   else if (ix < 2)
      text_error("WARNING: dof4 arrayed, but no 5th channel present.\n");
+   return (0);
 }
-static
+static int
 func4dmf(value)
 double 		value;
 {
   initdecmodfreq(value,2,INIT_APVAL);	/* set decoupler modulation freq */
+   return (0);
 }
-static
+static int
 func4dmf2(value)
 double 		value;
 {
   initdecmodfreq(value,2,INIT_APVAL);	/* set decoupler modulation freq */
+   return (0);
 }
-static
+static int
 func4dmf3(value)
 double 		value;
 {
   initdecmodfreq(value,2,INIT_APVAL);	/* set decoupler modulation freq */
+   return (0);
 }
-static
+static int
 func4dmf4(value)
 double 		value;
 {
   initdecmodfreq(value,2,INIT_APVAL);	/* set decoupler modulation freq */
+   return (0);
 }
 /*---------------------------------------------------
 |  functions call for integer parameters 
 +--------------------------------------------------*/
-static
+static int
 func4spin(value)
 double          value;
 {
@@ -877,7 +886,7 @@ double          value;
    DPRINT(DPRTLEVEL,"func for spin called\n");
    return (0);
 }
-static
+static int
 func4loc(value)
 double          value;
 {
@@ -885,7 +894,7 @@ double          value;
    DPRINT(DPRTLEVEL,"func for spin called\n");
    return (0);
 }
-static
+static int
 func4dhp_dlp(value)
 double          value;
 {
@@ -897,17 +906,17 @@ double          value;
 |  functions call for global double parameters effecting
 |  low core or automation structure.
 +--------------------------------------------------*/
-static
+static int
 func4nt(value)
 double          value;
 {
- long tempnt;
+ int tempnt;
    tempnt = (codelong) (value + 0.005);
    set_lacqvar(ntrt, tempnt);
-   DPRINT1(DPRTLEVEL,"func for nt called, new value: %ld\n", (codelong) (value + 0.005));
+   DPRINT1(DPRTLEVEL,"func for nt called, new value: %d\n", (codelong) (value + 0.005));
    return (0);
 }
-static
+static int
 func4pad_temp(value)
 double          value;
 {
@@ -919,7 +928,7 @@ double          value;
 /*---------------------------------------------------
 |  string functions call for global string parameters
 +--------------------------------------------------*/
-static
+static int
 func4dmm(value)
 char           *value;
 {
@@ -928,7 +937,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dmm called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4dm(value)
 char           *value;
 {
@@ -937,7 +946,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dm called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4dseq(value)
 char           *value;
 {
@@ -945,7 +954,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dseq called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4dmm2(value)
 char           *value;
 {
@@ -954,7 +963,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dmm2 called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4dm2(value)
 char           *value;
 {
@@ -963,7 +972,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dm2 called value='%s'\n", value);
    return (0);
 }
-static 
+static int 
 func4dseq2(value) 
 char           *value;
 { 
@@ -971,7 +980,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dseq2 called value='%s'\n", value); 
    return (0);
 }
-static
+static int
 func4dmm3(value)
 char           *value;
 {
@@ -980,7 +989,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dmm3 called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4dm3(value)
 char           *value;
 {
@@ -989,7 +998,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dm3 called value='%s'\n", value);
    return (0);
 }
-static 
+static int 
 func4dseq3(value) 
 char           *value;
 { 
@@ -997,7 +1006,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dseq3 called value='%s'\n", value); 
    return (0);
 }
-static
+static int
 func4dmm4(value)
 char           *value;
 {
@@ -1006,7 +1015,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dmm4 called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4dm4(value)
 char           *value;
 {
@@ -1015,7 +1024,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dm4 called value='%s'\n", value);
    return (0);
 }
-static 
+static int 
 func4dseq4(value) 
 char           *value;
 { 
@@ -1023,7 +1032,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dseq4 called value='%s'\n", value); 
    return (0);
 }
-static
+static int
 func4hs(value)
 char           *value;
 {
@@ -1032,7 +1041,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for hs called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4homo(value)
 char           *value;
 {
@@ -1041,7 +1050,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for homo called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4homo2(value)
 char           *value;
 {
@@ -1050,7 +1059,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for homo2 called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4homo3(value)
 char           *value;
 {
@@ -1059,7 +1068,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for homo3 called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4homo4(value)
 char           *value;
 {
@@ -1068,7 +1077,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for homo4 called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4alock(value)
 char           *value;
 {
@@ -1077,7 +1086,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for alock called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4wshim(value)
 char           *value;
 {
@@ -1117,7 +1126,7 @@ static int func4d4(double value)
    DPRINT(DPRTLEVEL,"func for d4 called\n");
    return (0);
 }
-static
+static int
 func4phase1(value)
 double          value;
 {
@@ -1125,7 +1134,7 @@ double          value;
    DPRINT(DPRTLEVEL,"func for phase1 called\n");
    return (0);
 }
-static
+static int
 func4phase2(value)
 double          value;
 {
@@ -1133,7 +1142,7 @@ double          value;
    DPRINT(DPRTLEVEL,"func for phase2 called\n");
    return (0);
 }
-static
+static int
 func4phase3(value)
 double          value;
 {
@@ -1141,7 +1150,7 @@ double          value;
    DPRINT(DPRTLEVEL,"func for phase3 called\n");
    return (0);
 }
-static 
+static int 
 func4satmode(value) 
 char           *value;
 { 
@@ -1153,28 +1162,28 @@ char           *value;
 /*---------------------------------------------------
 |  Auto structure parameter  functions
 +--------------------------------------------------*/
-static
+static int
 func4lkpwr(value)
 double          value;
 {
    set_lockpower( (codeint) sign_add(value, 0.005));
    return (0);
 }
-static
+static int
 func4lkgain(value)
 double          value;
 {
    set_lockgain( (codeint) sign_add(value, 0.005));
    return (0);
 }
-static
+static int
 func4lkphase(value)
 double          value;
 {
    set_lockphase( (codeint) sign_add(value, 0.005));
    return (0);
 }
-static
+static int
 func4rcgain(value)
 double          value;
 {
@@ -1182,7 +1191,7 @@ double          value;
    gainactive = TRUE; /* non arrayable */
    return (0);
 }
-static
+static int
 func4shimdac(value)
 double          value;
 {
@@ -1193,18 +1202,12 @@ double          value;
 /*----------------------------------------------------
 |  initglblstruc - load up a global structure element
 +----------------------------------------------------*/
-static
-initglblstruc(index, name, glbladdr, function)
-int             index;
-char           *name;
-double         *glbladdr;
-int             (*function) ();
-
+static void
+initglblstruc(int index, char *name, double *glbladdr, int (*function)())
 {
    if (index >= MAXGLOBALS)
    {
-      fprintf(stdout, "initglblstruc: index: %d beyond limit %d\n", index, MAXGLOBALS);
-      psg_abort(1);
+      abort_message("initglblstruc: index: %d beyond limit %d\n", index, MAXGLOBALS);
    }
    strcpy(glblvars[index].gnam, name);
    glblvars[index].glblvalue = glbladdr;
@@ -1218,11 +1221,9 @@ int             (*function) ();
 |
 |                       Author Greg Brissey   6/5/87
 +------------------------------------------------------------------------*/
-elemvalues(elem)
-int             elem;
+int elemvalues(int elem)
 {
    char           *name;
-   char            mess[MAXSTR];
    int             ret;
    vInfo           varinfo;	/* variable information structure */
 
@@ -1237,11 +1238,9 @@ int             elem;
    name = lpel[elem - 1]->lpvar[0];
    if (ret = P_getVarInfo(CURRENT, name, &varinfo))
    {
-      sprintf(mess, "Cannot find the variable: '%s'", name);
-      text_error(mess);
       if (bgflag)
-	 P_err(ret, name, ": ");
-      psg_abort(1);
+	      P_err(ret, name, ": ");
+      abort_message("Cannot find the variable: '%s'", name);
    }
    return ((int) varinfo.size);	/* # of values variable has */
 }
@@ -1297,7 +1296,7 @@ int             elem;
 |		     initparms() for each fid
 |			Author: Greg Brissey 6/2/89
 +-------------------------------------------------------*/
-initglobalptrs()
+void initglobalptrs()
 {
    int index;
    int shim_index;
@@ -1387,7 +1386,7 @@ initglobalptrs()
    {
       const char *sh_name;
       if ((sh_name = get_shimname(shim_index)) != NULL)
-          initglblstruc( index++, sh_name, 0L, func4shimdac);
+          initglblstruc( index++, (char *)sh_name, 0L, func4shimdac);
    }
 
    initglblstruc(index++, "spin", 0L, func4spin); 	/* assume spinactive = true */

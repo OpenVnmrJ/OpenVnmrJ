@@ -71,15 +71,14 @@
 extern double parmult();
 extern double getval();
 extern double sign_add();	/* add roundoff according to sign */
-extern long acqpar_seek();
-extern int putcode();
+extern void putcode(codeint arg);
 /*extern autodata autostruct; */
 
 extern int clr_at_blksize_mode;
 extern int lockfid_mode;
 extern int bgflag;
 /*extern int dsp_info[];*/
-extern long rt_tab[];
+extern int rt_tab[];
 extern int newacq;
 extern int      acqiflag;	/* for interactive acq. or not? */
 extern char fileRFpattern[];
@@ -96,6 +95,7 @@ static char infopath[256];
 
 static MFILE_ID ifile = NULL;	/* inova datafile for ra */
 static char *savedoffsetAddr;   /* saved inova offset header */
+static int acqpar_seek(unsigned int);
 
 #define AUTOLOC 1	/* offset into lc struct for autod struct */
 #define ACODEB 11	/* offset to beginning of Acodes */
@@ -103,15 +103,15 @@ static char *savedoffsetAddr;   /* saved inova offset header */
 
 #define RRI_SHIMSET	5	/* shimset number for RRI Shims */
 
-extern unsigned long start_elem;     /* elem (FID) for acquisition to start on (RA)*/
-extern unsigned long completed_elem; /* total number of completed elements (FIDs)  (RA) */
+extern unsigned int start_elem;     /* elem (FID) for acquisition to start on (RA)*/
+extern unsigned int completed_elem; /* total number of completed elements (FIDs)  (RA) */
 
 extern int num_tables;		/* number of tables for acodes */
 
 extern Acqparams *Alc;
 SHR_EXP_STRUCT ExpInfo;
-static long max_ct;
-static long ss2val;
+static int max_ct;
+static int ss2val;
 
 double psync;
 double ldshimdelay,oneshimdelay;
@@ -131,13 +131,12 @@ double dsposskipdelay=0.0;
 |   2/10/89   Greg B.    1. Added Code to set low core element lc->acqelemid 
 |   5/2/91    Greg B.    1. low core element lc->acqelemid is a codelong now
 +---------------------------------------------------------------*/
-initacqparms(fidn)
-unsigned long fidn;
+void initacqparms(unsigned int fidn)
 {
     char dp[MAXSTR];
     char cp[MAXSTR];
     char ok2bumpstr[MAXSTR];
-    long np_words;	/* total # of data point words */
+    int np_words;	/* total # of data point words */
     codeint ss;		/* steady state count */
     codeint cttime;		/* #CTs between screen updates to Host */
     codeint dpflag;		/* double precision flag = 2 or 4 */
@@ -259,7 +258,7 @@ unsigned long fidn;
     /* --- setup real time np with total data points to be take --- */
     /*     the STM will expect this many points    */
     /*     data pts * # of fids */
-    tot_np = (codelong) ((long) (np + .0005)) * ((long) (nf + 0.005));
+    tot_np = (codelong) ((int) (np + .0005)) * ((int) (nf + 0.005));
 
     /*if (dsp_info[0] == 0)*/
     if (dsp_params.il_oversamp > 1)
@@ -402,10 +401,7 @@ unsigned long fidn;
 |
 |				Author Greg Brissey 6/26/86
 +------------------------------------------------------------------*/
-convertdbl(value,topint,botint)
-double value;
-int *topint;
-int *botint;
+void convertdbl(double value, int *topint, int *botint)
 {
     long long val;
     int top;
@@ -439,19 +435,18 @@ int *botint;
 |   2/22/90   Greg B.    1. return 0 if no blockheader data, return 1 if 
 |			    blockheader data present.
 +---------------------------------------------------------------*/
-ra_initacqparms(fidn)
-unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
+//  fidn;   /* fid number to obtain the acqpar parameters for */
+int ra_initacqparms(unsigned int fidn)
 {
    Acqparams *lc,*ra_lc;
    autodata *autoptr;
-   char msge[256];
    int len1,len2;
    codeint acqbuffer[512];
    struct datablockhead acqblockheader;
 
    if (fidn == 1)
    {
-     max_ct = 0L;
+     max_ct = 0;
    }
 
    acqpar_seek(fidn);	/* move to proper fid entry in acqpar */
@@ -523,22 +518,19 @@ unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
    else if ( lc->acqnt <= ra_lc->acqct )
     {
       lc->acqnt = ra_lc->acqnt; /* nt can not be made <= to ct , for now. */
-      sprintf(msge,"WARNING: FID:%d  'nt' <= 'ct', original 'nt' used.\n",
+      text_error("WARNING: FID:%d  'nt' <= 'ct', original 'nt' used.\n",
 		fidn);
-      text_error(msge);
     }
  
    DPRINT2(PRTLEVEL,"nt=%ld, ra nt=%ld\n",lc->acqnt,ra_lc->acqnt);
    if (ra_lc->acqnp != lc->acqnp)
    {
-      sprintf(msge,"WARNING 'np' has changed from %ld to %ld.\n",
+      text_error("WARNING 'np' has changed from %d to %d.\n",
 		ra_lc->acqnp,lc->acqnp);
-      text_error(msge);
    }
    if (ra_lc->acqdpf != lc->acqdpf)
    {
-      text_error("data precision changed, PSG aborting.");
-      psg_abort(1);
+      abort_message("data precision changed, PSG aborting.");
    }
    lc->acqct = ra_lc->acqct;
    lc->acqisum = ra_lc->acqisum;
@@ -580,9 +572,9 @@ unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
 |
 |       Sets ss counters for each element
 +-------------------------------------------------------------------*/
-set_counters()
+void set_counters()
 {
-    long ilsstmp, ilctsstmp;
+    int ilsstmp, ilctsstmp;
     if (Alc->acqss < 0)
     {
        Alc->acqssct = -1 * Alc->acqss;
@@ -630,8 +622,8 @@ ss4autoshim()
        Alc->acqssct = Alc->acqss;
        Alc->acqrtvptr = (Alc->acqnt - (Alc->acqssct % Alc->acqnt) + Alc->acqct)
 							 % Alc->acqnt;
-       init_acqvar(ssval,(long)Alc->acqssct);
-       init_acqvar(ctss,(long)Alc->acqrtvptr);
+       init_acqvar(ssval,Alc->acqssct);
+       init_acqvar(ctss,Alc->acqrtvptr);
     }
   }
 }
@@ -667,18 +659,14 @@ char *filename;
 |       Position the disk read/write heads to the proper block offset
 |       for the acqpar file (lc,auto structure parameters.
 |
-|   Modified   Author     Purpose
-|   --------   ------     -------
-|   2/10/89   Greg B.    1. Routine now returns the (long) position of seek
 +-------------------------------------------------------------------*/
-long acqpar_seek(elemindx)
-unsigned long elemindx;
+static int acqpar_seek(unsigned int elemindx)
 {
     int acqoffset;
-    long pos;
+    off_t pos;
 
     acqoffset = sizeof(acqfileheader) +
-        (acqfileheader.bbytes * ((unsigned long) (elemindx - 1)))  ;
+        (acqfileheader.bbytes * ((unsigned int) (elemindx - 1)))  ;
     if (bgflag)
         fprintf(stderr,"acqpar_seek(): fid# = %d,acqoffset = %d \n",
            elemindx,acqoffset);
@@ -693,7 +681,7 @@ unsigned long elemindx;
         }
         return(-1);
     }    
-    return(pos);
+    return(0);
 }
 
 int setup_parfile(suflag)
@@ -1384,7 +1372,7 @@ void write_exp_info()
     int bytes;
 #ifdef LINUX
     int cnt;
-    long rt_tab_tmp[RT_TAB_SIZE];
+    int rt_tab_tmp[RT_TAB_SIZE];
 #endif
 
     /* --- write parameter out real-time variable file --- */
@@ -1403,9 +1391,9 @@ void write_exp_info()
        {
           rt_tab_tmp[cnt] = htonl(rt_tab[cnt]);
        }
-       bytes = write(Infofd, rt_tab_tmp, sizeof(long) * get_rt_tab_elems() );
+       bytes = write(Infofd, rt_tab_tmp, sizeof(int) * get_rt_tab_elems() );
 #else
-       bytes = write(Infofd, rt_tab, sizeof(long) * get_rt_tab_elems() );
+       bytes = write(Infofd, rt_tab, sizeof(int) * get_rt_tab_elems() );
 #endif
        if (bgflag)
          fprintf(stderr,"Bytes written to info file: %d (bytes).\n",bytes);
@@ -1424,8 +1412,7 @@ void write_exp_info()
     }
 }
 
-int ra_inovaacqparms(fidn)
-unsigned long fidn;
+int ra_inovaacqparms(unsigned int fidn)
 {
    char fidpath[512];
    int curct;

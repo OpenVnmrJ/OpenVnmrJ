@@ -25,8 +25,6 @@ class Synthesizer
   int *fliststore;  // this member never referred to anywhere
   int calcFTW1(double freq);
   int calcFTW2(double freq);
-  long long getFTW(double freq);
-  long long getFTW1(double freq);
 
  public:
   static int dds2_ftw1(double freq);
@@ -37,7 +35,7 @@ class Synthesizer
   static unsigned dds_switch(double freq);
 
   int format_dds(int *buffer, 
-		 unsigned long ftw1, unsigned long ftw2, unsigned long rfswitch,
+		 unsigned int ftw1, unsigned int ftw2, unsigned int rfswitch,
 		 int atten, unsigned short freq);
 
   int format_var400(int *buffer, unsigned long long ftw, int rfswitch);
