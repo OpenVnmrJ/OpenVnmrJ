@@ -21,11 +21,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
-#ifndef __INTERIX
-  #include <termio.h>    /* solaris & Linux, though one might also be able to use termios.h */
-#else
-  #include <termios.h>   /* Interix/SFU under Windows */
-#endif
+#include <termios.h>
 #include "errLogLib.h"
 #include "msgQLib.h"
 #include "timerfuncs.h"

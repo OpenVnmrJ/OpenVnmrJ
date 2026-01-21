@@ -32,7 +32,17 @@ extern void fit_images(FDFptr *in_object, int n_infiles,
 		       void func(), void jac(),
 		       int method(), int guess(), int parfix());
 
+extern int linfit_setup();
+extern int linfit_go();
+extern int linfit();
+extern int divset_();
+extern int dn2g_();
+extern int dn2f_();
+
 extern int marquardt();
+extern int interrupt(void);
+extern int interrupt_begin(void);
+extern int interrupt_end(void);
 
 void linfit1(int npts, double *x, double *y, double *w,
 	     double *m, double *b, double *resid);

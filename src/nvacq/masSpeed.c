@@ -432,7 +432,7 @@ void MASSpeed()
     int  response;
     int  status, mStatus;
     char msgBuf[MAX_MSG_LEN];
-    long cycle=0;
+    int cycle=0;
     int  delay;
 
     DPRINT(1, "*** Starting MASSpeed in Sleep State\n");
@@ -637,8 +637,8 @@ int readCharWithTimeout(char *chr)
 int getMASSpeedResponseString(char *result)
 {
     char in_str[80];
-    long cnt=0;
-    long break_out=0, place;
+    int cnt=0;
+    int break_out=0, place;
 
     /* clear and terminate the input string in case we have an error
        and don't set the result string.
@@ -1097,8 +1097,8 @@ int getMASResponseString(char *result, int len)
 {
     char in_str[1028];
     int status = 0;
-    long cnt=0,prevchr;
-    long break_out=0;
+    int cnt=0,prevchr;
+    int break_out=0;
 
     /* clear and terminate the input string in case we have an error
        and don't set the result string.

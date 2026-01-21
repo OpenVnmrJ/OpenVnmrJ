@@ -341,8 +341,9 @@ static int convertfid(char *expname, int result, int ctval )		/* Name taken from
            if ( ! access(parpath,R_OK) )
            {
               char tmpStr2[MAXPATH*2];
+	      int ret __attribute__((unused));
               sprintf(tmpStr2,"cp -f %s %s/PsgFile",parpath,curexpdir);
-              system(tmpStr2);
+              ret = system(tmpStr2);
            }
         }
 
@@ -557,9 +558,10 @@ int     iter, wcode;
 static void cleanupVp(const char *dir)
 {
    char tmpStr[MAXPATH];
+   int ret __attribute__((unused));
 
    sprintf(tmpStr,"rm -rf %s",dir);
-   system(tmpStr);
+   ret = system(tmpStr);
 
 }
 
@@ -579,8 +581,9 @@ static void checkVpState(const char *acqdir, int doGlobals)
    }
    if ( P_getstring(PROCESSED,"go_id",tmpStr,1,MAXPATH) || strcmp(tmpStr,ptr) )
    {
-      char tmpStr2[MAXPATH*2];
+      char tmpStr2[MAXPATH*3];
       int ex;
+      int ret __attribute__((unused));
 
       Wturnoff_buttons();		/* deactive any interactive programs */
       clearExpDir(curexpdir);
@@ -629,22 +632,22 @@ static void checkVpState(const char *acqdir, int doGlobals)
 #endif
          ex++;
       }
-      link(tmpStr2,tmpStr);
+      ret = link(tmpStr2,tmpStr);
 
       sprintf(tmpStr2,"cp %s/text %s/text",acqdir,curexpdir);
-      system(tmpStr2);
+      ret = system(tmpStr2);
       sprintf(tmpStr,"%s/PsgFile",acqdir);
       if ( ! access(tmpStr,R_OK) )
       {
          sprintf(tmpStr2,"cp -f %s %s/PsgFile",tmpStr,curexpdir);
-         system(tmpStr2);
+         ret = system(tmpStr2);
       }
       sprintf(tmpStr,"%s/sampling.sch",acqdir);
       if ( ! access(tmpStr,R_OK) )
       {
          sprintf(tmpStr2,"cp -f %s %s/sampling.sch; cp -f %s %s/acqfil/sampling.sch",
                           tmpStr,curexpdir,tmpStr,curexpdir);
-         system(tmpStr2);
+         ret = system(tmpStr2);
       }
       setMenuName("main");
       Wsetgraphicsdisplay("");
@@ -908,9 +911,10 @@ static int log_acq_message(int auto_mode, char *autodir, char *userdir, char *ex
               if (! strcmp(expn,"vp") )
               {
                  char explog[MAXPATH];
+	         int ret __attribute__((unused));
                  sprintf( explog,"%s/acqfil/log", curexpdir );
                  unlink(explog);
-                 link(logpath,explog);
+                 ret = link(logpath,explog);
               }
            }
 
@@ -1113,7 +1117,7 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
                    fprintf(fd,"%s\n",tempbuf);
                    fclose(fd);
                    sprintf(temp3buf,"%s/acqqueue/acqmsg",systemdir);
-                   link(temp2buf,temp3buf);
+                   r = link(temp2buf,temp3buf);
                    unlink(temp2buf);
                 }
 

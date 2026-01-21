@@ -35,30 +35,24 @@ for i in mathFuncTargetList:
 fitFileList = [ 'fit.c', 'linfit.c', 'chisq.c' ]
 
 # library dependancies
-ddlPath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,os.pardir,os.pardir,os.pardir,'ddl')
-SConscript(os.path.join(ddlPath, 'SConstruct'))
+# ddlPath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,os.pardir,os.pardir,os.pardir,'ddl')
+# SConscript(os.path.join(ddlPath, 'SConstruct'))
 
 ibPath = os.path.join(cwd, os.pardir, os.pardir,os.pardir,os.pardir,os.pardir,os.pardir,'ib')
 SConscript(os.path.join(ibPath, 'SConstruct'))
-if os.path.exists("m64") or os.path.exists(os.path.join(ibPath,'..','datastation')):
-  compileFlag = ""
-else:
-  compileFlag = " -m32"
 
 # build environments
-cEnv = Environment(CCFLAGS    = '-Wno-error=implicit-function-declaration -O -DLINUX -fPIC'+compileFlag,
-                   CPPDEFINES = ['LINUX'],
-                   LINKFLAGS  = '-shared -Wl,-rpath,.:/vnmr/lib '+compileFlag,
+cEnv = Environment(CCFLAGS    = '-O -DLINUX -fPIC',
+                   LINKFLAGS  = '-shared -Wl,-rpath,.:/vnmr/lib ',
                    CPPPATH    = [cwd,
                                  ])
-LibList = [ 'ddl', 'port3', 'f2c', 'm' ]
+LibList = [ 'port3', 'f2c', 'm' ]
 ufuncsObj = cEnv.Object("ufuncs.c")
 parmlistObj = cEnv.Object("parmlist.c")
 
 fit = cEnv.Program(target  = fitTarget,
                         source  = [ fitFileList]+ufuncsObj+parmlistObj, 
                         LIBPATH = [cwd,
-                                   ddlPath,
                                    ibPath ],
                         LIBS    = LibList,
                                    )
@@ -72,7 +66,6 @@ for i in range(len(mathFuncTargetList)):
     buildList.append(cEnv.Program(target = mathFuncTargetList[i],
                         source  = [ srcFileList[i]]+ufuncsObj+parmlistObj, 
                         LIBPATH = [cwd,
-                                   ddlPath,
                                    ibPath ],
                         LIBS    = LibList,
                                    )

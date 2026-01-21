@@ -11,7 +11,6 @@ procTarget = 'Masproc'
 cwd = os.getcwd()
 
 # library dependancies
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
 ncommHdrList = [ 'errLogLib.h',
                  'eventHandler.h',
                  'ipcMsgQLib.h',
@@ -25,7 +24,10 @@ vnmrHdrList = [ 'acquisition.h',
                 'errorcodes.h']
 
 
-SConscript(os.path.join(ncommPath, 'SConstruct'))
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
+if not os.path.exists(ncommPath):
+   Execute('cp -r '+os.path.join(cwd,os.pardir,'ncomm') + ' ' + ncommPath+ ';touch '+ncommPath+'/m64')
+   Execute('cd ../ncomm64; scons')
 
 # source files
 expProcPath     = os.path.join(cwd,os.pardir,'expproc')
@@ -55,9 +57,9 @@ masProcFileList = ['masproc.c',
 
 
 # build environment
-env = Environment(CCFLAGS    = '-O2 -m32  -DMASPROC -Wall -Wno-implicit-function-declaration',
+env = Environment(CCFLAGS    = '-O2 -DMASPROC -Wall',
                            CPPDEFINES = ['LINUX','DEBUG'],
-                           LINKFLAGS  = '-m32 -Wl,-rpath,/vnmr/lib',
+                           LINKFLAGS  = '-Wl,-rpath,/vnmr/lib',
                            CPPPATH    = [cwd])
 
                                          # expProcPath,
@@ -74,7 +76,7 @@ envProg = env.Program(target  = procTarget,
                                             masProcFileList],
                                  LIBPATH = [cwd,
                                             ncommPath],
-                                 LIBS    = ['acqcomm'])
+                                 LIBS    = ['acqcomm64'])
 
 buildMethods.makeSymLinks(env, procTarget, cwd, nvacqPath, nvacqFileList)
 buildMethods.makeSymLinks(env, procTarget, cwd, expProcPath, expProcHdrList)

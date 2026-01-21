@@ -1024,14 +1024,14 @@ void AspDis1D::setSpecRegion(double c1, double c2, double scale, bool zoomin) {
    if(scale == 0) scale = 1.0;
    c1 *= scale;
    c2 *= scale;
-   double cr,delta;
+   double delta;
    if(c2>c1) {
-	cr = c2;
+	// cr = c2;
 	delta = c2-c1;
 	P_setreal(CURRENT, "sp", c1, 1);
 	P_setreal(CURRENT, "wp", delta, 1);
    } else {
-        cr = c1;
+   //      cr = c1;
 	delta = c1-c2;
 	P_setreal(CURRENT, "sp", c2, 1);
 	P_setreal(CURRENT, "wp", delta, 1);

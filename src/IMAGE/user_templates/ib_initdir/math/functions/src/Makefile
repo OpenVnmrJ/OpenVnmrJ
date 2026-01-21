@@ -3,15 +3,8 @@
 
 BINDIR = ../bin
 SRCDIR = ../src
-ifeq (,$(findstring 64-bit, $(shell file /vnmr/lib/libddl.so)))
-	ARCH = -m32
-else
-	ARCH = 
-endif
-#
 
-# echo "arch is $(arch)"
-CFLAGS = -O -DLINUX $(ARCH) -fPIC
+CFLAGS = -O -DLINUX -fPIC
 CC = gcc
 LIBFLAG = -shared -Wl,-rpath,.:$(BROWSERDIR)/math/lib:$(vnmrsystem)/lib \
                 -L. -L$(BROWSERDIR)/math/lib -L$(vnmrsystem)/lib \
@@ -107,8 +100,8 @@ $(COBJ) : %.o:%.c
 # "-Y": do not look in usual places for system include files.
 # (Produces a bunch of spurious warnings about not being able
 # to find header files.)
-depend:	$(CSRC)
-	makedepend -f makemathfunc.lnx -Y $(CSRC)
+# depend:	$(CSRC)
+# 	makedepend -f makemathfunc.lnx -Y $(CSRC)
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

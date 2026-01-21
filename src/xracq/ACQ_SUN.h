@@ -20,13 +20,9 @@
 #ifdef SUN
 typedef char  c68char;
 typedef short c68int;
-typedef long  c68long;
-typedef unsigned long  c68ulong;
 #else
 typedef char  c68char;
 typedef int   c68int;
-typedef long  c68long;
-typedef unsigned long  c68ulong;
 #endif
 
 #endif
@@ -73,7 +69,7 @@ struct ia_stat {
 		c68int	sh_smplx;	/* are we doing simplex? */
 		c68int	sh_dacs[48];	/* all shimdacs */
 		c68int	adc_size;	/* number of adc bits */
-                c68long neg_ct;         /* negative ct value for FID display */
+      int neg_ct;         /* negative ct value for FID display */
 		c68int	filler;		/* fill to 128 bytes = mailbox size */
 		};
 

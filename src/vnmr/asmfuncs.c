@@ -1021,11 +1021,11 @@ static void blockedByGet(char *dir, char *name)
  */
 static int getQueueFile(char *autodir, char *filename)
 {
-   char queuefile[MAXPATH];
+   char queuefile[MAXPATH+16];
    FILE *fd;
    FILE *outfd;
    char startword[MAXPATH];
-   char tmpStr[2*MAXPATH + 10];
+   char tmpStr[2*MAXPATH + 64];
    char tmp[MAXPATH];
    char tmp2[MAXPATH];
    int  lines = 0;
@@ -1068,13 +1068,14 @@ static int getQueueFile(char *autodir, char *filename)
    fclose(outfd);
    if (lines)
    {
+      int ret __attribute__((unused));
       sprintf(tmpStr,"mv %s %s.tmp", queuefile, queuefile);
-      system(tmpStr);
+      ret = system(tmpStr);
       sprintf(tmpStr,"tail -n +%d %s.tmp > %s.tmp2", lines+1,
               queuefile, queuefile);
-      system(tmpStr);
+      ret = system(tmpStr);
       sprintf(tmpStr,"mv %s.tmp2 %s", queuefile, queuefile);
-      system(tmpStr);
+      ret = system(tmpStr);
       strcat(queuefile,".tmp");
       unlink(queuefile);
       strcat(queuefile,"2");
@@ -1090,11 +1091,12 @@ static int getQueueFile(char *autodir, char *filename)
  */
 static int addQueueFile(char *autodir, char *filename, char *queuename)
 {
-   char queuefile[MAXPATH];
-   char cmd[2*MAXPATH + 10];
+   char queuefile[MAXPATH+16];
+   char cmd[2*MAXPATH + 64];
    char buf[1024];
    int infd, outfd;
    int n;
+   int ret __attribute__((unused));
 
    if ( ! access(filename,R_OK) )
    {
@@ -1105,7 +1107,7 @@ static int addQueueFile(char *autodir, char *filename, char *queuename)
          infd = open(filename, O_RDONLY);
          outfd = open(queuefile, O_WRONLY|O_CREAT|O_APPEND|O_SYNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
          while ( (n = read(infd,buf, 1024)) > 0)
-            write(outfd,buf,n);
+            ret = write(outfd,buf,n);
          fsync(outfd);
          close(outfd);
          close(infd);
@@ -1114,11 +1116,11 @@ static int addQueueFile(char *autodir, char *filename, char *queuename)
       {
          /* prepend to head of autoqueue */
          sprintf(cmd,"mv %s %s.tmp", queuefile, queuefile);
-         system(cmd);
+         ret = system(cmd);
          sprintf(cmd,"cp %s %s", filename, queuefile);
-         system(cmd);
+         ret = system(cmd);
          sprintf(cmd,"/bin/cat %s.tmp >> %s", queuefile, queuefile);
-         system(cmd);
+         ret = system(cmd);
          strcat(queuefile,".tmp");
          unlink(queuefile);
       }
@@ -1198,8 +1200,8 @@ void autoqMsgOff()
 int autoq(int argc, char *argv[], int retc, char *retv[])
 {
    char autodir[MAXPATH];
-   char lockPath[MAXPATH];
-   char idPath[MAXPATH];
+   char lockPath[MAXPATH+16];
+   char idPath[MAXPATH+16];
    char lockLogPath[MAXPATH];
    char idLogPath[MAXPATH];
    char logBasePath[MAXPATH];
@@ -1256,7 +1258,7 @@ int autoq(int argc, char *argv[], int retc, char *retv[])
    else if ( ! strcmp(argv[1],"get") )
    {
       FILE *fd;
-      char blockfile[MAXPATH];
+      char blockfile[MAXPATH+16];
       if (argc < 3)
       {
          Werrprintf("usage: %s('get',filename) requires a filename.",argv[0]);

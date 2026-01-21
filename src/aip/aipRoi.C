@@ -204,7 +204,8 @@ void Roi::create(spGframe_t gframe) {
         GframeManager *gfm = GframeManager::get();
         spGframe_t gf;
         ReviewQueue *rq = ReviewQueue::get();
-        RoiManager *roim = RoiManager::get();
+        RoiManager *roim __attribute__((unused));
+        roim = RoiManager::get();
         spDataInfo_t dataInfo;
         std::set<string> keylist = rq->getKeyset(binding);
         std::set<string>::iterator itr;
@@ -239,6 +240,8 @@ void Roi::create(spGframe_t gframe) {
                         break;
                     case ROI_POLYGON_OPEN:
                         roi = new Polyline(gf, magnetCoords);
+                        break;
+                    default:
                         break;
                     }
                     if (selectFlag && roi !=NULL) {
@@ -376,7 +379,8 @@ void Roi::load(ifstream &infile, int type, bool pixflag) {
     ReviewQueue *rq = ReviewQueue::get();
 
     DataManager *dm = DataManager::get();
-    DataMap *dataMap = dm->getDataMap();
+    DataMap *dataMap __attribute__((unused));
+    dataMap = dm->getDataMap();
 
     std::set<string> keylist = rq->getKeyset(binding);
     std::set<string>::iterator itr;
@@ -526,7 +530,6 @@ double Roi::distanceFromLine(double x, double y, double x1, double y1,
  *  STATIC
  *                                                                       */
 Roi *Roi::get_selected_tool() {
-    Roi *tool;
     RoiManager *roim = RoiManager::get();
 
     if (roim->numberSelected() ) {
@@ -695,12 +698,10 @@ bool Roi::getSum(double &sum, int &count) {
  *  Return true if successful, otherwise false.
  *                                  */
 bool Roi::histostats(int nbins, double bot, double top, RoiData *stats) {
-    register int index;
-    double thickness;
-    double z_location;
+    int index;
     spImgInfo_t img = pOwnerFrame->getFirstImage();
 
-    register float *data;
+    float *data;
     if (nbins <= 0|| (data = firstPixel()) == 0) {
         // aipStatNumBins zero, or no pixels in this ROI.
         return false;
@@ -842,6 +843,7 @@ bool Roi::setPixelCoord(int index, double x, double y) {
     pntPix[index].x = x;
     pntPix[index].y = y;
     updateDataCoord(index);
+    return true;
 }
 
 bool Roi::updateDataCoord(int index) {
@@ -849,7 +851,7 @@ bool Roi::updateDataCoord(int index) {
         return false;
     }
     // Set magnet coordinate
-    if (magnetCoords->coords.size() <= index) {
+    if ((int) magnetCoords->coords.size() <= index) {
         // TODO: use vector for magnetCoords->coords
         magnetCoords->coords.resize(index+1);
     }
@@ -862,13 +864,14 @@ bool Roi::updateDataCoord(int index) {
     magnetCoords->rev = 1;
 
     // Set data coordinate
-    if (pntData->coords.size() <= index) {
+    if ((int) pntData->coords.size() <= index) {
         // Make sure vector is big enough
         pntData->coords.resize(index+1);
     }
     view->pixToData(pntPix[index].x, pntPix[index].y, pntData->coords[index].x,
             pntData->coords[index].y);
     pntData->rev = rev;
+    return true;
 
 }
 
@@ -1107,7 +1110,8 @@ void Roi::drawRoiNumber() {
     int width = 0;
     int x = (int) x_max + 2;
     int y = (int) y_min;
-    int x1 = gf->minX();
+    int x1 __attribute__((unused));
+    x1 = gf->minX();
     int y1 = gf->minY();
     int x2 = gf->maxX();
     int y2 = gf->maxY();
@@ -1292,7 +1296,8 @@ void Roi::createSlavesForData() {
     spGframe_t gf;
     GframeList::iterator gfi;
     DataManager *dm = DataManager::get();
-    DataMap *dataMap = dm->getDataMap();
+    DataMap *dataMap __attribute__((unused));
+    dataMap = dm->getDataMap();
 
     std::set<string> keylist = rq->getKeyset(binding);
     std::set<string>::iterator itr;
@@ -1478,7 +1483,7 @@ void Roi::update_screen_coords() {
 }
 
 void Roi::setMagnetCoordsFromPixels() {
-    if (magnetCoords->coords.size() != npnts) {
+    if ((int) magnetCoords->coords.size() != npnts) {
         magnetCoords->coords.resize(npnts);
     }
     spViewInfo_t view = pOwnerFrame->getFirstView();
@@ -1720,7 +1725,6 @@ bool Roi::contains(int x, int y) {
    bool yes=false;
    Dpoint_t p, poly[64];
    int npt;
-   float r;
    pnts3D_t data;
    int i;
    double a,b;
@@ -1752,6 +1756,7 @@ bool Roi::contains(int x, int y) {
       break;
    case ROI_LINE:
    case ROI_POINT:
+   default:
       break;
    }
    return yes;
@@ -1770,7 +1775,7 @@ void Roi::setDataPntsFromMagnet() {
     if(view == nullView) return;
 
     for (int i=0; i<npnts; i++) {
-        double x, y, z;
+        double x, y;
         double px, py, pz;
         view->magnetToPix(data[i].x, data[i].y, data[i].z, px, py, pz);
         view->pixToData(px, py, x, y);

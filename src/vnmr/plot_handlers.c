@@ -114,7 +114,7 @@ static char TmpPlotterName[128];
 static char TmpPlotterType[128];
 static char TmpOsPlotterName[512];
 static char TmpAttr[MAXSTR];
-static char TmpLraster[6];
+static char TmpLraster[16];
 static char PaperName[128];
 static char Lbaud[10];
 static char TmpTitle[128];
@@ -3380,11 +3380,11 @@ static
 void hires_absolute(float *ptr, double scale, int dfpnt, int depnt, int npnts,
            int vertical, int offset, int maxv, int minv, int dcolor)
 {
-  register int i,npnt;
-  register double nextval;
-  register double maxval, minval;
-  register double xfactor;
-  register int xorig, yorig;
+  int i,npnt;
+  double nextval;
+  double maxval, minval;
+  double xfactor;
+  int xorig, yorig;
 
   cp_tog = 0;
   ps_flush(); 
@@ -3460,9 +3460,9 @@ static
 void hires_relative(float *ptr, double scale, int dfpnt, int depnt, int npnt,
            int vertical, int offset, int maxv, int minv, int dcolor)
 {
-  register int i, start, stop, pnts;
-  register double nextval, lastval;
-  register double maxval, minval;
+  int i, start, stop, pnts;
+  double nextval, lastval;
+  double maxval, minval;
 
   cp_tog = 0;
   ps_flush(); 
@@ -3581,7 +3581,7 @@ ps_ybars(int dfpnt, int depnt, struct ybar *out, int vertical,
          int maxv, int minv) 
 /**********************************************/
 { 
-  register int i,del,start,stop,base;
+  int i,del,start,stop,base;
   void range_ybar();			
   ps_flush(); 
   /* first check vertical limits */
@@ -3897,8 +3897,8 @@ plot_ybars(int dfpnt, int depnt, struct ybar *out, int vertical,
            int maxv, int minv)  
 /********************************************/
 /* draws a spectrum */
-{ register int i,j,k;
-  register int down,lasty;
+{ int i,j,k;
+  int down,lasty;
   void range_ybar();			
 	
   /* first check vertical limits */
@@ -4527,7 +4527,7 @@ plot_multi_column_table(char *fpath, int isPeak) {
     fclose(fd);
 }
 
-static long
+static int
 plot_2_columns(FILE *fd, int plotValue, int *lines) {
     int leftSide, length, k1, k2, s1, s2;
     int ptr, w, x, x2, y, incr, lastY, gap, rows;

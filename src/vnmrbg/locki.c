@@ -111,12 +111,12 @@ static int lock_first;
 static int acqi_connected = FALSE;
 static float LKlevel = 0.0;
 static FID_STAT_BLOCK *fidstataddr;
-static unsigned long fidId = 0;
+static unsigned int fidId = 0;
 
 static struct {
-	long	NumTrans;
-	long	ctcount;
-	long	elemid;
+	int	NumTrans;
+	int	ctcount;
+	int	elemid;
 } prevFidStats;
 
 
@@ -307,7 +307,7 @@ static void disp_nvdata() {
     int len;
     char   buf[12];
     int     i, sum;
-    long    lkdata[1024];
+    int    lkdata[1024];
 
     free(fidstataddr);
     fidstataddr = malloc(sizeof(FID_STAT_BLOCK));
@@ -378,7 +378,7 @@ static void disp_nvdata() {
     sum >>= NDC_LOCKDATA_SHIFTCONST;
 */
     for (i=0;i < 512;i++) {
-      lkdata[i] = (long)-(( ((float)(lkdata[i] >> NDC_LOCKDATA_SHIFTCONST) + 1024)/2048.0) * (mnumypnts * 2.0 / 3.0));
+      lkdata[i] = -(( ((float)(lkdata[i] >> NDC_LOCKDATA_SHIFTCONST) + 1024)/2048.0) * (mnumypnts * 2.0 / 3.0));
     }
     expand32(&lkdata[0], 130, out[new], mnumxpnts, (mnumypnts * 2) / 3);
     /* calculate imaginary date */
@@ -387,7 +387,7 @@ static void disp_nvdata() {
 	    lkdata[i]=0;
         sort_nvdata(sData+1, lkdata+10, len, &sum);
         for (i=0;i < 512;i++) {
-         lkdata[i] = (long)-(( ((float)(lkdata[i] >> NDC_LOCKDATA_SHIFTCONST)
+         lkdata[i] = -(( ((float)(lkdata[i] >> NDC_LOCKDATA_SHIFTCONST)
 		 + 1024)/2048.0) * (mnumypnts * 2.0 / 3.0));
 	}
         expand32(&lkdata[0], 130, imgout[new], mnumxpnts, (mnumypnts * 2) / 3);
@@ -510,7 +510,7 @@ disp_nvdata()
     sum >>= NDC_LOCKDATA_SHIFTCONST;
 */
     for (i=0;i < 512;i++) {
-      lkdata[i] = (long)-(( ((float)(lkdata[i] >> NDC_LOCKDATA_SHIFTCONST) + 1024)/2048.0) * (mnumypnts * 2.0 / 3.0));
+      lkdata[i] = -(( ((float)(lkdata[i] >> NDC_LOCKDATA_SHIFTCONST) + 1024)/2048.0) * (mnumypnts * 2.0 / 3.0));
     }
     expand32(&lkdata[0], 130, out[new], mnumxpnts, (mnumypnts * 2) / 3);
     /* calculate imaginary date */
@@ -848,7 +848,7 @@ locki(int argc, char **argv, int retc, char **retv)
 int stop_acqi( int abortall )
 {
     int rtn = acqi_connected;
-    char tmp[MAXPATH];
+    char tmp[MAXPATH] = {};
     P_getstring(GLOBAL,"acqmode",tmp,1, 12);
     if (strcmp(tmp,"lock") == 0)
     { if (stop_lockexp()) {

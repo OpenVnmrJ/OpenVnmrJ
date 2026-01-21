@@ -341,14 +341,14 @@ void AspPeak::display1d(spAspCell_t cell, int xoff, int yoff, spAspDataInfo_t da
 void AspPeak::display2d(spAspCell_t cell, int xoff, int yoff, spAspDataInfo_t dataInfo, int peakFlag) {
 
    char fontName[64];
-   int markcolor;
+//   int markcolor;
    if(selected == LABEL_SELECTED) {
         getOptName(PEAK_LABEL,fontName);
    } else {
         getOptName(PEAK_NUM,fontName);
    }
-   if(selected == PEAK_SELECTED) markcolor = ACTIVE_COLOR; 
-   else markcolor = PEAK_NUM_COLOR;
+//   if(selected == PEAK_SELECTED) markcolor = ACTIVE_COLOR; 
+//   else markcolor = PEAK_NUM_COLOR;
 
    if(dataInfo->haxis.name == cursor->resonances[0].name
 		&& dataInfo->vaxis.name == cursor->resonances[1].name) {

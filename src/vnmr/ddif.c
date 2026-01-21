@@ -165,7 +165,7 @@ ddif (int argc, char *argv[], int retc, char *retv[])
   /*Declarations */
 /*{{{*/
   int ini, ipnt, nextpeak = 0, currpeak, prevpeak;
-  register int i, l, ij;
+  int i, l, ij;
   float *inp;
   double prevnompt, arg1, arg2, arg3, arg4, erff1, erff2, erff3, erff4,
     currdiff, halfptdiff, root2, peakamp, peakmax;
@@ -512,7 +512,7 @@ ddif (int argc, char *argv[], int retc, char *retv[])
 	    (short) S_DATA | S_SPEC | S_FLOAT | S_COMPLEX | NI_CMPLX;
 	  inblock.head->index = (short) n;
 	  inblock.head->mode = (short) NP_PHMODE | NI_PHMODE;
-	  inblock.head->ctcount = (long) 0;
+	  inblock.head->ctcount = 0;
 	  inblock.head->lpval = 0.0;
 	  inblock.head->rpval = 0.0;
 	  inblock.head->lvl = 0.0;

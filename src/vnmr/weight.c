@@ -215,8 +215,8 @@ int init_wt1(struct wtparams *wtpar, int fdimname)
 |             init_wt2()/7              |
 |                                       |
 +--------------------------------------*/
-int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
-             register int n, int rftflag, int fdimname, double fpmult, int rdwtflag)
+int init_wt2(struct wtparams *wtpar, float  *wtfunc,
+             int n, int rftflag, int fdimname, double fpmult, int rdwtflag)
 {
   char                  wtfname[MAXSTR],
                         wtfilename[MAXPATHL],
@@ -232,8 +232,8 @@ int init_wt2(struct wtparams *wtpar, register float  *wtfunc,
                         ph,
 			phi,
                         awc;
-  register int          i;
-  register float        lbconst,
+  int          i;
+  float        lbconst,
 			lbvar,
 			gfconst,
 			gfvar,
