@@ -45,7 +45,7 @@ extern int chgdeg2b();
 extern int acqiflag;		/* True if acodes are for Acqi */
 extern int bgflag;		/* print diagnostics if not 0 */
 extern int rcvroff_flag;	/* global receiver off flag */
-/* extern int decblankoff_flag;	/* global decoupler blanking flag */
+// extern int decblankoff_flag;	/* global decoupler blanking flag */
 extern char filexpath[];	/* ex: $vnmrsys/acqque/exp1.russ.012345 */
 extern char fileRFpattern[];	/* absolute path name of WG RF load file */
 extern char filegrad[]; 	/* path for old SIS RF modulator patterns */
@@ -132,7 +132,7 @@ struct patinarray *inpatptr[INPUTPTR_ARRAYSIZE];
 struct outpatfile {		/* output file descriptor structure	*/
 	int	fd;		/* unit number		*/
 	codelong *hptr;		/* header pointer 	*/		
-	unsigned long *mptr;	/* data pointer		*/
+	unsigned int *mptr;	/* data pointer		*/
 	int	size;		/* size			*/
 	} ;
 
@@ -170,7 +170,7 @@ static char paterrmsg[MAXPATHL]; /* for forming messages for text_error */
 *************************************************************************/
 
 
-initshapedpatterns(dummyarg)
+int initshapedpatterns(dummyarg)
 /************************************************************************
 * Initshapedpatterns needs to be called once at the beginning of an
 * experiment acquisition.  It initializes the tables used for tracking 
@@ -179,7 +179,6 @@ initshapedpatterns(dummyarg)
 *************************************************************************/
 int dummyarg;	/* MUST BE 1! will be arraydim when arrayed patterns work */
 {
- int	i;
  int	mask;
 
  arrayno = 0;
@@ -232,7 +231,7 @@ int dummyarg;	/* MUST BE 1! will be arraydim when arrayed patterns work */
  /*******							*********/
  otptr = &obstbl;
  if (bgflag)
-	fprintf(stderr,"otptr = %lx\n",otptr);
+	fprintf(stderr,"otptr = %p\n",otptr);
  if (initpl(otptr) == PATERR)
  {
 	text_error("could not allocate memory for obs RF pulse table\n");
@@ -288,7 +287,8 @@ p_endarrayelem()
  arrayno++;			/* increment array counter	*/
 }
 
-closeshapedpatterns(dummyarg)
+// int dummyarg;	/* MUST BE 1! will be arraydim when arrayed patterns work */
+int closeshapedpatterns(int dummyarg)
 /************************************************************************
 * Frees memory that holds the pattern link list.  
 * Writes the size of the pattern file in words and the last sector of
@@ -299,20 +299,19 @@ closeshapedpatterns(dummyarg)
 * experiment.
 * PATERR RETURN FROM THIS FUNCTION SHOULD ABORT PULSE SEQUENCE GENERATION !!
 *************************************************************************/
-int dummyarg;	/* MUST BE 1! will be arraydim when arrayed patterns work */
 {
 	struct pmlist  *pl;		/* memory map list pointer */
 	struct pmlist  *nextpl;		/* memory map list pointer */
 
-	if (rfpatfilptr->size > (long)(dummyarg+1) * sizeof(codelong)) {
+	if (rfpatfilptr->size > (dummyarg+1) * sizeof(codelong)) {
 	/* "rewind" file and update file header */
 		if (lseek(rfpatfilptr->fd,0,0) == SYSERR) {
 			text_error("RF lseek failed!\n");
 			return(PATERR);
 		}
 		if (write(rfpatfilptr->fd,rfpatfilptr->hptr,
-		(long)(dummyarg+1) * sizeof(codelong)) !=
-		(long)(dummyarg+1) * sizeof(codelong)) {
+		(dummyarg+1) * sizeof(codelong)) !=
+		(dummyarg+1) * sizeof(codelong)) {
 			text_error("RF write failed!\n");
 			return(PATERR);
 		}
@@ -367,7 +366,7 @@ void S_shapedpulse(char *pulsefile, double pulsewidth, codeint phaseptr,
  double twidth;
  codeint patptr;
 	if (bgflag) {
-		fprintf(stderr,"pulsefile addr = %x\n",pulsefile);
+		fprintf(stderr,"pulsefile addr = %p\n",pulsefile);
 		fprintf(stderr,"pulsefile = %s\n",pulsefile);
 		fprintf(stderr,"pulsewidth = %lf\n",pulsewidth);
 		fprintf(stderr,"phaseptr = %d\n",phaseptr);
@@ -511,7 +510,7 @@ void S_simshapedpulse(char *fno, char *fnd, double transpw, double decpw,
 *************************************************************************/
 {
  double centertime;
- double	twidth,two,twd;
+ double	two,twd;
  int	ogate,dgate;
  codeint patptr;
  char	*pb = "";
@@ -527,7 +526,6 @@ if ((transpw > 0.0) && (decpw > 0.0))
 	HSgate(RFP270,FALSE);
 	sisdecblank(OFF);
  	HSgate(RXOFF,TRUE); 
-	twidth = 0.0;
 	two = transpw; 
 	twd = decpw;
 	if (strcmp(fno,pb) > 0) 
@@ -594,7 +592,6 @@ if ((transpw > 0.0) && (decpw > 0.0))
    		HSgate(ogate,FALSE);  
 		G_Delay(DELAY_TIME, centertime, 0);
    		HSgate(dgate,FALSE);
-		twidth=centertime+centertime+two;
   	}
  	else
   	{
@@ -606,7 +603,6 @@ if ((transpw > 0.0) && (decpw > 0.0))
    		HSgate(dgate,FALSE); 
 		G_Delay(DELAY_TIME, centertime, 0);
    		HSgate(ogate,FALSE);
-		twidth=centertime+centertime+twd;
   	}
 	G_Delay(DELAY_TIME, rx2, 0);
 	sisdecblank(ON);
@@ -636,7 +632,7 @@ struct	shapetbl *tblptr;
 		fprintf(stderr,"pat= %s width = %lg\n",pulsefile,pulsewidth);
 	}
 	if (bgflag)
-		fprintf(stderr,"otptr = %lx\n",tblptr);
+		fprintf(stderr,"otptr = %p\n",tblptr);
 	
 	if ((patternptr = patsrch(pulsefile,pulsewidth * 1.0e6,tblptr))
 	== PATERR)
@@ -705,7 +701,7 @@ struct	shapetbl *tblptr;
    	hdrptr->patptr = patternptr;
    	hdrptr->patwords = npatunits;
 	hdrptr->spare = 0x4242; /* DEBUG ONLY */
-   	tsize = ((npatunits)*(sizeof(long)))
+   	tsize = ((npatunits)*(sizeof(int)))
 	+ sizeof(struct dataheader);
    	if (write(opfile->fd,opfile->mptr,tsize) != tsize) {
 		text_error("RF write failed\n");
@@ -833,7 +829,7 @@ struct	outpatfile *opfile;
 {
 	double	remtim;
 	int	i,ip,ia,patternsiz,tnum,j;
-	unsigned long *outpatptr;
+	unsigned int *outpatptr;
 	int	iamplitude,iphase;
 	struct ptimecodes tpat[TIMTBLSIZE];
 
@@ -853,7 +849,7 @@ struct	outpatfile *opfile;
 	/* opfile is rfpatfilptr at this point */
 	/* malloc space for pattern header (not file header!) and pattern
 	data */
-	opfile->mptr = (unsigned long *) malloc(((PATWRDMAX) * sizeof(long)) +
+	opfile->mptr = (unsigned int *) malloc(((PATWRDMAX) * sizeof(int)) +
 				sizeof(struct dataheader));
 	if (opfile->mptr == NULL) {
 		text_error("output pattern file malloc failed\n");
@@ -862,7 +858,7 @@ struct	outpatfile *opfile;
 	/* initialize ==> header */
 	hdrptr = (struct dataheader *) opfile->mptr;
 	/* initialize ==> pattern info */
-	outpatptr = (unsigned long *)((char *)hdrptr + sizeof(struct dataheader));
+	outpatptr = (unsigned int *)((char *)hdrptr + sizeof(struct dataheader));
 
 
 	while (i <= patpntcnt) {
@@ -937,11 +933,11 @@ insbitl(srcwrd, dstwrd, startbit, nbits)
 /* 	startbit location in dstwrd.					*/
 /************************************************************************/
 #define maxbits  32
-long	srcwrd;
-long	*dstwrd;
+int	srcwrd;
+int	*dstwrd;
 int	startbit, nbits;
 {
-long	msk;
+int	msk;
 int	temp;
 
 temp = startbit + nbits;
@@ -964,7 +960,7 @@ return;
 /*float	rphase;
  *{
  * int iphase;
- * iphase = ((long) ((rphase + 0.25)*10)) % 3600;
+ * iphase = ((int) ((rphase + 0.25)*10)) % 3600;
  * if (iphase < 0) iphase = 3600 + iphase;
  * iphase = ((iphase/900)*256) + ((iphase % 900)/5);
  * return(iphase);
@@ -1071,7 +1067,7 @@ struct shapetbl *tblptr;
 
 	pl->type = FREE;	/* create first entry in the list to init */
 	if (bgflag)
-		fprintf(stderr,"initpl hostmem = %lx mem_size = %ld\n",pl,pl->wordcount);
+		fprintf(stderr,"initpl hostmem = %p mem_size = %d\n",pl,pl->wordcount);
 	pl->patadr = 0;
 	pl->arrayno = 0;
 	pl->wordcount = PATWRDMAX;
@@ -1255,7 +1251,7 @@ struct shapetbl *tblptr;
 			pl->wordcount += next->wordcount;
 			pl->flink = next->flink;
 			if (bgflag)
-				fprintf(stderr,"free next = %x\n",next);
+				fprintf(stderr,"free next = %p\n",next);
 			free(next);
 		}
 	}
@@ -1268,7 +1264,7 @@ struct shapetbl *tblptr;
 			prev->wordcount += pl->wordcount;
 			prev->flink = pl->flink;
 			if (bgflag)
-				fprintf(stderr,"free current = %x\n",pl);
+				fprintf(stderr,"free current = %p\n",pl);
 			free(pl);
 		}
 	}

@@ -16,7 +16,7 @@
 	gen_apshaped_pulse provides fine-grained "waveform generator-type"
 	pulse shaping capability for systems with direct frequency synthesis
 	and on-board small angle phase and linear amplitude control via AP bus.
-	A pulse shape file for the waveform generator (/vnmr/shapelib/*.RF)
+	A pulse shape file for the waveform generator (*.RF in /vnmr/shapelib/)
 	is interpreted and translated into AP bus statements.
 	The amplitude pattern is stored in a phase table, which is then read
 	in a loop. Also the phase pattern is stored in a phase table; small
@@ -81,6 +81,9 @@
 #include "apdelay.h"
 #include "macros.h"
 #include "vfilesys.h"
+#include "abort.h"
+#include "pvars.h"
+#include "rcvrfuncs.h"
 
 #define CURRENT		1
 #define MAXPATHL	128
@@ -91,7 +94,8 @@
 
 FILE	*shapefile;
 
-extern double	getval();
+extern void HSgate(int ch, int state);
+extern double getval(const char *name);
 extern char	curexp[MAXPATHL];
 
 static int	*shape_pwr;
@@ -160,8 +164,7 @@ double	pws,
    {
       float phase, amplitude, duration;
    };
-   char fname[MAXSTR],
-        errstr[MAXSTR];
+   char fname[MAXSTR];
    int 	i, k, nitems,
 	*start_pwrpntr,
 	*start_phspntr;
@@ -175,8 +178,7 @@ double	pws,
 
    if (ap_interface < 4)
    {
-      text_error("apshaped_pulse is available only on UnityPlus.\n");
-      psg_abort(1);
+      abort_message("apshaped_pulse is available only on UnityPlus.\n");
    }
 
     if (newacq)
@@ -236,11 +238,9 @@ double	pws,
    +-------------------------------------*/
    if (nslices == 0)
    {
-      strcpy(errstr,"apshaped_pulse:  incorrect shape definition in ");
-      strcat(errstr,fname);
-      text_error(errstr);
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  incorrect shape definition in %s",
+            fname);
    }
 
    /*--------------------------------------------------+
@@ -249,11 +249,9 @@ double	pws,
    +--------------------------------------------------*/
    if (nslices > MAXSLICES)
    {
-      strcpy(errstr,"apshaped_pulse:  too many elements in pulse shape ");
-      strcat(errstr,fname);
-      text_error(errstr);
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  too many elements in pulse shape %s",
+            fname);
    }
 
 
@@ -265,9 +263,8 @@ double	pws,
    spulse = start_spulse;
    if (spulse == NULL)
    {
-      text_error("apshaped_pulse:  unable to allocate buffer memory");
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  unable to allocate buffer memory");
    }
 
    /*--------------------------------------------------+
@@ -278,7 +275,7 @@ double	pws,
    shape_pwr = start_pwrpntr;
    if (start_pwrpntr == NULL)
    {
-      text_error("apshaped_pulse:  unable to create pointer to power values");
+      abort_message("apshaped_pulse:  unable to create pointer to power values");
       fclose(shapefile);
       psg_abort(1);
    }
@@ -286,9 +283,8 @@ double	pws,
    shape_phase = start_phspntr;
    if (start_phspntr == NULL)
    {
-      text_error("apshaped_pulse:  unable to create pointer to phase values");
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  unable to create pointer to phase values");
    }
  
    /*---------------------------------------+
@@ -442,8 +438,7 @@ double	pws,
 
    if ( (plength - aptime) < mindelay)
    {
-      text_error("apshaped_pulse: pulse too short or too many elements in shape");
-      psg_abort(1);
+      abort_message("apshaped_pulse: pulse too short or too many elements in shape");
    }
 
 
@@ -526,7 +521,7 @@ double	pws,
 |				calling arguments.		|
 +--------------------------------------------------------------*/
 /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
-G_apshaped_pulse(shape, pws, phs, rx1, rx2, device)
+void G_apshaped_pulse(shape, pws, phs, rx1, rx2, device)
 char	shape[MAXSTR];
 codeint	phs;
 int	device;
@@ -543,15 +538,14 @@ double	pws,
    };
    char filep1[MAXSTR],             /* vnmruser */
         filep2[MAXSTR],             /* vnmrsystem */
-	fname[MAXSTR],
-        errstr[MAXSTR];
+	fname[MAXSTR];
    int 	i, k, nitems,
 	*start_pwrpntr,
 	*start_phspntr;
    int npulses = 0,
        nslices = 0,
        output = FALSE;
-   extern double rfchan_getpwrf();
+   extern double rfchan_getpwrf(int chan);
    double	plength, aptime, tmp, mindelay, mod_factor;
    float	phas, amp, dur, gate;
    struct p_slice *spulse, *start_spulse;
@@ -565,8 +559,7 @@ double	pws,
    
    if (ap_interface < 4)
    {
-      text_error("apshaped_pulse is available only on UnityPlus.\n");
-      psg_abort(1);
+      abort_message("apshaped_pulse is available only on UnityPlus.\n");
    }
 
     if (newacq)
@@ -608,8 +601,7 @@ double	pws,
       shapefile = fopen(filep2, "r");	/* if not found, find global file */
       if (shapefile == NULL)
       {
-         text_error("apshaped_pulse:  shape file not found.\n");
-         psg_abort(1);
+         abort_message("apshaped_pulse:  shape file not found.\n");
       }
       else
       {
@@ -650,11 +642,9 @@ double	pws,
    +-------------------------------------*/
    if (nslices == 0)
    {
-      strcpy(errstr,"apshaped_pulse:  incorrect shape definition in ");
-      strcat(errstr,fname);
-      text_error(errstr);
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  incorrect shape definition in %s",
+            fname);
    }
 
    /*--------------------------------------------------+
@@ -663,11 +653,9 @@ double	pws,
    +--------------------------------------------------*/
    if (nslices > MAXSLICES)
    {
-      strcpy(errstr,"apshaped_pulse:  too many elements in pulse shape ");
-      strcat(errstr,fname);
-      text_error(errstr);
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  too many elements in pulse shape %s",
+            fname);
    }
 
 
@@ -679,9 +667,8 @@ double	pws,
    spulse = start_spulse;
    if (spulse == NULL)
    {
-      text_error("apshaped_pulse:  unable to allocate buffer memory");
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  unable to allocate buffer memory");
    }
 
    /*--------------------------------------------------+
@@ -692,17 +679,15 @@ double	pws,
    shape_pwr = start_pwrpntr;
    if (start_pwrpntr == NULL)
    {
-      text_error("apshaped_pulse:  unable to create pointer to power values");
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  unable to create pointer to power values");
    }
    start_phspntr = (int *)malloc(sizeof(int) * (nslices + 2));
    shape_phase = start_phspntr;
    if (start_phspntr == NULL)
    {
-      text_error("apshaped_pulse:  unable to create pointer to phase values");
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  unable to create pointer to phase values");
    }
  
    /*---------------------------------------+
@@ -875,8 +860,7 @@ double	pws,
 
    if ( (plength - aptime) < mindelay)
    {
-      text_error("apshaped_pulse: pulse too short or too many elements in shape");
-      psg_abort(1);
+      abort_message("apshaped_pulse: pulse too short or too many elements in shape");
    }
 
 

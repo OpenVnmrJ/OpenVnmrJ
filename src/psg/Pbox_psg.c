@@ -458,7 +458,11 @@ shape getGsh(char *shname)			/* read .GRD shaped gradient */
     gshape.pw = 0.0;
 
   fseek(inpf, 0, 0);
-  while ((getc(inpf)) == '#') fgets(str, MAXSTR, inpf);  /* ignore com-s */
+  while ((getc(inpf)) == '#')
+  {
+     char *ptr __attribute__((unused));
+     ptr = fgets(str, MAXSTR, inpf);  /* ignore com-s */
+  }
   k = ftell(inpf); fseek(inpf, k-1, 0);
 
   j = 0; nn = 0;
@@ -569,7 +573,7 @@ shape getRsh(char *shname)    /* retrieve parameters from .RF file header */
 
   rshape.ok = 0;
   rshape.pw = 0.0; rshape.pwr = 0.0; rshape.pwrf = 0.0; rshape.dres = 0.0;
-  rshape.dmf = 0,0; rshape.dcyc = 0.0; rshape.B1max = 0.0;
+  rshape.dmf = 0.0; rshape.dcyc = 0.0; rshape.B1max = 0.0;
   (void) sprintf(rshape.name, "%s" , shname);
   fixname(rshape.name);
 
@@ -965,8 +969,10 @@ void presat() /* use tof instead of satfrq */
 
 void new_name(char *name)
 {
+  int offset;
   getstr("seqfil", name);   
-  sprintf(name, "%s_%d", name, ++ipx); 
+  offset = strlen(name);
+  sprintf(name + offset, "_%d", ++ipx); 
   
   return; 
 }
@@ -977,7 +983,7 @@ void new_name(char *name)
 int isarry(char *arrpar)
 {
   char array[MAXSTR];
-  int i, j, k, m, n;
+  int i, j, m, n;
 
   getstr("array",array);
 
@@ -985,7 +991,7 @@ int isarry(char *arrpar)
   else if (array[0] == '(') i=1, j--;
   else i=0;
 
-  k=0; m=0;
+  m=0;
   while(i < j)
   {
     while((i < j) && (arrpar[m] == array[i]))
@@ -1023,7 +1029,10 @@ void opx(char *name)  /* Syntax : opx(""); opx("xxx"); opx("xxx.RF"); opx(pwpat)
 
 void setwave(char *wave)      /* Syntax : setwave("esnob 2.5m -12.4k"); */
 {
-  sprintf(px_cmd, "%s \"%s\" ", px_cmd, wave); 
+  int offset;
+  
+  offset = strlen(px_cmd);
+  sprintf(px_cmd+offset, " \"%s\" ", wave); 
   
   return; 
 }
@@ -1032,8 +1041,11 @@ void setwave(char *wave)      /* Syntax : setwave("esnob 2.5m -12.4k"); */
 void putwave(char *sh, double bw, double ofs, double st,
              double pha, double fla)
 {
-  sprintf(px_cmd, "%s \"%s %.7f %.2f %.2f %.2f %.2f\" ", 
-          px_cmd, sh, bw, ofs, st, pha, fla); 
+  int offset;
+  
+  offset = strlen(px_cmd);
+  sprintf(px_cmd+offset, " \"%s %.7f %.2f %.2f %.2f %.2f\" ", 
+          sh, bw, ofs, st, pha, fla); 
   
   return; 
 }
@@ -1041,7 +1053,10 @@ void putwave(char *sh, double bw, double ofs, double st,
 
 void pboxpar(char *pxname, double pxval) /* syntax: pboxpar("steps", 500.0) */
 {
-  sprintf(px_opts, "%s -%s %.3f", px_opts, pxname, pxval); 
+  int offset;
+  
+  offset = strlen(px_opts);
+  sprintf(px_opts+offset, " -%s %.3f", pxname, pxval); 
   
   return; 
 }
@@ -1050,7 +1065,10 @@ void pboxpar(char *pxname, double pxval) /* syntax: pboxpar("steps", 500.0) */
 /* old style, to insure back-compatibility */
 void pbox_par(char *pxname, char *pxval)  /* syntax: pbox_par("steps", "500") */
 {
-  sprintf(px_opts, "%s -%s %s", px_opts, pxname, pxval); 
+  int offset;
+  
+  offset = strlen(px_opts);
+  sprintf(px_opts+offset, " -%s %s", pxname, pxval); 
   
   return; 
 }
@@ -1058,7 +1076,10 @@ void pbox_par(char *pxname, char *pxval)  /* syntax: pbox_par("steps", "500") */
 
 void pboxSpar(char *pxname, char *pxval) /* syntax: pboxSpar("steps", "500") */
 {
-  sprintf(px_opts, "%s -%s %s", px_opts, pxname, pxval); 
+  int offset;
+  
+  offset = strlen(px_opts);
+  sprintf(px_opts+offset, " -%s %s", pxname, pxval); 
   
   return; 
 }
@@ -1067,7 +1088,10 @@ void pboxSpar(char *pxname, char *pxval) /* syntax: pboxSpar("steps", "500") */
 /* e.g. pboxUpar("attn", 49, "d")  */
 void pboxUpar(char *pxname, double pxval, char *pxunits)
 {  
-  sprintf(px_opts, "%s -%s %.3f%s", px_opts, pxname, pxval, pxunits); 
+  int offset;
+  
+  offset = strlen(px_opts);
+  sprintf(px_opts+offset, " -%s %.3f%s", pxname, pxval, pxunits); 
   
   return; 
 }
@@ -1075,15 +1099,19 @@ void pboxUpar(char *pxname, double pxval, char *pxunits)
 
 void cpx(double rfpw90, double rfpwr)  /* syntax : cpx(ref_pw90, ref_pwr) */
 {
+  int offset;
+
   if(rfpw90 > 1.0)       /* check validity of calibration data */
   {
-    text_error("cpx : incorrect dimension for pulse length : %.2f sec\n", rfpw90);
-    exit(0);
+    abort_message("cpx : incorrect dimension for pulse length : %.2f sec\n",
+          rfpw90);
   }
-  sprintf(px_cmd, "%s -p %.0f -l %.2f", px_cmd, rfpwr, 1.0e6*rfpw90);  
+  
+  offset = strlen(px_cmd);
+  sprintf(px_cmd+offset, " -p %.0f -l %.2f", rfpwr, 1.0e6*rfpw90);  
   if (px_debug) text_message("%s%s\n", px_cmd, px_opts);
   
-  system((char *)strcat(px_cmd,px_opts));       /* run Pbox */
+  offset = system((char *)strcat(px_cmd,px_opts));       /* run Pbox */
   
   return;
 }
@@ -1092,16 +1120,17 @@ void cpx(double rfpw90, double rfpwr)  /* syntax : cpx(ref_pw90, ref_pwr) */
 shape pbox_inp(char *file_name, double rfpw90, double rfpwr)
 {
   shape xsh;
+  int ret __attribute__((unused));
 
   if(rfpw90 > 1.0)       /* check validity of calibration data */
   {
-    printf("pbox_inp : incorrect dimension for pulse length : %.2f sec\n", rfpw90);
-    exit(0);
+    abort_message("pbox_inp: incorrect dimension for pulse length : %.2f sec\n",
+          rfpw90);
   }
   sprintf(px_cmd, "Pbox -f %s -p %.0f -l %.2f", file_name, rfpwr, 1.0e6*rfpw90);
   if (px_debug) printf("%s\n", px_cmd);
 
-  system(px_cmd);                                       /* run Pbox */
+  ret = system(px_cmd);                     /* run Pbox */
   (void) pbox_get();                        /* get shape parameters */
 
   xsh.pw = pbox_pw;
@@ -1128,15 +1157,15 @@ shape pbox_shape(char *shn, char *wvn, double pw_bw,
 
   if (sh.pwrf > 4095.0) 
   {
+    int ret __attribute__((unused));
     sprintf(str, " -attn %.0f%c\n", rf_pwr, 'd');
 
-    system((char *)strcat(px_cmd,str));                      
+    ret = system((char *)strcat(px_cmd,str));                      
 
     sh = getRsh(shn);
     if (sh.pwrf > 4095.0) 
     {
-      text_error("pbox_make : power error, pwrf = %.0f\n ", sh.pwrf);
-      psg_abort(1);
+      abort_message("pbox_make : power error, pwrf = %.0f\n ", sh.pwrf);
     }
   }
 
@@ -1157,15 +1186,15 @@ shape pboxAshape(char *shn, char *wvn, double bw, double pw,
 
   if (sh.pwrf > 4095.0) 
   {
+    int ret __attribute__((unused));
     sprintf(str, " -attn %.0f%c\n", rf_pwr, 'd');
 
-    system((char *)strcat(px_cmd,str));                      
+    ret = system((char *)strcat(px_cmd,str));                      
 
     sh = getRsh(shn);
     if (sh.pwrf > 4095.0) 
     {
-      text_error("pbox_make : power error, pwrf = %.0f\n ", sh.pwrf);
-      psg_abort(1);
+      abort_message("pbox_make : power error, pwrf = %.0f\n ", sh.pwrf);
     }
   }
 
@@ -1176,8 +1205,9 @@ shape pboxAshape(char *shn, char *wvn, double bw, double pw,
 shape  pbox_mix(char *shp, char *mixpat, double mixpwr,
                 double refpw90, double refpwr)
 {
-  char  cmd[MAXSTR], repflg[MAXSTR], tmp[MAXSTR];
+  char  cmd[MAXSTR*2], repflg[MAXSTR], tmp[MAXSTR];
   double  reps=0.0;
+  int ret __attribute__((unused));
 
   getstr("repflg", repflg);
   if (repflg[A] == 'y') reps = 1.0;
@@ -1186,7 +1216,7 @@ shape  pbox_mix(char *shp, char *mixpat, double mixpwr,
 
   sprintf(cmd, "Pbox %s -u %s -w %s -attn %.0fd -p %.0f -l %.2f -%.0f\n",
           tmp, userdir, mixpat, mixpwr, refpwr, 1e6*refpw90, reps);
-  system(cmd);
+  ret = system(cmd);
   if(repflg[A] == 'y') text_message("  cmd : %s", cmd);
   return (getDsh(tmp));
 }
@@ -1194,7 +1224,8 @@ shape  pbox_mix(char *shp, char *mixpat, double mixpwr,
 /* make adiabatic 180 */
 shape  pbox_ad180(char *shp, double refpw90, double refpwr)
 {
-  char  cmd[MAXSTR], repflg[MAXSTR], tmp[MAXSTR];
+  char  cmd[MAXSTR*2], repflg[MAXSTR], tmp[MAXSTR];
+  int ret __attribute__((unused));
 
   getstr("repflg", repflg);
 
@@ -1202,7 +1233,7 @@ shape  pbox_ad180(char *shp, double refpw90, double refpwr)
 
   sprintf(cmd, "Pbox %s -u %s -w \"cawurst-10 %.2f/%.7f\" -p %.0f -l %.2f\n",
               tmp, userdir, 1.0/refpw90, refpw90*20.0, refpwr, 1e6*refpw90);
-  system(cmd);
+  ret = system(cmd);
   if (repflg[A] == 'y')
     text_message("  cmd : %s", cmd);
 
@@ -1212,7 +1243,8 @@ shape  pbox_ad180(char *shp, double refpw90, double refpwr)
 /* make backwards adiabatic 180 */
 shape  pbox_ad180b(char *shp, double refpw90, double refpwr)
 {
-  char  cmd[MAXSTR], repflg[MAXSTR], tmp[MAXSTR];
+  char  cmd[MAXSTR*2], repflg[MAXSTR], tmp[MAXSTR];
+  int ret __attribute__((unused));
 
   getstr("repflg", repflg);
 
@@ -1220,7 +1252,7 @@ shape  pbox_ad180b(char *shp, double refpw90, double refpwr)
 
   sprintf(cmd, "Pbox %s -u %s -w \"cawurst-10 %.2f/%.7f\" -p %.0f -l %.2f\n",
               tmp, userdir, -1.0/refpw90, refpw90*20.0, refpwr, 1e6*refpw90);
-  system(cmd);
+  ret = system(cmd);
   if (repflg[A] == 'y')
     text_message("  cmd : %s", cmd);
 

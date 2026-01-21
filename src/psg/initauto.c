@@ -100,7 +100,7 @@ int aut_parse(char *pp, int *inc)
    int  tmp;
    int  delaytime;
    int  maxtime;
-   long active;
+   int active;
    char criteria,f_crit;
 
    flag = 0;
@@ -124,11 +124,11 @@ int aut_parse(char *pp, int *inc)
 	 break;
       case SEL_COIL:		/* shim coils to shim and then do simplex */
          tmp = *pp++;
-	 active =  (long) ((*pp++ << 8) & 0xff00);
-	 active |= (long) ((*pp++)       & 0x00ff);
+	 active =  (int) ((*pp++ << 8) & 0xff00);
+	 active |= (int) ((*pp++)       & 0x00ff);
          active = (active << 16);
-	 active |= (long) ((*pp++ << 8)  & 0xff00);
-	 active |= (long) ((*pp++)       & 0x00ff);
+	 active |= (int) ((*pp++ << 8)  & 0xff00);
+	 active |= (int) ((*pp++)       & 0x00ff);
 	 criteria = *pp++;	/* for method shim */
 	 f_crit = *pp++;	/* for method shim */
          *inc += 7;
@@ -348,7 +348,7 @@ static void checkactive(unsigned int *mask)
 static int
 selectcoil(char *py, unsigned int *mask, int shimset)
 {
-   register char   tt,
+   char   tt,
                    ty;
    int             kk;
    unsigned int    active;

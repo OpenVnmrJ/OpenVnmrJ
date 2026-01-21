@@ -49,7 +49,6 @@ extern int newacq;
 extern int acqiflag;
 extern int ap_interface;
 extern int bgflag;
-extern int putcode();
 
 extern Object RF_Rout,RF_Opts,RF_Opts2;
 

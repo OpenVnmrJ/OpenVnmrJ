@@ -46,9 +46,9 @@ extern int 	newacq;
 extern codeint	dtmcntrl;
 
 extern Object ObjectNew();
-extern int AP_Device();
-extern int putcode();
+extern int AP_Device(void *thisv, Message msg, void *param, void *result);
 extern int SetAPAttr(Object attnobj, ...);
+extern void timerwords(double time, int *tword1, int *tword2);
 
 Object APbyte = NULL;
 
@@ -113,8 +113,6 @@ void inituserapobjects()
 
 void setBOB(int value, int reg)
 {
-   char            msge[128];
-
     if (!newacq)
     {
 	text_error("Warning: setuserap available only on Inova systems.\n");
@@ -140,17 +138,13 @@ void setBOB(int value, int reg)
 							SET_VALUE, NULL);
 		break;
 	default:
-		sprintf(msge,"setuserap: Invalid register = %d.\n",reg);
-		text_error(msge);
-        	psg_abort(1);
+		abort_message("setuserap: Invalid register = %d.\n",reg);
     }
 
 }
 
 void vsetBOB(int rtparam, int reg)
 {
-   char            msge[128];
-
     if (!newacq)
     {
 	text_error("Warning: vsetuserap available only on Inova systems.\n");
@@ -172,9 +166,7 @@ void vsetBOB(int rtparam, int reg)
 		SetAPAttr(BOBreg3, SET_RTPARAM, (c68int)(rtparam), NULL);
 		break;
 	default:
-		sprintf(msge,"vsetuserap: Invalid register = %d.\n",reg);
-		text_error(msge);
-        	psg_abort(1);
+		abort_message("vsetuserap: Invalid register = %d.\n",reg);
     }
 
 }
@@ -182,7 +174,6 @@ void vsetBOB(int rtparam, int reg)
 void vreadBOB(int rtparam, int reg)
 {
     int addrreg;
-    char msge[128];
 
     if (!newacq)
     {
@@ -206,9 +197,7 @@ void vreadBOB(int rtparam, int reg)
 		vapread(rtparam,addrreg+3,BOB_READ_SYNC_DELAY);
 		break;
 	default:
-		sprintf(msge,"readuserap: Invalid register = %d.\n",reg);
-		text_error(msge);
-        	psg_abort(1);
+		abort_message("readuserap: Invalid register = %d.\n",reg);
     }
 
 }

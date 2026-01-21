@@ -12,6 +12,7 @@
 |	sets the bit in the HSlines to the given state .
 |				Author Greg Brissey  5/13/86
 +-----------------------------------------------------------------------*/
+#include <stdlib.h>
 #include "acodes.h"
 
 extern int HSlines;

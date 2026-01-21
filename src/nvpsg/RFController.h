@@ -57,7 +57,6 @@ class RFController: public Controller
      static double h1freq;
      static double systemIF;
      static double xmtrHiLowFreq;
-     static double ampHiLowFreq;
 
      cPatternEntry *p2Dec;
      int *increaseDataStore(int *origbuffer,int origsize, int finalsize);

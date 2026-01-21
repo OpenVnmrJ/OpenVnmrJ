@@ -2,13 +2,11 @@
 // You may distribute under the terms of either the GNU General Public
 // License or the Apache License, as specified in the LICENSE file.
 // For more information, see the LICENSE file.
-char *SCCSid_swtune_c(){
-}
+
 #include <standard.h>
 
 #include "acodes.h"
 
-extern int putcode(codeint word);
 void pre_fidsequence()
 {
     int chan;

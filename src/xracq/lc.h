@@ -156,8 +156,8 @@ struct autod {
 /* --- code type definitions, can be changed for different machines */
 typedef char codechar;          /* 1 bytes */
 typedef short codeint;          /* 2 bytes */
-typedef long  codelong;         /* 4 bytes */
-typedef unsigned long  codeulong; /* 4 bytes */
+typedef int  codelong;         /* 4 bytes */
+typedef unsigned int  codeulong; /* 4 bytes */
 #endif
 
 /* auto data structure (pointed to by lc) */

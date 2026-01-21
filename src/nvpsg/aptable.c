@@ -158,7 +158,7 @@ static void writedebug(FILE *fd, int ntables);
 static int checktable(Tableinfo *tblinfo, int tblname, int namechk, int numberchk,
 		      int sizechk, int destchk, int indxchk, int writechk);
 static int table_math(int optype, int *value1, int *value2);
-void APsetreceiver(int tablename);
+static void APsetreceiver(int tablename);
 int tablertv(int tablename);
 int tablesv(int tablename);
 
@@ -342,7 +342,7 @@ get_main_phase(char arg[], int *index, int val[])
    return(j);
 }
 
-int phase_var_type(int val)
+static int phase_var_type(int val)
 {
    return((t1 <= val && val <= t60) ? SET_RTPHASE90 : SET_PHASE90);
 }
@@ -353,8 +353,7 @@ void setreceiver(int phaseptr)
       APsetreceiver(phaseptr);
    else
    {
-      text_error("Syntax Error:  invalid table name in setreceiver( ) psg command\n");
-      psg_abort(1);
+      abort_message("Syntax Error:  invalid table name in setreceiver( ) psg command\n");
    }
 }
 
@@ -391,7 +390,6 @@ int loadtable(char *infilename)
 		numeleminloop = 0,
 		activeopen_flag,
 		tflag = FALSE,
-		repflag = FALSE,
 		equalflag = FALSE,
 		parenthflag = FALSE,
 		bracketflag = FALSE,
@@ -654,7 +652,6 @@ int loadtable(char *infilename)
                load_element(numeleminloop, repfactor, tnum-1, &elempntr,
 		     loopelem, FALSE);
                bracketflag = FALSE;
-               repflag = FALSE;
             }
           
 /****************************************************
@@ -704,7 +701,6 @@ int loadtable(char *infilename)
                load_element(repfactor, numeleminloop, tnum-1, &elempntr,
 		     loopelem, TRUE);
                parenthflag = FALSE;
-               repflag = FALSE;
             }
 
 /*********************************************
@@ -949,9 +945,9 @@ static void checkforcomments(FILE *tfile)
 |              tablename:  t1 - t60                     |
 |                                                       |
 +------------------------------------------------------*/
-void APsetreceiver(int tablename)
+static void APsetreceiver(int tablename)
 {
-   int	recphase;
+   int	recphase __attribute__((unused));
    int		index,
 		i,
 		*table_pntr;
@@ -963,8 +959,7 @@ void APsetreceiver(int tablename)
    if (checktable(Table[index], tablename, TRUE, TRUE, TRUE,
    	FALSE, FALSE, FALSE) == TBLERROR)
    {
-      text_error("Error in SETRECEIVER\n");
-      psg_abort(1);
+      abort_message("Error in SETRECEIVER\n");
    }
 
    table_pntr = Table[index]->table_pointer;
@@ -1002,8 +997,7 @@ int tablertv(int tablename)
    if (checktable(Table[index], 0, FALSE, TRUE, FALSE, TRUE,
    	(!Table[index]->auto_inc), FALSE) == TBLERROR)
    {
-      text_error("Error in retrieving table value\n");
-      psg_abort(1);
+      abort_message("Error in retrieving table value\n");
    }
 
    if (!Table[index]->wrflag)

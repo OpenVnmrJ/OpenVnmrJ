@@ -1,0 +1,50 @@
+# '@(#)p_install '
+# 
+#
+
+# The p_install file is an optional file called by patchinstall.
+# The patchinstall script installs the content of the patch. This file
+# is used to handle miscellanous tasks, such as removing files, changing
+# permissions on files, etc.
+
+# The parameter $vnmrsystem will be set. Its typical value will be /vnmr
+# The parameter $tmp_save is the directory into which any files should be put.
+
+# Files should not be deleted, but moved to the $tmp_save directory.
+# That way, patchuninstall can move the file back. The commented example
+# illustrates removing a macro.
+
+# if [ ! -d $tmp_save/maclib ]
+# then
+#    mkdir -p $tmp_save/maclib
+# fi
+# mv $vnmrsystem/maclib/macroA $tmp_save/maclib/macroA
+
+# The patchinstall script may run fixpsg and display messages about
+# rebooting the console or restarting the acquisition communication
+# programs (the "procs"). Setting the following three variables to
+# yes will select those actions. This is typically done automatically
+# by the patchinstall script. You can also set them to "no" to turn of
+# the actions.
+
+# fix_psg="yes"
+# reboot="yes"
+# su_acqproc="yes"
+# Do fixpsg here to suppress warnings from clang compiler on newer MacOS versions
+fix_psg="no"
+# su_acqproc="no"
+
+
+# If an action cannot be undone by reloading the contents of the
+# saved patch directory back onto $vnmrsystem (/vnmr), then an
+# appropriate action should be saved in the p_uninstall script to undo
+# the action. For example, lets say the permissions on bin fileX
+# are 644 and they should be 664. The following will accomplish that.
+# Another example is renaming bin fileA to fileB.
+
+# chmod 664 $vnmrsystem/bin/fileX
+# printf "chmod 644 $vnmrsystem/bin/fileX\n" >> $tmp_save/p_uninstall
+
+# mv $vnmrsystem/bin/fileA $vnmrsystem/bin/fileB
+# printf "mv $vnmrsystem/bin/fileB $vnmrsystem/bin/fileA\n" >> $tmp_save/p_uninstall
+

@@ -22,7 +22,6 @@
 #include <string.h>
 #include <math.h>
 #include <stdarg.h>
-#include <sys/types.h>		/* for caddr_t */
 
 #include "rfconst.h"
 #include "acodes.h"
@@ -57,16 +56,25 @@ extern int      bgflag;
 #define DPRINT4(level, str, arg1, arg2, arg3, arg4)
 #endif 
 
-#if defined __GNUC__ && __GNUC__ >= 14
-#pragma GCC diagnostic warning "-Wimplicit-function-declaration"
-#endif
-
-extern char    *ObjError(), *ObjCmd();
+extern char *ObjError(int wcode);
+extern char *ObjCmd(int wcode);
 extern void abort_message(const char *format, ...) __attribute__((format(printf,1,2),noreturn));
 extern void text_error(const char *format, ...) __attribute__((format(printf,1,2)));
 extern int AP_Device();
 extern double round_freq(double baseMHz, double offsetHz,
                   double init_offsetHz, double stepsizeHz);
+extern int Device(void *this, Message msg, void *param, void *result);
+extern void putcode(c68int arg);
+extern void putgtab(int table, c68int  word);
+extern int mapRF(int index );
+extern int is_psg4acqi();
+extern int ClearTable(void *ptr, size_t tablesize);
+extern void tune_from_freq_obj(void *FreqObj, int dev_channel );
+extern int validate_imaging_config(char *callname);
+extern void formXLwords();
+extern void formPTSwords();
+extern int lockfreqtab_read(char *lkfilename, int h1freq, double *synthif,
+                     char *lksense, double *lockref);
 
 #define DPRTLEVEL 1
 
@@ -94,20 +102,15 @@ static void calcfixedoffset(Freq_Object *device);
 static int initswpfreq(Freq_Object *device);
 static int incrswpfreq(Freq_Object *device);
 static void calcsisoffset(Freq_Object *device);
-static void setSISPTS(long base, long offset, Freq_Object *device, int setoop);
-void apcodes(int boardadd, int breg, long longw, int *words);
+static void setSISPTS(int base, int offset, Freq_Object *device, int setoop);
+void apcodes(int boardadd, int breg, int longw, int *words);
 void setlkdecfrq(Freq_Object *device);
 
 /*-------------------------------------------------------------
 | Freq_Device()/4 - Message Handler for Freq_devices.
 |			Author: Greg Brissey  6/14/89
 +-------------------------------------------------------------*/
-int
-Freq_Device(this, msg, param, result)
-Freq_Object    *this;
-Message         msg;
-caddr_t         param;
-caddr_t         result;
+int Freq_Device(Freq_Object *this, Message msg, void *param, void *result)
 {
    int             error = 0;
 
@@ -513,7 +516,7 @@ static int set_attr(Freq_Object *this, Msg_Set_Param *param, Msg_Set_Result *res
 		 ObjCmd(param->setwhat), param->DBvalue, this->objname);
          this->sweepnp = param->DBvalue;
          this->maxswpwidth = 
-	       this->sweepnp * ((double) ((unsigned long) 0xffff));
+	       this->sweepnp * ((double) ((unsigned int) 0xffff));
          if (this->sweepwidth > 0)
 	   this->sweepincr = this->sweepwidth / this->sweepnp;
 	 break;
@@ -773,7 +776,6 @@ static int get_attr(Freq_Object *this, Msg_Set_Param *param, Msg_Set_Result *res
 int SetFreqAttr(Object obj, ...)
 {
    va_list         vargs;
-   char            msge[128];
    int             error = 0;
    int             error2 = 0;
    Msg_Set_Param   param;
@@ -811,9 +813,8 @@ int SetFreqAttr(Object obj, ...)
 	    error2 = Send(obj, MSG_SET_DEV_ATTR_pr, &param, &result);
 	    if (error2 < 0)
 	    {
-	       sprintf(msge, "%s : %s  '%s'\n", obj->objname, ObjError(error),
+	       text_error("%s : %s  '%s'\n", obj->objname, ObjError(error),
 		       ObjCmd(param.setwhat));
-	       text_error(msge);
 	       error = error2;
 	       break;
 	    }
@@ -889,8 +890,8 @@ static void calc_nondbl_OffsetStorage(Freq_Object *device, int spare)
 {
    double	ptsfreq;
    int		pts_mode;
-   int		ptsbit;
-   int		reg,apadr,enable;
+//   int		ptsbit;
+   int		reg,apadr;
 
    device->spec_freq = round_freq(device->base_freq, device->offset_freq,
                                   device->init_offset_freq,
@@ -926,8 +927,8 @@ static void calc_nondbl_OffsetStorage(Freq_Object *device, int spare)
 
    reg    = device->ap_reg;
    apadr  = device->ap_adr << 8;
-   ptsbit = 1 << (device->dev_channel-1);	/* e.g. 00001000 */
-   enable = ~ptsbit & 0x1e;			/* e.g. xxx1011x */
+   // ptsbit = 1 << (device->dev_channel-1);	/* e.g. 00001000 */
+   // enable = ~ptsbit & 0x1e;			/* e.g. xxx1011x */
    device->frq_codes[device->codecnt]   = APSELECT|apadr|(reg-1);
    if (( device->ptsoptions & (1 << OVR_UNDR_RANGE)) && !spare)
    { if ( pts_mode == UNDERRANGE )
@@ -957,14 +958,14 @@ static void calc_nondbl_OffsetStorage(Freq_Object *device, int spare)
 static void calc_nondbl_Offset(Freq_Object *device)
 {
    int		ptsbit;
-   int		reg,apadr,enable;
+   int		apadr;
 
    calc_nondbl_OffsetStorage(device,0);
 
-   reg    = device->ap_reg;
+   // reg    = device->ap_reg;
    apadr  = device->ap_adr << 8;
    ptsbit = 1 << (device->dev_channel-1);	/* e.g. 00001000 */
-   enable = ~ptsbit & 0x1e;			/* e.g. xxx1011x */
+   // enable = ~ptsbit & 0x1e;			/* e.g. xxx1011x */
    device->frq_codes[device->codecnt]   = APPREINCWR |apadr|ptsbit;
    device->frq_codes[device->codecnt+1] = APWRITE    |apadr;
    device->codecnt += 2;
@@ -980,7 +981,7 @@ static void set_nondbl_freq_fromstorage(Freq_Object *device, int spare)
 {
    int		pts_mode;
    int		ptsbit;
-   int		reg,apadr,enable;
+   int		reg,apadr;
 
    spare = spare & 0x1;			/* make sure spare is 0 or 1 */
    if (spare)
@@ -992,7 +993,7 @@ static void set_nondbl_freq_fromstorage(Freq_Object *device, int spare)
    reg    = device->ap_reg;
    apadr  = device->ap_adr << 8;
    ptsbit = 1 << (device->dev_channel-1);	/* e.g. 00001000 */
-   enable = ~ptsbit & 0x1e;			/* e.g. xxx1011x */
+   // enable = ~ptsbit & 0x1e;			/* e.g. xxx1011x */
    device->frq_codes[device->codecnt]   = APSELECT|apadr|(reg-1);
    if ( device->ptsoptions & (1 << OVR_UNDR_RANGE) )
    { if ( pts_mode == UNDERRANGE )
@@ -1024,8 +1025,8 @@ static void calcdirectOffset(Freq_Object *device)
 {
    double          ptsfreq;
    double          lbandmax_freq;
-   long            freqKHz;
-   long            freqtHz;
+   int            freqKHz;
+   int            freqtHz;
    int             highband;
    int             within1MHz;
    int             mode;
@@ -1055,8 +1056,8 @@ static void calcdirectOffset(Freq_Object *device)
 
    if (device->ptsoptions & (1 << USE_SETPTS)) /* gen SETPTS or apwords */
    {
-     freqKHz = (long) ((ptsfreq / 1000.0) +.0005);	/* freq KHz */
-     freqtHz = (long) ((ptsfreq - ((double) freqKHz * 1000.0)) * 10.0);	/* .1Hz */
+     freqKHz = (int) ((ptsfreq / 1000.0) +.0005);	/* freq KHz */
+     freqtHz = (int) ((ptsfreq - ((double) freqKHz * 1000.0)) * 10.0);	/* .1Hz */
 
      device->frq_codes[0] = (int) (freqKHz >> 8);
      device->frq_codes[1] = (int) (freqKHz & 0x00ff);
@@ -1065,7 +1066,7 @@ static void calcdirectOffset(Freq_Object *device)
 
      if (bgflag)
       fprintf(stderr,
-	  "directsyn(): PTSfreq = %13.1lf, freqKHz = %ld, freqtHz = %ld \n",
+	  "directsyn(): PTSfreq = %13.1lf, freqKHz = %d, freqtHz = %d \n",
 	      ptsfreq, freqKHz, freqtHz);
 
      /* Determine if Obs & Dec freq are within 1MHz */
@@ -1528,11 +1529,10 @@ static void calcfixedoffset(Freq_Object *device)
 +----------------------------------------------------------------------*/
 static int initswpfreq(Freq_Object *device)
 {
-   char msge[128];
    int i,idx,cnt,mask,highband;
    double lbandmax_freq,dtmp;
    double maxptswidth,maxbandwidth;
-   unsigned long ltmp;
+   unsigned int ltmp;
    Freq_Object    swpobj;	/* temporary sweep freq object */
    Freq_Object    *swpptr;
 
@@ -1550,8 +1550,7 @@ static int initswpfreq(Freq_Object *device)
    /* determine if trans freq is in high band or low band */
    if ( (swpptr->rftype != DIRECTSYN) && (device->rftype != DIRECT_NON_DBL) )
    {
-     sprintf(msge, "%s : Only Direct synthesis RF supported.\n", device->objname);
-     text_error(msge);
+     text_error("%s : Only Direct synthesis RF supported.\n", device->objname);
      return(ERROR_ABORT);
    }
 
@@ -1605,13 +1604,13 @@ static int initswpfreq(Freq_Object *device)
 
    /* if pts 155223964.05  dtmp = 15.0 */
    dtmp = swpptr->pts_freq / 1.0e7; /*  15  100,10 Mhz */
-   ltmp = (long) dtmp;
-   putcode( (int) ltmp);  /* 100,10 MHz */
+   ltmp = (int) dtmp;
+   putcode( ltmp);  /* 100,10 MHz */
 
    dtmp = swpptr->pts_freq - (double) (ltmp * 10000000);
-   ltmp = (long) dtmp;
-   putcode( (int) (ltmp >> 16));  /* upper word 5223964 Hz */
-   putcode( (int) (ltmp & 0xffff)); /* lower word 5223964 Hz */
+   ltmp = (int) dtmp;
+   putcode( (ltmp >> 16));  /* upper word 5223964 Hz */
+   putcode( (ltmp & 0xffff)); /* lower word 5223964 Hz */
    
    cnt = swpptr->codecnt;
    if (swpptr->ptsoptions & (1 << LATCH_PTS))
@@ -1647,17 +1646,15 @@ static int incrswpfreq(Freq_Object *device)
       putcode(device->sweeprtptr);
     else
     {
-      if ((unsigned long)device->sweepincr <= (unsigned long)0xffff)
+      if ((unsigned int)device->sweepincr <= (unsigned int)0xffff)
       {
         putcode((int) (device->sweepincr + 0.5));
       }
       else
       {
-	char msge[128];
-        sprintf(msge, 
+        text_error(
         "%s: Sweep increment too large, decrease sweep width or increase np.\n",
 	   device->objname);
-        text_error(msge);
         return(ERROR_ABORT);
       }
    }
@@ -1682,17 +1679,17 @@ static int incrswpfreq(Freq_Object *device)
 static void calcsisoffset(Freq_Object *device)
 {
    int             cnt;
-   long            baseFreq;	/* base freq */
-   long            max_todostep;
+   int            baseFreq;	/* base freq */
+   int            max_todostep;
    double          base_offset;	/* base freq, (i.e., tbo,dbo ) */
    double          specfreq;
-   double          lbandmax_freq;
+   // double          lbandmax_freq;
    double          pts;		/* PTS syn value */
 
 
    max_todostep = device->freq_stepsize;
 
-   lbandmax_freq = ((double) device->ptsval) - device->iffreq;	/* MHz */
+   // lbandmax_freq = ((double) device->ptsval) - device->iffreq;	/* MHz */
 
    device->spec_freq = round_freq(device->base_freq, device->offset_freq,
                                   device->init_offset_freq,
@@ -1761,10 +1758,10 @@ static void calcsisoffset(Freq_Object *device)
       }
    }
 
-   baseFreq = (long) ((base_offset * 1.0e7) +.005);
+   baseFreq = (int) ((base_offset * 1.0e7) +.005);
    /* set new tbo,dbo, convert to 1/10Hz */
    if (bgflag)
-      fprintf(stderr, "offsetsyn: baseFreq = %ld (1/10Hz)\n", baseFreq);
+      fprintf(stderr, "offsetsyn: baseFreq = %d (1/10Hz)\n", baseFreq);
 
    /* round baseMHz (tbo,dbo) to the larger of the tof & dof stepsize */
    if (max_todostep > 1L)
@@ -1773,7 +1770,7 @@ static void calcsisoffset(Freq_Object *device)
 	  max_todostep : 0L);
 
    if (bgflag)
-      fprintf(stderr, "offsetsyn:round to %ld(.1Hz), baseFreq= %ld(.1Hz)\n",
+      fprintf(stderr, "offsetsyn:round to %d(.1Hz), baseFreq= %d(.1Hz)\n",
 	      max_todostep, baseFreq);
 
    /* set new tbo,dbo, convert to 0.1Hz */
@@ -1795,12 +1792,12 @@ static void calcsisoffset(Freq_Object *device)
    device->codecnt = 0;
    if (device->ptsoptions & (1 <<  SIS_PTS_OFFSETSYN))
    {
-      long ifreq, mainpts;
+      int ifreq, mainpts;
       int setpts = FALSE;
 
       if (device->pts_freq != pts) setpts = TRUE;
-      mainpts = (long)((pts*10.0) + 0.0005);
-      ifreq = (long) (base_offset + 0.45);
+      mainpts = (int)((pts*10.0) + 0.0005);
+      ifreq = (int) (base_offset + 0.45);
       setSISPTS(mainpts,ifreq,device,setpts);	/* device->codecnt set 	*/
 						/* in setSISPTS		*/
    }
@@ -1837,12 +1834,11 @@ static void calcsisoffset(Freq_Object *device)
 # define	dcplofs	2
 # define	ptsboar	7
 
-long lngpow(a,b)
-int a,b;
+int lngpow(int a, int b)
 /* function to calculate power (pow)
 */
 {
-long respow = 1;
+int respow = 1;
 int II;
 	if (b==0) return(respow);
 	for (II=1; II <= b; II++) 
@@ -1850,7 +1846,7 @@ int II;
 	return(respow);
 }
 
-long ptsconv(int value)
+int ptsconv(int value)
 /* conversion program to convert a int number (10 <= x =< 4999) into
    the form for the pts output. Returned value is of type long, BCD coded
    32bit coded
@@ -1863,7 +1859,7 @@ long ptsconv(int value)
 */
 {
 int II;
-long ptsbcd;
+int ptsbcd;
 	{
 		ptsbcd = 0;
 		for (II=0; II<=3; II++) {
@@ -1873,9 +1869,9 @@ long ptsbcd;
 	return(ptsbcd);
 }}
 
-long ptsofs(long ofsint)
+int ptsofs(int ofsint)
 /* subroutine to convert an integer number in Hz (offset) into a bcd AP
-   Bus chip form. Returned value is long.
+   Bus chip form. Returned value is int.
    The bits have to be set as followed:
 		bits	value
 		0-3	1Hz
@@ -1889,7 +1885,7 @@ long ptsofs(long ofsint)
 */
 {
 int II;
-long ptsobcd = 0;
+int ptsobcd = 0;
 	{
 		for (II=0; II<=6; II++) {
 		ptsobcd = ptsobcd + (ofsint%10) * lngpow(2,(II*4));
@@ -1903,13 +1899,13 @@ long ptsobcd = 0;
 /*setoop: set offset or both: 0 only offset*/
 /*1 Main PTS + Offset*/
 /*structure - see freq_device.p */
-static void setSISPTS(long base, long offset, Freq_Object *device, int setoop)
+static void setSISPTS(int base, int offset, Freq_Object *device, int setoop)
 {
    int cnt;
 
     if (bgflag)
       fprintf(stderr, 
-      "setSISPTS: mainpts = %ld, ifreq = %ld , device chl = %d, setpts = %d\n",
+      "setSISPTS: mainpts = %d, ifreq = %d , device chl = %d, setpts = %d\n",
 	      base , offset, device->dev_channel, setoop);
 	cnt = device->codecnt;
 	if (setoop == 1)
@@ -1936,7 +1932,7 @@ static void setSISPTS(long base, long offset, Freq_Object *device, int setoop)
 	device->codecnt += 5;
 }
 
-void apcodes(int boardadd, int breg, long longw, int *words)
+void apcodes(int boardadd, int breg, int longw, int *words)
 {
 int init, seq1, seq2, seq3, seq4;
 

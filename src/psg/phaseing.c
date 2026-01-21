@@ -21,7 +21,6 @@ extern int	bgflag,			/* debug flag */
 		ap_ovrride;		/* ap delay override flag */
 extern int      safety_check();         /* safety checking for max atten value */
 extern char *ObjError(int wcode);
-extern int putcode();
 
 
 /*-----------------------------------------------------------------

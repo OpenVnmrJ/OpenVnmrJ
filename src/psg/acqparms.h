@@ -22,8 +22,8 @@
 /* --- code type definitions, can be changed for different machines */
 typedef char codechar;		/* 1 bytes */
 typedef short codeint;		/* 2 bytes */
-typedef long  codelong;		/* 4 bytes */
-typedef unsigned long  codeulong;/* 4 bytes */
+typedef int  codelong;		/* 4 bytes */
+typedef unsigned int  codeulong;/* 4 bytes */
 
 /*  define ACQPARMS so that other header files know this one is present */
 #define ACQPARMS
@@ -40,8 +40,8 @@ typedef struct {Functionp dispatch; char *objname; } *Object;
 /* --- code array variables --- */
 
 extern codeint    *Codes; 	/* beginning of Acode array */
-extern long	   Codesize;	/* size of the malloc space for codes */
-extern long	   CodeEnd;	/* End Address of the malloc space for codes */
+extern int	   Codesize;	/* size of the malloc space for codes */
+extern int	   CodeEnd;	/* End Address of the malloc space for codes */
 extern codeint    *Codeptr; 	/* pointer into the Acode array */
 extern codeint    *Aacode;	/* pointer to start address of Codes */
 extern codeint    *lc_stadr;  /* Low Core Start Address */
@@ -320,7 +320,7 @@ extern codeint dlvlrt;		/* offset to special dlvlrt */
 extern codeint hwloop_ptr;	/* offset to hardware loop Acode */
 extern codeint multhwlp_ptr;	/* offset to multiple hardware loop flag */
 extern codeint nsc_ptr;		/* offset to NSC Acode */
-extern unsigned long ix;		/* FID currently in Acode generation */
+extern unsigned int ix;		/* FID currently in Acode generation */
 extern int     nth2D;		/* 2D Element currently in Acode generation (VIS usage)*/
 extern int     arrayelements;	/* number of array elements */
 extern int     fifolpsize;	/* fifo loop size (words, eg. 63,512,1k,2k,4k, etc.) */

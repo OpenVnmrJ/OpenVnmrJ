@@ -6,9 +6,9 @@ import buildMethods
 platform = sys.platform
 
 # define target file names
-paramStaticTarget  = 'libparam.a'
+# paramStaticTarget  = 'libparam.a'
 paramSharedTarget  = 'libparam.so'
-psglibStaticTarget = 'libpsglib.a'
+# psglibStaticTarget = 'libpsglib.a'
 psglibSharedTarget = 'libpsglib.so'
 s2pulTarget        = 's2pul'
 
@@ -21,7 +21,7 @@ if (platform=="darwin"):
 cwd = os.getcwd()
 
 # library dependancies
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
 SConscript(os.path.join(ncommPath, 'SConstruct'))
 
 # source files
@@ -124,7 +124,6 @@ psgList = ['abort.c',
                'autofuncs.c',
                'convert.c',
                'convertapbout.c',
-               'convertipa.c',
                'cps.c',
                'crb_setup.c',
                'decfuncs.c',
@@ -206,6 +205,8 @@ cndPsgList = ['ap_device.c',
                   'pulses.c',
                   'rfchan_device.c']
 
+dummyFileList = ['x_ps.c']
+
 psgSeqPath       = os.path.join(cwd, os.pardir, 'psglib')
 psgSeqFileList   = ['s2pul.c']
 
@@ -226,9 +227,9 @@ expProcHdrList = ['expDoneCodes.h',
                   'shrexpinfo.h']
 
 # build environment
-env = Environment(CCFLAGS    = '-c -O -m32 -Wall -Wno-implicit-function-declaration -Wno-return-mismatch -Wno-implicit-int',
+env = Environment(CCFLAGS    = '-c -O -Wall -Wno-implicit-function-declaration -Wno-return-mismatch -Wno-implicit-int',
                   CPPDEFINES = ['LINUX', 'NESSIE', 'PSG_LC'],
-                  LINKFLAGS  = '-m32',
+                  LINKFLAGS  = '',
                   CPPPATH    = [cwd])
 
 if ( 'darwin' in platform ):
@@ -240,14 +241,14 @@ if ( 'darwin' in platform ):
     if osxflags:
        env.Append(CPPFLAGS = os.getenv('osxflags'))
 
-buildMethods.makeSymLinks(env, paramStaticTarget, cwd, vnmrPath, vnmrList)
-buildMethods.makeSymLinks(env, paramStaticTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(env, paramSharedTarget, cwd, vnmrPath, vnmrList)
+buildMethods.makeSymLinks(env, paramSharedTarget, cwd, vnmrPath, vnmrHdrList)
 
-buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, psgSeqPath, psgSeqFileList)
-buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, xracqPath, xracqHdrList)
-buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, expProcPath, expProcHdrList)
-buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, ncommPath, ncommHdrList)
-buildMethods.makeSymLinks(env, psglibStaticTarget, cwd, nvpsgPath, nvpsgHdrList)
+buildMethods.makeSymLinks(env, psglibSharedTarget, cwd, psgSeqPath, psgSeqFileList)
+buildMethods.makeSymLinks(env, psglibSharedTarget, cwd, xracqPath, xracqHdrList)
+buildMethods.makeSymLinks(env, psglibSharedTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, psglibSharedTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, psglibSharedTarget, cwd, nvpsgPath, nvpsgHdrList)
 
 buildMethods.makeSymLinks(env, s2pulTarget, cwd, psgSeqPath, psgSeqFileList)
 # buildMethods.makeSymLinks(env, s2pulTarget, cwd, vnmrPath, vnmrHdrList)
@@ -260,11 +261,11 @@ s2pulList  = psgSeqFileList
 libLists = ['m']
 
 # actual builds
-paramStatic = env.StaticLibrary(target  = paramStaticTarget,
-                                source  = vnmrList,
-                                LIBPATH = ncommPath,
-                                LIBS    = libLists)
-if ( ( 'darwin' not in platform ) and ( 'interix' not in platform ) ):
+# paramStatic = env.StaticLibrary(target  = paramStaticTarget,
+#                                 source  = vnmrList,
+#                                 LIBPATH = ncommPath,
+#                                 LIBS    = libLists)
+if ( 'darwin' not in platform ):
     paramShared = env.SharedLibrary(target  = paramSharedTarget,
                                 source  = vnmrList,
                                 LIBPATH = ncommPath,
@@ -277,11 +278,11 @@ if (platform=="darwin"):
                                 LIBPATH = ncommPath,
                                 LIBS    = libLists)
                                 
-psglibStatic = env.StaticLibrary(target  = psglibStaticTarget,
-                                 source  = psgLibList,
-                                 LIBPATH = ncommPath,
-                                 LIBS    = libLists)
-if ( ( 'darwin' not in platform ) and ( 'interix' not in platform ) ):
+# psglibStatic = env.StaticLibrary(target  = psglibStaticTarget,
+#                                  source  = psgLibList,
+#                                  LIBPATH = ncommPath,
+#                                  LIBS    = libLists)
+if ( 'darwin' not in platform ):
     psglibShared = env.SharedLibrary(target  = psglibSharedTarget,
                                  source  = psgLibList,
                                  LIBPATH = ncommPath,
@@ -294,10 +295,12 @@ if (platform=="darwin"):
                                  LIBPATH = ncommPath,
                                  LIBS    = libLists)
                                                               
-if ( 'interix' not in platform ):                                 
-    s2pul = env.Program(target  = s2pulTarget,
+dummyStatic = env.StaticLibrary(target  = 'dummy.a',
+                                  source  = [dummyFileList])
+
+s2pul = env.Program(target  = s2pulTarget,
                           source  = s2pulList,
-                          LIBS    = ['psglib', 'param', 'acqcomm', 'm'],
+                          LIBS    = ['psglib', 'param', 'acqcomm64', 'm'],
                           LIBPATH = [cwd, psgPath, ncommPath])
 
 
@@ -309,21 +312,19 @@ if not os.path.exists(vnmrlibPath):
    os.makedirs(vnmrlibPath)
 
    # actions to be performed after targets are built
-env.AddPostAction(paramStatic,
-               Action(Copy(vnmrlibPath, os.path.join(cwd, paramStaticTarget))))
+# env.AddPostAction(paramStatic,
+#               Action(Copy(vnmrlibPath, os.path.join(cwd, paramStaticTarget))))
 
-if ( 'interix' not in platform ):
-    env.AddPostAction(paramShared,
+env.AddPostAction(paramShared,
                Action(Copy(vnmrlibPath, os.path.join(cwd, paramSharedTarget))))
 
-env.AddPostAction(psglibStatic,
-               Action(Copy(vnmrlibPath, os.path.join(cwd, psglibStaticTarget))))
+# env.AddPostAction(psglibStatic,
+#             Action(Copy(vnmrlibPath, os.path.join(cwd, psglibStaticTarget))))
 
-if ( 'interix' not in platform ):
-    env.AddPostAction(psglibShared,
+env.AddPostAction(psglibShared,
                Action(Copy(vnmrlibPath, os.path.join(cwd, psglibSharedTarget))))
 
-env.AddPostAction(psglibStatic,
+env.AddPostAction(psglibShared,
               Action(Copy(vnmrlibPath, os.path.join(cwd, 'x_ps.o'))))
 
 vnmrPsgPath    = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', 'inova', 'psg')
@@ -331,12 +332,12 @@ vnmrPsgPath    = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', '
 if not os.path.exists(vnmrPsgPath):
    os.makedirs(vnmrPsgPath)
 
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, vnmrHdrList, '644')
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, psgList, '644')
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, cndPsgList, '644')
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, psgHdrList, '644')
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, nvpsgHdrList, '644')
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, xracqHdrList, '644')
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, ncommHdrList, '644')
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, expProcHdrList, '644')
-buildMethods.postBuildCopyPerm(env, psglibStatic, vnmrPsgPath, cwd, makeList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, vnmrHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, psgList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, cndPsgList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, psgHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, nvpsgHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, xracqHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, ncommHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, expProcHdrList, '644')
+buildMethods.postBuildCopyPerm(env, psglibShared, vnmrPsgPath, cwd, makeList, '644')

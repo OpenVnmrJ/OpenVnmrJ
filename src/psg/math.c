@@ -7,6 +7,8 @@
  * For more information, see the LICENSE file.
  */
 
+#include <stdlib.h>
+
 #include "acodes.h"
 #include "rfconst.h"
 #include "acqparms.h"

@@ -184,7 +184,7 @@ static int ftw1_base(double freq, struct breakpoint *bp, int ftw2)
 
 /* format_packet - formats a packet for transmission to the VFS/DJ programmer. */
 int Synthesizer::format_dds(int *buffer, 
-	       unsigned long ftw1, unsigned long ftw2, unsigned long rfswitch,
+	       unsigned int ftw1, unsigned int ftw2, unsigned int rfswitch,
 	       int atten, unsigned short mhz)
 {
   int nbytes = 0;
@@ -287,7 +287,7 @@ int Synthesizer::encodeFreq(double freq_mhz, int *array)
       DBG("..bp[%d]: %lf > %lf (%llx, %llx)\n", i, freq, bp->freq, AS_ULL(freq), AS_ULL(bp->freq));
     DBG("%f: bp[%d].freq=%f (%lx, %lx)\n", freq_index, i, (float)bp->freq, AS_UL(freq_index), AS_UL(bp->freq));
 
-    unsigned rfswitch = rfswitch_base(freq,bp);
+    unsigned int rfswitch = rfswitch_base(freq,bp);
     int ftw2 = ftw2_base(freq, bp);
     int ftw1 = ftw1_base(freq, bp, ftw2);
     int atten = 0x00; // set in the controller itself

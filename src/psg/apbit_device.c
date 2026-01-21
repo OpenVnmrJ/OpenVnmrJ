@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <sys/types.h>
 
 #include "oopc.h"
 
@@ -35,14 +34,17 @@ extern int      bgflag;
 #define DPRINT4(level, str, arg1, arg2, arg3, arg4)
 #endif
 
-extern char    *ObjError(), *ObjCmd();
-
 #define DPRTLEVEL 2
 
 typedef struct
 {
 #include "apbit_device.p"
 }               APBit_Object;
+
+extern int AP_Device(void *thisv, Message msg, void *param, void *result);
+extern int ClearTable(void *ptr, size_t tablesize);
+extern char *ObjError(int wcode);
+extern char *ObjCmd(int wcode);
 
 /* base class dispatcher */
 #define Base(this,msg,par,res)    AP_Device(this,msg,par,res)
@@ -56,12 +58,7 @@ static int set_value(APBit_Object *this, Msg_Set_Param *param, Msg_Set_Result *r
 | APBit_Device()/4 - Message Handler for apbit_devices.
 |			Author: Greg Brissey  8/18/88
 +-------------------------------------------------------------*/
-int 
-APBit_Device(this, msg, param, result)
-APBit_Object   *this;
-Message         msg;
-caddr_t         param;
-caddr_t         result;
+int APBit_Device(APBit_Object *this, Message msg, void *param, void *result)
 {
    int             error = 0;
 

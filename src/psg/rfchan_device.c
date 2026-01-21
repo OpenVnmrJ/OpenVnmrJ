@@ -18,7 +18,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <sys/types.h>			/* for caddr_t */
 
 #include "rfconst.h"
 #include "acodes.h"
@@ -51,15 +50,11 @@ extern int      bgflag;
 #endif
 
 extern char    *ObjError(), *ObjCmd();
-extern int okinhwloop();
 extern int SetAttnAttr(Object attnobj, ...);
 extern int attr_valtype(int attribute);
 extern void HSgate(int ch, int state);
 extern void settable90(int device, char arg[]);
-extern void notinhwloop(char *name);
-extern int ClearTable();
 extern int Device();
-extern int putcode();
 extern int	ap_interface;
 extern int 	SkipHSlineTest;
 
@@ -111,11 +106,7 @@ static void set_ampbandrelay(Object obj, RFChan_Object *this, double basefreq);
 |                       Author: Greg Brissey  12/07/89
 +-------------------------------------------------------------*/
 int
-RFChan_Device(this, msg, param, result)
-RFChan_Object  *this;
-Message         msg;
-caddr_t         param;
-caddr_t         result;
+RFChan_Device(RFChan_Object *this, Message msg, void *param, void *result)
 {
    int             error = 0;
 

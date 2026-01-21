@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #ifndef PSG_LC
 #define PSG_LC
@@ -35,8 +36,8 @@
 #define ADC_AP_ENABLE_APTO_DSP	  0x00200000  /* enable Apbus access to DSP regs */
 #define ADC_AP_CHANSELECT_POS          24
 
-unsigned long initial_adc();
-unsigned long initial_dtm();
+unsigned int initial_adc(int chan);
+unsigned int initial_dtm(codeint precision);
 
 autodata    *Aauto;     /* pointer to automation structure in Acode set */
 Acqparams   *Alc;	/* pointer to low core structure in Acode set */
@@ -124,7 +125,7 @@ extern char il[MAXSTR];	/* interleaved acquisition parameter, 'y','n' */
 #define LOCKZ0_I   XSAPBIO
 #define RTINIT LOADF
 
-long rt_tab[RT_TAB_SIZE];
+int rt_tab[RT_TAB_SIZE];
 int  rtinit_count;
 codeint rt_alc_tab[RT_TAB_SIZE];
 codeint dpfrt = DPFINDEX;
@@ -161,12 +162,12 @@ codeint v23 = V23INDEX;
 codeint v24 = V24INDEX;
 codeint clrbsflag = CLRBSFLAGINDEX;
 
-get_rt_tab_elems()
+int get_rt_tab_elems()
 {
    return(RT_TAB_SIZE);
 }
 
-static make_rt_table()
+static void make_rt_table()
 {
    int i;
 
@@ -219,9 +220,7 @@ static make_rt_table()
    rt_alc_tab[CLRBSFLAGINDEX] = clrbsflag; clrbsflag = CLRBSFLAGINDEX;
 }
 
-codeint *
-init_acodes(Codes)
-Acqparams *Codes;
+codeint *init_acodes(Acqparams *Codes)
 {   
     /* Set up Acode pointers */
     Alc = (Acqparams *) Codes;	/* start of low core */
@@ -239,9 +238,7 @@ Acqparams *Codes;
     return(Aacode);
 }
 
-set_lacqvar(index,val)
-codeint index;
-int val;
+void set_lacqvar(codeint index, int val)
 {
    codeint *ptr;
    codelong *ptr2;
@@ -263,9 +260,7 @@ int val;
    }
 }
 
-set_acqvar(index,val)
-codeint index;
-int val;
+void set_acqvar(codeint index, int val)
 {
    codeint *ptr;
 
@@ -285,9 +280,7 @@ int val;
    }
 }
 
-init_acqvar(index,val)
-codeint index;
-int val;
+void init_acqvar(codeint index, int val)
 {
    codeint *ptr;
 
@@ -300,9 +293,7 @@ int val;
    }
 }
 
-init_acqvartab(index,val)
-codeint index;
-int val;
+void init_acqvartab(codeint index, int val)
 {
    codeint *ptr;
 
@@ -312,8 +303,7 @@ int val;
    }
 }
 
-get_acqvar(index)
-codeint index;
+int get_acqvar(codeint index)
 {
    if (newacq)
    {
@@ -331,7 +321,7 @@ codeint index;
    }
 }
 
-std_lc_init()
+void std_lc_init()
 {
     int i,words;
     codeint *lc_struc;
@@ -369,14 +359,14 @@ std_lc_init()
     Alc->acqcodeb = Alc->acqcodep = Aacode - (codeint *) Alc;
     if (bgflag)
     {
-	fprintf(stderr,"acode offset addr = %lx, acode offset = %d \n",
+	fprintf(stderr,"acode offset addr = %p, acode offset = %d \n",
 		&(Alc->acqcodeb),Alc->acqcodeb);
-        fprintf(stderr,"finish np: %ld, nt: %ld\n",Alc->acqnp,Alc->acqnt);
+        fprintf(stderr,"finish np: %d, nt: %d\n",Alc->acqnp,Alc->acqnt);
 	fprintf(stderr,"npr_ptr offset: %d \n",npr_ptr);
-        fprintf(stderr,"acodeb adr: %lx,acodep adr: %lx\n",
+        fprintf(stderr,"acodeb adr: %p,acodep adr: %p\n",
 	      &(Alc->acqcodeb),&(Alc->acqcodep));
-        fprintf(stderr,"np adr: %lx, nt adr: %lx\n",&(Alc->acqnp),&(Alc->acqnt));
-        fprintf(stderr,"np: %ld, nt: %ld\n",Alc->acqnp,Alc->acqnt);
+        fprintf(stderr,"np adr: %p, nt adr: %p\n",&(Alc->acqnp),&(Alc->acqnt));
+        fprintf(stderr,"np: %d, nt: %d\n",Alc->acqnp,Alc->acqnt);
 	fprintf(stderr,"ct offset: %d \n",ct);
 	fprintf(stderr,"oph offset: %d \n",oph);
 	fprintf(stderr,"bsctr offset: %d \n",bsctr);
@@ -413,7 +403,7 @@ std_lc_init()
 
 }
 
-custom_lc_init(val1,val2,val3,val4,val5,val6,val7,val8,val9,val10,val11,val12,val13,val14,val15,val16,val17,val18)
+void custom_lc_init(val1,val2,val3,val4,val5,val6,val7,val8,val9,val10,val11,val12,val13,val14,val15,val16,val17,val18)
 codeint val1;
 codeulong val2;
 codeint val3;
@@ -449,7 +439,7 @@ codeint val18;
     Alc->acqasize =  (codeint) val11;
     Alc->acqcpf =    (codeint) val12;
     Alc->acqmaxconst = (codeint) val13;
-    Alc->acqct =  (codelong) 0L;	/* U+ RA, ct had better be Zero */
+    Alc->acqct =  (codelong) 0;	/* U+ RA, ct had better be Zero */
     if (newacq)
     {
        Alc->acqct =  (codelong) val16;  /* moved here since U+ RA can't handle this */
@@ -506,12 +496,12 @@ codeint val18;
 	   rt_tab[ilflagrt+TABOFFSET] = 0;
 
        /* Init maxsum  */
-       rt_tab[maxsum+TABOFFSET] = (long)dtmmaxsum;	
+       rt_tab[maxsum+TABOFFSET] = dtmmaxsum;	
 
     }
 }
 
-send_auto_pars()
+void send_auto_pars()
 {
     if (newacq)
     {
@@ -531,7 +521,7 @@ send_auto_pars()
     }
 }
 
-init_auto_pars(var1,var2,var3,var4,var5,var6,var7,var8)
+void init_auto_pars(var1,var2,var3,var4,var5,var6,var7,var8)
 codeint var1,var2,var3,var4,var5,var6,var7,var8;
 {
     Aauto->lockpower = var1;
@@ -558,34 +548,34 @@ codeint var1,var2,var3,var4,var5,var6,var7,var8;
     }
 }
 
-new_lcinit_arrayvars()
+void new_lcinit_arrayvars()
 {
     extern int  gainactive;
 
-    init_acqvar(fidctr,(long)Alc->acqelemid);
-    init_acqvar(ct,(long)Alc->acqct);
-    init_acqvar(ssval,(long)Alc->acqssct);
-    init_acqvar(ctss,(long)Alc->acqrtvptr);
-    init_acqvar(id2,(long)Alc->acqid2);
-    init_acqvar(id3,(long)Alc->acqid3);
-    init_acqvar(id4,(long)Alc->acqid4);
+    init_acqvar(fidctr,Alc->acqelemid);
+    init_acqvar(ct,Alc->acqct);
+    init_acqvar(ssval,Alc->acqssct);
+    init_acqvar(ctss,Alc->acqrtvptr);
+    init_acqvar(id2,Alc->acqid2);
+    init_acqvar(id3,Alc->acqid3);
+    init_acqvar(id4,Alc->acqid4);
     if (!acqiflag)
     {
-	init_acqvar(ntrt,(long)Alc->acqnt);
+	init_acqvar(ntrt,Alc->acqnt);
     }
     /* if gain is set to a value RTINIT it, if set to 'n' don'y
        so that prior FID will use the autogain value */
     if (gainactive && !acqiflag)
     {
-      init_acqvar(rtrecgain,(long)Aauto->recgain);
+      init_acqvar(rtrecgain,Aauto->recgain);
     }
 
     if (!ra_flag && !getIlFlag() )
-       init_acqvar(bsctr,(long)Alc->acqbsct);
+       init_acqvar(bsctr,Alc->acqbsct);
 
 }
 
-set_nfidbuf()
+void set_nfidbuf()
 {
 	int ntval, nbsval, ndim, ntmax;
 
@@ -615,8 +605,7 @@ set_nfidbuf()
 
 }
 
-set_lockpower( val )
-codeint val;
+void set_lockpower(codeint val )
 {
    Aauto->lockpower = val;
    if (newacq)
@@ -627,8 +616,7 @@ codeint val;
    }
 }
 
-set_lockphase( val )
-codeint val;
+void set_lockphase(codeint val )
 {
    Aauto->lockphase = val;
    if (newacq)
@@ -639,8 +627,7 @@ codeint val;
    }
 }
 
-set_lockgain( val )
-codeint val;
+void set_lockgain(codeint val )
 {
    Aauto->lockgain = val;
    if (newacq)
@@ -651,8 +638,7 @@ codeint val;
    }
 }
 
-set_recgain( val )
-codeint val;
+void set_recgain(codeint val )
 {
    Aauto->recgain = val;
 }
@@ -665,11 +651,9 @@ codeint val;
 /*		2 - lock channel.					*/
 /*		3 - test channel.					*/
 /*----------------------------------------------------------------------*/
-unsigned long 
-initial_adc(chan)
-int chan;
+unsigned int initial_adc(int chan)
 {
- unsigned long adccontrol;
+ unsigned int adccontrol;
    adccontrol = (AUDIO_CHAN_SELECT_MASK & chan) << ADC_AP_CHANSELECT_POS;
    if (chan == 0)
 	adccontrol = adccontrol | ADC_AP_ENABLE_RCV1_OVERLD;
@@ -681,11 +665,9 @@ int chan;
    return(adccontrol);
 }
 
-unsigned long 
-initial_dtm(precision)
-codeint precision;
+unsigned int initial_dtm(codeint precision)
 {
- unsigned long dtmcontrol;
+ unsigned int dtmcontrol;
    /* Enable adc and stm */
    dtmcontrol =  STM_AP_ENABLE_ADC1 | STM_AP_ENABLE_STM;
 
@@ -696,11 +678,10 @@ codeint precision;
    return(dtmcontrol);
 }
 
-write_rtvar_acqi_file()
+void write_rtvar_acqi_file()
 {
 FILE	*fopen();
 char    filename[MAXSTR];
-char   *getenv();
 FILE	*rtacqifile = 0;
 
    strcpy(filename,getenv("vnmrsystem") );
@@ -750,10 +731,7 @@ FILE	*rtacqifile = 0;
    if (rtacqifile) fclose(rtacqifile);
 }
 
-write_rtvar(fileid,rtname,rtindex)
-FILE	*fileid;
-char    *rtname;
-int	rtindex;
+void write_rtvar(FILE *fileid, char *rtname, int rtindex)
 {
    fprintf(fileid,"%-20s %10d %5d\n",rtname,rt_tab[rtindex+TABOFFSET],rtindex);
 }

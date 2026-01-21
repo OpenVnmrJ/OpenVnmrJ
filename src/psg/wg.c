@@ -53,7 +53,6 @@ extern int	newacq;
 extern int isBlankOn(int device);
 extern void	setHSLdelay();
 extern void HSgate(int ch, int state);
-extern int putcode();
 extern int putFile(const char *fname);
 
 #define N_HSLS_PER_CHANNEL	5
@@ -62,8 +61,8 @@ extern int putFile(const char *fname);
 #define SPINLOCK		( wtg_active ? 2 : DECOUPLE )
 /* #define WFG_OFFSET_DELAY	( (ap_interface < 4) ? 1.5e-6 : 0.45e-6 ) */
 #define WFG_TIME_RESOLUTION	( (ap_interface < 4) ? 2 : 1 )
-#define TIME_AMPL_GATE_BLANK	~( ((unsigned long)7 << 29) | 0x7ffff )
-#define TIME_GATE_BLANK		~( ((unsigned long)7 << 29) | 0x400ff )
+#define TIME_AMPL_GATE_BLANK	~( ((unsigned int)7 << 29) | 0x7ffff )
+#define TIME_GATE_BLANK		~( ((unsigned int)7 << 29) | 0x400ff )
 #define WFG_PULSE_FINAL_STATE	( (ap_interface < 4) ? TIME_AMPL_GATE_BLANK :\
 					TIME_GATE_BLANK )
 
@@ -230,7 +229,7 @@ struct p_list
   double scl_factor;
   int	wg_st_addr;
   int  telm,ticks,status,cycle_size;
-  long   *data;
+  int   *data;
   struct p_list *plink;
 }; 
 
@@ -284,7 +283,7 @@ struct gwh
 };
 
 static int d_in_RF = 0;
-static int read_in_pattern(struct r_data *rdata, long *lpntr, int *ticker,
+static int read_in_pattern(struct r_data *rdata, int *lpntr, int *ticker,
                            int tp, double scl);
 static void ib_safe();
 static struct p_list   *resolve_pattern();
@@ -737,7 +736,7 @@ void file_conv(struct r_list *indat, struct p_list *phead)
 {
     struct r_data *raw_data;
     int tick_cnt, cnt;
-    long *lpntr;
+    int *lpntr;
     double scl = 0.0;
     char snarf[MAXSTR];
     int add_words;
@@ -762,9 +761,9 @@ void file_conv(struct r_list *indat, struct p_list *phead)
       oldmask = 0x7ff;
       }
     if (indat->suffix == WDECOUPLER)
-       phead->data = (long *) malloc(2*phead->telm * sizeof(long));
+       phead->data = (int *) malloc(2*phead->telm * sizeof(int));
     else
-       phead->data = (long *) malloc((phead->telm+1) * sizeof(long));
+       phead->data = (int *) malloc((phead->telm+1) * sizeof(int));
     lpntr = phead->data;
     raw_data = indat->rdata;
     if (indat->suffix != WGRADIENT)
@@ -982,7 +981,7 @@ int id;
    a file is read in and parsed
 *************************************************************/
 
-static int read_in_pattern(struct r_data *rdata, long *lpntr, int *ticker,
+static int read_in_pattern(struct r_data *rdata, int *lpntr, int *ticker,
                            int tp, double scl)
 {  
    float scl_amp;
@@ -1244,11 +1243,11 @@ int dump_ib(apb,dest,arr,numb)
 int apb,
     dest,
     numb;
-long *arr;
+int *arr;
 {   
     struct gwh ibh;
 #ifdef LINUX
-    long *ptr;
+    int *ptr;
     int cnt;
 #endif
 
@@ -1276,7 +1275,7 @@ long *arr;
        ptr++;
     }
 #endif
-    if (fwrite(arr,sizeof(long),numb,global_fw) != numb)
+    if (fwrite(arr,sizeof(int),numb,global_fw) != numb)
     {
       text_error("instruction block write failed");
       psg_abort(1);
@@ -1293,7 +1292,7 @@ void dump_data()   /* template data */
    int i,j,terminator;
 #ifdef LINUX
    int cnt;
-   long *ptr;
+   int *ptr;
 #endif
 
    terminator = htonl(0xa5b6c7d8);
@@ -1331,7 +1330,7 @@ void dump_data()   /* template data */
             ptr++;
          }
 #endif
-         if ((j = fwrite(uu->data,sizeof(long),uu->telm,global_fw)) != uu->telm)
+         if ((j = fwrite(uu->data,sizeof(int),uu->telm,global_fw)) != uu->telm)
          {
            text_error("load file write error on plist  %d\n",j);
            psg_abort(1);
@@ -1342,7 +1341,7 @@ void dump_data()   /* template data */
      }
    }
    /* write of the terminator and close go together */
-   if ((j = fwrite(&terminator,sizeof(long),1,global_fw)) != 1)
+   if ((j = fwrite(&terminator,sizeof(int),1,global_fw)) != 1)
    {
       text_error("global RF load file write error on terminator\n");
       psg_abort(1);
@@ -4191,7 +4190,7 @@ handle hx;
 char *nm;
 double w,g1,g2,amp;
 {
-   long tib[10],mark;
+   int tib[10],mark;
    /* get pattern info */
    struct p_list *test;
    struct ib_list *temp;
@@ -4254,7 +4253,7 @@ double w,a;
 handle hx;
 int ll,pf;
 {
-   long dib[6];
+   int dib[6];
    int dectb; 
    double xx;
    struct p_list *test;
@@ -4303,7 +4302,7 @@ double w,a;
 handle hx;
 int ll,key;
 {
-   long gib[5];
+   int gib[5];
    int ticker;
    /* get pattern info */
    struct p_list *test;

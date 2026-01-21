@@ -146,7 +146,7 @@ static void t_chess(double pulsepower, char *pulseshape, double duration,
 
 static void t_wet4(codeint phaseA, codeint phaseB)
 {
-  double finepwr,gzlvlw,gtw,gswet,dmfwet,dpwrwet,dofwet,dreswet,wetpwr,pwwet,dz;
+  double finepwr,gzlvlw,gtw,gswet,wetpwr,pwwet,dz;
   int c13wet;
   char wetshape[MAXSTR], wetfly[MAXSTR], dmmwet[MAXSTR], dseqwet[MAXSTR];
 
@@ -157,10 +157,10 @@ static void t_wet4(codeint phaseA, codeint phaseB)
   getstr("dmmwet",dmmwet);
   wetpwr=getval("wetpwr");
   pwwet=getval("pwwet");
-  dmfwet=getval("dmfwet");
-  dpwrwet=getval("dpwrwet");
-  dofwet=getval("dofwet");
-  dreswet=getval("dreswet");
+//  dmfwet=getval("dmfwet");
+//  dpwrwet=getval("dpwrwet");
+//  dofwet=getval("dofwet");
+//  dreswet=getval("dreswet");
   dz=getval("dz");
   finepwr=wetpwr-(int)wetpwr;
   wetpwr=(double)((int)wetpwr);

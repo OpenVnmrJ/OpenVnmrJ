@@ -7,6 +7,7 @@
  * For more information, see the LICENSE file.
  */
 
+#include <stdlib.h>
 #include "acodes.h"
 #include "rfconst.h"
 #include "acqparms.h"
@@ -19,6 +20,9 @@ extern int  bgflag;	/* debug flag */
 extern int  ap_interface;
 extern int  spare12_hs_bits;
 extern int  newacq;
+
+extern void putcode(codeint arg);
+extern void HSgate(int ch, int state);
 
 /*------------------------------------------------------------------
 |
@@ -176,7 +180,7 @@ void sp2off()
 +-----------------------------------------------------------------*/
 void sp_on(int bitn)
 {
-    unsigned long sparelines;
+    unsigned int sparelines;
     if (newacq)
     {
 	if ((bitn >= 3) && (bitn <= 5))
@@ -203,7 +207,7 @@ void sp_on(int bitn)
 +-----------------------------------------------------------------*/
 void sp_off(int bitn)
 {
-    unsigned long sparelines;
+    unsigned int sparelines;
     if (newacq)
     {
 	if ((bitn >= 3) && (bitn <= 5))

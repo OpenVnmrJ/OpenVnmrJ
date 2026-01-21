@@ -17,6 +17,8 @@
 #include "variables.h"
 #include "vfilesys.h"
 #include "group.h"
+#include "pvars.h"
+#include "abort.h"
 
 
 /*************************
@@ -97,6 +99,8 @@ static int table_math(int optype, int *value1, int *value2);
 ***********************************/
 
 extern int	bgflag;
+extern int putFile(const char *fname);
+extern void putcode(short arg);
 		      
 
 /*---------------------------------------------------
@@ -697,8 +701,7 @@ static void checkforcomments(FILE *tfile)
 |                                   Author:  S. Farmer  |
 |                                     Date:  11-8-88    |
 +------------------------------------------------------*/
-APsetreceiver(tablename)
-codeint	tablename;
+void APsetreceiver(codeint tablename)
 {
    codeint	recphase,
 		tablertv();
@@ -874,10 +877,7 @@ static void writetable(Tableinfo *tblinfo)
 |                               Author:  S. Farmer  |
 |                                 Date:  11-8-88    |
 +--------------------------------------------------*/
-settable(tablename,numelements,tablearray)
-codeint	tablename;
-int	numelements,
-	tablearray[];
+void settable(codeint tablename, int numelements, int tablearray[])
 {
    int	index,
 	i,
@@ -958,10 +958,7 @@ int	numelements,
 |                               Author:  S. Farmer  |
 |                                 Date:  11-8-88    |
 +--------------------------------------------------*/
-getelem(tablename,indxptr,dstptr)
-codeint	indxptr,
-	dstptr,
-	tablename;
+void getelem(codeint tablename, codeint indxptr, codeint dstptr)
 {
    int	index;
 
@@ -1007,11 +1004,8 @@ codeint	indxptr,
 |                                Author:  S. Farmer  |
 |                                  Date:  11-8-88    |
 +---------------------------------------------------*/
-tabletop(operationtype,table1name,table2name,modval)
-codeint	table1name,
-	table2name;
-int	operationtype,
-	modval;
+void tabletop(int operationtype, codeint table1name,
+      codeint table2name, int modval)
 {
    int	index1,
 	index2,
@@ -1099,11 +1093,7 @@ int	operationtype,
 |                                 Author:  S. Farmer  |
 |                                   Date:  11-8-88    |
 +----------------------------------------------------*/
-tablesop(operationtype,tablename,scalarval,modval)
-codeint	tablename;
-int	operationtype,
-	scalarval,
-	modval;
+void tablesop(int operationtype, codeint tablename, int scalarval, int modval)
 {
    int		index,
 		i,
@@ -1161,7 +1151,7 @@ int	operationtype,
 |                               Author:  S. Farmer  |
 |                                 Date:  11-8-88    |
 +--------------------------------------------------*/
-inittablevar()
+void inittablevar()
 {
    int	i;
 
@@ -1602,8 +1592,7 @@ static int checktable(Tableinfo *tblinfo, codeint tblname, int namechk, int numb
 |                                Author:  S. Farmer  |
 |                                  Date:  1-10-89    |
 +---------------------------------------------------*/
-reset_table(tblinfo)
-Tableinfo	*tblinfo;
+void reset_table(Tableinfo *tblinfo)
 {
    int	i,
 	*table_pntr,

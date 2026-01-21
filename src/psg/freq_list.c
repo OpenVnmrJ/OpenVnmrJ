@@ -124,7 +124,6 @@ int globaltable;
 {
  int	i;
  int	mask;
- char paterrmsg[MAXPATHL];
 
  /*---------------------------------------------------------------------*/
  /* Initialize variables to be used in pulse sequence elements.		*/
@@ -146,8 +145,7 @@ int globaltable;
  freqfilptr->hptr = (codelong *)malloc(freqfilptr->size);
  if (freqfilptr->hptr == NULL)
  {
-	text_error("could not allocate memory for RF pattern file header\n");
-	psg_abort(1);
+	abort_message("could not allocate memory for RF pattern file header\n");
  }
  p_frqfilhdrpos = freqfilptr->hptr;
  *p_frqfilhdrpos++ = freqfilptr->size;	/* current file size */
@@ -172,9 +170,7 @@ int globaltable;
  	}
  	if (freqfilptr->fd == SYSERR)
  	{
-	   sprintf(paterrmsg,"init_global_list: file %s not opened\n",filexpan);
-	   text_error(paterrmsg);
-	   psg_abort(1);
+	   abort_message("init_global_list: file %s not opened\n",filexpan);
  	}
  }
  else if (gfreq.gseg == ACQ_RF_GSEG)
@@ -195,23 +191,19 @@ int globaltable;
  	}
  	if (freqfilptr->fd == SYSERR)
  	{
-	    sprintf(paterrmsg,
+	    abort_message(
 		 "init_global_list: file %s not opened\n",fileRFpattern);
-	    text_error(paterrmsg);
-	    psg_abort(1);
  	}
  }
  else
  {
-	text_error("init_global_list: Invalid Global Segment\n");
-	psg_abort(1);
+	abort_message("init_global_list: Invalid Global Segment\n");
  }
 
  if (write(freqfilptr->fd,freqfilptr->hptr,freqfilptr->size)
 						!= freqfilptr->size)
  {
-	text_error("init_global_list: file header not written\n");
-	psg_abort(1);
+	abort_message("init_global_list: file header not written\n");
  }
 
 
@@ -231,26 +223,23 @@ close_global_list()
 	/*** Do not write to file if INOVA system ***/
  	if (newacq) return(OK);
 
-	if (freqfilptr->size > (long)(256+2) * sizeof(codelong)) {
+	if (freqfilptr->size > (256+2) * sizeof(codelong)) {
  		p_frqfilhdrpos = freqfilptr->hptr;
  		*p_frqfilhdrpos = freqfilptr->size; /* update file size */
 
 		/* "rewind" file and update file header */
 		if (lseek(freqfilptr->fd,0,0) == SYSERR) {
-			text_error("Freq List lseek failed!\n");
-			psg_abort(1);
+			abort_message("Freq List lseek failed!\n");
 		}
 		if (write(freqfilptr->fd,freqfilptr->hptr,
-		(long)(256+2) * sizeof(codelong)) !=
-		(long)(256+2) * sizeof(codelong)) {
-			text_error("RF write failed!\n");
-			psg_abort(1);
+		(codelong)(256+2) * sizeof(codelong)) !=
+		(codelong)(256+2) * sizeof(codelong)) {
+			abort_message("RF write failed!\n");
 		}
 
 		/* close file */
 		if (close(freqfilptr->fd) == SYSERR) {
-		    text_error("Freq List close failed!\n");
-		    psg_abort(1);
+		    abort_message("Freq List close failed!\n");
 		}
 	}
 	else {
@@ -274,7 +263,7 @@ close_global_list()
  return(OK);
 }
 
-free_global_list()
+void free_global_list()
 {
 	if (freqfilptr->hptr != NULL) {
 		free( freqfilptr->hptr );
@@ -287,7 +276,6 @@ free_global_list()
 	}
 }
 
-void vget_elem(list_no, vindex)
 /************************************************************************
 * Description:
 *	Element creates the acodes for indexing into a table of previously
@@ -304,26 +292,22 @@ void vget_elem(list_no, vindex)
 *  
 *************************************************************************/
 
+void vget_elem(list_no, vindex)
 int 	list_no;
 codeint	vindex;
 {
-   char msge[MAXPATHL];
-
    /* check to make sure a valid global segment is available	*/
    if (gfreq.gseg < 0) 
    {
-  	text_error("Global segment not available for frequency list.\n");
-	psg_abort(1);
+  	abort_message("Global segment not available for frequency list.\n");
    }
 
    /* test valid apbus range for vindex */
    if (((vindex < v1) || (vindex > v14)) && ((vindex < t1) || 
 	(vindex > t60))) 
    {
-       sprintf(msge,"voffset: vindex illegal dynamic %d \n",
+       abort_message("voffset: vindex illegal dynamic %d \n",
 			       vindex);
-       text_error(msge);
-       psg_abort(1); 
    }
    if ((vindex >= t1) && (vindex <= t60))
 	vindex = tablertv(vindex);
@@ -331,9 +315,7 @@ codeint	vindex;
    /* test valid list number */
    if (gfreq.acodes_forelem[list_no] == 0)
    {
-	sprintf(msge, "List number: %d is incorrect.\n",list_no);
-	text_error(msge);
-	psg_abort(1);
+	abort_message("List number: %d is incorrect.\n",list_no);
    }
    /* sprintf(msge,"voffset: list[%d] gseg: %d  freq_addr: %d vindex: %d\n", */
    /*		list_no,gfreq.gseg,gfreq.acodes_forelem[list_no],vindex); */
@@ -364,27 +346,21 @@ codeint	vindex;
 /*			     Codeoffset. It Now calculated when needed.	*/
 /*									*/
 /*----------------------------------------------------------------------*/
-putgtab(table,word)
+void putgtab(table,word)
 int table;			/* currently not used */
 codeint word;
 {
-    if (bgflag)
-	fprintf(stderr,"GTAB: %d Code(%lx) = %d(dec) or %4x(hex) \n",
-		table,GTABptr,word,word);
     *GTABptr[table]++ = word; 		/* Put word into Codes array */
 
     /* test for acodes overflowing malloc acode memory */
     if ((long)GTABptr[table] > (long)GtabEnd)  
     {    
-        char msge[128];
-	sprintf(msge,"Acode overflow, %ld words generated.",
-		(long) (GTABptr[table] - GtabStart));
-	text_error(msge);
-	psg_abort(0); 
+	   abort_message("Acode overflow, %d words generated.",
+		(int) (GTABptr[table] - GtabStart));
     } 
 }
 
-condense_apbout(beginaddr, endaddr)
+void condense_apbout(beginaddr, endaddr)
   /************************************************************************
    * Description:
    *	Element will condense all the apbouts found into a single apbout,
@@ -410,8 +386,7 @@ codeint **endaddr;
    /* 			beginaddr,*endaddr,(int)*beginaddr);	*/
    if (*beginaddr != APBOUT)
    {
-	text_error("condense_apbout: Passed incorrect acode stream");
-	psg_abort(1);
+	abort_message("condense_apbout: Passed incorrect acode stream");
    }
    beginaddr++;			/* increment past apbout acode		*/
    apbcntr = beginaddr;		/* set address of apbout counter	*/
@@ -421,8 +396,7 @@ codeint **endaddr;
 	int tmpapbcntr;
    	if (*beginaddr != APBOUT)
    	{
-	   text_error("condense_apbout: Only accepts APBOUTS in acode stream.");
-	   psg_abort(1);
+	   abort_message("condense_apbout: Only accepts APBOUTS in acode stream.");
    	}
 	beginaddr++;		/* increment past apbout acode	*/
 	tmpapbcntr = *beginaddr++;	/* set address of apbout counter*/
@@ -465,13 +439,11 @@ int	list_no;
  int	size;			/* size in bytes of completed list */
  int	i;
  codeint *outputbuf;
- char   msge[128];
 
  /* check to make sure a valid global segment is available	*/
  if (gfreq.gseg < 0) 
  {
-	text_error("Global segment not available for offset list.\n");
-	psg_abort(1);
+	abort_message("Global segment not available for offset list.\n");
  }
 
  if (list_no < 0)
@@ -489,7 +461,7 @@ int	list_no;
 						nvals, device, GtabStart);
 
 	/* when list completed, update the size in file header		*/
-	size = (int)GTABptr[gfreq.gseg]-(int)outputbuf;
+	size = (int)(GTABptr[gfreq.gseg]-outputbuf);
 	freqfilptr->size += size;
 	*p_frqfilhdrpos++ = freqfilptr->size;
 
@@ -514,10 +486,8 @@ int	list_no;
 		    newacodes = nacodes;
 		} else {
 		    if (newacodes != nacodes) {
-		    sprintf(msge,"freq_list: Mismatch in acodes %d, is %d\n",
+		    abort_message("freq_list: Mismatch in acodes %d, is %d\n",
 			newacodes,nacodes);
-	    	    text_error(msge);
-		    psg_abort(1);
 		   }
 	    	}
 	   	nacqptr = nacqptr+nacodes;
@@ -531,8 +501,7 @@ int	list_no;
 	else {
 	   /* output the acodes to the global segment file	*/
    	   if (write(freqfilptr->fd,(char *)outputbuf,size) != size) {
-		text_error("RF write failed\n");
-		psg_abort(1);
+		abort_message("RF write failed\n");
 	   }
 	}
 	free(outputbuf);
@@ -545,20 +514,15 @@ int	list_no;
 	{
 	   if (bgflag)
 	   {
-	     sprintf(msge, "Warning: List [%d] already created.\n",list_no);
-	     text_error(msge);
+	     text_error("Warning: List [%d] already created.\n",list_no);
 	   }
 	}
 	if (gfreq.listcnt < list_no)
 	{
-	   sprintf(msge, "Error: List [%d] not in order.\n",list_no);
-	   text_error(msge);
-	   sprintf(msge, 
+	   text_error("Error: List [%d] not in order.\n",list_no);
+	   text_error(
 	    "Make sure to start at 0, and to have unique list\n"); 
-	   text_error(msge);
-	   sprintf(msge,"numbers for each list.\n");
-	   text_error(msge);
-	   psg_abort(1);
+	   abort_message("numbers for each list.\n");
 	}
 	return(-1);
  }
@@ -588,21 +552,17 @@ Create_mem_offset_list(list, nvals, device, pbuf)
     int	acodes_forelem;
     int	i;
     codeint *beginaddr;
-    char   msge[128];
 
     /* check for a valid device.	*/
     if ((device < 1) || (device > NUMch)){
-	sprintf(msge, "freq_list: device #%d is not within bounds 1 - %d\n",
-		device, MAX_RFCHAN_NUM);
-        text_error(msge);
-        psg_abort(1);
+	    abort_message("freq_list: device #%d is not within bounds 1 - %d\n",
+		    device, MAX_RFCHAN_NUM);
     }
     if (RF_Channel[device] == NULL){
 	if (ix < 2){
-	    sprintf(msge, 
+	    text_error(
 		    "offset: Warning RF Channel device #%d is not present.\n",
 		    device);
-	    text_error(msge);
 	}
         return(0);
     }
@@ -622,8 +582,7 @@ Create_mem_offset_list(list, nvals, device, pbuf)
 
 	if (bgflag)
 	{
-	   sprintf(msge,"num: %d  freq: %12.4lf\n",i,list[i]);
-	   text_error(msge);
+	   text_error("num: %d  freq: %12.4lf\n",i,list[i]);
 	}			
 
 	SetRFChanAttr(RF_Channel[device], SET_OFFSETFREQ, list[i], 
@@ -635,9 +594,8 @@ Create_mem_offset_list(list, nvals, device, pbuf)
 						&param, &result);
 	if (error < 0)
 	{
-	        sprintf(msge, 
+	        text_error(
 	       "%s : %s\n", RF_Channel[device]->objname, ObjError(error));
-	        text_error(msge);
 	}
 
 	/* delay in order for frequency switching to settle		*/
@@ -655,10 +613,8 @@ Create_mem_offset_list(list, nvals, device, pbuf)
 	    acodes_forelem = num_acodes_forelem;
 	}else{
 	    if (acodes_forelem != num_acodes_forelem){
-		sprintf(msge,"freq_list: Mismatch in freq acodes %d, is %d\n",
-			acodes_forelem,num_acodes_forelem);
-	        text_error(msge);
-		psg_abort(1);
+		    abort_message("freq_list: Mismatch in freq acodes %d, is %d\n",
+		    	acodes_forelem,num_acodes_forelem);
 	    }
 	}
     }
@@ -691,14 +647,12 @@ int	list_no;
  int	size;			/* size in bytes of completed list */
  int	i,j;
  codeint *outputbuf;
- char   msge[128];
 
 
  /* check to make sure a valid global segment is available	*/
  if (gfreq.gseg < 0) 
  {
-	text_error("Global segment not available for delay list.\n");
-	psg_abort(1);
+	abort_message("Global segment not available for delay list.\n");
  }
 
  if (list_no < 0)
@@ -716,7 +670,7 @@ int	list_no;
 						nvals, GtabStart);
 
 	/* when list completed, update the size in file header		*/
-	size = (int)GTABptr[gfreq.gseg]-(int)outputbuf;
+	size = (int)(GTABptr[gfreq.gseg]-outputbuf);
 	freqfilptr->size += size;
 	*p_frqfilhdrpos++ = freqfilptr->size;
 
@@ -740,10 +694,8 @@ int	list_no;
 		else if (delayacode == EVENT2_TWRD)
 			len = 4;
 		else {
-		    sprintf(msge,"Delay_list: unknown acode %d\n",
-			delayacode);
-	    	    text_error(msge);
-		    psg_abort(1);
+		    abort_message("Delay_list: unknown acode %d\n",
+		   	delayacode);
 		}
 
 		for (j=0; j<len; j++)
@@ -755,10 +707,8 @@ int	list_no;
 		    newacodes = nacodes;
 		} else {
 		    if (newacodes != nacodes) {
-		    sprintf(msge,"Delay_list: Mismatch in acodes %d, is %d\n",
+		    abort_message("Delay_list: Mismatch in acodes %d, is %d\n",
 			newacodes,nacodes);
-	    	    text_error(msge);
-		    psg_abort(1);
 		   }
 	    	}
 	   }
@@ -772,8 +722,7 @@ int	list_no;
 	{
 	   /* output the acodes to the global segment file	*/
    	   if (write(freqfilptr->fd,(char *)outputbuf,size) != size) {
-		text_error("delay list write failed\n");
-		psg_abort(1);
+		abort_message("delay list write failed\n");
 	   }
 	}
 	free(outputbuf);
@@ -787,20 +736,15 @@ int	list_no;
 	{
 	   if (bgflag)
 	   {
-	     sprintf(msge, "Warning: List [%d] already created.\n",list_no);
-	     text_error(msge);
+	     text_error("Warning: List [%d] already created.\n",list_no);
 	   }
 	}
 	if (gfreq.listcnt < list_no)
 	{
-	   sprintf(msge, "Error: List [%d] not in order.\n",list_no);
-	   text_error(msge);
-	   sprintf(msge, 
+	   text_error("Error: List [%d] not in order.\n",list_no);
+	   text_error(
 	    "Make sure to start at 0, and to have unique list\n"); 
-	   text_error(msge);
-	   sprintf(msge,"numbers for each list.\n");
-	   text_error(msge);
-	   psg_abort(1);
+	   abort_message("numbers for each list.\n");
 	}
 	return(-1);
  }
@@ -828,7 +772,6 @@ Create_mem_delay_list(list, nvals, pbuf)
     int	acodes_forelem;
     int	i;
     codeint *beginaddr;
-    char   msge[128];
 
 
     acodes_forelem = 0;
@@ -854,10 +797,8 @@ Create_mem_delay_list(list, nvals, pbuf)
 	    {
 	    	if (acodes_forelem != num_acodes_forelem)
 	    	{
-	   	 sprintf(msge,"freq_list: Mismatch in freq acodes %d, is %d\n",
+	   	 abort_message("freq_list: Mismatch in freq acodes %d, is %d\n",
 			acodes_forelem,num_acodes_forelem);
-	        text_error(msge);
-		 psg_abort(1);
 	    	}
 	    }
 
@@ -893,14 +834,12 @@ int	list_no;
  int	size;			/* size in bytes of completed list */
  int acodes_per_elem;
  codeint *outputbuf;
- char   msge[128];
 
 
  /* check to make sure a valid global segment is available	*/
  if (gfreq.gseg < 0) 
  {
-	text_error("Global segment not available for frequency list.\n");
-	psg_abort(1);
+	abort_message("Global segment not available for frequency list.\n");
  }
 
  if (list_no < 0)
@@ -920,14 +859,13 @@ int	list_no;
 						      (char *)outputbuf);
 	}else{
 	    /* when list completed, update the size in file header */
-	    size = (int)GTABptr[gfreq.gseg]-(int)outputbuf;
+	    size = (int)(GTABptr[gfreq.gseg]-outputbuf);
 	    freqfilptr->size += size;
 	    *p_frqfilhdrpos++ = freqfilptr->size;
 	    
 	   /* output the acodes to the global segment file	*/
    	   if (write(freqfilptr->fd,(char *)outputbuf,size) != size) {
-		text_error("RF write failed\n");
-		psg_abort(1);
+		abort_message("RF write failed\n");
 	   }
 	}
 	free(outputbuf);
@@ -940,20 +878,15 @@ int	list_no;
 	{
 	   if (bgflag)
 	   {
-	     sprintf(msge, "Warning: List [%d] already created.\n",list_no);
-	     text_error(msge);
+	     text_error("Warning: List [%d] already created.\n",list_no);
 	   }
 	}
 	if (gfreq.listcnt < list_no)
 	{
-	   sprintf(msge, "Error: List [%d] not in order.\n",list_no);
-	   text_error(msge);
-	   sprintf(msge, 
+	   text_error("Error: List [%d] not in order.\n",list_no);
+	   text_error(
 	    "Make sure to start at 0, and to have unique list\n"); 
-	   text_error(msge);
-	   sprintf(msge,"numbers for each list.\n");
-	   text_error(msge);
-	   psg_abort(1);
+	   abort_message("numbers for each list.\n");
 	}
 	return(-1);
  }
@@ -983,21 +916,17 @@ Create_mem_freq_list(list, nvals, device, outputbuf)
     int	acodes_forelem;
     int	i;
     codeint *beginaddr;
-    char   msge[128];
 
     /* check for a valid device.	*/
     if ((device < 1) || (device > NUMch)){
-	sprintf(msge, "freq_list: device #%d is not within bounds 1 - %d\n",
-		device, MAX_RFCHAN_NUM);
-        text_error(msge);
-        psg_abort(1);
+	    abort_message("freq_list: device #%d is not within bounds 1 - %d\n",
+	    	device, MAX_RFCHAN_NUM);
     }
     if (RF_Channel[device] == NULL){
 	if (ix < 2){
-	    sprintf(msge, 
+	    text_error(
 		    "offset: Warning RF Channel device #%d is not present.\n",
 		    device);
-	    text_error(msge);
 	}
         return 0;
     }
@@ -1046,9 +975,8 @@ Create_mem_freq_list(list, nvals, device, outputbuf)
 	error = Send(RF_Channel[device], MSG_GET_RFCHAN_ATTR_pr, 
 		     &param, &result);
 	if (error < 0){
-	    sprintf(msge, 
+	    text_error(
 		    "%s : %s\n", RF_Channel[device]->objname, ObjError(error));
-	    text_error(msge);
 	}
 	/* delay in order for frequency switching to settle		*/
 	if ((result.reqvalue != TRUE) && !newacq) {
@@ -1070,10 +998,8 @@ Create_mem_freq_list(list, nvals, device, outputbuf)
 	    acodes_forelem = num_acodes_forelem;
 	}else{
 	    if (acodes_forelem != num_acodes_forelem){
-		sprintf(msge,"freq_list: Mismatch in freq acodes %d, is %d\n",
+		abort_message("freq_list: Mismatch in freq acodes %d, is %d\n",
 			acodes_forelem, num_acodes_forelem);
-	        text_error(msge);
-		psg_abort(1);
 	    }
 	}
     }
@@ -1094,10 +1020,8 @@ Create_mem_freq_list(list, nvals, device, outputbuf)
 		newacodes = nacodes;
 	    }else{
 		if (newacodes != nacodes){
-		    sprintf(msge,"freq_list: Mismatch in acodes %d, is %d\n",
+		    abort_message("freq_list: Mismatch in acodes %d, is %d\n",
 			    newacodes, nacodes);
-	    	    text_error(msge);
-		    psg_abort(1);
 		}
 	    }
 	    nacqptr = nacqptr+nacodes;

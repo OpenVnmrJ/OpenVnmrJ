@@ -515,5 +515,9 @@ struct _tunefreq {
 	         };
 typedef struct _tunefreq Tunefreq;
 
+extern void notinhwloop(char *name);
+extern void okinhwloop();
+extern int ClearTable(void *ptr, size_t tablesize);
+
 /* end of acodes.h */
 

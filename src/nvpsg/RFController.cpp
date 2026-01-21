@@ -54,7 +54,6 @@ bool isICAT() {
 
 //
 double RFController::xmtrHiLowFreq= 150.0;
-double RFController::ampHiLowFreq=whatamphibandmin(0, 0.0);
 double RFController::h1freq = 0.0;
 double RFController::systemIF = 20.0; /* MHZ */
 

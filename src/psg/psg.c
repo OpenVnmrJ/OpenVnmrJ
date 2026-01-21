@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/file.h>
+#include <time.h>
 #include "group.h"
 #include "symtab.h"
 #include "variables.h"
@@ -21,6 +22,7 @@
 #include "pvars.h"
 #include "REV_NUMS.h"
 #include "asm.h"
+#include "tools.h"
 #include "oopc.h"	/* Object Oriented Programing Package */
 #include "ACQ_SUN.h"
 #include "rfconst.h"
@@ -29,14 +31,15 @@
 #include "vfilesys.h"
 #include "CSfuncs.h"
 #include "arrayfuncs.h"
+#include "cps.h"
 
 
 #ifndef ACQPARMS
 /* --- code type definitions, can be changed for different machines */
 typedef char codechar;          /* 1 bytes */
 typedef short codeint;          /* 2 bytes */
-typedef long  codelong;         /* 4 bytes */
-typedef unsigned long  codeulong; /* 4 bytes */
+typedef int  codelong;         /* 4 bytes */
+typedef unsigned int  codeulong; /* 4 bytes */
 #endif
 /* #define TESTING  */  /* use for stand alone dbx testing */
 
@@ -146,20 +149,20 @@ typedef unsigned long  codeulong; /* 4 bytes */
  */
 #define MV162_SIZE 	32767
 
-extern char *getwd();
-extern char *newString();
-extern char *realString();
-extern symbol **getTreeRoot();
-extern varInfo *rfindVar();
-extern int createPS();		/* create Pulse Sequence routine */
-extern double getval();
-extern double sign_add();
+extern void createPS();		/* create Pulse Sequence routine */
 extern codeint *init_acodes();
 extern void write_shr_info(double exp_time);
 extern void write_exp_info();
+extern void lockPsgQ(const char *dir);
+extern void unlockPsgQ(const char *dir);
+extern int sendExpproc(char *acqaddrstr, char *filename, char *info,
+           int nextflag);
 
 static void checkGradAlt();
 void checkGradtype();
+void check_for_abort();
+void reset();
+void first_done();
 
 
 int bgflag = 0;
@@ -226,8 +229,8 @@ Tableinfo	*Table[MAXTABLE];
 char       **cnames;	/* pointer array to variable names */
 codeint     *preCodes;	/* pointer to the start of the malloced space */
 codeint     *Codes;	/* pointer to the start of the Acodes array */
-long	     Codesize;	/* size of the malloc space for codes */
-long	     CodeEnd;	/* End Address  of the malloc space for codes */
+int	     Codesize;	/* size of the malloc space for codes */
+int	     CodeEnd;	/* End Address  of the malloc space for codes */
 codeint     *Codeptr; 	/* pointer into the Acode array */
 int          nnames;	/* number of variable names */
 int          ntotal;	/* total number of variable names */
@@ -405,8 +408,8 @@ int curfifocount;		/* current number of word in fifo */
 int setupflag;			/* alias used to invoke PSG ,go=0,su=1,etc*/
 int dps_flag;			/* dps flag */
 int ra_flag;			/* ra flag */
-unsigned long start_elem;       /* elem (FID) for acquisition to start on (RA)*/
-unsigned long completed_elem;   /* total number of completed elements (FIDs)  (RA) */
+unsigned int start_elem;       /* elem (FID) for acquisition to start on (RA)*/
+unsigned int completed_elem;   /* total number of completed elements (FIDs)  (RA) */
 int statusindx;			/* current status index */
 int HSlines;			/* High Speed output board lines */
 int presHSlines;		/* last output of High Speed output board lines */
@@ -439,7 +442,7 @@ codeint hwloop_ptr;		/* offset to hardware loop Acode */
 codeint multhwlp_ptr;		/* offset to multiple hardware loop flag */
 codeint nsc_ptr;		/* offset to NSC Acode */
 
-unsigned long 	ix;			/* FID currently in Acode generation */
+unsigned int 	ix;			/* FID currently in Acode generation */
 int 	nth2D;			/* 2D Element currently in Acode generation (VIS usage)*/
 int     arrayelements;		/* number of array elements */
 int     fifolpsize;		/* fifo loop size (63, 512, 1k, 2k, 4k) */
@@ -812,8 +815,8 @@ struct _ModInfo	ModInfo[MAX_RFCHAN_NUM+1] = {
 +------------------------------------------------------------------------*/
 struct _cfindex
 {
-     long NFids;
-     long OffSets[10];
+     int NFids;
+     int OffSets[10];
 };
 typedef struct _cfindex cfindex;
 
@@ -966,16 +969,12 @@ main(argc,argv) 	int argc; char *argv[];
     /* ------- Check For GO - PSG Revision Clash ------- */
     if (Rev_Num != GO_PSG_REV )
     {	
-	char msge[100];
-	sprintf(msge,"GO(%d) and PSG(%d) Revision Clash, PSG Aborted.\n",
-	  Rev_Num,GO_PSG_REV);
-	text_error(msge);
-	psg_abort(1);
+	    abort_message("GO(%d) and PSG(%d) Revision Clash, PSG Aborted.\n",
+	         Rev_Num,GO_PSG_REV);
     }
     if (P_rec_stat == -1 )
     {	
-	text_error("P_receive had a fatal error.\n");
-	psg_abort(1);
+	    abort_message("P_receive had a fatal error.\n");
     }
 
 #else   /* TESTING */
@@ -1196,6 +1195,7 @@ main(argc,argv) 	int argc; char *argv[];
     A_getvalues(CURRENT,cvals,&ncvals,ntotal);
     if (bgflag)
         fprintf(stderr,"Number of names: %d \n",nnames);
+#ifdef XXX
     if (bgflag > 2)
     {
         for (i=0; i< nnames; i++)
@@ -1212,6 +1212,7 @@ main(argc,argv) 	int argc; char *argv[];
 	    }
         }
     }
+#endif
 
     /* variable look up now done with hash tables */
     init_hash(ntotal);
@@ -1239,32 +1240,29 @@ main(argc,argv) 	int argc; char *argv[];
 +------------------------------------------------------------------*/
     if (newacq)
     {
-       Codesize =  (long)  (MV162_SIZE * sizeof(codeint));     /* code + struct */
+       Codesize =  (int)  (MV162_SIZE * sizeof(codeint));     /* code + struct */
     }
     else
     {
-       Codesize =  (long)  (VM02_SIZE * sizeof(codeint));     /* code + struct */
+       Codesize =  (int)  (VM02_SIZE * sizeof(codeint));     /* code + struct */
     }
 
     if (bgflag)
     {
 	fprintf(stderr,"arraydim = %5.0lf \n",arraydim);
-        fprintf(stderr,"sizeof Codes: %ld(dec) bytes \n", Codesize);
+        fprintf(stderr,"sizeof Codes: %d(dec) bytes \n", Codesize);
     }
 
     preCodes = (codeint *) malloc( Codesize + 2 * sizeof(codelong) );
     if ( preCodes == 0L )
     {
-        char msge[128];
-	sprintf(msge,"Insuffient memory for Acode allocation of %ld Kbytes.",
-		Codesize/1000L);
-	text_error(msge);
-	reset(); 
-	psg_abort(0);
+	   reset(); 
+	   abort_message("Insuffient memory for Acode allocation of %d Kbytes.",
+		Codesize/1000);
     }
     Codes = preCodes + 4;
 
-    CodeEnd = ((long) Codes) + Codesize;
+    CodeEnd = (int) ((long) Codes + Codesize);
 
     /* Set up Acode pointers */
     Codeptr = init_acodes(Codes);
@@ -1434,7 +1432,7 @@ main(argc,argv) 	int argc; char *argv[];
         int num;
         num =  Codeptr - Codes;/* offset within Code File of next */
         for (i=0; i< (int) num; i++)
-	     fprintf(stderr,"0x%lx-Codes[%d]: %d or 0x%x \n",
+	     fprintf(stderr,"%p-Codes[%d]: %d or 0x%x \n",
 	        &Codes[i],i,Codes[i],Codes[i]);
     }
     if (checkflag)
@@ -1622,17 +1620,17 @@ psgsetup(in_pipe, bugflag)
     arraydim = 1.0;		/* SWTUNE is 1D, nomatter what. */
     if (newacq)
     {
-       Codesize =  (long)  (MV162_SIZE * sizeof(codeint));   /* code + struct */
+       Codesize =  (int)  (MV162_SIZE * sizeof(codeint));   /* code + struct */
     }
     else
     {
-       Codesize =  (long)  (VM02_SIZE * sizeof(codeint));    /* code + struct */
+       Codesize =  (int)  (VM02_SIZE * sizeof(codeint));    /* code + struct */
     }
 
     if (bgflag)
     {
 	fprintf(stderr,"arraydim = %5.0lf \n",arraydim);
-        fprintf(stderr,"sizeof Codes: %ld(dec) bytes \n", Codesize);
+        fprintf(stderr,"sizeof Codes: %d(dec) bytes \n", Codesize);
     }
 
     preCodes = (codeint *) malloc( Codesize + 2 * sizeof(codelong) );
@@ -1647,7 +1645,7 @@ psgsetup(in_pipe, bugflag)
     }
     Codes = preCodes + 4;
 
-    CodeEnd = ((long) Codes) + Codesize;
+    CodeEnd = ((int) Codes) + Codesize;
 
     /* Set up Acode pointers */
     Codeptr = init_acodes(Codes);
@@ -1706,7 +1704,7 @@ sendExpproc()
 |   This writes to the pipe that go is waiting on to decide when the first
 |   element is done.
 +--------------------------------------------------------------------------*/
-first_done()
+void first_done()
 {
    write_exp_info();
    closeCmd();
@@ -1717,7 +1715,7 @@ first_done()
 |   This procedure is called from close_error.  Close_error is called either
 |   when PSG completes successfully or when PSG calls psg_abort.
 +--------------------------------------------------------------------------*/
-closepipe2(int success)
+void closepipe2(int success)
 {
     char autopar[12];
 
@@ -1731,7 +1729,7 @@ closepipe2(int success)
 }
 /*-----------------------------------------------------------------------
 +------------------------------------------------------------------------*/
-reset()
+void reset()
 {
     if (cnames) free(cnames);
     if (cvals) free(cvals);
@@ -1757,7 +1755,6 @@ setGflags()
     extern Object ObjectNew();
     extern int    Attn_Device(),APBit_Device(),Event_Device();
     extern int    Freq_Device();
-    char  mess[MAXSTR];
     double tmpval;
     int 	i;
 
@@ -1766,11 +1763,9 @@ setGflags()
         NUMch = (int) (tmpval + 0.0005);
 	if (( NUMch < 1) || (NUMch > MAX_RFCHAN_NUM))
 	{
-            sprintf(mess,
+         abort_message(
 	     "Number of RF Channels specified '%d' is too large.. PSG Aborted.\n",
 	      NUMch);
-            text_error(mess);
-	    psg_abort(1);
 	}
         /* Fool PSG if numrfch is 1 */
 	if ( NUMch < 2)
@@ -1790,11 +1785,9 @@ setGflags()
         ap_interface = (int) (tmpval + 0.0005);
 	if (( ap_interface < 1) || (ap_interface > 3))
 	{
-            sprintf(mess,
+         abort_message(
 		"AP interface specified '%d' is not valid.. PSG Aborted.\n",
 	      ap_interface);
-            text_error(mess);
-	    psg_abort(1);
 	}
     }
     else
@@ -1829,9 +1822,8 @@ setGflags()
 	    ( fifolpsize != 1024) && (fifolpsize != 2048)  &&
 	    ( fifolpsize != 4096) && (fifolpsize != 8192) )
 	{
-            sprintf(mess,"Fifo size %d is not valid.. PSG Aborted.\n",fifolpsize);
-            text_error(mess);
-	    psg_abort(1);
+         abort_message(
+         "Fifo size %d is not valid.. PSG Aborted.\n",fifolpsize);
 	}
     }
     else
@@ -1843,19 +1835,15 @@ setGflags()
         rotorSync = (int) (tmpval + 0.0005);
 	if (( rotorSync != 0) && (rotorSync != 1) )
 	{
-            sprintf(mess,
+         abort_message(
 	      "Rotor Sync interface specified '%d' is not valid.. PSG Aborted.\n",
 	      ap_interface);
-            text_error(mess);
-	    psg_abort(1);
 	}
         if ( (rotorSync == 1) && (fifolpsize < 1024) )
 	{
-            sprintf(mess,
+         abort_message(
 	      "Wrong Fifo Loop Size to have Rotor Sync interface.. PSG Aborted.\n"
 	       );
-            text_error(mess);
-	    psg_abort(1);
         }
     }
     else
@@ -2571,7 +2559,7 @@ int   nextflag;
 
     expflags = 0;
     if (autoflag)
-	expflags = ((long)expflags | AUTOMODE_BIT);  /* set automode bit */
+	expflags = (expflags | AUTOMODE_BIT);  /* set automode bit */
 
     if (ra_flag)
         expflags |=  RESUME_ACQ_BIT;  /* set RA bit */
@@ -2580,7 +2568,7 @@ int   nextflag;
 	return(ERROR);
     if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
 	return(ERROR);
-    sprintf(message,"%d,%s,%d,%lf,%s,%s,%s,%s,%s,%d,%d,%lu,%lu,",
+    sprintf(message,"%d,%s,%d,%lf,%s,%s,%s,%s,%s,%d,%d,%u,%u,",
 		QUEUE,addr,
 		(int)priority,exptime,fidpath,codefile,
 		fileRFpattern, filegrad, filexpan,
@@ -2594,8 +2582,8 @@ int   nextflag;
       fprintf(stderr,"time: %lf\n",totaltime);
       fprintf(stderr,"suflag: %d\n",setupflag);
       fprintf(stderr,"expflags: %d\n",expflags);
-      fprintf(stderr,"start_elem: %lu\n",start_elem);
-      fprintf(stderr,"completed_elem: %lu\n",completed_elem);
+      fprintf(stderr,"start_elem: %u\n",start_elem);
+      fprintf(stderr,"completed_elem: %u\n",completed_elem);
       fprintf(stderr,"msge: '%s'\n",message);
       fprintf(stderr,"auto: %d\n",autoflag);
     }
@@ -2711,7 +2699,7 @@ int   nextflag;
     return(OK);
 }
 
-int check_for_abort()
+void check_for_abort()
 {
    if (access( abortfile, W_OK ) == 0)
    {
@@ -2826,16 +2814,12 @@ char *option;
 /*	invalid. Uses one argument which is the name of the calling	*/
 /*	routine.							*/
 /*----------------------------------------------------------------------*/
-validate_imaging_config(callname)
-char *callname;
+void validate_imaging_config(char *callname)
 {
-    char msg[128];
     if (!have_imaging_sw()){
     	/* Systems w/o imaging software */
-	sprintf(msg,"Error: %s not supported for system type.",callname);
-	text_error(msg);
-	text_error("       Select Imaging Spectrometer in config menu.");
-	psg_abort(1);
+	    text_error("Error: %s not supported for system type.",callname);
+	    abort_message("       Select Imaging Spectrometer in config menu.");
     }
 }
 
