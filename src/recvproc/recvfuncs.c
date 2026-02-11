@@ -114,7 +114,7 @@ static void sleepMilliSeconds(int msecs)
 *
 */
 static
-void calcDCoffset(long *noisedata, int length, double *realdcoffset, 
+void calcDCoffset(int *noisedata, int length, double *realdcoffset, 
 			double *imagdcoffset, int dp)
 {
    int  nscnt; 
@@ -445,14 +445,14 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
    char *dataPtr;
    char *blksizeData;
    char *discardData;
-   unsigned long xfrSize,bytes2xfr;
-   unsigned long maxFidsRecv;
-   unsigned long fidSize,correctedNP = 0,correctedFidSize = 0;
+   unsigned int xfrSize,bytes2xfr;
+   unsigned int maxFidsRecv;
+   unsigned int fidSize,correctedNP = 0,correctedFidSize = 0;
    int done,bytes,sync,stat;
    FID_STAT_BLOCK fidstatblk;
    char acqMsg[ACQ_UPLINK_XFR_MSG_SIZE+5];
    int enddata_flag;
-   long noisedata[256];
+   int noisedata[256];
    int iRcvr;
    int nRcvrs;
    int uplink_flag;
@@ -461,7 +461,7 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
        double r;
        double i;
    } dcLevel[MAX_STM_OBJECTS];
-/*   long *noisedata; */
+/*   int *noisedata; */
 
    DPRINT1(1,"uploadData: datafile: %p \n",datafile);
    DPRINT2(1,"uploadData: expInfo->IlFlag = %d RAFlag = %d\n",
@@ -483,15 +483,15 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
        noisesize = ((256 * expInfo->DspOversamp) + (expInfo->DspOsCoef - 1)) * 
 		   expInfo->DataPtSize;
 
-       /* noisedata = (long *) malloc(((noisesize*sizeof(long))) + 10); */
-       DPRINT2(1,"FID Size: %lu bytes, Noise Size: %d bytes\n",fidSize,noisesize);
+       /* noisedata = (int *) malloc(((noisesize*sizeof(int))) + 10); */
+       DPRINT2(1,"FID Size: %u bytes, Noise Size: %d bytes\n",fidSize,noisesize);
    }
    else
    {
        fidSize = expInfo->FidSize;
-       /* noisedata = (long *) malloc((256*sizeof(long))); */
+       /* noisedata = (int *) malloc((256*sizeof(int))); */
    }
-   DPRINT3(1,"uploadData: OverSample: %d, local FID buffer size: %lu, Actual FID Size: %d\n",
+   DPRINT3(1,"uploadData: OverSample: %d, local FID buffer size: %u, Actual FID Size: %d\n",
 	expInfo->DspOversamp,fidSize,expInfo->FidSize);
    DPRINT1(1,"uploadData: number of FIDS: %d\n", expInfo->NumFids );
 
@@ -506,7 +506,7 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
        else
 	  blksizeData = (char*) malloc((noisesize) + 10);
 
-       DPRINT2(1,"uploadData: malloc for Il-BS, RA or DSP: %lu bytes, addr: %p\n",
+       DPRINT2(1,"uploadData: malloc for Il-BS, RA or DSP: %u bytes, addr: %p\n",
 		  fidSize,blksizeData);
        if (blksizeData == NULL)
        {
@@ -602,7 +602,7 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
       {
 	   correctedNP = (fidstatblk.np - (expInfo->DspOsCoef - 1))/expInfo->DspOversamp;
 	   correctedFidSize = correctedNP * expInfo->DataPtSize;
-           DPRINT4(1,"Fid StatBlk: OverSample: Factor %d, Coef %d;  Corrected:  DataSize %lu, NP %lu\n",
+           DPRINT4(1,"Fid StatBlk: OverSample: Factor %d, Coef %d;  Corrected:  DataSize %u, NP %u\n",
 		expInfo->DspOversamp, expInfo->DspOsCoef, correctedFidSize, correctedNP);
       }
       /* DPRINT(-1,">>>>>>>  AT  'A' \n"); */
@@ -820,7 +820,7 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
 
       /* if ct <= 0 it is a steady state fid and should be discarded */
       /* else if fid elemid == 0 then this is the NOISE fid */
-      if ((long)fidstatblk.ct <= 0)	/* ss FID */
+      if (fidstatblk.ct <= 0)	/* ss FID */
       {
 	dataPtr = (char *)discardData;	
       }
@@ -871,7 +871,7 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
           else
 	     xfrSize = XFR_SIZE;
 
-          DPRINT4(2,"Address: %p, Xfr Size: 0x%lx (%lu)  Left: %lu\n",
+          DPRINT4(2,"Address: %p, Xfr Size: 0x%x (%u)  Left: %u\n",
 		dataPtr,xfrSize,xfrSize,bytes2xfr);
           blockAllEvents();
 	  bytes = readChannel(chanId,dataPtr,xfrSize);
@@ -883,25 +883,25 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
 	    errLogQuit(ErrLogOp,debugInfo,"uploadData: Failed to get xfrSize.\n");
           }
 
-	  if ((long)fidstatblk.ct > 0)   /* data will be discarded if ct <= 0 */
+	  if (fidstatblk.ct > 0)   /* data will be discarded if ct <= 0 */
 	    dataPtr += xfrSize;
 	  bytes2xfr -= xfrSize;
       }
 
-      if ((long)fidstatblk.ct <= 0)
+      if (fidstatblk.ct <= 0)
       {
 	DPRINT(1,"Do Nothing data is to be discarded\n");
 	continue;
       }
       else if ( fidstatblk.elemId == 0)     /* Calculate noise values */
       {
-	long *noisePtr;
+	int *noisePtr;
 	DPRINT(1,"A Noise FID do dclevel Calc\n");
 	nRcvrs = iRcvr + 1;	/* Count up nbr of rcvrs being used */
 
 	/* added test for JPSG since noise is oversampled for dsp='i'*/
         if ((fidstatblk.np > 256) && (expInfo->DspOversamp > 1))
-	  noisePtr = (long *)blksizeData; /* if np != 256 then noise has been oversampled */	
+	  noisePtr = (int *)blksizeData; /* if np != 256 then noise has been oversampled */	
 	else
 	  noisePtr = noisedata;	
 
@@ -950,7 +950,7 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
 
             /* If BS==0 then memcpy (there are no BS) otherwise 
 		if (ct/bs) <= 1 then memcpy (i.e. 1st BS) */
-	    First_Bs =  (expInfo->NumInBS >= 1) ? (((long)fidstatblk.ct / expInfo->NumInBS) <= 1 ) : 1;
+	    First_Bs =  (expInfo->NumInBS >= 1) ? ((fidstatblk.ct / expInfo->NumInBS) <= 1 ) : 1;
 
 
             /* if Interleave and elements 1st BS then memcpy not add */
@@ -967,8 +967,8 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
 /*
            if ( ((expInfo->RAFlag) && (expInfo->CurrentTran == 0)) ||
 	        ((expInfo->RAFlag == 0) && 
-		 (((long)fidstatblk.ct / expInfo->NumInBS) <= 1 )) ||
-                 ((dspflag)  && (((long)fidstatblk.ct / expInfo->NumInBS) <= 1 )) )
+		 ((fidstatblk.ct / expInfo->NumInBS) <= 1 )) ||
+                 ((dspflag)  && ((fidstatblk.ct / expInfo->NumInBS) <= 1 )) )
 */
 	   /* if ( Ra_Ct_Zero || Il_First_Bs || Dsp_First_Bs) */
 	   if ( Ra_Ct_Zero || Il_First_Bs )
@@ -990,13 +990,13 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
 #ifdef DEBUG
              {   /* diagnostic output */
         	int i;
-		long *lptr;
+		int *lptr;
 		short *sptr;
 	        if (expInfo->DataPtSize == 4)
 		{	
-             	   for(i=0,lptr=(long*)blksizeData;i<20;i++)
+             	   for(i=0,lptr=(int*)blksizeData;i<20;i++)
              	   {
-              	     DPRINT2(1,"data[%d]: %ld\n",i,*lptr++);
+              	     DPRINT2(1,"data[%d]: %d\n",i,*lptr++);
              	   }
 		}
 		else
@@ -1019,13 +1019,13 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
 		    (datafile->offsetAddr + sizeof(fidblockheader)), blksizeData,
 		     fidstatblk.np );
 #ifdef LINUX
-                 byteSwap((long*)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 0);
+                 byteSwap((int *)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 0);
                  /* Incoming data was already byte-swapped for DSP operation */
 #endif
        	         stat = sumFloatData( (float *)(datafile->offsetAddr + 
 		        sizeof(fidblockheader)),(float *)blksizeData, fidstatblk.np );
 #ifdef LINUX
-                 byteSwap((long*)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 0);
+                 byteSwap((int *)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 0);
 #endif
 	       }
 	       else
@@ -1034,13 +1034,13 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
 		    (datafile->offsetAddr + sizeof(fidblockheader)), blksizeData,
 		    fidstatblk.np );
 #ifdef LINUX
-                 byteSwap((long*)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 0);
-                 byteSwap((long*)blksizeData, fidstatblk.np, 0);
+                 byteSwap((int *)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 0);
+                 byteSwap((int *)blksizeData, fidstatblk.np, 0);
 #endif
        	         stat = sumIntData( (int*)(datafile->offsetAddr + 
 		        sizeof(fidblockheader)),(int*)blksizeData, fidstatblk.np);
 #ifdef LINUX
-                 byteSwap((long*)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 0);
+                 byteSwap((int *)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 0);
 #endif
                  if (stat)
        	            errLogRet(ErrLogOp,debugInfo,
@@ -1057,7 +1057,7 @@ int uploadData(MFILE_ID datafile, SHR_EXP_INFO expInfo)
 		     fidstatblk.np );
 #ifdef LINUX
                byteSwap((short*)(datafile->offsetAddr + sizeof(fidblockheader)), fidstatblk.np, 1);
-               byteSwap((long*)blksizeData, fidstatblk.np, 1);
+               byteSwap((int *)blksizeData, fidstatblk.np, 1);
 #endif
                stat = sumShortData( (short*)(datafile->offsetAddr + 
 		    sizeof(fidblockheader)),(short*)blksizeData,  fidstatblk.np  );
@@ -1445,7 +1445,7 @@ int InitialFileHeaders()
         fidblockheader.scale = (short) 0;
         fidblockheader.index = (short) 0;
         fidblockheader.mode = (short) 0;
-        fidblockheader.ctcount = (long) 0;
+        fidblockheader.ctcount = 0;
         fidblockheader.lpval = (float) 0.0;
         fidblockheader.rpval = (float) 0.0;
         fidblockheader.lvl = (float) 0.0;
@@ -1802,9 +1802,9 @@ void rmAcqiFiles( SHR_EXP_INFO ExpInfo )
 int recvInteract()
 {
    char *dataPtr;
-   unsigned long xfrSize,bytes2xfr,size2alloc;
-   unsigned long ptsRecv;
-   int64_t lastFid;
+   unsigned int xfrSize,bytes2xfr,size2alloc;
+   unsigned int ptsRecv;
+   int lastFid;
    int bytesPerPt,done,bytes,sync;
    FID_STAT_BLOCK fidstatblk;
    char acqMsg[ACQ_UPLINK_XFR_MSG_SIZE+5];
@@ -1835,7 +1835,7 @@ int recvInteract()
 /*  The value for NumFids should always be valid, even if nf
     is not defined.  Look at initacqparms.c, SCCS category PSG.  */
 
-   DPRINT1( 1, "in recvInteract, allocated %lu chars\n", size2alloc );
+   DPRINT1( 1, "in recvInteract, allocated %u chars\n", size2alloc );
    DPRINT1( 1, "in recvInteract: number of FIDS: %d\n", expInfo->NumFids );
    if (dataRecvBuf == NULL) {
       errLogSysRet(ErrLogOp,debugInfo,"recvInteract: cannot get space to receive data\n" );

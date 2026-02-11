@@ -766,12 +766,13 @@ void calc_digfilter()
 |		   dspExec()/4			|
 |						|
 +----------------------------------------------*/
-int dspExec(dataPtr, outPtr, np_os, fidsize, ct_os)
-char	*dataPtr,	/* data pointer */
-        *outPtr;	/* output data pointer */
-unsigned long  	 np_os,		/* number of oversampled data points */
-	 fidsize,	/* fid size in bytes */
-	 ct_os;		/* number of transients */
+// char	*dataPtr,	/* data pointer */
+//         *outPtr;	/* output data pointer */
+// unsigned int  	 np_os,		/* number of oversampled data points */
+// 	 fidsize,	/* fid size in bytes */
+// 	 ct_os;		/* number of transients */
+int dspExec(char *dataPtr, char *outPtr, unsigned int np_os,
+      unsigned int fidsize, unsigned int ct_os)
 {
    int			npbytes = (int)fidsize; 	/* number of bytes in acquired FID */
    int			ctval; 				/* number of transients */

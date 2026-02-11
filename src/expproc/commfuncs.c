@@ -39,6 +39,8 @@
 #define HEARTBEAT_TIMEOUT_INTERVAL	(2.8)
 
 extern MSG_Q_ID pRecvMsgQ;
+extern int isExpActive(void);
+extern int resetExpproc(void);
 
 int chanId;
 int chanIdSync;		/* Expproc's updating socket to console */
@@ -244,11 +246,13 @@ int connectChan(int chan_no)
 
 /* define this dummy for all other processes except Expproc */
 #ifndef NODUMMY
-void processChanMsge()
+void processChanMsge(int readChanId)
 {
+   return;
 }
-void resetExpproc()
+int resetExpproc()
 {
+   return(0);
 }
 int isExpActive()
 {
@@ -274,7 +278,7 @@ int isExpActive()
 static void
 chanAsyncConRetry(int chan_no)
 {
-  extern void processChanMsge();
+  extern void processChanMsge(int readChanId);
   int result;
   result = connectChannel( chan_no );
   if (result != -1)
@@ -315,7 +319,7 @@ static void ignoreSigalrm(int signal)
 int initiateAsyncChan(int chan_no)
 /* int chan_no - channel to open */
 {
-  extern void processChanMsge();
+  extern void processChanMsge(int readChanId);
   void ignoreSigalrm(int);
   int retry, ival;
   retry = 1;
@@ -433,8 +437,7 @@ int setRtimer(double timsec, double interval)
 *   the interface is a socket; otherwise it is a message queue.
 */
 
-int
-deliverMessage( char *interface, char *message )
+int deliverMessage( char *interface, char *message )
 {
 	char		tmpstring[ 256 ];
 	int		ival1, ival2;

@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <setjmp.h>
@@ -28,6 +29,28 @@
 #include "procQfuncs.h"
 #include "REV_NUMS.h"
 
+extern void expQTask();
+extern int parser(char* str);
+extern void wrtacqinfo2();
+extern void restartTasks();
+extern int connectChan(int chan_no);                   /*   commfuncs.c */
+extern void setupHeartBeat();
+extern int closeChannel( int channel );
+extern  int  activeExpQclean(void);
+extern void expQclean(void);
+extern void resetState(void);
+extern void delacqinfo2();
+extern void killTasks();
+extern void initConsoleStatus();
+extern void controlHeartBeat(int val);
+extern int initApplSocket();
+extern int initExpQs(int clean);
+extern int initCmdParser();
+extern int initActiveExpQ(int clean);
+extern int initExpStatus(int clean);
+extern int semClean();
+extern void setupexcepthandler();
+
 MSG_Q_ID pRecvMsgQ;
 
 char ProcName[256];
@@ -37,11 +60,8 @@ int  SystemVersionId = INOVA_SYSTEM_REV;
 static sigjmp_buf ReStart_Env;
 static void childItrp(int);
 
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
-   int rtn;
    sigset_t   blockmask;
    void TheGrimReaper(void*);
    void processMsge(void*);
@@ -207,7 +227,7 @@ void processMsge(void *notin)
        /* if we got a message then go ahead and parse it */
        if (rtn > 0)
        {
-         DPRINT2(1,"received %d bytes, MsgInbuf len %d bytes\n",rtn,strlen(MsgInbuf));
+         DPRINT2(1,"received %d bytes, MsgInbuf len %zd bytes\n",rtn,strlen(MsgInbuf));
 	 DPRINT1(1,"Expproc received command: %s\n", &MsgInbuf[ 0 ] );
          parser(MsgInbuf);
          MsgInbuf[0] = '\0';
@@ -257,16 +277,11 @@ childItrp(int signal)
 void
 TheGrimReaper(void* arg)
 {
-    int expid;
-    int item;
     int coredump;
     int pid;
     int status;
     int termsig;
-    int result;
     int kidstatus;
-    char ActiveId[256];
-    int  activetype,fgbg,apid;
     char *whodied;
     extern char *proctypeName(int);
     extern char *registerDeath(pid_t);
@@ -307,7 +322,7 @@ TheGrimReaper(void* arg)
 	}
 	else
 	{
-	   DPRINT1(1,"GrimReaper: Unknown Died.\n",whodied);
+	   DPRINT1(1,"GrimReaper: Unknown Died. PID: %d\n", pid);
 	}
    }
    /* Now that we are done catching kids, lets check for processing to do */
@@ -316,9 +331,8 @@ TheGrimReaper(void* arg)
    return;
 }
 
-resetExpproc()
+void resetExpproc()
 {
-    int stat;
     DPRINT(3,"resetExpproc\n");
     siglongjmp(ReStart_Env,1);
 }

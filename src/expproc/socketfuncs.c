@@ -94,13 +94,13 @@ processAcceptSocket( Socket *pSocket )
         char*			allocbuffer = NULL;
         char*			buffer = NULL;
 	char	 		constbuf[ 4096 ];
-        long			msgeSize;
+        int			msgeSize;
 	int	 		bcount;
   	sigset_t    savemask;
 
 	registerSocketNonAsync( pSocket );
         blockSignals(&savemask);  /* Block all Signals */
-	bcount = readSocketNonblocking( pSocket, (char*) &msgeSize, sizeof( long ) );
+	bcount = readSocketNonblocking( pSocket, (char*) &msgeSize, sizeof( int ) );
         // DPRINT2(1,"processAcceptSocket: bcount: %d, msgesize:  %ld\n",bcount,msgeSize);
         if (bcount > 0)
         {
