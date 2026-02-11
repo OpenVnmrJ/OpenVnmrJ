@@ -11,8 +11,7 @@
 /* Pbox_eqn.h - Pbox equation evaluator */
 
 
-void parse_eqn(expr)
-char *expr;
+void parse_eqn(char *expr)
 {
   int i=0, _ipr=0, ipr_=0;            
 
@@ -48,7 +47,6 @@ FILE *fnm;
 char *str, *val;
 {
   char chr[MAXSTR], *c;
-  int  i, toks;
           
   fseek(fnm, 0, 0);
   while (fscanf(fnm, "%s", chr) != EOF)
@@ -65,7 +63,7 @@ char *str, *val;
         if (chr[0] == '=')
         {
           fgets(val, MAXSTR, fnm); 
-          if(c = strchr(val, ';'))
+          if( (c = strchr(val, ';')) )
           {
             *c = '\0';
             (void) parse_eqn(val);           
@@ -79,7 +77,7 @@ char *str, *val;
       {
         strcpy(val, chr);
         fgets(chr, MAXSTR, fnm); 
-        if(c = strchr(chr, ';'))
+        if ( (c = strchr(chr, ';')) )
         {
           *c = '\0';
           strcat(val,chr);
@@ -99,7 +97,6 @@ char *val, *str;
 int  ip;
 {
   char chr[MAXSTR], *c;
-  int  i, toks;
   
   chr[0] = '\0';
   fseek(fnm, ip, 0); 
@@ -113,7 +110,7 @@ int  ip;
         if (chr[0] == '=') 
         {
           fgets(val, MAXSTR, fnm); 
-          if(c = strchr(val, ';'))
+          if ( (c = strchr(val, ';')) )
           {
             *c = '\0';
             (void) parse_eqn(val);           
@@ -127,7 +124,7 @@ int  ip;
       {
         strcpy(val, chr);
         fgets(chr, MAXSTR, fnm); 
-        if(c = strchr(chr, ';'))
+        if ( (c = strchr(chr, ';')) )
         {
           *c = '\0';
           strcat(val,chr);
@@ -203,7 +200,7 @@ char *expr, *sfnm;
 Var  *tkn;
 int  *tc;
 {
-  int i=0, j=0, k=0, prn=0, imax=0;          
+  int i=0, j=0, prn=0, imax=0;          
   char str[MAXSTR], val[MAXSTR];
   FILE *fil;
 
@@ -218,7 +215,7 @@ int  *tc;
   while(expr[i]!='\0')
   {
     while(isspace(expr[i])) i++; 
-    if(tkn->flg = isdelim(expr[i])) 
+    if ( (tkn->flg = isdelim(expr[i])) )
     {
       tkn->u = expr[i++];
       if(tkn->u == '(')
@@ -238,7 +235,7 @@ int  *tc;
       while(isspace(expr[i])) i++;
       if (expr[i] == '(')
       {         
-        if (tkn->u = set_func(str))
+        if ( (tkn->u = set_func(str)) )
           tkn->flg = FUNC;
         else
         {
@@ -663,9 +660,8 @@ int      np;
 double  *ar[];
 {
   int    i, j, k, ip, jp, toks, tkmax, ii=0, ic[2], tc, ti, tj;
-  char   str[MAXSTR], expr[MAXSTR];
+  char   expr[MAXSTR];
   double **a;
-  FILE   *fil;
   Var    *tok;
   
   strcpy(expr, eqn);
@@ -798,7 +794,7 @@ double  *ar[];
   for(i=0; i<np; i++)
     (*ar)[i] = a[k][i];
 
-  free(&tok);  
+  free(tok);  
   return (1);
 }
 

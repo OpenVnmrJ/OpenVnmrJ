@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,10 +26,13 @@
 #include "shrexpinfo.h"
 #include "expentrystructs.h"
 #include "hostAcqStructs.h"
+#include "chanLib.h"
+#include "commfuncs.h"
+#include "eventHandler.h"
 
 typedef struct _ptrNsize_ {
 		     char *pCode;
-	             unsigned long cSize;
+	             unsigned int cSize;
 	           } CODEENTRY;
 
 typedef CODEENTRY *CODELIST;
@@ -37,7 +41,7 @@ typedef CODEENTRY *CODELIST;
 extern int chanId;	/* Channel Id */
 SHR_EXP_INFO expInfo = NULL;   /* start address of shared Exp. Info Structure */
 
-static char command[256];
+// static char command[256];
 static char response[256];
 static char dspdlstat[256];
 static SHR_MEM_ID  ShrExpInfo = NULL;
@@ -45,11 +49,28 @@ ExpEntryInfo ActiveExpInfo;
 
 /* global info retained for acode shipping to console */
 static char labelBase[81];
-static long nAcodes;
+static int nAcodes;
 static MFILE_ID mapAcodes = NULL;
 static CODELIST CodeList = NULL;
 static int AbortXfer = 0;	/* SIGUSR2 will set this to abort transfer */
 
+void resetState();
+int mapInExp(ExpEntryInfo *expid);
+int mapOutExp(ExpEntryInfo *expid);
+int sendExpStat(char *str);
+int sendRTFile(char *filename,char *bufRootName);
+int sendTblFiles(unsigned int nTables, char *filename,char *bufRootName);
+int sendTable(char *fname, int tab_nbr, char *tname);
+int sendWFFile(char *filename,char *bufRootName);
+int sendAcodes(int nCodes, char *filename,char *bufRootName);
+int sendCommand(char *command,int trsize,char *response,int recvsiz);
+int blockAbortTransfer();
+int unblockAbortTransfer();
+int writeToConsole(int chanId,char* bufAdr,int size);
+int getResponce(char *response,int recvsiz);
+void install_ref(int size,int bufn,unsigned char *ptr);
+
+extern int deliverMessage( char *interface, char *message );
 /***************************************************************
 * sendCodes - Send an Experiment down to console
 * 	      RT parameter table, Tables, Acodes
@@ -57,10 +78,9 @@ static int AbortXfer = 0;	/* SIGUSR2 will set this to abort transfer */
 *	    2. Basename for Named Buffers (Exp1, Exp1rt,Exp1f1,Exp1t1,etc.)
 *
 */
-sendCodes(char *argstr)
+int sendCodes(char *argstr)
 {
     char *bufRootName;
-    char *expinfofile;
     char *filename;
     int result;
 
@@ -206,11 +226,9 @@ sendCodes(char *argstr)
     return(0);
 }
 
-int sendExpStat(str)
-char *str;
+int sendExpStat(char *str)
 {
    char cmdstr[256];
-   int size,bytes,stat;
   /*  Format:Cmd BufType Label(base) Size(max) number start_number  */
 
   sprintf(cmdstr,"%s none none 0 1 0",str);
@@ -226,7 +244,7 @@ char *str;
   return(0);
 }
 
-sendRTFile(char *filename,char *bufRootName)
+int sendRTFile(char *filename,char *bufRootName)
 {
    MFILE_ID ifile;
    char cmdstr[256];
@@ -283,100 +301,18 @@ sendRTFile(char *filename,char *bufRootName)
   return(stat);
 }
 
-#ifdef OLDSTYLE
-sendTblFile(unsigned long nTables, char *filename,char *bufRootName)
-{
-   MFILE_ID ifile;
-   CODELIST CodeList;
-   char cmdstr[256];
-   int k,size,bytes;
-   int codesize,maxSize;
-   unsigned long *offsetIndx;
-
-  /*  Format:Cmd BufType Label(base) Size(max) number start_number  */
-
-  /* Forget Malloc and Read, we'll use the POWER of MMAP */
-  ifile = mOpen(filename,0,O_RDONLY);
-  if (ifile == NULL)
-  {
-    errLogSysRet(LOGOPT,debugInfo,"could not open %s",filename);
-    return(-1);
-  }
-  if (ifile->byteLen == 0)
-  {
-    errLogRet(LOGOPT,debugInfo,"sendTblFile: '%s' is Empty\n",filename);
-    mClose(ifile);
-    return(-1);
-  }
-  /* going to read sequential once */
-  /* mAdvise(ifile,MF_SEQUENTIAL); */
-
-   /* number of acodes in file */
-   /* nTables = (unsigned long) ifile->offsetAddr; */
-   offsetIndx = (unsigned long*) (ifile->offsetAddr + sizeof(unsigned long));
-
-   CodeList = (CODELIST) malloc(sizeof(CODEENTRY) * nTables);
-   
-
-   /* find largest Table set */
-   for( k = 0, maxSize = 0; k < nTables - 1; k++)
-   {
-     codesize = ( offsetIndx[k+1] - offsetIndx[k] );
-     CodeList[k].cSize = codesize;
-     CodeList[k].pCode = ifile->offsetAddr + offsetIndx[k];
-     maxSize = (codesize > maxSize) ? codesize : maxSize;
-   }
-
-   size = ifile->byteLen;
-   codesize = ((unsigned long)size) - offsetIndx[nTables - 1];
-   CodeList[k].cSize = codesize;
-   CodeList[k].pCode = ifile->offsetAddr + offsetIndx[nTables - 1];
-   maxSize = (codesize > maxSize) ? codesize : maxSize;
-   for (k = 0; k < nTables; k++)
-   {
-     if ( (ActiveExpInfo.ExpInfo->ExpState >= EXPSTATE_TERMINATE)  &&
-		(k > 0) )
-     {
-        DPRINT1(0,"sendTblFile: Terminate Transfer: %d\n",ActiveExpInfo.ExpInfo->ExpState);
-        unblockAbortTransfer();
-	return(-1);
-     }
-
-     sprintf(cmdstr,"downLoad Dynamic %st%d %d %d %d",
-	     bufRootName,k,CodeList[k].cSize,1,k);
-     DPRINT1(1,"Send Tables Cmd: '%s'\n",cmdstr);
-     blockAbortTransfer();
-     sendCommand(cmdstr,DLCMD_SIZE,response,DLRESPB);
-     if (strncmp(response,"OK",2) == 0)
-     {
-           bytes = writeToConsole(chanId,
-	                CodeList[k].pCode,CodeList[k].cSize);
-     }
-     else
-     {
-        errLogRet(LOGOPT,debugInfo,
-		"sendTblFile: Console Transfer Error: '%s'\n",cmdstr);
-	unblockAbortTransfer();
-        return(-1);   /* return, download no further */
-     }
-   }
-   unblockAbortTransfer();
-   return(0);		/* anything less than zero and sendproc gives errors! */
-}
-#endif
-
-
 
 /* send all the tables in a more efficient manner  */
-sendTblFiles(unsigned long nTables, char *filename,char *bufRootName)
+int sendTblFiles(unsigned int nTables, char *filename,char *bufRootName)
 {
    MFILE_ID ifile;
    CODELIST CodeList;
    char cmdstr[256];
-   int k,size,bytes;
+   int k,size;
+   int bytes __attribute__((unused));
    int codesize,maxSize;
    int maxAvailable;
-   unsigned long *offsetIndx;
+   unsigned int *offsetIndx;
 
   /*  Format:Cmd BufType Label(base) Size(max) number start_number  */
 
@@ -397,8 +333,8 @@ sendTblFiles(unsigned long nTables, char *filename,char *bufRootName)
   /* mAdvise(ifile,MF_SEQUENTIAL); */
 
    /* number of acodes in file */
-   /* nTables = (unsigned long) ifile->offsetAddr; */
-   offsetIndx = (unsigned long*) (ifile->offsetAddr + sizeof(unsigned long));
+   /* nTables = (unsigned int) ifile->offsetAddr; */
+   offsetIndx = (unsigned int*) (ifile->offsetAddr + sizeof(unsigned int));
 
    CodeList = (CODELIST) malloc(sizeof(CODEENTRY) * nTables);
    
@@ -413,7 +349,7 @@ sendTblFiles(unsigned long nTables, char *filename,char *bufRootName)
    }
 
    size = ifile->byteLen;
-   codesize = ((unsigned long)size) - offsetIndx[nTables - 1];
+   codesize = ((unsigned int)size) - offsetIndx[nTables - 1];
    CodeList[k].cSize = codesize;
    CodeList[k].pCode = ifile->offsetAddr + offsetIndx[nTables - 1];
    maxSize = (codesize > maxSize) ? codesize : maxSize;
@@ -452,7 +388,7 @@ sendTblFiles(unsigned long nTables, char *filename,char *bufRootName)
    /* now send down the tables */
    for (k = 0; k < nTables; k++)
    {
-     long sizeToSend;
+     int sizeToSend;
 
      DPRINT2(1,"Sendproc: send table %d, size %d\n",
 	k,CodeList[k].cSize);
@@ -462,7 +398,7 @@ sendTblFiles(unsigned long nTables, char *filename,char *bufRootName)
         int zero = 0;
         DPRINT1(0,"sendTblFile: Terminate Transfer: %d\n",ActiveExpInfo.ExpInfo->ExpState);
 
-        bytes = writeToConsole(chanId,&zero,sizeof(long));
+        bytes = writeToConsole(chanId, (char *) &zero,sizeof(int));
         unblockAbortTransfer();
         free(CodeList);
         mClose(ifile);
@@ -470,7 +406,7 @@ sendTblFiles(unsigned long nTables, char *filename,char *bufRootName)
      }
 
      sizeToSend = htonl(CodeList[k].cSize);
-     bytes = writeToConsole(chanId,&sizeToSend,sizeof(long));
+     bytes = writeToConsole(chanId, (char *) &sizeToSend,sizeof(int));
      bytes = writeToConsole(chanId,CodeList[k].pCode,CodeList[k].cSize);
    }
    unblockAbortTransfer();
@@ -490,7 +426,7 @@ sendTblFiles(unsigned long nTables, char *filename,char *bufRootName)
 
 
 
-sendWFFile(char *filename,char *bufRootName)
+int sendWFFile(char *filename,char *bufRootName)
 {
    MFILE_ID ifile;
    char cmdstr[256];
@@ -558,8 +494,7 @@ sendWFFile(char *filename,char *bufRootName)
 *	    2n)	  Order in file of nth table to send.
 *	    2n+1) Name to give nth table
 */
-int
-sendTables(char *argstr)
+int sendTables(char *argstr)
   /* NOTE:
    * The "argstr" argument has been processed with strtok()--resulting in
    * a null being substituted for the first delimiter.
@@ -569,7 +504,6 @@ sendTables(char *argstr)
    * or if another call to strtok() occurs between these two.
    */
 {
-    char *args;
     char *filename;
     int rtn;
     char *sn;
@@ -583,7 +517,7 @@ sendTables(char *argstr)
 
     /* Send all the tables specified in the arg list */
     while ((sn=strtok(NULL, " ")) && (tblname=strtok(NULL," "))){
-	if (rtn=sendTable(filename, atoi(sn), tblname)){
+	if ( (rtn=sendTable(filename, atoi(sn), tblname)) ) {
 	    /* If error, send no more tables */
 	    break;
 	}
@@ -615,7 +549,6 @@ sendDelTables(char *argstr)
    * or if another call to strtok() occurs between these two.
    */
 {
-    char *args;
     char *filename;
     int rtn;
     char *sn;
@@ -629,7 +562,7 @@ sendDelTables(char *argstr)
 
     /* Send all the tables specified in the arg list */
     while ((sn=strtok(NULL, " ")) && (tblname=strtok(NULL," "))){
-	if (rtn=sendTable(filename, atoi(sn), tblname)){
+	if ( (rtn=sendTable(filename, atoi(sn), tblname)) ) {
 	    /* If error, send no more tables */
 	    break;
 	}
@@ -638,18 +571,18 @@ sendDelTables(char *argstr)
     return rtn;
 }
 
-int
-sendTable(char *fname,		/* Name of table file */
-	  int tab_nbr,		/* Position in file of table to download */
-	  char *tname)		/* Name to give the downloaded table */
+// sendTable(char *fname,		/* Name of table file */
+// 	  int tab_nbr,		/* Position in file of table to download */
+// 	  char *tname)		/* Name to give the downloaded table */
+int sendTable(char *fname, int tab_nbr, char *tname)
 {
     char cmdstr[256];
     MFILE_ID ifile;
-    long *lptr;
-    long ntbls;
+    int *lptr;
+    int ntbls;
     char *ptbl;
-    long tablelen;
-    long tableoffset;
+    int tablelen;
+    int tableoffset;
 
     /* Open the file */
     ifile = mOpen(fname, 0, O_RDONLY);
@@ -664,7 +597,7 @@ sendTable(char *fname,		/* Name of table file */
     }
 
     /* Go to nth table */
-    lptr = (long *)(ifile->offsetAddr);
+    lptr = (int *)(ifile->offsetAddr);
     ntbls = *lptr;		/* Nbr of tables in file */
     if (tab_nbr >= ntbls){
 	/* (First table is tab_nbr=0) */
@@ -682,7 +615,7 @@ sendTable(char *fname,		/* Name of table file */
     }
     ptbl = ifile->offsetAddr + tableoffset;
 
-    /*offsetIndx = (unsigned long*) (ifile->offsetAddr + sizeof(unsigned long));
+    /*offsetIndx = (unsigned int*) (ifile->offsetAddr + sizeof(unsigned int));
     CodeList = (CODELIST) malloc(sizeof(CODEENTRY) * nTables);*/
 
     /* Download it with specified name */
@@ -779,7 +712,7 @@ int decompress(unsigned char *dest, unsigned char *src,
    return(xcnt);
 }
       
-install_ref(int size,int bufn,unsigned char *ptr)
+void install_ref(int size,int bufn,unsigned char *ptr)
 {
    /* test is programming error test */
    if (ref_table[bufn].size != 0) 
@@ -812,10 +745,8 @@ unsigned char *get_ref(int num)
 unsigned char *
 send_code(unsigned char *addr, unsigned char *tmpptr, int codesize, int buf_num)
 {
-    int bytes;
     int index_x;
     unsigned char *codes;
-    long codeoffset;
     int action;
     int full_size;
     unsigned char *pp1;
@@ -825,7 +756,7 @@ send_code(unsigned char *addr, unsigned char *tmpptr, int codesize, int buf_num)
     /***************************************************/
 
     action= 0x0c0 & buf_num;
-    full_size = ((unsigned long) (0xffffff00 & buf_num)) >> 8;
+    full_size = ((unsigned int) (0xffffff00 & buf_num)) >> 8;
     buf_num  &= 0x03f; 
     codes = addr;
     DPRINT3(1,"send_code(): action= %d full_size= %d buffer= %d\n",
@@ -865,7 +796,7 @@ get_code_info(unsigned char *addr, unsigned char *out)
 {
    int i;
 
-   for (i=0; i < 2 * sizeof(long); i++)
+   for (i=0; i < 2 * sizeof(int); i++)
       *out++ = *addr++;
 }
 
@@ -873,23 +804,19 @@ get_code_info(unsigned char *addr, unsigned char *out)
 /****************************************************/
 /****************************************************/
 /****************************************************/
-sendAcodes(long nCodes, char *filename,char *bufRootName)
+int sendAcodes(int nCodes, char *filename,char *bufRootName)
 {
    char cmdstr[256],*tmp;
-   int k,size,bytes,stat,prtcnt;
+   int k,bytes,stat,prtcnt;
    int codesize,maxSize;
-   long acqBufsFree;
-   int  SinglePass;
-   unsigned long *offsetIndx,extraBytes;
-   int enoughExtra;
-   unsigned char *scratch = NULL;
+   int acqBufsFree;
    short *bigger = NULL;
-   long  *statusBlk = NULL;
+   int  *statusBlk = NULL;
    int scratch_size = 0;
    int codeinfo[2];
    int ntimes, nTimes2sendAcodes, startAcode;
    int abortSent;
-   long nFIDs;	/* number of Fids or ArrayDim */
+   int nFIDs;	/* number of Fids or ArrayDim */
    int JpsgFlag; 
 
    abortSent = stat = 0;
@@ -917,14 +844,14 @@ sendAcodes(long nCodes, char *filename,char *bufRootName)
   /* mAdvise(mapAcodes,MF_SEQUENTIAL); */
 
    /* number of acodes in file */
-   /* nAcodes = *((long*) mapAcodes->offsetAddr); */
+   /* nAcodes = *((int*) mapAcodes->offsetAddr); */
    nAcodes = nCodes;
    nFIDs = ActiveExpInfo.ExpInfo->ArrayDim;	/* Total Elements of this Exp. */
    startAcode = ActiveExpInfo.ExpInfo->CurrentElem;
    maxSize = ActiveExpInfo.ExpInfo->acode_max_size;
    scratch_size = maxSize + 2048;
    bigger = (short *) malloc(scratch_size);
-   statusBlk = (long*) bigger;
+   statusBlk = (int*) bigger;
 
    /*
    // Used for RA, if Jpsg then nAcodes will be 1, even if nFIDs is greater than 1
@@ -943,7 +870,7 @@ sendAcodes(long nCodes, char *filename,char *bufRootName)
 
    codesize = 0;
 
-   size = mapAcodes->byteLen;
+   // size = mapAcodes->byteLen;
 
    /* Since the console thinks all codes are the same size, and we told
       it the max size then we must write the max size to it.
@@ -1023,7 +950,7 @@ sendAcodes(long nCodes, char *filename,char *bufRootName)
 	   get_code_info((unsigned char *) (mapAcodes->offsetAddr + codesize),
 			 (unsigned char *) &codeinfo[0]);
            DPRINT2(2,"got code info %d %d, ",codeinfo[0], codeinfo[1]);
-           codesize += 2 * sizeof(long);
+           codesize += 2 * sizeof(int);
            code_ptr = (char*) send_code((unsigned char *) (mapAcodes->offsetAddr + codesize), 
 				(unsigned char *) bigger,
                      		codeinfo[0],codeinfo[1]);
@@ -1048,7 +975,7 @@ sendAcodes(long nCodes, char *filename,char *bufRootName)
 
   	      blockAbortTransfer();
 
-              bytes = writeToConsole(chanId,statusBlk,maxSize);
+              bytes = writeToConsole(chanId, (char *) statusBlk,maxSize);
 
    	      unblockAbortTransfer();
 
@@ -1094,7 +1021,7 @@ sendAcodes(long nCodes, char *filename,char *bufRootName)
 
   	  blockAbortTransfer();
 
-          bytes = writeToConsole(chanId,statusBlk,maxSize);
+          bytes = writeToConsole(chanId, (char *) statusBlk,maxSize);
 
    	  unblockAbortTransfer();
 
@@ -1114,7 +1041,7 @@ sendAcodes(long nCodes, char *filename,char *bufRootName)
 
   	blockAbortTransfer();
 
-        bytes = writeToConsole(chanId,statusBlk,maxSize);
+        bytes = writeToConsole(chanId, (char *) statusBlk,maxSize);
 
    	unblockAbortTransfer();
 
@@ -1138,7 +1065,7 @@ sendAcodes(long nCodes, char *filename,char *bufRootName)
   return(stat);
 }
 
-sendCommand(char *command,int trsize,char *response,int recvsiz)
+int sendCommand(char *command,int trsize,char *response,int recvsiz)
 {
    int trouble;
    blockAllEvents();
@@ -1164,7 +1091,7 @@ sendCommand(char *command,int trsize,char *response,int recvsiz)
    return(0);
 }
 
-getResponce(char *response,int recvsiz)
+int getResponce(char *response,int recvsiz)
 {
    int trouble;
    blockAllEvents();
@@ -1180,16 +1107,16 @@ getResponce(char *response,int recvsiz)
    return(0);
 }
 
-writeToConsole(int chanId,char* bufAdr,int size)
+int writeToConsole(int chanId,char* bufAdr,int size)
 {
-  int i,tot_size,bufsize,nblocks,nremain,tbytes;
+  int i,tot_size,nblocks,nremain,tbytes;
 
   tbytes = 0;
   tot_size = size;
 
-  bufsize = DLXFR_SIZE;
-  if (tot_size < DLXFR_SIZE)
-    bufsize = tot_size;
+  // bufsize = DLXFR_SIZE;
+  // if (tot_size < DLXFR_SIZE)
+  //   bufsize = tot_size;
 
   nblocks = tot_size / DLXFR_SIZE;
   nremain = tot_size % DLXFR_SIZE;
@@ -1211,13 +1138,13 @@ writeToConsole(int chanId,char* bufAdr,int size)
   return(tbytes);
 }
 
-abortCodes(char *str)
+int abortCodes(char *str)
 {
    DPRINT(1,"abortCodes: \n");
    return(0);
 }
 
-terminate(char *str)
+int terminate(char *str)
 {
    extern int shutdownMsgQ();
    DPRINT(1,"terminate: \n");
@@ -1225,13 +1152,13 @@ terminate(char *str)
    exit(0);
 }
 
-ShutDownProc()
+void ShutDownProc()
 {
    shutdownComm();
    resetState();
 }
 
-resetState()
+void resetState()
 {
   labelBase[0] = '\0';
   nAcodes = 0;
@@ -1249,7 +1176,7 @@ resetState()
   }
 }
 
-debugLevel(char *str)
+int debugLevel(char *str)
 {
     extern int DebugLevel;
     char *value;
@@ -1262,11 +1189,11 @@ debugLevel(char *str)
 }
 
 
-mapInExp(ExpEntryInfo *expid)
+int mapInExp(ExpEntryInfo *expid)
 {
     DPRINT1(2,"mapInExp: map Shared Memory Segment: '%s'\n",expid->ExpId);
 
-    expid->ShrExpInfo = shrmCreate(expid->ExpId,SHR_EXP_INFO_RW_KEY,(unsigned long)sizeof(SHR_EXP_STRUCT)); 
+    expid->ShrExpInfo = shrmCreate(expid->ExpId,SHR_EXP_INFO_RW_KEY,(unsigned int)sizeof(SHR_EXP_STRUCT)); 
     if (expid->ShrExpInfo == NULL)
     {
        errLogSysRet(LOGOPT,debugInfo,"mapInExp: shrmCreate() failed:");
@@ -1294,7 +1221,7 @@ mapInExp(ExpEntryInfo *expid)
     return(0);
 }
 
-mapOutExp(ExpEntryInfo *expid)
+int mapOutExp(ExpEntryInfo *expid)
 {
     DPRINT1(2,"mapOutExp: unmap Shared Memory Segment: '%s'\n",expid->ExpId);
 
@@ -1309,7 +1236,7 @@ mapOutExp(ExpEntryInfo *expid)
     return(0);
 }
 
-mapIn(char *str)
+int mapIn(char *str)
 {
     char* filename;
 
@@ -1317,7 +1244,7 @@ mapIn(char *str)
 
     DPRINT1(1,"mapIn: map Shared Memory Segment: '%s'\n",filename);
 
-    ShrExpInfo = shrmCreate(filename,SHR_EXP_INFO_RW_KEY,(unsigned long)sizeof(SHR_EXP_STRUCT)); 
+    ShrExpInfo = shrmCreate(filename,SHR_EXP_INFO_RW_KEY,(unsigned int)sizeof(SHR_EXP_STRUCT)); 
     if (ShrExpInfo == NULL)
     {
        errLogSysRet(LOGOPT,debugInfo,"mapIn: shrmCreate() failed:");
@@ -1334,7 +1261,7 @@ mapIn(char *str)
     return(0);
 }
 
-mapOut(char *str)
+int mapOut(char *str)
 {
     char* filename;
 
@@ -1353,11 +1280,11 @@ mapOut(char *str)
 
 /* dummy the SIGUSR2 routines, now use shrexpinfo.h ExpState to determine aborts, etc. */
 
-blockAbortTransfer() { return(0); }
+int blockAbortTransfer() { return(0); }
 
-unblockAbortTransfer() { return(0); }
+int unblockAbortTransfer() { return(0); }
 
-setupAbortXfer() { return(0); }
+int setupAbortXfer() { return(0); }
 
 #else
 
@@ -1368,7 +1295,7 @@ void abortTransfer()
    return;
 }
 
-blockAbortTransfer()
+int blockAbortTransfer()
 {
    sigset_t		qmask;
 
@@ -1377,7 +1304,7 @@ blockAbortTransfer()
    sigprocmask( SIG_BLOCK, &qmask, NULL );
    return(0);
 }
-unblockAbortTransfer()
+int unblockAbortTransfer()
 {
    sigset_t		qmask;
 
@@ -1391,7 +1318,7 @@ unblockAbortTransfer()
 |   Setup the exception handlers for aborting transfer SIGUSR1 
 |    
 +--------------------------------------------------------------------------*/
-setupAbortXfer()
+void setupAbortXfer()
 {
     sigset_t		qmask;
     struct sigaction	intquit;
@@ -1442,7 +1369,7 @@ setupAbortXfer()
     This program is ready to be used and no modifications should be required,
     with the possible exception of the block executed if consoleConn == 0.	*/
 
-sendVME(char *argstr )
+int sendVME(char *argstr )
 {
     char *downLoadFile, *memaddr, *vmeAddrAscii;
     char cmdstr[256];
@@ -1493,7 +1420,7 @@ sendVME(char *argstr )
      * hang up trying to do a readChannel() from the console.
      */
     sleep(2);  
-    sprintf( &cmdstr[ 0 ], "downLoad VME %s %lld", vmeAddrAscii, md->byteLen );
+    sprintf( &cmdstr[ 0 ], "downLoad VME %s %ld", vmeAddrAscii, md->byteLen );
     sendCommand(&cmdstr[ 0 ],DLCMD_SIZE,&response[ 0 ],DLRESPB);
     /*errLogRet( ErrLogOp, debugInfo,"Respond: %s\n",response);*/
     if (strncmp( "OK", response, strlen( "OK" ) ) == 0)

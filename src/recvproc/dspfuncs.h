@@ -50,8 +50,8 @@ extern "C" {
 #endif
 
 extern int  initDSP(SHR_EXP_INFO ExpInfo);
-extern int  dspExec(char *dataPtr, char *outPtr, unsigned long np,
-                    unsigned long fidsize, unsigned long ct);
+extern int  dspExec(char *dataPtr, char *outPtr, unsigned int np,
+                    unsigned int fidsize, unsigned int ct);
  
 #ifdef __cplusplus
 }

@@ -67,7 +67,7 @@ dumptab(filename)
 	int n;
 	struct host *hp;
 	FILE *fp;
-	long t;
+	time_t t;
 	/* Print symbols in alphabetical order for reader's convenience. */
 	static char legend[] = "#\n# Legend:\t(see bootptab.5)\n\
 #\tfirst field -- hostname (not indented)\n\
@@ -142,9 +142,7 @@ dumptab(filename)
  */
 
 static void
-dump_host(fp, hp)
-	FILE *fp;
-	struct host *hp;
+dump_host(FILE *fp, struct host *hp)
 {
 	/* Print symbols in alphabetical order for reader's convenience. */
 	if (hp) {
@@ -268,7 +266,7 @@ dump_host(fp, hp)
 		/* NetBSD: domainname (see above) */
 		/* NetBSD: dumpfile (see above) */
 		if (hp->flags.time_offset) {
-			fprintf(fp, "\\\n\t:to=%ld:", hp->time_offset);
+			fprintf(fp, "\\\n\t:to=%d:", hp->time_offset);
 		}
 		if (hp->flags.time_server) {
 			fprintf(fp, "\\\n\t:ts=");

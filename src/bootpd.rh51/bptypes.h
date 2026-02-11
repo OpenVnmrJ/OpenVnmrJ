@@ -16,7 +16,7 @@
  */
 
 #ifndef	int32
-#define int32 long
+#define int32 int
 #endif
 typedef unsigned int32 u_int32;
 

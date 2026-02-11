@@ -13,8 +13,10 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 
 
@@ -26,16 +28,17 @@
 #include "eventHandler.h"
 #include "commfuncs.h"
 
+extern int parser(char *str);
+extern void setupAbortXfer();
+extern int initCmdParser();
+extern void setupexcepthandler();
+
 MSG_Q_ID pRecvMsgQ;
 
 char ProcName[256];
 
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
-   int rtn;
-   char MsgInbuf[SEND_MSG_SIZE];
    sigset_t   blockmask;
    void processMsge(void*);
 
@@ -117,7 +120,8 @@ void processMsge(void *notin)
        /* if we got a message then go ahead and parse it */
        if (rtn > 0)
        {
-         DPRINT2(1,"received %d bytes, MsgInbuf len %d bytes\n",rtn,strlen(MsgInbuf));
+         DPRINT2(1,"received %d bytes, MsgInbuf len %zd bytes\n",
+               rtn,strlen(MsgInbuf));
          parser(MsgInbuf);
          MsgInbuf[0] = '\0';
        }

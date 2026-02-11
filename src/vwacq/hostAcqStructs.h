@@ -443,6 +443,7 @@ typedef struct _phandlrmsg_
 /* ------------- interrupt Message struct ----------------- */
 /* no longer really an interrupt message struct - but we retain the name */
 
+#ifdef XXX
 typedef struct {
 		short tag;
 		short donecode;
@@ -451,6 +452,7 @@ typedef struct {
 	        unsigned int count;
     		void *stmId;
 	       }  ITR_MSG;
+#endif
 
 
 #define CONSOLE_DEBUG_MAGIC	0x0124
@@ -458,8 +460,8 @@ typedef struct {
 /* Enforce 32 bit alignment */
 
 typedef struct {
-	void	*stmSrcAddr;		/* STM */
-	void	*stmDstAddr;
+	int	 stmSrcAddr;		/* STM */
+	int	 stmDstAddr;
 	int	 stmNpReg;
 	int	 stmNtReg;
 	short	 stmStatus;

@@ -1631,6 +1631,7 @@ phase_encode3_oblshapedgradient(char *token)
     timeVnum = 4;
     timeVals[0] = 17;  /* loop */
     timeVals[1] = 18;  /* wait */
+    timeVals[2] = 17;
 }
 
 void
@@ -6886,6 +6887,7 @@ compare_31(char *token, FILE *fin)
 		     	timeVnum = 4;
 		     	timeVals[0] = 17;  /* loop */
 		     	timeVals[1] = 18;  /* wait */
+            timeVals[2] = 17;  /* wait */
                 break;
               default:
 		        print_dummy_code(token);

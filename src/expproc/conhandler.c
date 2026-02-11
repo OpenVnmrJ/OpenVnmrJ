@@ -61,11 +61,30 @@ extern int  SystemVersionId;  /* System Version Id, compared with Console's */
 extern ExpEntryInfo ActiveExpInfo;
 
 extern void sendRoboCommand(char *cmd);
+extern int writeConsolseStatusBlock( char *filename );
+extern int readChannelNonblocking( int channel, char *datap, int bcount );
+extern int sigInfoproc(void);
+extern int setStatAcqSample(int sample );
+extern int getStatAcqSample();
+extern int receiveConsoleStatusBlock( CONSOLE_STATUS *pcsb );
+extern int compareShimsConsoleStatusBlock( CONSOLE_STATUS *pcsb );
+extern int deliverMessage(char *interface, char *msg); /*   commfuncs.c */
+extern void ShutDownProc();
+extern int isExpActive(void);
+extern int isThereInteractiveAccess();
+extern void resetState();
+extern int chkExpQ(char *argstr);
+extern void setHeartBeat();
+extern int startATask(int task);
+extern int parser(char* str);
 
 char *getAcqErrMsge( int wcode );
+void acqHandler(int *buffer);
+void roboCmd(char *cmd);
+void sendProcMsg(int elemId, int ctval, int donecode, int errorcode);
 
 
-locateConfFile( char *confFile )
+int locateConfFile( char *confFile )
 {
 	strcpy( confFile, getenv("vnmrsystem") );
 	if (strlen( confFile ) < (size_t) 1)
@@ -94,7 +113,7 @@ locateCurrentShims( char *currentShimsFile )
 }
 
 static int
-receiveConsoleDebugBlock( long *data )
+receiveConsoleDebugBlock( int *data )
 {
 	int	cdb_fd, ival;
 	char	file[MAXPATHL];
@@ -107,7 +126,7 @@ receiveConsoleDebugBlock( long *data )
 		return( -1 );
 	}
 
-	ival = write( cdb_fd, data, sizeof( CDB_BLOCK ) - sizeof( long ) );
+	ival = write( cdb_fd, data, sizeof( CDB_BLOCK ) - sizeof( int ) );
 	close( cdb_fd );
 
 	return( ival );
@@ -211,9 +230,9 @@ downloadShims()
 void processChanMsge(int readChanId)
 {
   int   rtn,stat, shimsChanged;
-  long  cmd;
-  long *data;
-  long  consoleMsge[ CONSOLE_MSGE_SIZE/sizeof( long ) ];
+  int  cmd;
+  int *data;
+  int  consoleMsge[ CONSOLE_MSGE_SIZE/sizeof( int ) ];
 
  /* Keep reading the Msg Q until no further Messages */
 
@@ -223,7 +242,7 @@ void processChanMsge(int readChanId)
 	*             -1 if not successful, with `errno' set
 	*                EWOULDBLOCK  no data pending for this channel
         */
-       rtn = readChannelNonblocking( readChanId, &consoleMsge[ 0 ], CONSOLE_MSGE_SIZE );
+       rtn = readChannelNonblocking( readChanId, (char *) &consoleMsge[ 0 ], CONSOLE_MSGE_SIZE );
        /* if we got a message then go ahead and parse it */
        if (rtn > 0)
        {
@@ -278,20 +297,20 @@ void processChanMsge(int readChanId)
 			   DPRINT(1, "MAS SpinPars updated\n");
                         }
 			shimsChanged = compareShimsConsoleStatusBlock( (CONSOLE_STATUS *) data );
-			stat = receiveConsoleStatusBlock( data );
+			stat = receiveConsoleStatusBlock( (CONSOLE_STATUS *) data );
 			DPRINT1(DEBUG_STATBLK,
 		 "case STATBLK: statblock memcmp = %d\n",stat
 			);
 			if (stat != 0 && ActiveExpInfo.ShrExpInfo != NULL &&
 					ACQ_ACQUIRE == getStatAcqState()) {
-				long		ctCnt;
+				int		ctCnt;
 
 			  /*  The CT counter is now kept by the console;
 			      Expproc just transfers the value so Infoproc
 			      and Acqstat can get at it.  July 1997	*/
 
 				ctCnt = getStatAcqCtCnt();
-				setStatCT((unsigned long) ctCnt);
+				setStatCT(ctCnt);
 			}
 
 			if (stat != 0) {
@@ -374,20 +393,20 @@ void processChanMsge(int readChanId)
 
 		      for ( index = 0; index < conf->STM_present; index++)
                       {
-                         void *dspDwnLdAddr;
-			 dspDwnLdAddr = htonl((long) conf->dspDownLoadAddrs[index]);
+                         int dspDwnLdAddr;
+			 dspDwnLdAddr = htonl(conf->dspDownLoadAddrs[index]);
 
 		         /* if ((conf->dspDownLoadAddr != (void *) 0xFFFFFFFF) &&
 		             (conf->dspDownLoadAddr != NULL))
 		         */
 			 /* errLogRet( LOGOPT, debugInfo, "STM[%d] dwnld addr: 0x%lx\n",index, dspDwnLdAddr); */
                          /* if ((dspDwnLdAddr != (void *) 0x01FF01FF) && (dspDwnLdAddr != NULL)) */
-                         if ((dspDwnLdAddr != (void *) 0xFFFFFFFF) && (dspDwnLdAddr != NULL))
+                         if ((dspDwnLdAddr !=  0xFFFFFFFF) && (dspDwnLdAddr != 0))
 		         {
 			   char msg4expproc[ MAXPATHL ];
 
 			   /*errLogRet( LOGOPT, debugInfo, "download stuff to DSP\n" );*/
-			   sprintf( &msg4expproc[ 0 ], "downloadDSP  \n%s \n0x%lx", DSP_DOWNLOAD_FILE,dspDwnLdAddr );
+			   sprintf( &msg4expproc[ 0 ], "downloadDSP  \n%s \n0x%x", DSP_DOWNLOAD_FILE,dspDwnLdAddr );
 			   /* errLogRet( LOGOPT, debugInfo, "downld msge : '%s'\n",msg4expproc); */
 			   deliverMessage( "Expproc", &msg4expproc[ 0 ] );
 		         }
@@ -431,14 +450,11 @@ void processChanMsge(int readChanId)
   return;
 }
 
-acqHandler(int *buffer)
+void acqHandler(int *buffer)
 {
-  char msgestr[256],ExpN[20],resetMsg[10];
-  MSG_Q_ID pVnmrMsgQ;
-  int sendProcMsg(int elem, int ctval, int donecode, int errorcode);
   int arg1;
 
-  extern rmPsgFiles(SHR_EXP_INFO ExpInfo);
+  extern void rmPsgFiles(SHR_EXP_INFO ExpInfo);
 
    arg1 = ntohl( buffer[1] );
    switch( ntohl(buffer[0]))
@@ -617,7 +633,7 @@ acqHandler(int *buffer)
    }
 }
 
-roboCmd(char *cmd)
+void roboCmd(char *cmd)
 {
    DPRINT1(1,"roboCmd: '%s'\n",cmd);
    if ( startATask(ROBOPROC) )     /* if not started then start it */
@@ -630,12 +646,12 @@ roboCmd(char *cmd)
    sendRoboCommand(cmd);
 }
 
-chngSample(char *args)
+void chngSample(char *args)
 {
    /* send message to roboproc */
 }
 
-expCmplt(char *args)
+void expCmplt(char *args)
 {
 }
 
@@ -644,10 +660,9 @@ expCmplt(char *args)
 *  Send the reset message to Sendproc, RecvProc, Procproc
 *
 */
-resetProcs()
+void resetProcs()
 {
-  char ExpN[20],resetMsg[10];
-  MSG_Q_ID pRecvMsgQ; 
+  char resetMsg[10];
   MSG_Q_ID pSendMsgQ;
   MSG_Q_ID pProcMsgQ;
   if (isExpActive() == 1)
@@ -684,9 +699,9 @@ resetProcs()
   }
 }
 
-sendProcMsg(int elemId, int ctval, int donecode, int errorcode)
+void sendProcMsg(int elemId, int ctval, int donecode, int errorcode)
 {
-   char msgestr[256];
+   char msgestr[256+16];
    MSG_Q_ID pProcMsgQ;
    if (isExpActive() == 1)
    {
@@ -714,7 +729,6 @@ sendProcMsg(int elemId, int ctval, int donecode, int errorcode)
 +-------------------------------------------------------*/
 char *getAcqErrMsge( int wcode )
 {
-    char tbuf[ 80 ];
     int iter;
 
     iter = 0;

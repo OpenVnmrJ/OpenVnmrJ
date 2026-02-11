@@ -190,7 +190,8 @@ struct _lc {            /* word allocation of the "acode" data set */
 	codelong acqisum;	/*imaginary sum from noisecheck*/
 	codelong acqrsum;	/*real sum from noisecheck*/
 	codelong acqdpts;	/* total data points */
-	struct autod *acqautop; /* pointer to auto struct(set by apint) */
+//	struct autod *acqautop; /* pointer to auto struct(set by apint) */
+	int      acqautop;   /* use int for 64-bit compatibility */
 	codelong acqstmar;	/* stm card address register */
 	codelong acqstmcr;	/* stm card count register */
         codelong acqrtvptr; 	/* ptr to malloc'ed real time variables   */

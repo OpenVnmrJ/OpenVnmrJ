@@ -30,6 +30,7 @@
 #include "tools.h"
 #include "wjunk.h"
 #include "params.h"
+#include "socket1.h"
 
 #define COMPLETE	0
 #define ERROR		1
@@ -66,7 +67,7 @@ extern char UserName[];
 
 extern void turnOffFixpar();
 extern void finddatainfo();
-extern int  AcqSocketIsRead();
+extern void  AcqSocketIsRead();
 extern FILE *popen_call(char *cmdstr, char *mode);
 extern int  pclose_call(FILE *pfile);
 extern void frame_update(char *, char *);
@@ -101,7 +102,7 @@ extern void init_proc2d();
 extern void init_colors();
 extern int  checkAcqLock(int expn );
 /* extern void setupVnmrAsync(void (*func)()); */
-extern void setupVnmrAsync();
+// extern void setupVnmrAsync(); in socket1.h
 extern int  getAutoDir(char *str, int maxlen);
 extern int  openVnmrInfo(char *dir);
 extern int  delexp(int argc, char *argv[], int retc, char *retv[]);
@@ -314,14 +315,15 @@ static void saveViewPortAddr()
    int pid, port;
    int fd;
    mode_t umaskVal;
+   int ret __attribute__((unused));
 
    P_getstring(GLOBAL,"vnmraddr",addr,1,MAXPATH);
    sscanf(addr,"%s %d %d", path, &port, &pid);
    sprintf(path,"%s/persistence/.vp_%d_%d", userdir, jParent, jcurwin_cexpn());
    umaskVal = umask(0);
    fd = open(path, O_CREAT | O_RDWR | O_TRUNC, 0666);
-   write(fd, &port, sizeof(port));
-   write(fd, &pid, sizeof(pid));
+   ret = write(fd, &port, sizeof(port));
+   ret = write(fd, &pid, sizeof(pid));
    close(fd);
    (void) umask(umaskVal);
 }
@@ -550,7 +552,7 @@ void bootup(int enumber)
 
                 sprintf(rtautocmd, "cp %s.fid/sampleinfo %s/sampleinfo",
                         datadir,curexpdir);
-                system(rtautocmd);
+                ex = system(rtautocmd);
                 ex = 0;
                 /* Wait up to 0.5 secs for fid to appear */
                 while ( access(rtautocmd,R_OK) && (ex < 50) )
