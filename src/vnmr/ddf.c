@@ -71,13 +71,15 @@ extern void Wturnoff_buttons();
 extern FILE *popen_call(char *cmdstr, char *mode);
 extern int  pclose_call(FILE *pfile);
 extern int  D_fidversion();
+extern void setRandomSeed(int seed);
 
 static int count_lines(char *fn_addr );
 static void make_std_bhead(dblockhead *bh_ref, short b_status, short b_index );
 static void make_empty_fhead(dfilehead *fh_ref );
 static int makefid_args(int argc, char *argv[], int *element_addr, int *format_addr,
                     int *addFlag, int *phaseInvert, int *revFlag, int *indexOffset,
-                    double *fidFreq, double *fidAmp, double *fidPhase );
+                    double *fidFreq, double *fidAmp, double *fidPhase,
+                    double *noiseLevel );
 static int report_data_format_inconsistent(char *cmd_name, int old_format );
 static int makefid_getfhead(char *cmd_name, dfilehead *fh_ref, int *update_fh_ref, int force );
 static int load_ascii_numbers(char *cmd_name, char *fn_addr, void *mem_buffer,
@@ -797,6 +799,10 @@ int averag(int argc, char *argv[], int retc, char *retv[])
 |
 +---------------------------------------------------------------------*/
 #define MAXCOL 5
+#define POLY0 0
+#define MAXMIN 1
+#define POLY1 2
+#define EXP 3
 int datafit(int argc, char *argv[], int retc, char *retv[])
 {
     int fitType=0;
@@ -813,6 +819,8 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
     double sumy = 0.0;
     double sumxy = 0.0;
     double sumy2 = 0.0;
+    double maxVal = -1e9;
+    double minVal = 1e9;
     int index;
     int ret __attribute__((unused));
     char line[512];
@@ -824,11 +832,13 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
         ABORT;
     }
     if ( ! strcmp(argv[1],"poly0")  )
-       fitType = 0;
+       fitType = POLY0;
+    else if ( ! strcmp(argv[1],"maxmin") )
+       fitType = MAXMIN;
     else if ( ! strcmp(argv[1],"poly1") )
-       fitType = 1;
+       fitType = POLY1;
     else if ( ! strcmp(argv[1],"exp") )
-       fitType = 2;
+       fitType = EXP;
     else
     {  Werrprintf("%s: first argument must be 'poly0', 'poly1', or 'exp'",argv[0]);
        ABORT;
@@ -875,7 +885,7 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
            ABORT;
        }
        r1 = v1->R;
-       if (fitType >= 1)
+       if (fitType >= POLY1)
        {
           if (argc < 4)
           {
@@ -925,7 +935,7 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
              fclose(fd);
              ABORT;
           }
-          if (fitType == 2)
+          if (fitType == EXP)
              val[col[1]] = log(val[col[1]]);
        }
        else
@@ -935,27 +945,48 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
              break;
           val[0] = r1->v.r;
           r1 = r1->next; 
-          if (fitType >= 1)
+          if (fitType >= POLY1)
           {
              val[1] = r2->v.r;
              r2 = r2->next; 
-             if (fitType == 2)
+             if (fitType == EXP)
                 val[1] = log(val[1]);
           }
        }
-       sumx += val[col[0]];
-       sumx2 += (val[col[0]]*val[col[0]]);
-       if (fitType >= 1)
+       if (fitType == MAXMIN)
        {
-          sumy += val[col[1]];
-          sumxy += (val[col[0]]*val[col[1]]);
-          sumy2 += (val[col[1]]*val[col[1]]);
+          if (val[col[0]] > maxVal)
+             maxVal = val[col[0]];
+          if (val[col[0]] < minVal)
+             minVal = val[col[0]];
+       }
+       else
+       {
+          sumx += val[col[0]];
+          sumx2 += (val[col[0]]*val[col[0]]);
+          if (fitType >= POLY1)
+          {
+             sumy += val[col[1]];
+             sumxy += (val[col[0]]*val[col[1]]);
+             sumy2 += (val[col[1]]*val[col[1]]);
+          }
        }
        index++;
     }
     if (fd)
        fclose(fd);
-    if (fitType == 0)
+    if (fitType == MAXMIN)
+    {
+       if (retc)
+       {
+          retv[0] = realString(maxVal);
+          if (retc>=2)
+             retv[1] = realString(minVal);
+       }
+       else
+          Winfoprintf("maximum: %g  minimum: %g",maxVal,minVal);
+    }
+    else if (fitType == POLY0)
     {
        double average;
        double stddev;
@@ -995,7 +1026,7 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
        denom = N*sumx2 - (sumx*sumx);
        slope = ( N*sumxy - sumx*sumy ) / denom;
        intercept = ( sumx2*sumy - sumx*sumxy ) / denom;
-       if (fitType == 2)
+       if (fitType == EXP)
           intercept = exp(intercept);
        rSquared = (sumxy -sumx*sumy/N) / sqrt((sumx2 - sumx*sumx/N) * (sumy2 - sumy*sumy/N));
        rSquared *= rSquared;
@@ -1005,7 +1036,7 @@ int datafit(int argc, char *argv[], int retc, char *retv[])
           if (retc>=2) retv[1] = realString(intercept);
           if (retc>=3) retv[2] = realString(rSquared);
        }
-       else if (fitType == 1)
+       else if (fitType == POLY1)
           Winfoprintf("slope: %g  intercept: %g R squared: %g",slope,intercept,rSquared);
        else
           Winfoprintf("exponent: %g  coefficent: %g R squared: %g",slope,intercept,rSquared);
@@ -1845,6 +1876,7 @@ static void cvrtReal(int npVal, int single_prec, void *mem_buffer)
 #define  CALC_STR       6
 #define  CALC_INDEX     7
 #define  CALC_2D        8
+#define  CALC_NOISE     9
 
 static void updateFidHead(dfilehead *fid_fhead, int blks, int pnts, int prec)
 {
@@ -2023,6 +2055,62 @@ static int calc_fid_from_values(char *cmd_name, char *fn_addr, void *mem_buffer,
 
         fclose( tfile );
         return( npnts );
+}
+
+static int calc_noise_fid(char *cmd_name, double noiseLevel, int old_blocks,
+                       int npnts, int first, int last,
+                       int addFlag,
+                       dfilehead *fid_fhead )
+{
+   int i, j;
+   dblockhead this_bh1;
+   dpointers fid_block1;
+   int ival __attribute__((unused));
+
+   j = first;
+   setRandomSeed(0);
+   while ( j <= last )
+   {
+      double mult;
+      float *ptr;
+      if (j <= old_blocks)
+      {
+         ival = D_getbuf( D_USERFILE, 1, j-1, &fid_block1 );
+      }
+      else
+      {
+         make_std_bhead( &this_bh1, fid_fhead->status, (short) j );
+         ival = D_allocbuf( D_USERFILE, j-1, &fid_block1 );
+         memcpy( fid_block1.head, &this_bh1, sizeof( dblockhead ) );
+      }
+      ptr=fid_block1.data;
+      i = 1;
+      mult = 2.0/(double) RAND_MAX;
+      if (addFlag)
+      {
+         double rval;
+         while ( i <= npnts )
+         {
+            rval = random();
+            *ptr++ += (float) (noiseLevel * (mult * rval - 1.0));
+            i++;
+         }
+      }
+      else
+      {
+         double rval;
+         while ( i <= npnts )
+         {
+            rval = random();
+            *ptr++ = (float) (noiseLevel * (mult * rval - 1.0));
+            i++;
+         }
+      }
+      ival = D_markupdated( D_USERFILE, j-1 );
+      ival = D_release( D_USERFILE, j-1 );
+      j++;
+   }
+   return( npnts );
 }
 
 static int calc_2d_fid(char *cmd_name, char *fn_addr,
@@ -2316,7 +2404,7 @@ static int calc_indexed_fid(char *cmd_name, char *fn_addr, void *mem_buffer,
 
 int makefid(int argc, char *argv[], int retc, char *retv[])
 {
-   char            *cmd_name, *fn_addr;
+   char            *cmd_name, *fn_addr = NULL;
    void            *mem_buffer = NULL;
    int              bytes_to_allocate, cur_fid_format, element_number, ival,
                     new_fid_format, nlines, np_makefid, old_nblocks,
@@ -2332,6 +2420,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
    double fidFreq = 0.0;
    double fidAmp = 1.0;
    double fidPhase = 0.0;
+   double noiseLevel = 0.0;
 
    cmd_name = argv[ 0 ];
    if (argc < COUNT_REQUIRED_ARGS) {
@@ -2340,11 +2429,12 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
       ABORT;
    }
 
+   np_makefid = -1;
    element_number = -1;             /* default values */
    new_fid_format = UNDEFINED;
    if (makefid_args( argc, argv, &element_number, &new_fid_format,
                     &addFlag, &phaseInvert, &revFlag, &indexOffset,
-                    &fidFreq, &fidAmp, &fidPhase ) != 0)
+                    &fidFreq, &fidAmp, &fidPhase, &noiseLevel ) != 0)
       ABORT;                        /* `makefid_args' reports error */
 //fprintf(stderr,"element_number:%d new_fid_format:%d addFlag:%d phaseInvert:%d revFlag:%d indexOffset:%d\n",
 //                element_number, new_fid_format, addFlag, phaseInvert, revFlag, indexOffset);
@@ -2369,6 +2459,11 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
       calcFID = 5;
       forceUpdate = 1;
    }
+   if (new_fid_format == CALC_NOISE)
+   {
+      new_fid_format = REAL_NUMBERS;
+      calcFID = 6;
+   }
    if (element_number == 0)
    {
       forceUpdate = 1;
@@ -2383,7 +2478,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
    {
       fn_addr = argv[ 2 ];        /* Pointer to line values */
    }
-   else
+   else if (calcFID != 6)         // not equal to NOISE
    {
       fn_addr = argv[ FILE_NAME_ARG ];        /* address of (input) file name */
       nlines = strlen( fn_addr );             /* borrow `nlines' */
@@ -2519,6 +2614,47 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
       calcFID = 4;
       P_setreal(CURRENT,"arraydim",(double) fid_fhead.nblocks,1);
       P_setreal(PROCESSED,"arraydim",(double) fid_fhead.nblocks,1);
+   }
+   else if (calcFID == 6)  // Noise case
+   {
+      old_nblocks = fid_fhead.nblocks;
+      if ( (element_number >= 0) && !update_fhead )
+      {
+         if (element_number > fid_fhead.nblocks)
+         {   Werrprintf("%s: can only add noise to element arraydim+1 or less",
+                argv[0]);
+             ABORT;
+         }
+         if (element_number == fid_fhead.nblocks)
+         {
+            updateFidHead(&fid_fhead, fid_fhead.nblocks+1,
+                          fid_fhead.np, new_fid_format);
+            D_updatehead( D_USERFILE, &fid_fhead );
+            addFlag = 0;
+         }
+         np_makefid = calc_noise_fid(cmd_name, noiseLevel, old_nblocks,
+                                     fid_fhead.np, element_number+1,
+                                     element_number+1, addFlag, &fid_fhead); 
+         calcFID = 4;
+         P_setreal(CURRENT,"arraydim",(double) fid_fhead.nblocks,1);
+         P_setreal(PROCESSED,"arraydim",(double) fid_fhead.nblocks,1);
+      }
+      else
+      {
+         double val;
+         int npnts;
+         int blocks;
+         P_getreal(CURRENT,"np",&val,1);
+         npnts = (int) val;
+         P_getreal(CURRENT,"arraydim",&val,1);
+         blocks = (int) val;
+         if (update_fhead)
+            addFlag = 0;
+         np_makefid = calc_noise_fid(cmd_name, noiseLevel, old_nblocks,
+                                     npnts, 1,
+                                     blocks, addFlag, &fid_fhead); 
+      }
+      calcFID = 4;
    }
    else if (calcFID)
    {
@@ -2699,12 +2835,14 @@ static struct format_table_entry {
         { "2d",         CALC_2D },
         { "calc",       CALC_FILE },
         { "calcIndex",  CALC_INDEX },
-        { "calcstr",    CALC_STR }
+        { "calcstr",    CALC_STR },
+        { "noise",      CALC_NOISE }
 };
 
 static int makefid_args(int argc, char *argv[], int *element_addr, int *format_addr,
                     int *addFlag, int *phaseInvert, int *revFlag, int *indexOffset,
-                    double *fidFreq, double *fidAmp, double *fidPhase )
+                    double *fidFreq, double *fidAmp, double *fidPhase,
+                    double *noise )
 {
         int     iter, ival, jter;
         int     size_of_table;
@@ -2726,6 +2864,23 @@ static int makefid_args(int argc, char *argv[], int *element_addr, int *format_a
            if (argc < 3)
            {
               Werrprintf( "%s: calcstr option requires frequency argument", argv[ 0 ]);
+              return( -1 );
+           }
+           firstArg = 3;
+        }
+        if ( ! strcmp(argv[1],"noise") )
+        {
+           *format_addr = CALC_NOISE;
+           if (argc < 3)
+           {
+              Werrprintf( "%s: noise option requires noise level", argv[ 0 ]);
+              return( -1 );
+           }
+           errno = 0;
+           *noise = atof(argv[2]);
+           if (errno)
+           {
+              Werrprintf( "%s: noise option requires noise level", argv[ 0 ]);
               return( -1 );
            }
            firstArg = 3;

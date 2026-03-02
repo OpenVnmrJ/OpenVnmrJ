@@ -11,12 +11,14 @@ makefid( 'calcstr','freq amp decay phase'  <,element number, 'add', 'sub' >
 	-  calculate a FID element with indexed input
 makefid( input line info, '2d')
 	-  calculate a 2D FID data set
+makefid( 'noise', noiseLevel <,element number, 'add'>)
+	-  calculate and add noise to a data set
 writefid( output text file <, element number > )
 	-  write numeric text file using a FID element.
 ****************************************************************************
 
 The makefid command lets you introduce computed data into your experiment.
-It has five options for defining the data. 
+It has several options for defining the data. 
 
 One option is a text file containing numeric values, 2 per line.  The first value is
 assigned to the X (or real) channel; the second value on the line is
@@ -106,14 +108,13 @@ new element is created, the 'add' option can be given or not. The 'sub'
 argument is the same as 'add' except the phase of the line is inverted
 by adding 180 deg.
 
-The last form of makefid uses the '2d' keyword. The first input argument,
+Another form of makefid uses the '2d' keyword. The first input argument,
 which is required, is the name of the file containing input. Each line of
 input has seven values. These are the f2 offset, f2 decay rate, f2 phase,
 f1 offset, f1 decay rate, f1 phase, and amplitude of each of the peaks
 in the 2D spectrum. The current experiment must have the parameters np, sw,
 ni, and sw1 set. With this information, makefid will generate a States 2D
 model file.
-
 
 Examples include:
 
@@ -193,7 +194,7 @@ makefid(curexp+'/fidlines','calcIndex','add')
 makefid(curexp+'/fidlines','calcIndex','add','indexOffset',3)
 
 
-The fourth and last form of makefid can be called with
+Another form of makefid can be called with
 the keyword 'calcstr' and the  frequency, amplitude, decay rate and phase
 of that line can be passed as the second argument. The second argument must
 be a string of space separated list of the parameters. The optional element
@@ -212,6 +213,27 @@ makefid('calcstr','2500.0 10.0 0.1 0.0',2)  // Add a second FID
 makefid('calcstr','2500.0 10.0 0.1 0.0',4)  // Add a fourth FID, the third FID is added as zeros.
 makefid('calcstr','2000.0 20.0 0.1 0.0',2,'add')  // Add another component to the second FID
 
+Another form of makefid uses the 'noise' keyword. The first input argument
+is the keyword 'noise'. The second required argument is the noise level. The
+command uses the random function to generate values between +/- the supplied
+noise level.  As above, using an element number of 0 will delete the current
+FID file before adding element 1. The element number can be one larger than the
+current number of elements. If no element number is supplied, then if FID data
+exists in the current experiment, then all arraydim elements are selected. If
+no FID data exists in the current experiment, the parameters np and arraydim are
+used to decide the number of elements to use. For the 'noise' option, only the
+format 'float' is allowed. It does not need to be specified. If the 'add' keyword
+is used, noise is added to the existing data. If the 'add' keyword is not used,
+the elements are replaced with noise.
+
+Examples include:
+
+makefid('noise',8.9e-5,'add')       // Add noise to all elements in the current experiment.
+makefid('noise',8.9e-5)             // Replace all elements in the current experiment with noise.
+                                    // If no data exists, use np and arraydim to determine the
+                                    // number of elements
+makefid('noise',8.9e-5,1,'add')     // Add noise to element 1 in the current experiment.
+makefid('noise',8.9e-5,arraydim+1)  // Create a new arraydim+1 noise element.
 
 
 writefid

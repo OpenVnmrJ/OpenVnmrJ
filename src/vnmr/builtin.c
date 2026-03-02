@@ -1702,21 +1702,27 @@ int format(int argc, char *argv[], int retc, char *retv[])
 |
 +-----------------------------------------------------------------------------*/
 
-#define RMAX 2147483647
+void setRandomSeed(int seed)
+{
+   static int seeded = 0;
+   if (!seeded)
+   {
+      if (seed == 0)
+         srandom( HostPid );
+      else
+         srandom( seed );
+      seeded = 1;
+   }
+}
 
 int getRandom(int argc, char *argv[], int retc, char *retv[])
 {
-   static int seeded = 0;
    int retReal = 0;
    int index;
    double max = 0.0;
    int useMax = 0;
 
-   if (!seeded)
-   {
-      srandom( HostPid );
-      seeded = 1;
-   }
+   setRandomSeed(0);
    index = 1;
    while (index < argc)
    {
@@ -1734,7 +1740,7 @@ int getRandom(int argc, char *argv[], int retc, char *retv[])
       double val = (double) random();
       if (useMax)
       {
-         val /= (double) RMAX;
+         val /= (double) RAND_MAX;
          val *= max;
       }
       if (retc)
@@ -1757,7 +1763,7 @@ int getRandom(int argc, char *argv[], int retc, char *retv[])
             negMax = 1;
          }
          imax = (int) (max + 0.1);
-         range = RMAX / (imax + 1);  /* determine size of max + 1 ranges of integers */
+         range = RAND_MAX / (imax + 1);  /* determine size of max + 1 ranges of integers */
          val /= range;
          if (val > imax)
             val = imax;
