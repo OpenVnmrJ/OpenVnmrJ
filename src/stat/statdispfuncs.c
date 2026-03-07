@@ -450,6 +450,7 @@ void disp_string(int item_no, char *strval)
 {
     char txt[TXT_LEN+1];
 
+    txt[0] = '\0';
     if (Wissun())
     {
         if (strlen(strval) > 0 )
@@ -504,6 +505,7 @@ static void disp_val(int item_no, unsigned int val, int show)
 {   char s[TXT_LEN+1];
     char txt[TXT_LEN+1];
 
+    txt[0] = '\0';
     if (val)
         sprintf(s,"%u",val);
     else
@@ -800,12 +802,13 @@ int updatestatscrn(AcqStatBlock *statblock)
     {
         CurrentStatBlock.AcqCmpltTime = statblock->AcqCmpltTime;
         /*fprintf(stderr,"CmpltT\n");*/
-        if (CurrentStatBlock.AcqCmpltTime > 0L)
+        if (CurrentStatBlock.AcqCmpltTime > 0)
         {
-            tmtime = localtime((const time_t *) &(CurrentStatBlock.AcqCmpltTime));
+            time_t curtime = CurrentStatBlock.AcqCmpltTime;
+            tmtime = localtime( &curtime );
             chrptr = asctime(tmtime);
             strcpy(datetim,chrptr);
-            datetim[19] = 0;
+            datetim[19] = '\0';
             disp_string(CompVal,&datetim[11]);
         }
         else
@@ -839,12 +842,13 @@ int updatestatscrn(AcqStatBlock *statblock)
     {
         CurrentStatBlock.AcqDataTime = statblock->AcqDataTime;
         /*fprintf(stderr,"DataT\n");*/
-        if (CurrentStatBlock.AcqDataTime > 0L)
+        if (CurrentStatBlock.AcqDataTime > 0)
         {
-            tmtime = localtime((const time_t *) &(CurrentStatBlock.AcqDataTime));
+            time_t curtime = CurrentStatBlock.AcqDataTime;
+            tmtime = localtime( &curtime );
             chrptr = asctime(tmtime);
             strcpy(datetim,chrptr);
-            datetim[19] = 0;
+            datetim[19] = '\0';
             datetim[10] = '-';
             // disp_string(DataVal,&datetim[11]);
             disp_string(DataVal,&datetim[4]);
