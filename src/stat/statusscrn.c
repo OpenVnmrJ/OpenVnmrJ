@@ -666,9 +666,9 @@ static void initDvals()
     StatBlock.AcqFidElem = 0;
     StatBlock.AcqCT = 0;
     StatBlock.AcqLSDV = 0;
-    StatBlock.AcqCmpltTime = 0L;
-    StatBlock.AcqRemTime = 0L;
-    StatBlock.AcqDataTime = 0L;
+    StatBlock.AcqCmpltTime = 0;
+    StatBlock.AcqRemTime = 0;
+    StatBlock.AcqDataTime = 0;
     StatBlock.AcqLockLevel = 0;
     StatBlock.AcqSpinSet = -1;
     StatBlock.AcqSpinAct = -1;
