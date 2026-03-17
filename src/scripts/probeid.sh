@@ -647,7 +647,7 @@ if [[ ! -f $JAVA ]]; then
    JAVA="java"
 fi
 
-# one common option: JAVAOPTS="-mx128m"
+# one common option: JAVAOPTS="-Xmx128m"
 # java debugger option: 
 #    JAVADBG="-agentlib:jdwp=transport=dt_socket,suspend=y,address=localhost:8000"
 JADADBG=
