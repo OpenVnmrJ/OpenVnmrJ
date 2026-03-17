@@ -150,9 +150,9 @@ fi
 # Set java memory usage
 if [ x$VJMEM = "x" ]
 then
-    vjmem=-mx1500m
+    vjmem=-Xmx1500m
 else
-    vjmem=-mx"$VJMEM"m
+    vjmem=-Xmx"$VJMEM"m
 fi
 
 sysdir=$vnmrsystem

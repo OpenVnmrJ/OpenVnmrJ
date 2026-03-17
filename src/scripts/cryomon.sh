@@ -100,5 +100,5 @@ fi
   #echo -------- USERDIR=$USERDIR
   #echo -------- DISPLAY=$DISPLAY
 
-  eval $JAVA -mx128m -classpath $SYSDIR/java/cryomon.jar -Dsysdir=$SYSDIR -Duserdir=$USERDIR vnmr.cryomon.CryoMonitorControls  $VNMRJ $GUIFLAG $MASTER $DEBUG &
+  eval $JAVA -Xmx128m -classpath $SYSDIR/java/cryomon.jar -Dsysdir=$SYSDIR -Duserdir=$USERDIR vnmr.cryomon.CryoMonitorControls  $VNMRJ $GUIFLAG $MASTER $DEBUG &
 

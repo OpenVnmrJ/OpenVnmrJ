@@ -177,5 +177,5 @@ fi
   JAR="$SYSDIR/java/apt.jar:$SYSDIR/java/probeid.jar:$SYSDIR/java/junit.jar:$SYSDIR/java/vnmrutil.jar"
   MAIN="vnmr.apt.ProbeTune"
 
-  eval $JAVA $DBG -mx128m -classpath $JAR -Dsysdir=$SYSDIR -Duserdir=$USERDIR $MAIN $DEB $PROBEID -probe $PROBE $SW $STO $GUIFLAG $INFOFLAG $UCUT $LCUT -sweep mt $IP -lockPort $LOCKPORT -systunedir $SYSTUNEDIR $MATCH $TUNEMODE $TUNECMD $MATCH2 $TUNEMODE2 $TUNECMD2 $EXEC > /dev/null &
+  eval $JAVA $DBG -Xmx128m -classpath $JAR -Dsysdir=$SYSDIR -Duserdir=$USERDIR $MAIN $DEB $PROBEID -probe $PROBE $SW $STO $GUIFLAG $INFOFLAG $UCUT $LCUT -sweep mt $IP -lockPort $LOCKPORT -systunedir $SYSTUNEDIR $MATCH $TUNEMODE $TUNECMD $MATCH2 $TUNEMODE2 $TUNECMD2 $EXEC > /dev/null &
 

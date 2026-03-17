@@ -54,4 +54,4 @@ fi
 
 vjclasspath="$vnmrsystem/java/vnmrj.jar"
 
-$javabin -mx600m -classpath $vjclasspath  -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption"  vnmr.ui.XmlToCsvUtil "$@"
+$javabin -Xmx600m -classpath $vjclasspath  -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption"  vnmr.ui.XmlToCsvUtil "$@"
