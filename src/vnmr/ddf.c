@@ -2627,8 +2627,10 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
          }
          if (element_number == fid_fhead.nblocks)
          {
+            int tmp = fid_fhead.vers_id;
             updateFidHead(&fid_fhead, fid_fhead.nblocks+1,
                           fid_fhead.np, new_fid_format);
+            fid_fhead.vers_id = tmp;
             D_updatehead( D_USERFILE, &fid_fhead );
             addFlag = 0;
          }
