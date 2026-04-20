@@ -404,6 +404,15 @@ if [ ! -x /usr/bin/dpkg ]; then
   ntfsprogs
   fuse-ntfs-3g
  '
+
+  if [[ $version -ge 9 ]]; then
+    if [[ -z $(rpm -qa | grep java | grep openjdk | grep -v headless) ]]; then
+       jdk=$(rpm -qa | grep java | grep openjdk | grep headless)
+       if [[ ! -z $jdk ]]; then
+          yum remove -y $jdk &>> $logfile
+       fi
+    fi
+  fi
   if [[ $version -ge 9 ]] &&
      [[ -z $(type -t subscription-manager) ]]; then
     epelList="python3-scons ImageMagick"
@@ -411,17 +420,17 @@ if [ ! -x /usr/bin/dpkg ]; then
        epelList="$epelList rsh rarpd"
     fi
     packageList="$item68List $commonList $pipeList libnsl tcsh"
-    if [[ -z $(rpm -qa | grep java | grep openjdk | grep -v headless) ]]; then
-       jdk=$(rpm -qa | grep java | grep openjdk | grep headless)
-       if [[ ! -z $jdk ]]; then
-          yum remove -y $jdk &>> $logfile
-       fi
-    fi
     packageList="$packageList java-17-openjdk"
   elif [ $version -ge 8 ]; then
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
-    commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
-    packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
+    if [ $version -ge 9 ]; then
+       epelList="$epelList gnuplot"
+       commonList="$commonList tcsh compat-openssl11 compat-libgfortran-48"
+       packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl"
+    else
+       commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
+       packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
+    fi
   else
     epelList="$epelList scons meld x11vnc"
     commonList="$commonList rsh rsh-server"
@@ -463,6 +472,7 @@ if [ ! -x /usr/bin/dpkg ]; then
   echo "You can monitor the progress in a separate terminal window with the command"
   echo "tail -f $logfile"
 
+  rhelRepoEnabled=0
   yum68List=''
   for xpack in $package68List
   do
@@ -542,7 +552,8 @@ if [ ! -x /usr/bin/dpkg ]; then
 	    if [[ $(subscription-manager repos --list-enabled |
 	 	     grep -i codeready > /dev/null; echo $?) != 0 ]]; then
           ARCH=$(/bin/arch)
-          subscription-manager repos --enable "codeready-builder-for-rhel-8-${ARCH}-rpms" &>> $logfile
+          subscription-manager repos --enable "codeready-builder-for-rhel-${version}-${ARCH}-rpms" &>> $logfile
+	  rhelRepoEnabled=1
         fi
         yumList="$yumList sharutils"
     fi
@@ -577,11 +588,10 @@ if [ ! -x /usr/bin/dpkg ]; then
     if [[ -z $(type -t subscription-manager) ]]; then
         yum -y install epel-release &>> $logfile
     else
-        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm &>> $logfile
-	    if [[ $(subscription-manager repos --list-enabled |
-	 	     grep -i codeready > /dev/null; echo $?) != 0 ]]; then
+        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${version}.noarch.rpm &>> $logfile
+	if [[ $rhelRepoEnabled -eq 0 ]]; then
           ARCH=$(/bin/arch)
-          subscription-manager repos --enable "codeready-builder-for-rhel-8-${ARCH}-rpms" &>> $logfile
+          subscription-manager repos --enable "codeready-builder-for-rhel-${version}-${ARCH}-rpms" &>> $logfile
         fi
     fi
   fi
