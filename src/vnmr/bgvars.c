@@ -370,7 +370,6 @@ int J_sendVPVars(int tree, char *name, int fd)
     symbol **root;
     varInfo *v;
     vInfo   vI;
-    extern varInfo *rfindVar();
 
 
     if ( (root = getTreeRoot(getRoot(tree))) )
