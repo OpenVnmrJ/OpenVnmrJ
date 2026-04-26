@@ -4576,18 +4576,18 @@ static int create_peak_file(peak_table_struct *peak_table, char *filename)
 {
     int i, ival;
     char dirname[MAXPATHL];
-    char cmd_str[MAXPATHL];
     struct stat unix_fab;
 
     strcpy(dirname,curexpdir);
     strcat(dirname,"/ll2d");
     ival = stat(dirname, &unix_fab);
+    fprintf(stderr,"create_peak_file ival= %d\n",ival);
     if (ival || !S_ISDIR(unix_fab.st_mode))  {
-      sprintf(cmd_str,"mkdir('%s')\n",dirname);
-      execString(cmd_str);
+      mode_t mode = 0777;
+      ival = mkdir(dirname, mode);
+    fprintf(stderr,"called mkdir ival= %d\n",ival);
       }
-    ival = stat(dirname, &unix_fab);
-    if (ival || !S_ISDIR(unix_fab.st_mode))  {
+    if (ival)  {
       return(ERROR);
       }
     
@@ -6756,7 +6756,7 @@ int peak2d(int argc, char *argv[], int retc, char *retv[])
       int cnt;
 
       ave = sum / (double) (npnt*npnt1);
-      stddev = sqrt( sumsq/((double) (npnt*npnt1)) - ave*ave);
+      stddev = sqrt( fabs(sumsq/((double) (npnt*npnt1)) - ave*ave));
       noise = fabs(ave) + 3.0*stddev;
       sum = sumsq = 0.0;
       cnt = 0;
@@ -6768,7 +6768,7 @@ int peak2d(int argc, char *argv[], int retc, char *retv[])
          { 
 	    if (fabs(*phasfl)<noise)
             {
-            sum += *phasfl;
+            // sum += *phasfl;
             sumsq += *phasfl * *phasfl;
             cnt++;
             }
@@ -6776,9 +6776,10 @@ int peak2d(int argc, char *argv[], int retc, char *retv[])
            phasfl++;
          }
         }
-      ave = sum / (double) cnt;
-      stddev = sqrt( sumsq/((double) cnt) - ave*ave);
-      noise = fabs(ave) + 3.0*stddev;
+      // ave = sum / (double) cnt;
+      // stddev = sqrt( sumsq/((double) cnt) - ave*ave);
+      // noise = fabs(ave) + 3.0*stddev;
+      noise = 2.0 * sqrt( sumsq/((double) cnt));
    }
 
    if (argc == 5)
@@ -7002,6 +7003,6 @@ int peak2d(int argc, char *argv[], int retc, char *retv[])
     retv[2] = realString((double)maxpoint);
   }
   if (retc>3)
-    retv[3] = realString((double)noise*vs2d);
+    retv[3] = realString((double)noise);
   RETURN;
 }
