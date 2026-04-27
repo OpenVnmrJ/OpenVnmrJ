@@ -9,7 +9,6 @@
 
 #include <standard.h>
 
-extern int lcsample();
 extern void pbox_par(char *pxname, char *pxval);
 
 double pwwet=0.0, wetpwr=0.0, wgfpwr=4095;
@@ -223,7 +222,6 @@ void pulsesequence()
 
   status(A);
 
-    lcsample();         /* Inject sample, if necessary */
     hsdelay(d1);
 
   status(B);

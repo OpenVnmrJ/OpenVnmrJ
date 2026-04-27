@@ -38,6 +38,19 @@
 #include "displayops.h"
 #include "fft.h"
  
+extern void weightfid(float *wtfunc, float *outp, int n, int rftflag,
+            int dtype);
+extern int htinit(ftparInfo *ftpar, int numfids);
+extern int gethtfid(int fidindex, float *combinebuf, ftparInfo *ftpar,
+             dfilehead *fidhead,
+             int *lastfid, float *addbuf, int nii, int datatype);
+extern void set_calcfidss(int value);
+extern void getcmplx_intfgm(float *data, float *buffer, int nhcpts,
+             int imagskip);
+extern void putcmplx_intfgm(float *data, float *buffer, int nhcpts,
+             int imagskip);
+extern float *gettrace(int trace, int fpnt);
+void driftcorrect_fid(float *outp, int np, int lsfid, int datamult);
 
 #ifdef  DEBUG
 extern int      debug1;
@@ -337,41 +350,18 @@ int fnpower(int fni)
 |  with defined coefficients.			|
 |						|
 +----------------------------------------------*/
-static int combinespectra(fidnum, outp, combinebuf, addbuf, wtfunc,
-			    rotatebuf, pwr, lastfid, datatype, npx,
-			    nnp, nzflvl, nzfnum, ftpar, fidhead,
-			    wtflag, parLPdata, dsfn0, dsnpx, dsnnp,
-                            dspwr, ftflag)
-int		fidnum,
-		datatype,
-		pwr,
-		*lastfid,
-		npx,
-		nnp,
-		nzflvl,
-		nzfnum,
-		wtflag,
-		dsfn0,
-		dsnpx,
-		dsnnp,
-		ftflag,
-		dspwr;
-float		*outp,
-		*combinebuf,
-		*addbuf,
-		*wtfunc,
-		*rotatebuf;
-ftparInfo	*ftpar;
-dfilehead	*fidhead;
-lpstruct	*parLPdata;
+static int combinespectra(int fidnum, float *outp, float *combinebuf,
+           float *addbuf, float *wtfunc, float *rotatebuf, int pwr,
+           int *lastfid, int datatype, int npx, int nnp, int nzflvl,
+           int nzfnum, ftparInfo *ftpar, dfilehead *fidhead, int wtflag,
+           lpstruct *parLPdata, int dsfn0, int dsnpx, int dsnnp,
+           int dspwr, int ftflag)
 {
   int		i,
 		tmpi,
 		fidindex,
 		fidcnt,
 		realt2data;
-  int		gethtfid();
-  void	weightfid();
 
 
   realt2data = (ftpar->procstatus & REAL_t2);
@@ -682,9 +672,6 @@ static int firstft(int fullft, ftparInfo *ftpar, dfilehead *fidhead, int ftflag)
 		dsnpadj,
 		dspwr,
 		tmpi;
-  void	        weightfid();
-  int		htinit(),
-  		gethtfid();
   lpstruct	parLPinfo;
   dpointers	outblock;
   wtPar		wtp;
@@ -1454,16 +1441,10 @@ static int secondft(ftparInfo *ftpar, int ftflag)
 		*rotatebuf;	/* phase rotation vector */
   double	rpx,
 		lpx;
-  void		weightfid(),
-		zeroimag(),
-		driftcorrect_fid();
   dfilehead	tmpdatahead;
   dpointers	outblock;
   lpstruct	parLPinfo;
   wtPar		wtp;
-  extern void	getcmplx_intfgm(),
-		putcmplx_intfgm(),
-		set_calcfidss();
 
   disp_status("FT (t1)");
   if ((ftpar->fn1 > DISPSIZE) || (ftpar->fn0 > DISPSIZE))
@@ -2425,7 +2406,6 @@ int ft2d(int argc, char *argv[], int retc, char *retv[])
   if (do_ds == FALSE)
   {
      int i, npt;
-     extern float *gettrace();
      extern int	fn1;
 
      init2d(1,0);

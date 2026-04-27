@@ -60,8 +60,10 @@ extern int  init_downsample_files(ftparInfo *ftpar);
 extern int  dim1count();
 extern int p11_saveFDAfiles_processed(char* func, char* orig, char* dest);
 extern int init2d_getfidparms(int dis_setup);
-
-
+extern double *readDFcoefs(char *name, double decfactor, int *ntaps,
+                    int min_ntaps, int max_ntaps);
+extern void set_calcfidss(int value);
+extern void calc_digfilter(double *dbuffer, int ntaps, int decfactor);
 
 extern coefs	arraycoef[MAX2DARRAY];
 static int getmultipliers(int argc, char *argv[], int arg_no, int dfflag,
@@ -74,7 +76,9 @@ static int getFidProcInfo(dfilehead *fidhead, ftparInfo *ftpar);
 int i_fid(dfilehead *fidhead, ftparInfo *ftpar);
 int fidss_par(ssparInfo *sspar, int ncp0, int memalloc, int dimen);
 int downsamp_par(ftparInfo *ftpar);
-extern void clearMspec();
+void ls_ph_fid(char *lsfname, int *lsfval, char *phfname, double *phfval,
+               char *lsfrqname, double *lsfrqval);
+extern void clearMspec(void);
 extern void set_dpf_flag(int b, char *cmd);
 extern void set_dpir_flag(int b, char *cmd);
 
@@ -1125,8 +1129,6 @@ int fidss_par(ssparInfo *sspar, int ncp0, int memalloc, int dimen)
 		ssfilter,
 		tmp;
    vInfo	info;
-   extern void	set_calcfidss();
-   extern void	calc_digfilter();
 
 
    sspar->zfsflag = FALSE;
@@ -1288,7 +1290,6 @@ int downsamp_par(ftparInfo *ftpar)
     double	tmp,
 		sw;
     dsparInfo   *dspar = &(ftpar->dspar);
-    double	*readDFcoefs();
 
 /**********************************************
 * init dspar struct, except for fileflag
@@ -2525,8 +2526,6 @@ int i_fid(dfilehead *fidhead, ftparInfo *ftpar)
    int          res;
    double       rx;
    vInfo        info;
-   void		ls_ph_fid();
- 
  
    D_trash(D_USERFILE);          /* instead of closing, trash it */
 
