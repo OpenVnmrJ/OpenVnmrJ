@@ -29,6 +29,7 @@ extern int    Tflag;
 int           ElementBotHead;
 int           ElementTopHead;
 int           terminalElementActive = 0;
+Element *findElement(Elist *elist, char *name);
 
 #ifndef VNMRJ
 static Elist *displayElist;
@@ -53,7 +54,7 @@ extern int      xcharpixels, ycharpixels;
 |	This routine initializes the element structure. It returns
 |       null if there is a problem.
 +--------------------------------------------------------------------*/
-Elist *initElementStruct()
+Elist *initElementStruct(void)
 {  Elist *eptr;	/* pointer to element list packet */
    
    if ( (eptr = (Elist *)allocateWithId(sizeof(Elist),"initElementStruct")) )
@@ -76,7 +77,7 @@ Elist *initElementStruct()
 |	This routine adds an element to the Elist
 +--------------------------------------------------------------------*/
 
-int addElement(elist,name,info)	Elist *elist; char *name,*info;
+int addElement(Elist *elist, char *name, char *info)
 {  Element *Aeptr;
    Element *eptr;   
    
@@ -206,8 +207,7 @@ int getNumberOfSelect(Elist *elist)
 |	This routine finds the first selection (if any), it 
 |       returns a pointer to the name, or null if no selection.
 +--------------------------------------------------------------------*/
-char *
-getFirstSelection(elist)	Elist *elist;  
+char *getFirstSelection(Elist *elist)
 {  Element *eptr;   
    
    if (Tflag)
@@ -237,9 +237,8 @@ getFirstSelection(elist)	Elist *elist;
 |       return with a null.
 +--------------------------------------------------------------------*/
 char *
-getNextSelection(elist,prev)	Elist *elist;  char *prev;
+getNextSelection(Elist *elist, char *prev)
 {  Element         *eptr;   
-   extern  Element *findElement();
    
    if (Tflag)
       fprintf(stderr,"getNextSelection: look for marked after %s\n",prev);      
@@ -271,8 +270,7 @@ getNextSelection(elist,prev)	Elist *elist;  char *prev;
 |
 |	This routine finds an element in the Elist
 +--------------------------------------------------------------------*/
-Element *
-findElement(elist,name)	Elist *elist;  char *name; 
+Element *findElement(Elist *elist, char *name)
 {  Element *eptr;   
    
    if (Tflag)
@@ -298,7 +296,7 @@ findElement(elist,name)	Elist *elist;  char *name;
 |	This routine finds the length of the  element with the 
 |	longest name. 
 +--------------------------------------------------------------------*/
-int getLongLen(elist)	Elist *elist;  
+int getLongLen(Elist *elist)
 {  Element *eptr;   
    int      curlen, maxlen;
 
@@ -329,7 +327,7 @@ int getLongLen(elist)	Elist *elist;
 |
 |	This routine does everything necessary to release an element list
 +--------------------------------------------------------------------*/
-int releaseElementStruct(elist)	Elist *elist;  
+int releaseElementStruct(Elist *elist)
 {  Element *eptr;   
    
    if (Tflag)
@@ -445,7 +443,7 @@ int addInfoToElement(Elist *elist, char *name, char *info)
 |	This routine gets info form an element in elist
 +--------------------------------------------------------------------*/
 char *
-getInfoFromElement(elist,name)  Elist *elist; char *name;  
+getInfoFromElement(Elist *elist, char *name)
 {  Element *eptr;   
    
    if (Tflag)

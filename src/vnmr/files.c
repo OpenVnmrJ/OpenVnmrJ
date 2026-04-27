@@ -27,8 +27,7 @@
 #include "element.h"
 #include "tools.h"
 
-extern char	*getcwd();
-extern char	*get_cwd();
+extern char	*get_cwd(void);
 extern int	 Tflag;
 extern int	 Bnmr;
 
@@ -502,11 +501,9 @@ static char	cur_menu_path[ MAXPATH ] = {'\0'};
 #endif
 
 char *
-get_all_active( elist )
-Elist *elist;
+get_all_active(Elist *elist )
 {
 	char		*first_one, *current_one;
-	extern char	*newString(), *newCat();
 
 	first_one = getFirstSelection( elist );
 	if (first_one == NULL)
@@ -540,9 +537,7 @@ Elist *elist;
 }
 
 char *
-get_one_active( elist, elem_num )
-Elist *elist;
-int elem_num;
+get_one_active(Elist *elist, int elem_num )
 {
 	char	*current_one;
 	int	 iter;

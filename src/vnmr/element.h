@@ -30,7 +30,7 @@ struct _Elist {
 		};
 typedef struct _Elist Elist;
 
-extern struct _Elist *initElementStruct();
-extern char          *getFirstSelection();
-extern char          *getNextSelection();
-extern char          *getInfoFromElement();
+extern Elist *initElementStruct(void);
+extern char  *getFirstSelection(Elist *elist);
+extern char  *getNextSelection(Elist *elist, char *prev);
+extern char  *getInfoFromElement(Elist *elist, char *name);

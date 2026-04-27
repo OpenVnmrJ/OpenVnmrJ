@@ -113,7 +113,6 @@ extern int debug1;
 static void dsww_specdisp(int local_color, int do_ww )
 /****************/
 { int ypos;
-  struct ybar *outindex();
 
   ypos = dfpnt2 + (int)(dispcalib * vp);
   DPRINT3("mnumypts= %d ypos + specmax= %d ypos - specmin= %d\n",
@@ -174,7 +173,7 @@ static void side_specdisp(int local_color)
 /****************/
 static int intdisp(int local_color)
 /****************/
-{ extern struct ybar *outindex();
+{
   struct ybar *out_ptr;
   double  vs1;
   double value;
@@ -498,10 +497,10 @@ static int setspecmaxmin()
 }
 
 /*************/
-static void checkinput(argc,argv,firstindex,lastindex,step,selected,top,side,do_dc,int_on,showPar,color_traces)
+static void checkinput(int argc, char *argv[], int *firstindex, int *lastindex,
+       int *step, int *selected, int *top, int *side, int *do_dc, int *int_on,
+       int *showPar, int *color_traces)
 /*************/
-int argc,*firstindex,*lastindex,*step,*selected,*top,*side,*do_dc,*int_on,*showPar,*color_traces;
-char *argv[];
 { int arg_no;
   int maxindex;
 
@@ -622,12 +621,9 @@ char *argv[];
 }
 
 /*******************************************************/
-static void getcolor(argc,argv,plotting,spec_color,int_color,int_on)
+static void getcolor(int argc, char *argv[], int plotting,
+            int *spec_color, int *int_color, int int_on)
 /*******************************************************/
-int   argc,plotting,int_on;
-char *argv[];
-int  *spec_color,
-     *int_color;
 {
    int argnum, col, found;
 

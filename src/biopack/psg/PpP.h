@@ -18,9 +18,11 @@ double pw_bw, ofs, rf_pwr, rf_pw90;
          cmd[MAXSTR];
   shape  sh;
   int ret __attribute__((unused));
+  int offset;
        
   sprintf(txt, "Pbox %s -w \"%s %.7f %.1f\" ", shn, wvn, pw_bw, ofs);
-  sprintf(txt, "%s -p %.0f -l %.2f ", txt, rf_pwr, 1.0e6*rf_pw90);
+  offset = strlen(txt);
+  sprintf(txt+offset, " -p %.0f -l %.2f ", rf_pwr, 1.0e6*rf_pw90);
   sprintf(cmd, "%s -attn %.0f%c -maxincr 10.0\n", txt, rf_pwr, 'E');
   printf("cmd = %s\n", cmd);
   ret = system(cmd);                                     /* execute Pbox */
@@ -34,8 +36,7 @@ double pw_bw, ofs, rf_pwr, rf_pw90;
     sh = getRsh(shn);
     if (sh.pwrf > 4095.0) 
     {
-      printf("pbox_make : power error, pwrf = %.0f\n ", sh.pwrf);
-      psg_abort(1);
+      abort_message("pbox_make : power error, pwrf = %.0f\n ", sh.pwrf);
     }
   }
 

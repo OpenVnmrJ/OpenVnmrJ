@@ -57,6 +57,12 @@ extern void fidrotate(float *data, int npts, float pc0, float pc1, int datatype)
 extern void rotate_fid(float *fidptr, double ph0, double ph1, int np, int datatype);
 #endif
 
+extern void writelpmatrix(lpinfo lppar);
+extern void writelpcoefs(dcomplex *coef, lpinfo lppar);
+extern void writelproots(dcomplex *lpcoefs, dcomplex *lproots,
+            lpinfo lppar, int mode);
+extern void writelpeigenvalues(double *evals, lpinfo lppar);
+
 static int	calcfidss = TRUE;
 int coefcalc(dcomplex *scratch, dcomplex *lpcoef, lpinfo lppar, dcomplex *roots);
 int findroots(dcomplex *polycoef, dcomplex *scratch, lpinfo lppar,
@@ -65,6 +71,20 @@ int invertdm(double *evals, int ncfilt, double lstrace);
 int qldecomp(double *svonvector, double *svoffvector, double *evmatrix, int dimen);
 int filterfid(ssparInfo parss, float *data, double *buffer,
               double *dfilter, int ncdatapts, int dataskip);
+void shufflematrix(double *matrix, int dimen);
+void hhtridiag(double *matrix, double *diag, double *offdiag,
+               double *scratch, int dimen);
+void sorteigensystem(double *evals, double *evmatrix, double **svevaddr,
+                     int dimen, int pack);
+void solvLS(dcomplex *lpcoef, dcomplex *lsresult, double *invevals,
+            double *scratch, double **svevaddr, lpinfo lppar);
+void correctfid(float *data, int ncdpts, double *polycoef,
+                int msize, int datatype);
+double calcpolyLS(double *lsmatrix, double *polycurve, double *lsresult,
+                  int nLSpts, int lsmatsize, double *scale);
+void solvpolyLS(double *coef, double *lsresult, double *invevals,
+                double *scratch, double **svevaddr, int msize,
+		int nevals, double scale);
 
 /*-------------------------------------------------------
 |							|
@@ -88,7 +108,7 @@ int filterfid(ssparInfo parss, float *data, double *buffer,
 +----------------------------------------------*/
 double cxabs(dcomplex cval)
 {
-   register double      result,
+   double      result,
                         tmp;
 
 
@@ -112,7 +132,7 @@ double cxabs(dcomplex cval)
 +----------------------------------------------*/
 dcomplex cdiv(dcomplex numerator, dcomplex denominator)
 {
-   register double      rval1,
+   double      rval1,
                         rval2,
                         ival1,
                         ival2,
@@ -142,7 +162,7 @@ dcomplex cdiv(dcomplex numerator, dcomplex denominator)
 +----------------------------------------------*/
 static dcomplex vnmrCsqrt(dcomplex cval)
 {
-   register double      rval,
+   double      rval,
                         ival,
                         rres,
                         ires;
@@ -203,28 +223,27 @@ static dcomplex vnmrCsqrt(dcomplex cval)
 |	  a1 + a2 + a3 + ... + aM = 0		|
 |						|
 +----------------------------------------------*/
-void lsmatcalc(data, lppar)
-fcomplex	*data;	/* pointer to original complex time-domain data	*/
-lpinfo	*lppar;	/* LP parameter structure			*/
+// *data;	/* pointer to original complex time-domain data	*/
+// *lppar;	/* LP parameter structure			*/
+void lsmatcalc(fcomplex *data, lpinfo *lppar)
 {
    int			nfpts,
 			ncolpts;
-   register int		i,
+   int		i,
 			j;
-   register double	ftmp1,
+   double	ftmp1,
 			ftmp2,
 			ftmp3,
 			ftmp4,
 			ftmp5,
 			ftmp6;
-   register fcomplex	*yval,
+   fcomplex	*yval,
 			*yval1,
 			*yval2,
 			*yval3;
    dcomplex		*svlpmatrix;
-   register dcomplex	*lpmatrix,
+   dcomplex	*lpmatrix,
 			*tmplpmat;
-   extern void		writelpmatrix();
 
 
    nfpts = lppar->ncfilt;
@@ -420,8 +439,7 @@ lpinfo	*lppar;	/* LP parameter structure			*/
 |		  qld_solve()/1			|
 |						|
 +----------------------------------------------*/
-dcomplex *qld_solve(lppar)
-lpinfo	*lppar;
+dcomplex *qld_solve(lpinfo *lppar)
 {
    int		nclpcoefs;
    double	*lsmatrix,
@@ -430,12 +448,6 @@ lpinfo	*lppar;
                 *scratch;
    dcomplex	*lsresult,
 		*lpcoef;
-   void		shufflematrix(),
-		hhtridiag(),
-		sorteigensystem(),
-		solvLS();
-   extern void	writelpcoefs(),
-		writelpeigenvalues();
 
 
 /***********************************************
@@ -473,25 +485,20 @@ lpinfo	*lppar;
 |	          solvLS()/6			|
 |						|
 +----------------------------------------------*/
-void solvLS(lpcoef, lsresult, invevals, scratch, svevaddr, lppar)
-double		*invevals,
-		*scratch,
-		**svevaddr;
-dcomplex	*lpcoef,
-		*lsresult;
-lpinfo		lppar;
+void solvLS(dcomplex *lpcoef, dcomplex *lsresult, double *invevals,
+            double *scratch, double **svevaddr, lpinfo lppar)
 {
-   register int		i,
+   int		i,
 			j,
 			dimen,
 			msize,
 			nsignals;
-   register double	ftmpr,
+   double	ftmpr,
 			ftmpi,
 			*evmatr,
 			*evmati,
 			**evaddr;
-   register dcomplex	*vec2,
+   dcomplex	*vec2,
 			*vecs,
 			*svvecs;
 
@@ -585,9 +592,9 @@ lpinfo		lppar;
 +----------------------------------------------*/
 int invertdm(double *evals, int ncfilt, double lstrace)
 {
-   register int		invert = TRUE,
+   int		invert = TRUE,
 			nsignals = 0;
-   register double	*vec1;
+   double	*vec1;
 
 
    vec1 = evals;
@@ -620,19 +627,15 @@ int invertdm(double *evals, int ncfilt, double lstrace)
 |	      sorteigensystem()/5		|
 |						|
 +----------------------------------------------*/
-void sorteigensystem(evals, evmatrix, svevaddr, dimen, pack)
-int		dimen,
-		pack;
-double		*evals,
-		*evmatrix,
-		**svevaddr;
+void sorteigensystem(double *evals, double *evmatrix, double **svevaddr,
+                     int dimen, int pack)
 {
    int			sort = TRUE,
 			setindex,
 			stindex = 0;
-   register int		i,
+   int		i,
 			msize;
-   register double	*evmat1,
+   double	*evmat1,
 			*vec1,
 			*vec2,
 			**evaddr1,
@@ -727,13 +730,11 @@ double		*evals,
 |	       shufflematrix()/2		|
 |						|
 +----------------------------------------------*/
-void shufflematrix(matrix, dimen)
-int	dimen;
-double	*matrix;
+void shufflematrix(double *matrix, int dimen)
 {
-   register int		i,
+   int		i,
 			j;
-   register double	*data,
+   double	*data,
 			*realbuf,
 			*imagbuf;
 
@@ -820,20 +821,16 @@ double	*matrix;
 |   matrix.					|
 |						|
 +----------------------------------------------*/
-void hhtridiag(matrix, diag, offdiag, scratch, dimen)
-int		dimen;
-double		*diag,
-		*offdiag,
-		*matrix,
-		*scratch;
+void hhtridiag(double *matrix, double *diag, double *offdiag,
+               double *scratch, int dimen)
 {
-   register int		i,
+   int		i,
 			j,
 			r;
    double		hfactor,
 			kfactor,
 			srootsigma;
-   register double	sigma,
+   double	sigma,
 			scale,
 			*uvector,
 			*qvector,
@@ -1058,7 +1055,7 @@ int qldecomp(double *svonvector, double *svoffvector, double *evmatrix, int dime
 			r,
                 	p,
                 	b;
-   register double	s,
+   double	s,
 			c,
 			f,
 			*onvector,
@@ -1175,7 +1172,6 @@ int rootpolynm(dcomplex *lpcoef, lpinfo lppar, int rootadjust)
 {
    dcomplex	*scratch,
 		*roots;
-   extern void		writelpcoefs();
 
 
    if (lppar.nsignals == 0)
@@ -1203,11 +1199,8 @@ int rootpolynm(dcomplex *lpcoef, lpinfo lppar, int rootadjust)
 |		  polysolve()/4			|
 |						|
 +----------------------------------------------*/
-static int polysolve(polycoef, degree, polyroot, polish)
-int		polish,
-		degree;
-dcomplex	*polycoef,
-		*polyroot;
+static int polysolve(dcomplex *polycoef, int degree,
+                     dcomplex *polyroot, int polish)
 {
    int			i,
 			j;
@@ -1216,12 +1209,12 @@ dcomplex	*polycoef,
 			f,
 			droot,
 			root;
-   register double	tmp,
+   double	tmp,
 			old_droot,
 			abs_droot,
 			abs_root,
 			err;
-   register dcomplex	*data;
+   dcomplex	*data;
 
 
    root = *polyroot;
@@ -1330,16 +1323,15 @@ int findroots(dcomplex *polycoef, dcomplex *scratch, lpinfo lppar,
 			sort = TRUE,
 			setindex,
 			stindex = 0;
-   register int		i,
+   int		i,
 			j;
    double		rmagn;
    dcomplex		b,
 			c,
 			root;
-   register double	tmp;
-   register dcomplex	*proots,
+   double	tmp;
+   dcomplex	*proots,
 			*pcoefs;
-   extern void		writelproots();
 
 
 /******************************************
@@ -1479,16 +1471,15 @@ int findroots(dcomplex *polycoef, dcomplex *scratch, lpinfo lppar,
 +----------------------------------------------*/
 int coefcalc(dcomplex *scratch, dcomplex *lpcoef, lpinfo lppar, dcomplex *roots)
 {
-   register int		i,
+   int		i,
 			j,
 			degree;
-   register double	re_root,
+   double	re_root,
 			im_root;
-   register dcomplex	*cvector,
+   dcomplex	*cvector,
 			*bvector,
 			*vector,
 			*proots;
-   extern void		writelpcoefs();
 
 
    proots = roots;
@@ -1537,18 +1528,15 @@ int coefcalc(dcomplex *scratch, dcomplex *lpcoef, lpinfo lppar, dcomplex *roots)
 |               calcrootdiff()/3                |
 |                                               |
 +----------------------------------------------*/
-double calcrootdiff(polycoefs, root, ncoefs)
-int             ncoefs;
-dcomplex        *polycoefs,
-                root;
+double calcrootdiff(dcomplex *polycoefs, dcomplex root, int ncoefs)
 {
-   register int         i;
-   register double      reroot,
+   int         i;
+   double      reroot,
                         imroot,
                         reval,
                         imval,
                         tmpval;
-   register dcomplex    *pcoefs;
+   dcomplex    *pcoefs;
  
  
 /*********************************************
@@ -1593,7 +1581,7 @@ int fidss(ssparInfo sspar, float *data, int ncdpts, int nclspts)
    int                  nLSpts,
 			msize,
                         i, j;
-   register float	*lfsdata;
+   float	*lfsdata;
    double               plstrace,
 			*lsmatrix,
                         *lsresult,
@@ -1602,11 +1590,8 @@ int fidss(ssparInfo sspar, float *data, int ncdpts, int nclspts)
                         *scratch,
                         *polycoef,
                         *polycurve,
-			*digfilter,
-			calcpolyLS();
-   register double	*pcurve;
-   void                 solvpolyLS(),
-                        correctfid();
+			*digfilter;
+   double	*pcurve;
    static int           nevals;
    static double	fidss_scale;
    double		sslsfrq_tmp;
@@ -1730,8 +1715,7 @@ int fidss(ssparInfo sspar, float *data, int ncdpts, int nclspts)
 |              set_calcfidss()/1                |
 |                                               |
 +----------------------------------------------*/
-void set_calcfidss(value)
-int     value;
+void set_calcfidss(int value)
 {
    calcfidss = value;
    if (calcfidss)
@@ -1744,15 +1728,12 @@ int     value;
 |           calc_digfilter()/3          |
 |                                       |
 +--------------------------------------*/
-void calc_digfilter(dbuffer, ntaps, decfactor)
-int	ntaps,
-	decfactor;
-double	*dbuffer;
+void calc_digfilter(double *dbuffer, int ntaps, int decfactor)
 {
-   register int         i,
+   int         i,
                         j,
 			nfullpts;
-   register double      *tmpfilter,
+   double      *tmpfilter,
 			*tmpfilter2,
                         wc,
                         hd,
@@ -1801,11 +1782,11 @@ int filterfid(ssparInfo parss, float *data, double *buffer,
 {
    int                  nLSpts,
 			ntaps;
-   register int         i,
+   int         i,
                         j;
-   register float       *tmpdata;
+   float       *tmpdata;
    double               sfactor;
-   register double      *tmpbuffer,
+   double      *tmpbuffer,
                         *tmpdfilter,
                         sum;
    int coeff_start, coeff_len, ntaps_2; 
@@ -1869,20 +1850,14 @@ int filterfid(ssparInfo parss, float *data, double *buffer,
 |               calcpolyLS()/6                  |
 |                                               |
 +----------------------------------------------*/
-double calcpolyLS(lsmatrix, polycurve, lsresult, nLSpts,
-				lsmatsize, scale)
-int     nLSpts,
-        lsmatsize;
-double  *lsmatrix,
-        *lsresult,
-        *polycurve,
-        *scale;
+double calcpolyLS(double *lsmatrix, double *polycurve, double *lsresult,
+                  int nLSpts, int lsmatsize, double *scale)
 {
-   register int         i,
+   int         i,
                         j,
                         count,
                         savecount;
-   register double      sum,
+   double      sum,
                         tmpstore,
                         *tmpdata,
                         *tmpresult;
@@ -1998,21 +1973,14 @@ double  *lsmatrix,
 |               solvpolyLS()/8                  |
 |                                               |
 +----------------------------------------------*/
-void solvpolyLS(coef, lsresult, invevals, scratch, svevaddr, msize,
-			nevals, scale)
-int     msize,
-        nevals;
-double  scale,
-        *coef,
-        *lsresult,
-        *invevals,
-        *scratch,
-        **svevaddr;
+void solvpolyLS(double *coef, double *lsresult, double *invevals,
+                double *scratch, double **svevaddr, int msize,
+		int nevals, double scale)
 {
-   register int         i,
+   int         i,
                         j;
    double               *svvecs;
-   register double      ftmp,
+   double      ftmp,
                         *vecs,
                         *vec2,
                         *evmat,
@@ -2080,17 +2048,13 @@ double  scale,
 |               correctfid()/5                  |
 |                                               |
 +----------------------------------------------*/
-void correctfid(data, ncdpts, polycoef, msize, datatype)
-int     ncdpts,
-        msize,
-        datatype;
-float   *data;
-double  *polycoef;
+void correctfid(float *data, int ncdpts, double *polycoef,
+                int msize, int datatype)
 {
-   register int         i,
+   int         i,
                         j;
-   register float       *fiddata;
-   register double      tmpdelta,
+   float       *fiddata;
+   double      tmpdelta,
                         tmpstore,
                         calcdata,
                         *coef;

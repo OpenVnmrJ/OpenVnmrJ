@@ -377,7 +377,7 @@ extern double	 cr, delta, rflrfp, sw, rflrfp1, sw1;
 extern int	 d2flag;
 extern int	 dconi_mode;
 extern int	 ds_mode;
-extern float	*calc_spec();
+extern float *calc_spec(int trace, int fpnt, int dcflag, int normok, int *newspec);
 
 /************************************************************************/
 /*  The `mark' command has several "helper" subroutines.  The name of	*/
