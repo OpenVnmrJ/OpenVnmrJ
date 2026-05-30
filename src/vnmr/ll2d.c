@@ -4764,7 +4764,7 @@ int read_peak_file(peak_table_struct **peak_table, char *filename)
 {
     int j, npeaks, header_count;
     char filenm0[MAXPATHL], *peak_fn;
-    char filenm[MAXPATHL], cmdstr[MAXPATHL];
+    char filenm[MAXPATHL], cmdstr[2*MAXPATHL+16];
     char str[MAXPATHL], *name;
     peak_struct *peak;
     FILE *fp;
@@ -4890,7 +4890,7 @@ int read_peak_file(peak_table_struct **peak_table, char *filename)
 
 static void update_peak_file_version(peak_table_struct **peak_table)
 {
-    char filenm0[MAXPATHL],cmdstr[MAXPATHL],*peak_fn;
+    char filenm0[MAXPATHL],cmdstr[2*MAXPATHL+16],*peak_fn;
     peak_table_struct *tmp_peak_table=NULL;
     peak_struct *tmp_peak;
     FILE *tmp_file;
@@ -4951,7 +4951,7 @@ static int read_ascii_peak_file(peak_table_struct **peak_table, char *filename)
     int i, key, length;
     char filenm0[MAXPATHL],label[LABEL_LEN+1], line[133], *ch_ptr, *peak_fn;
     char filenm[MAXPATHL], comment[COMMENT_LEN+1];
-    char str[MAXPATHL];
+    char str[2*MAXPATHL+16];
     double f1, f2, f1_min, f1_max, f2_min, f2_max, amp, vol, fwhh1, fwhh2;
     double f1_rflrfp, f2_rflrfp, f1_axis_scl, f2_axis_scl;
     float ver;
@@ -6647,6 +6647,8 @@ if (strcmp(callName, "acosy") == 0)
   RETURN;
 }
 
+#define POS 1
+#define NEG 2
 /*************************/
 int peak2d(int argc, char *argv[], int retc, char *retv[])
 /*************************/
@@ -6656,8 +6658,9 @@ int peak2d(int argc, char *argv[], int retc, char *retv[])
    double noise;
    double sum, sumsq, ave;
    int switchf1f2 = 0;
+   int posNegFlag = 0;
 
-   if (argc == 5)
+   if ( (argc == 5) || (argc == 6) )
    {
       char trace[5];
 
@@ -6680,45 +6683,77 @@ int peak2d(int argc, char *argv[], int retc, char *retv[])
           P_setstring(CURRENT, "trace", "f1", 1);
        ABORT;
      }
-   if (argc == 5)
+   if (argc == 2)
+   {
+      if (! strcmp(argv[1], "pos"))
+	   posNegFlag = POS;
+      else if (! strcmp(argv[1], "neg"))
+	   posNegFlag = NEG;
+      else
+      {
+          Werrprintf("%s: first argument %s must be pos or neg",
+			  argv[0], argv[1]);
+	  ABORT;
+      }
+
+   }
+   else if ( (argc == 5) || (argc == 6) )
    {
       int errorExit = 0;
-      if (isReal(argv[1]))
+      int argnum = 1;
+      if (argc == 6)
       {
-         npnt = ll2d_frq_to_dp( stringReal(argv[1]) + rflrfp ,sw,fn);
+         if (! strcmp(argv[1], "pos"))
+	    posNegFlag = POS;
+         else if (! strcmp(argv[1], "neg"))
+	    posNegFlag = NEG;
+         else
+         {
+            Werrprintf("%s: first argument %s must be pos or neg",
+			  argv[0], argv[1]);
+	    ABORT;
+         }
+	 argnum = 2;
+      }
+      if (isReal(argv[argnum]))
+      {
+         npnt = ll2d_frq_to_dp( stringReal(argv[argnum]) + rflrfp ,sw,fn);
       }
       else
       {
-         Werrprintf("first argument must be the F2 high field frequency");
+         Werrprintf("argument %d must be the F2 high field frequency",argnum);
          errorExit = 1;
       }
-      if (isReal(argv[2]))
+      argnum++;
+      if (isReal(argv[argnum]))
       {
-         fpnt = ll2d_frq_to_dp( stringReal(argv[2]) + rflrfp ,sw,fn);
+         fpnt = ll2d_frq_to_dp( stringReal(argv[argnum]) + rflrfp ,sw,fn);
          npnt -= fpnt;
       }
       else
       {
-         Werrprintf("second argument must be the F2 low field frequency");
+         Werrprintf("argument %d must be the F2 low field frequency",argnum);
          errorExit = 1;
       }
-      if (isReal(argv[3]))
+      argnum++;
+      if (isReal(argv[argnum]))
       {
-         npnt1 = ll2d_frq_to_dp( stringReal(argv[3])+rflrfp1 ,sw1,fn1);
+         npnt1 = ll2d_frq_to_dp( stringReal(argv[argnum])+rflrfp1 ,sw1,fn1);
       }
       else
       {
-         Werrprintf("third argument must be the F1 high field frequency");
+         Werrprintf("argument %d must be the F1 high field frequency", argnum);
          errorExit = 1;
       }
-      if (isReal(argv[4]))
+      argnum++;
+      if (isReal(argv[argnum]))
       {
-         fpnt1 = ll2d_frq_to_dp( stringReal(argv[4])+rflrfp1 ,sw1,fn1);
+         fpnt1 = ll2d_frq_to_dp( stringReal(argv[argnum])+rflrfp1 ,sw1,fn1);
          npnt1 -= fpnt1;
       }
       else
       {
-         Werrprintf("fourth argument must be the F1 low field frequency");
+         Werrprintf("argument %d must be the F1 low field frequency", argnum);
          errorExit = 1;
       }
       if (errorExit)
@@ -6732,7 +6767,49 @@ int peak2d(int argc, char *argv[], int retc, char *retv[])
    maxtrace = 0;
    maxpoint = 0;
    sum = sumsq = noise = 0.0;
-   for (ctrace=fpnt1; ctrace<fpnt1+npnt1; ctrace++)
+   if (posNegFlag == POS)
+   {
+     for (ctrace=fpnt1; ctrace<fpnt1+npnt1; ctrace++)
+     { if ((phasfl = gettrace(ctrace,fpnt)) == 0)
+	 return 1;
+       i = 0;
+       while (i<npnt)	/* go though the trace */
+         { 
+            sum += *phasfl;
+            sumsq += *phasfl * *phasfl;
+	    if ( *phasfl > max )
+             { max = *phasfl;
+               maxtrace = ctrace;
+               maxpoint = i;
+             }
+           i++;
+           phasfl++;
+         }
+     }
+   }
+   else if (posNegFlag == NEG)
+   {
+     for (ctrace=fpnt1; ctrace<fpnt1+npnt1; ctrace++)
+     { if ((phasfl = gettrace(ctrace,fpnt)) == 0)
+	 return 1;
+       i = 0;
+       while (i<npnt)	/* go though the trace */
+         { 
+            sum += *phasfl;
+            sumsq += *phasfl * *phasfl;
+	    if ( *phasfl < max )
+             { max = *phasfl;
+               maxtrace = ctrace;
+               maxpoint = i;
+             }
+           i++;
+           phasfl++;
+         }
+     }
+   }
+   else
+   {
+     for (ctrace=fpnt1; ctrace<fpnt1+npnt1; ctrace++)
      { if ((phasfl = gettrace(ctrace,fpnt)) == 0)
 	 return 1;
        i = 0;
@@ -6749,6 +6826,7 @@ int peak2d(int argc, char *argv[], int retc, char *retv[])
            phasfl++;
          }
      }
+   }
 
    if (retc > 3)
    {
