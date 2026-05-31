@@ -14,7 +14,7 @@
 /* auto data structure (pointed to by lc) */
 /* this structure is 256 bytes EXACTLY be CAREFUL */
 struct autod {
-	long checkmask;		/* bit mask for coil on/off */
+	int checkmask;		/* bit mask for coil on/off */
 	short when_mask;	/* when to shim mask */
 	short control_mask;	/* internal autoshim state */
 	short best,loops;	/* reports best vertex, # loops */
@@ -34,18 +34,19 @@ struct autod {
 /* low memory allocation */
 
 struct lc {		/* word allocation of the "acode" data set */
-	long	np;		/* 00 number of points */
-	long	nt;		/* 04 number of transients */
-	long	ct;		/* 08 completed transients */
-	long	isum;		/* 0c imaginary sum from noisecheck*/
-	long	rsum;		/* 10 real sum from noisecheck*/
-	long	dpts;		/* 14 total data points */
-	struct	autod	*autop;	/* 18 pntr to auto structure (set by apint) */
-	long	stmar;		/* 1c stm card address register */
-	long	stmcr;		/* 20 stm card count register */
-	long	rtvptr;		/* 24 ptr to malloc'ed real time variables */
-unsigned long	elemid;		/* 28 added for U+ compatability */
-unsigned long	squi;		/* 2c starting gate pattern */
+	int	np;		/* 00 number of points */
+	int	nt;		/* 04 number of transients */
+	int	ct;		/* 08 completed transients */
+	int	isum;		/* 0c imaginary sum from noisecheck*/
+	int	rsum;		/* 10 real sum from noisecheck*/
+	int	dpts;		/* 14 total data points */
+//	struct	autod	*autop;	/* 18 pntr to auto structure (set by apint) */
+	int	autop;	/* 18 pntr to auto structure (set by apint) */
+	int	stmar;		/* 1c stm card address register */
+	int	stmcr;		/* 20 stm card count register */
+	int	rtvptr;		/* 24 ptr to malloc'ed real time variables */
+unsigned int	elemid;		/* 28 added for U+ compatability */
+unsigned int	squi;		/* 2c starting gate pattern */
 	char	id;		/* 30 diffrent ID's are incompatible */
 	char	versn;		/* 31 versions are compatible */
 	short	o2auto;		/* 32 offset to auto structure (set by psg) */
@@ -126,8 +127,8 @@ unsigned long	squi;		/* 2c starting gate pattern */
 /* --- code type definitions, can be changed for different machines */
 typedef char codechar;          /* 1 bytes */
 typedef short codeint;          /* 2 bytes */
-typedef long  codelong;         /* 4 bytes */
-typedef unsigned long  codeulong; /* 4 bytes */
+typedef int  codelong;         /* 4 bytes */
+typedef unsigned int  codeulong; /* 4 bytes */
 #endif
 
 /*	end of lc structure	* */

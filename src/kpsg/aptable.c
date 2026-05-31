@@ -93,6 +93,7 @@ static int checktable(Tableinfo *tblinfo, codeint tblname, int namechk, int numb
 	int sizechk, int destchk, int indxchk, int writechk);
 static void writetable(Tableinfo *tblinfo);
 static int table_math(int optype, int *value1, int *value2);
+codeint tablertv(codeint tablename);
 
 
 /***********************************
@@ -100,7 +101,9 @@ static int table_math(int optype, int *value1, int *value2);
 ***********************************/
 
 extern int	bgflag;
-		      
+extern void notinhwloop(char *name);
+extern int putFile(const char *fname);		      
+extern void putcode(int datum);
 
 /*---------------------------------------------------
 |                                                   |
@@ -133,16 +136,13 @@ char	infilename[MAXSTR];
 		divnfactor = 0,
 		i,
 		j,
-		k,
 		index,
-		numeleminloop,
+		numeleminloop = 0,
 		activeopen_flag,
 		tflag = FALSE,
-		repflag = FALSE,
 		equalflag = FALSE,
 		parenthflag = FALSE,
 		bracketflag = FALSE,
-		closeflag = TRUE,
 		divnrtrnflag = FALSE,
 		numtables = last_table,
  		table_value,
@@ -403,7 +403,6 @@ char	infilename[MAXSTR];
                load_element(numeleminloop, repfactor, tnum-1, &elempntr,
 		     loopelem, FALSE);
                bracketflag = FALSE;
-               repflag = FALSE;
             }
           
 /****************************************************
@@ -453,7 +452,6 @@ char	infilename[MAXSTR];
                load_element(repfactor, numeleminloop, tnum-1, &elempntr,
 		     loopelem, TRUE);
                parenthflag = FALSE;
-               repflag = FALSE;
             }
 
 /*********************************************
@@ -699,11 +697,9 @@ static void checkforcomments(FILE *tfile)
 |                                   Author:  S. Farmer  |
 |                                     Date:  11-8-88    |
 +------------------------------------------------------*/
-APsetreceiver(tablename)
-codeint	tablename;
+void APsetreceiver(codeint tablename)
 {
-   codeint	recphase,
-		tablertv();
+   codeint	recphase __attribute__((unused));
    int		index,
 		i,
 		*table_pntr;
@@ -716,8 +712,7 @@ codeint	tablename;
    if (checktable(Table[index], tablename, TRUE, TRUE, TRUE,
    	FALSE, FALSE, FALSE) == TBLERROR)
    {
-      text_error("Error in SETRECEIVER\n");
-      psg_abort(1);
+      abort_message("Error in SETRECEIVER\n");
    }
 
    table_pntr = Table[index]->table_pointer;
@@ -745,8 +740,7 @@ codeint	tablename;
 |                                 Author:  S. Farmer   |
 |                                   Date:  11-8-88     |
 +-----------------------------------------------------*/
-codeint tablertv(tablename)
-codeint	tablename;
+codeint tablertv(codeint tablename)
 {
    int	index;
 
@@ -1002,7 +996,7 @@ void getelem(codeint tablename,codeint indxptr,codeint dstptr)
 |                                Author:  S. Farmer  |
 |                                  Date:  11-8-88    |
 +---------------------------------------------------*/
-tabletop(operationtype,table1name,table2name,modval)
+void tabletop(operationtype,table1name,table2name,modval)
 codeint	table1name,
 	table2name;
 int	operationtype,
@@ -1012,7 +1006,6 @@ int	operationtype,
 	index2,
 	index,
 	i,
-	*startholdpntr,
    	*elem1pntr,
 	*elem2pntr;
 
@@ -1094,7 +1087,7 @@ int	operationtype,
 |                                 Author:  S. Farmer  |
 |                                   Date:  11-8-88    |
 +----------------------------------------------------*/
-tablesop(operationtype,tablename,scalarval,modval)
+void tablesop(operationtype,tablename,scalarval,modval)
 codeint	tablename;
 int	operationtype,
 	scalarval,
@@ -1156,7 +1149,7 @@ int	operationtype,
 |                               Author:  S. Farmer  |
 |                                 Date:  11-8-88    |
 +--------------------------------------------------*/
-inittablevar()
+void inittablevar()
 {
    int	i;
 
@@ -1597,8 +1590,7 @@ static int checktable(Tableinfo *tblinfo, codeint tblname, int namechk, int numb
 |                                Author:  S. Farmer  |
 |                                  Date:  1-10-89    |
 +---------------------------------------------------*/
-reset_table(tblinfo)
-Tableinfo	*tblinfo;
+void reset_table(Tableinfo *tblinfo)
 {
    int	i,
 	*table_pntr,

@@ -25,6 +25,7 @@
 #include "Pbox_psg.h"
 
 #ifndef DPS
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/file.h>
 #include "vfilesys.h"
@@ -83,6 +84,8 @@ shape getRsh(char *shname)          /* retrieve parameters from .RF file header 
   shape    rshape;
   FILE     *inpf;
   int      j, k;
+  long ktell;
+  char *ret __attribute__((unused));
   char     ch, str[MAXSTR*2];
   extern char userdir[], systemdir[];
   double   am, ln;
@@ -114,8 +117,8 @@ shape getRsh(char *shname)          /* retrieve parameters from .RF file header 
     rshape.pw = 0.0, rshape.pwr = 0.0, rshape.pwrf = 0.0;
 
   fseek(inpf, 0, 0);
-  while ((getc(inpf)) == '#') fgets(str, MAXSTR, inpf);  /* ignore com-s */
-  k = ftell(inpf); fseek(inpf, k-1, 0);
+  while ((getc(inpf)) == '#') ret = fgets(str, MAXSTR, inpf);  /* ignore com-s */
+  ktell = ftell(inpf); fseek(inpf, ktell-1, 0);
 
   j = 0;
   while (((k = fscanf(inpf, "%lf %lf %lf %lf\n", &am, &am, &ln, &am)) == 4) && 
@@ -177,8 +180,7 @@ shape getDsh(char *shname)      /* retrieve parameters from .DEC file header */
   return dshape;
 }
 
-shape getRshape(shname)          /* retrieve parameters from .RF file header */
-char  *shname;
+shape getRshape(char *shname)    /* retrieve parameters from .RF file header */
 {
   char     rsh[MAXSTR];
 
@@ -190,12 +192,15 @@ char  *shname;
 static double amp[MAXPWSTEPS];		/* amplitude */
 static double pha[MAXPWSTEPS];		/* phase     */
 
-int setRshape(shname, pws)		/* read and set up .RF shaped pulse */
-char  *shname;				/* for systems with no WFG and linear  */
-double pws;				/* modulators, mainly for MERCURY */
+/* read and set up .RF shaped pulse */
+/* for systems with no WFG and linear  */
+/* modulators, mainly for MERCURY */
+int setRshape(char *shname, double pws)
 {
   FILE     *inpf;
   int      j, k, nn;
+  long ktell;
+  char *ret __attribute__((unused));
   char     str[MAXSTR];
   double   am, ph, ln, gt, mxl, rd=M_PI/180.0;
   extern char userdir[], systemdir[];
@@ -212,8 +217,8 @@ double pws;				/* modulators, mainly for MERCURY */
     }
   }
 
-  while ((getc(inpf)) == '#') fgets(str, MAXSTR, inpf);  /* ignore com-s */
-  k = ftell(inpf); fseek(inpf, k-1, 0);
+  while ((getc(inpf)) == '#') ret = fgets(str, MAXSTR, inpf);  /* ignore com-s */
+  ktell = ftell(inpf); fseek(inpf, ktell-1, 0);
 
   j = 0; nn = 0; mxl = 0.0;
   while (((k = fscanf(inpf, "%lf %lf %lf %lf\n", &ph, &am, &ln, &gt)) == 4) && 
@@ -263,10 +268,8 @@ double pws;				/* modulators, mainly for MERCURY */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Channel 1 (xmtr) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-void shaped_pulse(rfshape, pws, iph, del1, del2)		
-char  *rfshape;
-codeint iph; 
-double pws, del1, del2;
+void shaped_pulse(char *rfshape, double pws, codeint iph,
+		  double del1, double del2)		
 {
   int i, nstp;
   double  slw;
@@ -466,6 +469,8 @@ shape getGsh(char *shname)			/* read .GRD shaped gradient */
   shape    gshape;
   FILE     *inpf;
   int      j, k;
+  long ktell;
+  char *ret __attribute__((unused));
   char     ch, str[MAXSTR*2];
   double   am, ln;
   extern char userdir[], systemdir[];
@@ -495,8 +500,8 @@ shape getGsh(char *shname)			/* read .GRD shaped gradient */
     gshape.pw = 0.0;
   fseek(inpf, 0, 0);
 
-  while ((getc(inpf)) == '#') fgets(str, MAXSTR, inpf);  /* ignore com-s */
-  k = ftell(inpf); fseek(inpf, k-1, 0);
+  while ((getc(inpf)) == '#') ret = fgets(str, MAXSTR, inpf);  /* ignore com-s */
+  ktell = ftell(inpf); fseek(inpf, ktell-1, 0);
 
   j = 0;
   while (((k = fscanf(inpf, "%lf %lf\n", &am, &ln)) > 0) && 
@@ -507,8 +512,7 @@ shape getGsh(char *shname)			/* read .GRD shaped gradient */
   return gshape; 
 }
 
-shape getGshape(shname)          /* retrieve parameters from .RF file header */
-char  *shname;
+shape getGshape(char *shname)   /* retrieve parameters from .RF file header */
 {
   char     gsh[MAXSTR];
 
@@ -517,11 +521,12 @@ char  *shname;
   return getGsh(gsh); 
 }
 
-int setGshape(shname)			/* read .GRD shaped gradient */
-char  *shname;
+int setGshape(char *shname)	/* read .GRD shaped gradient */
 {
   FILE     *inpf;
   int      j, k, nn;
+  long ktell;
+  char *ret __attribute__((unused));
   char     str[MAXSTR];
   double   am, ln=0.0, mxl = 0.0;
   extern char userdir[], systemdir[];
@@ -537,8 +542,8 @@ char  *shname;
       exit(1);
     }
   }
-  while ((getc(inpf)) == '#') fgets(str, MAXSTR, inpf);  /* ignore com-s */
-  k = ftell(inpf); fseek(inpf, k-1, 0);
+  while ((getc(inpf)) == '#') ret = fgets(str, MAXSTR, inpf);  /* ignore com-s */
+  ktell = ftell(inpf); fseek(inpf, ktell-1, 0);
 
   j = 0; nn = 0;
   while (((k = fscanf(inpf, "%lf %lf\n", &am, &ln)) > 0) && 
@@ -570,11 +575,8 @@ char  *shname;
 }
 
 				      /* modified shaped gradient statement */
-void shapedgradient(gname, gw, glvl, axis, nstp, dum) 
-char  *gname, axis;
-int  dum;
-int    nstp;
-double glvl, gw; 
+void shapedgradient(char *gname, double gw, double glvl,
+		    char axis, int nstp, int dum) 
 {
    int i;
 
@@ -614,8 +616,7 @@ void pbox_zgrad(shape *gshape, double gw,
 
 /* ~~~~~~~~~~~~~~~~~~~~~ Miscallaneous Functions ~~~~~~~~~~~~~~~~~~~~~~ */
 
-void pfg_pulse(glvl, gw, gof1, gof2)
-double glvl, gw, gof1, gof2; 
+void pfg_pulse(double glvl, double gw, double gof1, double gof2)
 {
    delay(gof1);
    rgradient('z',glvl);

@@ -15,7 +15,7 @@
 |	   global varaibles
 +--------------------------------------------------------------------*/
 typedef short codeint;		/* 2 bytes */
-typedef long  codelong;		/* 4 bytes */
+typedef int  codelong;		/* 4 bytes */
 
 #define	ACQPARMS
 #define PI               3.14159265358979323846
@@ -27,8 +27,8 @@ typedef long  codelong;		/* 4 bytes */
 
 extern int     PSfile;		/* Acode file discriptor */
 extern short   *Codes; 		/* beginning of Acode array */
-extern long   Codesize;		/* size of the malloc space for codes */
-extern long   CodeEnd;		/* End Address of the malloc space for codes */
+extern int   Codesize;		/* size of the malloc space for codes */
+extern int   CodeEnd;		/* End Address of the malloc space for codes */
 extern short  *Codeptr; 	/* pointer into the Acode array */
 extern short  *Aacode;		/* pointer to start address of Codes */
 extern short  *lc_stadr;	/* Low Core Start Address */
@@ -134,7 +134,7 @@ extern int  dps_flag;		/* flag is true if dps is executing */
 extern int  checkflag;		/* flag is true if check option is passed to go */
 extern int  tuneflag;    	/* 'tune' is argument, for vnmrj */
 
-extern unsigned long ix;	/* FID currently in Acode generation */
+extern unsigned int ix;	/* FID currently in Acode generation */
 
 /* --- Pulse Seq. pointers to real time variables --- */
 extern codeint npr_ptr;		/* offset into code to variable np    */

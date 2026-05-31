@@ -15,7 +15,7 @@
 |  a pre_fidsequence() routine in your pulse sequence file and execute
 |  'seqgen'. The loader use the one in the pulse sequence before this one
 +----------------------------------------------------------------------------*/
-pre_fidsequence()
+void pre_fidsequence()
 {
   /*-----------------------------------------------------------------------
   |  You are responsible for any any fifo words generated to be outputed 

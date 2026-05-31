@@ -89,6 +89,19 @@ FILE	*shapefile;
 
 extern int	cardb;
 extern short	lin_attn[];
+extern void putcode(int datum);
+extern void setphase90(int device, int value);
+extern void gate(int gatebit, int on);
+extern void delay(double delay);
+extern void obs_pw_ovr(int longpulse);
+extern void decon();
+extern void initval(double rc, int  stl);
+extern void loop(codeint count,codeint counter);
+extern void endloop(codeint counter);
+extern void xmtron();
+extern void xmtroff();
+extern void decoff();
+extern void dec_pw_ovr(int longpulse);
 
 static int	*shape_pwr;
 static int	*shape_phase;
@@ -132,7 +145,7 @@ int  i = 0,
 |    perform a "WFG shaped" pulse via AP bus statements		|
 +--------------------------------------------------------------*/
 /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
-G_apshaped_pulse(shape, pws, phs,rx1, rx2, device)
+void G_apshaped_pulse(shape, pws, phs,rx1, rx2, device)
 char	shape[MAXSTR];
 short	phs;
 int	device;
@@ -147,8 +160,7 @@ struct p_slice
 {
    float phase, amplitude, duration;
 };
-char    fname[MAXSTR],
-        errstr[MAXSTR];
+char    fname[MAXSTR];
 double	plength, aptime, tmp;
 float	phas, amp, dur, xgate;
 int 	i, k, nitems,
@@ -210,11 +222,9 @@ struct	p_slice slice;
    +-------------------------------------*/
    if (nslices == 0)
    {
-      strcpy(errstr,"apshaped_pulse:  incorrect shape definition in ");
-      strcat(errstr,fname);
-      text_error(errstr);
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  incorrect shape definition in %s",
+            fname);
    }
 
    /*--------------------------------------------------+
@@ -223,11 +233,9 @@ struct	p_slice slice;
    +--------------------------------------------------*/
    if (nslices > MAXSLICES)
    {
-      strcpy(errstr,"apshaped_pulse:  too many elements in pulse shape ");
-      strcat(errstr,fname);
-      text_error(errstr);
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  too many elements in pulse shape %s",
+            fname);
    }
 
    /*--------------------------------------------------+
@@ -238,9 +246,8 @@ struct	p_slice slice;
    spulse = start_spulse;
    if (spulse == NULL)
    {
-      text_error("apshaped_pulse:  unable to allocate buffer memory");
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  unable to allocate buffer memory");
    }
 
    /*--------------------------------------------------+
@@ -251,17 +258,15 @@ struct	p_slice slice;
    shape_pwr = start_pwrpntr;
    if (start_pwrpntr == NULL)
    {
-      text_error("apshaped_pulse:  unable to create pointer to power values");
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  unable to create pointer to power values");
    }
    start_phspntr = (int *)malloc(sizeof(int) * (nslices + 2));
    shape_phase = start_phspntr;
    if (start_phspntr == NULL)
    {
-      text_error("apshaped_pulse:  unable to create pointer to phase values");
       fclose(shapefile);
-      psg_abort(1);
+      abort_message("apshaped_pulse:  unable to create pointer to phase values");
    }
  
    /*---------------------------------------+
@@ -319,10 +324,9 @@ struct	p_slice slice;
          xmtr_apreg=LB_XMT_SEL;
    }
    else
-   {  printf(
+   {  abort_message(
     "G_apshaped_pulse(): can't set shape for device %d, only TODEV or DODEV\n",
             device);
-      psg_abort(1);
    }
 
    /*-------------------------------------------------------+
@@ -410,17 +414,6 @@ struct	p_slice slice;
    for (i = 0; i < nslices; i++)
       putcode((short) start_pwrpntr[i]);
 
-   /* settable(phstbl, nslices, start_phspntr); */
-/*
-/*   putcode(TABLE);
-/*   acodelocphs = Codeptr - Aacode;
-/*   putcode((short) nslices);	/* size of table */
-/*   putcode((short) TRUE);		/* auto-inc flag */
-/*   putcode((short) 1);		/* divn-rtrn factor */
-/*   putcode(0);			/* auto-inc ct loc */
-/*   for (i = 0; i < nslices; i++)
-/*       putcode((short) start_phspntr[i]);
-/* */
    /*----------------------------------------------+
    |  Release pointers to phase and power arrays.  |
    +----------------------------------------------*/
@@ -437,12 +430,11 @@ struct	p_slice slice;
    /*----------------------------------------------------------+
    | Calculate time spent for AP bus events within each slice  |
    +----------------------------------------------------------*/
-   aptime = 4.8e-6; /* +15e-6     /* POWER_DELAY + SAPS_DELAY; */
+   aptime = 4.8e-6; // +15e-6     /* POWER_DELAY + SAPS_DELAY; */
 
    if ( (plength - aptime) < MINDELAY)
    {
-      text_error("apshaped_pulse: pulse too short or too many steps in shape");
-      psg_abort(1);
+      abort_message("apshaped_pulse: pulse too short or too many steps in shape");
    }
 
    /*==================================+

@@ -31,7 +31,7 @@ extern int  newacq;
 |				Author Greg Brissey 10/29/92
 |
 +-----------------------------------------------------------------*/
-clearHSlines()
+void clearHSlines()
 {
     /* --- initialize quiescent states --- */
     /* --- establish start and current quiescent HSline states --- */
@@ -39,12 +39,8 @@ clearHSlines()
     set_lacqvar(HSlines_ptr, 0);
     HSlines = 0;		/* Clear all High Speed line bits */
     presHSlines = 0;		/* Clear present High Speed line bits */
-/*     if (newacq)
-/*     {
-/* 	initorgHSlines(HSlines);
-/*     } */
      if (bgflag)
-        fprintf(stderr,"clearHSlines(): HSlines: 0x%lx presHSlines: 0x%lx\n",
+        fprintf(stderr,"clearHSlines(): HSlines: 0x%x presHSlines: 0x%x\n",
 		HSlines,presHSlines);
 }
 /*------------------------------------------------------------------
@@ -61,7 +57,7 @@ clearHSlines()
 |   --------   ------     -------
 |   6/15/89   Greg B.     1. Use new global parameters to calc acode offsets 
 +-----------------------------------------------------------------*/
-initHSlines()
+void initHSlines()
 {
     extern void init_pgd_hslines();
     extern void reset_decstatus();
@@ -69,7 +65,7 @@ initHSlines()
     /* --- initialize quiescent states --- */
     /* --- establish start and current quiescent HSline states --- */
 
-/*  status(A);	/* set HSlines according to decoupling?? */
+//  status(A);	/* set HSlines according to decoupling?? */
 
     if (newacq)
     {

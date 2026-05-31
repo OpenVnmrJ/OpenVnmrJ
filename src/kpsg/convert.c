@@ -142,7 +142,12 @@ extern codeint	tmprt;
 
 extern codeint	ntrt, strt;
 
-extern unsigned long	ix;
+extern unsigned int	ix;
+
+extern int get_acqvar(codeint index);
+extern int par_maxminstep(int tree, const char *name,
+      double *maxv, double *minv, double *stepv);
+extern int getIlFlag();
 
 typedef struct _apTbl {
                 codeint oldacodeloc;
@@ -151,13 +156,13 @@ typedef struct _apTbl {
         } apTbl;
 
 typedef struct _phasetbl {
-	long	phase90[4];
-	long	phasebits;
-	long	phasequad;
-	long	phasestep;
-	long	phaseprecision;
-	long	apaddr;
-	long	apdelay;
+	int	phase90[4];
+	int	phasebits;
+	int	phasequad;
+	int	phasestep;
+	int	phaseprecision;
+	int	apaddr;
+	int	apdelay;
 } phasetbl;
 
 typedef struct _tblhdr {
@@ -176,9 +181,10 @@ typedef struct _trBlk {
 /* Table information */
 static int num_aptables = 0;
 static apTbl *apTable[MAXAPTABLES];
+static int createtable(int size);
 
 int	n_again(),	n_apbout(),	n_begin(),	n_branch();
-int	n_branch_lt(),	n_check(),	n_copy(),	n_cpsamp();
+int	n_branch_lt(),	n_check(),	n_copy(), n_cpsamp();
 int	n_endif(),	n_endloop(),	n_endhwloop(),	n_eventn();
 int	n_fidcode(),	n_gain(),	n_gtabindx();
 int	n_hkeep(),	n_hsline(),	n_hwloop();
@@ -334,16 +340,12 @@ static union {
 #define IXPRINT1(str,arg1)      if (ix == 1) printf(str,arg1)
 #define IXPRINT2(str,arg1,arg2) if (ix == 1) printf(str,arg1,arg2)
 
-codeint
-*convert_Acodes(oldstart, oldlast, retsize)
-codeint  *oldstart, *oldlast;
-int      *retsize;
+codeint *convert_Acodes(codeint *oldstart, codeint *oldlast, int *retsize)
 {
 int		num, size;
-codeint		retLen;
+codeint		retLen __attribute__((unused));
 codeint		*cptr;
 static codeint	*mallocptr = NULL;
-static int 	old_size = 0;
 
 
    size = oldlast - oldstart;
@@ -363,7 +365,7 @@ static int 	old_size = 0;
       {
          abort_message("psg: do not have enough memory\n");
       }
-   newstartptr = mallocptr + 4;;
+      newstartptr = mallocptr + 4;
    }
    num_nsc = 0;
    ncodeptr = newstartptr;
@@ -383,7 +385,7 @@ static int 	old_size = 0;
    {
       if (*cptr < 0 || *cptr > LASTACODE)
       {
-         IXPRINT2("psg: unknown code '%d' addr is %d\n", *cptr, cptr);
+         IXPRINT2("psg: unknown code '%hd' addr is %p\n", *cptr, cptr);
          cptr++;
          continue;
       }
@@ -406,7 +408,7 @@ static int 	old_size = 0;
           {
              if (num == LASTCODE)
              {
-                IXPRINT2("psg: unknown code '%d'  addr is %d\n", *cptr, cptr);
+                IXPRINT2("psg: unknown code '%hd'  addr is %p\n", *cptr, cptr);
                 cptr++;
                 break;
             }
@@ -414,13 +416,12 @@ static int 	old_size = 0;
          num++;
       }
    }
-   *retsize = ((long)ncodeptr - (long)newstartptr);
+   *retsize = (int) ((long)ncodeptr - (long)newstartptr);
 /*   cleanupaptableinfo(); */
    return(mallocptr);
 }
 
-push_short (data)
-codeint  data;
+int push_short(codeint data)
 {
    if (stackptr < 18)
    {
@@ -431,6 +432,7 @@ codeint  data;
    {
        abort_message("Too many nested loops or if statements\n");
    }
+   return(0);
 }
 
 codeint
@@ -445,10 +447,10 @@ pop_short()
    {
        abort_message("missing loop() or ifzero()\n");
    }
+   return(0);
 }
 
-push_long (data)
-unsigned int  data;
+int push_long (unsigned int data)
 {
    if (lstackptr < 60)
    {
@@ -459,11 +461,11 @@ unsigned int  data;
    {
        abort_message("Too many nested loops or if statements\n");
    }
+   return(0);
 }
 
 
-unsigned int
-pop_long()
+unsigned int pop_long()
 {
    if (lstackptr > 0)
    {
@@ -474,11 +476,10 @@ pop_long()
    {
        abort_message("missing loop() or ifzero()\n");
    }
+   return(0);
 }
 
-putcode_long(data, addr)
-unsigned int data;
-codeint      *addr;
+int putcode_long(unsigned int data, codeint *addr)
 {
    endianSwap.ival = data;
 #ifdef LINUX
@@ -488,11 +489,10 @@ codeint      *addr;
    *addr++ = endianSwap.cval[0];
    *addr++ = endianSwap.cval[1];
 #endif
+   return(0);
 }
 
-copy(data,num)
-codeint	*data;
-codeint	num;
+int copy(codeint *data, codeint num)
 {
    *ncodeptr++ = num;
    data++;
@@ -505,9 +505,7 @@ codeint	num;
 
 }
 
-n_begin(addr,num)
-codeint	*addr;
-int	num;
+int n_begin(codeint *addr, int num)
 {
    *ncodeptr++ = INTERP_REV_CHK;
    *ncodeptr++ = 2;
@@ -516,9 +514,6 @@ int	num;
 
    *ncodeptr++ = INIT_FIFO;
    *ncodeptr++ = 2;
-/*   if (debug2)
-/*      *ncodeptr++ = 1;		/* write to file */
-/*   else */
       *ncodeptr++ = 0;
    *ncodeptr++ = 0;
 
@@ -557,18 +552,17 @@ int	num;
       *ncodeptr++ = -1;
       *ncodeptr++ = -1;
    }
+   return(0);
 }
 
-n_again(addr,num)
-codeint	*addr;
-int	num;
+int n_again(codeint *addr, int num)
 {
-int   len;
+// int   len;
 double   max,min,step;
 
    par_maxminstep(CURRENT, "gain", &max, &min, &step);
 
-   len = trTable[num].oldLen - 1;
+   // len = trTable[num].oldLen - 1;
    *ncodeptr++ = trTable[num].newCode;
    *ncodeptr++ = 11;
    addr++; /* skip over old acode */
@@ -591,20 +585,17 @@ double   max,min,step;
    return(0);
 }
 
-n_apbout(addr,num)
-codeint	*addr;
-int	num;
+int n_apbout(codeint *addr, int num)
 {
   *ncodeptr++ = trTable[num].newCode;
   addr++;
   trTable[num].oldLen = (*addr) + 3;	/* 1 for acode, 1 for count, count=#-1*/
   *ncodeptr++ = (*addr) + 2;		/* do NOT include acode for A_interp */
   copy(addr,(*addr)+1);
+   return(0);
 }
 
-n_branch(addr,num)
-codeint	*addr;
-int	num;
+int n_branch(codeint *addr, int num)
 {
 int		n;
 codeint		*tptr, jump;
@@ -643,11 +634,10 @@ unsigned int	ifOffset, elseOffset, offset;
    putcode_long(offset, tptr);  /* set jump offset for ifzero */
    /* Force the next HS line change to be sent */
    forceHSlines = 1;
+   return(0);
 }
 
-n_branch_lt(addr,num)
-codeint	*addr;
-int	num;
+int n_branch_lt(codeint *addr, int num)
 {
 int	n;
 codeint	*tptr, jump;
@@ -670,11 +660,12 @@ codeint	*tptr, jump;
       }
       n++;
    }
+   return(0);
 }
 
-n_copy(data,num)
-codeint	*data;
-codeint	num;
+int n_copy(data, num)
+   codeint *data;
+   codeint num;
 {
 codeint   len;
    len = trTable[num].oldLen - 1;
@@ -688,9 +679,7 @@ codeint   len;
    return(0);
 }
 
-n_cpsamp(addr,num)
-codeint	*addr;
-int	num;
+int n_cpsamp(codeint *addr, int num)
 {
    int   len;
    int   robotype;
@@ -712,6 +701,7 @@ int	num;
       *ncodeptr++ = *addr++;
       len--;
    }
+   return(0);
 }
 
 int
@@ -752,10 +742,8 @@ n_endloop(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-	codeint  jump;
 	codeint  *tptr;
 	unsigned int  offset, loopOffset, backOffset;
-	unsigned int  ifOffset, elseOffset;
 
 	*ncodeptr++ = trTable[num].newCode;
 	*ncodeptr++ = 4;
@@ -769,6 +757,7 @@ codeint	 num;
 	tptr = newstartptr + loopOffset;
 	offset = ncodeptr - newstartptr;
 	putcode_long(offset, tptr);  /* set jump offset for loop */
+   return(0);
 }
 
 int
@@ -806,9 +795,10 @@ codeint  num;
       *autoshimptr = ncodeptr - newstartptr; /* patch AUTOGAIN with Acode */
 					     /* offset to codes that      */
 					     /* acquire FID               */
+   return(0);
 }
 
-n_gain(addr,num)
+int n_gain(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -818,6 +808,7 @@ int	num;
    *ncodeptr++ = 0xa28;		/* change me, change n_gain too */
    *ncodeptr++ = *addr++;
    *ncodeptr++ = rtrecgain;
+   return(0);
 }
 
 /* Global Tables */
@@ -849,9 +840,10 @@ codeint	 num;
 	   *ncodeptr++ = 1;	
 	   *ncodeptr++ = gindex;	
 	}
+   return(0);
 }
 
-n_hkeep(addr,num)
+int n_hkeep(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -894,14 +886,16 @@ int	num;
       *ncodeptr++ = acqiflagrt;
       *ncodeptr++ = relaxdelayrt;
    }
+   return(0);
 }
 
-n_hsline(addr,num)
+int n_hsline(addr,num)
 codeint	*addr;
 int	num;
 {
    if (ix==1)
       printf("Acode %d marked as NULL, check\n",trTable[num].oldCode);
+   return(0);
 }
 
 int
@@ -924,7 +918,7 @@ int      num;
         return(0);
 }
 
-n_ifminus(addr,num)
+int n_ifminus(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -955,9 +949,10 @@ unsigned int	offset;
    {
        abort_message("missing endloop()\n");
    }
+   return(0);
 }
 
-n_ifnz(addr,num)
+int n_ifnz(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -984,6 +979,7 @@ unsigned int  offset;
    *ncodeptr++ = 0;
    /* Force the next HS line change to be sent */
    forceHSlines = 1;
+   return(0);
 }
 
 /*----------------------------------------------------------------------*/
@@ -1010,6 +1006,7 @@ unsigned int  offset;
    *ncodeptr++ = 0;
    /* Force the next HS line change to be sent */
    forceHSlines = 1;
+   return(0);
 }
 
 
@@ -1045,21 +1042,22 @@ codeint	num;
    *ncodeptr++ = SET;
    *ncodeptr++ = ct;
    *ncodeptr++ = strt;
+   return(0);
 }
 
-n_lksync(addr,num)
+int n_lksync(addr,num)
 codeint	*addr;
 codeint	num;
 {
    n_apbout(addr,num);
+   return(0);
 }
 
-n_loadshim(data,num)
+int n_loadshim(data,num)
 codeint	*data;
 int	num;
 {
 codeint	len;
-long	tword1,tword2;
 
    if (shimset != 10)
    {  *ncodeptr++ = SYNC_PARSER;
@@ -1069,11 +1067,6 @@ long	tword1,tword2;
       *ncodeptr++ = 0;
       *ncodeptr++ = 0;
 
-/* putcode_long(tword2, ncodeptr);
-/* ncodeptr += 2;
-/* putcode_long(tword1, ncodeptr);
-/* ncodeptr += 2;
-*/
    }
 
    len = trTable[num].oldLen - 1;
@@ -1089,7 +1082,7 @@ long	tword1,tword2;
    return(0);
 }
 
-n_lock(addr,num)
+int n_lock(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1112,9 +1105,10 @@ double   max,min,step;
    *ncodeptr++ = 0;		/* HS_Dtm_Adc */
    *ncodeptr++ = adccntrl;	/* adcntrl rt parm  */
    *ncodeptr++ = ssval;		/* iff ss=0 enable adc overflow */
+   return(0);
 }
 
-n_nextcodeset(addr,num)
+int n_nextcodeset(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1158,13 +1152,12 @@ int	num;
    return(0);
 }
 
-n_noise(addr,num)
+int n_noise(addr,num)
 codeint	*addr;
 int	num;
 {
-short	*ptr;
 
-   if (acqiflag) return;
+   if (acqiflag) return(0);
 
    /* printf("n_noise, offset: %d\n",ncodeptr - newstartptr); */
 
@@ -1188,18 +1181,19 @@ short	*ptr;
    /* Set DSP hardware */
 /************ tell the card about time correction ******/
 /*   *ncodeptr++ = APBCOUT;
-/*   *ncodeptr++ = 4;
-/*   *ncodeptr++ = STD_APBUS_DELAY;          /* delay */
-/*   *ncodeptr++ = 1;
-/*   *ncodeptr++ = 0xe84;
-/*   *ncodeptr++ = (codeint) dsp_info[2];
-/*******************************************************/
-/*   *ncodeptr++ = APBCOUT;
-/*   *ncodeptr++ = 4;
-/*   *ncodeptr++ = STD_APBUS_DELAY;          /* delay */
-/*   *ncodeptr++ = 1;
-/*   *ncodeptr++ = 0xe86;
-/*   *ncodeptr++ = (codeint) dsp_info[0];
+ *   *ncodeptr++ = 4;
+ *   *ncodeptr++ = STD_APBUS_DELAY;
+ *   *ncodeptr++ = 1;
+ *   *ncodeptr++ = 0xe84;
+ *   *ncodeptr++ = (codeint) dsp_info[2];
+
+ *   *ncodeptr++ = APBCOUT;
+ *   *ncodeptr++ = 4;
+ *   *ncodeptr++ = STD_APBUS_DELAY;
+ *   *ncodeptr++ = 1;
+ *   *ncodeptr++ = 0xe86;
+ *   *ncodeptr++ = (codeint) dsp_info[0];
+ */
 
    /* Next Scan Opcode */
    *ncodeptr++ = NEXTSCAN;
@@ -1213,23 +1207,23 @@ short	*ptr;
    *ncodeptr++ = zero;		/* fidctr */
 
 /*   *ncodeptr++ = EVENT1_DELAY;
-/*   *ncodeptr++ = 2;
-/*   *ncodeptr++ = (codeint) 0;
-/*   *ncodeptr++ = (codeint) 2400;   /* 30 usec dsp settling delay */
-/*
-/*   if (HS_Dtm_Adc == 0)
-/*   {
-/*      *ncodeptr++ = DISABLEOVRLDERR;
-/*      *ncodeptr++ = 1;
-/*      *ncodeptr++ = adccntrl;
-/*   }
-/*   else
-/*   {
-/*      *ncodeptr++ = DISABLEHSSTMOVRLDERR;
-/*      *ncodeptr++ = 1;
-/*      *ncodeptr++ = dtmcntrl;
-/*   }
-/* */
+ *   *ncodeptr++ = 2;
+ *   *ncodeptr++ = (codeint) 0;
+ *   *ncodeptr++ = (codeint) 2400;   // 30 usec dsp settling delay
+ *
+ *   if (HS_Dtm_Adc == 0)
+ *   {
+ *      *ncodeptr++ = DISABLEOVRLDERR;
+ *      *ncodeptr++ = 1;
+ *      *ncodeptr++ = adccntrl;
+ *   }
+ *   else
+ *   {
+ *      *ncodeptr++ = DISABLEHSSTMOVRLDERR;
+ *      *ncodeptr++ = 1;
+ *      *ncodeptr++ = dtmcntrl;
+ *   }
+ * */
 
    addr++;
    *ncodeptr++ = trTable[num].newCode;
@@ -1239,15 +1233,6 @@ short	*ptr;
    *ncodeptr++ = *addr++;   /* datapoints (lsw) */
    *ncodeptr++ = *addr++;   /* timerword 1 (msw) */
    *ncodeptr++ = *addr++;   /* timerword 1 (lsw) */
-
-/*   *ncodeptr++ = EVENTN;
-/*   *ncodeptr++ = 2;
-/*   ptr = (short *) &noise_dwell; */
-/*   *ncodeptr++ = 1;
-/*   *ncodeptr++ = 0x4001;
-/*   ptr++;
-/*   *ncodeptr++ = (codeint) *ptr;
-/* NOMERCURY */
 
    /* End of Scan */
    *ncodeptr++ = ENDOFSCAN;
@@ -1262,12 +1247,6 @@ short	*ptr;
    *ncodeptr++ = STATBLOCK_UPDT;
    *ncodeptr++ = 0;
 
-/*   *ncodeptr++ = EVENT1_DELAY;
-/*   *ncodeptr++ = 2;
-/*   *ncodeptr++ = (codeint) 0x24;
-/*   *ncodeptr++ = (codeint) 0x9f00; /* 30 msec dsp settling delay */
-/* NOMERCURY */
-
 /*   if (!debug2) */
      { 
       /* after noise, stop fifo and let noise data come to host then */
@@ -1278,9 +1257,10 @@ short	*ptr;
       *ncodeptr++ = NOISE_CMPLT;
       *ncodeptr++ = 0;
     }
+   return(0);
 }
 
-n_nsc(addr,num)
+int n_nsc(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1320,22 +1300,6 @@ int	num;
 
         /* orgHSdata = (unsigned int) get_acqvar(HSlines_ptr); */
 
-        /* Set DSP hardware */
-/************ tell the card about time correction ******/
-/*        *ncodeptr++ = APBCOUT;
-/*        *ncodeptr++ = 4;
-/*        *ncodeptr++ = STD_APBUS_DELAY;          /* delay */
-/*        *ncodeptr++ = 1;
-/*        *ncodeptr++ = 0xe84;
-/*        *ncodeptr++ = (codeint) dsp_info[2];
-/*******************************************************/
-/*        *ncodeptr++ = APBCOUT;
-/*        *ncodeptr++ = 4;
-/*        *ncodeptr++ = STD_APBUS_DELAY;          /* delay */
-/*        *ncodeptr++ = 1;
-/*        *ncodeptr++ = 0xe86;
-/*        *ncodeptr++ = (codeint) dsp_info[0]; */
-
 	/* Clear data at blocksize, if requested */
         *ncodeptr++ = BRA_EQ;
         *ncodeptr++ = 4;
@@ -1369,7 +1333,7 @@ int	num;
 
 }
 
-n_padly(addr,num)
+int n_padly(addr,num)
 codeint  *addr;
 codeint  num;
 {
@@ -1377,22 +1341,18 @@ codeint  num;
  *  { EVENT1_TWRD,      3,      n_scopy,        EVENT1_DELAY },
  *  { EVENT2_TWRD,      5,      n_scopy,        EVENT2_DELAY },
  */
-        codeint  tlen;
-        codeint  len;
-        codeint *count_addr;
-        codeint  count;
-
         addr++;
         *ncodeptr++ = trTable[num].newCode;
         *ncodeptr++ = *addr++ + 1;
         *ncodeptr++ = ct;
+   return(0);
 }
 
-n_phasestep(addr,num)
+int n_phasestep(addr,num)
 codeint	*addr;
 int	num;
 {
-codeint  len,channel,tablenum,flag;
+codeint  len,channel,tablenum;
 
    addr++;
    channel = (*addr++ & 0xff)-1; 
@@ -1410,9 +1370,10 @@ codeint  len,channel,tablenum,flag;
    {
       abort_message("No Phase table for channel %d.\n",channel);
    }
+   return(0);
 }
 
-n_rt2op(addr,num)
+int n_rt2op(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1431,10 +1392,11 @@ codeint  len;
        addr++;
        len--;
    }
+   return(0);
 
 }
 
-n_rt3op(addr,num)
+int n_rt3op(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1453,10 +1415,11 @@ codeint  len;
        addr++;
        len--;
    }
+   return(0);
 
 }
 
-n_rtop(addr,num)
+int n_rtop(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1475,9 +1438,10 @@ codeint  len;
       addr++;
       len--;
    }
+   return(0);
 }
 
-n_rtinit(addr,num)
+int n_rtinit(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1485,9 +1449,10 @@ int	num;
    *rtinit_ptr++ = *addr++;
    *rtinit_ptr++ = *addr++;
    *rtinit_ptr++ = *addr++;
+   return(0);
 }
 
-n_scopy(data,num)
+int n_scopy(data,num)
 codeint	*data;
 codeint	num;
 {
@@ -1515,45 +1480,44 @@ int      num;
    *ncodeptr++ = oph;
    *ncodeptr++ = dtmcntrl;
 /*   if (acqiflag)
-/*   {
-/*      if (HS_Dtm_Adc == 0)
-/*      {
-/*         *ncodeptr++ = DISABLEOVRLDERR;
-/*         *ncodeptr++ = 1;
-/*         *ncodeptr++ = adccntrl;
-/*      }
-/*      else
-/*      {
-/*         *ncodeptr++ = DISABLEHSSTMOVRLDERR;
-/*         *ncodeptr++ = 1;
-/*         *ncodeptr++ = dtmcntrl;
-/*      }
-/*   }
-/*   else
-/*   {
-/*      if (HS_Dtm_Adc == 0)
-/*      {
-/*         /* printf("n_seticm: ENABLEOVRLDERR (DTM)\n"); */
-/*         *ncodeptr++ = ENABLEOVRLDERR;
-/*         *ncodeptr++ = 3;
-/*         *ncodeptr++ = ssctr;
-/*         *ncodeptr++ = ct;
-/*         *ncodeptr++ = adccntrl;
-/*      }
-/*      else
-/*      {
-/*         /* printf("n_seticm: ENABLEHSSTMOVRLDERR (HS ADM)\n"); */
-/*
-/*         *ncodeptr++ = ENABLEHSSTMOVRLDERR;
-/*         *ncodeptr++ = 3;
-/*         *ncodeptr++ = ssctr;
-/*         *ncodeptr++ = ct;
-/*         *ncodeptr++ = dtmcntrl;
-/*      }
-/*   } */
+ *   {
+ *      if (HS_Dtm_Adc == 0)
+ *      {
+ *         *ncodeptr++ = DISABLEOVRLDERR;
+ *         *ncodeptr++ = 1;
+ *         *ncodeptr++ = adccntrl;
+ *      }
+ *      else
+ *      {
+ *         *ncodeptr++ = DISABLEHSSTMOVRLDERR;
+ *         *ncodeptr++ = 1;
+ *         *ncodeptr++ = dtmcntrl;
+ *      }
+ *   }
+ *   else
+ *   {
+ *      if (HS_Dtm_Adc == 0)
+ *      {
+ *         *ncodeptr++ = ENABLEOVRLDERR;
+ *         *ncodeptr++ = 3;
+ *         *ncodeptr++ = ssctr;
+ *         *ncodeptr++ = ct;
+ *         *ncodeptr++ = adccntrl;
+ *      }
+ *      else
+ *      {
+ *
+ *         *ncodeptr++ = ENABLEHSSTMOVRLDERR;
+ *         *ncodeptr++ = 3;
+ *         *ncodeptr++ = ssctr;
+ *         *ncodeptr++ = ct;
+ *         *ncodeptr++ = dtmcntrl;
+ *      }
+ *   } */
+   return(0);
 }
 
-n_setphase(addr,num)
+int n_setphase(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1577,6 +1541,7 @@ codeint  len,channel,tablenum,flag;
    {
       abort_message("No Phase table for channel %d.\n",channel);
    }
+   return(0);
 }
 
 int
@@ -1614,6 +1579,7 @@ codeint	len,channel,tablenum,flag;
        addr++;
        len--;
    }
+   return(0);
 }
 
 int
@@ -1621,7 +1587,7 @@ n_setphattr(addr, num)
 codeint	*addr;
 codeint	num;
 {
-codeint	len,channel,tablenum,flag,*shortptr;
+codeint	channel,*shortptr;
 int	i;
 int	*th;
 int	*createphasetable();
@@ -1654,22 +1620,14 @@ int     val;
    val |= *addr++; /* dev register */
    pphtbl->apaddr = htonl(val);
    pphtbl->apdelay = htonl(hb_dds_bits);
+   return(0);
 }
 
-n_setup(addr, num)
+int n_setup(addr, num)
 codeint	*addr;
 codeint	num;
 {
    addr++;
-/* load default line safe state */
-/*   *ncodeptr++ = LOADHSL_R;
-/*   *ncodeptr++ = 1;
-/*   *ncodeptr++ = HSlines_ptr;
-/*   *ncodeptr++ = EVENT1_DELAY;
-/*   *ncodeptr++ = 2;
-/*   *ncodeptr++ = (codeint) 0x0;
-/*   *ncodeptr++ = (codeint) 0x800;		/* 100 usec */
-
    *ncodeptr++ = trTable[num].newCode;
    *ncodeptr++ = 1;
    *ncodeptr++ = SETUP_CMPLT;
@@ -1680,9 +1638,10 @@ codeint	num;
    *ncodeptr++ = zero;     /* bsctr        */
    *ncodeptr++ = zero;     /* ntrt         */
    *ncodeptr++ = zero;     /* ct           */
+   return(0);
 }
 
-n_shim(addr,num)
+int n_shim(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1716,9 +1675,10 @@ codeint  len;
        *ncodeptr++ = *addr++;
        len--;
    }
+   return(0);
 }
 
-n_smpl_hold(addr,num)
+int n_smpl_hold(addr,num)
 codeint	*addr;
 int	num;
 {
@@ -1731,12 +1691,13 @@ int value;
       *ncodeptr++ = LKHOLD;
    else
       *ncodeptr++ = LKSAMPLE;
+   return(0);
 }
 
-n_tassign(addr,num)
+int n_tassign(addr,num)
 codeint	*addr,num;
 {
-codeint  len, loc;
+codeint  loc;
 int      pindex;
 
    addr++;
@@ -1762,14 +1723,15 @@ int      pindex;
    else
        *ncodeptr++ = *addr++;
    *ncodeptr++ = *addr++;
+   return(0);
 }
 
-n_table(addr,num)
+int n_table(addr,num)
 codeint	*addr;
 codeint	num;
 {
 codeint  len, offset;
-int      pindex, found;
+int      pindex;
 
    addr++;
    offset = addr - oldstartptr;
@@ -1804,6 +1766,7 @@ int      pindex, found;
        *ncodeptr++ = *addr++;
        len--;
    }
+   return(0);
 }
 
 
@@ -1817,20 +1780,16 @@ tblhdr	*th;
    /* IXPRINT1("createphasetable dev: %d.\n",channeldev); */
    tblnum = createtable( sizeof(tblhdr)+sizeof(phasetbl) );
    th = (tblhdr *) tblptr[tblnum];
-   th->num_entries = sizeof(phasetbl)/sizeof(long);
-   th->size_entry = sizeof(long);
+   th->num_entries = sizeof(phasetbl)/sizeof(int);
+   th->size_entry = sizeof(int);
    th->mod_factor = 1;
    phasetablenum[channeldev] = tblnum;
    return((int *)tblptr[tblnum]);
 }
 
-int 
-createglobaltable(num_entries, entry_size, data_entry)
-int num_entries;
-int entry_size;			/* in bytes */
-char *data_entry;
+int createglobaltable(int num_entries, int entry_size, char *data_entry)
 {
-   int tblnum,tsize,i,j;
+   int tblnum,tsize,i;
    tblhdr *th;
    int *tempptr;
    codeint *tmpdata;
@@ -1863,9 +1822,7 @@ char *data_entry;
    return(tblnum);
 }
 
-int
-createtable(size)
-int size;
+static int createtable(int size)
 {
    /* IXPRINT2("createtable num: %d size: %d.\n",num_tables,size); */
    tblptr[num_tables] = (int *) malloc( size );
@@ -1888,16 +1845,16 @@ int size;
 
 
 
-n_check(addr,num)
+int n_check(addr,num)
 codeint	*addr;
 int	num;
 {
    if (ix==1)
       printf("Acode %d marked as OBSOLETE, check\n",trTable[num].oldCode);
+   return(0);
 }
 
-calcheader(headerbuf)
-int *headerbuf;
+void calcheader(int *headerbuf)
 {
     int offset,i,size;
     tblhdr *th;
@@ -1914,11 +1871,11 @@ int *headerbuf;
     }
 }
 
-writetablefile(tfilename)
-char *tfilename;
+void writetablefile(char *tfilename)
 {
     int Tblfd;	/* file discriptor Code disk file */
-    int bytes,i,size,hdrsize;
+    int i,size,hdrsize;
+    int bytes __attribute__((unused));
     int *tblheader;
     int *tPtr;
     tblhdr *th;

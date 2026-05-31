@@ -11,11 +11,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "vnmrsys.h"
 #include "acqparms2.h"
 #include "lc_gem.h"
 #include "acodes.h"
+#include "abort.h"
 
 #define OK	0	
 #define SYSERR	-1	/* compatible with most UNIX error returns */
@@ -31,6 +33,8 @@
 extern int	bb_refgen, cardb, xltype;
 extern int	bgflag;		/* print diagnostics if not 0 */
 extern int	newacq;		/* Mercury with VxWorks */ 
+extern void putcode(int datum);
+extern int createglobaltable(int num_entries, int entry_size, char *data_entry);
 
 
 struct acode_globindx {
@@ -46,6 +50,11 @@ struct acode_globindx {
 codeint	*GTABptr[MAXGLOBALSEG];
 codeint *GtabStart,*GtabEnd;
 
+void putgtab(int table, codeint word );
+void setlbfreq_table(double freq, double off);
+void sethbfreq_table(double freq, double off);
+int Create_mem_freq_list(double *list, int nvals, int device,
+                         codeint *outputbuf);
 
 /*  Used by the Qtune program ...  */
 
@@ -60,8 +69,7 @@ get_maxfreqacode()
 * experiment acquisition.  It initializes the freq tables used  
 * in the acquisition.
 *************************************************************************/
-init_global_list(globaltable)
-int globaltable;	
+int init_global_list(int globaltable)
 {
 	gfreq.gseg = globaltable;
 	gfreq.listcnt = 0;
@@ -89,13 +97,8 @@ int globaltable;
 *	>= 0, Number of the list it has created. 
 *        < 0, No list created.
 *************************************************************************/
-int Create_freq_list(list, nvals, device, list_no)
-double *list;
-int	nvals;
-int	device;
-int	list_no;
+int Create_freq_list(double *list, int nvals, int device, int list_no)
 {
-	char	 msge[128];
 	int	 acodes_per_elem, size;
 	codeint *outputbuf;
 
@@ -125,22 +128,15 @@ int	list_no;
 	else {
 		if (gfreq.listcnt > list_no) {
 			if (bgflag) {
-				sprintf(msge,
-		   "Warning: List [%d] already created.\n", list_no
-			);
-			text_error(msge);
+				text_error(
+		         "Warning: List [%d] already created.\n", list_no);
 			}
 		}
 		if (gfreq.listcnt < list_no) {
-			sprintf(msge, "Error: List [%d] not in order.\n",list_no);
-			text_error(msge);
-			sprintf(msge, 
-		   "Make sure to start at 0, and to have unique list\n"
-			); 
-			text_error(msge);
-			sprintf(msge,"numbers for each list.\n");
-			text_error(msge);
-			psg_abort(1);
+			text_error("Error: List [%d] not in order.\n",list_no);
+			text_error(
+		   "Make sure to start at 0, and to have unique list\n"); 
+			abort_message("numbers for each list.\n");
 		}
 		return(-1);
 	}
@@ -159,17 +155,12 @@ int	list_no;
  * Return value: 
  *	Number of Acodes in each list element.
  *************************************************************************/
-int
-Create_mem_freq_list(list, nvals, device, outputbuf)
-double *list;
-int	nvals;
-int	device;
-codeint *outputbuf;
+int Create_mem_freq_list(double *list, int nvals, int device,
+                         codeint *outputbuf)
 {
 	int	 iter;
 	int	 acodes_forelem;
 	codeint *beginaddr;
-	char	 msge[ 128 ];
 
 	GTABptr[gfreq.gseg] = GtabStart = outputbuf;
 	GtabEnd = &outputbuf[(nvals*MAXFREQACODE)-1];
@@ -191,12 +182,10 @@ codeint *outputbuf;
 			acodes_forelem = num_acodes_forelem;
 		} else {
 			if (acodes_forelem != num_acodes_forelem) {
-				sprintf(msge,
+				abort_message(
 			   "freq_list: Mismatch in freq acodes %d, is %d\n",
 			    acodes_forelem, num_acodes_forelem
 				);
-				text_error(msge);
-				psg_abort(1);
 			}
 		}
 		*beginaddr = acodes_forelem;
@@ -223,9 +212,7 @@ codeint *outputbuf;
 /*	setoffset table		*/
 /*  number=offset*(2^32)/40e6   */
 /*------------------------------*/
-setoffset_table(offset,address)
-double	offset;
-int	address;
+void setoffset_table(double offset, int address)
 {
 
    int bits32, llbyte, hlbyte, lhbyte, hhbyte;
@@ -333,15 +320,12 @@ int	address;
 /*-------------------------------*/
 /*       setlbfreq_table         */
 /*-------------------------------*/
-setlbfreq_table(freq,off)
-double	freq;
-double	off;
+void setlbfreq_table(double freq, double off)
 {
-double	fabs();
 double	offset;
 double	ref_freq;
 double	LO_freq, xabs, best_xabs;
-int	test_r, test_v, r, v;
+int	test_r, test_v, r=0, v=0;
    if (bb_refgen)
    {  /* test has shown that 90 < r <= 150		*/
       /*                     98 < v <  221		*/
@@ -428,14 +412,11 @@ int	test_r, test_v, r, v;
 /*-------------------------------*/
 /*       sethbfreq_table         */
 /*-------------------------------*/
-sethbfreq_table(freq,off)
-double	freq;
-double	off;
+void sethbfreq_table(double freq, double off)
 {
-double	fabs();
 double	offset;
 double	LO_freq, xabs, best_xabs;
-int	test_r, test_v, r, v;
+int	test_r, test_v, r=0, v=0;
 
 /* first lets find the best r and v values	*/
 /* test has shown that  8 < r <= 16		*/
@@ -486,20 +467,15 @@ int	test_r, test_v, r, v;
 
 static int	gtab_count = 0;
 
-putgtab( table, word )
-int table;
-codeint word;
+void putgtab(int table, codeint word )
 {
 	*GTABptr[table]++ = word; 		/* Put word into Codes array */
 
     /* test for acodes overflowing malloc acode memory */
 
-	if ((long)GTABptr[table] > (long)GtabEnd) {    
-		char msge[128];
-		sprintf(msge,"Acode overflow, %ld words generated.",
-			 (long) (GTABptr[table] - GtabStart));
-		text_error(msge);
-		psg_abort(0); 
+	if (GTABptr[table] > GtabEnd) {    
+		abort_message("Acode overflow, %d words generated.",
+			 (int) (GTABptr[table] - GtabStart));
 	}
 
 	gtab_count++;
@@ -510,7 +486,7 @@ codeint word;
    close_global_list becomes a NO-OP.  It is being kept so the Mercury PSG
    and Unity PSG will have common source code entry points.		*/
 
-close_global_list()
+int close_global_list()
 {
 	return( OK );
 }
@@ -530,44 +506,38 @@ close_global_list()
 *	NONE 
 *  
 *************************************************************************/
-void vget_elem(list_no, vindex)
-int 	list_no;
-codeint	vindex;
+void vget_elem(int list_no, codeint vindex)
 {
-	char msge[MAXPATHL];
-
    /* check to make sure a valid global segment is available	*/
 
 	if (gfreq.gseg < 0) {
-		text_error("Global segment not available for frequency list.\n");
-		psg_abort(1);
+		abort_message("Global segment not available for frequency list.\n");
 		}
 
    /* test valid apbus range for vindex */
 
 	if ((vindex < v1) || (vindex > v10)) {
-		sprintf(msge,"voffset: vindex illegal dynamic %d \n", vindex);
-		text_error(msge);
-		psg_abort(1); 
+		abort_message("voffset: vindex illegal dynamic %d \n", vindex);
 	}
 
    /* test valid list number */
 
 	if (gfreq.acodes_forelem[list_no] == 0) {
-		sprintf(msge, "List number: %d is incorrect.\n",list_no);
-		text_error(msge);
-		psg_abort(1);
+		abort_message("List number: %d is incorrect.\n",list_no);
 	}
 
    /* sprintf(msge,"voffset: list[%d] gseg: %d  freq_addr: %d vindex: %d\n", */
    /*		list_no,gfreq.gseg,gfreq.acodes_forelem[list_no],vindex); */
    /* text_error(msge); */
 
+   if (!dps_flag)
+   {
 	putcode((codeint)GTABINDX);
 	putcode((codeint)gfreq.gseg);
 	putcode((codeint)gfreq.tblnum[list_no]);
 	putcode((codeint)gfreq.acodes_forelem[list_no]);
 	putcode((codeint)vindex);
+   }
 }
 
 /*--------------------------------------------------------------------
@@ -578,12 +548,10 @@ codeint	vindex;
 |                               Author Greg Brissey 8/9/88
 |       taken from device.c, SCCS category psg  11/19/1997
 +-------------------------------------------------------------------*/
-ClearTable(tableptr, tablesize)
-register char  *tableptr;
-register long   tablesize;
+void ClearTable(char *tableptr, int tablesize)
 {
-   register long   i;
+   int   i;
 
-   for (i = 0L; i < tablesize; i++)
+   for (i = 0; i < tablesize; i++)
       *tableptr++ = 0;
 }

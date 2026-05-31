@@ -149,7 +149,7 @@ struct p_list
   double scl_factor;
   int	wg_st_addr;
   int  telm,ticks,status,cycle_size;
-  long   *data;
+  int   *data;
   struct p_list *plink;
 }; 
 
@@ -195,7 +195,7 @@ struct gwh
 static double		dpf;
 static int		d_in_RF = 0;
 static int		read_in_pattern();
-static long		*lpntr;
+static int		*lpntr;
 static struct p_list	*resolve_pattern();
 static struct p_list	*pat_list_search();
 static struct p_list	*pat_file_search();
@@ -448,10 +448,10 @@ int add_words,length;
    if (indat->suffix == WDECOUPLER)
    {  length = 400/phead->telm + 1;
       length = length * phead->telm;
-      phead->data = (long *) malloc( (3*length+1) * sizeof(long));
+      phead->data = (int *) malloc( (3*length+1) * sizeof(int));
    }
    else
-   {  phead->data = (long *) malloc((phead->telm+2) * sizeof(long));
+   {  phead->data = (int *) malloc((phead->telm+2) * sizeof(int));
       length = phead->telm;
    }
    lpntr = phead->data;
@@ -803,7 +803,7 @@ int dump_ib(apb,dest,arr,numb)
 int apb,
     dest,
     numb;
-long *arr;
+int *arr;
 {   
     struct gwh ibh;
     if (global_fw == NULL) 
@@ -820,7 +820,7 @@ long *arr;
       text_error("instruction block write failed");
       psg_abort(1);
     }
-    if (fwrite(arr,sizeof(long),numb,global_fw) != numb)
+    if (fwrite(arr,sizeof(int),numb,global_fw) != numb)
     {
       text_error("instruction block write failed");
       psg_abort(1);
@@ -859,7 +859,7 @@ dump_data()   /* template data */
 	   text_error("error on dump file %d",j);
 	   psg_abort(1);
          }
-         if ((j = fwrite(uu->data,sizeof(long),uu->telm,global_fw)) != uu->telm)
+         if ((j = fwrite(uu->data,sizeof(int),uu->telm,global_fw)) != uu->telm)
          {
            text_error("load file write error on plist  %d\n",j);
            psg_abort(1);
@@ -870,7 +870,7 @@ dump_data()   /* template data */
      }
    }
    /* write of the terminator and close go together */
-   if ((j = fwrite(&terminator,sizeof(long),1,global_fw)) != 1)
+   if ((j = fwrite(&terminator,sizeof(int),1,global_fw)) != 1)
    {
       text_error("global RF load file write error on terminator\n");
       psg_abort(1);
@@ -907,7 +907,7 @@ remove it and send nothing - fileRFpattern = '\0'
 |               genshaped_pulse()/8             |
 |                                               |
 +----------------------------------------------*/
-genshaped_pulse(name, width, phase, rx1, rx2, g1,
+void genshaped_pulse(name, width, phase, rx1, rx2, g1,
                         g2, rfdevice)
 char	*name;
 codeint	phase;
@@ -997,13 +997,12 @@ struct ib_list  *sldr;
 |   rfdevice    -  RF device                    |
 |						|
 +----------------------------------------------*/
-genspinlock(name, pw_90, deg_res, phsval, ncycles, rfdevice)
+void genspinlock(name, pw_90, deg_res, phsval, ncycles, rfdevice)
 char	*name;
 codeint	phsval;
 double	pw_90, deg_res;
 int	rfdevice, ncycles;
 {
-char	msge[128];
 int	nticks;		/* number of 50ns ticks per spinlock pattern */
 double	sltime;		/* exact time of the spin lock in the WFG    */
 void	prg_dec_off();
@@ -1013,9 +1012,7 @@ void	prg_dec_off();
       psg_abort(1);
    }
    if ( (rfdevice != TODEV) && (rfdevice != DODEV) )
-   {  sprintf(msge, "genspinlock():  RF channel %d is invalid", rfdevice);
-      text_error(msge);
-      psg_abort(1);
+   {  abort_message("genspinlock():  RF channel %d is invalid", rfdevice);
    }
 
    if (ncycles < 1)
@@ -1027,17 +1024,13 @@ void	prg_dec_off();
    nticks = prg_dec_on(name, pw_90, deg_res, rfdevice);
 
    if (nticks < 0)
-   {  sprintf(msge, "genspinlock():  WFG already in use on channel %d\n",
+   {  abort_message("genspinlock():  WFG already in use on channel %d\n",
                 rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
    else if (nticks == 0)
-   {  sprintf(msge,
+   {  abort_message(
 	    "genspinlock():  cannot initiate WFG spin lock on channel %d\n",
 		rfdevice);
-      text_error(msge);
-      psg_abort(1);
    }
 
    sltime = nticks * ncycles * 2.5e-8;
@@ -1257,7 +1250,7 @@ handle hx;
 char *nm;
 double w,g1,g2,amp;
 {
-long tib[10],mark;
+int tib[10],mark;
 /* get pattern info */
 struct p_list *test;
 struct ib_list *temp;
@@ -1292,7 +1285,7 @@ double	w,a;
 handle	hx;
 int	ll,pf;
 {
-long		dib[6];
+int		dib[6];
 int		dectb; 
 double		xx;
 struct p_list	*test;

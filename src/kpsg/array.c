@@ -388,21 +388,17 @@ static void setup(char *varptr, int lpindex, int varindex)
 int             index;
 int             type;
 int             ret;
-char            mess[MAXSTR];
 vInfo           varinfo;	/* variable information structure */
    /* --- variable info  --- */
    if ( (ret = P_getVarInfo(CURRENT, varptr, &varinfo)) )
-   {  sprintf(mess, "Cannot find the variable: '%s'", varptr);
-      text_error(mess);
+   {
       if (bgflag) P_err(ret, varptr, ": ");
-      psg_abort(1);
+      abort_message("Cannot find the variable: '%s'", varptr);
    }
    type = varinfo.basicType;
    index = find(varptr);
    if (index == NOTFOUND)
-   {  sprintf(mess, "variable '%s' does not exist.", varptr);
-      text_error(mess);
-      psg_abort(1);
+   {  abort_message("variable '%s' does not exist.", varptr);
    }
    if (bgflag)
    {  fprintf(stderr,
@@ -417,8 +413,8 @@ vInfo           varinfo;	/* variable information structure */
       else
       {
 	 fprintf(stderr,
-	    "SETUP: cname[%d]: '%s', cvals[%d] = '%s' \n",
-	   index, cnames[index], index, cvals[index]);
+	    "SETUP: cname[%d]: '%s', cvals[%d] is a string\n",
+	   index, cnames[index], index);
    }  }
 
    if ( ! lpel[lpindex] )
@@ -444,8 +440,7 @@ vInfo           varinfo;	/* variable information structure */
    lpel[lpindex]->glblindex[varindex] = srchglobal(varptr);
 
    if (bgflag)
-   {  int gindx;
-      gindx = lpel[lpindex]->glblindex[varindex];
+   {
       fprintf(stderr,
 	"SETUP: #var = %d  var type: %d  var name: '%s',",
 	 lpel[lpindex]->numvar, lpel[lpindex]->vartype[varindex],
@@ -505,7 +500,6 @@ int             nvals,
 int             ret;
 int             gindx;
 double         *temptr;
-char            mess[MAXSTR];
 
    name = lpel[index]->lpvar[0];
    nvals = lpel[index]->numvals;
@@ -526,11 +520,9 @@ char            mess[MAXSTR];
 	 {
 	    if ((ret = A_getreal(CURRENT, name, parmptr, valindx)) < 0)
 	    {
-	       sprintf(mess, "Cannot find the variable: '%s'", name);
-	       text_error(mess);
 	       if (bgflag)
 		  P_err(ret, name, ": ");
-	       psg_abort(1);
+	       abort_message("Cannot find the variable: '%s'", name);
 	    }
 	    gindx = lpel[index]->glblindex[varindx];
             if (gindx >= 0) {
@@ -544,11 +536,9 @@ char            mess[MAXSTR];
 	 {
 	    if ((ret = A_getstring(CURRENT, name, parmptr, valindx)) < 0)
 	    {
-	       sprintf(mess, "Cannot find the variable: '%s'", name);
-	       text_error(mess);
 	       if (bgflag)
 		  P_err(ret, name, ": ");
-	       psg_abort(1);
+	       abort_message("Cannot find the variable: '%s'", name);
 	    }
 	    gindx = lpel[index]->glblindex[varindx];
             if (gindx >= 0) {
@@ -579,7 +569,7 @@ char            mess[MAXSTR];
 	 totaltime = 0.0;	/* total timer events for a fid */
 	 preacqtime = 0.0;	/* time for preacquisition delay */
 	 ix++;			/* generating Acode for FID ix */
-         Alc->elemid = (unsigned long) ix;    /*  fid number */
+         Alc->elemid = (unsigned int) ix;    /*  fid number */
          if (ix > 1)		/* else initialRF() acodes are over written */
          {  Codeptr = Aacode;	/* reset back to beginning of Code section */
             rtinit_count = 0;
@@ -652,41 +642,46 @@ double sign_add(double arg1, double arg2)
 |  functions call for parameters effecting
 |  frequencies .
 +--------------------------------------------------*/
-static
+static int
 func4sfrq(value)
 double 		value;
 {
    sfrq = value;
+   return (0);
 }
-static
+static int
 func4dfrq(value)
 double 		value;
 {
    dfrq = value;
+   return (0);
 }
-static
+static int
 func4tof(value)
 double 		value;
 {
     tof = value;
+   return (0);
 }
-static
+static int
 func4dof(value)
 double 		value;
 {
    dof = value;
+   return (0);
 }
 
-static
+static int
 func4dmf(value)
 double 		value;
 {
     dmf = value;
+   return (0);
 }
 /*---------------------------------------------------
 |  functions call for integer parameters 
 +--------------------------------------------------*/
-static
+static int
 func4spin(value)
 double          value;
 {
@@ -694,7 +689,7 @@ double          value;
    DPRINT(DPRTLEVEL,"func for spin called\n");
    return (0);
 }
-static
+static int
 func4loc(value)
 double          value;
 {
@@ -716,15 +711,16 @@ static int func4d2(double value)
    return (0);
 }
 
-static
+static int
 func4dpwrf(value)
 double		value;
 {
    dpwrf = value;
    cur_dpwrf = value;
+   return(0);
 }
 
-static
+static int
 func4dhp(value)
 double          value;
 {
@@ -733,7 +729,7 @@ double          value;
    return (0);
 }
 
-static
+static int
 func4dlp(value)
 double          value;
 {
@@ -741,7 +737,7 @@ double          value;
    DPRINT(DPRTLEVEL,"func for dlp to set dec atten \n");
    return (0);
 }
-static
+static int
 func4pplvl(value)
 double	value;
 {
@@ -750,28 +746,29 @@ double	value;
    return (0);
 }
 
-static
+static int
 func4tpwrf(value)
 double		value;
 {
    tpwrf = value;
    cur_tpwrf = value;
+   return (0);
 }
 
 /*---------------------------------------------------
 |  functions call for global double parameters effecting
 |  low core or automation structure.
 +--------------------------------------------------*/
-static
+static int
 func4nt(value)
 double          value;
 {
-   nt = (long) (value + 0.005);
-   Alc->nt = (long) (nt + 0.005);
+   nt = (int) (value + 0.005);
+   Alc->nt = (int) (nt + 0.005);
    DPRINT1(DPRTLEVEL,"func for nt called, new value: %ld\n", nt);
    return (0);
 }
-static
+static int
 func4pad_temp(value)
 double          value;
 {
@@ -783,7 +780,7 @@ double          value;
 /*---------------------------------------------------
 |  string functions call for global string parameters
 +--------------------------------------------------*/
-static
+static int
 func4dmm(value)
 char           *value;
 {
@@ -792,7 +789,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dmm called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4dm(value)
 char           *value;
 {
@@ -801,7 +798,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for dm called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4hs(value)
 char           *value;
 {
@@ -820,7 +817,7 @@ char           *value;
  *    return (0);
  * }
  */
-static
+static int
 func4alock(value)
 char           *value;
 {
@@ -829,7 +826,7 @@ char           *value;
    DPRINT1(DPRTLEVEL,"func for alock called value='%s'\n", value);
    return (0);
 }
-static
+static int
 func4wshim(value)
 char           *value;
 {
@@ -842,28 +839,28 @@ char           *value;
 /*---------------------------------------------------
 |  Auto structure parameter  functions
 +--------------------------------------------------*/
-static
+static int
 func4lkpwr(value)
 double          value;
 {
    Aauto->lockpower = (codeint) sign_add(value, 0.005);
    return (0);
 }
-static
+static int
 func4lkgain(value)
 double          value;
 {
    Aauto->lockgain = (codeint) sign_add(value, 0.005);
    return (0);
 }
-static
+static int
 func4lkphase(value)
 double          value;
 {
    Aauto->lockphase = (codeint) sign_add(value, 0.005);
    return (0);
 }
-static
+static int
 func4rcgain(value)
 double          value;
 {
@@ -871,7 +868,7 @@ double          value;
 /*   gainactive = TRUE; */ /* non arrayable */
    return (0);
 }
-static
+static int
 func4shimdac(value)
 double          value;
 {
@@ -910,7 +907,6 @@ int             (*function) ();
 int elemvalues(int elem)
 {
    char           *name;
-   char            mess[MAXSTR];
    int             ret;
    vInfo           varinfo;	/* variable information structure */
 
@@ -925,11 +921,9 @@ int elemvalues(int elem)
    name = lpel[elem - 1]->lpvar[0];
    if ( (ret = P_getVarInfo(CURRENT, name, &varinfo)) )
    {
-      sprintf(mess, "Cannot find the variable: '%s'", name);
-      text_error(mess);
       if (bgflag)
 	 P_err(ret, name, ": ");
-      psg_abort(1);
+      abort_message("Cannot find the variable: '%s'", name);
    }
    return ((int) varinfo.size);	/* # of values variable has */
 }

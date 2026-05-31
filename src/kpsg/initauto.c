@@ -9,6 +9,7 @@
 /* 
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <netinet/in.h>
 #include "acodes.h"
 #include "rfconst.h"
@@ -19,6 +20,8 @@
 #endif
 #include "group.h"
 #include "shims.h"
+#include "abort.h"
+#include "cps.h"
 
 #ifdef MERCURY
 extern char interLock[];
@@ -72,8 +75,8 @@ extern int      bgflag;
 #define MAX_TIME    7
 #define QUICK_SH    8
 
-extern double getval();
-extern double sign_add();
+extern void init_auto_pars();
+extern void putcode(int datum);
 
 static int com_len;
 static codeint com_str[64];
@@ -85,15 +88,13 @@ static int quick_len;
  *  aut_parse and aut_parse_string model the interpretation of a
  *  shim method by autshm.  It is included here as an aid to debugging.
  */
-aut_parse(pp,inc)
-char           *pp;
-int            *inc;
+int aut_parse(char *pp, int *inc)
 {
    int  flag;
    int  tmp;
    int  delaytime;
    int  maxtime;
-   long active;
+   int active;
    char criteria,f_crit;
 
    flag = 0;
@@ -117,11 +118,11 @@ int            *inc;
 	 break;
       case SEL_COIL:		/* shim coils to shim and then do simplex */
          tmp = *pp++;
-	 active =  (long) ((*pp++ << 8) & 0xff00);
-	 active |= (long) ((*pp++)       & 0x00ff);
+	 active =  ((*pp++ << 8) & 0xff00);
+	 active |= ((*pp++)       & 0x00ff);
          active = (active << 16);
-	 active |= (long) ((*pp++ << 8)  & 0xff00);
-	 active |= (long) ((*pp++)       & 0x00ff);
+	 active |= ((*pp++ << 8)  & 0xff00);
+	 active |= ((*pp++)       & 0x00ff);
 	 criteria = *pp++;	/* for method shim */
 	 f_crit = *pp++;	/* for method shim */
          *inc += 7;
@@ -237,17 +238,17 @@ char           *exc;
 static int
 parse_lng(val, exc, decimal)
 /* returns number of characters in val. if ok, sets val */
-long           *val;
+int           *val;
 char           *exc;
 int             decimal;        /* mode = 1 decimal, mode = 0 hexidecimal */
 {
    int             tt;
    int             sign,
                    digit;
-   long            value;
+   int            value;
  
    sign = 1;
-   value = 0L;
+   value = 0;
    tt = 0;
    if (*exc == '-')
    {
@@ -296,7 +297,7 @@ int             decimal;        /* mode = 1 decimal, mode = 0 hexidecimal */
             else
                break;           /* char < 0 so done */
          }
-         value = value * 16L + (long) digit;
+         value = value * 16 + digit;
       }
    }   
    if (tt == 0)
@@ -304,13 +305,12 @@ int             decimal;        /* mode = 1 decimal, mode = 0 hexidecimal */
       return (0);
    else
    {
-      *val = value * (long) sign;
+      *val = value * sign;
       return (tt);
    }   
 }
  
-static checkactive(mask)
-int *mask;
+static void checkactive(unsigned int *mask)
 {
    int index;
    const char *sh_name;
@@ -542,13 +542,10 @@ char            cc;
 }
 
 static void
-translate_string(shimset)
-int shimset;
+translate_string(int shimset)
 {
    char comstring[MAXSTR];	/* shimming background command string */
    char *pp, *out_str;
-   int fid_start = 0;
-   int fid_end = 100;
    unsigned int mask;
    char s_crit = 'm';
    char f_crit = 'm';
@@ -579,33 +576,6 @@ int shimset;
                      text_error("Check your 'method' parameter");
 	             psg_abort(1);
 		     break;
-/*                   *out_str++ = FID_SH;
-/*                     DPRINT0("set fid shim ");
-/*                     if (*pp == ':')
-/*                     {
-/*                        pp++;
-/*                        kk = parse_int(&tmp, pp);   /* get fid start limit */
-/*                        if (kk > 0 && tmp >= 0 && tmp < 100)
-/*                        {
-/*                           fid_start = tmp;
-/*                           pp += kk - 1;
-/*                           if (*pp == ',')
-/*                           {
-/*                               pp++;
-/*                               kk = parse_int(&tmp, pp);    /* get fid stop limit */
-/*                               if (kk > 0 && tmp > fid_start && tmp <= 100)
-/*                               {
-/*                                  fid_end = tmp;
-/*                                  pp += kk - 1;
-/*                               }
-/*                           }    
-/*                        }
-/*                     }
-/*                     DPRINT2("with limits %d and %d\n",fid_start,fid_end);
-/*                     *out_str++ = (char) fid_start;
-/*                     *out_str++ = (char) fid_end;
-/*                     break;
-/* */
          case 'Q':
          case 'q':
                      q_ptr = out_str;
@@ -730,8 +700,7 @@ int shimset;
 #endif
 }
 
-putmethod(mode)
-int mode;
+void putmethod(int mode)
 {
    int temp;
 
@@ -753,7 +722,7 @@ int mode;
    }
 }
 
-initautostruct()
+void initautostruct()
 {
     double lockpower;
     double lockgain;

@@ -64,8 +64,7 @@ int	rtindex;	/* index to real time variable in code (v1-v14) */
 	fprintf(stderr,"starthardloop(): v# index: %d \n",rtindex);
     if (hwlooping)	/* No nesting of hardware loops */
     {
-	text_error("Missing endhardloop after previous starthardloop\n");
-	psg_abort(0);
+	    abort_message("Missing endhardloop after previous starthardloop\n");
     }
     putcode(0);
     hwlooping = TRUE;			/* mark the start of a hardware loop */
@@ -103,8 +102,7 @@ double	timeofloop,time4load;
    if (bgflag)
       fprintf(stderr,"endhardloop(): \n");
    if (!hwlooping)
-   {  text_error("Missing starthardloop \n");
-      psg_abort(0);
+   {  abort_message("Missing starthardloop \n");
    }
    hwlooping = FALSE;	/* not hardware looping any more, mark it */
    fifowords = curfifocount - hwloop_cnt;
@@ -115,12 +113,9 @@ double	timeofloop,time4load;
    }
    else
    {
-      char     mess[80];
       if (fifowords > 2048)
-      {  sprintf(mess,"Hardware loop %d exceeds max (2048) fifo words.\n",
+      {  abort_message("Hardware loop %d exceeds max (2048) fifo words.\n",
                 fifowords);
-         text_error(mess);
-	 psg_abort(0);
       }
       apc.apcarray[hwloop_ptr + 1] = fifowords;
 
@@ -214,13 +209,11 @@ int     twords;
 
    if (dwell < 2.0e-7)
    {
-      text_error("acquire(): dwell time must be larger than 2e-7\n");
-      psg_abort(0);
+      abort_message("acquire(): dwell time must be larger than 2e-7\n");
    }
    if (datapts < 1.5)
    {
-      text_error("must acquire at least two (one pair) data points\n");
-      psg_abort(0);
+      abort_message("must acquire at least two (one pair) data points\n");
    }
 
    dwell *= 1e3;			/* in msec */
@@ -234,8 +227,7 @@ int     twords;
    {
       if (pairs > FIFOLOOPSIZE /ntwords)
       {
-         text_error("Too many data points to acquire in hardware loop.\n");
-         psg_abort(0);
+         abort_message("Too many data points to acquire in hardware loop.\n");
       }
       else
       {  /* increment fifocount for the CTCs that will be generated */
@@ -340,7 +332,7 @@ void donoisecalc()
 |	if not, then do an implicit acuire.
 |	else do not.
 +------------------------------------------------------------------*/
-test4acquire()
+void test4acquire()
 {
    if (acqtriggers == 0)		/* No data acquisition yet? */
    {
@@ -406,16 +398,13 @@ test4acquire()
 |	set the invalid hardware loop flag 
 |				Author Greg Brissey  7/10/86
 +------------------------------------------------------------------*/
-notinhwloop(name)
-char *name;		/* name of calling routine */
+// char *name;		/* name of calling routine */
+void notinhwloop(char *name)
 {
-   char mess[80];
    if (bgflag)
        fprintf(stderr,"notinhwloop('%s'):\n",name);
    if (hwlooping)
    {
-       sprintf(mess," '%s' is not valid between starthardloop() and endhardloop()\n",name);
-       text_error(mess);
-       psg_abort(0);		/* abort process */
+       abort_message("'%s' is not valid between starthardloop() and endhardloop()\n",name);
    }
 }

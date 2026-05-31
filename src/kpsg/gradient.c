@@ -31,6 +31,15 @@ void calc_amp_tc();
 void pfg_reset(char where);
 void pfg_blank(char where);
 void pfg_enable(char where);
+void pfg_reg(char where, int reg, int what);
+void pgradient(int where, double value);
+void hgradient(char gid, double gamp);
+void lgradient(char who, double howmuch);
+void shimgradient(char gid, double gamp);
+void getstr2nwarn(char *variable, char *buf);
+void pfg_12s(char id, int which, int top12, int bot12);
+void l_reset(char who);
+void l_cntrl(char who, int tog);
 
 /************************************************************************/
 /*									*/
@@ -47,23 +56,17 @@ void pfg_enable(char where);
 /*									*/
 /************************************************************************/
 
-static void warnclip(val,cval,what)
-int	val,cval;
-char	what;
+static void warnclip(int val, int cval, char what)
 {  
-   char msg[MAXSTR];
    if ((ix <= warnclipix) || (! warnclipDone))
    {
-      sprintf(msg,"Gradient %c out of range, %d clipped to %d\n",what,val,cval);
-      text_error(msg);
+      text_error("Gradient %c out of range, %d clipped to %d\n",what,val,cval);
       warnclipDone = 1;
       warnclipix = ix;
    }
 }
 
-static int bound12(x,what)
-int	x;
-char	what;
+static int bound12(int x, char what)
 {  
    if (x > 2047) 
    {   warnclip(x,2047,what);
@@ -76,9 +79,7 @@ char	what;
    return(x);
 }
 
-static float rbound16(x,what)
-float x;
-char what;
+static float rbound16(float x, char what)
 {
    if (x > 32767.0)
    {
@@ -154,10 +155,8 @@ void rgradient(char axis, double value)
    }
 }
 
-hgradient(gid,gamp)
-char gid; double gamp;
+void hgradient(char gid, double gamp)
 {
-  char mess[MAXSTR];
 
   if (hgradient_present() != 0)
   {
@@ -180,8 +179,7 @@ char gid; double gamp;
   grad_flag = TRUE;
 }
 
-shimgradient(gid, gamp)
-char gid; double gamp;
+void shimgradient(char gid, double gamp)
 {
   int val;
   double dshimval=0.0;
@@ -216,7 +214,7 @@ char gid; double gamp;
   grad_flag = TRUE;
 }
 
-zero_all_gradients()
+void zero_all_gradients()
 {	
   if (tolower(gradtype[2]) == 'p') rgradient('z',0.0);
   if (tolower(gradtype[2]) == 'l') rgradient('z',0.0);
@@ -263,7 +261,7 @@ char  *c1,*c2,*c3,*orientname;
 /*	state turns on PFG if set to y			*/
 /*							*/
 /********************************************************/
-all_grad_reset()
+void all_grad_reset()
 {
 char	pfg_on[MAXSTR];
 
@@ -290,9 +288,7 @@ char	pfg_on[MAXSTR];
 /*	returns string value of variable from two trees	*/
 /*	current then global				*/
 /********************************************************/
-getstr2nwarn(variable,buf)
-char *variable;
-char buf[];
+void getstr2nwarn(char *variable, char *buf)
 {
    if (P_getstring(CURRENT, variable, buf, 1, MAXSTR))
    {  if (P_getstring(GLOBAL, variable, buf, 1, MAXSTR))
@@ -300,7 +296,7 @@ char buf[];
    }
 }
  
-ecc_handle()
+void ecc_handle()
 {
   if(tolower(gradtype[0]) == 'p')
   {
@@ -325,24 +321,7 @@ ecc_handle()
   }
 }
 
-/* gradtype='p' calls */
-pgradient(where,value)
-int where;
-float value;
-{
-int	base,tmp;
-   base = get_pfg_base(where);
-   if (base == 0)
-      return;
-   value = rbound16(value,where);
-   value *= 16.0;  /* scale to 20 bits */
-   tmp = (int) value;
-   pfg_20(tmp,base);
-   grad_flag = TRUE;  /* enable kill function */
-}
-
-pfg_20(num20,base)
-int num20, base;
+void pfg_20(int num20, int base)
 {
    int word[7],mask,nmask;
    mask = base & 0x0fc00;
@@ -364,6 +343,21 @@ int num20, base;
    curfifocount += 6;
 }
 
+/* gradtype='p' calls */
+void pgradient(int where, double value)
+{
+   int	base,tmp;
+   float val;
+   base = get_pfg_base(where);
+   if (base == 0)
+      return;
+   val = rbound16((float) value,where);
+   val *= 16.0;  /* scale to 20 bits */
+   tmp = (int) val;
+   pfg_20(tmp,base);
+   grad_flag = TRUE;  /* enable kill function */
+}
+
 double tcmax[4]={ 0.235,2.35,165.0,23.5};
 /************************************************************************/
 /*	this routine is the interface to the Highland amp tc pairs      */
@@ -378,7 +372,7 @@ double amp,tc;
 {
      int amp12,tc12;
      double xx,tc_min,tc_max;
-     char tmp[64],tchn;
+     char tchn;
      tchn = tolower(chan); 
      if (!((tchn == 'x') || (tchn == 'y') || (tchn == 'z')))
      {
@@ -400,8 +394,7 @@ double amp,tc;
      tc_min = 0.089*tc_max;  /*  let 1% over/under slide thru and clip */
      if ((tc > 1.01*tc_max) || (tc < tc_min))
      {
-        sprintf(tmp,"%c, #%d out of range [%f,%f]\n",chan,eccno,tc_min,tc_max);
-        text_error(tmp);
+        text_error("%c, #%d out of range [%f,%f]\n",chan,eccno,tc_min,tc_max);
         return;
      }
      xx =  (tc_max/tc - 1.0)*409.5;
@@ -433,16 +426,12 @@ void pfg_enable(char where)
    pfg_reg(where,2,1);
 }
 
-pfg_select_addr(which,where)
-int which;
-char where;
+void pfg_select_addr(int which, char where)
 {
    pfg_reg(where,0,(which & 0x3));
 }
 
-pfg_12s(id,which,top12,bot12)
-char id;
-int which,top12,bot12;
+void pfg_12s(char id, int which, int top12, int bot12)
 {
    int word[6], mask, nmask, base;
    base = get_pfg_base(id);
@@ -466,9 +455,7 @@ int which,top12,bot12;
    curfifocount += 6;
 } 
 
-pfg_reg(where,reg,what)
-char where;
-int reg,what;
+void pfg_reg(char where, int reg, int what)
 {
 int word[2],base;
    base = get_pfg_base(where);
@@ -518,9 +505,7 @@ int base;
    return(base);
 }
 
-lgradient(who,howmuch)
-char who;
-double howmuch;
+void lgradient(char who, double howmuch)
 {
 int temp,i,base;
 short obuff[7];
@@ -538,8 +523,7 @@ short obuff[7];
        putcode(obuff[i]);
 }
 
-l_reset(who)
-char who;
+void l_reset(char who)
 {
 short obuff[10];
 int i,base;
@@ -554,9 +538,7 @@ int i,base;
        putcode(obuff[i]);
 }
 
-l_cntrl(who,tog)
-char who;
-int tog;
+void l_cntrl(char who, int tog)
 {
 short obuff[10];
 int i,base;
@@ -579,13 +561,13 @@ void zgradpulse(double gval,double gdelay)
    }  
 }
 
-lk_sampling_off()
+void lk_sampling_off()
 /* dummy function to switch lock sampling off */
 /* needed for deuterium gradient shimming */
 {
 }
 
-settmpgradtype(char *tmpgradname)
+void settmpgradtype(char *tmpgradname)
 {
   char tmpGradtype[MAXSTR];
   if (P_getstring(CURRENT, tmpgradname, tmpGradtype, 1, MAXSTR) == 0)

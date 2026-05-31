@@ -13,12 +13,15 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/file.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <netinet/in.h>
 #include "data.h"
 #include "acqparms2.h"
 #include "lc_gem.h"
 #include "shrexpinfo.h"
 #include "mfileObj.h"
+#include "abort.h"
 
 #define PRTLEVEL 1
 #define DEBUG
@@ -44,44 +47,44 @@ typedef	struct _aprecord {
 } aprecord;
 
 extern int           bgflag;
-extern unsigned long start_elem;     /* elem for acquisition to (re)start on */
-extern unsigned long completed_elem; /* total number of completed elements */
+extern unsigned int start_elem;     /* elem for acquisition to (re)start on */
+extern unsigned int completed_elem; /* total number of completed elements */
 extern Acqparams     *Alc;
 extern aprecord      apc;
 extern SHR_EXP_STRUCT	ExpInfo;
+extern int getStartFidNum();
+extern int getIlFlag();
 
 static int                  acqfd;
 static struct datafilehead  acqfileheader;
 static struct datablockhead acqblockheader;
 static int                  acqparmsize = sizeof(autodata) + sizeof(Acqparams);
 
-static long max_ct;
+static int max_ct;
 
 static MFILE_ID ifile = NULL;	/* mercury datafile for ra */
 static char *savedoffsetAddr;   /* saved mercury offset header */
+void acqpar_seek(unsigned int elemindx);
 
 /*-----------------------------------------------------------------
 |	ra_initacqparms(fid#)
 +---------------------------------------------------------------*/
-ra_initacqparms(fidn)
-unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
+int ra_initacqparms(unsigned int fidn)
 {
    Acqparams *lc,*ra_lc;
-   autodata *autoptr;
-   char msge[256];
    int len1,len2;
    codeint acqbuffer[512];
    struct datablockhead acqblockheader;
 
    if (fidn == 1)
    {
-     max_ct = 0L;
+     max_ct = 0;
    }
 
    acqpar_seek(fidn);	/* move to proper fid entry in acqpar */
    len1 = read(acqfd,&acqblockheader,sizeof(struct datablockhead));
    len2 = read(acqfd,acqbuffer,acqparmsize);
-   DPRINT3(PRTLEVEL,"ra_init: fid %lu, blockhdr %d, lc & auto %d\n",
+   DPRINT3(PRTLEVEL,"ra_init: fid %u, blockhdr %d, lc & auto %d\n",
 		fidn,len1,len2);
 
    if ( (len1 == 0) || (len2 == 0) )
@@ -90,20 +93,20 @@ unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
       {
         start_elem = fidn;
         max_ct = -1L;           /* only set start_elem once */
-        DPRINT3(PRTLEVEL,"fid: %lu, start_elem = %lu, max_ct = %d  \n",
+        DPRINT3(PRTLEVEL,"fid: %u, start_elem = %u, max_ct = %d  \n",
 	  fidn,start_elem,max_ct);
       }
       return(0);	/* no further data */
    }
  
    ra_lc = (Acqparams *) acqbuffer; /* ra lc parameters */
-/*   lc = (Acqparams *) codestadr; /* initialize lc parameters */
+//   lc = (Acqparams *) codestadr; /* initialize lc parameters */
    lc = (Acqparams *) apc.apcarray; /* initialize lc parameters */
 
-   DPRINT2(PRTLEVEL,"lc-> 0x%lx, ra_lc-> 0x%lx\n",lc,ra_lc);
-   DPRINT2(PRTLEVEL,"ct=%ld, ra ct=%ld\n",lc->ct,ra_lc->ct);
-   DPRINT2(PRTLEVEL,"np=%ld, ra np=%ld\n",lc->np,ra_lc->np);
-   DPRINT2(PRTLEVEL,"nt=%ld, ra nt=%ld\n",lc->nt,ra_lc->nt);
+   DPRINT2(PRTLEVEL,"lc-> %p, ra_lc-> %p\n",lc,ra_lc);
+   DPRINT2(PRTLEVEL,"ct=%d, ra ct=%d\n",lc->ct,ra_lc->ct);
+   DPRINT2(PRTLEVEL,"np=%d, ra np=%d\n",lc->np,ra_lc->np);
+   DPRINT2(PRTLEVEL,"nt=%d, ra nt=%d\n",lc->nt,ra_lc->nt);
 
    /* find the maximum ct acquired without actually completing the FID */
    /* the assumption here is that fids are acquired 1 to arraydim */
@@ -114,7 +117,7 @@ unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
       start_elem = fidn;        /* maybe start_elem */
    }
 
-   DPRINT3(PRTLEVEL,"fid: %lu, start_elem = %lu, max_ct = %d  \n",
+   DPRINT3(PRTLEVEL,"fid: %u, start_elem = %u, max_ct = %d  \n",
 	fidn,start_elem,max_ct);
  
    DPRINT1(PRTLEVEL,"il='%s'\n",il);
@@ -136,7 +139,7 @@ unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
      }
    }
 
-   DPRINT3(PRTLEVEL,"fid: %lu, start_elem = %lu, max_ct = %d  \n",
+   DPRINT3(PRTLEVEL,"fid: %u, start_elem = %u, max_ct = %d  \n",
 	fidn,start_elem,max_ct);
  
 
@@ -148,17 +151,15 @@ unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
    else if ( lc->nt <= ra_lc->ct )
     {
       lc->nt = ra_lc->nt; /* nt can not be made <= to ct , for now. */
-      sprintf(msge,"WARNING: FID:%d  'nt' <= 'ct', original 'nt' used.\n",
+      text_error("WARNING: FID:%d  'nt' <= 'ct', original 'nt' used.\n",
 		fidn);
-      text_error(msge);
     }
  
-   DPRINT2(PRTLEVEL,"nt=%ld, ra nt=%ld\n",lc->nt,ra_lc->nt);
+   DPRINT2(PRTLEVEL,"nt=%d, ra nt=%d\n",lc->nt,ra_lc->nt);
    if (ra_lc->np != lc->np)
    {
-      sprintf(msge,"WARNING 'np' has changed from %ld to %ld.\n",
+      text_error("WARNING 'np' has changed from %d to %d.\n",
 		ra_lc->np,lc->np);
-      text_error(msge);
    }
    if (ra_lc->dpf != lc->dpf)
    {
@@ -206,8 +207,7 @@ unsigned long fidn;   /* fid number to obtain the acqpar parameters for */
 |       Position the disk read/write heads to the proper block offset
 |       for the acqpar file (lc,auto structure parameters.
 +-------------------------------------------------------------------*/
-open_acqpar(filename)
-char *filename;
+void open_acqpar(char *filename)
 {
    int len;
    if (bgflag)
@@ -233,34 +233,28 @@ char *filename;
 |   --------   ------     -------
 |   2/10/89   Greg B.    1. Routine now returns the (long) position of seek
 +-------------------------------------------------------------------*/
-acqpar_seek(elemindx)
-unsigned long elemindx;
+void acqpar_seek(unsigned int elemindx)
 {
     int acqoffset;
-    long pos;
 
     acqoffset = sizeof(acqfileheader) +
-        (acqfileheader.bbytes * ((unsigned long) (elemindx - 1)))  ;
+        (acqfileheader.bbytes * ((unsigned int) (elemindx - 1)))  ;
     if (bgflag)
         fprintf(stderr,"acqpar_seek(): fid# = %d,acqoffset = %d \n",
            elemindx,acqoffset);
-    pos = lseek(acqfd, acqoffset,L_SET);
-    if (pos == -1)
+    if ( lseek(acqfd, acqoffset,L_SET) == (off_t) -1 )
     {
         char *str_err;
 
         if ( (str_err = strerror(errno) ) != NULL )
         {
-           fprintf(stdout,"acqpar_seek Error: offset %ld,: %s\n",
+           fprintf(stdout,"acqpar_seek Error: offset %d,: %s\n",
                acqoffset,str_err);
         }
-        return(-1);
     }    
-    return(pos);
 }
 
-int ra_mercacqparms(fidn)
-unsigned long fidn;
+void ra_mercacqparms(unsigned int fidn)
 {
    char fidpath[512];
    int curct;

@@ -79,9 +79,12 @@ extern	int	ra_flag;
 extern	short	*Aacode;
 extern	short	*Codeptr;
 extern	short	*Codes;
-extern  long	CodeEnd;
+extern   short *CodeEnd;
 extern	autodata	*Aauto;/* ptr to automation structure in Acode set */
 extern	Acqparams	*Alc;  /* pointer to low core structure in Acode set */
+
+extern codeint *convert_Acodes(codeint *oldstart, codeint *oldlast,
+                               int *retsize);
 
 extern SHR_EXP_STRUCT	ExpInfo;
 
@@ -250,10 +253,10 @@ void putcode(int datum)
       Codeptr++;	/* for phase table compatiblity, someday should use */
 			/* only Codeptr */
       apc.preg ++;
-      if (&apc.apcarray[apc.preg] >= (short *) CodeEnd)
+      if (&apc.apcarray[apc.preg] >= CodeEnd)
       {
-        abort_message("Acode overflow, %ld words generated.",
-                (long) (apc.preg));
+        abort_message("Acode overflow, %d words generated.",
+                apc.preg);
       }
    }
 }
@@ -1292,9 +1295,8 @@ double	time,rem;
 int	apbcnt_ap;
 int	lpcnt;
    if (delay < 0.0)
-   { char msge[128];
-     sprintf(msge,"PSG: negative time delay, set to 0.0\n");
-     text_error(msge);
+   {
+     text_error("PSG: negative time delay, set to 0.0\n");
      return;
    }
    if (delay < 1e-7) return;
@@ -2338,29 +2340,29 @@ double	hd_off;
    {
       if ((2.0*dfrq) >= xltype)
       {
-         sprintf(nucleiNameStr,"'%s %s'",str2,str);
+         sprintf(nucleiNameStr,"'%.2s %.2s'",str2,str);
       }
       else
       {
-         sprintf(nucleiNameStr,"'- %s'",str);
+         sprintf(nucleiNameStr,"'- %.2s'",str);
       }
    }
    else
    {
        if (indirect == 1)
        {
-          sprintf(nucleiNameStr,"'%s %s'",str,str2);
+          sprintf(nucleiNameStr,"'%.2s %.2s'",str,str2);
        }  
        else
        {
-          sprintf(nucleiNameStr,"'%s -'",str);
+          sprintf(nucleiNameStr,"'%.2s -'",str);
        }
    }
 
 
    if (P_getstring(CURRENT, "rfchnuclei", str, 1, MAXSTR) >= 0)
    {
-      sprintf(str2,"%s",nucleiNameStr);
+//      sprintf(str2,"%s",nucleiNameStr);
       putCmd("rfchnuclei = %s", nucleiNameStr);
    }
 }
@@ -2374,16 +2376,17 @@ double	hd_off;
 /*-------------------------------*/
 void initdecphasetab()                                        
 /*   set up table for decoupler phases*/
+/*   Note: newacq is always true */
 {
    if (newacq)
    {  putcode(SETPHATTR);
    }
    if (!indirect)
-   {  if (newacq) putcode(1);
-      if (newacq) putcode(0); putcode(0);
-      if (newacq) putcode(0); putcode(DC270);
-      if (newacq) putcode(0); putcode(DC180);
-      if (newacq) putcode(0); putcode(DC90);
+   {  /* if (newacq) */ putcode(1);
+      /* if (newacq) */ putcode(0); putcode(0);
+      /* if (newacq) */ putcode(0); putcode(DC270);
+      /* if (newacq) */ putcode(0); putcode(DC180);
+      /* if (newacq) */ putcode(0); putcode(DC90);
       if (newacq)
       {  putcode(0);
          putcode(DC270);
@@ -2395,11 +2398,11 @@ void initdecphasetab()
       }
    }
    else
-   {  if (newacq) putcode(2);
-      if (newacq) putcode(0); putcode(0);
-      if (newacq) putcode(0); putcode(RFPC270);
-      if (newacq) putcode(0); putcode(RFPC180);
-      if (newacq) putcode(0); putcode(RFPC90);
+   {  /* if (newacq) */ putcode(2);
+      /* if (newacq) */ putcode(0); putcode(0);
+      /* if (newacq) */ putcode(0); putcode(RFPC270);
+      /* if (newacq) */ putcode(0); putcode(RFPC180);
+      /* if (newacq) */ putcode(0); putcode(RFPC90);
       if (newacq)
       {  putcode(0);
          putcode(RFPC270);
@@ -2417,16 +2420,17 @@ void initdecphasetab()
 /*-------------------------------*/
 void initobsphasetab()                                        
 /*   setup obspulse rfphase pattern table */
+/*   Note: newacq is always true */
 {
    if (newacq)
    {  putcode(SETPHATTR);
    }
    if (cardb)			/*for lowband */
-   {  if (newacq) putcode(2);
-      if (newacq) putcode(0); putcode(0);
-      if (newacq) putcode(0); putcode(RFPC270);
-      if (newacq) putcode(0); putcode(RFPC180);
-      if (newacq) putcode(0); putcode(RFPC90);
+   {  /* if (newacq) */ putcode(2);
+      /* if (newacq) */ putcode(0); putcode(0);
+      /* if (newacq) */ putcode(0); putcode(RFPC270);
+      /* if (newacq) */ putcode(0); putcode(RFPC180);
+      /* if (newacq) */ putcode(0); putcode(RFPC90);
       if (newacq)
       {  putcode(0);
          putcode(RFPC270);
@@ -2435,11 +2439,11 @@ void initobsphasetab()
       }
    }
    else				/*for hydrogen*/
-   {  if (newacq) putcode(1);
-      if (newacq) putcode(0); putcode(0);
-      if (newacq) putcode(0); putcode(RFPH270);
-      if (newacq) putcode(0); putcode(RFPH180);
-      if (newacq) putcode(0); putcode(RFPH90);
+   {  /* if (newacq) */ putcode(1);
+      /* if (newacq) */ putcode(0); putcode(0);
+      /* if (newacq) */ putcode(0); putcode(RFPH270);
+      /* if (newacq) */ putcode(0); putcode(RFPH180);
+      /* if (newacq) */ putcode(0); putcode(RFPH90);
       if (newacq)
       {  putcode(0);
          putcode(RFPH270);
@@ -3651,13 +3655,14 @@ void write_Acodes(int act)
 
 void close_codefile()
 {
+    int tmp __attribute__((unused));
     if (newacq)
     {
        /*
         * We write extra stuff so that when this file is mmapped,
         * we will not read past the end of the file
         */
-       write(PSfile,(char *) preCodes,max_acode + 2 * sizeof(codelong));
+       tmp = write(PSfile,(char *) preCodes,max_acode + 2 * sizeof(codelong));
     }
     close(PSfile);
 }

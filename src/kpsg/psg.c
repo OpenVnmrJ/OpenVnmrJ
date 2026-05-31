@@ -70,12 +70,15 @@
 #define anyrfwg		( (is_y(rfwg[0])) || (is_y(rfwg[1])) )
 #define anywg		anyrfwg		/* Mercury-Vx only supports rfwg */
 
+extern short *init_acodes(Acqparams *Codes);
+
 static void checkGradAlt();
 void checkGradtype();
 void first_done();
 void reset();
 void check_for_abort();
 void write_shr_info(double exp_time);
+void write_exp_info();
 /****************************************/
 /*		EXTERNALS		*/
 /****************************************/
@@ -123,9 +126,9 @@ extern int	v15;		/* offset in code to v15 */
 extern int	v16;		/* offset in code to v16 */
 
 extern int loc;
-extern long	rt_tab[];
+extern int	rt_tab[];
 
-extern unsigned long 	ix;	/* FID currently in Acode generation */
+extern unsigned int 	ix;	/* FID currently in Acode generation */
 
 
 
@@ -135,11 +138,11 @@ extern unsigned long 	ix;	/* FID currently in Acode generation */
 extern autodata	*Aauto;			/* ptr to automation struct in Acodes */
 extern Acqparams	*Alc;		/* ptr to lc struct in Acode set */
 
-       char	abortfile[MAXPATHL];	/* path for abort signal file */
+       char	abortfile[MAXPATHL+20];	/* path for abort signal file */
        char	acqHost[50];		/* Acq. machine Host name */
        char	**cnames;		/* pointer array to variable names */
        char	curexp[MAXPATHL];	/* current experiment path */
-       char	*extra_hp;
+//       char	*extra_hp;
        char	filegrad[MAXPATHL];	/* path for Gradient file */
        char	filepath[MAXPATHL];	/* file path for Codes */
        char	fileRFpattern[MAXPATHL];/* path for obs & dec RF pattern file */
@@ -217,8 +220,8 @@ static int	ready = 0;              /* go.c expects 0 for success */
        int	whenshim;
        int	specialGradtype = 0;
 
-       long	CodeEnd;	/* End Address  of the malloc space for codes */
-       long	Codesize;	/* size of the malloc space for codes */
+       short *CodeEnd;	/* End Address  of the malloc space for codes */
+       int	Codesize;	/* size of the malloc space for codes */
 
 extern short	*Aacode; 	/* pointer to Acode array, also Start Address */
        short	*Codeptr; 	/* pointer into the Acode array */
@@ -228,8 +231,8 @@ extern short	 fidctr;	/* offset into code to bsct */
 extern short	*lc_stadr;	/* Low Core Start Address */
        short	*preCodes;	/* pointer to the start of the malloced space */
 
-unsigned long	start_elem;	/* elem (FID) for acquisition to start on (RA)*/
-unsigned long	completed_elem;	/* number of completed elements (FIDs) (RA) */
+unsigned int	start_elem;	/* elem (FID) for acquisition to start on (RA)*/
+unsigned int	completed_elem;	/* number of completed elements (FIDs) (RA) */
 /**************************************
 *  Structure for real-time AP tables  *
 *  and global variables declarations  *
@@ -294,7 +297,7 @@ SHR_EXP_STRUCT	ExpInfo;
 
 
 #ifndef SWTUNE
-main(argc,argv) 	int argc; char *argv[];
+int main(int argc, char *argv[])
 {   
     char    array[MAXSTR];
     char    parsestring[MAXSTR];	/* string that is parsed */
@@ -311,7 +314,7 @@ main(argc,argv) 	int argc; char *argv[];
     int     i;
     int     narrays;
     int     nextflag = 0;
-    int     Rev_Num;
+    int     Rev_Num __attribute__((unused));
     int     P_rec_stat;
   
     acqiflag = ra_flag = dps_flag = waitflag = fidscanflag = tuneflag = checkflag = 0;
@@ -378,9 +381,9 @@ main(argc,argv) 	int argc; char *argv[];
     if (bgflag)
       fprintf(stderr,"PSG: Piping Complete\n");
  
-    getparm("acqaddr","string",GLOBAL,filename,MAXPATHL);
-    sscanf(filename, "%s", acqHost);
-    extra_hp = gethostbyname(acqHost);
+//    getparm("acqaddr","string",GLOBAL,filename,MAXPATHL);
+//    sscanf(filename, "%s", acqHost);
+//    extra_hp = gethostbyname(acqHost);
     /* ------- Check For GO - PSG Revision Clash ------- */
 /* FV    if (Rev_Num != GO_PSG_REV )
  * FV    {	
@@ -626,8 +629,8 @@ main(argc,argv) 	int argc; char *argv[];
 	    }
 	    else
 	    {
-	        fprintf(stderr,"name[%d] = '%s' value = '%s' \n",
-	   	    i,cnames[i],cvals[i]);
+	        fprintf(stderr,"name[%d] = '%s' value a string\n",
+	   	    i,cnames[i]);
 	    }
         }
     }
@@ -661,32 +664,29 @@ main(argc,argv) 	int argc; char *argv[];
 |		- c. Acodes		  pointer = Aacode;
 +------------------------------------------------------------------*/
     if (newacq)
-       Codesize =  (long)  (MV162_SIZE * sizeof(codeint)); /* code + struct */
+       Codesize =  (MV162_SIZE * sizeof(codeint)); /* code + struct */
     else
-       Codesize =  (long)  (VM02_SIZE * sizeof(short));    /* code + struct */
+       Codesize =  (VM02_SIZE * sizeof(short));    /* code + struct */
 
     if (bgflag)
     {
 	fprintf(stderr,"arraydim = %5.0lf \n",arraydim);
-        fprintf(stderr,"sizeof Codes: %ld(dec) bytes \n", Codesize);
+        fprintf(stderr,"sizeof Codes: %d(dec) bytes \n", Codesize);
     }
 
-    preCodes = (short *) malloc( Codesize + 2 * sizeof(long) );
+    preCodes = (short *) malloc( Codesize + 2 * sizeof(int) );
     if ( preCodes == 0L )
     {
-        char msge[128];
-	sprintf(msge,"Insuffient memory for Acode allocation of %ld Kbytes.",
-		Codesize/1000L);
-	text_error(msge);
-	reset(); 
-	psg_abort(0);
+	     reset(); 
+	     abort_message("Insuffient memory for Acode allocation of %d Kbytes.",
+		Codesize/1000);
     }
     Codes = preCodes + 4;
 
-    CodeEnd = ((long) Codes) + Codesize;
+    CodeEnd = Codes + Codesize;
 
     /* Set Acode pointer to beginning of Codes */
-    Codeptr = (short *)init_acodes(Codes);
+    Codeptr = init_acodes((Acqparams *) Codes);
 
     /* Set up Acode pointers */
 /*    Alc = (Acqparams *) Codes; */	/* start of low core */
@@ -700,9 +700,9 @@ main(argc,argv) 	int argc; char *argv[];
 /*	 */	/* fidctr is long we must shift the offset by 1 word */
 
     if (bgflag)
-    {	fprintf(stderr,"Code address:  0x%lx \n",Codes);
-     	fprintf(stderr,"Codeptr address:  0x%lx \n",Codeptr);
-     	fprintf(stderr,"CodeEnd address:  0x%lx \n",CodeEnd);
+    {	fprintf(stderr,"Code address:  %p \n",Codes);
+     	fprintf(stderr,"Codeptr address:  %p \n",Codeptr);
+     	fprintf(stderr,"CodeEnd address:  %p \n",CodeEnd);
     }
 	
     oldwhenshim = -1;	   /* previous value of shimming mask */
@@ -996,35 +996,32 @@ psgsetup(in_pipe, bugflag)
 
     arraydim = 1.0;		/* SWTUNE is 1D, nomatter what. */
 
-    Codesize =  (long)  (MV162_SIZE * sizeof(codeint)); /* code + struct */
+    Codesize =  MV162_SIZE * sizeof(codeint); /* code + struct */
 
     if (bgflag)
     {
 	fprintf(stderr,"arraydim = %5.0lf \n",arraydim);
-        fprintf(stderr,"sizeof Codes: %ld(dec) bytes \n", Codesize);
+        fprintf(stderr,"sizeof Codes: %d(dec) bytes \n", Codesize);
     }
 
-    preCodes = (short *) malloc( Codesize + 2 * sizeof(long) );
+    preCodes = (short *) malloc( Codesize + 2 * sizeof(int) );
     if ( preCodes == 0L )
     {
-        char msge[128];
-	sprintf(msge,"Insuffient memory for Acode allocation of %ld Kbytes.",
-		Codesize/1000L);
-	text_error(msge);
-	reset(); 
-	psg_abort(0);
+	     reset(); 
+	     abort_message("Insuffient memory for Acode allocation of %d Kbytes.",
+		Codesize/1000);
     }
     Codes = preCodes + 4;
 
-    CodeEnd = ((long) Codes) + Codesize;
+    CodeEnd = Codes + Codesize;
 
     /* Set Acode pointer to beginning of Codes */
-    Codeptr = (short *)init_acodes(Codes);
+    Codeptr = init_acodes(Codes);
 
     if (bgflag)
-    {	fprintf(stderr,"Code address:  0x%lx \n",Codes);
-     	fprintf(stderr,"Codeptr address:  0x%lx \n",Codeptr);
-     	fprintf(stderr,"CodeEnd address:  0x%lx \n",CodeEnd);
+    {	fprintf(stderr,"Code address:  %p \n",Codes);
+     	fprintf(stderr,"Codeptr address:  %p \n",Codeptr);
+     	fprintf(stderr,"CodeEnd address:  %p \n",CodeEnd);
     }
 
     if (setGflags()) psg_abort(0);
@@ -1200,7 +1197,6 @@ double  ni3,
                 d4;
    int          sparse = 0;
    int          CStype = 0;
-   int          arrayIsSet;
 
    if ( ! CSinit("sampling", curexp) )
    {
@@ -1218,7 +1214,6 @@ double  ni3,
       else
          sparse =  1;
    }
-   arrayIsSet = 0;
 
    strcpy(parsestr, "");
    if (sparse)
@@ -1535,7 +1530,7 @@ int   nextflag;
 
     expflags = 0;
     if (autoflag)
-	expflags = ((long)expflags | AUTOMODE_BIT);  /* set automode bit */
+	expflags = (expflags | AUTOMODE_BIT);  /* set automode bit */
 
     if (ra_flag)
         expflags |=  RESUME_ACQ_BIT;  /* set RA bit */
@@ -1544,23 +1539,23 @@ int   nextflag;
 	return(ERROR);
     if (getparm("vnmraddr","string",GLOBAL,addr,MAXSTR))
         return(ERROR);
-    sprintf(message,"%d,%s,%d,%lf,%s,%s,%s,%s,%s,%d,%d,%lu,%lu,",
+    sprintf(message,"%d,%s,%d,%lf,%s,%s,%s,%s,%s,%d,%d,%u,%u,",
 		QUEUE,addr,
-		(int)priority,exptime,fidpath,codefile,
+		priority,exptime,fidpath,codefile,
 		fileRFpattern, filegrad, filexpan,
-		(int)setupflag,(int)expflags,
+		setupflag,expflags,
                 start_elem, completed_elem);
     if (bgflag)
     {
       fprintf(stderr,"vnHost: '%s'\n",vnHost);
       fprintf(stderr,"fidpath: '%s'\n",fidpath);
       fprintf(stderr,"codefile: '%s'\n",codefile);
-      fprintf(stderr,"priority: %d'\n",(int) priority);
+      fprintf(stderr,"priority: %d'\n", priority);
       fprintf(stderr,"time: %lf\n",totaltime);
       fprintf(stderr,"suflag: %d\n",setupflag);
       fprintf(stderr,"expflags: %d\n",expflags);
-      fprintf(stderr,"start_elem: %lu\n",start_elem);
-      fprintf(stderr,"completed_elem: %lu\n",completed_elem);
+      fprintf(stderr,"start_elem: %u\n",start_elem);
+      fprintf(stderr,"completed_elem: %u\n",completed_elem);
       fprintf(stderr,"msge: '%s'\n",message);
       fprintf(stderr,"auto: %d\n",autoflag);
     }
@@ -1617,8 +1612,8 @@ int   nextflag;
        sprintf(infostr,"%s %s",tmpstr,tmpstr2);
        if (sendExpproc(addr,codefile,infostr,nextflag))
        {
-        text_error("Experiment unable to be sent\n");
-        return(ERROR);
+          text_error("Experiment unable to be sent\n");
+          return(ERROR);
        }
     }
 
@@ -1828,7 +1823,7 @@ typedef	struct _aprecord {
 } aprecord;
 
 extern aprecord apc;
-creatDPS()
+void creatDPS()
 {
     apc.apcarray = Codes;
     x_pulsesequence();  /* generate  Pulse Sequence */
@@ -2192,7 +2187,7 @@ char *dspfilt;
 +-------------------------------------------------------------------*/
 set_counters()
 {
-    long ilsstmp, ilctsstmp;
+    int ilsstmp, ilctsstmp;
     if (Alc->ss < 0)
     {
        Alc->ssct = -1 * Alc->ss;
@@ -2220,14 +2215,12 @@ set_counters()
 }
 
 
-set_acode_size(sz)
-int sz;
+void set_acode_size(int sz)
 {
     ExpInfo.acode_1_size = sz;
 }
 
-set_max_acode_size(sz)
-int sz;
+void set_max_acode_size(int sz)
 {
     ExpInfo.acode_max_size = sz;
 }
@@ -2287,13 +2280,14 @@ void write_shr_info(double exp_time)
 
       bgflag=0;
 }
-write_exp_info()
+
+void write_exp_info()
 {
     int Infofd; /* file discriptor Code disk file */
     int bytes;
 #ifdef LINUX
     int cnt;
-    long rt_tab_tmp[RT_TAB_SIZE];
+    int rt_tab_tmp[RT_TAB_SIZE];
 #endif
 
     /* --- write parameter out real-time variable file --- */
@@ -2308,9 +2302,9 @@ write_exp_info()
        {
           rt_tab_tmp[cnt] = htonl(rt_tab[cnt]);
        }
-       bytes = write(Infofd, rt_tab_tmp, sizeof(long) * get_rt_tab_elems() );
+       bytes = write(Infofd, rt_tab_tmp, sizeof(int) * get_rt_tab_elems() );
 #else
-       bytes = write(Infofd, rt_tab, sizeof(long) * get_rt_tab_elems() );
+       bytes = write(Infofd, rt_tab, sizeof(int) * get_rt_tab_elems() );
 #endif
        if (bgflag)
          fprintf(stderr,"Bytes written to info file: %d (bytes).\n",bytes);
