@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/file.h>
 #include <string.h>
@@ -21,15 +22,22 @@
 #include "REV_NUMS.h"
 #include "dsp.h"
 #include "lc_index.h"
+#include "abort.h"
 
-extern double sign_add();
+extern double sign_add(double arg1, double arg2);
 
 extern int gen_apbcout();
+extern int get_acqvar(codeint index);
+extern void timerwords(double time, int *tword1, int *tword2);
+extern int par_maxminstep(int tree, const char *name,
+           double *maxv, double *minv, double *stepv);
+extern int getIlFlag();
 
 extern int debug2;
 extern int acqiflag;
 extern int rtinit_count;
 extern int      ap_interface;
+extern int rt_tab[];
 extern codeint  dpfrt, arraydimrt, relaxdelayrt, nfidbuf, rtcpflag;
 extern codeint	rtrecgain, npnoise, dtmcntrl, gindex, ctss, adccntrl;
 extern codeint	ilflagrt, tmprt, acqiflagrt, maxsum, incrdelay, endincrdelay;
@@ -239,8 +247,9 @@ static apTbl *apTable[MAXAPTABLES];
 
 static int createtable(int size);
 static int *createphasetable(codeint channeldev);
+static void cleanupaptableinfo();
 
-int     createglobaltable();
+int createglobaltable(int num_entries, int entry_size, char *data_entry);
 
 int	n_begin(),n_setup();
 int	n_apbout(), n_apcout(), n_tapbout(), n_iapread();
@@ -267,7 +276,9 @@ int	n_wgcmd(), n_wg3(), n_wgiload();
 int	n_vtset(), n_tunefreq();
 int 	n_cpsamp();
 int 	n_scopytst();
+#ifdef DOIPA
 int	n_ipacode();
+#endif
 int     n_again();
 int     n_fidcode();
 int	n_initdelay(), n_incrdelay(), n_rt_event1();
@@ -436,7 +447,9 @@ trBlk  trTable[] = {
     { DISABLEOVRFLOW, 	2,	n_disableovrflow, DISABLEOVRLDERR },
     { EXTGATE, 		3,	n_scopy,	INOVAXGATE },
     { ROTORSYNC,	3,	n_scopy,	INOVAROTORSYNC },
+#ifdef DOIPA
     { IPACODE, 		2,	n_ipacode,	0 },
+#endif
     { FIDCODE, 		1,	n_fidcode,	0 },
     { IAPREAD,		7,	n_iapread,	EXEAPREAD},
     { IMASKON, 		3,	n_scopy,	MASKHSL },
@@ -485,8 +498,6 @@ static union {
 static int
 rcvrActive(short n)
 {
-   extern int rt_tab[];
-    int mask;
     int rtn;
 
     rtn = (rt_tab[activercvrs+TABOFFSET] >> n) & 1;
@@ -500,10 +511,9 @@ codeint  *oldstart, *oldlast;
 int	 *retsize;
 {
 	int	 num, size;
-	codeint  retLen;
+	codeint  retLen __attribute__((unused));
 	codeint  *cptr;
         static codeint  *mallocptr = NULL;
-	static int	old_size = 0;
 
 
 	size = oldlast - oldstart;
@@ -545,7 +555,7 @@ int	 *retsize;
 	{
 	     if (*cptr < 0 || *cptr > LOCKSEQUENCE)
 	     {
-		IXPRINT2("psg: Unknown Code '%d' addr is %d\n", *cptr, cptr);
+		IXPRINT2("psg: Unknown Code '%d' addr is %p\n", *cptr, cptr);
 		cptr++;
 		continue;
 	     }
@@ -569,7 +579,7 @@ int	 *retsize;
 		{
 		    if (trTable[num].oldCode == LASTCODE)
 		    {
-			IXPRINT2("psg: Unknown code '%d'  addr is %d\n", *cptr, cptr);
+			IXPRINT2("psg: Unknown code '%d'  addr is %p\n", *cptr, cptr);
 			cptr++;
 			break;
 		    }
@@ -577,13 +587,12 @@ int	 *retsize;
 		num++;
 	     }
 	}
-	*retsize = (int)(ncodeptr - newstartptr);
+	*retsize = (int)((long)ncodeptr - (long)newstartptr);
 	cleanupaptableinfo();
 	return(mallocptr);
 }
 
-push_short (data)
-codeint  data;
+static void push_short (codeint data)
 {
 	if (stackptr < 18)
 	{
@@ -597,8 +606,7 @@ codeint  data;
 	}
 }
 
-codeint
-pop_short()
+static codeint pop_short()
 {
 	if (stackptr > 0)
 	{
@@ -612,8 +620,7 @@ pop_short()
 	}
 }
 
-push_long (data)
-unsigned int  data;
+static void push_long (unsigned int data)
 {
 	if (lstackptr < 60)
 	{
@@ -628,8 +635,7 @@ unsigned int  data;
 }
 
 
-unsigned int
-pop_long()
+static unsigned int pop_long()
 {
 	if (lstackptr > 0)
 	{
@@ -643,9 +649,7 @@ pop_long()
 	}
 }
 
-putcode_long(data, addr)
-unsigned int data;
-codeint      *addr;
+static void putcode_long(unsigned int data, codeint *addr)
 {
    endianSwap.ival = data;
 #ifdef LINUX
@@ -723,6 +727,7 @@ int	 num;
         *rtinit_ptr++ = *addr++;
         *rtinit_ptr++ = *addr++;
         *rtinit_ptr++ = *addr++;
+	return(0);
 }
 
 /*  n_copy will change Acode and copy the rest */
@@ -776,6 +781,7 @@ int	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 /*  n_vtset will change Acode and copy the rest */
@@ -985,8 +991,7 @@ n_apcout(addr, num)
 codeint  *addr;
 int	 num;
 {
-	int	 i;
-	codeint  len,controlword,offset,maxval,value,apaddr;
+	codeint  controlword,offset,maxval,value,apaddr;
 
 	addr++;				/* skip acode */
 	apaddr = *addr++;		/* get apaddr */
@@ -1103,6 +1108,7 @@ int	 num;
 	*ncodeptr++ = len;
 	for (i=0; i<len; i++)
 	   *ncodeptr++ = *addr++;
+	return(0);
 
 }
 
@@ -1120,9 +1126,8 @@ n_apbout(addr, num)
 codeint  *addr;
 int	 num;
 {
-	int	 ret,lindex,dlindex, i, aindex,j,nacodes;
-	codeint  len,datalen,curaddr;
-	codeint  *tmpcodeptr, *tmpdelayptr;
+	int	 nacodes;
+	codeint  len;
 
 	addr++;
 	len = *addr++;
@@ -1132,7 +1137,6 @@ int	 num;
  *	    IXPRINT2("n_apbout %d = 0x%x\n",i,*(addr+i));
  *	}
  */
-	ret = len + 3;
 	if (len <= 0)
  	    trTable[num].oldLen = 2;
 	else
@@ -1145,6 +1149,7 @@ int	 num;
 	ncodeptr = ncodeptr+nacodes;
 
 	/* IXPRINT1("gen_apbcout ncodeptr = 0x%x\n",ncodeptr); */
+	return(0);
 
 }
 
@@ -1177,6 +1182,7 @@ int	 num;
 	*ncodeptr++ = 2;
 	*ncodeptr++ = apaddrreg;
 	*ncodeptr++ = rtparam;
+	return(0);
 }
 
 
@@ -1195,6 +1201,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 int
@@ -1262,6 +1269,7 @@ n_begin()
 	   *ncodeptr++ = -1;
    	   *ncodeptr++ = -1;
         }
+	return(0);
 }
 
 int
@@ -1290,6 +1298,7 @@ codeint	 num;
 	*ncodeptr++ = zero; 	/* ntrt		*/
 	*ncodeptr++ = zero; 	/* ct		*/
 
+	return(0);
 }
 
 int
@@ -1310,6 +1319,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 
@@ -1331,6 +1341,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 
@@ -1352,6 +1363,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 
@@ -1383,6 +1395,7 @@ codeint	 num;
 	*ncodeptr++ = 0;
         /* Force the next HS line change to be sent */
         forceHSlines = 1;
+	return(0);
 }
 
 
@@ -1410,6 +1423,7 @@ codeint	 num;
 	*ncodeptr++ = 0;
         /* Force the next HS line change to be sent */
         forceHSlines = 1;
+	return(0);
 }
 
 
@@ -1454,6 +1468,7 @@ codeint	 num;
 	putcode_long(offset, tptr);  /* set jump offset for ifzero */
         /* Force the next HS line change to be sent */
         forceHSlines = 1;
+	return(0);
 }
 
 int
@@ -1482,6 +1497,7 @@ codeint	 num;
 	     }
 	     n++;
 	}
+	return(0);
 }
 
 
@@ -1536,6 +1552,7 @@ codeint	 num;
 	    text_error("missing endloop()\n");
 	    psg_abort(1);
 	}
+	return(0);
 }
 
 
@@ -1544,10 +1561,8 @@ n_endloop(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-	codeint  jump;
 	codeint  *tptr;
 	unsigned int  offset, loopOffset, backOffset;
-	unsigned int  ifOffset, elseOffset;
 
 	*ncodeptr++ = trTable[num].newCode;
 	*ncodeptr++ = 4;
@@ -1561,6 +1576,7 @@ codeint	 num;
 	tptr = newstartptr + loopOffset;
 	offset = ncodeptr - newstartptr;
 	putcode_long(offset, tptr);  /* set jump offset for loop */
+	return(0);
 }
 
 
@@ -1611,6 +1627,7 @@ codeint	 num;
 	   *ncodeptr++ = ntrt;
 	   *ncodeptr++ = ctss;
 	}
+	return(0);
 }
 
 
@@ -1656,6 +1673,7 @@ codeint	 num;
 	*ncodeptr++ = SET;
 	*ncodeptr++ = ct;
 	*ncodeptr++ = strt;
+	return(0);
 }
 
 static void
@@ -1692,9 +1710,7 @@ n_noise(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-   extern int rt_tab[];
-
-	if (acqiflag) return;
+	if (acqiflag) return(0);
 /*
 	dsp_off_params.flags = 0;
         dsp_off_params.rt_oversamp = 1;
@@ -1854,6 +1870,7 @@ codeint	 num;
            *ncodeptr++ = NOISE_CMPLT;
            *ncodeptr++ = 0;
 	}
+	return(0);
 }
 
 int
@@ -1861,7 +1878,7 @@ n_tassign(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-	codeint  len, loc;
+	codeint  loc;
 	int	 pindex;
 
 	addr++;
@@ -1888,6 +1905,7 @@ codeint	 num;
 	else
 	     *ncodeptr++ = *addr++;
 	*ncodeptr++ = *addr++;
+	return(0);
 }
 
 /* SETPHATTR */
@@ -1910,6 +1928,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 int
@@ -1981,6 +2000,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 int n_fidcode(addr,num)
@@ -1999,6 +2019,7 @@ codeint	 num;
    printf("n_fidcode: autoshimptr: %d, value: %d \n",
 	autoshimptr,ncodeptr - newstartptr);
 */
+	return(0);
 }
 
 int
@@ -2020,6 +2041,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 
@@ -2047,6 +2069,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 int
@@ -2106,6 +2129,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 int
@@ -2113,7 +2137,7 @@ n_tunefreq(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-	codeint  len,newlen,nacodes;
+	codeint  len,nacodes;
 	codeint  *addrLen,*newLen;
 
 	*ncodeptr++ = trTable[num].newCode;
@@ -2134,6 +2158,7 @@ codeint	 num;
 	ncodeptr = ncodeptr+nacodes;
 	*ncodeptr++ = *addr++;		/* band select */
 	*newLen = nacodes+3;		/* update acode length */
+	return(0);
 
 }
 
@@ -2158,6 +2183,7 @@ codeint	 num;
 	    *ncodeptr++ = *data++;
 	    len--;
 	}
+	return(0);
 }
 
 
@@ -2204,6 +2230,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 
@@ -2242,6 +2269,7 @@ int      num;
 	   }
         }
 	orgHSdata = newHSdata;
+	return(0);
 }
 
 int
@@ -2292,6 +2320,7 @@ int      num;
 					sparelines);
 	    break;
 	}
+	return(0);
 		
 }
 
@@ -2302,14 +2331,13 @@ n_gain(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
-
 	addr++;
 	*ncodeptr++ = trTable[num].newCode;
 	*ncodeptr++ = 3;
 	*ncodeptr++ = 0xb42;   /* Change Me then change the one in n_again */
 	*ncodeptr++ = STD_APBUS_DELAY;	/* dito */
 	*ncodeptr++ = rtrecgain;
+	return(0);
 }
 
 /*  n_again convert old AUTOGAIN to the INOVA AUTOGAIN */
@@ -2318,7 +2346,6 @@ n_again(addr, num)
 codeint  *addr;
 int	 num;
 {
-	int   len;
         double   max,min,step;
 
         par_maxminstep(CURRENT, "gain", &max, &min, &step);
@@ -2328,7 +2355,7 @@ int	 num;
 */
         /* printf("n_again, offset: %d\n",ncodeptr - newstartptr); */
 
-	len = trTable[num].oldLen - 1;
+//	len = trTable[num].oldLen - 1;
 	*ncodeptr++ = trTable[num].newCode;
 	*ncodeptr++ = 11;
 	addr++; /* skip over old acode */
@@ -2379,10 +2406,11 @@ int	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 
-n_padly(addr,num)
+int n_padly(addr,num)
 codeint  *addr;
 codeint	 num;
 {
@@ -2433,11 +2461,12 @@ codeint	 num;
            }
         }
         *count_addr = count;
+	return(0);
 }
 
 #define OLD_LOCK_HOLD	1
 
-n_smpl_hold(addr,num)
+int n_smpl_hold(addr,num)
 codeint  *addr;
 codeint	 num;
 {
@@ -2450,10 +2479,11 @@ codeint	 num;
 	   *ncodeptr++ = LKHOLD;
 	else
 	   *ncodeptr++ = LKSAMPLE;
+	return(0);
 }
 
 
-n_lktc(addr,num)
+int n_lktc(addr,num)
 codeint  *addr;
 codeint	 num;
 {
@@ -2465,14 +2495,14 @@ codeint	 num;
 	*ncodeptr++ = 2;
 	*ncodeptr++ = *addr++;
 	*ncodeptr++ = ct;
+	return(0);
 }
 
-n_lock(addr,num)
+int n_lock(addr,num)
 codeint  *addr;
 codeint	 num;
 {
    double   max,min,step;
-   int tempgain;
 
 	addr++;
         /* printf("n_alock, offset: %d\n",ncodeptr - newstartptr); */
@@ -2486,6 +2516,7 @@ codeint	 num;
 	*ncodeptr++ = (short) max;
 
 	addr++;
+	return(0);
 }
 
 /* GRADIENT and WAVEFORM GENERATOR */
@@ -2525,6 +2556,7 @@ codeint	 num;
 	   *ncodeptr++ = *addr++;
 	   nvalues--;
 	}
+	return(0);
 
 }
 
@@ -2543,6 +2575,7 @@ codeint	 num;
 	*ncodeptr++ = 1;
 	*ncodeptr++ = apaddr;
 	*ncodeptr++ = *addr++;	/* this was previously only a byte, check!!! */
+	return(0);
 }
 
 int
@@ -2560,6 +2593,7 @@ codeint	 num;
 	*ncodeptr++ = 1;
 	*ncodeptr++ = apaddr;
 	*ncodeptr++ = *addr++;
+	return(0);
 }
 
 int
@@ -2567,7 +2601,6 @@ n_pvgradient(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
    ushort apaddr;
 
 	addr++;
@@ -2590,6 +2623,7 @@ codeint	 num;
 	*ncodeptr++ = *addr++;			/* vmult */
 	*ncodeptr++ = *addr++;			/* incr */
 	*ncodeptr++ = *addr++;			/* base */
+	return(0);
 }
 
 int
@@ -2597,7 +2631,6 @@ n_tvgradient(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
    ushort apaddr;
 
 	addr++;
@@ -2612,6 +2645,7 @@ codeint	 num;
 	*ncodeptr++ = *addr++;			/* vmult */
 	*ncodeptr++ = *addr++;			/* incr */
 	*ncodeptr++ = *addr++;			/* base */
+	return(0);
 }
 
 int
@@ -2619,7 +2653,6 @@ n_incpgrad(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
    ushort apaddr;
 
 	addr++;
@@ -2646,6 +2679,7 @@ codeint	 num;
 	*ncodeptr++ = *addr++;			/* vmult3 */
 	*ncodeptr++ = *addr++;			/* incr3 */
 	*ncodeptr++ = *addr++;			/* base */
+	return(0);
 }
 
 int
@@ -2653,7 +2687,6 @@ n_inctgrad(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
    ushort apaddr;
 
 	addr++;
@@ -2672,6 +2705,7 @@ codeint	 num;
 	*ncodeptr++ = *addr++;			/* vmult3 */
 	*ncodeptr++ = *addr++;			/* incr3 */
 	*ncodeptr++ = *addr++;			/* base */
+	return(0);
 }
 
 int
@@ -2679,8 +2713,6 @@ n_wgd3(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
-
 	addr++;
 	*ncodeptr++ = trTable[num].newCode;
 	*ncodeptr++ = 7;
@@ -2691,6 +2723,7 @@ codeint	 num;
 	*ncodeptr++ = *addr++;			/* vmult */
 	*ncodeptr++ = *addr++;			/* incr */
 	*ncodeptr++ = *addr++;			/* base */
+	return(0);
 }
 
 int
@@ -2698,7 +2731,6 @@ n_wgv3(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
    ushort apaddr,inst_id,vloops;
 
 	addr++;
@@ -2724,6 +2756,7 @@ codeint	 num;
 	*ncodeptr++ = 1;
 	*ncodeptr++ = apaddr;
 	*ncodeptr++ = vloops;
+	return(0);
 }
 
 int
@@ -2731,7 +2764,6 @@ n_wgi3(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
    ushort apaddr,inst_id,loops;
 
 	addr++;
@@ -2761,6 +2793,7 @@ codeint	 num;
 	*ncodeptr++ = 1;
 	*ncodeptr++ = apaddr;
 	*ncodeptr++ = loops;
+	return(0);
 }
 
 int
@@ -2768,8 +2801,6 @@ n_incwgrad(addr,num)
 codeint  *addr;
 codeint	 num;
 {
-   int tempgain;
-
 	addr++;
 	*ncodeptr++ = trTable[num].newCode;
 	*ncodeptr++ = 11;
@@ -2784,6 +2815,7 @@ codeint	 num;
 	*ncodeptr++ = *addr++;			/* vmult3 */
 	*ncodeptr++ = *addr++;			/* incr3 */
 	*ncodeptr++ = *addr++;			/* base */
+	return(0);
 }
 
 /* Global Tables */
@@ -2815,6 +2847,7 @@ codeint	 num;
 	   *ncodeptr++ = 1;	
 	   *ncodeptr++ = gindex;	
 	}
+	return(0);
 }
 
 /* PHASES */
@@ -2853,6 +2886,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 
 #ifdef XXXX
@@ -2890,6 +2924,7 @@ codeint	 num;
 	    *ncodeptr++ = *addr++;
 	    len--;
 	}
+	return(0);
 }
 #endif
 
@@ -2926,6 +2961,7 @@ codeint	 num;
 	   printf("No Phase table for channel %d.\n",channel);
 	   psg_abort(1);
 	}
+	return(0);
 }
 
 int
@@ -2933,7 +2969,7 @@ n_phasestep(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-	codeint  len,channel,tablenum,flag;
+	codeint  len,channel,tablenum;
 
 	addr++;
 	channel = (*addr++ & 0xff)-1;
@@ -2951,6 +2987,7 @@ codeint	 num;
 	   printf("No Phase table for channel %d.\n",channel);
 	   psg_abort(1);
 	}
+	return(0);
 }
 
 int
@@ -2958,7 +2995,7 @@ n_setphattr(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-	codeint  len,channel,tablenum,flag,*shortptr;
+	codeint  channel,*shortptr;
 	int i;
 	int *th;
 	phasetbl *pphtbl;
@@ -2990,6 +3027,7 @@ codeint	 num;
 	val |= *addr++; /* dev register */
 	pphtbl->apaddr = htonl(val);
 	pphtbl->apdelay = htonl(STD_APBUS_DELAY);
+	return(0);
 	
 }
 
@@ -3003,6 +3041,7 @@ int      num;
 	*ncodeptr++ = 2;
 	*ncodeptr++ = dtmcntrl;
 	*ncodeptr++ = activercvrs;
+	return(0);
 }
 
 int
@@ -3010,7 +3049,6 @@ n_seticm(addr,num)
 codeint  *addr;
 int      num;
 {
-   extern int rt_tab[];
 	/* Set Receiver phase cycle Opcode */
 	*ncodeptr++ = trTable[num].newCode;
 	*ncodeptr++ = 3;
@@ -3084,6 +3122,7 @@ int      num;
 */
 #endif
 	}
+	return(0);
 }
 
 
@@ -3096,7 +3135,6 @@ n_enableovrflow(addr,num)
 codeint  *addr;
 int      num;
 {
-   extern int rt_tab[];
 #ifdef XXXX
    if (HS_Dtm_Adc == 0)
    {
@@ -3150,7 +3188,6 @@ codeint  *addr;
 int      num;
 {
 
-   extern int rt_tab[];
 #ifdef XXXX
    if (HS_Dtm_Adc == 0)
    {
@@ -3191,7 +3228,6 @@ n_nsc(addr,num)
 codeint  *addr;
 int      num;
 {
-   extern int rt_tab[];
 
 	if (num_nsc < 12)
 	{
@@ -3375,6 +3411,7 @@ int      num;
 	return(0);
 }
 
+#ifdef DOIPA
 int
 n_ipacode(addr, num)
 codeint  *addr;
@@ -3384,16 +3421,16 @@ codeint	 num;
 	newaddr = ncodeptr - newstartptr;
 	addr++;
 	oldaddr = *addr++;
-#ifdef DOIPA
 	change_ipalocation(oldaddr,newaddr);
-#endif
+	return(0);
 }
+#endif
 
-n_lock_seq(addr, num)
+int n_lock_seq(addr, num)
 codeint  *addr;
 codeint	 num;
 {
-    /*IXPRINT2("n_lock_seq(%d, %d)\n", *addr, num);/*CMP*/
+    // IXPRINT2("n_lock_seq(%d, %d)\n", *addr, num);/*CMP*/
 
     /* Lock FID is upside down; this negates it */
     *ncodeptr++ = RT2OP;
@@ -3452,15 +3489,11 @@ static int *createphasetable(codeint channeldev)
 }
 
 int 
-createglobaltable(num_entries, entry_size, data_entry)
-int num_entries;
-int entry_size;			/* in bytes */
-char *data_entry;
+createglobaltable(int num_entries, int entry_size, char *data_entry)
 {
-   int tblnum,tsize,i,j;
+   int tblnum,tsize;
    tblhdr *th;
    int *tempptr;
-   codeint *tmpdata;
   
    /* IXPRINT2("createglobaltable entries: %d size: %d.\n",num_entries, */
    /* 							entry_size); */
@@ -3504,8 +3537,7 @@ static int createtable(int size)
    return(num_tables-1);
 }
 
-calcheader(headerbuf)
-int *headerbuf;
+static void calcheader(int *headerbuf)
 {
     int offset,i,size;
     tblhdr *th;
@@ -3522,11 +3554,11 @@ int *headerbuf;
     }
 }
 
-writetablefile(tfilename)
-char *tfilename;
+void writetablefile(char *tfilename)
 {
     int Tblfd;	/* file discriptor Code disk file */
-    int bytes,i,size,hdrsize;
+    int bytes __attribute__((unused));
+    int i,size,hdrsize;
     int *tblheader;
     int *tPtr;
     tblhdr *th;
@@ -3568,16 +3600,14 @@ char *tfilename;
     close(Tblfd);
 }
 
-void initorgHSlines(hslines)
-int hslines;
+void initorgHSlines(int hslines)
 {
 	orgHSdata = (unsigned int) hslines;
 }
 
 
-cleanupaptableinfo()
+static void cleanupaptableinfo()
 {
-	codeint  len, loc;
 	int	 pindex;
 
 	if (num_aptables == 0) return;
