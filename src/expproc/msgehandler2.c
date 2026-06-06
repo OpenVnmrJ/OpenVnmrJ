@@ -545,7 +545,7 @@ int chkExpQ(char *argstr)
   /* Before checking besure we have a connection to console */
   DPRINT(1,"ChkQ.\n");
 
-  if (consoleConn())
+  if ( ! consoleConn())
   {
      if (DebugLevel > 0)
          expQshow();
@@ -981,6 +981,19 @@ int rebootConsole(char *args)
 
 	resetExpproc();
 	return (0);
+}
+
+int acqDequeue(char *args)
+{
+   return(0);
+}
+int rebooted(char *args)
+{
+   return(0);
+}
+int acqHalt2(char *args)
+{
+   return(0);
 }
 
 /* abort but provides Wexp processing  */
@@ -2063,6 +2076,8 @@ reserveConsole(char *args)
 
 /*  Check for a series of special situations here ...  */
 
+		deliverMessage( returnInterface, "OK" );
+      return(0);
 	if (consoleConn() == 0) {
 		deliverMessage( returnInterface, "DOWN" );
 		return( -1 );
@@ -3321,6 +3336,8 @@ void sendRoboCommand(char *cmd)
     * the messageQ is initialized.
     */
    maxtries = 25;
+
+    DPRINT1(1,"sendRoboCommand: %s\n", cmd);
    while( 1 )
    {
       stat = deliverMessage( "Roboproc", cmd);

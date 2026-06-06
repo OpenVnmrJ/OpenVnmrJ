@@ -188,10 +188,7 @@ char *bootpd_dump = DUMPTAB_FILE;
  * main server loop is started.
  */
 
-void
-main(argc, argv)
-	int argc;
-	char **argv;
+int main(int argc, char **argv)
 {
 	struct timeval *timeout;
 	struct bootp *bp;
@@ -388,7 +385,7 @@ main(argc, argv)
 		exit(1);
 	}
 	bcopy(hep->h_addr, (char *)&my_ip_addr, sizeof(my_ip_addr));
-	if (debug>2) 
+	if (debug) 
               report(LOG_INFO, "passed gethostbyname()");
 
 	if (standalone) {
@@ -436,7 +433,7 @@ main(argc, argv)
 	 * Read the bootptab file.
 	 */
 	readtab(1);					/* force read */
-	if (debug> 2) 
+	if (debug) 
                report(LOG_INFO, "done reading bootptab");
 
 	if (standalone) {
@@ -475,7 +472,7 @@ main(argc, argv)
 		}
 	} /* if standalone (2nd)*/
 
-	if (debug>2)
+	if (debug)
                report(LOG_INFO, "passed standalone");
 	/*
 	 * Get destination port number so we can reply to client
@@ -638,7 +635,6 @@ PRIVATE void
 handle_request()
 {
         char *cbp;
-        short *sbp;
         int   *ibp;
         struct in_addr *in_bp;
 	struct bootp *bp; // = (struct bootp *) pktbuf;
@@ -651,6 +647,7 @@ handle_request()
 	char *clntpath;
 	char *homedir, *bootfile;
 	int n;
+        int PPCflag = 0;  // flag to append PPC to file name
 
 	/* XXX - SLIP init: Set bp_ciaddr = recv_addr here? */
 
@@ -688,7 +685,7 @@ ignoring request for server %s from client at %s address %s",
 		 * client doesnt know his IP address,
 		 * search by hardware address.
 		 */
-		if (debug > 1) {
+		if (debug) {
 			report(LOG_INFO, "request from %s address %s",
 				   netname(bp->bp_htype),
 				   // haddrtoa(bp->bp_chaddr, bp->bp_hlen));
@@ -715,7 +712,7 @@ ignoring request for server %s from client at %s address %s",
 			//haddr_conv802(bp->bp_chaddr, dummyhost.haddr, hlen);
                         cbp = (char *) bp + 28;
 			haddr_conv802(cbp, dummyhost.haddr, hlen);
-			if (debug > 1) {
+			if (debug) {
 				report(LOG_INFO, "\
 HW addr type is IEEE 802.  convert to %s and check again\n",
 					   haddrtoa(dummyhost.haddr, bp->bp_hlen));
@@ -746,7 +743,7 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
 		 * search by IP address.
 		 */
                 in_bp = (struct in_addr *)bp + 3;
-		if (debug > 1) {
+		if (debug) {
 			report(LOG_INFO, "request from IP addr %s",
 				   inet_ntoa(*in_bp));
 		}
@@ -776,7 +773,7 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
 	if (hp->flags.min_wait) {
 		u_int32 t = (u_int32) ntohs(bp->bp_secs);
 		if (t < hp->min_wait) {
-			if (debug > 1)
+			if (debug)
 				report(LOG_INFO,
 					   "ignoring request due to timestamp (%d < %d)",
 					   t, hp->min_wait);
@@ -889,12 +886,19 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
 	//if (bp->bp_file[0]) {
 	if (*cbp != 0) {
 		// homedir = bp->bp_file;
+                if (debug)
+		   report(LOG_INFO, "cbp: %s", cbp);
 		homedir = cbp;
 		bootfile = strrchr(homedir, '/');
+                if (debug) {
+                      report(LOG_INFO, "homedir=\"%s\"  bootfile=\"%s\"",
+                             (homedir) ? homedir : "",
+                             (bootfile) ? bootfile : "");
+                }
 		if ( ! strcmp(cbp,"/tftpboot/vxBoot/vxWorks"))
                 {
                    strcat(cbp,"PPC");
-                   if (debug > 2) {
+                   if (debug) {
                       report(LOG_INFO, "fixed homedir=\"%s\"  bootfile=\"%s\"",
                              (homedir) ? homedir : "",
                              (bootfile) ? bootfile : "");
@@ -909,10 +913,15 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
 			bootfile = homedir;
 			homedir = NULL;
 		}
-		if (debug > 2) {
+		if (debug) {
 			report(LOG_INFO, "requested path=\"%s\"  file=\"%s\"",
 				   (homedir) ? homedir : "",
 				   (bootfile) ? bootfile : "");
+		}
+                if ( ! strncmp(bootfile,"vxWorks", strlen("vxWorks")) )
+		{
+		   if ( strcmp(bootfile,"vxWorks.auto") )
+                      PPCflag = 1;
 		}
 	}
 
@@ -924,20 +933,28 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
          * do NOT use the bootptab information
          */
         if ((homedir==NULL)||(bootfile==NULL))
+	{
            n=1;
+           if (debug)
+		report(LOG_INFO, "n=1 due to NULL");
+	}
         else
+	{
            n = strncmp(homedir,"/tftpboot",9) + strncmp(bootfile,"vxWorks",7);
+           if (debug)
+		report(LOG_INFO, "n=%d due to strcmp", n);
+	}
         if (n == 0)
         {
            homedir = "/var/lib/tftpboot/vxBoot";
-	       if (chk_access(homedir, &bootsize) == 0)
+	   if (chk_access(homedir, &bootsize) == 0)
            {
               n = 0;
            }
            else
            {
               homedir = "/tftpboot/vxBoot";
-	          if (chk_access(homedir, &bootsize) == 0)
+	      if (chk_access(homedir, &bootsize) == 0)
               {
                  n = 0;
               }
@@ -945,20 +962,25 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
               {
                   // Ubuntu 20 case
                  homedir = "/srv/tftp/vxBoot";
-	             if (chk_access(homedir, &bootsize) == 0)
+	         if (chk_access(homedir, &bootsize) == 0)
                  {
                     n = 0;
                  }
               }
            }
         }
-	if (debug>2) report(LOG_INFO, "bootfile check: n=%d",n);
+	if (debug) report(LOG_INFO, "bootfile check: n=%d",n);
         if (n != 0) 
 	{
            if (hp->flags.homedir)
 		homedir = hp->homedir->string;
 	   if (hp->flags.bootfile)
 		bootfile = hp->bootfile->string;
+	   if (debug) {
+		   report(LOG_INFO, "n != 0 homedir=\"%s\"  file=\"%s\"",
+				   (homedir) ? homedir : "",
+				   (bootfile) ? bootfile : "");
+	   }
         }
 
 	/*
@@ -977,6 +999,16 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
 		bootfile = NULL;
 	}
 
+        if (PPCflag)
+        {
+           if ( strstr(clntpath,"PPC") == NULL)
+              strcat(clntpath,"PPC");
+        }
+	if (debug) {
+		report(LOG_INFO, "clntpath=\"%s\"  realpath=\"%s\"",
+			   (clntpath) ? clntpath : "",
+			   (realpath) ? realpath : "");
+	}
 	/*
 	 * First try to find the file with a ".host" suffix
 	 */
@@ -1020,8 +1052,8 @@ HW addr type is IEEE 802.  convert to %s and check again\n",
         cbp = (char *)bp + 108;
 	// strncpy(bp->bp_file, clntpath, BP_FILE_LEN);
         strncpy(cbp, clntpath, BP_FILE_LEN);
-	if (debug > 2)
-		report(LOG_INFO, "bootfile=\"%s\"", clntpath);
+	if (debug)
+		report(LOG_INFO, "final bootfile=\"%s\"", clntpath);
 
 #ifdef	CHECK_FILE_ACCESS
 null_file_name:
@@ -1112,7 +1144,6 @@ sendreply(forward, dst_override)
 	int32 dst_override;
 {
         char *cbp;
-        short *sbp;
         int   *ibp;
 	struct bootp *bp = (struct bootp *) pktbuf;
 	struct in_addr dst;
@@ -1342,8 +1373,6 @@ dovend_rfc1048(bp, hp, bootsize)
 	struct host *hp;
 	int32 bootsize;
 {
-	char * cbp;
-        int  * ibp;
 	int bytesleft, len;
 	byte *vp;
 
