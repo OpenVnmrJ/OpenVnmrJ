@@ -58,8 +58,7 @@ struct pwrstruct
 | to be changed.
 +------------------------------------------------------------------*/
 /*VARARGS1*/
-int 
-G_Power(int firstkey, ...)
+void G_Power(int firstkey, ...)
 {
    int		   ap_mask, setrtval;
    int             counter;

@@ -58,6 +58,28 @@ static void Tincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
 static int get_l_pfg_base(char where);
 static int get_t_pfg_base(char where);
 void calc_amp_tc(char chan, int eccno, double amp, double tc);
+void ecc_zero();
+void ecc_enable();
+void pgradient(int where, float value);
+void pfg_reset(char where);
+void pfg_blank(char where);
+void pfg_enable(char where);
+void pfg_20(int num20, int base);
+void pfg_reg(char where, int reg, int what);
+void Sincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
+		 codeint mult1, codeint mult2, codeint mult3);
+void Wincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
+		codeint mult1, codeint mult2, codeint mult3);
+void t_grad_selectone(char which);
+void tgradient(char which, double value);
+void t_dsbl(char which);
+void t_enbl(char which);
+void l200_reset(int j);
+void l_cntrl(char who, int tog);
+void l_reset(char who);
+void lgradient(char who, double howmuch);
+void pfg_12s(char id, int which, int top12, int bot12);
+void getstr2nwarn(char *variable, char buf[]);
 
 /*
    if dynamic call then value = gamp0+gampi*mult;
@@ -82,23 +104,18 @@ void calc_amp_tc(char chan, int eccno, double amp, double tc);
             = 'hhhh'  homospoil pulse (z only)
 */
 
-static void warnclip(val,cval,what)
-int val,cval;
-char what;
+static void warnclip(int val, int cval, char what)
 {  
-   char msg[MAXSTR];
    if ((ix <= warnclipix) || (! warnclipDone))
    {
-      sprintf(msg,"Gradient %c set out of range %d clipped to %d\n",what,val,cval);
-      text_error(msg);
+      text_error("Gradient %c set out of range %d clipped to %d\n",
+		  what,val,cval);
       warnclipDone = 1;
       warnclipix = ix;
    }
 }
 
-static int bound12(x,what)
-int x;
-char what;
+static int bound12(int x, char what)
 {  
    if (x > 2047) 
    {
@@ -113,9 +130,7 @@ char what;
    return(x);
 }
 
-static int bound16(x,what)
-int x;
-char what;
+static int bound16(int x, char what)
 {
    if (x > 32767) 
    {
@@ -130,9 +145,7 @@ char what;
    return(x);
 }
 
-static float rbound16(x,what)
-float x;
-char what;
+static float rbound16(float x, char what)
 {
    if (x > 32767.0) 
    {
@@ -163,7 +176,7 @@ void settmpgradtype(char *tmpgradname)
 
 void rgradientCodes(char gid, double rgamp)
 { 
-  int ix, gamp;
+  int ix=0, gamp;
   switch (gid)
   {
     case 'x': case 'X':  ix = 0;
@@ -176,7 +189,7 @@ void rgradientCodes(char gid, double rgamp)
                          gradzval = rgamp;
                          break;
     case 'n': case 'N':  break;
-    default: text_error("illegal gradient case"); psg_abort(1);
+    default: abort_message("illegal gradient case");
   }
   setHSLdelay();
   if ((gid == 'n') || (gid == 'N'))
@@ -196,7 +209,7 @@ void rgradientCodes(char gid, double rgamp)
     case 'U': case 'u':	tgradient(gid,rgamp); break;
     case 'A': case 'a':	shimgradient(gid,gamp); break;
     case 'H': case 'h':	hgradient(gid,gamp); break;
-    default:  text_error("no gradients configured");	psg_abort(1);
+    default:  abort_message("no gradients configured");
   }
 }
 
@@ -216,12 +229,9 @@ void rgradient(char axis, double value)
    }
 }
 
-void S_vgradient(gid,gamp0,gampi,mult)
-char gid;
-int gamp0,gampi;
-codeint mult;
+void S_vgradient(char gid, int gamp0, int gampi, codeint mult)
 { 
-  int ix;
+  int ix=0;
   setHSLdelay();
   switch (gid)
   {
@@ -229,7 +239,7 @@ codeint mult;
     case 'y': case 'Y':  ix = 1; break;
     case 'z': case 'Z':  ix = 2; break;
     case 'n': case 'N':  break;
-    default: text_error("illegal gradient case"); psg_abort(1);
+    default: abort_message("illegal gradient case");
   }
   if ((gid == 'n') || (gid == 'N'))
     return;
@@ -245,19 +255,16 @@ codeint mult;
     case 'T': case 't':	
     case 'U': case 'u':	Tvgradient(gid,gamp0,gampi,mult); break;
     case 'L': case 'l': text_error("no vgradient for case l");
-    default:  text_error("no gradients configured");	psg_abort(1);
+    default:  abort_message("no gradients configured");
   }
 }
 
 /*	S_incgradient implements incgradient for the DAC board.
  */
-void S_incgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
- char gid;
- int gamp0;
- int gamp1, gamp2, gamp3;
- codeint mult1, mult2, mult3;
+void S_incgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
+		codeint mult1, codeint mult2, codeint mult3)
 { 
-  int ix;
+  int ix=0;
 
   setHSLdelay();
   switch (gid)
@@ -266,7 +273,7 @@ void S_incgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
     case 'y': case 'Y':  ix = 1; break;
     case 'z': case 'Z':  ix = 2; break;
     case 'n': case 'N':  break;
-    default: text_error("illegal gradient case\n"); psg_abort(1);
+    default: abort_message("illegal gradient case\n");
   }
   if ((gid == 'n') || (gid == 'N'))
     return;
@@ -290,7 +297,7 @@ void S_incgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
 	Tincgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3); 
 	break;
     case 'L': case 'l': text_error("no incgradient for case l");
-    default:  text_error("no gradients configured\n");	psg_abort(1);
+    default:  abort_message("no gradients configured\n");
   }
 }
 
@@ -312,18 +319,15 @@ static void shimgradient(char gid, int gamp)
 { 
   double shimval,dshimset;
   int tamp,dac_num,shimamp;
-  char console_name[MAXSTR], mess[MAXSTR];
+  char console_name[MAXSTR];
 
   if (P_getstring(CURRENT, "console", console_name, 1, MAXSTR) != 0)
   {
-    sprintf(mess,"PSG: parameter console not found\n");
-    text_error(mess);
-    psg_abort(1);
+    abort_message("PSG: parameter console not found\n");
   }
   if ( P_getreal(GLOBAL,"shimset",&dshimset,1) != 0 )
   {
-    text_error("PSG: shimset not found.\n");
-    psg_abort(1); 
+    abort_message("PSG: shimset not found.\n");
   } 
 
   switch (gid) {
@@ -338,9 +342,7 @@ static void shimgradient(char gid, int gamp)
 	}
 	break; 
     default:
-      sprintf(mess,"shimgradient %c not available\n",gid);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("shimgradient %c not available\n",gid);
   }
   shimamp = IRND(shimval);
   /* use shimamp=0 to switch off shimgradient */
@@ -362,13 +364,10 @@ static void shimgradient(char gid, int gamp)
 
 static void hgradient(char gid, int gamp)
 {
-  char mess[MAXSTR];
   switch (gid) 
   {
     case 'x': case 'X': case 'y': case 'Y':
-      sprintf(mess,"homospoil gradient %c not available\n",gid);
-      text_error(mess);
-      psg_abort(1);
+      abort_message("homospoil gradient %c not available\n",gid);
       break;
     case 'z': case 'Z': break;
     default: ;
@@ -399,7 +398,6 @@ static void hgradient(char gid, int gamp)
 
 static void Sgradient(char gid, int gamp)
 { int tamp,dac_num;
-  char mess[MAXSTR];
 
   validate_imaging_config("Sgradient");
 
@@ -410,9 +408,7 @@ static void Sgradient(char gid, int gamp)
     case 'y': case 'Y':  dac_num = YGRAD; break;
     case 'z': case 'Z':  dac_num = ZGRAD; break;
     default:
-      sprintf(mess,"dac case bad = %c \n",gid);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("dac case bad = %c \n",gid);
   }
   putcode(GRADIENT);
   putcode(dac_num);
@@ -423,16 +419,13 @@ static void Sgradient(char gid, int gamp)
 
 static void Svgradient(char gid, int gamp0, int gampi, codeint mult)
 { 
-  char mess[MAXSTR];
   int dac_num,dacamp0,dacampi;
 
   validate_imaging_config("Svgradient");
 
   /* test valid range */
   if (((mult < v1) || (mult > v14)) && ((mult < t1) || (mult > t60))) {
-      sprintf(mess,"mult illegal dynamic %d \n",mult);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("mult illegal dynamic %d \n",mult);
   }
 
   if ((mult >= t1) && (mult <= t60))
@@ -448,9 +441,7 @@ static void Svgradient(char gid, int gamp0, int gampi, codeint mult)
    case 'y': case 'Y':  dac_num = YGRAD; break;
    case 'z': case 'Z':  dac_num = ZGRAD; break;
    default:
-      sprintf(mess,"dac case bad = %c \n",gid);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("dac case bad = %c \n",gid);
   }
   putcode(VGRADIENT);
   putcode(dacampi);
@@ -464,19 +455,14 @@ static void Svgradient(char gid, int gamp0, int gampi, codeint mult)
 
 /*	S_incgradient implements incgradient for the DAC board.
  */
-Sincgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
- char gid;
- int gamp0;
- int gamp1, gamp2, gamp3;
- codeint mult1, mult2, mult3;
+void Sincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
+		 codeint mult1, codeint mult2, codeint mult3)
 { 
-    char mess[MAXSTR];
     int i;
     int dac_num;
     int mult[4];
     int gamp[4];
     int dacamp[4];
-    int wg_ap_addr;
     
     validate_imaging_config("Sincgradient");
 
@@ -495,15 +481,13 @@ Sincgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
 	    && mult[i] != zero
 	    && mult[i] != ct)
 	{
-	    sprintf(mess,"Sincgradient: mult[%d] illegal RT variable: %d \n",
+	    abort_message("Sincgradient: mult[%d] illegal RT variable: %d \n",
 		    i, mult[i]);
-	    text_error(mess);
-	    psg_abort(1); 
 	}
     }
     
     for (i=0; i<=3; i++){
-	dacamp[i] = bound12(gamp[i]);
+	dacamp[i] = bound12(gamp[i], gid);
     }
     switch (gid) {
 	/* these should be externally keyed to the system type */
@@ -511,9 +495,7 @@ Sincgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
       case 'y': case 'Y':  dac_num = YGRAD; break;
       case 'z': case 'Z':  dac_num = ZGRAD; break;
       default:
-	sprintf(mess,"Sincgradient(): Bad gradient specified: %c\n",gid);
-	text_error(mess);
-	psg_abort(1); 
+	abort_message("Sincgradient(): Bad gradient specified: %c\n",gid);
     }
     putcode(INCGRAD);
     putcode(dac_num);
@@ -531,15 +513,12 @@ Sincgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
 
 static void Wgradient(char gid, int gamp)
 { int tamp,wg_ap_addr;
-  char mess[MAXSTR];
   tamp = bound16(gamp,gid); /* bounds */
   /* get_wg_apbase is in wg.c */
   wg_ap_addr = get_wg_apbase(gid)+3;
   if (wg_ap_addr < 0) 
   {
-      sprintf(mess,"Bad Gradient Specified = %c \n",gid);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("Bad Gradient Specified = %c \n",gid);
   }
   if (bgflag)
        fprintf(stderr,"%d   %d from gradient\n",wg_ap_addr,tamp);
@@ -553,14 +532,11 @@ static void Wgradient(char gid, int gamp)
 
 static void Wvgradient(char gid, int gamp0, int gampi, codeint mult)
 { 
-  char mess[MAXSTR];
   int wg_ap_addr,dacamp0,dacampi;
 
   /* test valid range */
   if (((mult < v1) || (mult > v14)) && ((mult < t1) || (mult > t60))) {
-      sprintf(mess,"mult illegal dynamic %d \n",mult);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("mult illegal dynamic %d \n",mult);
   }
 
   if ((mult >= t1) && (mult <= t60))
@@ -573,9 +549,7 @@ static void Wvgradient(char gid, int gamp0, int gampi, codeint mult)
   wg_ap_addr = get_wg_apbase(gid)+3;
   if (wg_ap_addr < 0) 
   {
-      sprintf(mess,"Bad Gradient Specified = %c \n",gid);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("Bad Gradient Specified = %c \n",gid);
   }
   putcode(WGD3);
   putcode(wg_ap_addr);
@@ -589,13 +563,9 @@ static void Wvgradient(char gid, int gamp0, int gampi, codeint mult)
 
 /*	Wincgradient() implements incgradient() for the gradient WFG boards.
  */
-Wincgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
- char gid;
- int gamp0;
- int gamp1, gamp2, gamp3;
- codeint mult1, mult2, mult3;
+void Wincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
+		codeint mult1, codeint mult2, codeint mult3)
 { 
-    char mess[MAXSTR];
     int i;
     int gamp[4];
     int dacamp[4];
@@ -619,21 +589,17 @@ Wincgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
 	    && mult[i] != zero
 	    && mult[i] != ct)
 	{
-	    sprintf(mess,"WG_incgradient: mult[%d] illegal RT variable: %d \n",
+	    abort_message("WG_incgradient: mult[%d] illegal RT variable: %d \n",
 		    i, mult[i]);
-	    text_error(mess);
-	    psg_abort(1); 
 	}
     }
     
     for (i=0; i<=3; i++){
-	dacamp[i] = bound16(gamp[i]);
+	dacamp[i] = bound16(gamp[i],gid);
     }
     wg_ap_addr = get_wg_apbase(gid)+3;
     if (wg_ap_addr < 0){
-	sprintf(mess,"WG_incgradient: Bad Gradient Specified = %c\n",gid);
-	text_error(mess);
-	psg_abort(1);
+	abort_message("WG_incgradient: Bad Gradient Specified = %c\n",gid);
     }
     putcode(INCWGRAD);
     putcode(wg_ap_addr);
@@ -653,16 +619,14 @@ Wincgradient(gid,gamp0,gamp1,gamp2,gamp3,mult1,mult2,mult3)
 
 */
 
-getorientation(c1,c2,c3,orientname)
-char  *c1,*c2,*c3,*orientname;
+int getorientation(char *c1, char *c2, char *c3, char *orientname)
 {
    char orientstring[MAXSTR];
    int i;
    getstr(orientname,orientstring);
    if (orientstring[0] == '\0') 
    {
-   text_error("can't find variable in tree\n");
-   psg_abort(1);
+   abort_message("can't find variable in tree\n");
    }
    else if (bgflag)
      fprintf(stderr,"orientname = %s\n",orientname);
@@ -690,7 +654,7 @@ char  *c1,*c2,*c3,*orientname;
 /*	state turns on PFG if set to y			*/
 /*							*/
 /********************************************************/
-all_grad_reset()
+void all_grad_reset()
 {
     char pfg_on[MAXSTR];
     /* any imaging wfgs */
@@ -808,9 +772,7 @@ all_grad_reset()
  |	returns string value of variable from two trees
  |	current then global
  +------------------------------------------------------------------*/
- getstr2nwarn(variable,buf)
- char *variable;
- char buf[];
+void  getstr2nwarn(char *variable, char buf[])
  {
      if (P_getstring(CURRENT, variable, buf, 1, MAXSTR))
      {
@@ -819,7 +781,7 @@ all_grad_reset()
      }
  }
  
-ecc_handle()
+void ecc_handle()
 {
     char buf[MAXSTR];
     if (P_getstring(GLOBAL,"chiliConf",buf,1,MAXSTR))
@@ -833,7 +795,7 @@ ecc_handle()
 
 }
 
-ecc_zero()
+void ecc_zero()
 {
   if(is_porq(gradtype[0]))
   {
@@ -858,9 +820,8 @@ ecc_zero()
   }
 }
 
-ecc_enable()
+void ecc_enable()
  {
-    char buf[MAXSTR];
     double amp1z,tc1z,amp2z,tc2z,amp3z,tc3z,amp4z,tc4z;
     if(is_porq(gradtype[2]))
     {
@@ -917,16 +878,14 @@ ecc_enable()
 
 #include "ACQ_SUN.h"
 
-static int get_pfg_base();
+static int get_pfg_base(char where);
 
-pgradient(where,value)
-int where;
-float value;
+void pgradient(int where, float value)
 {
   int base,tmp;
   char graddisableflag[2];
-  if (bgflag)
-   fprintf(stderr,"pgradient call on %c with value %f\n",where,value);
+   if (bgflag)
+      fprintf(stderr,"pgradient call on %c with value %f\n",where,value);
    base = get_pfg_base(where);
    if (base == 0) 
      return;
@@ -962,50 +921,44 @@ float value;
 /* THIS ACTION TAKES 50 MILLISECONDS */
 
 
-pfg_reset(where)
-char where;
+void pfg_reset(char where)
 {
-  if (bgflag)
-   fprintf(stderr,"pfg_reset call on %c\n",where);
+   if (bgflag)
+      fprintf(stderr,"pfg_reset call on %c\n",where);
    /* reset but not enabled */
    pfg_reg(where,2,2);
    pfg_reg(where,2,0);
 }
 
-pfg_blank(where)
-char where;
+void pfg_blank(char where)
 {
-  if (bgflag)
-   fprintf(stderr,"pfg_blank call on %c\n",where);
+   if (bgflag)
+      fprintf(stderr,"pfg_blank call on %c\n",where);
    /* disable - no reset */
    pfg_reg(where,2,0);
 }
 
-pfg_enable(where)
-char where;
+void pfg_enable(char where)
 {
-  if (bgflag)
-   fprintf(stderr,"pfg_enable call on %c\n",where);
+   if (bgflag)
+      fprintf(stderr,"pfg_enable call on %c\n",where);
    /* enable - no reset */
    pfg_reg(where,2,1);
 }
 
-pfg_select_addr(which,where)
-int which;
-char where;
+void pfg_select_addr(int which, char where)
 {
    int tmp;
-  if (bgflag)
-   fprintf(stderr,"pfg_select_addr call\n");
+   if (bgflag)
+      fprintf(stderr,"pfg_select_addr call\n");
    tmp = which & 0x3;
    pfg_reg(where,0,tmp);
 }
 
-pfg_quick_zero(where)
-char where;
+void pfg_quick_zero(char where)
 {
-  if (bgflag)
-   fprintf(stderr,"pfg_quick_zero call on %c\n",where);
+   if (bgflag)
+      fprintf(stderr,"pfg_quick_zero call on %c\n",where);
    pfg_reg(where,0,8);
    pfg_reg(where,0,0);
 }
@@ -1019,8 +972,7 @@ char where;
 *	pfg_20 currently points dac - it could be sped up
 *	by insuring pointer to correct place
 *************************************************************/
-pfg_20(num20,base)
-int num20, base;
+void pfg_20(int num20, int base)
 {
    int word[7],mask,nmask;
    mask = base & 0x0fc00;
@@ -1067,17 +1019,15 @@ void calc_amp_tc(char chan, int eccno, double amp, double tc)
 {
      int amp12,tc12;
      double xx,tc_min,tc_max;
-     char tmp[64],tchn;
+     char tchn;
      tchn = tolower(chan); 
      if (!((tchn == 'x') || (tchn == 'y') || (tchn == 'z')))
      {
-       text_error("illegal compensation channel");
-       psg_abort(1);
+       abort_message("illegal compensation channel");
      }
      if (!((eccno > 0) || (eccno <= 5)))
      {
-       text_error("illegal compensation number");
-       psg_abort(1);
+       abort_message("illegal compensation number");
      }
      xx = amp;
      xx *= 40.950;
@@ -1091,8 +1041,7 @@ void calc_amp_tc(char chan, int eccno, double amp, double tc)
      tc_min = 0.089*tc_max;  /*  let 1% over/under slide thru and clip */
      if ((tc > 1.01*tc_max) || (tc < tc_min))
      {
-        sprintf(tmp,"%c, #%d out of range [%f,%f]\n",chan,eccno,tc_min,tc_max);
-        text_error(tmp);
+        text_error("%c, #%d out of range [%f,%f]\n",chan,eccno,tc_min,tc_max);
         return;
      }
      xx =  (tc_max/tc - 1.0)*409.5;
@@ -1107,14 +1056,11 @@ void calc_amp_tc(char chan, int eccno, double amp, double tc)
 
 static void Pvgradient(char where, int gamp0, int gampi, codeint mult)
 { 
-  char mess[MAXSTR];
   int base,dacamp0,dacampi;
 
   /* test valid range */
   if (((mult < v1) || (mult > v14)) && ((mult < t1) || (mult > t60))) {
-      sprintf(mess,"mult illegal dynamic %d \n",mult);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("mult illegal dynamic %d \n",mult);
   }
 
   if ((mult >= t1) && (mult <= t60))
@@ -1128,9 +1074,7 @@ static void Pvgradient(char where, int gamp0, int gampi, codeint mult)
   
   if (base < 0) 
   {
-      sprintf(mess,"Bad Gradient Specified = %c \n",where);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("Bad Gradient Specified = %c \n",where);
   }
   putcode(PVGRADIENT);
   putcode(base);
@@ -1144,7 +1088,6 @@ static void Pvgradient(char where, int gamp0, int gampi, codeint mult)
 static void Pincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
                          codeint mult1, codeint mult2, codeint mult3)
 { 
-    char mess[MAXSTR];
     int i;
     int gamp[4];
     int dacamp[4];
@@ -1167,23 +1110,19 @@ static void Pincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
 	    && mult[i] != zero
 	    && mult[i] != ct)
 	{
-	    sprintf(mess,"Pincgradient: mult[%d] illegal RT variable: %d \n",
+	    abort_message("Pincgradient: mult[%d] illegal RT variable: %d \n",
 		    i, mult[i]);
-	    text_error(mess);
-	    psg_abort(1); 
 	}
     }
     
     for (i=0; i<=3; i++){
-	dacamp[i] = bound16(gamp[i]);
+	dacamp[i] = bound16(gamp[i], gid);
     }
   base = get_pfg_base(gid);
   
   if (base < 0) 
   {
-      sprintf(mess,"Bad Gradient Specified = %c \n",gid);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("Bad Gradient Specified = %c \n",gid);
   }
     putcode(INCPGRAD);
     putcode(base);
@@ -1200,7 +1139,6 @@ static void Pincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
 
 static void Tvgradient(char where, int gamp0, int gampi, codeint mult)
 { 
-  char mess[MAXSTR];
   int base,dacamp0,dacampi;
   char tag;
   tag = tolower(gradtype[2]);
@@ -1209,9 +1147,7 @@ static void Tvgradient(char where, int gamp0, int gampi, codeint mult)
 
   /* test valid range */
   if (((mult < v1) || (mult > v14)) ) {
-      sprintf(mess,"mult illegal dynamic %d \n",mult);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("mult illegal dynamic %d \n",mult);
   }
   base = get_t_pfg_base(where);
   dacamp0 = bound16(gamp0,where);
@@ -1226,9 +1162,7 @@ static void Tvgradient(char where, int gamp0, int gampi, codeint mult)
   
   if (base < 0) 
   {
-      sprintf(mess,"Bad Gradient Specified = %c \n",where);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("Bad Gradient Specified = %c \n",where);
   }
   t_grad_selectone(where);	/* sets gradient board to accept one 	*/
 				/* value for specified axis.		*/
@@ -1244,7 +1178,6 @@ static void Tvgradient(char where, int gamp0, int gampi, codeint mult)
 static void Tincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
                          codeint mult1, codeint mult2, codeint mult3)
 { 
-    char mess[MAXSTR];
     int i;
     int gamp[4];
     int dacamp[4];
@@ -1270,15 +1203,13 @@ static void Tincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
 	    && mult[i] != zero
 	    && mult[i] != ct)
 	{
-	    sprintf(mess,"Pincgradient: mult[%d] illegal RT variable: %d \n",
+	    abort_message("Pincgradient: mult[%d] illegal RT variable: %d \n",
 		    i, mult[i]);
-	    text_error(mess);
-	    psg_abort(1); 
 	}
     }
     
     for (i=0; i<=3; i++){
-	dacamp[i] = bound16(gamp[i]);
+	dacamp[i] = bound16(gamp[i], gid);
   	/* divide dac units in half for L200 amplifier only */
   	if ((tag == 't') || (tag == 'u'))
   	{
@@ -1289,9 +1220,7 @@ static void Tincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
   
     if (base < 0) 
     {
-      sprintf(mess,"Bad Gradient Specified = %c \n",gid);
-      text_error(mess);
-      psg_abort(1); 
+      abort_message("Bad Gradient Specified = %c \n",gid);
     }
 
     t_grad_selectone(gid);	/* sets gradient board to accept one 	*/
@@ -1312,9 +1241,7 @@ static void Tincgradient(char gid, int gamp0, int gamp1, int gamp2, int gamp3,
 /************************************************************************/
 /*	all numbers should be range checked before this routine		*/
 /************************************************************************/
-pfg_12s(id,which,top12,bot12)
-char id;
-int which,top12,bot12;
+void pfg_12s(char id, int which, int top12, int bot12)
 {
    int word[6], mask, nmask, base;
    base = get_pfg_base(id);
@@ -1326,8 +1253,8 @@ int which,top12,bot12;
    nmask = top12 >> 4;	/* pick off top 8 	    */
    word[3] = mask | 0xB000 | nmask; 	
    nmask = ((top12 & 0x0f) << 4) | ((bot12 & 0x0f00) >> 8);	
-  if (bgflag)
-   fprintf(stderr,"bot12 = %x  nmask = %x\n",bot12,nmask);
+   if (bgflag)
+      fprintf(stderr,"bot12 = %x  nmask = %x\n",bot12,nmask);
    word[4] = mask | 0xB000 | nmask; 	
    nmask = bot12 & 0x00ff;	
    word[5] = mask | 0xB000 | nmask; 	
@@ -1341,9 +1268,7 @@ int which,top12,bot12;
 /********************************************************
 *	write access to PFG registers			*
 ********************************************************/
-pfg_reg(where,reg,what)
-char where;
-int reg,what;
+void pfg_reg(char where, int reg, int what)
 {
   int word[2],base;
   base = get_pfg_base(where);
@@ -1358,11 +1283,9 @@ int reg,what;
   curfifocount += 2;
 }
 
-static int get_pfg_base(where)
-char where;
+static int get_pfg_base(char where)
 {
    int base;
-   char tstr[32];
    switch (where)
    {
      case 'x': case 'X':   base = 0x0C50; break;
@@ -1372,9 +1295,7 @@ char where;
      case 'n': case 'N':   base = 0; break;
      default: 
      {
-	 sprintf(tstr,"Unrecognized PFG channel = %c\n",where);
-	 text_error(tstr);
-	 psg_abort(1);
+	 abort_message("Unrecognized PFG channel = %c\n",where);
      }
    }
    return(base);
@@ -1439,9 +1360,7 @@ char where;
 /* lenable */
 /* lblank */
 
-lgradient(who,howmuch)
-char who;
-double howmuch;
+void lgradient(char who, double howmuch)
 {
   int temp,i,base;
   short obuff[7];
@@ -1483,8 +1402,7 @@ double howmuch;
   }
 }
 
-l_reset(who)
-char who;
+void l_reset(char who)
 {
   short obuff[10];
   int i,base;
@@ -1513,9 +1431,7 @@ char who;
   curfifocount += 4;
 }
 
-l_cntrl(who,tog)
-char who;
-int tog;
+void l_cntrl(char who, int tog)
 {
   short obuff[10];
   int i,base;
@@ -1545,7 +1461,6 @@ int tog;
 static int get_l_pfg_base(char where)
 {
    int base;
-   char tstr[32];
    switch (where)
    {
      case 'x': case 'X':   base = 0x0C60; break;
@@ -1555,9 +1470,7 @@ static int get_l_pfg_base(char where)
      case 'n': case 'N':   base = 0; break;
      default: 
      {
-	 sprintf(tstr,"Unrecognized PFG channel = %c\n",where);
-	 text_error(tstr);
-	 psg_abort(1);
+	 abort_message("Unrecognized PFG channel = %c\n",where);
      }
    }
    return(base);
@@ -1567,8 +1480,7 @@ static int get_l_pfg_base(char where)
 
 static int lmask = 0;
 
-l200_reset(j)
-int j;
+void l200_reset(int j)
 {
   if (newacq)
   {
@@ -1611,8 +1523,7 @@ int j;
   }
 }
 
-int tflg1(which)
-char which;
+int tflg1(char which)
 {
   int flag;
   flag = 0;
@@ -1625,8 +1536,7 @@ char which;
   return(flag);
 }
 
-int tflg2(which)
-char which;
+int tflg2(char which)
 {
   int flag;
   flag = 0;
@@ -1642,7 +1552,6 @@ char which;
 static int get_t_pfg_base(char where)
 {
    int base;
-   char tstr[32];
    switch (where)
    {
      case 'x': case 'X':   base = 0x0C88; break;
@@ -1652,16 +1561,13 @@ static int get_t_pfg_base(char where)
      case 'n': case 'N':   base = 0; break;
      default: 
      {
-	 sprintf(tstr,"Unrecognized PFG channel = %c\n",where);
-	 text_error(tstr);
-	 psg_abort(1);
+	 abort_message("Unrecognized PFG channel = %c\n",where);
      }
    }
    return(base);
 }
 
-t_enbl(which)
-char which;
+void t_enbl(char which)
 {
   int flag;
   flag = tflg1(which);
@@ -1687,8 +1593,7 @@ char which;
   }
 }
 
-t_dsbl(which)
-char which;
+void t_dsbl(char which)
 {
   int flag;
   flag = tflg1(which);
@@ -1714,9 +1619,7 @@ char which;
   }
 }
 
-tgradient(which,value)
-char which;
-double value;
+void tgradient(char which, double value)
 {
   int flag,tmp;
   char graddisableflag[2];
@@ -1782,8 +1685,7 @@ double value;
 
 }
 
-t_grad_selectone(which)
-char which;
+void t_grad_selectone(char which)
 {
   int flag;
   /* tflg2 - select and execute */

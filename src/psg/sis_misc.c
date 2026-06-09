@@ -66,8 +66,7 @@ int tword1,tword2;
  *	Last Revised:		R. Schmidt	911022
  *------------------------------------------------------------------------*/
 
-S_setloopsize(loopsize)
-double loopsize;
+void S_setloopsize(double loopsize)
 {
 	/* abort if not using an XRpulser (Pulse control, acquisition
 	control) board */

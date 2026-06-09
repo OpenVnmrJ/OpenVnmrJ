@@ -18,6 +18,7 @@
 extern int HSrotor;
 extern int newacq;
 extern int ok2bumpflag;
+extern int putcode(short arg);
 
 /*-------------------------------------------------------------------
 |
@@ -37,7 +38,7 @@ extern int ok2bumpflag;
 |			     getstr()
 |
 +------------------------------------------------------------------*/
-interlocktests()
+void interlocktests()
 {
  
     if ( (interLock[0] != 'n') && (interLock[0] != 'N') )

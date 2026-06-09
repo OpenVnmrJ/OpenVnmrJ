@@ -29,7 +29,7 @@ extern int  newacq;
 |				Author Greg Brissey 10/29/92
 |
 +-----------------------------------------------------------------*/
-clearHSlines()
+void clearHSlines()
 {
     codeint *ptr;		/* pointer for Codes array */
     /* --- initialize quiescent states --- */
@@ -61,7 +61,7 @@ clearHSlines()
 |   --------   ------     -------
 |   6/15/89   Greg B.     1. Use new global parameters to calc acode offsets 
 +-----------------------------------------------------------------*/
-initHSlines()
+void initHSlines()
 {
     codeint *ptr;		/* pointer for Codes array */
     extern void init_pgd_hslines();

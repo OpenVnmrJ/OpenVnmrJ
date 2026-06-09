@@ -8,13 +8,17 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "group.h"
 #include "acodes.h"
 #include "rfconst.h"
 #include "acqparms.h"
 #include "expDoneCodes.h"
+#include "pvars.h"
 
-extern double sign_add();
+extern double sign_add(double arg1, double arg2);
+extern void putcode(short arg);
+extern void convertdbl(double value, int *topint, int *botint);
 extern int  bgflag;	/* debug flag */
 
 static int getvtpid()
@@ -42,7 +46,7 @@ static int getvtpid()
 |   6/15/89   Greg B.     1. Use new global parameters to instead of getval(),
 |			     getstr(),var_active().
 +-----------------------------------------------------------------*/
-setvt()
+void setvt()
 {
     int setting;
     int pid;
@@ -75,7 +79,7 @@ setvt()
 |   6/15/89   Greg B.     1. Use new global parameters to instead of getval(),
 |			     getstr(),var_active().
 +-----------------------------------------------------------------*/
-wait4vt()
+void wait4vt()
 {
     int topword;
     int botword;

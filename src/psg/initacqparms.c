@@ -22,12 +22,16 @@
 |
 +------------------------------------------------------------------*/
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/file.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
+#include <time.h>
 #include "mfileObj.h"
 #include "variables.h"
 #include "data.h"
@@ -38,6 +42,7 @@
 #include "acqparms.h"
 #include "dsp.h"
 #include "pvars.h"
+#include "cps.h"
 
 /*  PSG_LC  conditional compiles lc.h properly for PSG */
 #ifndef  PSG_LC
@@ -69,10 +74,18 @@
 
 
 extern double parmult();
-extern double getval();
-extern double sign_add();	/* add roundoff according to sign */
 extern void putcode(codeint arg);
-/*extern autodata autostruct; */
+extern void std_lc_init();
+extern int getIlFlag();
+extern int getStartFidNum();
+extern void custom_lc_init();
+extern int option_check(const char *option);
+extern int get_rt_tab_elems();
+extern void writetablefile(char *tfilename);
+extern void init_acqvar(codeint index, int val);
+extern int par_maxminstep(int tree, const char *name,
+           double *maxv, double *minv, double *stepv);
+
 
 extern int clr_at_blksize_mode;
 extern int lockfid_mode;
@@ -90,7 +103,7 @@ extern codeint ilssval,ilctss,ssval,ctss;
 static int acqfd;
 static struct datafilehead acqfileheader;
 static struct datablockhead acqblockheader;
-static acqparmsize = sizeof(autodata) + sizeof(Acqparams);
+static int acqparmsize = sizeof(autodata) + sizeof(Acqparams);
 static char infopath[256];
 
 static MFILE_ID ifile = NULL;	/* inova datafile for ra */
@@ -144,12 +157,6 @@ void initacqparms(unsigned int fidn)
     codeint asize;		/*  data size in blocks  (256words) */
     codelong tot_np;		/*  np size */
     codelong curct, bsct4ra;
-    int i;
-    int topword;
-    int botword;
-    int times;
-    int bytes;
-    int words;
     int fifotype;
     double tmpval;
 
@@ -192,7 +199,7 @@ void initacqparms(unsigned int fidn)
     if (ss != 0) 
         cttime = 0; 		/* no ct display with steady state
     else if ( cttime > 32767) 
-        cttime = 32767;		/* max ct between updates */
+        cttime = 32767;		 max ct between updates */
     else if (cttime < 1)
         cttime = 1;
   
@@ -280,10 +287,12 @@ void initacqparms(unsigned int fidn)
        if (P_getstring(CURRENT, "osfilt", tmpstr, 1, 255) >= 0 )
        {
           if ( (tmpstr[0] == 'b') || (tmpstr[0] == 'B') )
+          {
              if ( (tmpstr[1] >= '1') && (tmpstr[1] <= '7') )
                 asize |= ((tmpstr[1]-'0') << 8);
              else 
                 asize |= (1 << 8);
+          }
        }
     }
     if (dpflag == 4)
@@ -412,7 +421,7 @@ void convertdbl(double value, int *topint, int *botint)
     top = val / 65536;
     bot = val % 65536;
     if (bgflag)
-	fprintf(stderr,"convertdbl(): value: %lf top: %ld bot: %ld \n",
+	fprintf(stderr,"convertdbl(): value: %lf top: %d bot: %d \n",
 		value,top,bot); 
     *topint = top;
     *botint = bot;
@@ -439,7 +448,6 @@ void convertdbl(double value, int *topint, int *botint)
 int ra_initacqparms(unsigned int fidn)
 {
    Acqparams *lc,*ra_lc;
-   autodata *autoptr;
    int len1,len2;
    codeint acqbuffer[512];
    struct datablockhead acqblockheader;
@@ -612,7 +620,7 @@ void set_counters()
 |       Sets ss counters if autoshimming.
 |	Only set if ss > 1 and the counters have not been set.
 +-------------------------------------------------------------------*/
-ss4autoshim()
+void ss4autoshim()
 {
 
   if (newacq)
@@ -634,8 +642,7 @@ ss4autoshim()
 |       Position the disk read/write heads to the proper block offset
 |       for the acqpar file (lc,auto structure parameters.
 +-------------------------------------------------------------------*/
-open_acqpar(filename)
-char *filename;
+void open_acqpar(char *filename)
 {
    int len;
    if (bgflag)
@@ -676,7 +683,7 @@ static int acqpar_seek(unsigned int elemindx)
         char *str_err;
         if ( (str_err = strerror(errno) ) != NULL )
         {
-           fprintf(stdout,"acqpar_seek Error: offset %ld,: %s\n",
+           fprintf(stdout,"acqpar_seek Error: offset %d,: %s\n",
                acqoffset,str_err);
         }
         return(-1);
@@ -988,7 +995,7 @@ int suflag;
     {
         ExpInfo.Billing.enabled = 1;
     }
-        t = time(0);
+        t = (int) time(0);
         ExpInfo.Billing.submitTime = t;
         ExpInfo.Billing.startTime  = t;
         ExpInfo.Billing.doneTime   = t;
@@ -1017,20 +1024,17 @@ int suflag;
     return(0);
 }
 
-set_acode_size(sz)
-int sz;
+void set_acode_size(int sz)
 {
     ExpInfo.acode_1_size = sz;
 }
 
-set_max_acode_size(sz)
-int sz;
+void set_max_acode_size(int sz)
 {
     ExpInfo.acode_max_size = sz;
 }
 
-setDSPgain(val)
-int val;
+void setDSPgain(int val)
 {
     ExpInfo.DspGainBits = val;
 }
@@ -1045,7 +1049,7 @@ int calcdspskip()
 {
   char dspflg[2], fsqflg[2];
   double dwelldsp=0.0, swval=0.0, oversampval=0.0;
-  double skipdlyadj=0.0, prealfa, rof2val;
+  double skipdlyadj=0.0, prealfa;
   int osskippts=0, prealfa_defined=0;
 
   /* optimize the delay to about 30us if no prealfa defined */
@@ -1151,13 +1155,9 @@ int calcdspskip()
 |               getDSPinfo()/0                  |
 |                                               |
 +----------------------------------------------*/
-int getDSPinfo(factor,coef,sw,maxlbsw)
-int factor,coef;
-double sw;
-double maxlbsw;
+int getDSPinfo(int factor, int coef, double sw, double maxlbsw)
 {
-   int		np,
-		ntaps;
+   int		np;
    double	tmp;
    double  maxv, minv, stepv;
    char osskip[2];
@@ -1256,7 +1256,7 @@ double maxlbsw;
 }
 
 
-turnoff_swdsp()
+void turnoff_swdsp()
 {
    if (ix == 1)
    {
@@ -1284,7 +1284,7 @@ turnoff_swdsp()
     ExpInfo.DspOslsfrq = 0.0;
     ExpInfo.DspFiltFile[0] = '\0';
 }
-turnoff_hwdsp()
+void turnoff_hwdsp()
 {
    codeint *tmpptr;
    if (ix == 1)
@@ -1347,7 +1347,7 @@ void write_shr_info(double exp_time)
     }
     if (ExpInfo.InteractiveFlag)
     {
-       char tmppath[256];
+       char tmppath[256+16];
        sprintf(tmppath,"%s.new",infopath);
        unlink(tmppath);
        Infofd = open(tmppath,O_EXCL | O_WRONLY | O_CREAT,0666);
@@ -1408,11 +1408,13 @@ void write_exp_info()
            ExpInfo.TableFile[0] = '\000';
            fprintf(stderr,"PSG: WARNING: write_exp_info(): num_tables=0\n");
        }
+#ifdef DOIPA
        if (acqiflag) write_rtvar_acqi_file();
+#endif
     }
 }
 
-int ra_inovaacqparms(unsigned int fidn)
+void ra_inovaacqparms(unsigned int fidn)
 {
    char fidpath[512];
    int curct;

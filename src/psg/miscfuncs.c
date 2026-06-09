@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
@@ -19,8 +20,11 @@
 #include "ACode32.h"
 #endif
 #include "acqparms.h"
+#include "cps.h"
 #include "group.h"
 #include "macros.h"
+#include "pvars.h"
+#include "abort.h"
 
 #if defined(SOLARIS) || defined(AIX) || defined(LINUX)
 #ifndef M_LN10
@@ -32,6 +36,9 @@
 extern int  fifolpsize; /* fifo loop size */
 extern int  dps_flag;
 extern double   dps_fval[];
+extern char *ObjError(int wcode);
+extern int waveon(int dev, double *scale_val);
+extern int option_check(const char *option);
 
 #ifndef NVPSG
 
@@ -41,8 +48,7 @@ extern double   dps_fval[];
 |	output board.
 |				Greg B. 11/20/88
 +----------------------------------------------------------*/
-int crtfifo_cnt(count)
-int count;
+int crtfifo_cnt(int count)
 {
    if (fifolpsize < 65)	/* determine output board type */
    {
@@ -100,22 +106,19 @@ int dev;
    Msg_Set_Result result;
    int HSmask;
    int error;
-   char msge[128];
 
    param.setwhat=GET_XMTRGATE;
    error = Send(RF_Channel[dev],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
    if (error < 0)
    {
-      sprintf(msge,"%s : %s\n",RF_Channel[dev]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[dev]->objname,ObjError(error));
    }
    HSmask = result.reqvalue;
    param.setwhat=GET_XMTRGATEBIT;
    error = Send(RF_Channel[dev],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
    if (error < 0)
    {
-      sprintf(msge,"%s : %s\n",RF_Channel[dev]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[dev]->objname,ObjError(error));
    }
 /*	
    if (debug_power)
@@ -159,9 +162,7 @@ double time;
    return(loss);
 }
 
-static int testchan(dev,time)
-int dev;
-double time;
+static void testchan(int dev, double time)
 {
    int pwr_lvl = 0;
    double save_time = 0.0;
@@ -180,7 +181,6 @@ double time;
       Msg_Set_Param param;
       Msg_Set_Result result;
       int error;
-      char msge[128];
       double add;
       double add_inc;
       double saveE;
@@ -189,8 +189,7 @@ double time;
       error = Send(RF_Channel[dev],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
       if (error < 0)
       {
-         sprintf(msge,"%s : %s\n",RF_Channel[dev]->objname,ObjError(error));
-         text_error(msge);
+         text_error("%s : %s\n",RF_Channel[dev]->objname,ObjError(error));
       }
       pwr_lvl = result.reqvalue;
       /*
@@ -273,9 +272,7 @@ double time;
 #define MAXGRAD  40
 #define LOSSPERSEC  2.5
 
-static int testgrad(devchar,time,lvl)
-int devchar;
-double time,lvl;
+static void testgrad(int devchar, double time, double lvl)
 {
    int pwr_lvl = lvl;
    int dev;
@@ -324,8 +321,7 @@ double time,lvl;
  * This procedure is called from delayer and acquire-  whenever a time
  * event is generated.
  */
-checkpowerlevels(time)
-double time;
+void checkpowerlevels(double time)
 {
    int i;
    extern double gradxval, gradyval, gradzval;
@@ -364,12 +360,12 @@ double time;
  * This procedure is called from psg.c to initialize the probe scheme
  */
 
-init_power_check()
+void init_power_check()
 {
     char   tmpstr[20];
     do_power_check = option_check("nosafe") ? FALSE : TRUE;
     if (P_getstring(GLOBAL,"probe_protection",tmpstr,1,12) < 0)
-       tmpstr[0] == 'y';
+       strcpy(tmpstr, "y");
     if (tmpstr[0] == 'n')
        do_power_check = FALSE;
     debug_power = option_check("debugprobe");
@@ -394,7 +390,7 @@ init_power_check()
  *  gradient levels do not exceed 50% of MAX.  If they do, we
  *  simply add a delay to deal with it.
  */
-endPowerCheck()
+void endPowerCheck()
 {
    int i;
 
@@ -423,11 +419,11 @@ endPowerCheck()
  * These should be removed in the next release
  */
 
-gradCheckOn()
+void gradCheckOn()
 {
    do_grad_check = 1;
 }
-gradCheckOff()
+void gradCheckOff()
 {
    do_grad_check = 0;
 }
@@ -484,10 +480,8 @@ int channel;
        }
        else
        {
-         char msge[128];
          result=0;
-         sprintf(msge,"channel %d attenuation value %gdB exceeds %gdB safety limit (%s) \n",channel,value,maxattenvalue,paramname);
-         text_error(msge);
+         text_error("channel %d attenuation value %gdB exceeds %gdB safety limit (%s) \n",channel,value,maxattenvalue,paramname);
        }
      }
   }
@@ -500,11 +494,11 @@ int channel;
 */
 static int warned_already=0;
 
-check5MhzFoo()
+void check5MhzFoo()
 {
     char dp[MAXSTR];
-    double bufs,maxbufs,memuse;
-    double cttime,ctcmplttime,buftime,npbuftime;
+    double bufs,memuse;
+    double cttime,ctcmplttime,npbuftime;
     double d0,d0n,diftim;
     int dpflag,d0flag;
     double arraydim;
@@ -538,14 +532,14 @@ check5MhzFoo()
     /* printf("totaltime: %lf\n",totaltime); */
     bufs = (bs == 0) ? 1 : nt / bs;
     bufs *= arraydim;
-    maxbufs = 2097152 / (np * 4);
+    // maxbufs = 2097152 / (np * 4);
     /* printf("bufs: %lf, maxbufs: %lf\n",bufs,maxbufs); */
     
     /* 1. remove pad */
     /* 2. remove 1st of two d0 delays in transient, (ifzero result in cps.c) */
     cttime = totaltime - pad - (d0-interfidovhd);  
     ctcmplttime = cttime * nt;
-    buftime = ctcmplttime / bufs;
+    // buftime = ctcmplttime / bufs;
     npbuftime = ctcmplttime / (bufs * np * dpflag);
 
     /*printf("cttime: %lf, ctmcplttime: %lf, buftime: %lg, bytebuftime: %lg\n",
@@ -580,10 +574,3 @@ check5MhzFoo()
     }
 }
 #endif 
-/*  lcsample()
- *  set triggers for injecting an LC sample.
- *  no longer used in vnmrs or inova.  -bfetler 5/25/07
- */
-lcsample()
-{
-}

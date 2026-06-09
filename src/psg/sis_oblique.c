@@ -264,7 +264,7 @@ non_zero_row(col, m)
 /*	   names pat_x,pat_y,pat_z				*/
 /*  RETURN: rescale value					*/
 /*--------------------------------------------------------------*/
-rotate_shapes(pat1,pat2,pat3,scale1,scale2,scale3,ang1,ang2,ang3,
+void rotate_shapes(pat1,pat2,pat3,scale1,scale2,scale3,ang1,ang2,ang3,
 			pat_x,pat_y,pat_z,scale_x,scale_y,scale_z)
 char pat1[],pat2[],pat3[];
 double scale1,scale2,scale3;
@@ -906,7 +906,7 @@ void S_oblique_gradient(double level1,double level2,double level3,
                 modulated using the gradient waveshaping hardware.
         ***********************************************************/
 
-S_oblique_shapedgradient(pat,width,lvl1,lvl2,lvl3,ang1,ang2,ang3,loops,wait)
+void S_oblique_shapedgradient(pat,width,lvl1,lvl2,lvl3,ang1,ang2,ang3,loops,wait)
 
   char pat[];
 double width;
@@ -997,7 +997,7 @@ double ang1,ang2,ang3;
 
         ***********************************************************/
 
-S_oblique_shaped3gradient(pat1,pat2,pat3,width,lvl1,lvl2,lvl3,ang1,ang2,ang3,
+void S_oblique_shaped3gradient(pat1,pat2,pat3,width,lvl1,lvl2,lvl3,ang1,ang2,ang3,
 								loops,wait)
 char pat1[],pat2[],pat3[];
 double width;
@@ -1369,7 +1369,7 @@ codeint vmult2;
              second axis of the logical frame.
         **********************************************************/
 
-S_phase_encode_shapedgradient(pat,width,stat1,stat2,stat3,step2,
+void S_phase_encode_shapedgradient(pat,width,stat1,stat2,stat3,step2,
         vmult2,lim2,ang1,ang2,ang3,vloops,wait,tag)
 
 char    pat[];
@@ -1546,7 +1546,7 @@ codeint vmult2,vloops;
 	
         ***********************************************************/
 
-S_pe_oblique_shaped3gradient(pat1,pat2,pat3,width,lvl1,lvl2,lvl3,
+void S_pe_oblique_shaped3gradient(pat1,pat2,pat3,width,lvl1,lvl2,lvl3,
 			step2,vmult2,lim2,ang1,ang2,ang3,wait,tag)
 char pat1[],pat2[],pat3[];
 double width;

@@ -230,7 +230,7 @@ char       **cnames;	/* pointer array to variable names */
 codeint     *preCodes;	/* pointer to the start of the malloced space */
 codeint     *Codes;	/* pointer to the start of the Acodes array */
 int	     Codesize;	/* size of the malloc space for codes */
-int	     CodeEnd;	/* End Address  of the malloc space for codes */
+codeint	   *CodeEnd;	/* End Address  of the malloc space for codes */
 codeint     *Codeptr; 	/* pointer into the Acode array */
 int          nnames;	/* number of variable names */
 int          ntotal;	/* total number of variable names */
@@ -1262,7 +1262,7 @@ main(argc,argv) 	int argc; char *argv[];
     }
     Codes = preCodes + 4;
 
-    CodeEnd = (int) ((long) Codes + Codesize);
+    CodeEnd = Codes + Codesize;
 
     /* Set up Acode pointers */
     Codeptr = init_acodes(Codes);
@@ -1645,15 +1645,15 @@ psgsetup(in_pipe, bugflag)
     }
     Codes = preCodes + 4;
 
-    CodeEnd = ((int) Codes) + Codesize;
+    CodeEnd = Codes + Codesize;
 
     /* Set up Acode pointers */
     Codeptr = init_acodes(Codes);
 
     if (bgflag)
-    {	fprintf(stderr,"Code address:  0x%lx \n",Codes);
-     	fprintf(stderr,"Codeptr address:  0x%lx \n",Codeptr);
-     	fprintf(stderr,"CodeEnd address:  0x%lx \n",CodeEnd);
+    {	fprintf(stderr,"Code address:  %p \n",Codes);
+     	fprintf(stderr,"Codeptr address:  %p \n",Codeptr);
+     	fprintf(stderr,"CodeEnd address:  %p \n",CodeEnd);
     }
 
     /* --- setup global flags and variables --- */

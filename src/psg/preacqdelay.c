@@ -15,6 +15,8 @@
 #include "macros.h"
 
 extern double getval();
+extern void putcode(short arg);
+extern double getval(const char *name);
 
 extern int  bgflag;	/* debug flag */
 
@@ -32,19 +34,16 @@ double preacqtime;      /* value of pad used for time calculations */
 |   --------   ------     -------
 |   6/15/89   Greg B.     1. Use new global parameters instead of var_active()
 +------------------------------------------------------------------*/
-preacqdelay()
+void preacqdelay()
 {
     double predelay;		/* pre-acquisition delay time  'pad' */
     double delaytime;		/* temp delays */
-    int    tword1;		/* timer word one */
-    int    tword2;		/* timer word two */
-    int    ntwords;		/* number of timerwords needed */
     int    skipcount;		/* codes to skip if to skip PADLY */
     codeint *skipcntadr;
 
    if (bgflag)
        fprintf(stderr,"preacqdelay(): \n");
-/*     if (var_active("pad",CURRENT))	/* is variable in use ? */
+//     if (var_active("pad",CURRENT))	/* is variable in use ? */
     if (padactive)	/* is variable in use ? */
     {
         /* delay if pad or temp has changed & delay is > than min */

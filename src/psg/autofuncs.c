@@ -21,10 +21,14 @@
 #include "macros.h"
 #include "abort.h"
 #include "cps.h"
+#include "pvars.h"
 
 extern int bgflag;	/* debug flag */
 extern int newacq;
 extern int option_check(const char *option);
+extern int getStartFidNum();
+extern void putcode(short arg);
+extern void ss4autoshim();
 
 extern int ok2bumpflag;
 
@@ -33,6 +37,7 @@ int setshimflag(char *wshim, int *flag);
 extern void putmethod(int mode, int buffer[]);
 #else
 extern void putmethod(int mode);
+extern void preacqdelay();
 #endif
 
 #ifndef NVPSG
@@ -52,7 +57,6 @@ extern codeint adccntrl;
 +-----------------------------------------------------------------*/
 void initauto1()
 {
-    codeint new;
     codeint mode;
 
     if (ix == getStartFidNum())
@@ -150,10 +154,9 @@ void loadshims()
 +-----------------------------------------------------------------*/
 void initauto2()
 {
-    int new;
     int do_autolock;
 
-    new = loc;  /* get sample location */
+    // new = loc;  /* get sample location */
 
     if ( spinactive )  /* spin = 'y' */
         spin = (int) (getval("spin") + 0.0005);  /* get sample spin rate */

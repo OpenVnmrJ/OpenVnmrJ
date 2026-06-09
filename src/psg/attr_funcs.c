@@ -13,6 +13,7 @@
 #include "acodes.h"
 #include "rfconst.h"
 #include "acqparms.h"
+#include "abort.h"
 
 #ifdef DEBUG
 extern int      bgflag;
@@ -49,7 +50,6 @@ extern int NUMch;	/* number of defined channels */
 /*VARARGS2*/
 int sync_on_event(Object dev_obj, ...)
 {
-   char		   msge[128];
    va_list         vargs;
    int             error = 0;
    Msg_Set_Param   param;
@@ -80,9 +80,8 @@ int sync_on_event(Object dev_obj, ...)
 	    error = Send(dev_obj, MSG_SET_EVENT_VAL_pr, &param, &result);
 	    break;
 	 default:
-            sprintf(msge,"%s : Unknown Command '%s'.\n",
+            abort_message("%s : Unknown Command '%s'.\n",
 		dev_obj->objname,ObjCmd(param.setwhat));
-            abort_message(msge);
 	    break;
       }
    }
@@ -96,7 +95,6 @@ int sync_on_event(Object dev_obj, ...)
 +---------------------------------------------------------------------*/
 int hardware_get(Object dev_obj, ...)
 {
-   char		   msge[128];
    va_list         vargs;
    int             error = 0;
    Msg_Set_Param   param;
@@ -120,9 +118,8 @@ int hardware_get(Object dev_obj, ...)
 	    error = Send(dev_obj, MSG_GET_EVENT_VAL_pr, &param, &result);
 	    break;
 	 default:
-            sprintf(msge,"%s : Unknown Command '%s'.\n",
+            abort_message("%s : Unknown Command '%s'.\n",
 		dev_obj->objname,ObjCmd(param.setwhat));
-            abort_message(msge);
 	    break;
       }
    }
@@ -141,22 +138,17 @@ int hardware_get(Object dev_obj, ...)
 |
 +------------------------------------------------------------------*/
 static int
-verify_rfchan( device, facility )
-int device;
+verify_rfchan(int device, char *facility )
 {
-	char	msge[ 128 ];
-
 	if ((device < 1) || (device > NUMch))
 	{
-		sprintf(msge,"%s: device #%d is not within bounds 1 - %d\n",
+		abort_message("%s: device #%d is not within bounds 1 - %d\n",
 			      facility,device,NUMch);
-		abort_message(msge);
 	}
 	if ( RF_Channel[device] == NULL )
 	{
-		sprintf(msge,"%s: Warning RF Channel device #%d is not present.\n",
+		text_error("%s: Warning RF Channel device #%d is not present.\n",
 			      facility,device);
-		text_error(msge);
 		return(-1);
 	}
 
@@ -175,7 +167,6 @@ int device;
 int rfchan_getrfband(int device)
 {
     int error;
-    char msge[128];
     Msg_Set_Param param;
     Msg_Set_Result result;
 
@@ -189,8 +180,7 @@ int rfchan_getrfband(int device)
     error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
     if (error < 0)
     {
-      sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
     }
     return(result.reqvalue);
 }
@@ -207,7 +197,6 @@ double
 rfchan_getlbandmax(int device)
 {
     int error;
-    char msge[128];
     Msg_Set_Param param;
     Msg_Set_Result result;
 
@@ -221,8 +210,7 @@ rfchan_getlbandmax(int device)
     error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
     if (error < 0)
     {
-      sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
     }
     return(result.DBreqvalue);
 }
@@ -238,7 +226,6 @@ rfchan_getlbandmax(int device)
 double rfchan_getfreqmax(int device)
 {
     int error;
-    char msge[128];
     Msg_Set_Param param;
     Msg_Set_Result result;
 
@@ -252,8 +239,7 @@ double rfchan_getfreqmax(int device)
     error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
     if (error < 0)
     {
-      sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
     }
     return(result.DBreqvalue);
 }
@@ -269,7 +255,6 @@ double rfchan_getfreqmax(int device)
 int rfchan_getampband(int device)
 {
     int error;
-    char msge[128];
     Msg_Set_Param param;
     Msg_Set_Result result;
 
@@ -283,8 +268,7 @@ int rfchan_getampband(int device)
     error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
     if (error < 0)
     {
-      sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
     }
     return(result.reqvalue);
 }
@@ -300,7 +284,6 @@ int rfchan_getampband(int device)
 double rfchan_getbasefreq(int device)
 {
     int error;
-    char msge[128];
     Msg_Set_Param param;
     Msg_Set_Result result;
 
@@ -314,8 +297,7 @@ double rfchan_getbasefreq(int device)
     error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
     if (error < 0)
     {
-      sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
     }
     return(result.DBreqvalue);
 }
@@ -328,7 +310,6 @@ double rfchan_getbasefreq(int device)
 double rfchan_getfreqstep(int device)
 {
     int error;
-    char msge[128];
     Msg_Set_Param param;
     Msg_Set_Result result;
 
@@ -342,8 +323,7 @@ double rfchan_getfreqstep(int device)
     error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
     if (error < 0)
     {
-      sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-      text_error(msge);
+      text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
     }
     return(result.DBreqvalue);
 }
@@ -360,7 +340,6 @@ int rfchan_getxmtrstate(int device)
 {
 	int		HSlines, HSmask;
 	int		error;
-	char		msge[128];
 	Msg_Set_Param	param;
 	Msg_Set_Result	result;
 
@@ -374,8 +353,7 @@ int rfchan_getxmtrstate(int device)
 	error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
 	if (error < 0)
 	{
-		sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-		text_error(msge);
+		text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
 	}
 	HSlines = result.reqvalue;
 
@@ -385,8 +363,7 @@ int rfchan_getxmtrstate(int device)
 	error = Send(RF_Channel[device],MSG_GET_RFCHAN_ATTR_pr,&param,&result);
 	if (error < 0)
 	{
-		sprintf(msge,"%s : %s\n",RF_Channel[device]->objname,ObjError(error));
-		text_error(msge);
+		text_error("%s : %s\n",RF_Channel[device]->objname,ObjError(error));
 	}
 	HSmask = result.reqvalue;
 
@@ -401,7 +378,6 @@ int rfchan_getxmtrstate(int device)
 +----------------------------------------------------------------*/
 double rfchan_getpower(int channel )
 {
-	char		msge[ 128 ];
 	int		error;
 	Msg_Set_Param	param;
 	Msg_Set_Result	result;
@@ -418,10 +394,9 @@ double rfchan_getpower(int channel )
 		&result
 	);
 	if (error < 0) {
-		sprintf( msge,
+		text_error(
 			"%s : %s\n", RF_Channel[channel]->objname, ObjError(error)
 		);
-		text_error(msge);
 	}
 
 	return( (double) (result.reqvalue) );
@@ -435,7 +410,6 @@ double rfchan_getpower(int channel )
 +----------------------------------------------------------------*/
 double rfchan_getpwrf(int channel )
 {
-	char		msge[ 128 ];
 	int		error;
 	Msg_Set_Param	param;
 	Msg_Set_Result	result;

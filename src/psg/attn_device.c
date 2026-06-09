@@ -61,12 +61,18 @@ typedef struct {
 /* base class dispatcher */
 #define Base(this,msg,par,res)    AP_Device(this,msg,par,res)
 
+extern int AP_Device(void *thisv, Message msg, void *param, void *result);
+extern void validate_imaging_config(char *callname);
+
 extern int      curfifocount;
 extern int	ap_interface;
+extern void putgtab(int table, c68int  word);
 
 static int init_atten(Msg_New_Result *result);
-static int get_attr(Attn_Object *this, Msg_Set_Param *param, Msg_Set_Result *result);
-static int set_attn(Attn_Object *this, Msg_Set_Param *param, Msg_Set_Result *result);
+static int get_attr(Attn_Object *this, Msg_Set_Param *param,
+           Msg_Set_Result *result);
+static int set_attn(Attn_Object *this, Msg_Set_Param *param,
+           Msg_Set_Result *result);
 
 /*-------------------------------------------------------------
 | Attn_Device()/4 - Message Handler for Attn_devices.
@@ -184,8 +190,8 @@ static int set_attn(Attn_Object *this, Msg_Set_Param *param, Msg_Set_Result *res
 	  this->curattn = this->rtptr4attn;
         }
 	else if (this->maxattn != (c68long)255)  
-	if (this->maxattn != (c68long)255)  
-	{
+	  if (this->maxattn != (c68long)255)  
+	  {
         /*** NMR Systems ***/
 	this->rtptr4attn = (c68long) (param->value);
         encode_word = 0;
@@ -213,9 +219,9 @@ static int set_attn(Attn_Object *this, Msg_Set_Param *param, Msg_Set_Result *res
         result->genfifowrds = 2 * this->ap_bytes; /* words stuffed in fifo */
 	curfifocount += (2 * this->ap_bytes);
 	this->curattn = this->rtptr4attn;
-	}
-	else
-	{
+	  }
+	  else
+	  {
 	/*** SISCO Unity Only ...				***/
 	/*** - RF double bit high order bit of attenuator chip.	***/
 	validate_imaging_config("SIS attn ");
@@ -227,8 +233,8 @@ static int set_attn(Attn_Object *this, Msg_Set_Param *param, Msg_Set_Result *res
 	   this->rtptr4attn = (c68long) (this->curattn & 0x07f);
 	else
 	   text_error("ERROR: Invalid rfband in setting attn value.\n");
-        encode_word = 0;
-        DPRINT1(DPRTLEVEL,"Channel=%d\n",this->dev_channel);
+   encode_word = 0;
+   DPRINT1(DPRTLEVEL,"Channel=%d\n",this->dev_channel);
 	encode_word = encode_word | this->setselect;
         if (this->ap_mode == -1)
            encode_word |= NEGLOGIC_BIT;
@@ -251,7 +257,7 @@ static int set_attn(Attn_Object *this, Msg_Set_Param *param, Msg_Set_Result *res
 	curfifocount += (2 * this->ap_bytes);
 	this->setselect = 0;
 	/*** end SISCO ***/
-	}
+	  }
         break;
 
       case SET_RTPARAM:
@@ -465,10 +471,9 @@ static int get_attr(Attn_Object *this, Msg_Set_Param *param, Msg_Set_Result *res
 | SetAttnAttr  -  Set Attenuator Device to List of Attributes
 |			Author: Greg Brissey  8/18/88
 +---------------------------------------------------------------------*/
-SetAttnAttr(Object attnobj, ...)
+int SetAttnAttr(Object attnobj, ...)
 {
   va_list vargs;
-  char msge[128];
   int error = 0;
   int error2 = 0;
   Msg_Set_Param param;
@@ -490,10 +495,8 @@ SetAttnAttr(Object attnobj, ...)
 	    error2 = Send(attnobj, MSG_SET_DEV_ATTR_pr, &param, &result);
 	    if (error2 < 0)
 	    {
-	       sprintf(msge, "%s : %s  '%s'\n", attnobj->objname, ObjError(error),
+	       abort_message("%s : %s  '%s'\n", attnobj->objname, ObjError(error),
 		       ObjCmd(param.setwhat));
-	       text_error(msge);
-	       psg_abort(1);
 	    }
 	 }
       }

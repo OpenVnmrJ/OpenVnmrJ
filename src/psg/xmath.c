@@ -23,7 +23,18 @@
 
 #ifdef NVPSG
 #include "macros.h"
+#else
+extern void S_oblique_gradient(double level1,double level2,double level3,
+                        double ang1,double ang2,double ang3);
+extern void S_oblique_gradpulse(double level1, double level2, double level3,
+                double ang1, double ang2, double ang3, double gdelay);
+extern int  loadtable(char *infilename);
+extern void tabletop(int operationtype, int table1name, int table2name, int modval);
+extern void tablesop(int operationtype, int tablename, int scalarval, int modval);
 #endif
+extern void S_oblique_shapedgradient();
+extern void S_pe_oblique_shaped3gradient();
+
 
 #ifndef G2000
 #include "acqparms.h"
@@ -42,7 +53,6 @@ extern  int     last_table;
 #ifndef G2000
 extern void initparms();
 extern void initparms_img();
-extern int lcsample();
 extern void setGlobalDouble(const char *name, double val);
 #endif
 #include "Pbox_psg.h"
@@ -95,7 +105,9 @@ static int      shapeListNum = 0;
 static int      parallelChan = 0;
 static char     dpsfilepath[512];
 static char     tmpData[32];
+#ifndef G2000
 static const char	*grad_label[] = { "x", "y", "z" };
+#endif
 static FILE     *dpsdata;
 static double   incDelays[5];
 static double  	ssNum;
@@ -546,7 +558,7 @@ dump_dps_power()
     fprintf(dpsdata, " %d 3  %f %f\n", RFPWR, dpwr2, dpwrf2);
     fprintf(dpsdata, " %d 4  %f %f\n", RFPWR, dpwr3, dpwrf3);
 #else
-    fprintf(dpsdata, " %d 1  %f %f\n", RFPWR, tpwr, 0);
+    fprintf(dpsdata, " %d 1  %f 0\n", RFPWR, tpwr);
 #endif
 
 }
@@ -689,8 +701,9 @@ createDPS(char *cmd, char *expdir, double arraydim, int array_num, char *array_s
 		   vFlag = cmd[4] - '0';
 		if (vFlag == 0)
 		{
-		    freopen("/dev/null","a", stdout);
-		    freopen("/dev/null","a", stderr);
+          FILE *res __attribute__((unused));
+		    res = freopen("/dev/null","a", stdout);
+		    res = freopen("/dev/null","a", stderr);
                     outOff = 1;
 		}
 		else
@@ -766,6 +779,7 @@ createDPS(char *cmd, char *expdir, double arraydim, int array_num, char *array_s
 	}
 	if (dpsTimer == 0)
 	{
+     int res __attribute__((unused));
 	  if (vFlag > 1)
 	   printf("start pulsesequence ...\n");
 #if !defined(G2000) || defined(MERCURY)
@@ -804,8 +818,9 @@ createDPS(char *cmd, char *expdir, double arraydim, int array_num, char *array_s
              reset_dps_parms(expdir);
              reset_channels();
              if (!outOff) {
-                freopen("/dev/null","a", stdout);
-	        freopen("/dev/null","a", stderr);
+                FILE *res __attribute__((unused));
+                res = freopen("/dev/null","a", stdout);
+	             res = freopen("/dev/null","a", stderr);
                 outOff = 1;
              }
 #ifdef  AIX
@@ -836,7 +851,7 @@ createDPS(char *cmd, char *expdir, double arraydim, int array_num, char *array_s
 	     strcpy(retdata, "1 \n");
 	  else
 	     strcpy(retdata, "3 \n");
-          write(pipe2nmr,retdata, strlen(retdata));
+     res = write(pipe2nmr,retdata, strlen(retdata));
 	}
 	if (dpsFlag >= PLOT) {
            if (pipe2nmr >= 0)
@@ -856,8 +871,9 @@ createDPS(char *cmd, char *expdir, double arraydim, int array_num, char *array_s
            if (debugTimer > 0)
               vFlag = 1;
            if (!outOff && debugTimer < 1) {
-              freopen("/dev/null","a", stdout);
-	      freopen("/dev/null","a", stderr);
+              FILE *res __attribute__((unused));
+              res = freopen("/dev/null","a", stdout);
+	           res = freopen("/dev/null","a", stderr);
               outOff = 1;
            }
         }
@@ -886,8 +902,9 @@ createDPS(char *cmd, char *expdir, double arraydim, int array_num, char *array_s
         }
 	if (dpsTimer == 1)
 	{
+      int res __attribute__((unused));
 	   sprintf(retdata, "2 %f \n", totalTime);
-           write(pipe2nmr,retdata, strlen(retdata));
+      res = write(pipe2nmr,retdata, strlen(retdata));
 	}
 	close(pipe2nmr);
 }
@@ -1080,6 +1097,7 @@ dps_clear_fval()
 }
 
 
+#ifndef G2000
 static void
 dps_print_grad(int code, const char *name, const char *v_name,
                const char *w_name, double width)
@@ -1092,6 +1110,7 @@ dps_print_grad(int code, const char *name, const char *v_name,
 		grad_label[n], v_name, dps_fval[n], w_name, width);
 	}
 }
+#endif
 
 
 void
@@ -1268,10 +1287,12 @@ codeint vmult2;
 char	*s1,*s2,*s3,*s4,*s5,*s6,*s7,*s8,*s9;
 char	*s10,*s11,*s12,*s13,*s14,*s15;
 {
+#ifndef G2000
 #ifndef NVPSG
 	char    c1, c2, c3;
 	char	*n1, *n2, *n3;
 	int	v1, v2, v3;
+#endif
 #endif
 
 	if (dpsTimer != 0)
@@ -1601,7 +1622,6 @@ void dps_lcsample(char *name, int code)
 	    return;
 #ifndef G2000
 	dps_clear_fval();
-	lcsample();
 	if (dps_fval[0] < 1.0 && dps_fval[1] < 1.0)
 	    return;
 	fprintf(dpsdata, "%d ifzero 0 1 0 ix %d \n", IFZERO, IX);
@@ -1717,8 +1737,9 @@ static double cal_dps_timer(int id)
 	if (id == 1)
 	{
            if (!outOff) {
-	      freopen("/dev/null","a", stdout);
-	      freopen("/dev/null","a", stderr);
+              FILE *res __attribute__((unused));
+	           res = freopen("/dev/null","a", stdout);
+	           res = freopen("/dev/null","a", stderr);
               outOff = 1;
            }
 	}
@@ -2182,6 +2203,7 @@ rt_tbl_cmd(int ttop, RTNODE *node)
 	     tablesop(opcode, v1, v2, v3);
 }
 
+#ifndef G2000
 static int
 dps_get_ap(int tnum, int sindex, int dindex)
 {
@@ -2217,6 +2239,7 @@ dps_get_ap(int tnum, int sindex, int dindex)
 	}
 	return(*tval);
 }
+#endif
 #endif
 
 
@@ -2489,7 +2512,7 @@ void end_parallel_time(RTNODE *node)
 
 static void simulate_dps_code(int ct_num)
 {
-	int	v1, delayEvent;
+	int	v1, delayEvent __attribute__((unused));
 	int	kzloop;
 	double	f1, exTime;
 	RTNODE  *cnode;
@@ -2697,8 +2720,10 @@ insert_dps_gvar(const char *name, double *vaddr)
 static void
 set_dps_gvars()
 {
+#ifndef G2000
+   double dum;
+#endif
 	int	k;
-	double	dum;
 
 	for (k = 0; k < GVMAX; k++) {
 		globals[k].name[0] = '0';

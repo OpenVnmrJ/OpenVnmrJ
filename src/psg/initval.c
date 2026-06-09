@@ -10,8 +10,10 @@
 #include <stdio.h>
 #include "acqparms.h"
 
-extern double getval();
-extern double sign_add();
+extern double getval(const char *variable);
+extern double sign_add(double arg1, double arg2);
+extern void set_acqvar(codeint index, int val);
+extern void notinhwloop(char *name);
 
 extern int  bgflag;	/* debug flag */
 extern int  newacq;
@@ -28,9 +30,9 @@ extern int  newacq;
 |   --------   ------     -------
 |   6/15/89   Greg B.     1. Use new global parameters to calc lc offsets 
 +------------------------------------------------------------------*/
-G_initval(value,index)
-double value;		/* value to set variable to */
-codeint    index;		/* offset into acq code of variable */
+// double value;		/* value to set variable to */
+// codeint    index;		/* offset into acq code of variable */
+void G_initval(double value, codeint index)
 {
    value = (value > 0.0) ? (value + 0.5) : (value - 0.5); /* round up value */
    if (bgflag)

@@ -21,9 +21,9 @@ extern int presHSlines;
 extern int SkipHSlineTest;
 extern int newacq;
 
-HSgate(bit,state)
-int bit;	/* bit to set */
-int state;	/* state to set bit, (0 or 1) */
+//  bit;	/* bit to set */
+//  state;	/* state to set bit, (0 or 1) */
+void HSgate(int bit, int state)
 {
 
     if (state)
@@ -42,11 +42,6 @@ int state;	/* state to set bit, (0 or 1) */
 	return;
     }
 
-/*
-/* Remove output board differences
-/*
-/* if ( fifolpsize > 65)
- */
     /* There maybe more subtle ways but its fast and sure */
     /* Well almost, I forgot ifzero() constructs in the uses pulse sequence */
     /* so upon entering the PS SkipHSlineTest is set to 1 thus avoiding the */

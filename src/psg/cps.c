@@ -68,9 +68,58 @@
 #ifdef DOIPA
 extern FILE *sliderfile;
 #endif
-extern double sign_add();
 extern double whatiffreq();
 extern void pulsesequence();
+extern int ra_initacqparms(unsigned int fidn);
+extern void initacqparms(unsigned int fidn);
+extern void ra_inovaacqparms(unsigned int fidn);
+extern void set_counters();
+extern void new_lcinit_arrayvars();
+extern int getStartFidNum();
+extern int parmToRcvrMask(char *parName);
+extern void set_nfidbuf();
+extern void send_auto_pars();
+extern int getIlFlag();
+extern int getWfgAPaddr(int rfdevice);
+extern void command_wg(int which_wg, int cmd_wg);
+extern void init_ecc();
+extern void init_crb();
+extern void all_grad_reset();
+extern void ecc_handle();
+extern void setRF();
+extern void initHSlines();
+extern int download_master_decc_values();
+extern void gatedecoupler(int statindex, double delaytime);
+extern void pre_fidsequence();
+extern void loadshims();
+extern void initauto1();
+extern void initauto2();
+extern void setvt();
+extern void wait4vt();
+extern void initwshim();
+extern void initautogain();
+extern void interlocktests();
+extern void setMRFilters();
+extern void setMRGains();
+extern void checkpowerlevels(double time);
+extern void donoisecalc();
+extern void init_dqdfrq();
+extern void init_lkrelay();
+extern void inittablevar();
+extern void initparms_img();
+extern void reset_table(Tableinfo *tblinfo);
+extern void test4acquire();
+extern void endPowerCheck();
+extern void check5MhzFoo();
+extern void setDSPgain(int val);
+extern void setRFInfo(int hwchan, int chan);
+extern int getDSPinfo(int factor, int coef, double sw, double maxlbsw);
+extern void getlockmode(char *alock, int *mode);
+extern int setshimflag(char *wshim, int *flag);
+extern void set_acode_size(int sz);
+extern void set_max_acode_size(int sz);
+extern int getExpNum();
+extern int deliverMessageSuid(char *interface, char *message );
 
 extern int bgflag;
 extern int ap_interface;	/* ap bus interface type 1=500style, 2=amt style */ 
@@ -105,7 +154,7 @@ extern int traymax;
 
 codeint lkflt_fast;	/* value to set lock loop filter to when fast */
 codeint lkflt_slow;	/* value to set lock loop filter to when slow */
-static ra_initcnt = 0;  /* If lc has been updated in an ra the 1st fid not
+static int ra_initcnt = 0;  /* If lc has been updated in an ra the 1st fid not
 			 * acquired yet (no data) lc must be reset, after that
 			 * lc need not be reset, hence this count flag */
 static int PSfile;	/* file discriptor for Acode disk file */
@@ -131,6 +180,7 @@ void putcode(codeint word);
 void putval(char *paramname, double paramvalue);
 void updt_interfiddelay(double updttime);
 static void init_interfiddelay();
+void clearapdatatable();
 
 /*-----------------------------------------------------------------------
 |  createPS()
@@ -1127,10 +1177,7 @@ struct _dspline dsp_down_tab[DSP_DOWN_ENTRY]=  {
 { "aplus",  2,0, 2,  8,300000.0},
 };
 
-static int dsp_set(swval,factor,dpchar)
-double swval;
-int factor;
-char dpchar;
+static void dsp_set(double swval, int factor, char dpchar)
 {
    char tmpstr[256];
    struct _dspline *tap;
@@ -1380,8 +1427,7 @@ void initparms()
           }
           else
           {
-             fprintf(stdout,"Invalid value for rfchannel.\n");
-             psg_abort(1);
+             abort_message("Invalid value for rfchannel.\n");
           }
        }
        char nucleiNameStr[MAXSTR], nucleus[MAXSTR], strbuf[MAXSTR];  
@@ -1396,7 +1442,7 @@ void initparms()
                getstrnwarn("tn",nucleus);
                if (strcmp(nucleus,"")==0)
                   strcpy(nucleus,"-");
-               sprintf(strbuf,"%s ",nucleus);
+               sprintf(strbuf,"%.16s ",nucleus);
                strcat(nucleiNameStr,strbuf);
             } 
             else if (i == DECch)
@@ -1404,7 +1450,7 @@ void initparms()
                getstrnwarn("dn",nucleus);
                if (strcmp(nucleus,"")==0)
                   strcpy(nucleus,"-");
-               sprintf(strbuf,"%s ",nucleus);
+               sprintf(strbuf,"%.16s ",nucleus);
                strcat(nucleiNameStr,strbuf);
             } 
             else if (i == DEC2ch) 
@@ -1412,7 +1458,7 @@ void initparms()
                getstrnwarn("dn2",nucleus);
                if (strcmp(nucleus,"")==0)
                   strcpy(nucleus,"-");
-               sprintf(strbuf,"%s ",nucleus);
+               sprintf(strbuf,"%.16s ",nucleus);
                strcat(nucleiNameStr,strbuf);
             } 
             else if (i == DEC3ch) 
@@ -1420,7 +1466,7 @@ void initparms()
                getstrnwarn("dn3",nucleus);
                if (strcmp(nucleus,"")==0)
                   strcpy(nucleus,"-");
-               sprintf(strbuf,"%s ",nucleus);
+               sprintf(strbuf,"%.16s ",nucleus);
                strcat(nucleiNameStr,strbuf);
             }
        }
@@ -2135,9 +2181,7 @@ void getstrnwarn(const char *variable, char buf[])
 |			second argument	to first
 |	returns new value (double)
 +------------------------------------------------------------------*/
-double sign_add(arg1,arg2)
-double arg1;
-double arg2;
+double sign_add(double arg1, double arg2)
 {
     if (arg1 >= 0.0)
 	return(arg1 + arg2);
@@ -2152,12 +2196,12 @@ double arg2;
 void putcode(codeint word)
 {
     if (bgflag)
-	fprintf(stderr,"Code(%p) = %d(dec) or %4x(hex) \n",
-		Codeptr,word,word);
+	fprintf(stderr,"Code = %d(dec) or %4x(hex) \n",
+		word,word);
     *Codeptr++ = word; 		/* Put word into Codes array */
 
     /* test for acodes overflowing malloc acode memory */
-    if ((long)Codeptr >= CodeEnd)  
+    if (Codeptr >= CodeEnd)  
     {    
 	     abort_message("Too many Acodes.");
     }
@@ -2184,7 +2228,7 @@ void putLongCode(unsigned int longWord)
 |	clearapdatatable()/0
 |	zeros the data table 
 +------------------------------------------------------------------*/
-clearapdatatable()
+void clearapdatatable()
 {
     notinhwloop("clearapdatatable");
     putcode(CLEARDATA);
@@ -2204,11 +2248,11 @@ typedef unsigned char BASICSIZE;
 
 int 
 compress(dest,ref,src,num)
-register BASICSIZE *dest, *ref, *src;
-register int num;
+BASICSIZE *dest, *ref, *src;
+int num;
 {
-  register int i,sneak;
-  register BASICSIZE *d,k,zcnt;
+  int i,sneak;
+  BASICSIZE *d,k,zcnt;
   d = dest;
   zcnt = 0;
   sneak = 0;
@@ -2307,11 +2351,11 @@ find_reference(int num)
 
 static int 
 add_reference(num_elements,ref_ptr)
-register int num_elements;
-register unsigned char *ref_ptr;
+int num_elements;
+unsigned char *ref_ptr;
 {
-    register unsigned char *pntr1,*pntr,*tt;
-    register int index,j;
+    unsigned char *pntr1,*pntr,*tt;
+    int index,j;
 /*
     Find empty buffer #
 */
@@ -2495,13 +2539,14 @@ void init_codefile(char *codepath)
 
 void close_codefile()
 {
+    int res __attribute__((unused));
     if (newacq)
     {
        /*
         * We write extra stuff so that when this file is mmapped,
         * we will not read past the end of the file
         */
-       write(PSfile,(char *) preCodes,max_acode + 2 * sizeof(codelong));
+       res = write(PSfile,(char *) preCodes,max_acode + 2 * sizeof(codelong));
     }
     close(PSfile);
 }

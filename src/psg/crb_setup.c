@@ -56,6 +56,8 @@
 #include "acqparms.h"
 #include "group.h"
 #include "macros.h"
+#include "abort.h"
+#include "pvars.h"
 
 /* These AP defines are also in oopc.h, but other stuff there messes us up */
 #ifndef APSELECT
@@ -100,6 +102,7 @@ extern int bgflag;
 extern char gradtype[];
 extern double getval();
 extern float get_decctool_shimscale();
+extern void putcode(short arg);
 
 
 
@@ -116,12 +119,12 @@ static unsigned int *chip_bufs[3] = { chipbuf1, chipbuf2, chipbuf3 };
 
 static  codeint head[] = {APBOUT,
                       0,                             /* Reserve for count-1 */
-                      (APSELECT | CROT+0),  /* Register 0 */
+                      (APSELECT | CROT),  /* Register 0 */
                       (CROTWRITE | 0x00),   /* Reset FIFOs */
                       (CROTWRITE | 0x40)};  /* Enable FIFOs */
 
 
-static codeint tail[] = {(APSELECT | CROT+0),  /* Register 0 */
+static codeint tail[] = {(APSELECT | CROT),  /* Register 0 */
                       (CROTWRITE | 0x47),   /* Interrupt all 3 DSPs */
                       (CROTWRITE | 0x40)};  /* DSPs to normal mode */
 
@@ -137,6 +140,7 @@ static codeint apbcmds[OUTLEN + 1];
 static void obl_matrix(double ang1, double ang2, double ang3, double *matrix);
 
 
+#ifdef XXX
 static void
 print_rotation_matrix(double m[9])
 {
@@ -185,6 +189,7 @@ tms2float(unsigned int x)
 	return (1 + f) * pow(2.0, e);
     }
 }
+#endif
 
 /*
  * Convert a floating point number in native format to TMS32032
@@ -219,31 +224,32 @@ float2tms32(float x)
     return rtn;
 }
 
+#ifdef XXX
 static double gauss_dac(gid)
 char gid; 
 {
     double  G_dac,gradmax;
-    int ix, gamp;
     switch (gid)
     {
-	case 'x': case 'X':  ix = 0;
+	case 'x': case 'X':
                            gradmax = gxmax;
                            break;
-	case 'y': case 'Y':  ix = 1;
+	case 'y': case 'Y':
                            gradmax = gymax;
                            break;
-	case 'z': case 'Z':  ix = 2;
+	case 'z': case 'Z':
                            gradmax = gzmax;
                            break;
 	case 'n': case 'N':  break;
-	default: printf("Illegal gradient configuration."); psg_abort(1);
+	default: abort_message("Illegal gradient configuration.");
     }
 
     G_dac = (double)gradstepsz/gradmax;
     return(G_dac);
 }
+#endif
                 
-rotateHW(ang1,ang2,ang3,matrix)
+void rotateHW(ang1,ang2,ang3,matrix)
 double ang1,ang2,ang3;
 double matrix[9];
 {
@@ -318,8 +324,7 @@ static void obl_matrix(double ang1, double ang2, double ang3, double *matrix)
 }
  
 
-static rotate_unity(matrix)
-double matrix[9];
+static void rotate_unity(double matrix[9])
 {
     /*Define the UNITY transformation matrix*****************/
 
@@ -354,6 +359,7 @@ double matrix[9];
  */
 
 
+#ifdef XXX
 static int
 get_dsp_chip_download_bufsize()
 {
@@ -363,9 +369,10 @@ get_dsp_chip_download_bufsize()
 
     return nsize ;  
 }
+#endif
 
 
-static 
+static void
 make_dsp_chip_download(unsigned int *buffer,
 		       double dir_cosines[3],
 		       double lab_offset,
@@ -420,7 +427,7 @@ make_apbout_from_dspcode(unsigned int *dspcode[], int nwords) /* 3 DSP code list
 
     /* Write to the FIFOs. Words go in bytewise, little-endian */
     for (i=0; i<NCHIPS; i++) {
-	*pc++ = (APSELECT | CROT + regorder[i]);
+	*pc++ = (APSELECT | (CROT + regorder[i]) );
 	for (j=0; j<nwords; j++) {
 	    *pc++ = CROTWRITE | (dspcode[i][j] & 0xff);
 	    *pc++ = CROTWRITE | ((dspcode[i][j] >> 8) & 0xff);
@@ -453,7 +460,6 @@ make_apbout_from_dspcode(unsigned int *dspcode[], int nwords) /* 3 DSP code list
 static void
 send_apbout_string(codeint *apb)
 {
-    int i;
     int len;
     codeint *apend;
 
@@ -525,7 +531,9 @@ calcDelayVals(delaya,delayb,delayc,delays)
 double delaya,delayb,delayc;
 double *delays;
 {
-        double dlyvalx,dlyvaly,dlyvalz; 	/* number of 20MHz/50ns clock periods  */
+        double dlyvalx = 0.0,
+               dlyvaly = 0.0,
+               dlyvalz = 0.0; 	/* number of 20MHz/50ns clock periods  */
 	double maxdelay;
         double *delayvals;
 /*
@@ -554,8 +562,7 @@ double *delays;
 	}
 	else 
 	{
-           text_error("PSG: gradient amplifier group delays can't be calculated.\n");
-           psg_abort(1);
+           abort_message("PSG: gradient amplifier group delays can't be calculated.\n");
         }
 
         delayvals = delays;
@@ -571,15 +578,11 @@ double *delays;
 
 
 
-static genApCmds(matrix,offset1,offset2,offset3,delay1,delay2,delay3)
+static void genApCmds(matrix,offset1,offset2,offset3,delay1,delay2,delay3)
 double matrix[9];
 double offset1,offset2,offset3;
 double delay1,delay2,delay3;
 {
-    int i;
-    int bsize;
-    int wsize;
-
     /*
     bsize = get_dsp_chip_download_bufsize();
     wsize = bsize / sizeof(unsigned int);
@@ -634,8 +637,7 @@ double delay1,delay2,delay3;
     	double matrix[9];
     	double xoffset,yoffset,zoffset;
     	double xdelay,ydelay,zdelay;
-        double *delaysptr;
-        double offsets[3],delays[3];;
+      double offsets[3],delays[3];;
  
         if ((gradtype[0] != 'R') && (gradtype[0] != 'r'))
            return;
@@ -668,7 +670,7 @@ double delay1,delay2,delay3;
  *  this is the init_crb() routine to download a unity matrix to the coordinate rotator board
  */
 
-int init_crb()
+void init_crb()
 {
  	double matrix[9];
 	double init_offset1 = 0.0;

@@ -93,6 +93,7 @@ static void writedebug(FILE *fd, int ntables);
 static int checktable(Tableinfo *tblinfo, codeint tblname, int namechk, int numberchk,
 	int sizechk, int destchk, int indxchk, int writechk);
 static int table_math(int optype, int *value1, int *value2);
+codeint tablertv(codeint tablename);
 
 /***********************************
 *  External Variable Declarations  *
@@ -134,16 +135,13 @@ char	infilename[MAXSTR];
 		divnfactor = 0,
 		i,
 		j,
-		k,
 		index,
-		numeleminloop,
+		numeleminloop = 0,
 		activeopen_flag,
 		tflag = FALSE,
-		repflag = FALSE,
 		equalflag = FALSE,
 		parenthflag = FALSE,
 		bracketflag = FALSE,
-		closeflag = TRUE,
 		divnrtrnflag = FALSE,
 		numtables = last_table,
  		table_value,
@@ -405,7 +403,6 @@ char	infilename[MAXSTR];
                load_element(numeleminloop, repfactor, tnum-1, &elempntr,
 		     loopelem, FALSE);
                bracketflag = FALSE;
-               repflag = FALSE;
             }
           
 /****************************************************
@@ -455,7 +452,6 @@ char	infilename[MAXSTR];
                load_element(repfactor, numeleminloop, tnum-1, &elempntr,
 		     loopelem, TRUE);
                parenthflag = FALSE;
-               repflag = FALSE;
             }
 
 /*********************************************
@@ -703,8 +699,7 @@ static void checkforcomments(FILE *tfile)
 +------------------------------------------------------*/
 void APsetreceiver(codeint tablename)
 {
-   codeint	recphase,
-		tablertv();
+   codeint	recphase __attribute__((unused));
    int		index,
 		i,
 		*table_pntr;
@@ -746,8 +741,7 @@ void APsetreceiver(codeint tablename)
 |                                 Author:  S. Farmer   |
 |                                   Date:  11-8-88     |
 +-----------------------------------------------------*/
-codeint tablertv(tablename)
-codeint	tablename;
+codeint tablertv(codeint tablename)
 {
    int	index;
 
@@ -1011,7 +1005,6 @@ void tabletop(int operationtype, codeint table1name,
 	index2,
 	index,
 	i,
-	*startholdpntr,
    	*elem1pntr,
 	*elem2pntr;
 

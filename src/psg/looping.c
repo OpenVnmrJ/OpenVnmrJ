@@ -31,6 +31,11 @@ extern  codeint pop();
 void push(codeint word);
 extern  double looptimepop();
 void looptimepush(double word);
+extern void assign(int a, int b);
+extern void putcode(short arg);
+extern void incr(int a);
+extern int get_acqvar(codeint index);
+
 /*-------------------------------------------------------------------
 |
 |	loop(count,counter)

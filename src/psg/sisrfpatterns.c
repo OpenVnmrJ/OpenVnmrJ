@@ -164,20 +164,21 @@ codelong  *p_filhdrpos;
 static char pulsepath[MAXPATHL]; /* absolute path name of template file */
 static char paterrmsg[MAXPATHL]; /* for forming messages for text_error */
 
+void insbitl(int srcwrd, int *dstwrd, int startbit, int nbits);
 
 /************************************************************************
 *	RF PATTERN ELEMENTS - mrh
 *************************************************************************/
 
 
-int initshapedpatterns(dummyarg)
+// dummyarg;	 MUST BE 1! will be arraydim when arrayed patterns work
+int initshapedpatterns(int dummyarg)
 /************************************************************************
 * Initshapedpatterns needs to be called once at the beginning of an
 * experiment acquisition.  It initializes the tables used for tracking 
 * patterns used in the acquisition.
 * PATERR RETURN FROM THIS FUNCTION SHOULD ABORT PULSE SEQUENCE GENERATION !!
 *************************************************************************/
-int dummyarg;	/* MUST BE 1! will be arraydim when arrayed patterns work */
 {
  int	mask;
 
@@ -251,7 +252,7 @@ int dummyarg;	/* MUST BE 1! will be arraydim when arrayed patterns work */
  return(OK);
 }
 
-p_endarrayelem()
+void p_endarrayelem()
 /*************************************************************************
 * p_endarrayelem is to be added to the end of each array element so 
 * the array header at the beginning of the pulsesequence can be 
@@ -926,16 +927,13 @@ struct	outpatfile *opfile;
 	return(patternsiz);
 }
 
-insbitl(srcwrd, dstwrd, startbit, nbits)
+void insbitl(int srcwrd, int *dstwrd, int startbit, int nbits)
 /************************************************************************/
 /* Description:								*/
 /* 	insbitl inserts nbits from bit location 0 in srcwrd into 	*/
 /* 	startbit location in dstwrd.					*/
 /************************************************************************/
 #define maxbits  32
-int	srcwrd;
-int	*dstwrd;
-int	startbit, nbits;
 {
 int	msk;
 int	temp;

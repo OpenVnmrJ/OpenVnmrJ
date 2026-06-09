@@ -1755,7 +1755,7 @@ double  width,
 |             gensim2shaped_pulse()/12          |
 |                                               |
 +----------------------------------------------*/
-gensim2shaped_pulse(name1, name2, width1, width2, phase1,
+void gensim2shaped_pulse(name1, name2, width1, width2, phase1,
                    phase2, rx1, rx2, g1, g2, rfdevice1,
                    rfdevice2)
 char    *name1,
@@ -2776,7 +2776,7 @@ void gensim3shaped_pulse(char *name1, char *name2, char *name3,
 |	       gen2spinlock()/11		|
 |						|
 +----------------------------------------------*/
-gen2spinlock(name1, name2, pw90_1, pw90_2, dres_1, dres_2, phs_1,
+void gen2spinlock(name1, name2, pw90_1, pw90_2, dres_1, dres_2, phs_1,
 		phs_2, ncycles, rfdevice1, rfdevice2)
 char	*name1,
 	*name2;
@@ -3435,7 +3435,7 @@ void S_shapedgradient(char *name, double width, double amp,
    }
 }
 
-shaped_2D_gradient(name,width,amp,which,loops,wait_4_me,tag)
+void shaped_2D_gradient(name,width,amp,which,loops,wait_4_me,tag)
 /* only amp variation with 2d implemented! */
 char *name,which;
 double width,amp;
@@ -3488,7 +3488,7 @@ int wait_4_me,loops,tag;
       G_Delay(DELAY_TIME,width,0);
 }
 
-shaped_2D_Vgradient(name,width,vx,vconst,vmult,which,loops,wait_4_me,tag)
+void shaped_2D_Vgradient(name,width,vx,vconst,vmult,which,loops,wait_4_me,tag)
 /* only amp variation with 2d implemented! */
 char *name,which;
 double width;
@@ -3550,7 +3550,7 @@ int wait_4_me,loops,tag;
 /* the first has point & Vwrite, the second has pointgo only	*/
 /****************************************************************/
 /* double */
-prepWFGforPE(name,width,amp_const,amp_incr,amp_vmult,which,vloops,
+void prepWFGforPE(name,width,amp_const,amp_incr,amp_vmult,which,vloops,
 		wait_4_me,tag)
 /* Allows amplitude and loops to be realtime variables */
 char *name,which;
@@ -3565,7 +3565,7 @@ int wait_4_me,tag;
    validate_imaging_config("Shapedvgradient");
 
    if (width <  MINWGTIME) 
-     return(0.0);
+     return;
    if ((which == 'n') || (which == 'N'))
      return;
    if (no_grad_wg(which))
@@ -3713,7 +3713,7 @@ int wait_4_me,tag;
 /* SISCO WG Element						*/
 /****************************************************************/
 /* double */
-shaped_V_gradient(name,width,amp_const,amp_incr,amp_vmult,which,vloops,
+void shaped_V_gradient(name,width,amp_const,amp_incr,amp_vmult,which,vloops,
 		wait_4_me,tag)
 /* Allows amplitude and loops to be realtime variables */
 char *name,which;
@@ -3728,7 +3728,7 @@ int wait_4_me,tag;
    validate_imaging_config("Shapedvgradient");
 
    if (width <  MINWGTIME) 
-     return(0.0);
+     return;
    if ((which == 'n') || (which == 'N'))
      return;
    if (no_grad_wg(which))
@@ -3808,7 +3808,7 @@ int wait_4_me,tag;
 /****************************************************************/
 
 /* double */
-prepforshapedINCgradient(which, pattern, width, a0, a1, a2, a3,
+void prepforshapedINCgradient(which, pattern, width, a0, a1, a2, a3,
 			   x1, x2, x3, loops, wait)
 char which;
 char *pattern;
@@ -3828,7 +3828,7 @@ int wait;
    validate_imaging_config("Shapedincgradient");
 
    if (width <  MINWGTIME){ 
-       return(0.0);
+       return;
    }
    if ((which == 'n') || (which == 'N'))
      return;
@@ -3906,7 +3906,7 @@ int wait;
 /****************************************************************/
 
 /* double */
-doshapedINCgradient(which, pattern, width, a0, a1, a2, a3,
+void doshapedINCgradient(which, pattern, width, a0, a1, a2, a3,
 			   x1, x2, x3, loops, wait)
 char which;
 char *pattern;
@@ -3926,7 +3926,7 @@ int wait;
    validate_imaging_config("Shapedincgradient");
 
    if (width <  MINWGTIME){ 
-       return(0.0);
+       return;
    }
    if ((which == 'n') || (which == 'N'))
      return;
@@ -4006,7 +4006,7 @@ int wait;
 /****************************************************************/
 
 /* double */
-shaped_INC_gradient(which, pattern, width, a0, a1, a2, a3,
+void shaped_INC_gradient(which, pattern, width, a0, a1, a2, a3,
 			   x1, x2, x3, loops, wait)
 char which;
 char *pattern;
@@ -4026,7 +4026,7 @@ int wait;
    validate_imaging_config("Shapedincgradient");
 
    if (width <  MINWGTIME){ 
-       return(0.0);
+       return;
    }
    if ((which == 'n') || (which == 'N'))
      return;

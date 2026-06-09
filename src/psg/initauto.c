@@ -30,7 +30,7 @@ extern char interLock[];
 extern int  whenshim;
 #endif
 
-extern double getGain();
+extern double getGain(int ircvr);
 extern void init_auto_pars(int var1,int var2,int var3,
          int var4,int var5,int var6,int var7,int var8);
 extern int getFirstActiveRcvr();

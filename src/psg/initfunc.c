@@ -144,9 +144,7 @@ void initdecmodfreq(double freq, int chan, int mode)
 |   --------   ------     -------
 |   6/22/89    Greg B.	   1. added mode so that ap words can be calc once
 +------------------------------------------------------------------*/
-void rfbandselect(band,mode)
-char band;
-int mode;
+void rfbandselect(char band, int mode)
 {
     double rf;
     int             error;
@@ -239,9 +237,8 @@ static void report_convert_lockfreq_error()
 |   05/1997    Robert L.   2. reworked setlkfrqflt to use SETLOCKFREQ A-code
 +------------------------------------------------------------------*/
 #define	TWO_24	16777216.0	/* 2 to_the_power 24 */
-void setlkfrqflt(rate,mode)
-double rate;
-int mode;     /* mode instructs the program to perform computations or output A-codes */
+// mode instructs the program to perform computations or output A-codes
+void setlkfrqflt(double rate, int mode)
 {
 int	i,num_apwords;
 double	lockfreq,lkof;
@@ -394,8 +391,7 @@ void decouplerattn(int mode)
    }
 }
 
-int
-get_filter_max_bandwidth()
+int get_filter_max_bandwidth()
 {
     char tbuf[10];
     int fbmax;
@@ -433,8 +429,7 @@ get_filter_max_bandwidth()
 #define	RCVR_ADDR	0x0b
 #define RVCR_GAIN	0x42
 #define	RCVR_FILTERS	0x40
-void dofiltercontrol(mode)
-int mode;
+void dofiltercontrol(int mode)
 {
 int	apfilter;
 int	apb_byte;
@@ -512,8 +507,7 @@ int	num_apbytes;
 |   --------   ------     -------
 |   6/22/89    Greg B.	   1. added mode so that ap words can be calc once
 +------------------------------------------------------------------*/
-void dowlfiltercontrol(mode)
-int mode;
+void dowlfiltercontrol(int mode)
 {
     double bw;
     int apfilter;

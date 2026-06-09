@@ -41,7 +41,7 @@ typedef struct {Functionp dispatch; char *objname; } *Object;
 
 extern codeint    *Codes; 	/* beginning of Acode array */
 extern int	   Codesize;	/* size of the malloc space for codes */
-extern int	   CodeEnd;	/* End Address of the malloc space for codes */
+extern codeint	   *CodeEnd;	/* End Address of the malloc space for codes */
 extern codeint    *Codeptr; 	/* pointer into the Acode array */
 extern codeint    *Aacode;	/* pointer to start address of Codes */
 extern codeint    *lc_stadr;  /* Low Core Start Address */

@@ -16,6 +16,7 @@
 #include "lc.h"
 #include "acodes.h"
 #include "lc_index.h"
+#include "cps.h"
 
 
 #define         AUDIO_CHAN_SELECT_MASK  0x000f
@@ -38,6 +39,7 @@
 
 unsigned int initial_adc(int chan);
 unsigned int initial_dtm(codeint precision);
+void init_acqvar(codeint index, int val);
 
 autodata    *Aauto;     /* pointer to automation structure in Acode set */
 Acqparams   *Alc;	/* pointer to low core structure in Acode set */
@@ -117,6 +119,11 @@ extern int newacq;
 extern int acqiflag;
 extern int ra_flag;
 extern char il[MAXSTR];	/* interleaved acquisition parameter, 'y','n' */
+extern void putcode(short arg);
+extern void putLongCode(unsigned int longWord);
+extern int getIlFlag();
+extern int parmToRcvrMask(char *parName);
+extern int getmaxval(const char *parname );
 
 
 #define LOCKPOWER_I NNOISE
@@ -230,8 +237,8 @@ codeint *init_acodes(Acqparams *Codes)
     rtinit_count = 0;
 
     if (bgflag)
-    {	fprintf(stderr,"Code address:  0x%lx \n",Codes);
-     	fprintf(stderr,"Aacode address:  0x%lx \n",Aacode);
+    {	fprintf(stderr,"Code address:  %p \n",Codes);
+     	fprintf(stderr,"Aacode address:  %p \n",Aacode);
     }
     if (newacq)
        make_rt_table();
@@ -256,7 +263,7 @@ void set_lacqvar(codeint index, int val)
    if (bgflag)
    {
       fprintf(stderr,"index= %d val= %d \n",index,val);
-      fprintf(stderr,"val = %d at address:  0x%lx \n",*ptr2, ptr2);
+      fprintf(stderr,"val = %d at address:  %p \n",*ptr2, ptr2);
    }
 }
 
@@ -276,14 +283,12 @@ void set_acqvar(codeint index, int val)
    if (bgflag)
    {
       fprintf(stderr,"index= %d val= %d \n",index,val);
-      fprintf(stderr,"val = %d at address:  0x%lx \n",*ptr, ptr);
+      fprintf(stderr,"val = %d at address:  %p \n",*ptr, ptr);
    }
 }
 
 void init_acqvar(codeint index, int val)
 {
-   codeint *ptr;
-
    if (newacq)
    {
       putcode(RTINIT);
@@ -295,8 +300,6 @@ void init_acqvar(codeint index, int val)
 
 void init_acqvartab(codeint index, int val)
 {
-   codeint *ptr;
-
    if (newacq)
    {
       rt_tab[index+TABOFFSET] = val;
@@ -678,6 +681,7 @@ unsigned int initial_dtm(codeint precision)
    return(dtmcontrol);
 }
 
+#ifdef DOIPA
 void write_rtvar_acqi_file()
 {
 FILE	*fopen();
@@ -730,6 +734,7 @@ FILE	*rtacqifile = 0;
 
    if (rtacqifile) fclose(rtacqifile);
 }
+#endif
 
 void write_rtvar(FILE *fileid, char *rtname, int rtindex)
 {

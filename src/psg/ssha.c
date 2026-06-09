@@ -30,7 +30,7 @@
 #define SSHA_ON		1
 
 extern int	newacq;
-extern int putcode();
+extern int putcode(short arg);
 
 /*  Configured status is based on hdwshim.  Currently it is on or off,
     but it could get more values if the hdwshim parameter is asked to
@@ -116,7 +116,7 @@ void initSSHAshimmethod()
 int translateSSHAmethod(char hdwshimmethod[] )
 {
 	double dshimset;
-	int rval, found, i, coarseflag;
+	int rval, i, coarseflag;
 	char tmpSSHAmethod[MAXSTR], hdwshimmethod_name[MAXSTR], errstr[MAXSTR];
 
 	strcpy( hdwshimmethod_name, "hdwshimlist" );
@@ -135,7 +135,6 @@ int translateSSHAmethod(char hdwshimmethod[] )
 	  }
 	}
 	rval = 0;
-	found = 0;
 	i = 0;
 	strcpy( tmpSSHAmethod, hdwshimmethod );
 	strcpy( errstr, "" );
@@ -185,7 +184,11 @@ int translateSSHAmethod(char hdwshimmethod[] )
 	  else
 	  {
 	    if ((tmpSSHAmethod[i] != ',') && (tmpSSHAmethod[i] != ' '))
-	      sprintf(errstr,"%s%c",errstr,tmpSSHAmethod[i]);
+       {
+         int offset;
+         offset = strlen(errstr);
+	      sprintf(errstr + offset,"%c",tmpSSHAmethod[i]);
+       }
 	    i++;
 	    continue;
 	  }

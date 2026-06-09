@@ -66,7 +66,17 @@ extern char fileRFpattern[];    /* absolute path name of RF load file */
 extern int freq_global_table;
 extern int gen_apbcout();
 extern char *ObjError(int wcode);
+extern int createglobaltable(int num_entries, int entry_size,
+           char *data_entry);
+extern int rfchan_getampband(int device);
+extern int SetAPBit(Object obj, ...);
 
+static int
+Create_mem_offset_list(double *list, int nvals, int device, codeint *pbuf);
+static int
+Create_mem_delay_list(double *list, int nvals, codeint *pbuf);
+static int
+Create_mem_freq_list(double *list, int nvals, int device, codeint *outputbuf);
 /************************
 *  pattern globals	*
 *************************/
@@ -114,13 +124,12 @@ int get_freqlist_table()
 }
 
 
-init_global_list(globaltable)
+int init_global_list(int globaltable)
 /************************************************************************
 * init_global_list needs to be called once at the beginning of an
 * experiment acquisition.  It initializes the freq tables used  
 * in the acquisition.
 *************************************************************************/
-int globaltable;	
 {
  int	i;
  int	mask;
@@ -210,7 +219,7 @@ int globaltable;
  return(OK);
 }
 
-close_global_list()
+int close_global_list()
 /************************************************************************
 * Writes the size of the freq list file in the header
 * Closes the freq list files in the experiment library.
@@ -346,9 +355,7 @@ codeint	vindex;
 /*			     Codeoffset. It Now calculated when needed.	*/
 /*									*/
 /*----------------------------------------------------------------------*/
-void putgtab(table,word)
-int table;			/* currently not used */
-codeint word;
+void putgtab(int table, codeint word)
 {
     *GTABptr[table]++ = word; 		/* Put word into Codes array */
 
@@ -470,13 +477,13 @@ int	list_no;
 	   /*-----------------------------------------------------------*/
 	   /* convert old acode list to table list for TAPBCOUT		*/
 	   /*-----------------------------------------------------------*/
-	   codeint *newacqbuf,*nacqptr,*addr,*nend;
+	   codeint *newacqbuf,*nacqptr,*addr;
 	   int len,nacodes;
 	   int newacodes = 0;
 
  	   nacqptr = newacqbuf = (codeint *)malloc(nvals*MAXFREQACODE*2);
 	   addr = GtabStart;
-	   nend = newacqbuf + nvals*MAXFREQACODE;
+	   // nend = newacqbuf + nvals*MAXFREQACODE;
 	   for (i=0; i<nvals; i++) 
 	   {
 		addr++;		/* skip acode */
@@ -528,8 +535,8 @@ int	list_no;
  }
 }
 
-int
-Create_mem_offset_list(list, nvals, device, pbuf)
+static int
+Create_mem_offset_list(double *list, int nvals, int device, codeint *pbuf)
   /************************************************************************
    * Description:
    *	Element will generate a list of frequency setting Acodes.
@@ -544,10 +551,6 @@ Create_mem_offset_list(list, nvals, device, pbuf)
    *	Number of Acodes in each list element.
    *************************************************************************/
 
-  double *list;
-  int	nvals;
-  int	device;
-  codeint *pbuf;
 {
     int	acodes_forelem;
     int	i;
@@ -679,13 +682,13 @@ int	list_no;
 	   /*-----------------------------------------------------------*/
 	   /* convert old acode list to table list for DELAYS		*/
 	   /*-----------------------------------------------------------*/
-	   codeint *newacqbuf,*nacqptr,*addr,*nend,delayacode;
+	   codeint *newacqbuf,*nacqptr,*addr,delayacode;
 	   int len,nacodes;
 	   int newacodes = 0;
 
  	   nacqptr = newacqbuf = (codeint *)malloc(nvals*MAXDELAYACODE*2);
 	   addr = GtabStart;
-	   nend = newacqbuf + nvals*MAXDELAYACODE;
+	   // nend = newacqbuf + nvals*MAXDELAYACODE;
 	   for (i=0; i<nvals; i++) 
 	   {
 		delayacode = *addr++;		/* skip acode */
@@ -750,8 +753,8 @@ int	list_no;
  }
 }
 
-int
-Create_mem_delay_list(list, nvals, pbuf)
+static int
+Create_mem_delay_list(double *list, int nvals, codeint *pbuf)
   /************************************************************************
    * Description:
    *	Element will generate a list of frequency setting Acodes.
@@ -765,9 +768,6 @@ Create_mem_delay_list(list, nvals, pbuf)
    *	Number of Acodes in each list element.
    *************************************************************************/
 
-  double *list;
-  int	nvals;
-  codeint *pbuf;
 {
     int	acodes_forelem;
     int	i;
@@ -892,8 +892,8 @@ int	list_no;
  }
 }
 
-int
-Create_mem_freq_list(list, nvals, device, outputbuf)
+static int
+Create_mem_freq_list(double *list, int nvals, int device, codeint *outputbuf)
   /************************************************************************
    * Description:
    *	Element will generate a list of frequency setting Acodes.
@@ -908,10 +908,6 @@ Create_mem_freq_list(list, nvals, device, outputbuf)
    *	Number of Acodes in each list element.
    *************************************************************************/
 
-  double *list;
-  int	nvals;
-  int	device;
-  codeint *outputbuf;
 {
     int	acodes_forelem;
     int	i;
@@ -1005,13 +1001,13 @@ Create_mem_freq_list(list, nvals, device, outputbuf)
     }
     if (newacq){
 	/* Convert acode list to table list for TAPBCOUT */
-	codeint *newacqbuf, *nacqptr, *addr, *nend;
+	codeint *newacqbuf, *nacqptr, *addr;
 	int len, nacodes;
 	int newacodes = 0;
 
 	nacqptr = newacqbuf = (codeint *)malloc(nvals*MAXFREQACODE*2);
 	addr = GtabStart;
-	nend = newacqbuf + nvals*MAXFREQACODE;
+	// nend = newacqbuf + nvals*MAXFREQACODE;
 	for (i=0; i<nvals; i++){
 	    addr++;		/* skip acode */
 	    len = *addr++;

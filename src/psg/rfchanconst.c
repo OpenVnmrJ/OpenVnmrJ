@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "chanstruct.h"
 #include "oopc.h"
 #include "rfconst.h"
@@ -132,9 +133,7 @@ char	*frqoffsetname;
    RFInfo[chan].rftofname = frqoffsetname;
 }
 
-void setRFInfo(hwchan,chan)
-int hwchan;
-int chan;
+void setRFInfo(int hwchan, int chan)
 {
    switch (hwchan)
    {
@@ -158,8 +157,7 @@ int chan;
    }
 }
 
-char *getoffsetname(chan)
-int chan;
+char *getoffsetname(int chan)
 {
    return(RFInfo[chan].rftofname);
 }
@@ -167,21 +165,7 @@ int chan;
 #define FREQ 1
 #define NUC 2
 
-char *getfreqname(chan)
-{
-   char *getname();
-   return (getname(chan,FREQ));
-}
-
-char *getnucname(chan)
-{
-   char *getname();
-   return (getname(chan,NUC));
-}
-
-char *getname(chan,nametype)
-int chan;
-int nametype;
+char *getname(int chan, int nametype)
 {
    char *ptr;
 
@@ -266,4 +250,14 @@ int nametype;
    }
 
    return(ptr);
+}
+
+char *getfreqname(int chan)
+{
+   return (getname(chan,FREQ));
+}
+
+char *getnucname(int chan)
+{
+   return (getname(chan,NUC));
 }

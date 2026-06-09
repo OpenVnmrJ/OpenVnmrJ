@@ -15,6 +15,7 @@
 #include "chanstruct.h"
 #include "group.h"
 #include "apdelay.h"
+#include "abort.h"
 
 #ifdef RFCHANNELS
 #include "macros.h"
@@ -49,10 +50,31 @@ extern int newacq;
 extern int acqiflag;
 extern int ap_interface;
 extern int bgflag;
+extern int SetRFChanAttr(Object obj, ...);
+extern char *ObjError(int wcode);
+extern void initdecmodfreq(double freq, int chan, int mode);
+extern void pulseampfilter(int mode);
+extern void dowlfiltercontrol(int mode);
+extern void dofiltercontrol(int mode);
+extern void decouplerattn(int mode);
+extern void setlkfrqflt(double rate, int mode);
+extern void set_observech(int channel);
+extern void rfbandselect(char band, int mode);
+extern void ifzero(codeint rtvar);
+extern void endif(codeint rtvar);
+extern int SetAPAttr(Object attnobj, ...);
+extern int getGainBits(int ircvr);
+extern void updt_interfiddelay(double updttime);
+extern int set_gate_mode(int rfchan);
+extern int SetAPBit(Object obj, ...);
+extern void set_preamp_mask();
+
 
 extern Object RF_Rout,RF_Opts,RF_Opts2;
 
-initialRF()
+void setPICreg();
+
+void initialRF()
 {
 int rfchan;
    for (rfchan=1; rfchan <= NUMch; rfchan++)
@@ -89,12 +111,11 @@ int rfchan;
       rfbandselect(rfband[0], INIT_APVAL); /* select proper preamp */
 }
 
-setRF()
+void setRF()
 {
 codeint		*apbcntadr;
 codeint		 apbcount;
 int		 rfchan;
-int		 gmode;
 
    if ((newacq) ) ifzero(initflagrt);
       putcode(LKFILTER);
@@ -131,7 +152,7 @@ int		 gmode;
    *apbcntadr = apbcount;
 
    if (bgflag)
-      fprintf(stderr," apbcount = %d, cntadr = %lx \n",apbcount,apbcntadr);
+      fprintf(stderr," apbcount = %d, cntadr = %p \n",apbcount,apbcntadr);
 
 /*  Since the lock frequency is set with a separate A-code, rather
     than in connection with the massive APBOUT instruction above,
@@ -230,7 +251,7 @@ int		 gmode;
       updt_interfiddelay(1.0*INOVA_STD_APBUS_DELAY);
       SetAPAttr(RCVR_homo, SET_VALUE,NULL);	/* generate APBOUT */
       updt_interfiddelay(1.0*INOVA_STD_APBUS_DELAY);
-/*      SetAPBit (RF_Amp_AP, SET_VALUE,NULL);	/* generate APBOUT */
+//      SetAPBit (RF_Amp_AP, SET_VALUE,NULL);	/* generate APBOUT */
 
       /* set up 4t channel magleg PIC register values base on 0xb49 register value */
       setPICreg();
@@ -256,10 +277,9 @@ int		 gmode;
 *	
 *   GMB   8/16/02
 */
-setPICreg()
+void setPICreg()
 {
     int             error;
-    int             result;
     Msg_Set_Param   param;
     Msg_Set_Result  obj_result;
     int mlregvalue, hilo, mixer,sel0, notHilo,sel0Cmd,mixerCmd;
@@ -272,10 +292,8 @@ setPICreg()
     param.setwhat = GET_VALUE;
     error = Send(RF_PICrout, MSG_GET_APBIT_MASK_pr, &param, &obj_result);
     if (error < 0)
-    {  char    msge[128];
-
-       sprintf(msge, "%s : %s\n", RF_MLrout->objname, ObjError(error));
-           text_error(msge);
+    {
+       text_error("%s : %s\n", RF_MLrout->objname, ObjError(error));
     }
     tmpregval = (int) (obj_result.reqvalue);
     if (bgflag)
@@ -284,10 +302,8 @@ setPICreg()
     param.setwhat = GET_VALUE;
     error = Send(RF_MLrout, MSG_GET_APBIT_MASK_pr, &param, &obj_result);
     if (error < 0)
-    {  char    msge[128];
-
-       sprintf(msge, "%s : %s\n", RF_MLrout->objname, ObjError(error));
-           text_error(msge);
+    {
+       text_error("%s : %s\n", RF_MLrout->objname, ObjError(error));
     }
     mlregvalue = (int) (obj_result.reqvalue);
     if (bgflag)
@@ -318,19 +334,16 @@ setPICreg()
     param.setwhat = GET_VALUE;
     error = Send(RF_PICrout, MSG_GET_APBIT_MASK_pr, &param, &obj_result);
     if (error < 0)
-    {  char    msge[128];
-
-       sprintf(msge, "%s : %s\n", RF_MLrout->objname, ObjError(error));
-           text_error(msge);
+    {
+       text_error("%s : %s\n", RF_MLrout->objname, ObjError(error));
     }
     tmpregval = (int) (obj_result.reqvalue);
     if (bgflag)
        fprintf(stderr,"setPICreg(): RF_PICrout - new val: 0x%x\n",tmpregval);
 }
 
-mapRF(index)
+int mapRF(int index)
 {
-   int rfchan;
    int index2;
 
    index2 = index;

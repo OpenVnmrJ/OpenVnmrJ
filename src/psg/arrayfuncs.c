@@ -74,6 +74,19 @@ extern int A_getreal(int tree, const char *name, double **valaddr, int index);
 extern int A_getstring(int tree, const char *name, char **straddr, int index);
 extern void check_for_abort();
 extern void set_lacqvar(codeint index, int val);
+extern void createPS();
+extern void first_done();
+extern int SetRFChanAttr(Object obj, ...);
+extern void initdecmodfreq(double freq, int chan, int mode);
+extern void decouplerattn(int mode);
+extern void getlockmode(char *alock, int *mode);
+extern int setshimflag(char *wshim, int *flag);
+extern void set_acqvar(codeint index, int val);
+extern void set_lockpower(codeint val );
+extern void set_lockgain(codeint val );
+extern void set_lockphase(codeint val );
+extern void set_recgain(codeint val );
+
 
 /*-----------------------------------------------------------------------
 |  structure loopelemt:
@@ -570,7 +583,6 @@ void arrayPS(int index, int numarrays)
    int             ret;
    int             gindx;
    double         *temptr;
-   char            mess[MAXSTR];
 
    name = lpel[index]->lpvar[0];
    nvals = lpel[index]->numvals;
@@ -853,13 +865,13 @@ double 		value;
   initdecmodfreq(value,2,INIT_APVAL);	/* set decoupler modulation freq */
    return (0);
 }
-static int
-func4dmf2(value)
-double 		value;
-{
-  initdecmodfreq(value,2,INIT_APVAL);	/* set decoupler modulation freq */
-   return (0);
-}
+// static int
+// func4dmf2(value)
+// double 		value;
+// {
+//   initdecmodfreq(value,2,INIT_APVAL);	/* set decoupler modulation freq */
+//    return (0);
+// }
 static int
 func4dmf3(value)
 double 		value;
@@ -1236,7 +1248,7 @@ int elemvalues(int elem)
    }
 
    name = lpel[elem - 1]->lpvar[0];
-   if (ret = P_getVarInfo(CURRENT, name, &varinfo))
+   if ( (ret = P_getVarInfo(CURRENT, name, &varinfo)) )
    {
       if (bgflag)
 	      P_err(ret, name, ": ");
@@ -1252,9 +1264,7 @@ int elemvalues(int elem)
 |
 |                       Author Greg Brissey   6/5/87
 +------------------------------------------------------------------------*/
-elemindex(fid, elem)
-int             fid;
-int             elem;
+int elemindex(int fid, int elem)
 {
    int             i,
                    nvalues,
