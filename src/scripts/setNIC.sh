@@ -159,7 +159,7 @@ addToNetplan() {
     ${OVJ_NIC}:
       addresses:
       - $OVJ_IP/24
-      renderer: networkd
+      renderer: NetworkManager
 EOF
    if [[ -f /sys/class/net/${OVJ_NIC}/address ]]; then
       hwaddr=$(awk '{ print tolower($0) }' < /sys/class/net/${OVJ_NIC}/address)
@@ -187,6 +187,29 @@ EOF
       echo "   hwaddress ${hwaddr}" >> ${file}
    fi
    echo "# OpenVnmrJ End" >> ${file}
+}
+
+addNMFile() {
+   file=/etc/sysconfig/network-scripts/ifcfg-${OVJ_NIC}
+   if [[ -e $file ]]; then
+      rm -f $file
+   fi
+   nmcli con delete Spectrometer &> /dev/null
+   mac=""
+   if [[ -f /sys/class/net/${OVJ_NIC}/address ]]; then
+      hwaddr=$(awk '{ print toupper($0) }' < /sys/class/net/${OVJ_NIC}/address)
+      mac="ether.mac-address ${hwaddr}"
+   fi
+   fw=""
+   if [[ -x /usr/bin/firewall-cmd ]] ; then
+      fw="con.zone trusted"
+   fi
+   nmcli con add type ethernet con-name Spectrometer ifname ${OVJ_NIC} \
+	   ip4 ${OVJ_IP}/24 ipv4.method manual ipv6.method ignore  \
+	   ipv4.never-default true ${fw} con.autoconnect-priority -999 \
+	   ${mac} ipv4.ignore-auto-dns true \
+	   ipv4.ignore-auto-routes true > /dev/null
+   nmcli con up Spectrometer > /dev/null
 }
 
 addIfcfgFile() {
@@ -766,11 +789,17 @@ addTrusted() {
          elif [[ "$line" != *"trusted" ]] ; then
             sed -i s/"$line"/"ZONE=trusted"/ $file
          fi
+      elif [[ -d /etc/NetworkManager/system-connections ]]; then
+	 fw=$(nmcli -g connection.zone con show Spectrometer)
+	 if [[ ${fw} != "trusted" ]]; then
+	    fw="con.zone trusted"
+	    nmcli con modify Spectrometer ${fw}
+	 fi
       else
-         zone=$(/usr/bin/firewall-cmd --get-zone-of-interface=${OVJ_NIC})
-         if [[ $zone -ne "trusted" ]] ; then
-            /usr/bin/firewall-cmd --permanent --zone=trusted --add-interface=${OVJ_NIC}
-         fi
+            zone=$(/usr/bin/firewall-cmd --get-zone-of-interface=${OVJ_NIC})
+            if [[ $zone != "trusted" ]] ; then
+               /usr/bin/firewall-cmd --permanent --zone=trusted --add-interface=${OVJ_NIC}
+            fi
       fi
    else
       file=/etc/sysconfig/iptables
@@ -802,9 +831,14 @@ checkTrusted() {
             echo "ZONE not set to "trusted" in $file"
             ret=1
          fi
+      elif [[ -d /etc/NetworkManager/system-connections ]]; then
+	 zone=$(nmcli -g connection.zone con show Spectrometer)
+         if [[ $zone != "trusted" ]] ; then
+            echo "ZONE not set to "trusted" according to firewall-cmd"
+	 fi
       else
          zone=$(/usr/bin/firewall-cmd --get-zone-of-interface=${OVJ_NIC})
-         if [[ $zone -ne "trusted" ]] ; then
+         if [[ $zone != "trusted" ]] ; then
             echo "ZONE not set to "trusted" according to firewall-cmd"
             ret=1
          fi
@@ -1071,12 +1105,14 @@ if [[ ${OVJ_VERIFY} -eq 0 ]] ; then
    if [[ $? -ne 0 ]] ; then
       exit 1
    fi
-   if [[ -d /etc/sysconfig ]]; then
+   if [[ -d /etc/netplan ]];  then
+      addToNetplan
+   elif [[ -d /etc/NetworkManager/system-connections ]]; then
+      addNMFile
+   elif [[ -d /etc/sysconfig ]]; then
       addIfcfgFile
    elif [[ -f /etc/network/interfaces ]];  then
       addToInterfaces
-   elif [[ -d /etc/netplan ]];  then
-      addToNetplan
    fi
    if [[ -e ${vnmrsystem}/adm/log/CONSOLE ]] ; then
       cons=$(cat ${vnmrsystem}/adm/log/CONSOLE)

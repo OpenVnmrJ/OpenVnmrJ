@@ -88,8 +88,13 @@ update_user_group() {
              /usr/sbin/useradd -d$nmr_home/$nmr_adm -s/bin/bash -g$nmr_group $nmr_adm 2> /dev/null
              logmsg "chmod 755 $nmr_home/$nmr_adm"
              chmod 755 "$nmr_home/$nmr_adm"
-             logmsg "/usr/bin/passwd -f -u $nmr_adm"
-             /usr/bin/passwd -f -u $nmr_adm >> $logfile 2>&1
+             if [ $distmajor -ge 10 ] ; then
+                logmsg "/usr/bin/passwd -d $nmr_adm"
+                /usr/bin/passwd -d $nmr_adm >> $logfile 2>&1
+	     else
+                logmsg "/usr/bin/passwd -f -u $nmr_adm"
+                /usr/bin/passwd -f -u $nmr_adm >> $logfile 2>&1
+	     fi
           else
              # --home-create == -m, --home == -d, --shell == -s, --gid == -g
              # must give the account a temp password 'abcd1234' to get the account active 
@@ -487,18 +492,25 @@ echo "NMR Destination directory= $dest_dir"
 echo "NMR host='$(/bin/hostname)' domain='$domainname'"
 
 source_dir=$(dirname "$src_code_dir")
-if [ x$lflvr != "xdebian" ]
-then
-   (su $nmr_adm -fc "ls $source_dir > /dev/null 2>&1 ")
+nmr_installer=$(stat -c %U $src_code_dir)
+
+if [[ $nmr_adm != $nmr_installer ]]; then
+   chmod -R 777 $source_dir
+   chmod 755 /home/${nmr_installer}
 else
-   (sudo -u $nmr_adm ls $source_dir > /dev/null 2>&1)
-fi
-if [ $? -ne 0 ]
-then
-   echo ""
-   echo "$nmr_adm does not have permission to access $source_dir"
-   echo "Updating permissions with: chmod 775 $(dirname $source_dir)"
-   chmod 775 $(dirname $source_dir)
+   if [ x$lflvr != "xdebian" ]
+   then
+      (su $nmr_adm -fc "ls $source_dir > /dev/null 2>&1 ")
+   else
+      (sudo -u $nmr_adm ls $source_dir > /dev/null 2>&1)
+   fi
+   if [ $? -ne 0 ]
+   then
+      echo ""
+      echo "$nmr_adm does not have permission to access $source_dir"
+      echo "Updating permissions with: chmod 775 $(dirname $source_dir)"
+      chmod 775 $(dirname $source_dir)
+   fi
 fi
 acq_pid=-1
  

@@ -240,7 +240,7 @@ setWallPaper() {
 setDeskTop() {
    cp "$vnmrsystem"/user_templates/$1 Desktop/.
    if [[ $as_root = "y" ]]; then
-      chown "$name_add":"$nmr_group" $1
+      chown "$name_add":"$nmr_group" Desktop/$1
    fi
    if [[ -d ./.local/share/applications ]]; then
       cp "$vnmrsystem"/user_templates/$1 .local/share/applications/.

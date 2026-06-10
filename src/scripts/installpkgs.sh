@@ -58,9 +58,14 @@ EOF
 }
 
 setDistMajor() {
-   distmajor=16
-   if [[ -f /etc/lsb-release ]]; then
-      . /etc/lsb-release
+   distmajor=18
+#  For Ubuntu variants such as Mint
+   file="/etc/upstream-release/lsb-release"
+   if [[ ! -f $file ]]; then
+      file="/etc/lsb-release"
+   fi
+   if [[ -f $file ]]; then
+      . $file
       distmajor=${DISTRIB_RELEASE:0:2}
    elif [[ -f /etc/os-release ]]; then
       . /etc/os-release
@@ -133,11 +138,32 @@ do
   if [[ "x$arg" = "xb12" ]]; then
     b12Acq=1
   fi
+  if [[ "x$arg" = "x-vv" ]]; then
+    set -x
+  fi
 done
 
 if [[ $ddrAcq -eq 0 ]] && [[ $miAcq -eq 0 ]] && [[ $b12Acq -eq 0 ]]
 then
-   ddrAcq=1
+   dir=$(realpath $0 | grep -w code)
+   if [[ $? = 0 ]]; then
+      dir=$(dirname $dir)
+      if [[ -f $dir/rht/vnmrs.opt ]]; then
+         ddrAcq=1
+      else
+         miAcq=1
+      fi
+   else
+      if [[ -d /vnmr/psg ]]; then
+         if [[ -f /vnmr/psg/psgmain.cpp ]]; then
+      	   ddrAcq=1
+         else
+      	   miAcq=1
+         fi
+      else
+         ddrAcq=1
+      fi
+   fi
 fi
 
 if [[ $ovjRepo -eq 0 ]] && [[ $noPing -eq 0 ]]
@@ -215,7 +241,6 @@ if [ ! -x /usr/bin/dpkg ]; then
 
 #for RHEL 7 and Centos 7
 # remove gnome-power-manager tk tcl
-# rename openmotif22 to motif.i686
 # recompile fortran with gfortran and remove compat-libf2c-34 compat-gcc-34-g77 
 #   and add libgfortran
 # recompile Xrecon to remove libtiff dependence
@@ -369,7 +394,6 @@ if [ ! -x /usr/bin/dpkg ]; then
   motif
   mtools
   expect
-  gpm
   minicom
   telnet
   tftp-server
@@ -413,23 +437,46 @@ if [ ! -x /usr/bin/dpkg ]; then
        fi
     fi
   fi
-  if [[ $version -ge 9 ]] &&
+  if [[ $version -ge 10 ]] &&
+     [[ -z $(type -t subscription-manager) ]]; then
+    epelList="python3-scons ImageMagick"
+    if [[ $almalinux -eq 1 ]]; then
+       epelList="$epelList rarpd"
+    fi
+    packageList="$item68List $commonList $pipeList libnsl tcsh xhost"
+    if [[ -z $(rpm -qa | grep java | grep openjdk | grep -v headless) ]]; then
+       jdk=$(rpm -qa | grep java | grep openjdk | grep headless)
+       if [[ ! -z $jdk ]]; then
+          yum remove -y $jdk &>> $logfile
+       fi
+    fi
+    packageList="$packageList java-25-openjdk"
+    if [ "$(rpm -q rsh | grep 'not installed' > /dev/null;echo $?)" == "0" ]
+     then
+       dir=$(dirname $0)
+       rshFile="rsh-0.17-102.el9.x86_64.rpm"
+       if [ -f $dir/linux/$rshFile ]
+       then
+         yum -y install --disablerepo="*" $dir/linux/$rshFile &>> $logfile
+       fi
+     fi
+  elif [[ $version -ge 9 ]] &&
      [[ -z $(type -t subscription-manager) ]]; then
     epelList="python3-scons ImageMagick"
     if [[ $almalinux -eq 1 ]]; then
        epelList="$epelList rsh rarpd"
     fi
-    packageList="$item68List $commonList $pipeList libnsl tcsh"
+    packageList="$item68List gpm $commonList $pipeList libnsl tcsh"
     packageList="$packageList java-17-openjdk"
   elif [ $version -ge 8 ]; then
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
     if [ $version -ge 9 ]; then
        epelList="$epelList gnuplot"
        commonList="$commonList tcsh compat-openssl11 compat-libgfortran-48"
-       packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl"
+       packageList="$item68List gpm $commonList $pipeList java-1.8.0-openjdk libnsl"
     else
        commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
-       packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
+       packageList="$item68List gpm $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
     fi
   else
     epelList="$epelList scons meld x11vnc"
@@ -473,12 +520,6 @@ if [ ! -x /usr/bin/dpkg ]; then
   echo "tail -f $logfile"
 
   rhelRepoEnabled=0
-  yum68List=''
-  for xpack in $package68List
-  do
-    yum68List="$yum68List ${xpack}.i686"
-  done
-  yum68List="$yum68List ncurses-libs.i686"
   if [[ $repoGet -eq 1 ]]; then
     echo "Downloading standard packages (1 of 3)"
     echo "Downloading standard packages (1 of 3)" > $logfile
@@ -520,7 +561,6 @@ if [ ! -x /usr/bin/dpkg ]; then
         cp -f $repoPath/* $repoPathTmp > /dev/null 2>&1
       fi
     fi
-    yum -y install $repoArg $yum68List &>> $logfile
     if [ $version -eq 8 ]; then
       cp -f $repoPath/* $repoPathTmp > /dev/null 2>&1
     fi
@@ -545,7 +585,6 @@ if [ ! -x /usr/bin/dpkg ]; then
     if [ "x$yumList" != "x" ]; then
       yum -y install --disablerepo="*" --enablerepo="openvnmrj" $yumList &>> $logfile
     fi
-    yum -y install --disablerepo="*" --enablerepo="openvnmrj" $yum68List &>> $logfile
   else
     if [[ $version -ge 8 ]] &&
        [[ ! -z $(type -t subscription-manager) ]]; then
@@ -568,7 +607,6 @@ if [ ! -x /usr/bin/dpkg ]; then
         yum -y --enablerepo=?ower?ools install sharutils &>> $logfile
       fi
     fi
-    yum -y install $yum68List &>> $logfile
   fi
 
 # perl-homedir creates a perl5 directory in every acct. This fixes it so it does not do that.
@@ -641,13 +679,15 @@ if [ ! -x /usr/bin/dpkg ]; then
     fi
   fi
 
-  dir=$(dirname $0)
-  if [ "$(rpm -q numlockx | grep 'not installed' > /dev/null;echo $?)" == "0" ]
-  then
-    if [ -f $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm ]
-    then
-      yum -y install --disablerepo="*" $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm &>> $logfile
-    fi
+  if [[ $version -lt 10 ]]; then
+     if [ "$(rpm -q numlockx | grep 'not installed' > /dev/null;echo $?)" == "0" ]
+     then
+       dir=$(dirname $0)
+       if [ -f $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm ]
+       then
+         yum -y install --disablerepo="*" $dir/linux/numlockx-1.2-6.el7.nux.x86_64.rpm &>> $logfile
+       fi
+     fi
   fi
 
   if [ $version -ge 7 ]; then
@@ -656,13 +696,13 @@ if [ ! -x /usr/bin/dpkg ]; then
   if [[ $ovjRepo -eq 1 ]]; then
      rm -f /etc/yum.repos.d/openvnmrj.repo
   fi
-  chown $(stat -c "%U.%G" $0) $logfile
+  chown $(stat -c "%U:%G" $0) $logfile
   if [[ $repoGet -eq 1 ]]; then
     if [ $version -eq 8 ]; then
       rm -rf $repoPath
       mv $repoPathTmp $repoPath
     fi
-    chown -R $(stat -c "%U.%G" $0) $repoPath
+    chown -R $(stat -c "%U:%G" $0) $repoPath
     echo "CentOS / RedHat package download complete"
     echo "Packages stored in $repoPath"
   else
@@ -722,22 +762,21 @@ else
   if [[ $b12Acq -eq 1 ]]; then
       acqInstall="libusb-dev"
   else
-      if [[ $(uname -m) = "x86_64" ]]; then
-          dpkg --add-architecture i386
-      fi
       if [[ $ddrAcq -eq 1 ]]; then
-          acqInstall="rarpd tftp-hpa tftpd-hpa"
-          if [ $distmajor -lt 24 ] ; then
-              acqInstall="$acqInstall rsh-client rsh-server"
-          else
-              acqInstall="$acqInstall rsh-redone-client rsh-redone-server"
-          fi
+          acqInstall="rarpd"
       fi
-      if [[ $miAcq -eq 1 ]]; then
-          acqInstall="$acqInstall tftp-hpa tftpd-hpa"
+      acqInstall="$acqInstall tftp-hpa tftpd-hpa"
+      if [ $distmajor -lt 24 ] ; then
+         acqInstall="$acqInstall rsh-client rsh-server"
+      elif [ $distmajor -lt 26 ] ; then
+         acqInstall="$acqInstall rsh-redone-client rsh-redone-server"
+      fi
+      if [[ $distmajor -lt 26 ]]; then
+          acqInstall="$acqInstall libcanberra-gtk-module"
       fi
   fi
   apt-get -qq update
+  apt-get --fix-broken -y install
   if [[ $? -ne 0 ]]; then
     echo "Ubuntu software update is preventing installation"
     echo "Please try again in 5-10 minutes, after this tool completes its task."
@@ -751,12 +790,18 @@ else
   if [[ $repoGet -eq 1 ]]; then
      acqInstall="rarpd rsh-client rsh-server tftp-hpa tftpd-hpa"
      apt-get -y install dpkg-dev &>> $logfile
-     dpkg --add-architecture i386
+  fi
+  if [[ $distmajor -ge 26 ]]; then
+      if [[ -z $(type -t rsh) ]]; then
+          dir=$(dirname $0)
+          apt-get install -y $dir/linux/rsh-redone-client_85-4_amd64.deb \
+		     $dir/linux/rsh-redone-server_85-4_amd64.deb &>> logfile
+      fi
   fi
   apt-get $repoArg -o DPkg::Options::="--force-confnew" -y install \
       tcsh make expect bc git scons g++ gfortran \
       openssh-server mutt sharutils sendmail-cf gnome-power-manager \
-      kdiff3 libcanberra-gtk-module ghostscript imagemagick vim xterm \
+      kdiff3 ghostscript imagemagick vim xterm \
       gedit dos2unix zip cups gnuplot gnome-terminal enscript rpcbind \
       $acqInstall &>> $logfile
   if [[ $repoGet -eq 1 ]]; then
@@ -773,27 +818,16 @@ else
                  libc6-dev
                  libglu1-mesa-dev
                  libgsl-dev'
-    if [[ $(uname -m) = "x86_64" ]]; then
-       installList="$installList gcc-multilib g++-multilib"
-    fi
     if [[ $distmajor -gt 20 ]]; then
        installList="$installList default-jre"
-       if [[ $(uname -m) = "x86_64" ]]; then
-          installList="$installList lib32stdc++6"
-       fi
     else
        installList="$installList openjdk-8-jre lib32stdc++-8-dev"
-    fi
-    if [[ $b12Acq -ne 1 ]]; then
-       if [[ $(uname -m) = "x86_64" ]]; then
-          installList="$installList libcrypt1:i386"
-       fi
     fi
     apt-get $repoArg -y install $installList &>> $logfile
   elif [ $distmajor -gt 16 ] ; then
    # these are needed to build
     apt-get $repoArg -y install gdm3 gnome-session openjdk-8-jre \
-      lib32stdc++-7-dev libc6-dev-i386 libglu1-mesa-dev libgsl-dev &>> $logfile
+      lib32stdc++-7-dev libglu1-mesa-dev libgsl-dev &>> $logfile
   fi
   if [[ $ovjRepo -eq 1 ]]; then
      repoPath=$(head -n 1 /etc/apt/sources.list | awk '{print $5}')

@@ -19,7 +19,6 @@
 #
 # set -x
 
-xhost + > /dev/null
 
 set_system_stuff() {
    ostype=$(uname -s)
@@ -362,6 +361,7 @@ if [[ -z $(type -t java) ]] ; then
 fi
 # remove reboot flag for SELinux disabling
 rm -f /tmp/reboot
+xhost + > /dev/null
 
 # loop though the arguments and check for the install option key word
 # noPing, NOTE this must be the first argument
