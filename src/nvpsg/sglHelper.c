@@ -1027,7 +1027,6 @@ void calc_mean_nt_tr()
 {
   int nnt,ntr;
   double sum;
-  int i;
 
   if (ix > 1) return;
 

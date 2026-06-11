@@ -50,15 +50,11 @@ int getFirstActiveRcvr()
   return(1);
 }
 
-double getGain()
+double getGain(int ircvr)
 {
   return(6.0);
 }
 
-int lcsample() 
-{ 
-   return(0);
-}
 /* 
    these are here because a macro definition 
    confuses those who use offset and power as
