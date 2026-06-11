@@ -59,13 +59,8 @@ then
    then
       Wextra=${Wextra}" -Wno-format-overflow"
    fi
-   arch=""
-   file -L $vnmrsystem/lib/libpsglib.so | grep "32-bit" $file >& /dev/null
-   if [[ $? -eq 0 ]]; then
-      arch="-m32"
-   fi
    rm -f *.o
-   make -e -s -f makeuserpsg.lnx CFLAGS="-O -fPIC ${arch} ${Wextra}" LDFLAGS="-shared ${arch}" fixlib
+   make -e -s -f makeuserpsg.lnx CFLAGS="-O -fPIC ${Wextra}" LDFLAGS="-shared" fixlib
 else
    if test $osname = "Darwin"
    then

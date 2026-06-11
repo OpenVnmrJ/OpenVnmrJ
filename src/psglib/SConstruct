@@ -11,35 +11,17 @@ platform = sys.platform
 cwd = os.getcwd()
 
 # library dependancies
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
-ncomm32Path = os.path.join(cwd, os.pardir, 'ncomm')
-#SConscript(os.path.join(ncommPath, 'SConstruct'))
-if os.path.exists('/usr/bin/scons') or os.path.exists('/usr/local/bin/scons') or os.path.exists('/opt/homebrew/bin/scons'):
-   cmd='cd ../ncomm64;scons'
-   cmd='cd ../ncomm;scons'
-else:
-   cmd='cd ../ncomm64;scons-3'
-   cmd='cd ../ncomm;scons-3'
-os.system(cmd)
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
 
 # dependancies
 binPath = os.path.join(cwd, os.pardir, 'bin')
-#SConscript(os.path.join(binPath, 'SConstruct'))
-if os.path.exists('/usr/bin/scons') or os.path.exists('/usr/local/bin/scons') or os.path.exists('/opt/homebrew/bin/scons'):
-   cmd='cd ../bin;scons -f SConstruct.dps_ps_gen'
-else:
-   cmd='cd ../bin;scons-3 -f SConstruct.dps_ps_gen'
-os.system(cmd)
+SConscript(os.path.join(binPath, 'SConstruct.dps_ps_gen'))
 
 psgPath = os.path.join(cwd, os.pardir, 'psg')
 
 nvpsgPath = os.path.join(cwd, os.pardir, 'nvpsg')
-#SConscript(os.path.join(nvpsgPath, 'SConstruct'))
-if os.path.exists('/usr/bin/scons') or os.path.exists('/usr/local/bin/scons') or os.path.exists('/opt/homebrew/bin/scons'):
-   cmd='cd ../nvpsg;scons'
-else:
-   cmd='cd ../nvpsg;scons-3'
-os.system(cmd)
+SConscript(os.path.join(nvpsgPath, 'SConstruct'))
 
 vnmrPath   = os.path.join(cwd, os.pardir, 'vnmr')
 
@@ -75,9 +57,9 @@ symlink(os.path.join(nvpsgPath,'chempack.h'),os.path.join(psgPath,'chempack.h'))
 
 
 # build environments
-seqLibEnv = Environment(CCFLAGS    = '-O -Wall -m32 ',
+seqLibEnv = Environment(CCFLAGS    = '-O -Wall ',
                         CPPDEFINES = ['LINUX', 'NESSIE'],
-                        LINKFLAGS  = '-m32 -O -Wl,-rpath,/vnmr/lib',
+                        LINKFLAGS  = '-O -Wl,-rpath,/vnmr/lib',
                         CPPPATH    = [psgPath])
 if (platform=="darwin"):
     seqLibEnv.Replace(CC = 'clang')
@@ -218,12 +200,7 @@ SConscript('lcseqlib/SConstruct.vnmrs',exports = 'nvseqLibEnv psgPath nvpsgPath 
 
 #seqlib build
 if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
-#    SConscript(os.path.join(psgPath, 'SConstruct'))
-    if os.path.exists('/usr/bin/scons') or os.path.exists('/usr/local/bin/scons'):
-       cmd='cd ../psg;scons'
-    else:
-       cmd='cd ../psg;scons-3'
-    os.system(cmd)
+    SConscript(os.path.join(psgPath, 'SConstruct'))
 
     iseqlibPath =  os.path.join(cwd,'iseqlib')
     Execute('rm -rf  iseqlib; mkdir iseqlib')
@@ -231,21 +208,21 @@ if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
     Execute('cp ' + os.path.join(cwd,os.pardir,'ipsglib') + '/*.c '+ iseqlibPath)
     Execute('cp -f SConstruct.inova ' + iseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova')
-    SConscript('iseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('iseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
     iautoseqlibPath =  os.path.join(cwd,'iautoseqlib')
     Execute('rm -rf iautoseqlib; mkdir iautoseqlib')
     Execute('cp ' + os.path.join(cwd,os.pardir,'autotest','psglib') + '/*.c '+ iautoseqlibPath)
     Execute('cp -f SConstruct.inova ' + iautoseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','autotest')
-    SConscript('iautoseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('iautoseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
     idosyseqlibPath =  os.path.join(cwd,'idosyseqlib')
     Execute('rm -rf idosyseqlib; mkdir idosyseqlib')
     Execute('cp ' + os.path.join(cwd,os.pardir,'DOSY','psglib') + '/*.c '+ idosyseqlibPath)
     Execute('cp -f SConstruct.inova ' + idosyseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','console','inova',dosyDirName)
-    SConscript('idosyseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('idosyseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
     isolidseqlibPath =  os.path.join(cwd,'isolidseqlib')
     if os.path.exists(isolidseqlibPath):
@@ -253,7 +230,7 @@ if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
     Execute('cp -rfL ' + os.path.join(cwd,os.pardir,'solidspack','ipsglib') + ' ' + isolidseqlibPath)
     Execute('cp -f SConstruct.inova ' + isolidseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','solidspack')
-    SConscript('isolidseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('isolidseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
     ibioseqlibPath =  os.path.join(cwd,'ibioseqlib')
     if os.path.exists(ibioseqlibPath):
@@ -262,7 +239,7 @@ if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
     Execute('cp -f SConstruct.inova_bio ' + ibioseqlibPath)
     Execute('rm -f ' + ibioseqlibPath + '/gnoesyNfhsqc3919.c')
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','biopack')
-    SConscript('ibioseqlib/SConstruct.inova_bio',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('ibioseqlib/SConstruct.inova_bio',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
     iimageseqlibPath =  os.path.join(cwd,'iimageseqlib')
     if os.path.exists(iimageseqlibPath):
@@ -270,7 +247,7 @@ if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
     Execute('cp -rf ' + os.path.join(cwd,os.pardir,'IMAGE','ipsglib') + ' ' + iimageseqlibPath)
     Execute('cp -f SConstruct.inova ' + iimageseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','console','inova','IMAGE','imaging')
-    SConscript('iimageseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('iimageseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
 
     serviceseqlibPath =  os.path.join(cwd,'serviceseqlib')
@@ -285,14 +262,14 @@ if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
     Execute('cp ' + os.path.join(cwd,os.pardir,'veripulse','psglib') + '/*.c '+ ivpseqlibPath)
     Execute('cp -f SConstruct.inova ' + ivpseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','veripulse')
-    SConscript('ivpseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('ivpseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
     igxyzseqlibPath =  os.path.join(cwd,'igxyzseqlib')
     Execute('rm -rf  igxyzseqlib; mkdir igxyzseqlib')
     Execute('cp ' + os.path.join(cwd,os.pardir,'gxyzshim','psglib') + '/*.c '+ igxyzseqlibPath)
     Execute('cp -f SConstruct.inova ' + igxyzseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'console','inova','gxyzshim')
-    SConscript('igxyzseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('igxyzseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
     igilsonseqlibPath =  os.path.join(cwd,'igilsonseqlib')
     if os.path.exists(igilsonseqlibPath):
@@ -300,7 +277,7 @@ if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
     Execute('cp -rf ' + os.path.join(cwd,os.pardir,'Gilson','psglib') + ' ' + igilsonseqlibPath)
     Execute('cp -f SConstruct.inova ' + igilsonseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','console','inova','Gilson')
-    SConscript('igilsonseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('igilsonseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 
     ilcseqlibPath =  os.path.join(cwd,'ilcseqlib')
     if os.path.exists(ilcseqlibPath):
@@ -308,5 +285,5 @@ if ( ('darwin' not in platform) and (not os.path.exists("../datastation")) ):
     Execute('cp -rf ' + os.path.join(cwd,os.pardir,'LCNMR','psglib') + ' ' + ilcseqlibPath)
     Execute('cp -f SConstruct.inova ' + ilcseqlibPath)
     seqPath=os.path.join(cwd,os.pardir,os.pardir,os.pardir,'options','console','inova','LC','lc')
-    SConscript('ilcseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncomm32Path seqPath')
+    SConscript('ilcseqlib/SConstruct.inova',exports = 'seqLibEnv psgPath vnmrPath ncommPath seqPath')
 

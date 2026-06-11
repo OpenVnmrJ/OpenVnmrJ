@@ -69,7 +69,6 @@ if [ -d "$vnmruser"/psg ]; then
    fi
 fi
 
-arch=""
 # Silence warnings from newer gcc compilers
 if [ x$osname = "xLinux" ]; then
    Wextra=""
@@ -97,10 +96,6 @@ if [ x$osname = "xLinux" ]; then
    if [[ $? -eq 0 ]]
    then
       Wextra=${Wextra}" -Wno-format-overflow"
-   fi
-   file -L $vnmrsystem/lib/libpsglib.so | grep "32-bit" $file >& /dev/null
-   if [[ $? -eq 0 ]]; then
-      arch="-m32"
    fi
 fi
 
@@ -226,7 +221,7 @@ while [ $# != 0 ]; do
       if [ x$osname = "xLinux" ]; then
          ( make -e -s -f $makefile PS=${file}${dpspost} \
            CPPFLAGS="$incl" \
-           LIB="$psdir" CFLAGS="-O2 ${arch} ${Wextra}" LFLAGS="$rpath" \
+           LIB="$psdir" CFLAGS="-O2 ${Wextra}" LFLAGS="$rpath" \
            SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
            SEQLIB="$seqlib" psgLinux) 2>> /dev/null
       elif [ x$osname = "xDarwin" ]; then
@@ -239,7 +234,7 @@ while [ $# != 0 ]; do
       else
          ( make -e -s -f $makefile PS=${file}${dpspost} \
            CPPFLAGS="$incl" \
-           LIB="$psdir" CFLAGS="-O2 -m32 -D_ALL_SOURCE" LFLAGS="$rpath" \
+           LIB="$psdir" CFLAGS="-O2 -D_ALL_SOURCE" LFLAGS="$rpath" \
            CC="gcc" CCC="g++" \
            SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
            SEQLIB="$seqlib" psgInterix) 2>> /dev/null
@@ -275,7 +270,7 @@ while [ $# != 0 ]; do
          if [ x$osname = "xLinux" ]; then
             ( make -e -s -f $makefile PS=$file \
               CPPFLAGS="$incl" \
-              LIB="$psdir" CFLAGS="-O2 ${arch} ${Wextra}" LFLAGS="$rpath" \
+              LIB="$psdir" CFLAGS="-O2 ${Wextra}" LFLAGS="$rpath" \
               SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
               SEQLIB="$seqlib" psgLinux) 2>> /dev/null
          elif [ x$osname = "xDarwin" ]; then
@@ -288,7 +283,7 @@ while [ $# != 0 ]; do
          else
             ( make -e -s -f $makefile PS=$file \
               CPPFLAGS="$incl" \
-              LIB="$psdir" CFLAGS="-O2 -m32 -D_ALL_SOURCE" LFLAGS="$rpath" \
+              LIB="$psdir" CFLAGS="-O2 -D_ALL_SOURCE" LFLAGS="$rpath" \
               CC="gcc" CCC="g++" \
               SHELL="/bin/sh" DPS_DUMMY_OBJ="$dps_dummy_obj" \
               SEQLIB="$seqlib" psgInterix) 2>> /dev/null

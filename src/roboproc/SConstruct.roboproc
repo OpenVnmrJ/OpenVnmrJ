@@ -50,10 +50,8 @@ ncommHdrList = [ 'chanLib.h',
                  'sockets.h' ]
 ncommFileList = ['errLogLib.c']
 
-ncommPath = os.path.join(cwd, os.pardir, 'ncomm64')
-if not os.path.exists(ncommPath):
-   Execute('cp -r '+os.path.join(cwd,os.pardir,'ncomm') + ' ' + ncommPath+ ';touch '+ncommPath+'/m64')
-   Execute('cd ../ncomm64; scons')
+ncommPath = os.path.join(cwd, os.pardir, 'ncomm')
+SConscript(os.path.join(ncommPath, 'SConstruct'))
 
 # source files
 expProcPath     = os.path.join(cwd, os.pardir, 'expproc')
@@ -114,7 +112,7 @@ roboproc = roboProcEnv.Program(target  = roboprocTarget,
                                           ncommPath,
                                           os.path.join(ovjtools, 'tcl', 'srcTcl'),
                                           os.path.join(os.sep, 'vnmr','lib')],
-                               LIBS    = ['tcl8.4', 'acqcomm64','m'])
+                               LIBS    = ['tcl8.4', 'acqcomm','m'])
 
 #
 # these linked preaction will cause reuqire headers and source to be symlinked 
@@ -140,7 +138,7 @@ gilscript = gilScriptEnv.Program(target  = 'Gilscript',
                                             ncommPath,
                                             os.path.join(ovjtools, 'tcl', 'srcTcl'),
                                             os.path.join(os.sep, 'vnmr','lib')],
-                                 LIBS    = ['tcl8.4', 'acqcomm64','m'])
+                                 LIBS    = ['tcl8.4', 'acqcomm','m'])
 
 gilAlignBuildList = []
 for i in multiBuildFileList:
@@ -164,7 +162,7 @@ nmsalign = roboProcEnv.Program(target  = 'nmsalign',
                                           ncommPath,
                                           os.path.join(ovjtools, 'tcl', 'srcTcl'),
                                           os.path.join(os.sep, 'vnmr','lib')],
-                               LIBS    = ['tcl8.4', 'acqcomm64'])
+                               LIBS    = ['tcl8.4', 'acqcomm'])
 
 ptTermHandlerObj = roboProcEnv.StaticObject(target = termHandlerFileList[0] + 'ptalign.o',
                                             source = termHandlerFileList[0])
@@ -175,7 +173,7 @@ ptalign = roboProcEnv.Program(target  = 'ptalign',
                                          ncommPath,
                                          os.path.join(ovjtools, 'tcl', 'srcTcl'),
                                          os.path.join(os.sep, 'vnmr','lib')],
-                              LIBS    = ['tcl8.4', 'acqcomm64'])
+                              LIBS    = ['tcl8.4', 'acqcomm'])
 
 # define with absolute path where built files will be copied
 vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'acqbin')

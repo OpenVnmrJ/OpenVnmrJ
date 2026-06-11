@@ -10,20 +10,13 @@ platform = sys.platform
 # define target file names
 # ncommStaticTarget   = 'libncomm.a'
 # acqcommStaticTarget = 'libacqcomm.a'
-if os.path.exists("m64"):
-   ncommSharedTarget   = 'libncomm64.so'
-   acqcommSharedTarget = 'libacqcomm64.so'
+
+if (platform=="darwin"):
+    ncommSharedTarget  = 'libncomm.dylib'
+    acqcommSharedTarget = 'libacqcomm.dylib'
 else:
    ncommSharedTarget   = 'libncomm.so'
    acqcommSharedTarget = 'libacqcomm.so'
-
-if (platform=="darwin"):
-  if os.path.exists("m64"):
-    ncommSharedTarget  = 'libncomm64.dylib'
-    acqcommSharedTarget = 'libacqcomm64.dylib'
-  else:
-    ncommSharedTarget  = 'libncomm.dylib'
-    acqcommSharedTarget = 'libacqcomm.dylib'
     
 # we need to specify an absolute path so this SConstruct file 
 # can be called from any other SConstruct file
@@ -70,14 +63,9 @@ psgFileList = ['convertapbout.c']
 vwacqPath    = os.path.join(cwd, os.pardir, 'vwacq')
 vwacqHdrList = ['hostAcqStructs.h']
 
-if os.path.exists("m64") or os.path.exists("../datastation"):
-  compileFlag = ""
-else:
-  compileFlag = " -m32"
 # build environment
-env = Environment(CCFLAGS    = '-fPIC -c -Wall -O'+compileFlag,
+env = Environment(CCFLAGS    = '-fPIC -c -Wall -O',
                   CPPDEFINES = ['LINUX', 'NESSIE', 'USE_HTONS'],
-                  LINKFLAGS  = compileFlag,
                   CPPPATH    = [cwd])
 if ('darwin' in platform):
     env.Replace(CC = 'clang')
