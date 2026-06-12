@@ -59,20 +59,9 @@ unmrBgFileList = [
                   'wjunk.c']
 
 if (platform=="darwin"):
-    compileFlag = ""
-    compileOption = ""
+    compileMacOsDir = "macos64"
 else:
-    compileFlag = "-m32"
-    compileOption = "-DHAVE_LARGEFILE_SUPPORT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
-
-compileLinuxDir = "linux"
-compileMacOsDir = "macos64"
-# switching vnmrbg to 64-bit requires switch for PSG too
-# Following defines for 64-bit Linux compile
-if os.path.exists("m64") or os.path.exists("../datastation"):
-  compileFlag = ""
-  compileOption = ""
-  compileLinuxDir = "linux_arm"
+    compileLinuxDir = "linux_arm"
 
 if (opensource=="false"):
     cOptFileList = ['vnmr_nr.c',
@@ -559,27 +548,12 @@ ncommHdrList = ['sockets.h',
                 'chanLib.h',
                 'mfileObj.h',
                 'errLogLib.h',
-                'hhashLib.h',
-                'ipcKeyDbm.h',
-                'ipcMsgQLib.h',
                 'semLib.h',
-                'msgQLib.h',
-                'eventHandler.h',
-                'eventQueue.h',
-                'eventQueueP.h',
-                'listObj.h',
                 'shrMLib.h']
 ncommFileList = ['sockets.c',
                  'mfileObj.c',
                  'errLogLib.c',
-                 'hhashLib.c',
-                 'ipcKeyDbm.c',
-                 'ipcMsgQLib.c',
                  'semLib.c',
-                 'msgQLib.c',
-                 'eventHandler.c',
-                 'eventQueue.c',
-                 'listObj.c',
                  'fdmask.c',
                  'shrMLib.c']
 
@@ -627,11 +601,11 @@ interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
 interixgpp= os.path.join(os.sep,'opt','gcc.3.3','bin','g++')
 
 if (platform=="darwin"):
-    ccflags_32_64 = compileFlag +' -arch x86_64 -arch arm64 -O3 -Wall -Wno-format-security ' + compileOption
-    linkflags_32_64 = compileFlag +' -arch x86_64 -arch arm64 -O3 '
+    ccflags_32_64 = ' -arch x86_64 -arch arm64 -O3 -Wall -Wno-format-security '
+    linkflags_32_64 = ' -arch x86_64 -arch arm64 -O3 '
 else:
-    ccflags_32_64 = compileFlag +' -Wall ' + compileOption
-    linkflags_32_64 = compileFlag +' -O -rdynamic'
+    ccflags_32_64 = ' -Wall '
+    linkflags_32_64 = ' -O -rdynamic'
 
 # build environment
 vnmrBgCEnv = Environment(CC         = "aarch64-linux-gnu-gcc",
@@ -649,6 +623,7 @@ if (platform=="darwin"):
     osxflags = os.getenv('osxflags')
     if osxflags:
        vnmrBgCEnv.Append(CCFLAGS = os.getenv('osxflags'))
+
 if (opensource=="true"):
     if (gplsource=="true"):
         vnmrBgCEnv.Append(CPPDEFINES = 'VNMR_GPL')
@@ -663,11 +638,16 @@ if not os.path.exists("/etc/redhat-release"):
 else:
 # This is for CentOS 7
     if os.path.exists("/usr/bin/systemctl"):
-        vnmrBgCppEnv.Append(CCFLAGS = ' -O2 -Wno-format-security -std=c++11 ')
+        vnmrBgCppEnv.Append(CCFLAGS = ' -std=c++11 ')
         vnmrBgCppEnv.Append(CPPDEFINES = 'boost=std')
 
 if (platform!="darwin"):
     vnmrBgCEnv.Append(CCFLAGS = ' -O2 -Wno-format-security ')
+    vnmrBgCppEnv.Append(CCFLAGS = ' -O2 ')
+# test if gcc version is >= 15
+    if 'gcc' in vnmrBgCEnv['CC']:
+        if  int(vnmrBgCEnv.subst('$CCVERSION').split('.')[0]) >= 15:
+             vnmrBgCEnv.Append(CCFLAGS = ' -std=gnu17')
 
 if (opensource=="true"):
     if (gplsource=="true"):
@@ -815,44 +795,33 @@ magicComSpcObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, magicComSpcPath
 
 magicAllObjs = magicCObjs + magicComSpcObjs # MAGIC_ALL_OBJ
 
-if ('interix' not in platform):    # Interix
-   if (platform=="darwin"):
-       linkflags2_32_64 = compileFlag +' -arch x86_64 -arch arm64 -O3 '
+if (platform=="darwin"):
+       linkflags2_32_64 = ' -arch x86_64 -arch arm64 -O3 '
        vnmrBgCppEnv.Replace(CXX = 'clang++')
-   else:
-       linkflags2_32_64 = compileFlag +' -O2 -rdynamic'
+else:
+       linkflags2_32_64 = ' -O2 -rdynamic'
 
-   if (opensource=="false"):
+if (opensource=="false"):
        vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
                                    source    = [unmrAllObjs,
                                                 magicAllObjs],
                                    LINKFLAGS = linkflags2_32_64,
                                    LIBPATH   = [cwd],
                                    LIBS      = ['dl'])
-   elif (gplsource=="true"):
+elif (gplsource=="true"):
        vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
                                    source    = [unmrAllObjs,
                                                 magicAllObjs],
                                    LINKFLAGS = linkflags2_32_64,
                                    LIBPATH   = [cwd],
                                    LIBS      = ['gsl','gslcblas','dl'])
-   else:
+else:
        vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
                                    source    = [unmrAllObjs,
                                                 magicAllObjs],
                                    LINKFLAGS = linkflags2_32_64,
                                    LIBPATH   = [cwd],
                                    LIBS      = ['dl'])
-else:
-   vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
-                                   source    = [unmrAllObjs,
-                                                magicAllObjs],
-                                   LINKFLAGS = '-O2 -m32',
-                                   LIBPATH   = [cwd,
-                                                os.path.join(os.sep, 'usr','lib','x86'),
-                                                os.path.join(os.sep, 'usr', 'X11R6', 'lib')],
-                                   LIBS      = ['dl','m','X11','Xt','Xp','Xext','SM','ICE','l','socket'])
-   
 
 # define with absolute path where built files will be copied
 vnmrBinInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')

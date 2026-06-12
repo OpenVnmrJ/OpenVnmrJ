@@ -55,17 +55,12 @@ ncommFileList = ['errLogLib.h',
 
 getPlFileList    = ['plextract.c']
 cmprsFidFileList = ['compressfid.c']
-if os.path.exists("m64") or os.path.exists("../datastation"):
-  compileFlag = ""
-else:
-  compileFlag = "-m32"
-
 
 # build environments
 env = Environment(CC         = 'aarch64-linux-gnu-gcc',
-                  CCFLAGS    = '-O3 -Wall '+compileFlag,
+                  CCFLAGS    = '-O3 -Wall ',
                   CPPDEFINES = ['LINUX','FT3DIO','NOASYNC'],
-                  LINKFLAGS  = '-DLINUX '+compileFlag,
+                  LINKFLAGS  = '-DLINUX ',
                   CPPPATH    = cwd)
 
 if (platform=="darwin"):
@@ -76,11 +71,16 @@ if (platform=="darwin"):
     if osxflags:
        env.Append(CCFLAGS = os.getenv('osxflags'))
     env.Replace(LINKFLAGS = '')
+else:
+# test if gcc version is >= 15
+    if 'gcc' in env['CC']:
+        if  int(env.subst('$CCVERSION').split('.')[0]) >= 15:
+             env.Append(CCFLAGS = ' -std=gnu17')
 
 
 buildMethods.makeSymLinks(env, getplaneTarget, cwd, vnmrPath, vnmrHdrList)
 
-lpEnv = env.Clone(CCFLAGS = '-O3 -Wall '+compileFlag)
+lpEnv = env.Clone(CCFLAGS = '-O3 -Wall ')
 lpEnv.Append(CPPDEFINES = ['FT3D'])
 
 if (platform=="darwin"):
@@ -91,6 +91,11 @@ if (platform=="darwin"):
     if osxflags:
        lpEnv.Append(CCFLAGS = os.getenv('osxflags'))
     lpEnv.Replace(LINKFLAGS = '')
+else:
+# test if gcc version is >= 15
+    if 'gcc' in lpEnv['CC']:
+        if  int(lpEnv.subst('$CCVERSION').split('.')[0]) >= 15:
+             lpEnv.Append(CCFLAGS = ' -std=gnu17')
 
 buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, ncommPath, ncommFileList)
 buildMethods.makeSymLinks(lpEnv, ft3dTarget, cwd, vnmrPath, vnmrFileList)

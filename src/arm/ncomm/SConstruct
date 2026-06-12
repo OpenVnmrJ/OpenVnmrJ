@@ -8,14 +8,15 @@ import buildMethods
 platform = sys.platform
 
 # define target file names
-ncommStaticTarget   = 'libncomm.a'
-ncommSharedTarget   = 'libncomm.so'
-acqcommStaticTarget = 'libacqcomm.a'
-acqcommSharedTarget = 'libacqcomm.so'
+# ncommStaticTarget   = 'libncomm.a'
+# acqcommStaticTarget = 'libacqcomm.a'
 
 if (platform=="darwin"):
     ncommSharedTarget  = 'libncomm.dylib'
     acqcommSharedTarget = 'libacqcomm.dylib'
+else:
+   ncommSharedTarget   = 'libncomm.so'
+   acqcommSharedTarget = 'libacqcomm.so'
     
 # we need to specify an absolute path so this SConstruct file 
 # can be called from any other SConstruct file
@@ -44,8 +45,7 @@ chanlibFileList = ['chanLib.c',
 expprocPath     = os.path.join(cwd, os.pardir, 'expproc')
 expprocHdrList  = ['expQfuncs.h',
                    'hostMsgChannels.h',
-                   'shrstatinfo.h',
-                   'shrexpinfo.h']
+                   'shrstatinfo.h']
 expprocFileList = ['expQfuncs.c',
                    'statfuncs.c']
 
@@ -63,15 +63,10 @@ psgFileList = ['convertapbout.c']
 vwacqPath    = os.path.join(cwd, os.pardir, 'vwacq')
 vwacqHdrList = ['hostAcqStructs.h']
 
-if os.path.exists("m64") or os.path.exists("../datastation"):
-  compileFlag = ""
-else:
-  compileFlag = " -m32"
 # build environment
 env = Environment(CC         = 'aarch64-linux-gnu-gcc',
-                  CCFLAGS    = '-fPIC -c -Wall -O'+compileFlag,
+                  CCFLAGS    = '-fPIC -c -Wall -O',
                   CPPDEFINES = ['LINUX', 'NESSIE', 'USE_HTONS'],
-                  LINKFLAGS  = compileFlag,
                   CPPPATH    = [cwd])
 if ('darwin' in platform):
     env.Replace(CC = 'clang')
@@ -82,14 +77,19 @@ if ('darwin' in platform):
        env.Append(CCFLAGS = os.getenv('osxflags'))
     env.Replace(CPPFLAGS = '-Wall -Wno-format-security -Wno-return-type')
     env.Replace(LINKFLAGS = '')
+else:
+# test if gcc version is >= 15
+    if 'gcc' in env['CC']:
+        if  int(env.subst('$CCVERSION').split('.')[0]) >= 15:
+             env.Append(CCFLAGS = ' -std=gnu17')
 
 
-buildMethods.makeSymLinks(env, acqcommStaticTarget, cwd, expprocPath, expprocFileList)
-buildMethods.makeSymLinks(env, acqcommStaticTarget, cwd, expprocPath, expprocHdrList)
-buildMethods.makeSymLinks(env, acqcommStaticTarget, cwd, vnmrPath, vnmrFileList)
-buildMethods.makeSymLinks(env, acqcommStaticTarget, cwd, vnmrPath, vnmrHdrList)
-buildMethods.makeSymLinks(env, acqcommStaticTarget, cwd, psgPath, psgFileList)
-buildMethods.makeSymLinks(env, acqcommStaticTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(env, acqcommSharedTarget, cwd, expprocPath, expprocFileList)
+buildMethods.makeSymLinks(env, acqcommSharedTarget, cwd, expprocPath, expprocHdrList)
+buildMethods.makeSymLinks(env, acqcommSharedTarget, cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(env, acqcommSharedTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(env, acqcommSharedTarget, cwd, psgPath, psgFileList)
+buildMethods.makeSymLinks(env, acqcommSharedTarget, cwd, vwacqPath, vwacqHdrList)
 
 # aggregated file lists
 libncommList    = ncommFileList + chanlibFileList
@@ -97,8 +97,8 @@ outsideFileList = vnmrFileList + expprocFileList + psgFileList
 libacqcommList  = libncommList + outsideFileList
 
 # actual builds
-ncommStatic = env.StaticLibrary(ncommStaticTarget, [libncommList])
-if ('darwin' not in platform) and ('interix' not in platform):
+# ncommStatic = env.StaticLibrary(ncommStaticTarget, [libncommList])
+if ('darwin' not in platform):
     ncommShared = env.SharedLibrary(ncommSharedTarget, [libncommList])
 
 if (platform=="darwin"):
@@ -106,8 +106,8 @@ if (platform=="darwin"):
     env.Replace(LINKFLAGS = ['-install_name',ncommSharedPath,'-undefined','dynamic_lookup'])
     ncommShared = env.SharedLibrary(ncommSharedTarget, [libncommList])
     
-acqcommStatic = env.StaticLibrary(acqcommStaticTarget, [libacqcommList])
-if ('darwin' not in platform) and ('interix' not in platform):
+# acqcommStatic = env.StaticLibrary(acqcommStaticTarget, [libacqcommList])
+if ('darwin' not in platform):
     acqcommShared = env.SharedLibrary(acqcommSharedTarget, [libacqcommList])
 
 if (platform=="darwin"):
@@ -123,14 +123,12 @@ if not os.path.exists(vnmrPath):
    os.makedirs(vnmrPath)
 
 # actions to be performed after targets are built
-env.AddPostAction(ncommStatic,
-                  Action(Copy(vnmrPath, os.path.join(cwd, ncommStaticTarget))))
-if ('interix' not in platform):
-    env.AddPostAction(ncommShared,
+#env.AddPostAction(ncommStatic,
+#                  Action(Copy(vnmrPath, os.path.join(cwd, ncommStaticTarget))))
+env.AddPostAction(ncommShared,
                   Action(Copy(vnmrPath, os.path.join(cwd, ncommSharedTarget))))
-env.AddPostAction(acqcommStatic,
-                  Action(Copy(vnmrPath, os.path.join(cwd, acqcommStaticTarget))))
-if ('interix' not in platform):
-    env.AddPostAction(acqcommShared,
+#env.AddPostAction(acqcommStatic,
+#                  Action(Copy(vnmrPath, os.path.join(cwd, acqcommStaticTarget))))
+env.AddPostAction(acqcommShared,
                   Action(Copy(vnmrPath, os.path.join(cwd, acqcommSharedTarget))))
 
