@@ -272,7 +272,7 @@ static int make_fd_rmask(int *maxfd_ptr, fd_set *readfdp )
 }
 
 static void
-sigio_irpt()
+sigio_irpt(int sig)
 {
 	int			maxfd, nfound;
 	fd_set			readfd;
@@ -310,7 +310,6 @@ static void setup_sigio()
 {
     struct sigaction	intserv;
     sigset_t		qmask;
-    void		sigio_irpt();
  
     /* --- set up signal handler --- */
 
@@ -326,7 +325,7 @@ static void setup_sigio()
 }
 
 static void
-dontdie()
+dontdie(int sig)
 {
     if (Acqdebug)
         fprintf(stderr,"DONTDIE(): write to a closed pipe occured\n");
@@ -361,7 +360,7 @@ void setuppipehandler()
 +--------------------------------------------------------------------------*/
 
 static void
-terminated()
+terminated(int sig)
 {
 #ifdef USE_RPC
     close_rpc();
@@ -370,7 +369,7 @@ terminated()
 }
 
 static void
-SigQuit()
+SigQuit(int sig)
 {
 #ifdef USE_RPC
     close_rpc();

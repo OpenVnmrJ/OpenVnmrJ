@@ -622,6 +622,7 @@ if (platform=="darwin"):
     osxflags = os.getenv('osxflags')
     if osxflags:
        vnmrBgCEnv.Append(CCFLAGS = os.getenv('osxflags'))
+
 if (opensource=="true"):
     if (gplsource=="true"):
         vnmrBgCEnv.Append(CPPDEFINES = 'VNMR_GPL')
@@ -642,6 +643,10 @@ else:
 if (platform!="darwin"):
     vnmrBgCEnv.Append(CCFLAGS = ' -O2 -Wno-format-security ')
     vnmrBgCppEnv.Append(CCFLAGS = ' -O2 ')
+# test if gcc version is >= 15
+    if 'gcc' in vnmrBgCEnv['CC']:
+        if  int(vnmrBgCEnv.subst('$CCVERSION').split('.')[0]) >= 15:
+             vnmrBgCEnv.Append(CCFLAGS = ' -std=gnu17')
 
 if (opensource=="true"):
     if (gplsource=="true"):

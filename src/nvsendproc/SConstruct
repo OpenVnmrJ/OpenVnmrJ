@@ -153,7 +153,7 @@ nvPsgHdrList = ['lc.h',
                 'PSGFileHeader.h']
 
 # build environment
-nvSendProcEnv = Environment(CCFLAGS    = '-O -Wall',
+env = Environment(CCFLAGS    = '-O -Wall',
                             CPPDEFINES = ['LINUX', 'NODUMMY', 'RTI_UNIX',
                                           'NIRVANA', 'DEBUG'],
                             LINKFLAGS  = '',
@@ -161,11 +161,13 @@ nvSendProcEnv = Environment(CCFLAGS    = '-O -Wall',
                                           nddsHdrPathUnix,
                                           nddsHdrPathShare])
 
-#buildMethods.symLinkNow(nvSendProcEnv, cwd, nvacqPath, nddsIdlFileList)
-#buildMethods.symLinkNow(nvSendProcEnv, cwd, nvacqPath, nddsXFileList)
-
 # if 'Sendproc4x' in COMMAND_LINE_TARGETS:
-nvSendProcEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
+env.Append(CPPDEFINES = 'RTI_NDDS_4x')
+
+# test if gcc version is >= 15
+if 'gcc' in env['CC']:
+   if  int(env.subst('$CCVERSION').split('.')[0]) >= 15:
+       env.Append(CCFLAGS = ' -std=gnu17')
 
 
 # define Builders
@@ -173,25 +175,25 @@ nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
                            nddsGen + ' ' + \
                            '-replace ' + '$SOURCES.file')
 
-nvSendProcEnv.Append(BUILDERS = {'NddsGen' : nddsBld})
+env.Append(BUILDERS = {'NddsGen' : nddsBld})
 
 
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, nvPsgPath, nvPsgHdrList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, sendProcPath, sendProcFileList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, ncommPath, ncommHdrList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, ncommPath, ncommFileList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, nvExpProcPath, nvExpProcFileList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, expProcPath, expProcHdrList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, expProcPath, expProcFileList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, nvRecvProcPath, nvRecvProcHdrList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, nvRecvProcPath, nvRecvProcFileList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, nvacqPath, nvacqHdrList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, nvacqPath, nvacqFileList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, vwacqPath, vwacqHdrList)
-buildMethods.makeSymLinks(nvSendProcEnv, nvSendProcTarget, cwd, vwacqPath, vwacqFileList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, nvPsgPath, nvPsgHdrList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, sendProcPath, sendProcFileList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, ncommPath, ncommFileList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, nvExpProcPath, nvExpProcFileList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, expProcPath, expProcFileList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, nvRecvProcPath, nvRecvProcHdrList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, nvRecvProcPath, nvRecvProcFileList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, nvacqPath, nvacqHdrList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, nvacqPath, nvacqFileList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(env, nvSendProcTarget, cwd, vwacqPath, vwacqFileList)
 
 
-nvsendproc = nvSendProcEnv.Program(target  = nvSendProcTarget,
+nvsendproc = env.Program(target  = nvSendProcTarget,
                                    source  = [nvSendProcFileList,
                                               sendProcFileList,
                                               nvExpProcFileList,
@@ -213,6 +215,6 @@ if not os.path.exists(vnmrPath):
    os.makedirs(vnmrPath)
 
 # actions to be performed after targets are built
-nvSendProcEnv.AddPostAction(nvsendproc,
+env.AddPostAction(nvsendproc,
                           Action(Copy(os.path.join(vnmrPath,'Sendproc'), os.path.join(cwd, nvSendProcTarget))))
 

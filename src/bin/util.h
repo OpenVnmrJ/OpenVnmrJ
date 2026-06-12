@@ -8,7 +8,7 @@
  */
 /*
  */
-FILE *efopen();
-void exitm();
-char *efgets();
-void checkargs();
+extern FILE *efopen(char *progname, char *filename, char *status);
+extern char *efgets(char *s, int n, FILE *stream);
+extern void exitm(char *message);
+extern void checkargs(char *progname, int argc, char *errmsg);

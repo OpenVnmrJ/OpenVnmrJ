@@ -858,7 +858,7 @@ ioDev *setupSmsComms(char *smsPortPath)
     also use this mechanism for halting the sample changer.
 
 *****************************************************************************/
-void abortRobot()
+void abortRobot(int sig)
 {
     char abrt;
 

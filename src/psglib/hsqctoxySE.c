@@ -59,8 +59,7 @@ void mlevb()
    rgpulse(slpw,v4,0.0,0.0);
 }
 
-void dipsi(phse1,phse2)
-codeint phse1,phse2;
+void dipsi(codeint phse1, codeint phse2)
 {
         double slpw5;
         slpw5 = getval("slpw")/18.0;

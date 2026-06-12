@@ -15,8 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-FILE *efopen(progname,filename,status)
-char	*progname,*filename,*status;
+FILE *efopen(char *progname, char *filename, char *status)
 {
     FILE	*fname;
 
@@ -32,10 +31,7 @@ char	*progname,*filename,*status;
  * read a string from a file, skipping comment lines (# in first column) 
  */
 
-char *efgets(s,n,stream)
-char	*s;
-int 	n;
-FILE	*stream;
+char *efgets(char *s, int n, FILE *stream)
 {
     char	*status;
 
@@ -54,8 +50,7 @@ FILE	*stream;
  * exit with a message 
  */
 
-void exitm(message)
-char	*message;
+void exitm(char *message)
 {
     fprintf(stderr,"\n%s\n\n",message);
     exit(1);
@@ -65,9 +60,7 @@ char	*message;
  * check arguments, exit if incorrect 
  */
 
-void checkargs(progname,argc,errmsg)
-char	*progname,*errmsg;
-int	argc;
+void checkargs(char *progname, int argc, char *errmsg)
 {
     if ( argc == 1 )
     {

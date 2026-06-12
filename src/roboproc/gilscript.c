@@ -143,7 +143,7 @@ int main (int argc, char *argv[])
 }
 
 
-static void sigalrm_irpt()
+static void sigalrm_irpt(int sig)
 {
     sigset_t qmask;
     struct sigaction sigalrm_action;

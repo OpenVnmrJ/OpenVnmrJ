@@ -108,7 +108,6 @@ static int get_system_globals(char *cname )
 	char		*systemdir;
 	char		 conpar_path[ MAXPATHL ];
 	int		 ival;
-	extern char	*getenv();
 
 	systemdir = getenv( "vnmrsystem" );
 	if (systemdir == NULL) {

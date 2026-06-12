@@ -44,7 +44,7 @@ static sigset_t         orig_sigmask;
 
 *****************************************************************************/
 static void
-sigalrm_irpt()
+sigalrm_irpt(int sig)
 {
     sigset_t         qmask;
     struct sigaction sigalrm_action;

@@ -279,8 +279,8 @@ double  *fx[], *bx[];
 }
 
 /* keep same matrix elements for H12, H20, H28 */
-static int hm_Fx(nix, i1, i2, h2, h4, brev)   /* ni, ni2, i */
-int nix, i1, i2, h2, h4, brev;
+/* ni, ni2, i */
+static int hm_Fx(int nix, int i1, int i2, int h2, int h4, int brev)
 {
   int  i, j, ii, jj;
 
@@ -338,9 +338,8 @@ int nix, i1, i2, h2, h4, brev;
 }
 
 
-shape  pboxHT_F1(shp, refpw90, refpwr, tp)       /* make shape in F1 */
-char    *shp, tp;
-double  refpw90, refpwr;
+/* make shape in F1 */
+shape  pboxHT_F1(char *shp, double refpw90, double refpwr, char tp)
 {
   FILE     *inpf;
   long     jx;
@@ -500,38 +499,33 @@ double  refpw90, refpwr;
   return getRsh(str);
 }
 
-shape  pboxHT_F1e(shp, refpw90, refpwr)       /* make excitation shape in F1 */
-char    *shp;
-double  refpw90, refpwr;
+/* make excitation shape in F1 */
+shape  pboxHT_F1e(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F1(shp, refpw90, refpwr, 'e');
 }
 
-shape  pboxHT_F1i(shp, refpw90, refpwr)       /* make inversion shape in F1 */
-char    *shp;
-double  refpw90, refpwr;
+/* make inversion shape in F1 */
+shape  pboxHT_F1i(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F1(shp, refpw90, refpwr, 'i');
 }
 
-shape  pboxHT_F1s(shp, refpw90, refpwr)       /* make sequential inv shape in F1 */
-char    *shp;
-double  refpw90, refpwr;
+/* make sequential inv shape in F1 */
+shape  pboxHT_F1s(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F1(shp, refpw90, refpwr, 's');
 }
 
-shape  pboxHT_F1r(shp, refpw90, refpwr)       /* make refocusing shape in F1 */
-char    *shp;
-double  refpw90, refpwr;
+/* make refocusing shape in F1 */
+shape  pboxHT_F1r(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F1(shp, refpw90, refpwr, 'r');
 }
 
 
-shape  pboxHT_F2(shp, refpw90, refpwr, tp)       /* make shape in F2 */
-char    *shp, tp;
-double  refpw90, refpwr;
+/* make shape in F2 */
+shape  pboxHT_F2(char *shp, double refpw90, double refpwr, char tp)
 {
   FILE     *inpf;
   long     jx;
@@ -663,38 +657,33 @@ double  refpw90, refpwr;
   return getRsh(str);
 }
 
-shape  pboxHT_F2e(shp, refpw90, refpwr)       /* make excitation shape in F2 */
-char    *shp;
-double  refpw90, refpwr;
+/* make excitation shape in F2 */
+shape  pboxHT_F2e(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F2(shp, refpw90, refpwr, 'e');
 }
 
-shape  pboxHT_F2i(shp, refpw90, refpwr)       /* make inversion shape in F2 */
-char    *shp;
-double  refpw90, refpwr;
+/* make inversion shape in F2 */
+shape  pboxHT_F2i(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F2(shp, refpw90, refpwr, 'i');
 }
 
-shape  pboxHT_F2s(shp, refpw90, refpwr)       /* make sequential inv shape in F2 */
-char    *shp;
-double  refpw90, refpwr;
+/* make sequential inv shape in F2 */
+shape  pboxHT_F2s(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F2(shp, refpw90, refpwr, 's');
 }
 
-shape  pboxHT_F2r(shp, refpw90, refpwr)       /* make refocusing shape in F2 */
-char    *shp;
-double  refpw90, refpwr;
+/* make refocusing shape in F2 */
+shape  pboxHT_F2r(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F2(shp, refpw90, refpwr, 'r');
 }
 
 
-shape  pboxHT_F3(shp, refpw90, refpwr, tp)       /* make shape in F3 */
-char    *shp, tp;
-double  refpw90, refpwr;
+/* make shape in F3 */
+shape  pboxHT_F3(char *shp, double refpw90, double refpwr, char tp)
 {
   FILE     *inpf;
   long     jx;
@@ -821,30 +810,26 @@ double  refpw90, refpwr;
 }
 
 
-shape  pboxHT_F3e(shp, refpw90, refpwr)       /* make excitation shape in F3 */
-char    *shp;
-double  refpw90, refpwr;
+/* make excitation shape in F3 */
+shape  pboxHT_F3e(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F3(shp, refpw90, refpwr, 'e');
 }
 
-shape  pboxHT_F3i(shp, refpw90, refpwr)       /* make inversion shape in F3 */
-char    *shp;
-double  refpw90, refpwr;
+/* make inversion shape in F3 */
+shape  pboxHT_F3i(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F3(shp, refpw90, refpwr, 'i');
 }
 
-shape  pboxHT_F3s(shp, refpw90, refpwr)       /* make refocusing shape in F3 */
-char    *shp;
-double  refpw90, refpwr;
+/* make refocusing shape in F3 */
+shape  pboxHT_F3s(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F3(shp, refpw90, refpwr, 's');
 }
 
-shape  pboxHT_F3r(shp, refpw90, refpwr)       /* make refocusing shape in F3 */
-char    *shp;
-double  refpw90, refpwr;
+/* make refocusing shape in F3 */
+shape  pboxHT_F3r(char *shp, double refpw90, double refpwr)
 {
   return pboxHT_F3(shp, refpw90, refpwr, 'r');
 }
@@ -905,9 +890,8 @@ static long HTarr()
   return 0;
 }
 
-shape  pboxHT(shp, refpw90, refpwr, tp)       /* make shape in HT dimension */
-char    *shp, tp;
-double  refpw90, refpwr;
+/* make shape in HT dimension */
+shape  pboxHT(char *shp, double refpw90, double refpwr, char tp)
 {
   FILE     *inpf;
   long     jx;
@@ -1049,39 +1033,34 @@ double  refpw90, refpwr;
   return getRsh(str);
 }
 
-shape  pboxHTe(shp, refpw90, refpwr)       /* make excitation shape in HT */
-char    *shp;
-double  refpw90, refpwr;
+/* make excitation shape in HT */
+shape  pboxHTe(char *shp, double refpw90, double refpwr)
 {
   return pboxHT(shp, refpw90, refpwr, 'e');
 }
 
-shape  pboxHTi(shp, refpw90, refpwr)       /* make inversion shape in HT */
-char    *shp;
-double  refpw90, refpwr;
+/* make inversion shape in HT */
+shape  pboxHTi(char *shp, double refpw90, double refpwr)
 {
   return pboxHT(shp, refpw90, refpwr, 'i');
 }
 
-shape  pboxHTr(shp, refpw90, refpwr)       /* make refocusing shape in HT */
-char    *shp;
-double  refpw90, refpwr;
+/* make refocusing shape in HT */
+shape  pboxHTr(char *shp, double refpw90, double refpwr)
 {
   return pboxHT(shp, refpw90, refpwr, 'r');
 }
 
-shape  pboxHTs(shp, refpw90, refpwr)       /* make refocusing shape in HT */
-char    *shp;
-double  refpw90, refpwr;
+/* make refocusing shape in HT */
+shape  pboxHTs(char *shp, double refpw90, double refpwr)
 {
   return pboxHT(shp, refpw90, refpwr, 's');
 }
 
 /* ~~~~~~~~~~~~~~~ Decoupler Functions : Use for simshaped_pulse ~~~~~~~~~~~~~~~~*/
 
-static void pboxHT_makedec(fname, Tp, bw, Jxy, stepsize, ref_pw90, ref_pwr)
-char *fname;
-double Tp, bw, Jxy, stepsize, ref_pw90, ref_pwr;
+static void pboxHT_makedec(char *fname, double Tp, double bw, double Jxy,
+		double stepsize, double ref_pw90, double ref_pwr)
 {
   char    cmd[MAXSTR],
           str[40],

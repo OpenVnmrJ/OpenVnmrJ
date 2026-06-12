@@ -61,7 +61,7 @@ nautoFileList = ['autoproc.c',
 
 
 # build environment
-nautoProcEnv = Environment(CCFLAGS    = '-O2 -Wall',
+env = Environment(CCFLAGS    = '-O2 -Wall',
                            CPPDEFINES = ['LINUX','DEBUG'],
                            LINKFLAGS  = '-Wl,-rpath,/vnmr/lib',
                            CPPPATH    = [cwd])
@@ -72,8 +72,12 @@ nautoProcEnv = Environment(CCFLAGS    = '-O2 -Wall',
                                          # ncommPath,
                                          # os.path.join(cwd, os.pardir, 'vwacq')])
 
+# test if gcc version is >= 15
+if 'gcc' in env['CC']:
+   if  int(env.subst('$CCVERSION').split('.')[0]) >= 15:
+      env.Append(CCFLAGS = ' -std=gnu17')
 # actual builds
-nautoproc = nautoProcEnv.Program(target  = nautoProcTarget,
+nautoproc = env.Program(target  = nautoProcTarget,
                                  source  = [nautoFileList,
                                             expProcFileList,
                                             procProcFileList,
@@ -82,14 +86,14 @@ nautoproc = nautoProcEnv.Program(target  = nautoProcTarget,
                                             ncommPath],
                                  LIBS    = ['acqcomm'])
 
-buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, vwacqPath, vwacqHdrList)
-buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, ncommPath, ncommHdrList)
-buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, expProcPath, expProcHdrList)
-buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, expProcPath, expProcFileList)
-buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, procProcPath, procProcHdrList)
-buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, procProcPath, procProcFileList)
-buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, vnmrPath, vnmrHdrList)
-buildMethods.makeSymLinks(nautoProcEnv, nautoProcTarget, cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(env, nautoProcTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(env, nautoProcTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, nautoProcTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, nautoProcTarget, cwd, expProcPath, expProcFileList)
+buildMethods.makeSymLinks(env, nautoProcTarget, cwd, procProcPath, procProcHdrList)
+buildMethods.makeSymLinks(env, nautoProcTarget, cwd, procProcPath, procProcFileList)
+buildMethods.makeSymLinks(env, nautoProcTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(env, nautoProcTarget, cwd, vnmrPath, vnmrFileList)
 
 # define with absolute path where built files will be copied
 vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'acqbin')
@@ -99,6 +103,6 @@ if not os.path.exists(vnmrInstallPath):
    os.makedirs(vnmrInstallPath)
 
 # actions to be performed after targets are built
-nautoProcEnv.AddPostAction(nautoproc,
+env.AddPostAction(nautoproc,
                            Action(Copy(vnmrInstallPath, os.path.join(cwd, nautoProcTarget))))
 

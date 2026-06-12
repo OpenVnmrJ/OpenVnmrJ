@@ -362,10 +362,9 @@ void processChanMsge(int readChanId)
 #endif
 		   locateConfFile( &file[ 0 ] );
 		   conf_fd = fopen( &file[ 0 ], "w");
-		   if (conf_fd == (FILE *)NULL)
+		   if (conf_fd == NULL)
 		   {  errLogRet(LOGOPT,debugInfo,
 			"Cannot open %s\n", &file[ 0 ]);
-		      fclose( conf_fd );
 		   }
 		   else
 		   {  if ( fwrite(data,sizeof(struct _hw_config),1,

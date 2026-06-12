@@ -9,6 +9,7 @@
 # Main MAIN main
 
 MAKEFILE= makeuserpsg.lnx
+CDEFINE = 
 
 UNAME_S := $(shell uname -s)
 
@@ -22,6 +23,11 @@ else
   CC=gcc
   CFLAGS= -O -fPIC
   LDFLAGS= -shared
+  VERS := $(shell gcc -dumpversion)
+  IS_15 := $(shell [ $(VERS) -ge 15 ] && echo true)
+  ifeq ($(IS_15),true)
+     CDEFINE= -std=gnu17
+  endif
 endif
 #-----  The system and user PSG directories
 PSG_DIR= $(vnmrsystem)/psg/
@@ -29,7 +35,6 @@ LIB_DIR= $(vnmrsystem)/lib/
 USR_PSG_DIR= $(vnmruser)/psg/
 
 #-----  Normal operational compile flags
-CDEFINE = 
 NVFLAGS = -Dcodeint=int -Dcodelong=int
 CPPFLAGS= -DSUN -DLINUX -DPSG_LC -DNVPSG -U_FORTIFY_SOURCE
 
@@ -40,7 +45,7 @@ SHAREDLIB_VER=6.0
 
 #-----  Link commands for needed sources and makefile
 COMPILE.c   = $(CC)  $(CFLAGS) $(CPPFLAGS) $(CDEFINE) $(NVFLAGS) -c
-COMPILE.cc  = $(CCC) $(CFLAGS) $(CPPFLAGS) $(CDEFINE) -c
+COMPILE.cc  = $(CCC) $(CFLAGS) $(CPPFLAGS) -c
 LINK.c      = $(CCC) $(LDFLAGS)
 
 #------------------------------------------------------------------------

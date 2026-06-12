@@ -29,6 +29,10 @@ if ( 'darwin' in platform ):
     if osxflags:
        dpsPsGenEnv.Append(CCFLAGS = os.getenv('osxflags'))
     dpsPsGenEnv.Replace(LINKFLAGS = '-Os')
+else:
+    if 'gcc' in dpsPsGenEnv['CC']:
+        if  int(dpsPsGenEnv.subst('$CCVERSION').split('.')[0]) >= 15:
+             dpsPsGenEnv.Append(CCFLAGS = ' -std=gnu17')
 
 buildMethods.makeSymLinks(dpsPsGenEnv, dpsPsGenTarget, cwd, vnmrPath, vnmrHdrList)
 

@@ -12,8 +12,8 @@
 #include "acodes.h"
 
 extern int      cardb;
-extern int Create_freq_list();
-extern void vget_elem();
+extern int Create_freq_list(double *list, int nvals, int device, int list_no);
+extern void vget_elem(int list_no, codeint vindex);
 extern int find(const char *word);
 extern void putcode(int datum);
 

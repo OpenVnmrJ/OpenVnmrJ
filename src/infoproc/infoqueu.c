@@ -84,6 +84,7 @@ static void setupInfopoller();
 static RegPacket *getRegPacket(char *username, int pid, char *hostname,
              int portnum, int datetime, struct hostent *inetent);
 static RegPacket *getlastRp();
+void Statuscheck(int sig);
 
 int initregqueue()
 {
@@ -816,7 +817,6 @@ update_statinfo()
 static void setupInfopoller()
 {
 #ifndef NIRVANA
-    void Statuscheck();
     sigset_t		qmask;
     struct sigaction intserv;
 
@@ -893,8 +893,7 @@ static void setInfoTimer(int action)
 }
 
 
-void
-Statuscheck()
+void Statuscheck(int sig)
 {
     struct timeval clock;
     int		 timeit;

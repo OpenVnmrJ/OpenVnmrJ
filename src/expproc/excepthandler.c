@@ -49,7 +49,7 @@ SpanishInquisition()
 |
 +---------------------------------------------------------------------*/
 static void
-terminated()
+terminated(int sig)
 {
     /* logprint(MASTER,0,AcqProcDied,"\n"); */
 
@@ -73,7 +73,7 @@ terminated()
 |
 +--------------------------------------------------------------------------------*/
 static void
-Segment()
+Segment(int sig)
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Segmentation Violation\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Segmentation Violation\n"); */
@@ -82,7 +82,7 @@ Segment()
     SpanishInquisition();
 }
 static void
-Ill_instr()
+Ill_instr(int sig)
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Illegal Instruction.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Illegal Instruction.\n"); */
@@ -91,7 +91,7 @@ Ill_instr()
     SpanishInquisition();
 }
 static void
-FPexcept()
+FPexcept(int sig)
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Arithmetic Exception.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Arithmetic Exception.\n"); */
@@ -100,7 +100,7 @@ FPexcept()
     SpanishInquisition();
 }
 static void
-BusErr()
+BusErr(int sig)
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Bus Error.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Bus Error.\n"); */
@@ -110,7 +110,7 @@ BusErr()
 }
 
 static void
-CpuLim()
+CpuLim(int sig)
 { 
     errLogRet(ErrLogOp,debugInfo, "%s: Exceeded CPU Time Limit.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Exceeded CPU Time Limit.\n"); */
@@ -119,7 +119,7 @@ CpuLim()
     SpanishInquisition(); 
 }
 static void
-FsLim()
+FsLim(int sig)
 {  
     errLogRet(ErrLogOp,debugInfo, "%s: Exceeded File Size Limit.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Exceeded File Size Limit.\n");  */
@@ -128,7 +128,7 @@ FsLim()
     SpanishInquisition();  
 } 
 static void
-SigQuit()
+SigQuit(int sig)
 {
     errLogRet(ErrLogOp,debugInfo, "%s: Quit Signal.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Quit Signal.\n");*/
@@ -137,7 +137,7 @@ SigQuit()
     SpanishInquisition();
 }
 static void
-Trap()
+Trap(int sig)
 { 
     errLogRet(ErrLogOp,debugInfo, "%s: Trace Trap.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", Trace Trap.\n"); */
@@ -157,7 +157,7 @@ IOTtrap()
 +----------------------------------------------------*/
 #ifndef LINUX
 static void
-EMTtrap()
+EMTtrap(int sig)
 {   
     errLogRet(ErrLogOp,debugInfo, "%s: EMT Trap.\n",ProcName);
     /* logprint(MASTER,0,AcqProcDied,", EMT Trap.\n");   */
@@ -167,7 +167,7 @@ EMTtrap()
 }
 #endif
 static void
-SYStrap()
+SYStrap(int sig)
 {    
     errLogRet(ErrLogOp,debugInfo, 
 		"%s: Bad Argument to a System Call.\n",ProcName);

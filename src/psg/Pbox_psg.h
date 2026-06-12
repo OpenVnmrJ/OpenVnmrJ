@@ -104,27 +104,28 @@ extern shape  pbox_ad180b(char *shp, double refpw90, double refpwr);
 /* Pbox_HT function definitions */
 extern shape pboxHT_dec(char *pwpat, const char *pshape, double jXH,
             double bw, double ref_pw, double ref_comp, double ref_pwr);
-extern shape pboxHT();
-extern shape pboxHT_F1();
-extern shape pboxHT_F2();
-extern shape pboxHT_F3();
 
-extern shape pboxHT_F1e();
-extern shape pboxHT_F1i();
-extern shape pboxHT_F1s();
-extern shape pboxHT_F1r();
-extern shape pboxHT_F2e();
-extern shape pboxHT_F2i();
-extern shape pboxHT_F2s();
-extern shape pboxHT_F2r();
-extern shape pboxHT_F3e();
-extern shape pboxHT_F3i();
-extern shape pboxHT_F3s();
-extern shape pboxHT_F3r();
-extern shape pboxHTe();
-extern shape pboxHTi();
-extern shape pboxHTs();
-extern shape pboxHTr();
+extern shape pboxHT(char *shp, double refpw90, double refpwr, char tp);
+extern shape pboxHT_F1(char *shp, double refpw90, double refpwr, char tp);
+extern shape pboxHT_F2(char *shp, double refpw90, double refpwr, char tp);
+extern shape pboxHT_F3(char *shp, double refpw90, double refpwr, char tp);
+
+extern shape pboxHT_F1e(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F1i(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F1s(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F1r(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F2e(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F2i(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F2s(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F2r(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F3e(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F3i(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F3s(char *shp, double refpw90, double refpwr);
+extern shape pboxHT_F3r(char *shp, double refpw90, double refpwr);
+extern shape pboxHTe(char *shp, double refpw90, double refpwr);
+extern shape pboxHTi(char *shp, double refpw90, double refpwr);
+extern shape pboxHTs(char *shp, double refpw90, double refpwr);
+extern shape pboxHTr(char *shp, double refpw90, double refpwr);
 
 #endif
 

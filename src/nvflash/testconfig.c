@@ -247,7 +247,7 @@ int main(int argc, char **argv)
 #endif
 }
 
-static void TimeoutHandler()
+static void TimeoutHandler(int sig)
 {
    DestroyDomain();  // make sure to notify console this pub is going away
    fprintf(stderr,"Master did not respond to query within timeout period, continuing...\n");

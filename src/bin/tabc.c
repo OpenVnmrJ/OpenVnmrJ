@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     char    orig_fid[128], vnmruser_dir[128], vnmrsystem_dir[128];
     char    curexpdir[128];  /* delete this declaration if built into vnmr */
     char    **data;
-    FILE    *table_ptr, *fopen();
+    FILE    *table_ptr;
 
     /****
     * Check for NUM_ARGS command-line arguments in addition to command name.

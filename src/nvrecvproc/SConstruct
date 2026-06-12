@@ -152,7 +152,7 @@ nddsCFileList = ['Data_Upload.c',
 
 
 # Environment for building nvRecvproc
-nvRecvProcEnv = Environment(CCFLAGS    = '-O -g -Wall',
+env = Environment(CCFLAGS    = '-O -g -Wall',
                             CPPDEFINES = [ 'LINUX', 'NODUMMY',
                                           '_FORTIFY_SOURCE=2',
                                           'RTI_UNIX', 'NIRVANA', 'THREADED', 'DEBUG'],
@@ -161,13 +161,13 @@ nvRecvProcEnv = Environment(CCFLAGS    = '-O -g -Wall',
                                           nddsHdrPathUnix,
                                           nddsHdrPathShare])
 
-# link in ndds x & idl files
-#buildMethods.symLinkNow(nvRecvProcEnv, cwd, nvacqPath, nddsIdlFileList)
-# buildMethods.symLinkNow(nvRecvProcEnv, cwd, nvacqPath, nddsXFileList)
-
-# nvRecvProcEnv = nvRecvProcBaseEnv.Clone()
 #if 'Recvproc4x' in COMMAND_LINE_TARGETS:
-nvRecvProcEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
+env.Append(CPPDEFINES = 'RTI_NDDS_4x')
+
+# test if gcc version is >= 15
+if 'gcc' in env['CC']:
+   if  int(env.subst('$CCVERSION').split('.')[0]) >= 15:
+       env.Append(CCFLAGS = ' -std=gnu17')
 
 # define Builders
 nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
@@ -175,31 +175,29 @@ nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
                            '-replace ' + '$SOURCES.file',
                   chdir  = cwd)
 
-nvRecvProcEnv.Append(BUILDERS = {'NddsGen' : nddsBld})
+env.Append(BUILDERS = {'NddsGen' : nddsBld})
 
 # Actual build
 #for i in range(len(nddsXFileList)):
-#   nvRecvProcEnv.NddsGen(source = [nddsXFileList[i]],
+#   env.NddsGen(source = [nddsXFileList[i]],
 #                         target = nddsCFileList[i])
 
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, vwacqPath, vwacqHdrList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, vnmrHdrPath, vnmvHdrList)
-# buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, recvProcPath, recvProcHdrList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, recvProcPath, recvProcFileList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, nvSendProcPath, nvSendProcHdrList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, nvSendProcPath, nvSendProcFileList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, procProcPath, procProcHdrList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, procProcPath, procProcFileList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, ncommPath, ncommHdrList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, ncommPath, ncommFileList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, expProcPath, expProcHdrList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, expProcPath, expProcFileList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, nvExpProcPath, nvExpProcFileList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, nvacqPath, nvacqHdrList)
-buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, nvacqPath, nvacqFileList)
-# buildMethods.makeSymLinks(nvRecvProcEnv, nvRecvProcTarget, cwd, nvacqPath, nddsFileList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, vwacqPath, vwacqHdrList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, vnmrHdrPath, vnmvHdrList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, recvProcPath, recvProcFileList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, nvSendProcPath, nvSendProcHdrList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, nvSendProcPath, nvSendProcFileList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, procProcPath, procProcHdrList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, procProcPath, procProcFileList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, ncommPath, ncommFileList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, expProcPath, expProcFileList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, nvExpProcPath, nvExpProcFileList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, nvacqPath, nvacqHdrList)
+buildMethods.makeSymLinks(env, nvRecvProcTarget, cwd, nvacqPath, nvacqFileList)
 
-recvproc = nvRecvProcEnv.Program(target  = nvRecvProcTarget,
+recvproc = env.Program(target  = nvRecvProcTarget,
                                  source  = [nvRecvProcFileList,
                                             recvProcFileList,
                                             nvSendProcFileList,
@@ -221,6 +219,6 @@ if not os.path.exists(vnmrPath):
    os.makedirs(vnmrPath)
 
 # actions to be performed after targets are built
-nvRecvProcEnv.AddPostAction(recvproc,
+env.AddPostAction(recvproc,
                             Action(Copy(os.path.join(vnmrPath,'Recvproc'), os.path.join(cwd, nvRecvProcTarget))))
 

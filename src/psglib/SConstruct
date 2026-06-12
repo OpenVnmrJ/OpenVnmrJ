@@ -71,6 +71,11 @@ if (platform=="darwin"):
        seqLibEnv.Append(CCFLAGS = os.getenv('osxflags'))
     seqLibEnv.Replace(CPPFLAGS = '-Wall -Wno-format-security -Wno-return-type')
     seqLibEnv.Replace(LINKFLAGS = '-Os -Wl,-rpath,/vnmr/lib')
+else:
+# test if gcc version is >= 15
+    if 'gcc' in seqLibEnv['CC']:
+        if  int(seqLibEnv.subst('$CCVERSION').split('.')[0]) >= 15:
+             seqLibEnv.Append(CCFLAGS = ' -std=gnu17')
                                       
 nvseqLibEnv = Environment(CPPFLAGS   = '-O -Wall',
                           CPPDEFINES = ['LINUX', 'NESSIE', 'NVPSG', 'codeint=int', 'codelong=int'],
@@ -87,6 +92,11 @@ if (platform=="darwin"):
        nvseqLibEnv.Append(CCFLAGS = os.getenv('osxflags'))
     nvseqLibEnv.Replace(CPPFLAGS = '-Wall -Wno-format-security -Wno-return-type')
     nvseqLibEnv.Replace(LINKFLAGS = '-Os -Wl,-rpath,/vnmr/lib')
+else:
+# test if gcc version is >= 15
+    if 'gcc' in nvseqLibEnv['CC']:
+        if  int(nvseqLibEnv.subst('$CCVERSION').split('.')[0]) >= 15:
+             nvseqLibEnv.Append(CCFLAGS = ' -std=gnu17')
 
 # custom builder for dps_ps_gen
 nvbld = Builder(action = os.path.join(cwd, os.pardir, 'bin', 'dps_ps_gen') + \

@@ -73,7 +73,7 @@ References:
 #include <standard.h>
 
 extern int specialGradtype;
-extern void settmpgradtype();
+extern void settmpgradtype(char *axis);
 
 static int ph1[16] = {0,1,2,3,0,1,2,3,1,2,3,0,1,2,3,0},
            ph2[2]  = {0,1},

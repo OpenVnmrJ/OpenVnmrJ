@@ -186,7 +186,7 @@ nddsCFileList = [ 'Monitor_Cmd.c',
 # create some ndds files
 # nddsgen of 3x files can not be threads so for 3x we do the nddsgen during parse time
 # build environment
-nvexpProcCEnv = Environment(CCFLAGS    = '-O -g -Wall',
+env = Environment(CCFLAGS    = '-O -g -Wall',
                             CPPDEFINES = ['LINUX', 'NODUMMY', 'RTI_UNIX', 
                                           'NIRVANA', 'NOASYNC', 'DEBUG', 'USE_HTONS'],
                             LINKFLAGS  = '',
@@ -194,15 +194,13 @@ nvexpProcCEnv = Environment(CCFLAGS    = '-O -g -Wall',
                                           nddsHdrPathUnix,
                                           nddsHdrPathShare ])
 
-# link in ndds x & idl files
-#buildMethods.symLinkNow(nvexpProcCEnv, cwd, nvAcqPath, nddsIdlFileList)
-#buildMethods.symLinkNow(nvexpProcCEnv, cwd, nvAcqPath, nddsXFileList)
-
 # if 'Expproc4x' in COMMAND_LINE_TARGETS:
-nvexpProcCEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
+env.Append(CPPDEFINES = 'RTI_NDDS_4x')
 
-
-#nvexpProcCppEnv = nvexpProcCEnv.Copy(CC = 'g++')
+# test if gcc version is >= 15
+if 'gcc' in env['CC']:
+   if  int(env.subst('$CCVERSION').split('.')[0]) >= 15:
+       env.Append(CCFLAGS = ' -std=gnu17')
 
 # define Builders
 #nddsBld = Builder(action = 'export NDDSHOME; NDDSHOME=' + nddsHome + '; ' + \
@@ -214,48 +212,42 @@ nvexpProcCEnv.Append(CPPDEFINES = 'RTI_NDDS_4x')
 #
 # symlinks headers to this directory
 #
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, psgPath, psgHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, acqProcPath, acqProcHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, vnmrPath, vnmrHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, ncommPath, ncommFileList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, ncommPath, ncommHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, chanObjPath, chanObjHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, chanObjPath, chanObjFileList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvSendProcPath, nvSendProcHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvSendProcPath, nvSendProcFileList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvRecvProcPath, nvRecvProcHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvRecvProcPath, nvRecvProcFileList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, procProcPath, procProcHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, procProcPath, procProcFileList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, vwAcqPath, vwAcqHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, vwAcqPath, vwAcqFileList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvAcqPath, nvAcqHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, nvAcqPath, nvAcqFileList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, expProcPath, expProcHdrList)
-buildMethods.makeSymLinks(nvexpProcCEnv, expProcTarget, cwd, expProcPath, expProcFileList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, psgPath, psgHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, acqProcPath, acqProcHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, vnmrPath, vnmrHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, ncommPath, ncommFileList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, ncommPath, ncommHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, chanObjPath, chanObjHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, chanObjPath, chanObjFileList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, nvSendProcPath, nvSendProcHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, nvSendProcPath, nvSendProcFileList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, nvRecvProcPath, nvRecvProcHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, nvRecvProcPath, nvRecvProcFileList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, procProcPath, procProcHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, procProcPath, procProcFileList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, vwAcqPath, vwAcqHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, vwAcqPath, vwAcqFileList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, nvAcqPath, nvAcqHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, nvAcqPath, nvAcqFileList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, expProcPath, expProcHdrList)
+buildMethods.makeSymLinks(env, expProcTarget, cwd, expProcPath, expProcFileList)
 
 # actual build
-expproc = nvexpProcCEnv.Program(target  = expProcTarget,
-                                  source  = [nvexpProcCEnv.SharedObject(ncommFileList),
-                                             nvexpProcCEnv.SharedObject(chanObjFileList),
-                                             nvexpProcCEnv.SharedObject(nvAcqFileList),
-                                             nvexpProcCEnv.SharedObject(nddsCFileList),
-                                             nvexpProcCEnv.SharedObject(expProcFileList),
-                                             nvexpProcCEnv.SharedObject(nvExpProcFileList),
-                                             nvexpProcCEnv.SharedObject(procProcFileList),
-                                             nvexpProcCEnv.SharedObject(nvRecvProcFileList),
-                                             nvexpProcCEnv.SharedObject(nvSendProcFileList),
-                                             nvexpProcCEnv.SharedObject(vwAcqFileList)],
+expproc = env.Program(target  = expProcTarget,
+                                  source  = [env.SharedObject(ncommFileList),
+                                             env.SharedObject(chanObjFileList),
+                                             env.SharedObject(nvAcqFileList),
+                                             env.SharedObject(nddsCFileList),
+                                             env.SharedObject(expProcFileList),
+                                             env.SharedObject(nvExpProcFileList),
+                                             env.SharedObject(procProcFileList),
+                                             env.SharedObject(nvRecvProcFileList),
+                                             env.SharedObject(nvSendProcFileList),
+                                             env.SharedObject(vwAcqFileList)],
                                   LIBPATH = [cwd,
                                              nddsLibPath],
                                   LIBS    = [ LibList ] )
 
-# really only need for NDDS 3x clean
-# nvexpProcCEnv.Clean( expProcTarget, [ nddsXFileList, nddsIdlFileList, nddsCFileList, 'Monitor_Cmd.h','Console_Stat.h','App_HB.h'])
-
-
-
-# buildMethods.makeSymLinks(nvexpProcCEnv, genTargets, cwd, nvAcqPath, nddsIdlFileList)
 
 # define with absolute path where built files will be copied
 vnmrInstallPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'console', 'ddr', 'acqbin')
@@ -265,7 +257,7 @@ if not os.path.exists(vnmrInstallPath):
    os.makedirs(vnmrInstallPath)
 
 # actions to be performed after targets are built
-nvexpProcCEnv.AddPostAction(expproc,
+env.AddPostAction(expproc,
                               Action(Copy(os.path.join(vnmrInstallPath,'Expproc'),
                                           os.path.join(cwd, expProcTarget))))
 

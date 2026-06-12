@@ -254,9 +254,7 @@ void mlev17(length,width,phsw,phsx,phsy,phsz,loop_counter)
 
 /*------------------------dipsi2 spinlock definition-------------*/
 
-void dips2(width,phsA,phsB)
-double width;
-codeint phsA,phsB;
+void dips2(double width, codeint phsA, codeint phsB)
 {
       txphase(phsA); delay(320*width/90);
       txphase(phsB); delay(410*width/90);
@@ -293,9 +291,7 @@ codeint phsx,phsy,loop_counter;
 
 /*------------------------dipsi3 spinlock definition-------------*/
 
-void dips3(width,phsA,phsB)
-double width;
-codeint phsA,phsB;
+void dips3(double width, codeint phsA, codeint phsB)
 {
       txphase(phsA); delay(245*width/90);
       txphase(phsB); delay(395*width/90);
@@ -403,9 +399,7 @@ void dante_spinlock(length,width,phs1,loop_counter)
 
 /*------------------cw spinlock---------------------*/
 
-void cw_spinlock(length,phs1)
- double length;
- codeint phs1;
+void cw_spinlock(double length, codeint phs1)
 {
 	rgpulse(length,phs1,0.0,0.0);
 } 

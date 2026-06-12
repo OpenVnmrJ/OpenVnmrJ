@@ -62,6 +62,11 @@ port3Env = Environment(CCFLAGS    = '-O',
                      CPPDEFINES = ['LINUX'],
                      CPPPATH    = [cwd])
 
+# test if gcc version is >= 15
+if 'gcc' in port3Env['CC']:
+    if  int(port3Env.subst('$CCVERSION').split('.')[0]) >= 15:
+        port3Env.Append(CCFLAGS = ' -std=gnu17')
+
 # actual builds
 libport3Static = port3Env.StaticLibrary(target  = libPort3StaticTarget,
                                         source  = [port3FileList],

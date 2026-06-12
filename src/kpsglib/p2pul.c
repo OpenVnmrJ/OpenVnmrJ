@@ -18,11 +18,11 @@ static double amp1y,amp2y,amp3y,amp4y;
 static double tc1z,tc2z,tc3z,tc4z; 
 static double amp1z,amp2z,amp3z,amp4z; 
 static char   gread,gslice,gphase,command[MAXSTR],gradshape[MAXSTR];
-extern void calc_amp_tc();
+extern void calc_amp_tc(char chan, int eccno, double amp, double tc);
 extern void pfg_reset(char where);
 extern void pfg_blank(char where);
 extern void pfg_enable(char where);
-extern int getorientation();
+extern int getorientation(char *c1, char *c2, char *c3, char *orientname);
 
 void send_eddys(char chan, double deddy)
 {

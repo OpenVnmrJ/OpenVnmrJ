@@ -45,32 +45,37 @@ infoServerFileList = []
 acqMeterFileList = ['acqmeter_win.c']
 
 # build environment
-statEnv = Environment(CCFLAGS    = '-O2 -Wall',
+env = Environment(CCFLAGS    = '-O2 -Wall',
                       CPPDEFINES = ['ACQSTAT', 'LINUX', 'SUN', 'BSDACQ', 'X11'],
                       LINKFLAGS  = '-O2 -Wl,-rpath,/vnmr/lib ',
                       CPPPATH    = [cwd])
 
+# test if gcc version is >= 15
+if 'gcc' in env['CC']:
+    if  int(env.subst('$CCVERSION').split('.')[0]) >= 15:
+        env.Append(CCFLAGS = ' -std=gnu17')
+
 # if os.path.exists('/usr/include/tirpc'):
-#    statEnv.Append(  CPPPATH=[ '/usr/include/tirpc']  )
+#    env.Append(  CPPPATH=[ '/usr/include/tirpc']  )
 #    LibList = [ 'm', 'acqcomm', 'tirpc' ]
 #    LibList2 = [ 'tirpc' ]
 # else:
 LibList = [ 'm', 'acqcomm' ]
 LibList2 = []
 
-buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, xracqPath, xracqHdrList)
-buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, acqProcPath, acqProcHdrList)
-buildMethods.makeSymLinks(statEnv, infostatTarget, cwd, vnmrPath, vnmrFileList)
+buildMethods.makeSymLinks(env, infostatTarget, cwd, xracqPath, xracqHdrList)
+buildMethods.makeSymLinks(env, infostatTarget, cwd, acqProcPath, acqProcHdrList)
+buildMethods.makeSymLinks(env, infostatTarget, cwd, vnmrPath, vnmrFileList)
 
 # actual builds
-infostat = statEnv.Program(target  = infostatTarget,
+infostat = env.Program(target  = infostatTarget,
                            source  = [acqStatFileList,
                                       vnmrFileList],
                            LIBPATH = [cwd,
                                       ncommPath],
                            LIBS    = [ LibList ])
 
-showstat = statEnv.Program(target  = showstatTarget,
+showstat = env.Program(target  = showstatTarget,
                            source  = [showStatFileList,
                                       infoServerFileList],
                            LIBPATH = [cwd,
@@ -85,8 +90,8 @@ if not os.path.exists(vnmrInstallPath):
    os.makedirs(vnmrInstallPath)
 
 # actions to be performed after targets are built
-statEnv.AddPostAction(infostat,
-                      Action(Copy(vnmrInstallPath, os.path.join(cwd, infostatTarget))))
-statEnv.AddPostAction(showstat,
-                      Action(Copy(vnmrInstallPath, os.path.join(cwd, showstatTarget))))
+env.AddPostAction(infostat,
+          Action(Copy(vnmrInstallPath, os.path.join(cwd, infostatTarget))))
+env.AddPostAction(showstat,
+          Action(Copy(vnmrInstallPath, os.path.join(cwd, showstatTarget))))
 

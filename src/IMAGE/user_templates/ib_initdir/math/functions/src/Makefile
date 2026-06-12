@@ -5,6 +5,11 @@ BINDIR = ../bin
 SRCDIR = ../src
 
 CFLAGS = -O -DLINUX -fPIC
+VERS := $(shell gcc -dumpversion)
+IS_15 := $(shell [ $(VERS) -ge 15 ] && echo true)
+ifeq ($(IS_15),true)
+   CFLAGS = -O -DLINUX -fPIC -std=gnu17
+endif
 CC = gcc
 LIBFLAG = -shared -Wl,-rpath,.:$(BROWSERDIR)/math/lib:$(vnmrsystem)/lib \
                 -L. -L$(BROWSERDIR)/math/lib -L$(vnmrsystem)/lib \

@@ -12,6 +12,12 @@
 #OPTDEFS= -DSYSLOG -DVEND_CMU -DDEBUG
 OPTDEFS= -DVEND_CMU -DDEBUG
 
+VERS := $(shell gcc -dumpversion)
+IS_15 := $(shell [ $(VERS) -ge 15 ] && echo true)
+ifeq ($(IS_15),true)
+   OPTDEFS= -DVEND_CMU -DDEBUG -std=gnu17
+endif
+
 # Uncomment and edit this to choose the facility code used for syslog.
 # LOG_FACILITY= "-DLOG_BOOTP=LOG_LOCAL2"
 

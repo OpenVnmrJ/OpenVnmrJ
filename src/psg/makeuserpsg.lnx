@@ -11,6 +11,11 @@ USR_PSG_DIR= $(vnmruser)/psg/
 CDEFINE= -DLINUX -DNESSIE -Wno-format -Wno-implicit-int -Wno-implicit-function-declaration
 CFLAGS= -O -fPIC -c
 CPPFLAGS= -U_FORTIFY_SOURCE
+VERS := $(shell gcc -dumpversion)
+IS_15 := $(shell [ $(VERS) -ge 15 ] && echo true)
+ifeq ($(IS_15),true)
+   CPPFLAGS= -U_FORTIFY_SOURCE -std=gnu17
+endif
 LDFLAGS= -shared
 COMPILE.c= $(CC) $(CFLAGS) $(CPPFLAGS) $(CDEFINE) -c
 LINK.c= $(CC) $(LDFLAGS)

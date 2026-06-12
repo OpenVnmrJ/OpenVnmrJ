@@ -38,6 +38,11 @@ env = Environment(CCFLAGS    = '-fPIC -g -c -Wall -O',
                                 os.path.join(ovjtools, 'tcl', 'srcTcl'),
                                 os.path.join(ovjtools, 'tcl', 'srcTk')])
 
+# test if gcc version is >= 15
+if 'gcc' in env['CC']:
+    if  int(env.subst('$CCVERSION').split('.')[0]) >= 15:
+        env.Append(CCFLAGS = ' -std=gnu17')
+
 # actual build
 vnmrwish = env.Program(target  = vnmrwishTarget,
                        LIBPATH = [ncommPath,

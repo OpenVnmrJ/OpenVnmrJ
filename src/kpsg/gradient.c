@@ -27,7 +27,7 @@ static int warnclipDone = 0;
 static int warnclipix = 1;
 static int get_pfg_base(char where);
 void rgradient(char axis, double value);
-void calc_amp_tc();
+void calc_amp_tc(char chan, int eccno, double amp, double tc);
 void pfg_reset(char where);
 void pfg_blank(char where);
 void pfg_enable(char where);
@@ -224,8 +224,7 @@ void zero_all_gradients()
   if (tolower(gradtype[1]) == 'a') rgradient('y',0.0);
 }
 
-int getorientation(c1,c2,c3,orientname)
-char  *c1,*c2,*c3,*orientname;
+int getorientation(char *c1, char *c2, char *c3, char *orientname)
 {
    char orientstring[MAXSTR];
    int i;
@@ -365,10 +364,7 @@ double tcmax[4]={ 0.235,2.35,165.0,23.5};
 /*      chan = 'x','y','z',  tcno = {1,2,3,4}				*/
 /*      0<= amp <=100,  tcmax/11 <= tc <= tcmax			 	*/
 /************************************************************************/
-void calc_amp_tc(chan,eccno,amp,tc)
-char chan;
-int eccno;
-double amp,tc;
+void calc_amp_tc(char chan, int eccno, double amp, double tc)
 {
      int amp12,tc12;
      double xx,tc_min,tc_max;

@@ -27,7 +27,7 @@ int	i, n ;
 char	fname[5];
 char	ctrl [8];
 double  dofoff, tau, cycles;
-double  fn [10],fabs();
+double  fn [10];
 
    n = 0;
    fname[0] = 'f';
