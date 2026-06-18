@@ -27,4 +27,9 @@ fi
 
 LANG=en_US.UTF8
 $javabin -jar $vnmrsystem/java/account.jar "$@"
+
+if [ -f $vnmrsystem/adm/accounting/acctLog.xml ]
+then
+   chmod 666 $vnmrsystem/adm/accounting/acctLog.xml
+fi
 exit 0

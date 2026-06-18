@@ -249,7 +249,10 @@ doUpgrade () {
     ignoreFiles="
         acq/info
         p11/part11Config
+        adm/accounting/accounts/accounting.prop
+        adm/accounting/group
         adm/accounting/loggingParamList
+        adm/users/operators/automation.conf
         adm/users/profiles/accPolicy
         adm/users/userDefaults
         pulsecal
