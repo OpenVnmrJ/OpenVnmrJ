@@ -223,9 +223,11 @@ javaLink = os.path.join(ovjtools, 'java')
 
 for i in buildList:
    SConscript(os.path.join('src',i, 'SConstruct'))
-if ( not os.path.exists(os.path.join('src','datastation'))) :
-   for i in build2List:
-      SConscript(os.path.join('src',i, 'SConstruct'))
+
+if ( 'darwin' not in platform):
+   if ( not os.path.exists(os.path.join('src','datastation'))) :
+      for i in build2List:
+         SConscript(os.path.join('src',i, 'SConstruct'))
 
 # Check for link to java home on Linux only (darwin uses the System java)
 if os.path.exists(javaLink) or 'linux' not in platform:
