@@ -285,55 +285,6 @@ if [ ! -x /usr/bin/dpkg ]; then
   xorg-x11-fonts-misc
  '
 
-# The following were removed from the CentOS 6.8 kickstart
-# gnome-python2-desktop
-# compat-gcc-34-g77
-# openmotif22
-# openmotif-devel.i686
-# rpmforge-release
-# tigervnc
-# tigervnc-server
-# @basic-desktop
-# @desktop-platform all files present
-# @desktop-platform-devel
-# @eclipse
-# @general-desktop
-# sendmail-cf
-# unix2dos
-# @server-platform
-# @server-platform-devel
-# @server-policy
-# @tex
-# @virtualization
-# @workstation-policy  installs gdm, already present
-# @additional-devel
-# @base
-# @core
-# @desktop-debugging
-# @development
-# @directory-client
-# @emacs
-# @fonts
-# @graphical-admin-tools
-# @input-methods
-# @internet-browser
-# @java-platform
-# @legacy-x
-# @network-file-system-client
-# @performance
-# @perl-runtime
-# @print-client
-# @remote-desktop-clients
-# @technical-writing
-# @virtualization-client
-# @virtualization-platform
-# @x11
-# libgnomeui-devel
-# libbonobo-devel
-# kdegraphics
-# @debugging
-# @graphics
-
   package68List=' 
   libstdc++
   libstdc++-devel
@@ -342,56 +293,8 @@ if [ ! -x /usr/bin/dpkg ]; then
   libX11
  '
 
-  offList=' 
-  libgcrypt-devel
-  libXinerama-devel
-  xorg-x11-proto-devel
-  startup-notification-devel
-  junit
-  libXau-devel
-  libXrandr-devel
-  popt-devel
-  libdrm-devel
-  libxslt-devel
-  libglade2-devel
-  gnutls-devel
-  pax
-  python-dmidecode
-  oddjob
-  wodim
-  sgpio
-  genisoimage
-  device-mapper-persistent-data
-  systemtap-client
-  abrt-gui
-  desktop-file-utils
-  ant
-  rpmdevtools
-  javapackages-tools
-  rpmlint
-  samba
-  samba-winbind
-  certmonger
-  pam_krb5
-  krb5-workstation
-  netpbm-progs
-  libXmu
-  libXp
-  perl-DBD-SQLite
-  libvirt-java
-  python-psycopg2
-  gsl-devel
-  hplip-gui
-  icedtea-web
-  lm_sensors
-  logwatch
-  recode
-  syslinux-extlinux
- '
-
   item68List='
   libXt
-  motif
   mtools
   expect
   minicom
@@ -399,7 +302,6 @@ if [ ! -x /usr/bin/dpkg ]; then
   tftp-server
   dos2unix
   gitk
-  gsl
   tftp
   xterm
   createrepo
@@ -441,47 +343,38 @@ if [ ! -x /usr/bin/dpkg ]; then
      [[ -z $(type -t subscription-manager) ]]; then
     epelList="python3-scons ImageMagick"
     if [[ $almalinux -eq 1 ]]; then
-       epelList="$epelList rarpd"
+       epelList="$epelList rarpd rsh rsh-server motif gsl"
+    else
+       item68List='$item68List motif gsl'
     fi
     packageList="$item68List $commonList $pipeList libnsl tcsh xhost"
-    if [[ -z $(rpm -qa | grep java | grep openjdk | grep -v headless) ]]; then
-       jdk=$(rpm -qa | grep java | grep openjdk | grep headless)
-       if [[ ! -z $jdk ]]; then
-          yum remove -y $jdk &>> $logfile
-       fi
-    fi
     packageList="$packageList java-25-openjdk"
-    if [ "$(rpm -q rsh | grep 'not installed' > /dev/null;echo $?)" == "0" ]
-     then
-       dir=$(dirname $0)
-       rshFile="rsh-0.17-102.el9.x86_64.rpm"
-       if [ -f $dir/linux/$rshFile ]
-       then
-         yum -y install --disablerepo="*" $dir/linux/$rshFile &>> $logfile
-       fi
-     fi
+  elif [[ $version -ge 10 ]]; then
+    epelList="python3-scons ImageMagick rarpd rsh rsh-server motif gsl"
+    packageList="$item68List $commonList $pipeList libnsl tcsh xhost"
+    packageList="$packageList java-25-openjdk"
   elif [[ $version -ge 9 ]] &&
      [[ -z $(type -t subscription-manager) ]]; then
     epelList="python3-scons ImageMagick"
     if [[ $almalinux -eq 1 ]]; then
        epelList="$epelList rsh rarpd"
     fi
-    packageList="$item68List gpm $commonList $pipeList libnsl tcsh"
+    packageList="$item68List gpm $commonList $pipeList libnsl tcsh motif gsl"
     packageList="$packageList java-17-openjdk"
   elif [ $version -ge 8 ]; then
     epelList="$epelList kdiff3 k3b ImageMagick rsh rsh-server"
     if [ $version -ge 9 ]; then
        epelList="$epelList gnuplot"
        commonList="$commonList tcsh compat-openssl11 compat-libgfortran-48"
-       packageList="$item68List gpm $commonList $pipeList java-1.8.0-openjdk libnsl"
+       packageList="$item68List gpm $commonList $pipeList java-1.8.0-openjdk libnsl motif gsl"
     else
        commonList="$commonList tcsh compat-openssl10 compat-libgfortran-48"
-       packageList="$item68List gpm $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
+       packageList="$item68List gpm $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd motif gsl"
     fi
   else
     epelList="$epelList scons meld x11vnc"
     commonList="$commonList rsh rsh-server"
-    packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd"
+    packageList="$item68List $commonList $pipeList java-1.8.0-openjdk libnsl gnuplot xinetd motif gsl"
   fi
 
 
@@ -653,6 +546,17 @@ if [ ! -x /usr/bin/dpkg ]; then
   then
     yum -y erase epel-release &>> $logfile
   fi
+  if [[ $version -ge 10 ]]; then
+    if [ "$(rpm -q rsh | grep 'not installed' > /dev/null;echo $?)" == "0" ]
+     then
+       dir=$(dirname $0)
+       rshFile="rsh-0.17-102.el9.x86_64.rpm"
+       if [ -f $dir/linux/$rshFile ]
+       then
+         yum -y install --disablerepo="*" $dir/linux/$rshFile &>> $logfile
+       fi
+     fi
+   fi
 #  Do not install turbovnc but leave process in case someone wants to install
 #  it on their own.
 #  if [ "$(rpm -q turbovnc | grep 'not installed' > /dev/null;echo $?)" == "0" ]
@@ -775,8 +679,8 @@ else
           acqInstall="$acqInstall libcanberra-gtk-module"
       fi
   fi
-  apt-get -qq update
-  apt-get --fix-broken -y install
+  apt-get -qq update &>> $logfile
+  apt-get --fix-broken -y install &>> $logfile
   if [[ $? -ne 0 ]]; then
     echo "Ubuntu software update is preventing installation"
     echo "Please try again in 5-10 minutes, after this tool completes its task."
@@ -835,68 +739,65 @@ else
      fontList=$(cd $repoPath && ls -1 fonts-* | tr "_" " " | awk '{print $1}' )
   else
      fontList=$(apt-cache search -n "^fonts-*" | awk '{print $1}' |
+             grep -v "^fonts-adf" |
+             grep -v "^fonts-adobe" |
+             grep -v "^fonts-aenig" |
              grep -v "^fonts-al" |
              grep -v "^fonts-ancient" |
              grep -v "^fonts-aoy" |
              grep -v "^fonts-arab" |
              grep -v "^fonts-arp" |
              grep -v "^fonts-aru" |
+             grep -v "^fonts-atkin" |
+             grep -v "^fonts-aver" |
 	     grep -v "^fonts-ba" | 
-	     grep -v "^fonts-ben" | 
+	     grep -v "^fonts-be" | 
+             grep -v "^fonts-ca" |
              grep -v "^fonts-comp" |
+             grep -v "^fonts-cmu" |
              grep -v "^fonts-cn" |
+             grep -v "^fonts-cr" |
+             grep -v "^fonts-cu" |
 	     grep -v "^fonts-cw" | 
 	     grep -v "^fonts-ddc" | 
-	     grep -v "^fonts-deji" | 
+	     grep -v "^fonts-dej" | 
 	     grep -v "^fonts-deva" | 
+	     grep -v "^fonts-do" | 
 	     grep -v "^fonts-dz" | 
-	     grep -v "^fonts-ee" | 
-	     grep -v "^fonts-far" | 
-	     grep -v "^fonts-freefar" | 
+	     grep -v "^fonts-e" | 
+	     grep -v "^fonts-f" | 
              grep -v "^fonts-garg" |
              grep -v "^fonts-gfs" |
+	     grep -v "^fonts-gr" | 
 	     grep -v "^fonts-gu" | 
-             grep -v "^fonts-hanazono" |
+             grep -v "^fonts-ha" |
              grep -v "^fonts-horai" |
              grep -v "^fonts-hos" |
-             grep -v "^fonts-ibm" |
-             grep -v "^fonts-ind" |
-             grep -v "^fonts-ipa" |
+             grep -v "^fonts-i" |
+             grep -v "^fonts-j" |
              grep -v "^fonts-k" |
-	     grep -v "^fonts-lara" | 
-	     grep -v "^fonts-ldco" | 
-	     grep -v "^fonts-lexi" | 
-	     grep -v "^fonts-lg-a" | 
-	     grep -v "^fonts-lk" | 
-             grep -v "^fonts-lohit" |
-	     grep -v "^fonts-manch" | 
-	     grep -v "^fonts-mathe" | 
-	     grep -v "^fonts-migmix" | 
-	     grep -v "^fonts-mik" | 
-	     grep -v "^fonts-misa" | 
-	     grep -v "^fonts-mlym" | 
-             grep -v "^fonts-mplus" |
-	     grep -v "^fonts-mo" | 
+	     grep -v "^fonts-l" | 
+	     grep -v "^fonts-m" | 
              grep -v "^fonts-na" |
              grep -v "^fonts-noto" |
 	     grep -v "^fonts-olds" | 
 	     grep -v "^fonts-or" | 
 	     grep -v "^fonts-pa" | 
+	     grep -v "^fonts-po" | 
+	     grep -v "^fonts-pr" | 
 	     grep -v "^fonts-or" | 
 	     grep -v "^fonts-or" | 
-             grep -v "^fonts-rict" |
-             grep -v "^fonts-rit" |
+             grep -v "^fonts-r" |
              grep -v "^fonts-s" |
 	     grep -v "^fonts-t" | 
              grep -v "^fonts-ubuntu-classic" |
              grep -v "^fonts-uk" |
 	     grep -v "^fonts-um" | 
              grep -v "^fonts-un" |
-             grep -v "^fonts-vlg" |
+             grep -v "^fonts-v" |
              grep -v "^fonts-wo" |
              grep -v "^fonts-wqy" |
-             grep -v "^fonts-yo" |
-             grep -v "^fonts-yr" 
+             grep -v "^fonts-y" 
             )
   fi
   apt-get $repoArg -y install $fontList &>> $logfile
