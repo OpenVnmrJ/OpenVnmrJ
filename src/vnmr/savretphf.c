@@ -19,6 +19,7 @@
 #include "vnmrsys.h"
 
 #ifdef UNIX
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
@@ -54,7 +55,7 @@ static int save_phasefile (char *outname );
 static int return_phasefile (char *path );
 
 /******************************************************************************/
-int svphf ( argc, argv, retc, retv )
+int svphf (int argc, char *argv[], int retc, char *retv[] )
 /* 
 Purpose:
 -------
@@ -75,8 +76,6 @@ retc  :  (I  )  Number of returned arguments, that is, the dimension of the
 		following argument.
 retv  :  (   )  (Pointer to) array of output arguments.  Not used in this case.
 */
-int argc, retc;
-char *argv[], *retv[];
 { /* Begin function svphf */
    /*
    Local Variables:
@@ -227,7 +226,7 @@ outname  :  (I  )  (Pointer to) name of file to receive the phasefile data.
 } /* End function save_phasefile */
 
 /******************************************************************************/
-int rtphf ( argc, argv, retc, retv )
+int rtphf (int argc, char *argv[], int retc, char *retv[] )
 /* 
 Purpose:
 -------
@@ -248,8 +247,6 @@ retc  :  (I  )  Number of returned arguments, that is, the dimension of the
 		following argument.
 retv  :  (   )  (Pointer to) array of output arguments.  Not used in this case.
 */
-int argc, retc;
-char *argv[], *retv[];
 { /* Begin function rtphf */
    /*
    Local Variables:
@@ -261,11 +258,10 @@ char *argv[], *retv[];
    char		ni0name[6];
    int		r;
    double	rni;
-   int          dim0,dim1;
    int err;
    dfilehead	phasehead;	/* header information for phasfile	*/
    int	ndflag = ONE_D; /* number of Data dimensions            */
-   char     normchar,revchar;
+//   char     normchar,revchar;
    /*
    Begin Executable Code:
    ---------------------
@@ -316,14 +312,13 @@ char *argv[], *retv[];
 
   /* Defaults for 1D data */
   ndflag = ONE_D;
-  dim1 = dim0 = S_NP;
   ni = 1;
-  normchar = ' ';
-  revchar = '1';
+//  normchar = ' ';
+//  revchar = '1';
   if (phasehead.status & S_TRANSF)	/* 2D data */
   {
      ndflag = TWO_D;
-     normchar = '2';
+//   normchar = '2';
      if (phasehead.status & S_3D)
         ndflag = THREE_D;
 
@@ -353,26 +348,26 @@ char *argv[], *retv[];
         if ((phasehead.status & (S_NP|S_NF)) == (S_NP|S_NF) )
         {
            strcpy(ni0name, "nf");
-           normchar = '3';
-           revchar = '1';
+//         normchar = '3';
+//         revchar = '1';
         }
         else if ((phasehead.status & (S_NP|S_NI)) == (S_NP|S_NI) )
         { 
            strcpy(ni0name, "ni"); 
-           normchar = '3';
-           revchar = '1';
+//         normchar = '3';
+//         revchar = '1';
         } 
         else if ((phasehead.status & (S_NP|S_NI2)) == (S_NP|S_NI2) )
         {
            strcpy(ni0name, "ni2");
-           normchar = '3';
-           revchar = '2';
+//         normchar = '3';
+//         revchar = '2';
         }
         else if ((phasehead.status & (S_NI|S_NI2)) == (S_NI|S_NI2) )
         {
            strcpy(ni0name, "ni");
-           normchar = '2';
-           revchar = '1';
+//         normchar = '2';
+//         revchar = '1';
         }
         else
         {
@@ -719,7 +714,7 @@ int readheader(int argc, char *argv[], int retc, char *retv[])
 {
    int in_file;
    dfilehead datafilehead;
-   int blks, traces, nps;
+   dblockhead datablockhead;
 
    if (argc<2)
    {
@@ -737,25 +732,91 @@ int readheader(int argc, char *argv[], int retc, char *retv[])
       close(in_file);
       ABORT;
    }
-   close(in_file);
-   nps = ntohl(datafilehead.np);
-   blks = ntohl(datafilehead.nblocks);
-   traces = ntohl(datafilehead.ntraces);
-   
-   if (retc)
+   if ( (argc >= 3) &&  !strcmp(argv[2],"scale") )
    {
-      retv[0] = intString(nps);
-      if (retc >= 2)
+      int blk = 1;
+      int blks;
+      int bbytes;
+
+
+      if (argc > 3)
+         blk = atoi(argv[3]);
+      blks = ntohl(datafilehead.nblocks);
+      if ( (blk < 1) || (blk > blks))
       {
-         retv[1] = intString(blks);
-         if (retc >= 3)
-            retv[2] = intString(traces);
+         Werrprintf ("%s: Block %d does not exist in file %s",
+			  argv[0], blk, argv[1]);
+         close(in_file);
+         ABORT;
+      }
+      blk -= 1;
+      bbytes = ntohl(datafilehead.bbytes);
+      if (lseek(in_file,sizeof(dfilehead) + blk * bbytes, SEEK_SET) !=
+		      (off_t) -1 )
+      {
+         if (read(in_file, &datablockhead, sizeof(dblockhead)) <= 0)
+         {
+            Werrprintf ("%s: Error reading from file %s", argv[0], argv[1]);
+            close(in_file);
+            ABORT;
+         }
+      }
+      else
+      {
+         Werrprintf ("%s: Error reading block %d from file %s",
+			 argv[0], blk+1, argv[1]);
+         close(in_file);
+         ABORT;
+      }
+      int ctcount, scale, shift;
+      double factor;
+      ctcount = ntohl(datablockhead.ctcount);
+      scale = ntohs(datablockhead.scale);
+      shift = 1 << abs(scale);
+      if (scale < 1)
+         factor = 1.0/(double)(shift);
+      else
+         factor = (double)(shift);
+      if (retc)
+      {
+         retv[0] = intString(ctcount);
+         if (retc >= 2)
+         {
+            retv[1] = intString(scale);
+            if (retc >= 3)
+               retv[2] = realString(factor);
+         }
+      }
+      else
+      {
+         Winfoprintf("%s block %d: ctcount:%d  scale:%d  factor:%g",
+			 argv[0], blk+1, ctcount, scale, factor);
       }
    }
    else
    {
-      Winfoprintf("%s: points:%d  blocks:%d  traces:%d",argv[0],nps,blks,traces);
+      int blks, traces, nps;
+      nps = ntohl(datafilehead.np);
+      blks = ntohl(datafilehead.nblocks);
+      traces = ntohl(datafilehead.ntraces);
+   
+      if (retc)
+      {
+         retv[0] = intString(nps);
+         if (retc >= 2)
+         {
+            retv[1] = intString(blks);
+            if (retc >= 3)
+               retv[2] = intString(traces);
+         }
+      }
+      else
+      {
+         Winfoprintf("%s: points:%d  blocks:%d  traces:%d",
+			 argv[0],nps,blks,traces);
+      }
    }
+   close(in_file);
 
    RETURN;
 }

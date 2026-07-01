@@ -1,0 +1,49 @@
+******************************************************************************
+* header_change infile setCT ct <blk>
+* header_change infile scale ct scale <blk>
+* header_change infile outfile ct
+******************************************************************************
+  
+header_change is a stand-alone program used to modify
+certain fields in a FID block header. It may be accessed
+directly from a Linux shell tool or via the shell command
+within OpenVnmrJ.
+
+There are three forms of this command. In all cases, the first
+argument is the path name of the FID file to be used. The second
+argument is a keyword 'setCT' or scale or the path name of a file
+to which the modified 'infile' will be written.  
+
+If the setCT keyword (case insensitive) is given, the next
+argument is the new value of the ctcount field of the FID
+block header. An optional block number may also be supplied.
+If no block number is given, the ctcount of all the blocks
+in the FID file will be modified.
+
+If the scale keyword (case insensitive) is given, the third
+argument is the new value of the ctcount field of the FID
+block header and the fourth argument is the new value of
+the scale field of the FID block header.  An optional final
+block number may also be supplied.  If no block number is
+given, the ctcount and scale value of all the blocks in the
+FID file will be modified. See the scalefid manual for a
+description of the functioning of the scale field in the
+FID block header.
+
+If the second argument is neither setct nor scale, it is taken
+as the file name to which the modified FID file will be written.
+The third argument is the value of the new ctcount field in this
+modified "outfile".
+
+Examples from a shell tool:
+header_change $vnmruser/exp1/acqfil/fid setct 6
+header_change $vnmruser/exp1/acqfil/fid scale 2 -1 1
+header_change $vnmruser/exp1/acqfil/fid $vnmruser/exp1/acqfil/fid2 5
+
+Examples from within OVJ via the shell command:
+write('line3','header_change '+curexp+'/acqfil/fid setct %d',6):$cmd
+shell($cmd)
+write('line3','header_change '+curexp+'/acqfil/fid scale %d %d %d',2,-1,1):$cmd
+shell($cmd)
+write('line3','header_change '+curexp+'/acqfil/fid '+curexp+'/acqfil/fid2 %d',5):$cmd
+shell($cmd)

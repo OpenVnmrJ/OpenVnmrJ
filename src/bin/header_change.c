@@ -59,6 +59,13 @@ struct {
 #define S_COMPLEX       0x10    /* 0 = real         1 = complex    */
 #define VERSION 1
 
+/*
+ * header_change infile outfile ct
+ * header_change infile versid newVersion
+ * header_change infile setCT ct <blk>
+ * header_change infile scale ct scale <blk>
+ */
+
 /*** PROGRAM BEGIN *************************************/
 int main(int argc, char *argv[])
 {
@@ -74,6 +81,8 @@ int main(int argc, char *argv[])
      int ctval;
      int no_bytes;
      int versID = 0;
+     int scaling = 0;
+     int setCT = 0;
 
 /*** CONTROL OF INPUT PARAMETERS ******************************/
      if (argc<2)
@@ -95,6 +104,8 @@ int main(int argc, char *argv[])
          }
 
       versID = ( ! strcmp("versid",argv[2]) );
+      scaling = ( ! strcasecmp("scale",argv[2]) );
+      setCT = ( ! strcasecmp("setCT",argv[2]) );
          
 /*** OPENING THE FILES AND READING THE HEADER ****************/
 
@@ -105,7 +116,7 @@ int main(int argc, char *argv[])
          }
       rewind(in_file);  
         
-     if ( ! versID)
+     if ( ! versID && ! scaling && !setCT)
      {
       if ((out_file=fopen(argv[2],"wb"))==NULL)
          {
@@ -158,6 +169,73 @@ int main(int argc, char *argv[])
             fprintf (stderr, "Error in writting output data (datafilehead)\n");
             exit (3);
          }
+         if (fclose(in_file) != 0) 
+         {
+            printf ("Error closing input file"); 
+            exit (3);      
+         }
+         exit(EXIT_SUCCESS);
+      }
+      if ( scaling || setCT )
+      {
+	 int start, end;
+	 short scale = 0;
+	 int bbytes;
+         nblks = ntohl(datafilehead.nblocks);
+         bbytes = ntohl(datafilehead.bbytes);
+         ctval = atoi(argv[3]);
+	 if (setCT)
+	 {
+            if (argc == 5)
+	    {
+               start = end = atoi(argv[4]) - 1;
+	    }
+	    else
+	    {
+               start = 0;
+	       end = nblks;
+	    }
+	 }
+	 if (scaling)
+	 {
+            scale = atoi(argv[4]);
+            if (argc == 6)
+	    {
+               end = atoi(argv[5]);
+	       start = end - 1;
+	       if ( (start < 0) || (end > nblks))
+	       {
+                  fprintf(stderr,
+		     "%s: block value (%d) must be between 1 and %d\n",
+		     argv[0], end, nblks);
+                  exit (3);
+	       }
+	    }
+	    else
+	    {
+               start = 0;
+	       end = nblks;
+	    }
+	 }
+         for (i=start; i<end; i++)
+         {
+            fseek(in_file,sizeof(datafilehead) + i * bbytes, SEEK_SET);
+            if (fread(&datablockhead,sizeof(datablockhead),1,in_file) != 1)
+            {
+            fprintf (stderr, "Error in reading input data (datablockhead)\n");
+            exit (3);
+            }
+            datablockhead.ctcount = htonl(ctval);
+	    if (scaling)
+               datablockhead.scale = htons(scale);
+            fseek(in_file,sizeof(datafilehead) + i * bbytes, SEEK_SET);
+            if (fwrite(&datablockhead,sizeof(datablockhead),1,in_file) != 1)
+            {
+            fprintf (stderr, "Error in writing output data (datablockhead)\n");
+            exit (3);
+            }
+	 }
+	 fflush(in_file);
          if (fclose(in_file) != 0) 
          {
             printf ("Error closing input file"); 

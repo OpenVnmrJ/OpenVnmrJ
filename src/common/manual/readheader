@@ -1,5 +1,7 @@
 
 readheader(filename):$pts,$blks,$traces - Display or return data block header information
+readheader(filename,'scale' <,blk>):$ct,$scale,$factor - Display or return data
+                      scaling information
 
  All VnmrJ data files have header files that describe the data in the file.
  See the User Programming manual for details about the file structure.
@@ -17,3 +19,17 @@ readheader(filename):$pts,$blks,$traces - Display or return data block header in
 Examples
  readheader(curexp+'/acqfil/fid'):$pt,$blk    // Returns points and blocks of
                                               // the FID in the current experiment
+
+The data block headers contain information about data scaling. The second form
+of readheader will return the "ctcount" and scale parameters from the block
+header. An optional third argument specifies the block to read the information
+from. The default is block 1. An optional third return value will return
+the data multiplier defined by the scale value. It represents the power of
+2 that the data are multiplied by. For example, if scale = 2, the data are
+multiplied by (2**scale, 2**2) or 4. If scale = -4, the data are multiplied
+by (2**scale, 2**-4) or 1/16.
+
+Examples
+ readheader(curexp+'/acqfil/fid','scale'):$ct,$scale   // Returns ct and scale
+                                                          from block 1.
+ readheader(curexp+'/acqfil/fid','scale',arraydim):$ct,$scale,$factor   // Returns ct and scale and scaling factor from the last block
