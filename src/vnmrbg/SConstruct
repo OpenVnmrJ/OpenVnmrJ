@@ -597,21 +597,18 @@ revdateFileList = ['revdate.c']
 #Execute("flex -omagic.lex.c magic.lex.l")
 
 
-interixgcc= os.path.join(os.sep,'opt','gcc.3.3','bin','gcc')
-interixgpp= os.path.join(os.sep,'opt','gcc.3.3','bin','g++')
-
 if (platform=="darwin"):
-    ccflags_32_64 = ' -arch x86_64 -arch arm64 -O3 -Wall -Wno-format-security '
-    linkflags_32_64 = ' -arch x86_64 -arch arm64 -O3 '
+    ccflags = ' -arch x86_64 -arch arm64 -O3 -Wall -Wno-format-security '
+    linkflags = ' -arch x86_64 -arch arm64 -O3 '
 else:
-    ccflags_32_64 = ' -Wall '
-    linkflags_32_64 = ' -O -rdynamic'
+    ccflags = ' -Wall '
+    linkflags = ' -O3 -rdynamic'
 
 # build environment
-vnmrBgCEnv = Environment(CCFLAGS    = ccflags_32_64,
+vnmrBgCEnv = Environment(CCFLAGS    = ccflags,
                          CPPDEFINES = ['LINUX', 'VNMRJ', 'BSDACQ', 'SUN', 'X11',
                                        'NOMOTIF', 'NESSIE', 'USE_HTONS'],
-                         LINKFLAGS  = linkflags_32_64,
+                         LINKFLAGS  = linkflags,
                          CPPPATH    =  cwd)
 
 
@@ -641,8 +638,8 @@ else:
         vnmrBgCppEnv.Append(CPPDEFINES = 'boost=std')
 
 if (platform!="darwin"):
-    vnmrBgCEnv.Append(CCFLAGS = ' -O2 -Wno-format-security ')
-    vnmrBgCppEnv.Append(CCFLAGS = ' -O2 ')
+    vnmrBgCEnv.Append(CCFLAGS = ' -O3 -Wno-format-security ')
+    vnmrBgCppEnv.Append(CCFLAGS = ' -O3 ')
 # test if gcc version is >= 15
     if 'gcc' in vnmrBgCEnv['CC']:
         if  int(vnmrBgCEnv.subst('$CCVERSION').split('.')[0]) >= 15:
@@ -795,30 +792,30 @@ magicComSpcObjs = buildMethods.symLinkStaticObj(vnmrBgCEnv, cwd, magicComSpcPath
 magicAllObjs = magicCObjs + magicComSpcObjs # MAGIC_ALL_OBJ
 
 if (platform=="darwin"):
-       linkflags2_32_64 = ' -arch x86_64 -arch arm64 -O3 '
+       linkflags2 = ' -arch x86_64 -arch arm64 -O3 '
        vnmrBgCppEnv.Replace(CXX = 'clang++')
 else:
-       linkflags2_32_64 = ' -O2 -rdynamic'
+       linkflags2 = ' -O3 -rdynamic'
 
 if (opensource=="false"):
        vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
                                    source    = [unmrAllObjs,
                                                 magicAllObjs],
-                                   LINKFLAGS = linkflags2_32_64,
+                                   LINKFLAGS = linkflags2,
                                    LIBPATH   = [cwd],
                                    LIBS      = ['dl'])
 elif (gplsource=="true"):
        vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
                                    source    = [unmrAllObjs,
                                                 magicAllObjs],
-                                   LINKFLAGS = linkflags2_32_64,
+                                   LINKFLAGS = linkflags2,
                                    LIBPATH   = [cwd],
                                    LIBS      = ['gsl','gslcblas','dl'])
 else:
        vnmrbgBuild = vnmrBgCppEnv.Program(target    = vnmrbgTarget,
                                    source    = [unmrAllObjs,
                                                 magicAllObjs],
-                                   LINKFLAGS = linkflags2_32_64,
+                                   LINKFLAGS = linkflags2,
                                    LIBPATH   = [cwd],
                                    LIBS      = ['dl'])
 

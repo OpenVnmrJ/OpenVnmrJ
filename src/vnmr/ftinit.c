@@ -2504,6 +2504,7 @@ void setCtScaling(ftparInfo *ftpar)
 *   provision for turning of CT scaling of FID *
 ***********************************************/
    ftpar->ctScaling = 1;
+   filepath[0] = '\0';
    if (!P_getstring(CURRENT, "wtfile", filepath, 1, MAXPATHL-1))
    {
      if ( ! strcmp(filepath,"noCtScaling") )
