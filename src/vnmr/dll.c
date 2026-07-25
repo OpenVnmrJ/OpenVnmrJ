@@ -2067,8 +2067,10 @@ int analyze(int argc, char *argv[], int retc, char *retv[])
         strcmp(argv[2],"poly1") == 0 ||
         strcmp(argv[2],"poly2") == 0 ||
         strcmp(argv[2],"poly3") == 0)
+	{
       regression = 1;
       r_default = 1;
+	}
   }
   strcpy(filename,curexpdir);
   strcat(filename,"/analyze.inp");
