@@ -125,7 +125,7 @@ typedef struct {
 } XRectangle;
 #endif
 
-static XRectangle viewport = {-1, -1};
+static XRectangle viewport = {-1, -1, 0, 0};
 
 static struct {
     uchar_t *lookuptable;
@@ -820,11 +820,11 @@ GraphicsWin::copyImage(XID_t src, XID_t dst,
 Pixmap
 aipDisplayImage(float *data, int width, int height)
 {
-    VsInfo vsfunc;
-    vsfunc.minData = 0;
-    vsfunc.maxData = 0.045;
-    vsfunc.uFlowColor = palettes[GRAYSCALE_COLORS].firstColor;
-    vsfunc.oFlowColor = (vsfunc.uFlowColor +
+    VsInfo *vsfunc = new VsInfo();
+    vsfunc->minData = 0;
+    vsfunc->maxData = 0.045;
+    vsfunc->uFlowColor = palettes[GRAYSCALE_COLORS].firstColor;
+    vsfunc->oFlowColor = (vsfunc->uFlowColor +
 			 palettes[GRAYSCALE_COLORS].numColors - 1);
     return aipDisplayImage(GRAYSCALE_COLORS,
 			   data,
@@ -834,7 +834,7 @@ aipDisplayImage(float *data, int width, int height)
 			   viewport.x, viewport.y,
 			   viewport.width, viewport.height,
 			   ORIENT_BOTTOM,
-			   spVsInfo_t(&vsfunc),
+			   spVsInfo_t(vsfunc),
 			   INTERP_REPLICATION,
 			   false);
 }
@@ -1085,7 +1085,7 @@ aipDisplayImage(colormapSegment_t cmsindex, // index of palette to use
     XDestroyImage(ximage);
     pix_data = 0;
 #else /* ORIG */
-    int colormapID = open_color_palette("default");
+    int colormapID = open_color_palette((char *)"default");
     int transparency = 0;
     pixmap = aip_displayImage(img_data, colormapID, transparency, dest_x, dest_y, pixWd, pixHt, keep_pixmap);
 
