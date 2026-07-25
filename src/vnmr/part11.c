@@ -5201,7 +5201,7 @@ int isUserOwned(string path)
 }
 
 /**************************/
-void getFileStat(string file, string key, string value)
+void getFileStat(string file, const char *key, string value)
 /**************************/
 /* acceptable key: owner, size, mtime... */
 {
