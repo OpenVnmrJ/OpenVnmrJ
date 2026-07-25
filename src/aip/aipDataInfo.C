@@ -74,7 +74,7 @@ string DataInfo::getKey(DDLSymbolTable *st) {
 		}
 
 		int islash = path.rfind('/');
-		if (islash != string::npos) {
+		if (islash != (int)string::npos) {
 			file = path.substr(islash + 1);
 			path = path.substr(0, islash);
 		}
@@ -105,7 +105,7 @@ string DataInfo::getNameKey(DDLSymbolTable *st) {
 		}
 
 		int islash = path.rfind('/');
-		if (islash != string::npos) {
+		if (islash != (int)string::npos) {
 			file = path.substr(islash + 1);
 			path = path.substr(0, islash);
 		}
@@ -178,8 +178,8 @@ DataInfo::~DataInfo() {
 		//     delete the same data.
 		if (st->GetData() != dataStruct->data) {
 			if (isDebugBit(DEBUGBIT_6)) {
-				fprintf(stderr,"Deleting struct data at 0x%x\n",
-				dataStruct->data);
+				fprintf(stderr,"Deleting struct data at %p\n",
+				(void *)dataStruct->data);
 			}
 			delete[] dataStruct->data;
 		}
@@ -194,7 +194,7 @@ DataInfo::~DataInfo() {
 	delete dataStruct;
 	if (st) {
 		if (isDebugBit(DEBUGBIT_6)) {
-			fprintf(stderr,"Deleting symtab at 0x%x\n", st->GetData());
+			fprintf(stderr,"Deleting symtab at %p\n", (void *)st->GetData());
 		}
 		st->Delete();
 	}
@@ -216,7 +216,7 @@ void DataInfo::setGroup() {
 	} else {
 		group = string(pc);
 		int islash = group.rfind('/');
-		if (islash != string::npos) {
+		if (islash != (int)string::npos) {
 			group = group.substr(0, islash);
 		}
 	}
@@ -812,7 +812,7 @@ bool DataInfo::setDataStructureFromSymbolTable(dataStruct_t *ds,
 	/*
 	 * Sanity check on amount of data.
 	 */
-	if (buflen != st->DataLength()) {
+	if (buflen != (unsigned int)st->DataLength()) {
 		ok = false;
 		char msg[1024];
 		sprintf(msg,"Error: Image size expected=%d, Actual buffer size=%d",
