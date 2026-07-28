@@ -110,7 +110,7 @@ extern "C" {
     void interrupt_end(void);
     void interrupt_begin(void);
     // key is fullpath +' '+ fdf filename, (x, y) is upper left corner of the frame. 
-    int drawAnnotation(const char *key, int x, int y, int w, int h, int num, int id, bool f);
+    int drawAnnotation(const char *key, int x, int y, int w, int h, int num, int id);
     void Winfoprintf(const char *format, ...)  __attribute__((format(printf,1,2)));
     int appdirFind(const char *filename, const char *lib, char *fullpath, const char *suffix, int perm);
     int copy_file(char* origpath, char* destpath);

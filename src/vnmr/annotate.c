@@ -423,10 +423,9 @@ get_value()
 static int
 get_type(char *s)
 {
-    int type, len, k;
+    int len, k;
     char *d, *d1;
 
-    type = 0;
     d = s;
     inPtr = NULL;
     while (*d == ' ' || *d == '\t') d++;
@@ -2836,12 +2835,11 @@ check_aipAnnotation()
 }
 
 int drawAnnotation(const char *key, int x, int y, int w, int h,
-                   int frameNum, int frameId, int newFlag)
+                   int frameNum, int frameId)
 {
     int  newKey, newSize;
     int  i, k;
 
-    (void) newFlag;
     if (w < 50 || h < 50) {
         if (printErr)
            Werrprintf("Window size is too small for annotation.");

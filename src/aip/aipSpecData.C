@@ -67,9 +67,9 @@ bool SpecData::fillSpecStruct(DDLSymbolTable *newSt, specStruct_t *newSs) {
      Werrprintf("No \"storage\" in FDF header\n");
   } else strcpy(newSs->storage, str);
   
-  if (!newSt->GetValue("fidpath", str)) {
-     strcpy(newSs->fidpath,"");
-  } else strcpy(newSs->fidpath, str);
+//  if (!newSt->GetValue("fidpath", str)) {
+//     strcpy(newSs->fidpath,"");
+//  } else strcpy(newSs->fidpath, str);
   
   if (!newSt->GetValue("type", str)) {
      strcpy(newSs->type,"absval");
