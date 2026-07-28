@@ -595,8 +595,8 @@ bool Gframe::saveCanvasBackup(Roi *roi) {
     if (!viewList->empty()) {
         spViewInfo_t view = *viewList->begin();
         spImgInfo_t img = view->imgInfo;
-        drawAnnotation(img->getDataInfo()->getKey().c_str(), pixstx, pixsty, pixwd, pixht, getGframeNumber(), id,
-                0);
+        drawAnnotation(img->getDataInfo()->getKey().c_str(),
+			pixstx, pixsty, pixwd, pixht, getGframeNumber(), id);
     }
 
     aipCallDisplayListeners(id, false);
@@ -1112,7 +1112,7 @@ void Gframe::draw() {
             view = *viewList->begin();
             img = view->imgInfo;
             drawAnnotation(img->getDataInfo()->getKey().c_str(), pixstx, pixsty, pixwd, pixht, getGframeNumber(),
-                    id, changeFlag);
+                    id);
             //view->pixstx, view->pixsty, view->pixwd, view->pixht);
         }
         if (isImage && !movieStopped) {
