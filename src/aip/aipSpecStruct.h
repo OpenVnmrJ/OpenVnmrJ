@@ -25,7 +25,7 @@
 
 typedef struct _specStruct {
    float *data;
-   char fidpath[MAXPATHLEN];
+//   char fidpath[MAXPATHLEN];
    char type[MAXWORDLEN];        // E.g., "absval", "real", "imag", "complex" 
    char dataType[MAXWORDLEN];    // E.g., "spectrum", "baseline", "fitting"
    char storage[MAXWORDLEN];     // E.g., "float" 
