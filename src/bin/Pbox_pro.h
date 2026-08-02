@@ -82,7 +82,7 @@ int id;
 
   if (!Sh[id].set)
   {
-    if (j = is_reserved(Wv[id].sh))   /* set NULL and RDC shapes */
+    if ((j = is_reserved(Wv[id].sh)))   /* set NULL and RDC shapes */
     {
       Sh[id].set = j; 
       if(j == 2)
@@ -192,7 +192,7 @@ int setshapes()
   if (h.itnw)
   {
     wf = (Windw *) calloc(h.itnw, sizeof(Windw)); 
-    for(i=0, j=0; i<h.itnw; i++) 
+    for(i=0, j=0; i<h.itnf; i++) 
     {
       if (isname(&Sh[i].wf))
       {
@@ -206,7 +206,7 @@ int setshapes()
   if (h.itnd)
   {
     df = (Windw *) calloc(h.itnd, sizeof(Windw)); 
-    for(i=0, j=0; i<h.itnd; i++) 
+    for(i=0, j=0; i<h.itnf; i++) 
     {
       if (isname(&Sh[i].df))
       {
@@ -261,8 +261,8 @@ char fln[MAXSTR];
 
 int closepbox()
 {
-  FILE *fil, *fil2;
-  double **Sam, **Sph, **Wam, **Wph, **Wbs;
+  FILE *fil, *fil2 = NULL;
+  double **Sam = NULL, **Sph = NULL, **Wam = NULL, **Wph = NULL, **Wbs = NULL;
   char str1[MAXSTR], str2[MAXSTR];
   static char fnm[MAXSTR], fcl[MAXSTR];
   int i, j, k, n, m, nn, itr, nitr, inp, gate, minnumb, npmax;
@@ -1047,11 +1047,11 @@ FSLG -  one of the versions disabled here. EK.
     if (h.tfl > 0)
     {
       printf("   sh       pw        ofs   st  ph  su  lev(%s) ", "%");
-      if (Wv[i].php > 0.0) printf("trev   d1   d2   d0   wrp  php\n");
-      else if (Wv[i].wrp > 0.0) printf("trev   d1   d2   d0   wrp\n");
-      else if ((Wv[i].d0 - Wv[i].d1) > 0.0) printf("trev  d1  d2  d0\n");
-      else if (Wv[i].d2 > 0.0) printf("trev  d1  d2\n");
-      else if (Wv[i].d1 > 0.0) printf("trev  d1\n");
+      if (Wv[h.itnf-1].php > 0.0) printf("trev   d1   d2   d0   wrp  php\n");
+      else if (Wv[h.itnf-1].wrp > 0.0) printf("trev   d1   d2   d0   wrp\n");
+      else if ((Wv[h.itnf-1].d0 - Wv[h.itnf-1].d1) > 0.0) printf("trev  d1  d2  d0\n");
+      else if (Wv[h.itnf-1].d2 > 0.0) printf("trev  d1  d2\n");
+      else if (Wv[h.itnf-1].d1 > 0.0) printf("trev  d1\n");
       else printf("trev\n");
       for (i = 0; i < h.itnf; i++)
       {
@@ -1077,11 +1077,11 @@ FSLG -  one of the versions disabled here. EK.
     else
     {
       printf("   sh      bw      pw        ofs   st  ph  su  fla ");
-      if (Wv[i].php > 1.0e-8) printf("trev   d1   d2   d0   wrp  php\n");
-      else if (Wv[i].wrp > 1.0e-8) printf("trev   d1   d2   d0   wrp\n");
-      else if ((Wv[i].d0 - Wv[i].d1) > 1.0e-8) printf("trev  d1  d2  d0\n");
-      else if (Wv[i].d2 > 1.0e-8) printf("trev  d1  d2\n");
-      else if (Wv[i].d1 > 1.0e-8) printf("trev  d1\n");
+      if (Wv[h.itnf-1].php > 1.0e-8) printf("trev   d1   d2   d0   wrp  php\n");
+      else if (Wv[h.itnf-1].wrp > 1.0e-8) printf("trev   d1   d2   d0   wrp\n");
+      else if ((Wv[h.itnf-1].d0 - Wv[h.itnf-1].d1) > 1.0e-8) printf("trev  d1  d2  d0\n");
+      else if (Wv[h.itnf-1].d2 > 1.0e-8) printf("trev  d1  d2\n");
+      else if (Wv[h.itnf-1].d1 > 1.0e-8) printf("trev  d1\n");
       else printf("trev\n");
       for (i = 0; i < h.itnf; i++)
       {
@@ -1113,7 +1113,8 @@ FSLG -  one of the versions disabled here. EK.
       printf("\nWaveform # %d, %s :\n", i+1, Wv[i].sh);
       j = strlen(Wv[i].sh);
       printf("================"); 
-      for(k=0; k<j; k++) printf("="); printf("\n");
+      for(k=0; k<j; k++) { printf("="); }
+      printf("\n");
       reportwave(&Wv[i], h.reps);
       printf("\n");
       if(Sh[i].set == 1)
@@ -1602,8 +1603,8 @@ FSLG -  one of the versions disabled here. EK.
         {
           if (h.tfl < 0)
           {
-	    while ((Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
-	           (sum < 360.0) && (j + 1 < h.np))
+	    while ((j + 1 < h.np) && (Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
+	           (sum < 360.0))
 	    {
 	      sum += dumm;
 	      j++;
@@ -1611,8 +1612,8 @@ FSLG -  one of the versions disabled here. EK.
           }
           else
           {
-	    while ((Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
-	           (sum < 255.0) && (j + 1 < h.np))
+	    while ((j + 1 < h.np) && (Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
+	           (sum < 255.0))
 	    {
 	      sum += dumm;
 	      j++;
@@ -1634,8 +1635,8 @@ FSLG -  one of the versions disabled here. EK.
         {
           if (h.tfl < 0)
           {
-	      while ((Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
-	             (sum < 360.0) && (j + 1 < h.np))
+	      while ((j + 1 < h.np) && (Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
+	             (sum < 360.0))
 	      {
 	        sum += dumm;
 	        j++;
@@ -1643,8 +1644,8 @@ FSLG -  one of the versions disabled here. EK.
           }
           else
           {
-	      while ((Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
-	             (sum < 255.0) && (j + 1 < h.np))
+      while ((j + 1 < h.np) && (Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
+	             (sum < 255.0))
 	      {
 	        sum += dumm;
 	        j++;
