@@ -210,7 +210,7 @@ Shape *s;
   for(j = k; j < s->np; j++) 
     Pha[j] = ko-Amp[j];
                        
-  tm = Pha[s->np] - Pha[0];			/* max frequency, not scaled */
+  tm = Pha[s->np-1] - Pha[0];			/* max frequency, not scaled */
   ko = (double) s->np * s->pwsw * (Pha[k] - Pha[k-1]) / tm;
   s->pb1 = sqrt(fabs(ko * s->adb)); 
   if(s->pb1 < 2.0)
@@ -228,7 +228,7 @@ Shape *s;
 void fm2pm(s)					/* FM to PM conversion */
 Shape *s;
 {
-int     i, j, k;
+int     i, j = 0, k;
 double  ko=0, ph = 0.0;
   
   if((s->adb > 0.0) && (s->pwsw > 0.0))
