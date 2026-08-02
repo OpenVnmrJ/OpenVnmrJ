@@ -67,6 +67,11 @@ int main(int argc, char *argv[])
     exit(1);
   }
   nm = strlen(argv[1]);
+  if (nm < 3)
+  {
+    printf("Usage: Pxspy filename.extension\n");
+    exit(1);
+  }
   for (j = 0; j < 3; j++)
   {
     k = nm - 3 + j;
@@ -175,11 +180,13 @@ int main(int argc, char *argv[])
 
     while(fgets(str, MAXSTR, inpf))
     {
-      if((str[0] != '#') && (sscanf(str, "%lf", &am) > 0)) 
-      tokens = sscanf(str, "%lf %lf", &am, &ln);       
-      if (tokens < 2)
-        ln = 1.0;
-      np += (int) ln;
+      if((str[0] != '#') && (sscanf(str, "%lf", &am) > 0))
+      {
+        tokens = sscanf(str, "%lf %lf", &am, &ln);
+        if (tokens < 2)
+          ln = 1.0;
+        np += (int) ln;
+      }
     }
   }  
   else
