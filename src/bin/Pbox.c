@@ -22,9 +22,9 @@
 
 int main(int argc, char *argv[])
 {
-  FILE *fil;
+  FILE *fil = NULL;
   char opt = ' ', verb = 'n', un, val[10], fn_inp[MAXSTR], h_name[MAXSTR];
-  int  i, j, k, ip, narg, inm;
+  int  i, j, k, ip, narg, inm=0;
 
 /* ------------------------------- Check the Options -----------------------*/
 
@@ -402,6 +402,8 @@ int main(int argc, char *argv[])
   }
   else
   {
+    if (fil == NULL)
+      pxerr("Pbox error : no input file to open");
     fseek(fil, 0, 0); 
     for (i = 0; i < h.itnf; i++)
     {
