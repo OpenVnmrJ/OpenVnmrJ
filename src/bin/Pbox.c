@@ -67,7 +67,8 @@ int main(int argc, char *argv[])
                       pxerr("Option -u : invalid filename");
                     break;
           case 'v': verb='y';
-		    if (opt == ' ') opt = 'n'; break; 
+                    if (opt == ' ') opt = 'n';
+                    break; 
           case 'w': opt='n'; break; 
           case 'x': opt='n'; break; 
         }
@@ -240,7 +241,7 @@ int main(int argc, char *argv[])
                   {
                     if(verb=='y') printf("%s, ", argv[j+k]);
                     (void) strcpy(h.stepsize_, argv[j+k]);
-                    ip=sscanf(h.stepsize_, "%[0-9.]%c", val, &un);
+                    ip=sscanf(h.stepsize_, "%9[0-9.]%c", val, &un);
                     if ((ip==1) && (isdigit(val[0])))
                       h.stepsize = stod(val);		/* default is us */
                     else if (ip > 1)
