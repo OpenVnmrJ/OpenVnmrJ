@@ -370,7 +370,7 @@ char *fname;
 {
 FILE *fil;
 char str[MAXSTR], str1[MAXSTR], str2[MAXSTR];
-int  i;
+int  i = 0;
 
   if ((fil = fopen(fname, "r")) == NULL)
   {
@@ -1411,7 +1411,7 @@ double srev;
   int j, k;
 
   if (srev > 1.0) 
-    srev = 1.0;
+    srev = 1.0, j = 0;
   else if (srev < 0.0)					/* find the maximum */
   {
     for (j = 0, k = 0, tm = 0.0; j < np; j++)
@@ -2122,7 +2122,7 @@ int  ip;
   if (findeqnm(fil, "amf", str, ip)) 
   { 
     strcpy(s->am, str);	                                    /* AM funct */
-    { char _mp[MAXSTR]; sprintf(_mp, "#    amf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    amf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (s->am[0] == 'n' && s->am[1] == '\0') strcpy(s->am, "sq");
   if (s->am[0] == 's' && s->am[1] == 'q' && s->am[2] == '\0')
@@ -2131,97 +2131,97 @@ int  ip;
   if (findeqnm(fil, "fmf", str, ip)) 
   {
     strcpy(s->fm, str);                                     /* FM funct */
-    { char _mp[MAXSTR]; sprintf(_mp, "#    fmf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    fmf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (s->fm[0] == 'n' && s->fm[1] == '\0') s->ffl = 0;
   else s->ffl = 1;
   if (findeqnm(fil, "pmf", str, ip)) 	                    /* PM funct */
   {
     strcpy(s->fm, str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    pmf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    pmf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
     if (s->fm[0] == 'n' && s->fm[1] == '\0') s->ffl = 0;
     else s->ffl = -1;
   }
   if (findparm(fil, "su", str, ip)) 
   {
     strcpy(s->su, str);	                                  /* supercycle */
-    { char _mp[MAXSTR]; sprintf(_mp, "#    su = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    su = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "fla", str, ip))                      /* flipangle */
   {
-    { char _mp[MAXSTR]; sprintf(_mp, "#    fla = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    fla = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
     s->oflg = ofres(str);
     s->fla = stod(str); 
   }
   if (findparm(fil, "pwbw", str, ip)) 
   {
     s->pwb = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    pwbw = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }    
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    pwbw = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }    
   }
   if (findparm(fil, "pwb1", str, ip)) 
   {
     s->pb1 = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    pb1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    pb1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }    
   if (findparm(fil, "pwsw", str, ip)) 
   {
     s->pwsw = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    pwsw = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }    
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    pwsw = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }    
   }
   if (findparm(fil, "adb", str, ip)) 
   {
     s->adb = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    adb = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    adb = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "ofs", str, ip)) 
   {
     s->of = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    ofs = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    ofs = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "dres", str, ip)) 
   {
     s->dres = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    dres = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    dres = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "st", str, ip)) 
   {
     s->st = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    st = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    st = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "dash", str, ip)) 
   {
     strcpy(s->dash, str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    dash = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    dash = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "c1", str, ip)) 
   {
     s->c1 = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    c1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    c1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "c2", str, ip)) 
   {
     s->c2 = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    c2 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    c2 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "c3", str, ip)) 
   {
     s->c3 = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    c3 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    c3 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "d1", str, ip)) 
   {
     s->d1 = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    d1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    d1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "d2", str, ip)) 
   {
     s->d2 = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    d2 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    d2 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "dutyc", str, ip)) 
   {
     s->duty = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    dutyc = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    dutyc = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
     if ((s->duty > 0.0001) && (s->duty < 1.0))
       s->d1 = s->d2 = (0.5 / s->duty) - 0.5;
     else 
@@ -2230,75 +2230,75 @@ int  ip;
   if (findparm(fil, "steps", str, ip)) 
   {
     s->dnp = stoi(str); 
-    { char _mp[MAXSTR]; sprintf(_mp, "#    steps = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    steps = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
 
 		/* Truncation Parameters */
   if (findparm(fil, "min", str, ip)) 
   {
     s->min = stod(str); 
-    { char _mp[MAXSTR]; sprintf(_mp, "#    min = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    min = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "max", str, ip)) 
   {
     s->max = stod(str); 
-    { char _mp[MAXSTR]; sprintf(_mp, "#    max = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    max = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "left", str, ip)) 
   {
     s->lft = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    left = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    left = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "right", str, ip)) 
   {
     s->rgt = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    right = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    right = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "cmplx", str, ip)) 
   {
     s->co = stoi(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    cmplx = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    cmplx = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "wrap", str, ip)) 
   {
     s->wr = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    wrap = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    wrap = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "stretch", str, ip)) 
   {
     s->stch = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    stretch = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    stretch = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "trev", str, ip)) 
   {
     s->trev = stoi(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    trev = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    trev = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "srev", str, ip)) 
   {
     s->srev = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    srev = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    srev = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "reflect", str, ip)) 
   {
     s->rfl = stod(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    reflect = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    reflect = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if ((findparm(fil, "dcflag", str, ip)) && (str[0] == 'y')) 
   {
     s->dc = 1;
-    { char _mp[MAXSTR]; sprintf(_mp, "#    dcflag = y\n"); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    dcflag = y\n"); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
 		/* Additional Data Matrix */
   if ((i=findparm(fil, "cols", str, ip))) 
   {
     s->n = stoi(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    cols = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    cols = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }    
   if ((j=findparm(fil, "rows", str, ip))) 
   {
     s->m = stoi(str);
-    { char _mp[MAXSTR]; sprintf(_mp, "#    rows = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    rows = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if ((i) || (j))
   {
@@ -2306,14 +2306,14 @@ int  ip;
     s->f = arry(k); k=0;     
     for(i = 0; i< s->m; i++) 
     {
-      { char _mp[MAXSTR]; sprintf(_mp, "#      "); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+      { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#      "); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
       for(j = 0; j< s->n; j++) 	
       {
 	fscanf(fil, "%lf", &s->f[k]);
-	{ char _mp[MAXSTR]; sprintf(_mp, " %12.6f  ", s->f[k]); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+	{ char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), " %12.6f  ", s->f[k]); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
 	k++;			
       }
-      { char _mp[MAXSTR]; sprintf(_mp, " \n"); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
+      { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), " \n"); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
     }
   }
   if ((strcmp(s->fm, "sqw") == 0) || (strcmp(s->fm, "fsw") == 0))
