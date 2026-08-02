@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
   int i, j, k, nm, tokens, np, gt;
   float am, ph, fgt, re, im, ln, numb, tpa;
   double rd = PI / 180.0;
-  char ch, str[128];
+  char ch, str[MAXSTR];
   char ifn[MAXSTR], ofn[MAXSTR];
   static char ext[10];
 
@@ -62,6 +62,11 @@ int main(int argc, char *argv[])
     exit(1);
   }
   nm = strlen(argv[1]);
+  if (nm < 3)
+  {
+    printf("Usage: Pxfid filename.extension\n");
+    exit(1);
+  }
   for (j = 0; j < 3; j++)
   {
     k = nm - 3 + j;
