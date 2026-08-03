@@ -109,14 +109,13 @@ int read_sample_info(FILE *stream, struct sample_info *s)
 	   strncpy(s->prompt_entry[line].eprompt,prompt,MAX_PROMPT_LEN);	/* 11 char */
 	   s->prompt_entry[line].eprompt[MAX_PROMPT_LEN-1] = '\0'; /* be sure null term string */
 	   /* build up a 80 char EOE string */
-	   strcpy(s->prompt_entry[line].etext,s->prompt_entry[line].eprompt);	/* 11 char */
-	   strcat(s->prompt_entry[line].etext,s->prompt_entry[line].eprompt);	/* 11 char */
-	   strcat(s->prompt_entry[line].etext,s->prompt_entry[line].eprompt);	/* 11 char */
-	   strcat(s->prompt_entry[line].etext,s->prompt_entry[line].eprompt);	/* 11 char */
-	   strcat(s->prompt_entry[line].etext,s->prompt_entry[line].eprompt);	/* 11 char */
-	   strcat(s->prompt_entry[line].etext,s->prompt_entry[line].eprompt);	/* 11 char */
-	   strcat(s->prompt_entry[line].etext,s->prompt_entry[line].eprompt);	/* 11 char */
-	   strcat(s->prompt_entry[line].etext,s->prompt_entry[line].eprompt);	/* 11 char */
+	   {
+	     int k;
+	     const char *ep = s->prompt_entry[line].eprompt;
+	     strcpy(s->prompt_entry[line].etext, ep);	/* 11 char */
+	     for (k = 1; k < 8; k++)
+	       strcat(s->prompt_entry[line].etext, ep);	/* 11 char */
+	   }
 	   break;	/* yes then stop */
        }
        else
