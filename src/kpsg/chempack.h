@@ -12,9 +12,7 @@
 
 #include "group.h"
 
-static double syncGrad(gT,gL,Mf,sR,Rv)
-char *gT, *gL, *sR, *Rv;
-double Mf;
+static double syncGrad(char *gT, char *gL, double Mf, char *sR, char *Rv)
 {
    double tt, ll, sr, garea, reps;
    sr = getval(sR);
@@ -39,9 +37,7 @@ double Mf;
         return(ll);
 }
 
-double syncGradTime(gTime,gLevel,Mfactor)
-char *gTime, *gLevel;
-double Mfactor;
+double syncGradTime(char *gTime, char *gLevel, double Mfactor)
 {
    double Tt = getval(gTime);
    char probetype[MAXSTR];
@@ -51,9 +47,7 @@ double Mfactor;
    return(Tt);
 }
 
-double syncGradLvl(gTime,gLevel,Mfactor)
-char *gTime, *gLevel;
-double Mfactor;
+double syncGradLvl(char *gTime, char *gLevel, double Mfactor)
 {
    double Ll = getval(gLevel);
    char probetype[MAXSTR];
@@ -63,9 +57,7 @@ double Mfactor;
    return(Ll);
 }
 
-void satpulse(saturation,phase,rx1,rx2)
-double saturation, rx1, rx2;
-codeint phase;
+void satpulse(double saturation, codeint phase, double rx1, double rx2)
 {
   double satpwr,
 	 satfrq;
@@ -110,8 +102,7 @@ void steadystate()
 }
 
 /*   Flip back pulse definition */
-void FBpulse(phase,phaseinc)
-codeint phase, phaseinc;
+void FBpulse(codeint phase, codeint phaseinc)
 
 {
   char fbshp[MAXSTR];
@@ -132,9 +123,7 @@ codeint phase, phaseinc;
 	
 /*-----------------MLEV17c definition-----------------------------*/
 
-void mlevc(width,phsA,phsB)
-  double width;
-  codeint phsA,phsB;
+void mlevc(double width, codeint phsA, codeint phsB)
 {
    txphase(phsA); delay(width);
    xmtroff(); delay(width); xmtron();
@@ -143,9 +132,7 @@ void mlevc(width,phsA,phsB)
    txphase(phsA); delay(width);
 }
 
-void mlev17c(length,width,phsw,phsx,phsy,phsz,loop_counter)
- double length, width;
- codeint phsw,phsx,phsy,phsz,loop_counter;
+void mlev17c(double length, double width, codeint phsw, codeint phsx, codeint phsy, codeint phsz, codeint loop_counter)
 
 {
    double  cycles;
@@ -194,18 +181,14 @@ void mlev17c(length,width,phsw,phsx,phsy,phsz,loop_counter)
 
 /*-----------------MLEV17 definition-----------------------------*/
 
-void mlev(width,phsA,phsB)
-  double width;
-  codeint phsA,phsB;
+void mlev(double width, codeint phsA, codeint phsB)
 {
    txphase(phsA); delay(width);
    txphase(phsB); delay(2*width);
    txphase(phsA); delay(width);
 }
 
-void mlev17(length,width,phsw,phsx,phsy,phsz,loop_counter)
- double length, width;
- codeint phsw,phsx,phsy,phsz,loop_counter;
+void mlev17(double length, double width, codeint phsw, codeint phsx, codeint phsy, codeint phsz, codeint loop_counter)
 
 {
    double  cycles;
@@ -267,9 +250,7 @@ void dips2(double width, codeint phsA, codeint phsB)
       txphase(phsA); delay(370*width/90);
 }
 
-void dipsi2(length,width,phsx,phsy,loop_counter)
-double length,width;
-codeint phsx,phsy,loop_counter;
+void dipsi2(double length, double width, codeint phsx, codeint phsy, codeint loop_counter)
 {
   double cycles;
   cycles = length/(width*115.11);
@@ -313,9 +294,7 @@ void dips3(double width, codeint phsA, codeint phsB)
       txphase(phsB); delay(395*width/90);
 }
 
-void dipsi3(length,width,phsx,phsy,loop_counter)
-double length,width;
-codeint phsx,phsy,loop_counter;
+void dipsi3(double length, double width, codeint phsx, codeint phsy, codeint loop_counter)
 {
   double cycles;
   cycles = length/(width*217.33);
@@ -337,9 +316,7 @@ codeint phsx,phsy,loop_counter;
 
 /*-------------transverse roesy spinlock definition---------------*/
 
-void troesy(length,width,phs1,phs2,loop_counter)
- double length,width;
- codeint phs1, phs2, loop_counter;
+void troesy(double length, double width, codeint phs1, codeint phs2, codeint loop_counter)
 {
   double cycles;
    cycles = length/(width*4);
@@ -361,9 +338,7 @@ void troesy(length,width,phs1,phs2,loop_counter)
 
 /*------------------dante spinlock---------------------*/
 
-void dante_spinlock(length,width,phs1,loop_counter)
- double length,width;
- codeint phs1, loop_counter;
+void dante_spinlock(double length, double width, codeint phs1, codeint loop_counter)
 {
   double cycles,
   	 ratio;
@@ -406,10 +381,7 @@ void cw_spinlock(double length, codeint phs1)
 
 /*----------------- SpinLock definition---------------------*/
 
-void SpinLock(pattern,length,width,phsa,phsb,phsc,phsd,loop_counter)
- double length,width;
- codeint phsa,phsb,phsc,phsd,loop_counter;
- char pattern[MAXSTR];
+void SpinLock(char *pattern, double length, double width, codeint phsa, codeint phsb, codeint phsc, codeint phsd, codeint loop_counter)
 {
 
    obs_pw_ovr(TRUE);
