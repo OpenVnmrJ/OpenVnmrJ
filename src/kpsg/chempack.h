@@ -440,3 +440,4 @@ void SpinLock(pattern,length,width,phsa,phsb,phsc,phsd,loop_counter)
 }
 
 #endif  // CHEMPACK_H
+
