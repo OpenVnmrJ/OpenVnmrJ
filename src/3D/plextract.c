@@ -601,6 +601,8 @@ hdrInfo *createDATAheader(filepar *fileinfo, datafileheader *datahead, int pltyp
       return(NULL); 
    }
 
+   memset(hdrinfo->filehead, 0, sizeof(dfilehead) + nbheaders * sizeof(dblockhead));
+
    hdrinfo->blockhead = (dblockhead *) (hdrinfo->filehead + 1);
 
    hdrinfo->filehead->nblocks = 1;
