@@ -231,10 +231,6 @@ void Mouse::event(int x, int y, int button, int mask, int dummy) {
     // mask: 27   26   25   24 . 20   19   18   17   16 . 10   9   8 . 7-0
     //       meta alt  ctrl shft mmove drag clik up   down b3   b2  b1  clicks
 
-    /* if ((mask & mmove) == 0) {
-     fprintf(stderr,"mask=0x%08x, button=%d\n", mask, button);
-     }/*end CMP*/
-
     if (!aipHasScreen()) {
         // Someone else started using the screen w/o controlling the mouse.
         setState(notOwner);
