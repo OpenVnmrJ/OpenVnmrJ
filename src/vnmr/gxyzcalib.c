@@ -100,12 +100,13 @@
    char in_file[MAXLENGTH];
    char out_file[MAXLENGTH];
    int i,*ia,itst,k,mfit=MA,npt,xmax,xmin;
-   double gammaD2O,int_diam,chisq,ochisq,*x,*x1,*y1,
+   double chisq,ochisq,*x,*x1,*y1,
           *w,*sig,**covar,**alpha,*dummydyda,cwidth,cmidpoint,*m;
    char fname[MAXLENGTH];
+   int res __attribute__((unused));
 
-   gammaD2O=653.5;
-   int_diam=0.427;
+//   gammaD2O=653.5;
+//   int_diam=0.427;
 
 strcpy(in_file,curexpdir);
 strcat(in_file,"/xydata");
@@ -131,7 +132,7 @@ if ((outreg = fopen(fname,"w")) == NULL) {
  
         fprintf(out,"Output from calibxy\n");
 
-        fscanf(in,"%d  \n", &npt);
+        res = fscanf(in,"%d  \n", &npt);
    if ((npt>257)||(npt<2))
    {
         Werrprintf("Number of points %d  is unreasonable\n",npt);
