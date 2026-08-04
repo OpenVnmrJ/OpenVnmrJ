@@ -817,14 +817,15 @@ GraphicsWin::copyImage(XID_t src, XID_t dst,
     return true;
 }
 
+#ifdef UNUSED
 Pixmap
 aipDisplayImage(float *data, int width, int height)
 {
-    VsInfo *vsfunc = new VsInfo();
-    vsfunc->minData = 0;
-    vsfunc->maxData = 0.045;
-    vsfunc->uFlowColor = palettes[GRAYSCALE_COLORS].firstColor;
-    vsfunc->oFlowColor = (vsfunc->uFlowColor +
+    VsInfo vsfunc;
+    vsfunc.minData = 0;
+    vsfunc.maxData = 0.045;
+    vsfunc.uFlowColor = palettes[GRAYSCALE_COLORS].firstColor;
+    vsfunc.oFlowColor = (vsfunc.uFlowColor +
 			 palettes[GRAYSCALE_COLORS].numColors - 1);
     return aipDisplayImage(GRAYSCALE_COLORS,
 			   data,
@@ -834,10 +835,11 @@ aipDisplayImage(float *data, int width, int height)
 			   viewport.x, viewport.y,
 			   viewport.width, viewport.height,
 			   ORIENT_BOTTOM,
-			   spVsInfo_t(vsfunc),
+			   spVsInfo_t(&vsfunc),
 			   INTERP_REPLICATION,
 			   false);
 }
+#endif
 
 Pixmap
 aipDisplayImage(colormapSegment_t cmsindex, // index of palette to use
@@ -1410,7 +1412,7 @@ aipPrintImage(float *data, 		// pointer to data points
 	int err;
 
 	// Write raw data
-	write(fd, pix_data, pixWd * pixHt);
+	err = write(fd, pix_data, pixWd * pixHt);
 	close(fd);
 
 	// Convert to DICOM format
