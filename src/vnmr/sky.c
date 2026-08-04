@@ -14,6 +14,7 @@
 +--------------------------------------------------------------*/
 
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 
 #ifndef M_PI
@@ -61,70 +62,32 @@ extern int debug1;
 #define DPRINT4(str, arg1, arg2, arg3, arg4) 
 #endif 
 
-
-/*-------------------------------
-|				|
-|	     skywt()/0		|
-|				|
-|   Wait for array processor	|
-|   to be done.			|
-|				|
-+------------------------------*/
-void skywt()
-{ 
-}
-
-
-/*-------------------------------
-|				|
-|	   skyinit()/0		|
-|				|
-|  Initialize array processor.	|
-|				|
-+------------------------------*/
-void skyinit()
-{
-}
-
-
-/*-------------------------------
-|				|
-|	    skygo()/0		|
-|				|
-+------------------------------*/
-void skygo()
-{
-}
-
-
-/*-------------------------------
-|				|
-|	   skyinit()/0		|
-|				|
-+------------------------------*/
-void skyend()
-{
-}
-
-
-/*-------------------------------
-|				|
-|	    skyrel()/0		|
-|				|
-+------------------------------*/
-void skyrel()
-{
-}
-
-
 /* vector,vector,vector multiply, real vectors */
 /**********************************/
-void vvvrmult(float *in1, int is1, float *in2, int is2, float *out1, int os1, int n)
+void vvvrmult(float *restrict in1, int is1, float *in2, int is2, float *out1, int os1, int n)
 /**********************************/
-{ register int i;
-  register int is1r,is2r,os1r;
-  register float *in1r,*in2r,*out1r;
+{ int i;
+  int is1r,is2r,os1r;
+  float *in1r,*in2r,*out1r;
 
+ if (is1 == 1 && is2 == os1)
+  {
+    switch (is2)
+    {
+      case 1:
+        for (i = 0; i < n; i++) out1[i] = in1[i] * in2[i];
+        return;
+      case 2:
+        for (i = 0; i < n; i++) out1[i * 2] = in1[i] * in2[i * 2];
+        return;
+      case 4:
+        for (i = 0; i < n; i++) out1[i * 4] = in1[i] * in2[i * 4];
+        return;
+      default:
+        break; /* uncommon stride: fall through to generic below */
+    }
+  }
+ {
   is1r = is1; is2r = is2; os1r = os1;
   in1r = in1; in2r = in2; out1r = out1;
   i = n;
@@ -132,6 +95,7 @@ void vvvrmult(float *in1, int is1, float *in2, int is2, float *out1, int os1, in
     { *out1r = *in1r * *in2r; 
       in1r += is1r; in2r += is2r; out1r += os1r; 
     }
+ }
 }
 
 
@@ -142,9 +106,9 @@ void vvvrmult(float *in1, int is1, float *in2, int is2, float *out1, int os1, in
 +--------------------------------------*/
 void datafill(float *buffer, int n, float value)
 {
-   register int         i;
-   register float       *buffer0,
-                        d;
+   int         i;
+   float       *buffer0,
+               d;
 
    buffer0 = buffer;
    d = value;
@@ -157,8 +121,8 @@ void datafill(float *buffer, int n, float value)
 /*******************/
 void skymax(float *in1, float *in2, float *out, int n)
 /*******************/
-{ register int i;
-  register float *i1,*i2,*o1;
+{ int i;
+  float *i1,*i2,*o1;
 
   i1 = in1; i2 = in2; o1 = out;
   i = n;
@@ -171,8 +135,8 @@ void skymax(float *in1, float *in2, float *out, int n)
 /*******************/
 void skyadd(float *in1, float *in2, float *out, int n)
 /*******************/
-{ register int i;
-  register float *i1,*i2,*o1;
+{ int i;
+  float *i1,*i2,*o1;
 
   i1 = in1; i2 = in2; o1 = out;
   i = n;
@@ -187,22 +151,47 @@ void skyadd(float *in1, float *in2, float *out, int n)
 /* sum 	 sum of the points */
 /* npnt  number of points */
 /*****************************************/
-void vrsum(float *in1, int is1, float *sum, int npnt)
+void vrsum(float *restrict in1, int is1, float *restrict sum, int npnt)
 /*****************************************/
-{ register float *inptr;
-  register int    inincr;
-  register float  total;
-  register int i;
+{ float *inptr;
+  int    inincr;
+  float  total;
+  int i;
 
   inptr   = in1;
   inincr  = is1;
-  total   = 0.0;
+  total   = 0.0f;
+ if (is1 == 1)
+  {
+      float acc0=0,acc1=0,acc2=0,acc3=0,acc4=0,acc5=0,acc6=0,acc7=0;
+      for (i = 0; i + 8 <= npnt; i += 8)
+      {
+         acc0 += in1[i+0]; acc1 += in1[i+1]; acc2 += in1[i+2]; acc3 += in1[i+3];
+         acc4 += in1[i+4]; acc5 += in1[i+5]; acc6 += in1[i+6]; acc7 += in1[i+7];
+      }
+      total = ((acc0+acc1)+(acc2+acc3)) + ((acc4+acc5)+(acc6+acc7));
+      for (; i < npnt; i++) total += in1[i];
+  }
+  else if (is1 == 2)
+  {
+      float acc0=0,acc1=0,acc2=0,acc3=0,acc4=0,acc5=0,acc6=0,acc7=0;
+      for (i = 0; i + 8 <= npnt; i += 8)
+      {
+         acc0 += in1[(i+0)*2]; acc1 += in1[(i+1)*2]; acc2 += in1[(i+2)*2]; acc3 += in1[(i+3)*2];
+         acc4 += in1[(i+4)*2]; acc5 += in1[(i+5)*2]; acc6 += in1[(i+6)*2]; acc7 += in1[(i+7)*2];
+      }
+      total = ((acc0+acc1)+(acc2+acc3)) + ((acc4+acc5)+(acc6+acc7));
+      for (; i < npnt; i++) total += in1[i*2];
+  }
+  else
+ {
   i       = npnt;
   while (i--)
   {
     total += *inptr;
     inptr += inincr;
   }
+ }
   *sum = total;
 }
 
@@ -213,10 +202,10 @@ void vrsum(float *in1, int is1, float *sum, int npnt)
 /************************/
 void vssubr(float *inptr, float val, float *outptr, int n)
 /************************/
-{ register float d;
-  register int i;
-  register float *inp;
-  register float *outp;
+{ float d;
+  int   i;
+  float *inp;
+  float *outp;
 
   inp = inptr;
   outp = outptr;
@@ -235,14 +224,26 @@ void vssubr(float *inptr, float val, float *outptr, int n)
 /*****************************************/
 void vvrramp(float *in1, int is1, float *out1, int os1, float start, float delta, int npnt)
 /*****************************************/
-{ register float *inptr;
-  register int    inincr;
-  register float *outptr;
-  register int    outincr;
-  register float  level;
-  register float  incr;
-  register int    i;
+{ float *inptr;
+  int    inincr;
+  float *outptr;
+  int    outincr;
+  float  level;
+  float  incr;
+  int    i;
 
+ if (is1 == 1 && os1 == 1)
+  {
+    for (i = 0; i < npnt; i++)
+      out1[i] = in1[i] + (start + (float)i * delta);
+  }
+  else if (is1 == 2 && os1 == 2)
+  {
+    for (i = 0; i < npnt; i++)
+      out1[i * 2] = in1[i * 2] + (start + (float)i * delta);
+  }
+  else
+ {
   inptr   = in1;
   inincr  = is1;
   outptr  = out1;
@@ -257,6 +258,7 @@ void vvrramp(float *in1, int is1, float *out1, int os1, float start, float delta
     inptr  += inincr;
     level  += incr;
   }
+ }
 }
 
 
@@ -280,16 +282,28 @@ void vvrramp(float *in1, int is1, float *out1, int os1, float start, float delta
 /*         npoints;     number of complex points             */
 void vvvcmult(void *in1, int is1, void *in2, int is2, void *out1, int os1, int npoints)
 {
-   register int         i;
-   register float       tmp;
-   register fcomplex     *input1,
-                        *input2,
-			*output;
+   int         i;
+   float       tmp;
+   fcomplex 	*input1,
+				*input2,
+				*output;
 
    input1 = (fcomplex *)in1;
    input2 = (fcomplex *)in2;
    output = (fcomplex *)out1;
- 
+
+   if (is1 == 1 && is2 == 0 && os1 == 1)
+    {
+      float scalar_re = input2->re, scalar_im = input2->im;
+      for (i = 0; i < npoints; i++)
+      {
+         tmp = (input1[i].re * scalar_re) - (input1[i].im * scalar_im);
+         output[i].im = (input1[i].im * scalar_re) + (input1[i].re * scalar_im);
+         output[i].re = tmp;
+      }
+      return;
+    }
+	
    for (i = 0; i < npoints; i++)
    {
       tmp = (input1->re * input2->re) - (input1->im * input2->im);
@@ -322,15 +336,15 @@ void vvvcmult(void *in1, int is1, void *in2, int is2, void *out1, int os1, int n
 /*                 npoints;     number of hypercomplex points	*/
 void vvvhcmult(void *in1, int is1, void *in2, int is2, void *out1, int os1, int npoints)
 {
-   register int                 i;
-   register float               rere,
-                                reim,
-                                imre,
-                                imim,
-				tmp;
-   register hypercomplex        *input1,
-                                *input2,
-                                *output;
+   int                 i;
+   float               rere,
+                       reim,
+                       imre,
+                       imim,
+					   tmp;
+   hypercomplex        *input1,
+                       *input2,
+                       *output;
  
    input1 = (hypercomplex *)in1;
    input2 = (hypercomplex *)in2;
@@ -387,9 +401,9 @@ void vvvhcmult(void *in1, int is1, void *in2, int is2, void *out1, int os1, int 
 /* 	mult;		scaling factor				*/
 void scfix1(float *frompntr, int fromincr, float mult, short *topntr, int toincr, int npnts)
 {
-   register short	*destpntr;
-   register int		i;
-   register float	r,
+   short	*destpntr;
+   int		i;
+   float	r,
 			*srcpntr;
 
    srcpntr = frompntr;
@@ -429,9 +443,9 @@ void scfix1(float *frompntr, int fromincr, float mult, short *topntr, int toincr
 /* 	mult;		scaling factor				*/
 void scabs(float *frompntr, int fromincr, float mult, short *topntr, int toincr, int npnts, int sgn)
 {
-   register short	*destpntr;
-   register int		i;
-   register float	a,b,r,
+   short	*destpntr;
+   int		i;
+   float	a,b,r,
 			*srcpntr;
 
    srcpntr = frompntr;
@@ -442,7 +456,7 @@ void scabs(float *frompntr, int fromincr, float mult, short *topntr, int toincr,
       a = mult * srcpntr[0];
       b = mult * srcpntr[1];
       /* Don't worry about floating overflow; r should be reasonable size. */
-      r = sqrt(a * a + b * b);
+      r = sqrtf(a * a + b * b);
       *destpntr = r > 32767.499 ? sgn * MAX16INT : sgn * (short)(r + 0.5);
 
       srcpntr += fromincr;
@@ -466,18 +480,42 @@ void scabs(float *frompntr, int fromincr, float mult, short *topntr, int toincr,
 +--------------------------------------*/
 /* int	n,		number of real t1 data points/2 */
 /* 	datatype;	2 = complex    4 = hypercomplex */
-void preproc(float *datapntr, int n, int datatype)
+void preproc(float *restrict datapntr, int n, int datatype)
 {
-   register int		i,
-			j;
-   register float	mult_factor;
+   int		i, j;
 
-   mult_factor = 1;
-   for (i = 0; i < n; i++)
+   if (datatype == 2)
    {
-      for (j = 0; j < datatype; j++)
-         *datapntr++ *= mult_factor;
-      mult_factor *= (-1);
+      float *restrict ptr = datapntr + datatype;
+      for (i = 1; i < n; i += 2)
+      {
+         ptr[0] *= -1.0f;
+         ptr[1] *= -1.0f;
+         ptr += datatype*2;
+      }
+   }
+   else if (datatype == 4)
+   {
+      float *restrict ptr = datapntr + datatype;
+      for (i = 1; i < n; i += 2)
+      {
+         ptr[0] *= -1.0f;
+         ptr[1] *= -1.0f;
+         ptr[2] *= -1.0f;
+         ptr[3] *= -1.0f;
+         ptr += datatype*2;
+      }
+   }
+   else
+   {
+      float *restrict ptr = datapntr + datatype;
+      long stride = (long)datatype * 2;
+      for (i = 1; i < n; i += 2)
+      {
+         for (j = 0; j < datatype; j++)
+            ptr[j] *= -1.0f;
+         ptr += stride;
+      }
    }
 }
 
@@ -497,14 +535,14 @@ void preproc(float *datapntr, int n, int datatype)
 /* 	datatype;	2 = complex      4 = hypercomplex */
 void postproc(float *datapntr, int n,  int datatype)
 {
-  int			i,
+  int		i,
 			j,
 			skip;
-  register int		i1,
+  int		i1,
 			i2,
 			i3,
 			i4;
-  float			c1,
+  float		c1,
 			c2,
 			h1r,
 			hli,
@@ -516,15 +554,15 @@ void postproc(float *datapntr, int n,  int datatype)
 			d2,
 			d3,
 			d4;
-  register float	*pi1,
+  float  	*pi1,
 			*pi2,
 			*pi3,
 			*pi4;
-  double		wpr,
+  double	wpr,
 			wpi,
 			wtemp,
 			theta;
-  register double	wr,
+  double	wr,
 			wi;
 
 
@@ -644,8 +682,8 @@ void postproc(float *datapntr, int n,  int datatype)
 void combine(float *combinebuf, float *outp, int npoints, int datatype,
              float r1, float r2, float r3, float r4)
 {
-   register int		i;
-   register float	*combuffer,
+   int		i;
+   float	*combuffer,
 			*output;
 
    combuffer = combinebuf;
@@ -678,34 +716,25 @@ void combine(float *combinebuf, float *outp, int npoints, int datatype,
 /* Both shiftpts and npoints are numbers of complex pairs */
 void shiftComplexData(float *ptr, int shiftpts, int npoints, int len)
 {
-   register int		i;
-   register float	*endptr,
-			*sptr;
-
    if (shiftpts == 0)
       return;
    if (shiftpts > 0) /* right shift */
    {
-      if (npoints > len - shiftpts)
-      {
+	if (npoints > len - shiftpts)
          npoints = len - shiftpts;
-      }
-      sptr = ptr+(npoints)*2 -1;
-      endptr = ptr+(npoints+shiftpts)*2 - 1;
 
-      for (i = 0; i < npoints; i++)
-      { 
-         *endptr-- = *sptr--; 
-         *endptr-- = *sptr--; 
-      }
-      for (i = 0; i < shiftpts; i++)
-      { 
-         *endptr-- = 0.0;
-         *endptr-- = 0.0;
-      }
+	memmove(ptr + (long)shiftpts * 2, ptr, (size_t)npoints * 2 * sizeof(float));
+    memset(ptr, 0, (size_t)shiftpts * 2 * sizeof(float));
    }
    else if (shiftpts < 0) /* left shift */
    {
+	// For this case, memmove is very slow
+	if (shiftpts > -16)
+	{
+	  int	i;
+      float	*endptr,
+			*sptr;
+
       shiftpts *= -1;
       sptr = ptr+(shiftpts)*2;
       endptr = ptr;
@@ -717,9 +746,16 @@ void shiftComplexData(float *ptr, int shiftpts, int npoints, int len)
       }
       for (i = 0; i < shiftpts; i++)
       { 
-         *endptr++ = 0.0;
-         *endptr++ = 0.0;
+         *endptr++ = 0.0f;
+         *endptr++ = 0.0f;
       }
+	}
+	else
+	{
+      int nshift = -shiftpts;
+      memmove(ptr, ptr + (long)nshift * 2, (size_t)(npoints - nshift) * 2 * sizeof(float));
+      memset(ptr + (long)(npoints - nshift) * 2, 0, (size_t)nshift * 2 * sizeof(float));
+	}
    }
 }
 
@@ -738,8 +774,8 @@ void shiftComplexData(float *ptr, int shiftpts, int npoints, int len)
 /* float *data;		pointer to complex/hypercomplex data		*/
 void negateimaginary(float *data, int npoints, int datatype)
 {
-   register int		i;
-   register float	*tmp;
+   int		i;
+   float	*tmp;
 
    tmp = data + (datatype/2);
    if (datatype == HYPERCOMPLEX)
@@ -776,30 +812,29 @@ void negateimaginary(float *data, int npoints, int datatype)
 /* inp;		pointer to 32-bit, integer FID data		*/
 /* scalefactor,	scaling factor					*/
 /* outp;	pointer to 32-bit, floating point FID data	*/
-void cnvrts32(float scalefactor, int *inp, float *outp, int npx, int lsfidx)
+void cnvrts32(float scalefactor, int *restrict inp, float *restrict outp, int npx, int lsfidx)
 {
-   register int	  i;
-   register int   *datain;
-   register float *dataout;
+   int	  i;
 
-
-   if (lsfidx < 0)
+   if (lsfidx == 0)
    {
-      datain = inp + npx;
-      dataout = outp + npx - lsfidx;
       for (i = 0; i < npx; i++)
-         *(--dataout) = scalefactor * ( (float) (*(--datain)) );
+         outp[i] = scalefactor * (float)inp[i];
+   }
+   else if (lsfidx < 0)
+   {
+      for (i = 0; i < npx; i++)
+         outp[i - lsfidx] = scalefactor * (float)inp[i];
 
       for (i = 0; i < (-1)*lsfidx; i++)
-         *(--dataout) = 0.0;
+         outp[i] = 0.0f;
    }
    else
    {
-      datain = inp + lsfidx;
-      dataout = outp;
-
       for (i = 0; i < (npx - lsfidx); i++) 
-         *dataout++ = scalefactor * ( (float) (*datain++) );
+         outp[i] = scalefactor * (float)inp[i + lsfidx];
+	  for (i = 0; i < lsfidx; i++)
+         outp[i+npx-lsfidx] = 0.0f;
    }
 }
 
@@ -818,48 +853,28 @@ void cnvrts32(float scalefactor, int *inp, float *outp, int npx, int lsfidx)
 /* short *inp;		pointer to 16-bit, integer FID data		*/
 /* float scalefactor,	scaling factor				*/
 /* 	*outp;		pointer to 32-bit, floating point FID data	*/
-void cnvrts16(float scalefactor, short *inp, float *outp, int npx, int lsfidx)
+void cnvrts16(float scalefactor, short *restrict inp, float *restrict outp, int npx, int lsfidx)
 {
-   register int		i;
-   register short	*datain;
-   register float	*dataout;
+   int		i;
 
-   if (lsfidx < 0)
+   if (lsfidx == 0)
    {
-      datain = inp + npx;
-      dataout = outp + npx - lsfidx;
       for (i = 0; i < npx; i++)
-         *(--dataout) = scalefactor * ( (float) (*(--datain)) );
+         outp[i] = scalefactor * (float)inp[i];
+   }
+   else if (lsfidx < 0)
+   {
+      for (i = 0; i < npx; i++)
+         outp[i - lsfidx] = scalefactor * (float)inp[i];
     
       for (i = 0; i < (-1)*lsfidx; i++)
-         *(--dataout) = 0.0;
+         outp[i] = 0.0f;
    }
    else
    {
-      datain = inp + lsfidx;
-      dataout = outp;
-
       for (i = 0; i < (npx - lsfidx); i++) 
-         *dataout++ = scalefactor * ( (float) (*datain++) );
+         outp[i] = scalefactor * (float)inp[i + lsfidx];
+	  for (i = 0; i < lsfidx; i++)
+         outp[i+npx-lsfidx] = 0.0f;
    }
-}
-
-
-/*-----------------------------------------------
-|						|
-|		AP_bootup_msg()			|
-|						|
-|   This is merely a message line to be gen-	|
-|   erated (conditionally) in bootup.c.  By	|
-|   putting the message here (sky.c), sky.c is	|
-|   now the only source code file which uses	|
-|   the "AP" conditional compile flag, thus	|
-|   simplifying maintenance.			|
-|						|
-+----------------------------------------------*/
-void AP_bootup_msg()
-{
-#ifdef AP
-   Wscrprintf( "              Version for Sky Array Processor\n");
-#endif 
 }
