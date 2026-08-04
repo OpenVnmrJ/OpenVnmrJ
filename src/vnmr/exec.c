@@ -1196,7 +1196,8 @@ int execR(node *n, pair *p, char *macroName)
                         {
                            n = n->Lson;
                         }
-                        /* if oldnode->flavour == CM, fallthrough to CM case */
+                        /* if oldnode->flavour == CM */
+                        /* fall through */
           case CM:      if (execR(n->Lson,p, macroName))
                         {   pair Tp;
 
