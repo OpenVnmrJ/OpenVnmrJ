@@ -73,8 +73,8 @@ string DataInfo::getKey(DDLSymbolTable *st) {
 			path = string(pc);
 		}
 
-		int islash = path.rfind('/');
-		if (islash != (int)string::npos) {
+		size_t islash = path.rfind('/');
+		if (islash != string::npos) {
 			file = path.substr(islash + 1);
 			path = path.substr(0, islash);
 		}
@@ -104,8 +104,8 @@ string DataInfo::getNameKey(DDLSymbolTable *st) {
 			path = string(pc);
 		}
 
-		int islash = path.rfind('/');
-		if (islash != (int)string::npos) {
+		size_t islash = path.rfind('/');
+		if (islash != string::npos) {
 			file = path.substr(islash + 1);
 			path = path.substr(0, islash);
 		}
@@ -215,8 +215,8 @@ void DataInfo::setGroup() {
 		group = "";
 	} else {
 		group = string(pc);
-		int islash = group.rfind('/');
-		if (islash != (int)string::npos) {
+		size_t islash = group.rfind('/');
+		if (islash != string::npos) {
 			group = group.substr(0, islash);
 		}
 	}
@@ -485,7 +485,7 @@ bool DataInfo::updateScaleFactors() {
 			for (j=0; j<3; j++) {
 				fprintf(stderr,"%6.3f, ", d2m[i][j]);
 			}
-			fprintf(stderr,"%6.3f}\n", d2m[i][j]);
+			fprintf(stderr,"   }\n");
 		}
 	}
 
@@ -526,8 +526,6 @@ void DataInfo::rot90_header() {
 	double origin[2];
 	double roi[3];
 	double span[2];
-	double zx1;
-	double zx2;
 
 	// TODO: Delete these from symbol table instead of setting bogus value.
 	st->SetValue("theta", 9999);
@@ -584,7 +582,7 @@ void DataInfo::rot90_header() {
 void DataInfo::flip_header() {
 	int i;
 	double location[3];
-	int matrix[2];
+//	int matrix[2];
 	double orient[9];
 	double origin[2];
 	double span[2];
@@ -596,7 +594,7 @@ void DataInfo::flip_header() {
 	get_location(&location[0], &location[1], &location[2]);
 	span[0] = getRatioFast();
 	st->GetValue("origin", origin[0], 0);
-	matrix[0] = getFast();
+//	matrix[0] = getFast();
 
 	for (i=0; i<3; i++) {
 		st->SetValue("orientation", -orient[i], i);
@@ -672,12 +670,12 @@ void DataInfo::initializeSymTab(int new_rank, int new_bit, char * new_type,
 	st->CreateArray("ordinate");
 	st->SetValue("ordinate", "intensity", 0);
 
-	int typesize; /* data type of size */
-
-	if (strcmp(new_type, "short") == 0)
-		typesize = sizeof(short);
-	else
-		typesize = sizeof(float);
+	// int typesize; /* data type of size */
+        // 
+	// if (strcmp(new_type, "short") == 0)
+	// 	typesize = sizeof(short);
+	// else
+	// 	typesize = sizeof(float);
 
 	//   if (alloc_data) {
 	//       int filesize = sizeof(Sisheader) +
@@ -750,13 +748,15 @@ bool DataInfo::setDataStructureFromSymbolTable(dataStruct_t *ds,
 	if (!st->GetValue("filename", pc)) {
 		strcpy(ds->filepath, "No File Name");
 	} else {
-		strncpy(ds->filepath, pc, sizeof(ds->filepath));
+		strncpy(ds->filepath, pc, sizeof(ds->filepath)-1);
+		ds->filepath[sizeof(ds->filepath)-1] = '\0';
 	}
 	if (!st->GetValue("type", pc)) {
 		ok = false;
 		fprintf(stderr,"No \"type\" in FDF header\n");
 	} else {
-		strncpy(ds->type, pc, sizeof(ds->type));
+		strncpy(ds->type, pc, sizeof(ds->type)-1);
+		ds->type[sizeof(ds->type)-1] = '\0';
 	}
 	if (!st->GetValue("spatial_rank", pc) &&
 	!st->GetValue("subrank", pc))
@@ -764,13 +764,15 @@ bool DataInfo::setDataStructureFromSymbolTable(dataStruct_t *ds,
 		ok = false;
 		fprintf(stderr,"No \"spatial_rank\" in FDF header\n");
 	} else {
-		strncpy(ds->spatial_rank, pc, sizeof(ds->spatial_rank));
+		strncpy(ds->spatial_rank, pc, sizeof(ds->spatial_rank)-1);
+		ds->spatial_rank[sizeof(ds->spatial_rank)-1] = '\0';
 	}
 	if (!st->GetValue("storage", pc)) {
 		ok = false;
 		fprintf(stderr,"No \"storage\" in FDF header\n");
 	} else {
-		strncpy(ds->storage, pc, sizeof(ds->storage));
+		strncpy(ds->storage, pc, sizeof(ds->storage)-1);
+		ds->storage[sizeof(ds->storage)-1] = '\0';
 	}
 	if (!st->GetValue("bits", ds->bits)) {
 		ok = false;
@@ -783,7 +785,8 @@ bool DataInfo::setDataStructureFromSymbolTable(dataStruct_t *ds,
 	}
 
 	if (st->GetValue("ordinate", pc) || st->GetValue("ordinate", pc, 0)) {
-		strncpy(ds->ordinate, pc, sizeof(ds->ordinate));
+		strncpy(ds->ordinate, pc, sizeof(ds->ordinate)-1);
+		ds->ordinate[sizeof(ds->ordinate)-1] = '\0';
 	}
 	unsigned int buflen = ds->bits / 8; // Bytes per word
 	for (int i=0; i<ds->rank; i++) {
