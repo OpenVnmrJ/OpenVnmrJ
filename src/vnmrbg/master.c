@@ -65,15 +65,16 @@ int     debug = 0;
 #endif 
 
 /*  Definition of the acquisition message entry uses trickery in
-    that the actual entry may be smaller than 256+4 bytes.  The
+    that the actual entry may be smaller than 8192+4 bytes.  The
     actual size is determined by the length of the message received
     from Acqproc.  The structure definition is only referenced by
-    pointers and never explicitly allocated.			*/
+    pointers and never explicitly allocated. NOTE: must stay in sync
+    with smagic.c's struct acqmsgentry (curentry[ACQMBUFSIZE]==8192).			*/
 
 struct acqmsgentry
 {
    char           *nextentry;
-   char            curentry[256];
+   char            curentry[8192];
 };
 
 
@@ -134,8 +135,8 @@ extern int noUI;
     from Acqproc be sent to the child.				*/
 
 int             fgBusy;		/* Used by socket1.c    */
-extern struct acqmsgentry *baseofqueue;	/* Defined in socket1.c */
-extern struct acqmsgentry *removeAcqMsgEntry();	/* Defined in socket1.c */
+extern struct acqmsgentry *baseofqueue;	/* Defined in smagic.c */
+extern struct acqmsgentry *removeAcqMsgEntry();	/* Defined in smagic.c */
 
 extern void setupdirs(char *cptr );
 extern int unlockAllExp(char *userptr, int target_pid, int mode );
@@ -997,7 +998,7 @@ int             fd;
 	    DPRINT0("M: ...don't suspend anymore (kill timer)\n");
 	 }
 	 else
-	    DPRINT0("M: ...read all of them\n");
+	 	{ DPRINT0("M: ...read all of them\n"); }
 	 read(fd, IObuffer, len);
 	 n -= len;
 	 chewEachChar(IObuffer, len);

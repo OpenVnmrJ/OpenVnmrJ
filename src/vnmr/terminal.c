@@ -408,7 +408,7 @@ void terminal_main_loop()
 		  cur_mask &= ~(1 << seq_index);
 		 else if (*(cur_seq+cur_index+1) == '\0')
 		  break;
-		 else ;
+		 else { }
                 }
 		seq_index++;
 	    }
@@ -450,7 +450,7 @@ void terminal_main_loop()
 	    {
 	  	case NEWLINE:
 	  	case CONTROL_M:  if (1 <Tflag)
-	        	fprintf(stderr,"main_loop: got Return\n"); 
+				{ fprintf(stderr,"main_loop: got Return\n"); }
   			buffer[bp++] = '\n';
 			buffer[bp++] = '\0';
 			Wputchar('\n');                        

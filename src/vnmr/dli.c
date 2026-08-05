@@ -4305,7 +4305,7 @@ int php3, php1,php2, ok, m1, good;
 ok=FALSE;
 good=*good_regions;
 
-	if (fabs(speakB[*r0].php-speakB[*r1].php)<fabs(speakB[*r0].php-speakB[*r2].php))
+	if (abs(speakB[*r0].php-speakB[*r1].php)<abs(speakB[*r0].php-speakB[*r2].php))
 	{m1=*r1; *r1=*r2; *r2=m1;
 	}
 

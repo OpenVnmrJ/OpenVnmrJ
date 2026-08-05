@@ -299,7 +299,7 @@ int acqproc_msge(int argc, char *argv[], int retc, char *retv[])
       case ACQDEQUEUE:
          if (argc == 2)
          {
-            sprintf(message, "%s %s", argv[1], systemdir);
+            snprintf(message, MAXPATHL*2, "%s %s", argv[1], systemdir);
          }
          else
          {
@@ -312,7 +312,7 @@ int acqproc_msge(int argc, char *argv[], int retc, char *retv[])
                   Werrprintf("'go_id' not defined in submitted experiment");
                RETURN;
             }
-            sprintf(message, "%s %s", str, systemdir);
+            snprintf(message, MAXPATHL*2, "%s %s", str, systemdir);
          }
          break;
       default:
@@ -2473,11 +2473,11 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
                   port = pid = 0;
                   checkVnmrch(user, &port, &pid);
                   if (port)
-                     sprintf(cmd,"%d %d %s",port,pid,cmd2);
+                     snprintf(cmd,sizeof(cmd),"%d %d %s",port,pid,cmd2);
                }
                if (port)
                {
-                   sprintf(cmd2do,"write('net','%s',%d,`%s`)\n",
+                   snprintf(cmd2do,sizeof(cmd2do),"write('net','%s',%d,`%s`)\n",
                             host, htons(port), cmd2);
                    doCmd = 1;
                }
@@ -2496,7 +2496,7 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
                      P_setstring(GLOBAL,"operator",OperatorName,0);
                      setAppdirs();
                   }
-                  sprintf(cmd2do,"%s\n", cmd2);
+                  snprintf(cmd2do,sizeof(cmd2do),"%s\n", cmd2);
                }
                doCmd = 1;
             }
@@ -2579,7 +2579,7 @@ int atCmd(int argc, char *argv[], int retc, char *retv[])
          {
             if (retc)
             {
-               sprintf(cmd2,"%d:%.2d %-28s", hr, min, timespec);
+               snprintf(cmd2,sizeof(cmd2),"%d:%.2d %-28s", hr, min, timespec);
                retv[0] = newString(cmd2);
                if (retc > 1)
                   retv[1] = newString(user);

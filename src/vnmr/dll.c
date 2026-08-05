@@ -2067,8 +2067,10 @@ int analyze(int argc, char *argv[], int retc, char *retv[])
         strcmp(argv[2],"poly1") == 0 ||
         strcmp(argv[2],"poly2") == 0 ||
         strcmp(argv[2],"poly3") == 0)
+	{
       regression = 1;
       r_default = 1;
+	}
   }
   strcpy(filename,curexpdir);
   strcat(filename,"/analyze.inp");
@@ -2084,7 +2086,7 @@ int analyze(int argc, char *argv[], int retc, char *retv[])
       if ( (r = P_getVarInfo(PROCESSED,xname,&info)) )
         { P_err(r,xname,":");   return ERROR; }
       npairs = info.size;
-      if (npairs == 1 && strcmp(argv[3],"T2") == 0)
+      if (npairs == 1 && (argc >= 4) && strcmp(argv[3],"T2") == 0)
       {	strcpy(xname,"bt");
         r = P_getVarInfo(PROCESSED,xname,&info);
 	if (!r)
