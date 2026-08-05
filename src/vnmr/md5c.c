@@ -409,7 +409,7 @@ static int safecp_file(char* safecpPath, char* origpath, char* destpath)
 
     if(!fileExist(safecpPath)) return 0;
 
-    sprintf(cmd, "%s %s %s", safecpPath, origpath, destpath);
+    snprintf(cmd, sizeof(cmd), "%s %s %s", safecpPath, origpath, destpath);
     return(system(cmd));
 
 }
@@ -617,14 +617,18 @@ int checkP11Checksums(char* dirpath, FILE* outfp)
     if(!isAdirectory(dirpath)) return(0);
 
     if(strEndsWith(dirpath, "/")) {
-        strcpy(acq,"");
-        strncat(acq, dirpath, strlen(dirpath)-1);
-    } else strcpy(acq, dirpath);
+        size_t len = strlen(dirpath);
+        if (len > 0) len--;
+        if (len >= sizeof(acq)) len = sizeof(acq) - 1;
+        snprintf(acq, sizeof(acq), "%.*s", (int)len, dirpath);
+    } else snprintf(acq, sizeof(acq), "%s", dirpath);
    
     if(strEndsWith(dirpath, "/")) {
-        strcpy(dat,"");
-        strncat(dat, dirpath, strlen(dirpath)-1);
-    } else strcpy(dat,dirpath);
+        size_t len = strlen(dirpath);
+        if (len > 0) len--;
+        if (len >= sizeof(dat)) len = sizeof(dat) - 1;
+        snprintf(dat, sizeof(dat), "%.*s", (int)len, dirpath);
+    } else snprintf(dat, sizeof(dat), "%s", dirpath);
    
     if(strEndsWith(acq, ".REC/acqfil") ||
     strstr(dat, ".REC/datdir") != NULL ||
@@ -643,7 +647,7 @@ int checkP11Checksums(char* dirpath, FILE* outfp)
                 fprintf(stderr," checkP11Checksums %s\n", dp->d_name);
                 if (*dp->d_name != '.') {
 			   
-                    sprintf(child,"%s/%s",dirpath,dp->d_name);
+                    snprintf(child,sizeof(child),"%s/%s",dirpath,dp->d_name);
 		    if (isAdirectory(child)) {
 		if(debug)
                 fprintf(stderr," checkP11Checksums %s is dir.\n", child);
@@ -680,10 +684,12 @@ static void getStrValues(char* buf, string* words, int* n, char* delimiter)
 
     /* remove newline if exists */
     if(buf[strlen(buf)-1] == '\n') {
-        strcpy(str, "");
-        strncat(str, buf, strlen(buf)-1);
+        size_t len = strlen(buf);
+        if (len > 0) len--;
+        if (len >= sizeof(str)) len = sizeof(str) - 1;
+        snprintf(str, sizeof(str), "%.*s", (int)len, buf);
     } else
-       strcpy(str, buf);
+       snprintf(str, sizeof(str), "%s", buf);
 
     strptr = str;
     *n = 0;
