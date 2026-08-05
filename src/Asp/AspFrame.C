@@ -951,8 +951,8 @@ int AspFrame::loadSession(char *path) {
          P_read(CURRENT,words[1]);
       } else if(nw > 11 && strstr(words[0],"load") == words[0]) {
         if(root != "" && words[2][0] != '/') {
-	   strcpy(str,words[2]);
-	   sprintf(words[2],"%s/%s",root.c_str(),str);
+	   snprintf(str, sizeof(str), "%s", words[2]);
+	   snprintf(words[2], sizeof(words[2]), "%s/%s",root.c_str(),str);
 	}
 	//e.g. load 1 /tmp/spec.fdf spec1 spec1 0 -2.022703 14.022636 1.000000 0.000000 11 0
 	//e.g. load 2 /tmp/spec.fdf spec1 spec1 1 -2.022703 14.022636 1.000000 0.000000 11 0
@@ -970,8 +970,8 @@ int AspFrame::loadSession(char *path) {
 		strstr(words[0],"sub") == words[0] || strstr(words[0],"rep") == words[0])) {
 
         if(root != "" && words[2][0] != '/') {
-	   strcpy(str,words[2]);
-	   sprintf(words[2],"%s/%s",root.c_str(),str);
+	   snprintf(str, sizeof(str), "%s", words[2]);
+	   snprintf(words[2], sizeof(words[2]), "%s/%s",root.c_str(),str);
 	}
 	//e.g. add 1 /tmp/spec.fdf spec1 spec1 0 -2.022703 14.022636 1.000000 0.000000 11 0
 	//e.g. sub 1 /tmp/spec.fdf spec1 spec1 1 -2.022703 14.022636 1.000000 0.000000 11 0
@@ -1102,8 +1102,8 @@ int AspFrame::testSession(char *path, int &ntraces, int &straces, int &dataok) {
 
       } else if(nw > 11 && strstr(words[0],"load") == words[0]) {
         if(root != "" && words[2][0] != '/') {
-	   strcpy(str,words[2]);
-	   sprintf(words[2],"%s/%s",root.c_str(),str);
+	   snprintf(str, sizeof(str), "%s", words[2]);
+	   snprintf(words[2], sizeof(words[2]), "%s/%s",root.c_str(),str);
 	}
         trace = spAspTrace_t(new AspTrace(words,nw));
 	if(trace != nullAspTrace && trace->getData()) {
@@ -1117,8 +1117,8 @@ int AspFrame::testSession(char *path, int &ntraces, int &straces, int &dataok) {
       } else if(nw > 11 && (strstr(words[0],"add") == words[0] || 
 		strstr(words[0],"sub") == words[0])) {
         if(root != "" && words[2][0] != '/') {
-	   strcpy(str,words[2]);
-	   sprintf(words[2],"%s/%s",root.c_str(),str);
+	   snprintf(str, sizeof(str), "%s", words[2]);
+	   snprintf(words[2], sizeof(words[2]), "%s/%s",root.c_str(),str);
 	}
         trace = spAspTrace_t(new AspTrace(words,nw));
 	if(trace != nullAspTrace && trace->getData()) {

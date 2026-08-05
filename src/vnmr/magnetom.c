@@ -745,7 +745,7 @@ int show_remote_files (argc, argv, retc, retv)
       ABORT;
 
    /* build the command for listing the files in the remote directory */
-   (void)sprintf (cmd_buffer, "dnils -u %s %s '%s::%s%s'",
+   (void)snprintf (cmd_buffer, sizeof(cmd_buffer), "dnils -u %s %s '%s::%s%s'",
                   UserID, PassKey, NodeName, RemoteDir, VMS_srch_spec);
 
    Winfoprintf ("Getting file names in remote directory \"%s::%s\"",
@@ -1006,7 +1006,7 @@ int import_files (argc, argv, retc, retv)
    }
    /* build the SunLink network file copy command */
 
-   (void)sprintf (dnicp_cmd, "dnicp -v -u %s %s '%s::%s%s' %s",
+   (void)snprintf (dnicp_cmd, sizeof(dnicp_cmd), "dnicp -v -u %s %s '%s::%s%s' %s",
          UserID, PassKey, NodeName, RemoteDir, file_name, mag_file);
 
    Winfoprintf ("Getting MAGNETOM data file \"%s\"", file_name);
@@ -1488,13 +1488,13 @@ int export_files (argc, argv, retc, retv)
       }
       else if (which_extent > 0)
       {
-         (void)sprintf (src_file, "%s/acqfil/fid", src_dir);
+         (void)snprintf (src_file, sizeof(src_file), "%s/acqfil/fid", src_dir);
 
          /* need to write the parameters to disk, for the conversion */
          to_disk = 1;
       }
       else
-         (void)sprintf (src_file, "%s/fid", src_dir);
+         (void)snprintf (src_file, sizeof(src_file), "%s/fid", src_dir);
    }
    /* create the temporary directory for holding the intermediate data files */
    if (access (temp_dir, W_OK) != 0)
@@ -1527,7 +1527,7 @@ int export_files (argc, argv, retc, retv)
 
    /* build the command string to convert the source file into
       the intermediate target file in the temporary directory */
-   (void)sprintf (convert_cmd, "expsis -e %s %s %s", src_dir, src_file, temp_dir);
+   (void)snprintf (convert_cmd, sizeof(convert_cmd), "expsis -e %s %s %s", src_dir, src_file, temp_dir);
 
    Winfoprintf ("Converting intermediate file \"%s\"", src_file);
 
@@ -1542,7 +1542,7 @@ int export_files (argc, argv, retc, retv)
       Winfoprintf ("%s.", cnv_endmsg);
 
       /* build the SunLink network file copy command */
-      (void)sprintf (dnicp_cmd, "dnicp -v -u %s %s %s '%s::%s%s'",
+      (void)snprintf (dnicp_cmd, sizeof(dnicp_cmd), "dnicp -v -u %s %s %s '%s::%s%s'",
                      UserID, PassKey, temp_dir, NodeName, RemoteDir, mag_file);
 
       /* copy the VNMR data/pixel file from the temporary directory to the VAX */
@@ -2056,12 +2056,12 @@ static int dir_load (dirpath)
             char newname[MAXPATH];
 
             /* If file is directory, add a slash in front of it */
-            sprintf(newname, "%s/%s", dirpath, dp->d_name);
+            snprintf(newname, sizeof(newname), "%s/%s", dirpath, dp->d_name);
             if (isDirectory(newname))
             {
                char newname[MAXPATH];
 
-               (void) sprintf(newname, "/%s", dp->d_name);
+               (void) snprintf(newname, sizeof(newname), "/%s", dp->d_name);
                addElement(elist, newname, "d");
             }
             else
@@ -2491,7 +2491,7 @@ double fov;		/* field-of-view */
    }
    /* Write image data */
    if (write(fdout, (char *)data, sizeof(short)*width*height) !=
-       (sizeof(short)*width*height))
+       (ssize_t)(sizeof(short)*width*height))
    {
       Werrprintf("%s couldn't write image data", sub_msg);
       (void)close(fdout);

@@ -1085,11 +1085,7 @@ void VolData::extract_oblplanes(float *eulers, float *rotangles, int nslices,
     if (fabs(newrot[0])<eps)
         newrot[0]=0.;
     if (fabs(newrot[1])<eps)
-        newrot[1]=0.; rot[4]=1;
-        rot[5]=0;
-        rot[6]=0;
-        rot[7]=0;
-        rot[8]=1;
+        newrot[1]=0.;
     if (fabs(newrot[2])<eps)
         newrot[2]=0.;
     if (fabs(newrot[3])<eps)
@@ -1442,7 +1438,7 @@ void VolData::extract_oblplanes(float *eulers, float *rotangles, int nslices,
             }
             int digits = maxPlanes > 1 ? 1 + (int)log10(maxPlanes) : 1;
             char newpath[256];
-            sprintf(newpath, "%s_%s_%0*d_%d_%d_%d_%d_%d_%d_EXTRA",
+            snprintf(newpath, sizeof(newpath), "%s_%s_%0*d_%d_%d_%d_%d_%d_%d_EXTRA",
             volImagePath, orientStr, digits, *(tslicelist+islice),
             (int)*eulers,(int)*(eulers+1),(int)*(eulers+2),
             (int)*(rotangles),(int)*(rotangles+2),(int)*(rotangles+1) );
@@ -1524,7 +1520,7 @@ void VolData::extract_oblplanes(float *eulers, float *rotangles, int nslices,
         (int)*(rotangles),(int)*(rotangles+1),(int)*(rotangles+2) );
         datainfo->st->SetValue("filename", newpath);
         */
-        sprintf(newpath, "%s_%s_%0*d_%d_%d_%d_%d_%d_%d_EXTRA",
+        snprintf(newpath, sizeof(newpath), "%s_%s_%0*d_%d_%d_%d_%d_%d_%d_EXTRA",
         volImagePath, orientStr, digits, *(slicelist),
         (int)*eulers,(int)*(eulers+1),(int)*(eulers+2),
         (int)*(rotangles),(int)*(rotangles+1),(int)*(rotangles+2) );
@@ -1781,7 +1777,7 @@ void VolData::extract_plane(int orientation, int nslices, int *slicelist,
     }
     int digits = maxPlanes > 1 ? 1 + (int)log10(maxPlanes) : 1;
     char newpath[256];
-    sprintf(newpath, "%s_%s_MIP_%0*d_%0*d",
+    snprintf(newpath, sizeof(newpath), "%s_%s_MIP_%0*d_%0*d",
     volImagePath, orientStr, digits, *slicelist, digits, nslices);
 
     datainfo->st->SetValue("filename", newpath);

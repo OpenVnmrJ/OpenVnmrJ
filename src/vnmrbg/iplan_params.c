@@ -868,8 +868,8 @@ void updateSlab(int planType) {
    if(P_getstring(CURRENT, "slabctr", slabctr, 1, 4)) strcpy(slabctr, "y");
    if(slabctr[0] != 'y') return;
 
-   planParam sdim3,spos3,spss,sthk,sgap,sns;
-   planParam vdim3,vpos3;
+   planParam sdim3={0},spos3={0},spss={0},sthk={0},sgap={0},sns={0};
+   planParam vdim3={0},vpos3={0};
    getPlanParams(REGULAR,NULL,NULL,NULL,NULL,NULL,NULL,&sdim3,
              NULL,NULL,&spos3,&spss,&sthk,&sgap,&sns,1);
    getPlanParams(VOLUME,NULL,NULL,NULL,NULL,NULL,NULL,&vdim3,
@@ -1714,9 +1714,9 @@ void sendPlanParams(prescription* plans) {
       strcpy(arrayStr,"");
       sendPlanParamsForType(plans, paramTags[i].planType, arrayStr);
       if(strlen(arrayStr) > 0 && strlen(str) > 0) {
-	strcat(str,",");
-	strncat(str,arrayStr,strlen(arrayStr));
-      } else if(strlen(arrayStr) > 0) strcpy(str,arrayStr);
+	strncat(str,",", sizeof(str) - strlen(str) - 1);
+	strncat(str,arrayStr, sizeof(str) - strlen(str) - 1);
+      } else if(strlen(arrayStr) > 0) snprintf(str, sizeof(str), "%s", arrayStr);
    }
    setArray(str);
 }
