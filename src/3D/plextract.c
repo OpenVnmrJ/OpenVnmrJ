@@ -654,7 +654,7 @@ hdrInfo *createDATAheader(filepar *fileinfo, datafileheader *datahead, int pltyp
    hdrinfo->blockhead->ctcount = 0;
    hdrinfo->blockhead->scale   = 0;
    hdrinfo->blockhead->index   = 0;
-   hdrinfo->blockhead->status |= (S_DATA|S_SPEC|S_FLOAT);
+   hdrinfo->blockhead->status  = (S_DATA|S_SPEC|S_FLOAT);
    if (fileinfo->datatype > REAL)
    {
       hdrinfo->blockhead->status |= (S_COMPLEX|NI_CMPLX);
