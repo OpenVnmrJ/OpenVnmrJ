@@ -1204,7 +1204,7 @@ float	 shimcal[],	/* calibration values or offsets */
 	 shimerr[];	/* error in each shim */
 {
 	int gzmaxsize=MAX_CURVES;
-	int ma_list;
+	int ma_list=0;
 	int i, j, bflag, doread;
 	float tmp = 0.0;
 	char jstr[MAXPATHL];
@@ -1223,7 +1223,8 @@ float	 shimcal[],	/* calibration values or offsets */
 			case 1 : strcpy(mapname, jstr); break;
 			case 3 : strcpy(shimsetnum, jstr); break;
 			case 5 : if (isReal( jstr ))  ma_list = atoi( jstr ); 
-				 else ma_list = 4; break;
+				 else { ma_list = 4; }
+				 break;
 			default : break; 	/* 0 2 4 */
 			}
 		}
@@ -1986,7 +1987,8 @@ float shimoldv[], shimval[], shimadd[], shimerr[], *rmserr;
 			}
 		switch (j) {
 			case 2 : if (isReal( jstr ))  gzbase = atoi( jstr ); 
-				 else gzbase = gzmaxsize; break;
+				 else { gzbase = gzmaxsize; }
+				 break;
 			default : break; 	/* 0 1 */
 			}
 		}
@@ -2017,7 +2019,7 @@ float shimoldv[], shimval[], shimadd[], shimerr[], *rmserr;
 		Werrprintf( "%s: parameter 'shimset' not found", cmd_name );
 		return( -1 );
 	}
-	else sprintf(shimsetnum, "%g", dtmp);
+	else snprintf(shimsetnum, 4, "%g", dtmp);
 	return( 0 );
 }
 
@@ -2224,7 +2226,7 @@ int	 *gzsize, gzmaxsize;
 		Werrprintf( "%s: parameter 'shimset' not found", cmd_name );
 		return( -1 );
 	}
-	else sprintf(shimsetnum, "%g", dtmp);
+	else snprintf(shimsetnum, 4, "%g", dtmp);
 	ishimset = (int)(dtmp + 0.5);
 	for (j=0; j<gzmaxsize; j++) sprintf( shimname[j], "z%d", j+1 );
 	if ((ishimset == 1) || (ishimset == 2) || (ishimset == 10))
@@ -2434,7 +2436,7 @@ int	 *gzsize, gzmaxsize;
 		Werrprintf( "%s: parameter 'shimset' not found", cmd_name );
 		return( -1 );
 	}
-	else sprintf(shimsetnum, "%g", dtmp);
+	else snprintf(shimsetnum, 4, "%g", dtmp);
 	ishimset = (int)(dtmp + 0.5);
 	switch (ishimset)
 	{
@@ -2775,7 +2777,7 @@ int gmaplistfunc(int argc, char *argv[], int retc, char *retv[] )
 		 shimerr[MAX_PARAMS];	/* error in each shim */
 	char	 shimname[MAX_PARAMS][16];	/* shim names */
 	int	 gzmaxsize=MAX_CURVES, gzlist, btrigger=0; /* if poly then >8 */
-	int	 readfunc_type, gzsize, ival, jval=0;
+	int	 readfunc_type, gzsize=0, ival, jval=0;
 	float	 rmserr;
 	double	 dtmp;
 
