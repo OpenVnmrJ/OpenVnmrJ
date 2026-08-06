@@ -1167,7 +1167,7 @@ run_plot_constructor (int argc, char **argv)
            int portTmp;
            int pidTmp;
            sscanf(data,"%s %d %d",cmd, &portTmp, &pidTmp);
-	   sprintf(addr, "-h%s %d %d", cmd, htons(portTmp), pidTmp);
+	   snprintf(addr, sizeof(addr), "-h%s %d %d", cmd, htons(portTmp), pidTmp);
         }
 #else
 	sprintf(addr, "-h%s", data);
@@ -1545,7 +1545,7 @@ init_jplot(int argc, char **argv)
 		    else if (strcmp(argv[i], "-format") == 0) {
 	     		cstr = argv[i+1];
 			if (i < argc-1) {
-			    for (k = 0; k < strlen(cstr); k++) {
+			    for (k = 0; k < (int)strlen(cstr); k++) {
 				data[k] = toupper(cstr[k]);
 			    }
 			    data[k] = '\0';

@@ -346,7 +346,7 @@ int getdstring(char *paramname, char *t, int max, int digits, int tree0, int ind
 /********************************************/
 {  
     char   buf[1024];
-    char   t1[8];
+    char   t1[32];
     double value;
     vInfo  info;
 
@@ -361,24 +361,24 @@ int getdstring(char *paramname, char *t, int max, int digits, int tree0, int ind
        tree0 = GLOBAL;   /* Try GLOBAL tree before giving up */
        if (P_getVarInfo(tree0,paramname,&info))
        {
-          sprintf(t1,"%%%ds",max);
+          snprintf(t1,sizeof(t1),"%%%ds",max);
           sprintf(t,t1,"undefined");
           EPRINT2("getdstring: par=\"%s\" t=\"%s\"\n",paramname,t);
           ABORT;
        }
     }
     if (index>info.size)
-    {  sprintf(t1,"%%%ds",max);
+    {  snprintf(t1,sizeof(t1),"%%%ds",max);
        sprintf(t,t1," ");
        ABORT;
     }
     if ((info.size>1) && (index==0))
-    {  sprintf(t1,"%%%ds",max);
+    {  snprintf(t1,sizeof(t1),"%%%ds",max);
        sprintf(t,t1,"arrayed");
        arraycount += info.size + 2;
     }
     else if (!info.active) 
-    {  sprintf(t1,"%%%ds",max);
+    {  snprintf(t1,sizeof(t1),"%%%ds",max);
        sprintf(t,t1,"not used");
     }
     else
@@ -386,13 +386,13 @@ int getdstring(char *paramname, char *t, int max, int digits, int tree0, int ind
          index = 1;  
        switch (info.basicType)
        {   case T_REAL:     if (P_getreal(tree0,paramname,&value,index))
-                            { sprintf(t1,"%%%ds",max);
+                            { snprintf(t1,sizeof(t1),"%%%ds",max);
                               sprintf(t,t1,"ERROR");
                               return 1; 
                             }
 			    if (value == 0.0)
 			    {
-			        sprintf(t1,"%%%d.0f",max);
+			        snprintf(t1,sizeof(t1),"%%%d.0f",max);
 			        if (strcmp(paramname,"clindex"))
 			            sprintf(t,t1,value);
 			        else
@@ -401,18 +401,18 @@ int getdstring(char *paramname, char *t, int max, int digits, int tree0, int ind
 			    else 
 			    {
 			        if ((digits>=0)&&(fabs(value)<1e6))
-			    	   sprintf(t1,"%%%d.%df",max,digits);
+			    	   snprintf(t1,sizeof(t1),"%%%d.%df",max,digits);
 			        else 
-			    	   sprintf(t1,"%%%dg",max);
+			    	   snprintf(t1,sizeof(t1),"%%%dg",max);
 			        sprintf(t,t1,value);
 			    }
 			    break;
 	   case T_STRING:   if (P_getstring(tree0,paramname,buf,index,1024))
-                            { sprintf(t1,"%%%ds",max);
+                            { snprintf(t1,sizeof(t1),"%%%ds",max);
                                sprintf(t,t1,"ERROR");
                                return 1; 
                             }
-			    sprintf(t1,"%%%ds",max);
+			    snprintf(t1,sizeof(t1),"%%%ds",max);
 			    sprintf(t,t1,buf);
 			    EPRINT2("getdstring: name=\"%s\" string = \"%s\"\n",paramname,t);
 			    break;
@@ -448,8 +448,8 @@ static void disparam(char *paramname, int column, int special, int digits)
 	  row[column]++;
 	  specialstring[0] = '\0';
 	}
-      strncat(specialstring,t,COLUMNLENGTH-strlen(specialstring));
-      strcat(specialstring,"  ");
+      strncat(specialstring,t,sizeof(specialstring)-strlen(specialstring)-1);
+      strncat(specialstring,"  ",sizeof(specialstring)-strlen(specialstring)-1);
     }
   else
     { dg_move(row[column],column*COLUMNLENGTH);
@@ -507,7 +507,7 @@ static void distitle(char *titlename, int column)
 /* display title name in specified column */
 {
    char t[COLUMNLENGTH];
-   char t1[8];
+   char t1[32];
 
    if ((column<0)||(column>MAXCOLUMNS-1)) 
 	return;
@@ -523,7 +523,7 @@ static void distitle(char *titlename, int column)
    else
    {
       dg_move(row[column],column*COLUMNLENGTH);
-      sprintf(t1,"%%%ds",(COLUMNLENGTH-2+ (int) strlen(titlename))/2);
+      snprintf(t1,sizeof(t1),"%%%ds",(COLUMNLENGTH-2+ (int) strlen(titlename))/2);
       sprintf(t,t1,titlename);
       dg_addstr(t);
       row[column]++;
@@ -565,7 +565,7 @@ void writetitle(int expnum)
 
   sprintf(estring, "%d", expnum);
   if (P_getstring(PROCESSED,"pslabel",pslabel,1,32)==0)
-    { sprintf(t,"exp%s  %s",estring,pslabel);
+    { snprintf(t,sizeof(t),"exp%s  %s",estring,pslabel);
       writeline(t);
       writeline("");
     }
@@ -1288,7 +1288,9 @@ int dgmain(int argc, char *argv[], int retc, char *retv[])
 		   { if (isalnum_(tmplt[i])||(tmplt[i]==' '))
 		     { if (parampnt>=NAMELENGTH-1)
 				     temperr(i,"name too long",tmplt);
-		       else parampnt++; paramname[parampnt]=tmplt[i];
+		       else
+		         parampnt++;
+		       paramname[parampnt]=tmplt[i];
 		     }
 		     else if (tmplt[i]==',') 
 		       { paramname[parampnt+1] = '\0'; 
@@ -1465,7 +1467,9 @@ int dgmain(int argc, char *argv[], int retc, char *retv[])
 		   { if (isalnum_(tmplt[i])) 
 		       { if (omitpnt>=NAMELENGTH-1)
 				      temperr(i,"name too long",tmplt);
-		         else omitpnt++; omitname[omitpnt]=tmplt[i];
+		         else
+		           omitpnt++;
+		         omitname[omitpnt]=tmplt[i];
 		       }
 		     else if (tmplt[i]==')')
 		       { omitname[omitpnt+1]='\000'; state = 8;

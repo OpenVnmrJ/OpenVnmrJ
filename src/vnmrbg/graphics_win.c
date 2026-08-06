@@ -1125,7 +1125,7 @@ void jSetGraphicsWinId(char *idStr, int useX )
         }
         else
 	{
-	     if (nid == xid)
+	     if ((XID)nid == xid)
 	         return;
 	}
 	useXFunc = 1;
@@ -6724,9 +6724,9 @@ set_jframe_id(int id)
               oldf->mouseActive = Wisactive_mouse();
               oldf->mouseJactive = WisJactive_mouse();
 #endif
-              sprintf(oldf->menu, "%s", help_name);
+              snprintf(oldf->menu, sizeof(oldf->menu), "%s", help_name);
               if (getGraphicsCmd() > 0)
-                  sprintf(oldf->graphMode, "%s", gmode);
+                  snprintf(oldf->graphMode, sizeof(oldf->graphMode), "%s", gmode);
           }
       }
 /*
@@ -6787,7 +6787,7 @@ set_jframe_id(int id)
            }
            if(strlen(frame->menu) > 0) {
                 if(strcmp(frame->menu, help_name) != 0) {
-                      sprintf(cmd, "menu('%s')\n", frame->menu);
+                      snprintf(cmd, sizeof(cmd), "menu('%s')\n", frame->menu);
                       execString(cmd);
                 }
            }
@@ -11170,7 +11170,7 @@ open_var_font(fname, index, which, size)
      }
      varFont[index]->order = 0;
 
-     sprintf(varFont[index]->name, "font%d", index);
+     snprintf(varFont[index]->name, sizeof(varFont[index]->name), "font%d", index);
      k = fscanf(fin, "%d%d%d", &varFont[index]->width, &varFont[index]->height,
 	       &varFont[index]->ascent);
      if (k != 3)
@@ -11335,13 +11335,13 @@ double   val1, val2;
           x_cross_len  =  mnumypnts - off1;
       if(yval) {
 	int dec = getDscaleDecimal(0)+2;
-        char str[16];
-        sprintf(str, "%%.%df(%%.3g)",dec);
+        char str[32];
+        snprintf(str, sizeof(str), "%%.%df(%%.3g)",dec);
         sprintf(x_cross_info, str,val1,val2);
       } else {
 	int dec = getDscaleDecimal(0)+2;
-	char str[16];
-        sprintf(str, "%%.%df",dec);
+	char str[32];
+        snprintf(str, sizeof(str), "%%.%df",dec);
         sprintf(x_cross_info, str,val1);
       }
       if (!winDraw)
@@ -13990,7 +13990,7 @@ XtIntervalId aip_addTimeOut(unsigned long msec, void (*func)(), char *retPtr)
         tnode->active = 1;
         tnode->func = func;
         if (retPtr != NULL) {
-            if (strlen(retPtr) > tnode->valSize) {
+            if (strlen(retPtr) > (size_t)tnode->valSize) {
                 if (tnode->valSize > 0)
                     free(tnode->retVal);
                 tnode->valSize = strlen(retPtr);
