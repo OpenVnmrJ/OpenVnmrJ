@@ -466,7 +466,7 @@ static int pcmapgen(MFILE_ID pcmap_md, int blk_index, int pc_option)
    /* Copy header info and advance pcmap pointer .	*/
    /*----------------------------------------------*/
    block_head = (struct datablockhead *)pcmap_md->offsetAddr;
-   memcpy(pcmap_md->offsetAddr,&outblock.head,
+   memset(pcmap_md->offsetAddr,0,
 					sizeof(struct datablockhead));
    pcmap_md->offsetAddr += sizeof(struct datablockhead);
 

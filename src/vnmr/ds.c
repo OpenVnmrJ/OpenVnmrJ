@@ -57,7 +57,7 @@ extern int save_data(char *exppath, float *spec1, double mult1, float *spec2,
 extern void popBackingStore();
 extern void releasevarlist();
 extern void refresh_graf();
-extern int selectpl(int argc, char *argv[]);
+extern int selectpl(int argc, char *argv[], int retc, char *retv[]);
 extern void maxfloat(register float  *datapntr, register int npnt,
                      register float  *max);
 extern void integ(register float  *fptr, register float  *tptr, register int npnt);
@@ -2616,7 +2616,7 @@ int selecT(int argc, char *argv[], int retc, char *retv[])
 
    if (select2D)
    {
-      if ( selectpl(argc, argv) )
+      if ( selectpl(argc, argv, retc, retv) )
          return(ERROR);
    }
    else if (select1D)
