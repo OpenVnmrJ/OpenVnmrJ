@@ -81,7 +81,7 @@ static double getpwbw(const char *pshape)
 
   strcpy(fname, userdir);
   strcat(fname, "/shapelib/pbox.info");
-  sprintf(cmd, "Pbox -i %s > %s", pshape, fname);
+  snprintf(cmd, sizeof(cmd), "Pbox -i %s > %s", pshape, fname);
   system(cmd);
 
   if ((inpf = fopen(fname, "r")) != NULL)
@@ -97,7 +97,7 @@ static double getpwbw(const char *pshape)
       }
     }
     fclose(inpf);
-    sprintf(cmd, "rm -f %s/shapelib/pbox.info", userdir);
+    snprintf(cmd, sizeof(cmd), "rm -f %s/shapelib/pbox.info", userdir);
     system(cmd);
   }
   return(pwbw);
@@ -472,19 +472,19 @@ shape  pboxHT_F1(char *shp, double refpw90, double refpwr, char tp)
     if (dps_flag)
     {
        if(k==0) 
-         sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
+         snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
               str, bscor[A], htss1, refpwr, 1e6*refpw90, reps, userdir);
        else    
-         sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
+         snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
               str, bscor[A], htss1, refpwr, 1e6*refpw90, reps, userdir);
     }
     else
     {
        if(k==0) /* could use curexp instead of userdir */
-         sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
+         snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
               str, bscor[A], htss1, refpwr, 1e6*refpw90, reps, userdir);
        else    
-         sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
+         snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
               str, bscor[A], htss1, refpwr, 1e6*refpw90, reps, userdir);
     }
     system(cmd);                                  /* execute Pbox */
@@ -630,19 +630,19 @@ shape  pboxHT_F2(char *shp, double refpw90, double refpwr, char tp)
     if (dps_flag)
     {
       if(k==0) 
-        sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
+        snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
               str, bscor[B], htss2, refpwr, 1e6*refpw90, reps, userdir);
       else    
-        sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
+        snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
             str, bscor[B], htss2, refpwr, 1e6*refpw90, reps, userdir);
     }
     else
     {
       if(k==0) /* could use curexp instead of userdir */
-        sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
+        snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
               str, bscor[B], htss2, refpwr, 1e6*refpw90, reps, userdir);
       else    
-        sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
+        snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
             str, bscor[B], htss2, refpwr, 1e6*refpw90, reps, userdir);
     }
     system(cmd);                                  /* execute Pbox */
@@ -782,19 +782,19 @@ shape  pboxHT_F3(char *shp, double refpw90, double refpwr, char tp)
     if (dps_flag)
     {
       if(k==0) 
-        sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
+        snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
               str, bscor[C], htss3, refpwr, 1e6*refpw90, reps, userdir);
       else    
-        sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
+        snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
             str, bscor[C], htss3, refpwr, 1e6*refpw90, reps, userdir);
     }
     else
     {
       if(k==0) /* could use curexp instead of userdir */
-        sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
+        snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
               str, bscor[C], htss3, refpwr, 1e6*refpw90, reps, userdir);
       else    
-        sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
+        snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
             str, bscor[C], htss3, refpwr, 1e6*refpw90, reps, userdir);
     }
     system(cmd);                                  /* execute Pbox */
@@ -1006,19 +1006,19 @@ shape  pboxHT(char *shp, double refpw90, double refpwr, char tp)
     if (dps_flag)
     {
        if(k==0) 
-         sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
+         snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
               str, bscor[A], htss, refpwr, 1e6*refpw90, reps, userdir);
        else    
-         sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
+         snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
             str, bscor[A], htss, refpwr, 1e6*refpw90, reps, userdir);
     }
     else
     {
        if(k==0) /* could use curexp instead of userdir */
-         sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
+         snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -attn 0i -%.0f -u %s\n",
               str, bscor[A], htss, refpwr, 1e6*refpw90, reps, userdir);
        else    
-         sprintf(cmd, "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
+         snprintf(cmd, sizeof(cmd), "Pbox %s -bscor %c -s %.2f -p %.0f -l %.2f -%.0f -u %s\n",
             str, bscor[A], htss, refpwr, 1e6*refpw90, reps, userdir);
     }
     system(cmd);                                  /* execute Pbox */
@@ -1084,7 +1084,7 @@ static void pboxHT_makedec(char *fname, double Tp, double bw, double Jxy,
 */
   Tp /= ncyc;
 
-  sprintf(cmd, "Pbox %s -u %s -w \"wurst2i %9.7f/%3.1f\" ", fname, userdir, Tp, bw);
+  snprintf(cmd, sizeof(cmd), "Pbox %s -u %s -w \"wurst2i %9.7f/%3.1f\" ", fname, userdir, Tp, bw);
   if (stepsize < 0.05)
     sprintf(str, " -s n -sucyc %s", su);
   else

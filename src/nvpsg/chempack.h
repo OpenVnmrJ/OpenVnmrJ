@@ -35,7 +35,7 @@ void shaped_satpulse(const char *shn, double saturation1, codeint sphse1)
   extern char userdir[];
   int nlf, i;
 
-  sprintf(shname, "%s_%s",seqfil,shn);
+  snprintf(shname, sizeof(shname), "%s_%s", seqfil, shn);
   if (FIRST_FID)
   {
         int ret __attribute__((unused));
@@ -65,7 +65,7 @@ void shaped_saturate(const char *shn2, double saturation2, codeint sphse2)
   extern char userdir[];
   int nlf, i;
 
-  sprintf(shname, "%s_%s",seqfil,shn2);
+  snprintf(shname, sizeof(shname), "%s_%s", seqfil, shn2);
   if (FIRST_FID)
   {
         int ret __attribute__((unused));
