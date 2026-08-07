@@ -16,8 +16,6 @@ import javax.swing.*;
 import javax.swing.plaf.basic.*;
 import javax.swing.plaf.metal.*;
 
-import sun.misc.*;
-
 import vnmr.bo.*;
 import vnmr.util.*;
 import vnmr.ui.shuf.*;
@@ -425,11 +423,9 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             memorymonitor.setVisible(true);
         }
         
-        Signal.handle(new Signal("TERM"), new SignalHandler() {
-             public void handle(Signal sig) {
-                exitAll();
-             }
-        });
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            exitAll();
+        }));
 
         DisplayOptions.updateUIColor();
         

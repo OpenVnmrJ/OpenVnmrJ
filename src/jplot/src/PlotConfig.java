@@ -17,7 +17,6 @@ import java.util.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.event.*;
-import sun.misc.*;
 
 // import PlotEditTool.*;
 // import PlotItemPref.*;
@@ -162,11 +161,9 @@ public class PlotConfig extends JFrame
             public void windowClosing(WindowEvent e) { closeFrame(); } } );
       bimage = dp.createImage(pwidth, pheight);
 
-      Signal.handle(new Signal("TERM"), new SignalHandler() {
-             public void handle(Signal sig) {
-		closeFrame();
-             }
-        });
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        	closeFrame();
+	  }));
    }
 
 
