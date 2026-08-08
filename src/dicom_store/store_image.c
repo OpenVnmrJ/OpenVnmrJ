@@ -176,13 +176,13 @@ int main (int argc, char *argv[])
   /* NB: these were set by the script dicom_store */
   tmp = (char *)getenv("DICOM_BIN_DIR");
   if (tmp != NULL) {
-      sprintf (strPath, "%s/", tmp);
+      snprintf (strPath, sizeof(strPath), "%s/", tmp);
   }
   tmp = (char *)getenv("DICOM_CONF_DIR");
   if (tmp != NULL)
-      sprintf (strConfFile, "%s/%s", tmp, STORE_IMAGE_CONF);
+      snprintf (strConfFile,  sizeof(strConfFile), "%s/%s", tmp, STORE_IMAGE_CONF);
   else
-      sprintf (strConfFile, "%s", STORE_IMAGE_CONF);
+      snprintf (strConfFile,  sizeof(strConfFile), "%s", STORE_IMAGE_CONF);
 
 /* Open configuration file */
   fpConf = fopen (strConfFile, "r");
@@ -196,19 +196,11 @@ int main (int argc, char *argv[])
   if (fpConf != NULL)
   {
 /* Read the configuration file, if it exists */
-     while (!feof (fpConf) )
+     while (fgets (strBuffer, sizeof(strBuffer), fpConf) != NULL)
      {
-      	   if (feof(fpConf) != 0)
-      	   {
-          	break;
-      	   }
-
       	   strTag[0]=0;
       	   strValue[0]=0;
       	   strBuffer[0]=0;
-/* Read each line of the configuration file */
-      	   fgets (strBuffer, BUFFER_LEN, fpConf);
-
 /* Skip lines which starts with '#' */
       	   if (strBuffer[0]=='#' )
            {
@@ -216,39 +208,36 @@ int main (int argc, char *argv[])
            }
 
 /* Assign values to tags and its value */
-      	   sscanf (strBuffer, "%s : %s", strTag, strValue);
+      	   sscanf (strBuffer, "%20s : %80s", strTag, strValue);
 
       	   if(strcmp (strTag, "SCU_TITLE") == 0)
       	   {
 /* Read the AE Title of Client Application from the configuration file */
-         	sprintf (strAETitleExternal, " -aet %s ", strValue);
+         	snprintf (strAETitleExternal, sizeof(strAETitleExternal), " -aet %s ", strValue);
       	   }
       	   else if(strcmp (strTag, "AE_TITLE") == 0)
       	   {
 /* Read the AE Title of CTN Application from the configuration file */
-         	sprintf (strAETitleCTN, " -aec %s ", strValue);
+         	snprintf (strAETitleCTN, sizeof(strAETitleCTN), " -aec %s ", strValue);
       	   }
       	   else if(strcmp (strTag, "HOST") == 0)
       	   {
 /* Read the TCP/IP address from the configuration file */
-         	sprintf (strIP, " %s ", strValue);
+         	snprintf (strIP, sizeof(strIP), " %s ", strValue);
       	   }
       	   else if(strcmp (strTag, "PORT") == 0)
       	   {
 /* Read the TCP/IP port from the configuration file */
-         	sprintf (strPort, " %s ", strValue);
+         	snprintf (strPort, sizeof(strPort), " %s ", strValue);
       	   }
      } 
      fclose(fpConf);
   }
 
 /* Create the argument list for the CTN command : send_image */
-  if (bPing)
     // sprintf (strCTNArgument, "%s %s %s %s ", strAETitleExternal, strAETitleCTN, strIP, strPort);  
-     sprintf (strCTNArgument, " %s %s  %s %s", strIP, strPort, strAETitleCTN, strAETitleExternal);  
-  else
+     snprintf (strCTNArgument, sizeof(strCTNArgument), " %s %s  %s %s", strIP, strPort, strAETitleCTN, strAETitleExternal);  
         // sprintf (strCTNArgument, "%s %s %s %s %s ", strAETitleExternal, strAETitleCTN, strIP, strPort, dcmFile);  
-     sprintf (strCTNArgument, " %s %s %s %s ", strIP, strPort, strAETitleCTN,strAETitleExternal);  
   // sprintf (strCTNArgument, " %s %s %s %s %s/*.dcm ", strIP, strPort, strAETitleCTN,strAETitleExternal, dcmFile);  
 
 
@@ -262,32 +251,32 @@ int main (int argc, char *argv[])
   {
       if (bPing)
 	//         sprintf (strCommand, "%sdicom_echo -r 0 %s ", strPath, strCTNArgument);
-         sprintf (strCommand, "%sechoscu %s ", strPath, strCTNArgument);
+         snprintf (strCommand, sizeof(strCommand), "%sechoscu %s ", strPath, strCTNArgument);
       else
 	//         sprintf (strCommand, "%ssend_image -q %s ", strPath, strCTNArgument);
 	//  sprintf (strCommand, "%sstorescu  %s ", strPath, strCTNArgument);
-	sprintf (strCommand, "find %s -name \"*.dcm\" | xargs %sstorescu %s ", dcmFile, strPath, strCTNArgument); 
+	snprintf (strCommand, sizeof(strCommand), "find %s -name \"*.dcm\" | xargs %sstorescu %s ", dcmFile, strPath, strCTNArgument); 
  }
   else
   {
       if (bPing)
 	//         sprintf (strCommand, "%sdicom_echo -r 0 -v %s ", strPath, strCTNArgument);
-         sprintf (strCommand, "%sechoscu -v %s ", strPath, strCTNArgument);
+         snprintf (strCommand, sizeof(strCommand), "%sechoscu -v %s ", strPath, strCTNArgument);
       else
 	//         sprintf (strCommand, "%ssend_image  -v %s ", strPath, strCTNArgument);
 	//  sprintf (strCommand, "%sstorescu  -v %s ", strPath, strCTNArgument);
-	sprintf (strCommand, "find %s -name \"*.dcm\" | xargs %sstorescu  -v %s ", dcmFile, strPath, strCTNArgument);
+	snprintf (strCommand, sizeof(strCommand), "find %s -name \"*.dcm\" | xargs %sstorescu  -v %s ", dcmFile, strPath, strCTNArgument);
   }
   
   strMsg[0]='\0';
-  sprintf (strMsg, "Attempting to send image...\n\tExecuting ... %s", strCommand);
+  snprintf (strMsg, sizeof(strMsg), "Attempting to send image...\n\tExecuting ... %s", strCommand);
   WriteToLog (strMsg);
 
 
 
 /* Execute the CTN command 'send_image' to send images in server */
    ret = system (strCommand);     
-   if (ret == SUCCESS)
+   if (ret != -1 && WIFEXITED(ret) && WEXITSTATUS(ret) == SUCCESS)
       ret = 0;
    else
       ret = 1;

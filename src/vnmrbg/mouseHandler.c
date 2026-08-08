@@ -51,7 +51,7 @@ getButtonMode() {
 void setButtonMode(int mode) {
     char cmd[64];
     if(mode != USER_MODE) strcpy(buttonMacro,"");
-    sprintf(cmd,"setButtonMode(%d)\n",mode); 
+    snprintf(cmd, sizeof(cmd),"setButtonMode(%d)\n",mode); 
     execString(cmd);
 }
 
@@ -285,43 +285,43 @@ void userEvent(int x, int y, int mask, int mouseFrameID, char *userMacro) {
         strcpy(cmd,"");
         switch (mask) { // only set some of the event
         case b1+drag:
-          sprintf(cmd,"%s('b1+drag',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b1+drag',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b1+ctrl+shift+click+1:
-          sprintf(cmd,"%s('b1+ctrl+shift+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b1+ctrl+shift+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b1+shift+click+1:
-          sprintf(cmd,"%s('b1+shift+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b1+shift+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b1+ctrl+click+1:
-          sprintf(cmd,"%s('b1+ctrl+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b1+ctrl+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b1+click+1:
-          sprintf(cmd,"%s('b1+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b1+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b2+click+1:
-          sprintf(cmd,"%s('b2+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b2+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b3+click+1:
-          sprintf(cmd,"%s('b3+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b3+click+1',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b1+down:
-          sprintf(cmd,"%s('b1+down',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b1+down',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b2+down:
-          sprintf(cmd,"%s('b2+down',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b2+down',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b3+down:
-          sprintf(cmd,"%s('b3+down',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b3+down',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b1+up:
-          sprintf(cmd,"%s('b1+up',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b1+up',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b2+up:
-          sprintf(cmd,"%s('b2+up',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b2+up',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         case b3+up:
-          sprintf(cmd,"%s('b3+up',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
+          snprintf(cmd, sizeof(cmd),"%s('b3+up',%d,%d,%d)\n",userMacro,x,y,mouseFrameID);
              break;
         }
         if(strlen(cmd)>0) execString(cmd);
@@ -332,7 +332,7 @@ int userWheelEvent(int clicks) {
      if(getButtonMode() != USER_MODE) return 0; 
      if(strlen(buttonMacro) < 1) return 1;
 
-     sprintf(cmd,"%s('wheel',%d,%d)\n",buttonMacro,clicks,1);
+     snprintf(cmd, sizeof(cmd),"%s('wheel',%d,%d)\n",buttonMacro,clicks,1);
      execString(cmd);
      return 1;
 }

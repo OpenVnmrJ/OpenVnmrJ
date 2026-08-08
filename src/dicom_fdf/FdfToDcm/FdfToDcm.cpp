@@ -73,15 +73,15 @@ int main(int argc,char **argv)
 	char				customtagPath[PATH_MAX];
 	char				inputfilename[PATH_MAX];
 	char				outdcmfilename[PATH_MAX];
-	char				uidSuffix[64];
-	char				studyUID[128];
-	char				seriesUID[128];
+	char				uidSuffix[PATH_MAX];
+	char				studyUID[256];
+	char				seriesUID[PATH_MAX + 64];
 	char 				*pixelBuf;
         char                            syscmd[256];
         char                            stdid[256];
         char                            sha1[64];
-        char                            uidpbuf[NSHA1];
-        char                            uidfbuf[NSHA1];
+        char                            uidpbuf[NSHA1 + 1];
+        char                            uidfbuf[NSHA1 + 1];
         char                            tempbuf[256];
 
 	int				i,j;
@@ -116,7 +116,7 @@ int main(int argc,char **argv)
 
 	struct dirent 		**namelist;
 	int 				nFiles;
-	FILE				*fd, *procparfd, *customfd, *fdf_fd, *fsha;
+	FILE				*fd, *procparfd, *customfd, *fdf_fd = NULL, *fsha;
 
 	GetNamedOptions 		options(argc,argv);
 	InputOptions			input_options(options);
@@ -210,7 +210,7 @@ int main(int argc,char **argv)
 
 	//UI Series Instance UID 	 VR=<UI>   VL=<0x0032>
 	//Example: <1.3.6.1.4.1.670589.1.3.0.123.127440.31032.8323329>
-	sprintf(seriesUID, "1.3.6.1.4.1.%s.1.3.0.123.%s", VARIAN_COMPANY_ID, uidSuffix);
+	snprintf(seriesUID, sizeof(seriesUID), "1.3.6.1.4.1.%s.1.3.0.123.%s", VARIAN_COMPANY_ID, uidSuffix);
 
 	while(nFiles--)
 	{
@@ -312,6 +312,8 @@ int main(int argc,char **argv)
 				if(fread(&c, 1, 1, fd) != 1)
 				{
 					fprintf(stderr, "Error locating end of FDF header!!", errno);
+					fclose(fd);
+					exit(1);
 				}
 			}
 
@@ -414,11 +416,17 @@ int main(int argc,char **argv)
 			}
 			printf("Scaling factor: %f\n", scaleFactor);
 			fclose(fd);
+			free(pixelBuf);
 			printf("Pixel bytes written: %d\n", pixels);
 		}	// End if(isfdf)
 		else
 		{
 			ProcessFidData(fd, list, &fdfValues);
+			// Preserve the descriptor so the shared code below
+			// (ProcessCustomTags / fclose) has a valid FILE*,
+			// matching what the isfdf branch does.
+			fdf_fd = fd;
+			fd = NULL;
 		}
 		
 		// Setup the variables used to process the individual tags from the basic DICOM
@@ -540,7 +548,7 @@ int main(int argc,char **argv)
 
 		//sprintf(studyUID, "1.3.6.1.4.1.%s.1.2.0.%d", stdid, (unsigned int)gethostid());
 	
-		 sprintf(studyUID, "1.3.6.1.4.1.%s.1.2.0.%s_%s", strtok(fdfValues.studyid,"\""), strtok(fdfValues.oper,"\""),strtok(fdfValues.pname,"\""));
+		 snprintf(studyUID, sizeof(studyUID), "1.3.6.1.4.1.%s.1.2.0.%s_%s", strtok(fdfValues.studyid,"\""), strtok(fdfValues.oper,"\""), strtok(fdfValues.pname,"\""));
 
 		list+=new UIStringAttribute(TagFromName(StudyInstanceUID), studyUID);
 
@@ -713,6 +721,7 @@ int main(int argc,char **argv)
 
 		// Calculations are done differently depending on whether we're converting a
 		// 2D acquisition or a 3D acquisition.
+		float ctr[3] = {0.0f, 0.0f, 0.0f};
 		if(fdfValues.rank == 2)
 		{
 			// 1) Figure out distance from center of image to upper left corner:
@@ -889,13 +898,20 @@ int main(int argc,char **argv)
 		// If we found the file, process the custom tags
 		if(haveTagFile)
 		{
-		  ProcessCustomTags(customtagPath, procparPath, fdf_fd, list);
+		  if(fdf_fd != NULL)
+		  {  
+			  ProcessCustomTags(customtagPath, procparPath, fdf_fd, list);
+		  }
 		}
 		else
 		{
 			printf("Custom tag file not found, ignoring...\n");
 		}
-		fclose(fdf_fd); // now done with fdf file
+		if(fdf_fd != NULL)
+		{
+			fclose(fdf_fd); // now done with fdf file
+			fdf_fd = NULL;
+		}
 
 		// Add procpar file as a custom tag
 //		OtherByteLargeNonPixelAttribute(Tag t,BinaryInputStream &stream,OurStreamPos pos)
@@ -911,9 +927,14 @@ int main(int argc,char **argv)
 			{
 				perror("stat");
 			}
-			int tagSize = strlen(PROCPARTAGHEADER);
+			size_t tagSize = strlen(PROCPARTAGHEADER);
 			tagSize += strlen(PROCPARTAGFOOTER);
-			tagSize += sb.st_size;
+			tagSize += (size_t)sb.st_size;
+			if(sb.st_size < 0)
+			{
+				fprintf(stderr, "Invalid procpar file size, private tag will not be included!\n");
+				return 1;
+			}
 			char *privateBuf = (char *)malloc(tagSize + 4);
 			bzero(privateBuf, tagSize + 4);
 
@@ -993,25 +1014,27 @@ static void makesha1uid(char *filepath, char *filename, char *uidbuf)
 {
   int i,j;
   char sha1Path[256];
-  char fpath[256];
-  char sha1[NSHA1];
-  char   syscmd[256];
+  char fpath[512];
+  char sha1[NSHA1 + 1];
+  char   syscmd[800];
   FILE *fsha;
 
   // get its sha1sum to use for UID
-  (void)strcpy(sha1Path,"/vnmr/tmp");
-  (void)strcat(sha1Path,"/sha1.txt");
+  (void)snprintf(sha1Path, sizeof(sha1Path), "/vnmr/tmp/sha1.txt");
 
-  (void)strcpy(fpath,filepath);
-  (void)strcat(fpath,"/");
-  (void)strcat(fpath,filename);
+  (void)snprintf(fpath, sizeof(fpath), "%s/%s", filepath, filename);
 
-  (void)sprintf(syscmd,"sha1sum %s > %s \n",fpath,sha1Path);
+  (void)snprintf(syscmd, sizeof(syscmd), "sha1sum %s > %s \n", fpath, sha1Path);
   (void)system(syscmd);
 
   //read it in
   fsha=fopen(sha1Path,"r");
-  if(!fsha)printf("Could not open sha1 for %s \n",fpath);
+  if(!fsha)
+  {
+	  printf("Could not open sha1 for %s \n",fpath);
+	  uidbuf[0] = '\0';
+	  return;
+  }
   fscanf(fsha,"%10s",sha1);
   (void)fclose(fsha);
   unlink(sha1Path);
@@ -1025,7 +1048,7 @@ static void makesha1uid(char *filepath, char *filename, char *uidbuf)
   j=0;
   for(i=0;i<NSHA1;i++)
     {
-      if((isdigit(sha1[i])) && (sha1[i] != '0'))
+      if((isdigit(sha1[i])) && (sha1[i] != '0') && (j < NSHA1 - 1))
 	uidbuf[j++]=sha1[i];
     }
   uidbuf[j]='\0';

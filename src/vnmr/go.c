@@ -1148,14 +1148,14 @@ int acq(int argc, char *argv[], int retc, char *retv[])
        else
        {
             if (dirname[0] == '/')
-               sprintf(a_name,"%s.fid",dirname);
+               snprintf(a_name,sizeof(a_name),"%s.fid",dirname);
             else
-               sprintf(a_name,"%s/%s.fid",autodir,dirname);
-            sprintf(sif_name, "%s/fid",a_name);
+               snprintf(a_name,sizeof(a_name),"%s/%s.fid",autodir,dirname);
+            snprintf(sif_name,sizeof(sif_name), "%s/fid",a_name);
             unlink(sif_name);
-            sprintf(sif_name, "%s/procpar",a_name);
+            snprintf(sif_name,sizeof(sif_name), "%s/procpar",a_name);
             unlink(sif_name);
-            sprintf(sif_name, "%s/text",a_name);
+            snprintf(sif_name,sizeof(sif_name), "%s/text",a_name);
             unlink(sif_name);
        }
     }
@@ -1350,9 +1350,9 @@ int acq(int argc, char *argv[], int retc, char *retv[])
         if (automode)
         {
             if (dirname[0] == '/')
-               sprintf(dirpath,"%s.fid",dirname);
+               snprintf(dirpath,sizeof(dirpath),"%s.fid",dirname);
             else
-               sprintf(dirpath,"%s/%s.fid",autodir,dirname);
+               snprintf(dirpath,sizeof(dirpath),"%s/%s.fid",autodir,dirname);
         }
         if (vpmode && saveVpPars(dirpath, debugPutCmd))
         {
@@ -2640,7 +2640,7 @@ static int test4ACQ(char *dirname, char *dirpath, int acqiflag)
         if (dirname[0] == '/')
            strcpy(dirpath,dirname);
         else
-           sprintf(dirpath,"%s/%s",autodir,dirname);
+           snprintf(dirpath,MAXPATH,"%s/%s",autodir,dirname);
         if (vpmode)
         {
 	   strcpy(acqpath,dirpath);
@@ -3450,9 +3450,9 @@ int initacqqueue(int argc, char *argv[])
 
 
     /* --- create a unique file name based on time stamp --- */
-    sprintf(str,"%s.%s.%s_%ld_%06ld", expname, UserName, HostName,
+    snprintf(str,sizeof(str),"%s.%s.%s_%ld_%06ld", expname, UserName, HostName,
                  (long) clock.tv_sec, (long) clock.tv_usec);
-    sprintf(filepath,"%s/acqqueue/%s", systemdir, str);
+    snprintf(filepath,sizeof(filepath),"%s/acqqueue/%s", systemdir, str);
 
     P_setstring(CURRENT,"goid",filepath,1);
     GPRINT2(1,"initacqqueue(): ID: '%s', Date: '%s' \n",filepath,date);
@@ -3576,7 +3576,7 @@ int initacqqueue(int argc, char *argv[])
     char logfilepath[MAXSTR];
 
     /* Create the log file name with user specified parameter values*/
-    sprintf(logfilepath,"%s.loginfo", filepath);
+    snprintf(logfilepath,sizeof(logfilepath),"%s.loginfo", filepath);
     logFileFD = fopen(logfilepath, "w");
     //Werrprintf("log file: %s fd:%d", logfilepath,logFileFD);
     if(logFileFD != NULL) {
@@ -4299,6 +4299,7 @@ int	replaceSpaceFlag = TRUE;
 		replaceSpaceFlag = FALSE;
 	    else if (strcmp(argv[4],"replacespaces") == 0)
 		replaceSpaceFlag = TRUE;
+	    /* FALLTHROUGH */
       case 4:
 	    if (strcmp(argv[3],"keepspaces") == 0)
 		replaceSpaceFlag = FALSE;
@@ -4306,6 +4307,7 @@ int	replaceSpaceFlag = TRUE;
 		replaceSpaceFlag = TRUE;
 	    else
 		notsuffix = argv[3];
+	    /* FALLTHROUGH */
       case 3:
             /* use argv[1] for parameter name */
        if (strlen(argv[1]) >= MAXPATH-32)
@@ -4355,6 +4357,7 @@ int	replaceSpaceFlag = TRUE;
 	    break;
       case 2:
 	    retv[1] = newString((strrchr(result,'/')+1));
+	    /* FALLTHROUGH */
       case 1:
             strcat(result, suffix);
 	    retv[0] = newString(result);

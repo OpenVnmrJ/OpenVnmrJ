@@ -314,7 +314,7 @@ void show_vnmrj_alphadisplay()
 
 void textprintf(char *fgReaderBuffer,int len)
 {
-        char format[10];
+        char format[32];
 
         if (len < 1)
              return;
@@ -322,7 +322,7 @@ void textprintf(char *fgReaderBuffer,int len)
              fprintf(stderr, "%s",fgReaderBuffer); 
              return;
         }
-        sprintf(format,"%%%ds",len);
+        snprintf(format, sizeof(format), "%%%ds",len);
 
 	if (check_alphafile())
         {
@@ -411,7 +411,7 @@ void register_child_exit_func(int signum, int pid, void (*func_exit)(), void (*f
 
 void but_interpos_handler_jfunc(char *jstr )
 {
-    char sendstr[ 4 ];
+    char sendstr[ 16 ];
     int  but_num;
 
     but_num = atoi(jstr);
@@ -421,7 +421,7 @@ void but_interpos_handler_jfunc(char *jstr )
     is the button number (indexed from 1); otherwise, put the escape
     sequence on the command queue.                                      */
 
-    sprintf( &sendstr[ 0 ], "\033%d", but_num );
+    snprintf( sendstr, sizeof(sendstr), "\033%d", but_num );
     if (fgBusy == 0) {
       write( forgroundFdW, &sendstr[ 0 ], (but_num > 9) ? 3 : 2 );
       sendChildNewLine();
@@ -835,7 +835,7 @@ int pclose_call( FILE *pfile )
 		dtime2 = ( (double) (clock.tv_sec) + ((double) (clock.tv_usec)) / 1.0e6 );
 		delta=dtime2-dtime1;
 		if(delta>max_time)
-			strncpy(max_str,shell_str,255);
+			snprintf(max_str,sizeof(max_str),"%s",shell_str);
 		fflush(stdout);
 		fflush(stderr);
 		if(TimingFlag>2)

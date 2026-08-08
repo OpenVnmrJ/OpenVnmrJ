@@ -314,7 +314,7 @@ coef3D	*coef;
 	   *destcoef++ = *srccoef++;
    }else{
        /* No coef values passed, get them from the header */
-       if (read(fd, (char *)&filehead->coefvals, filehead->ncoefbytes)
+       if (read(fd, (char *)filehead->coefvals, filehead->ncoefbytes)
 	   != filehead->ncoefbytes)
        {
 	   Werrprintf("\nreadDATAheader():  read error 3");

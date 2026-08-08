@@ -273,6 +273,7 @@ int ProcessFidData(FILE *fidfd, class ManagedAttributeList& list, fdfEntries_t *
 			fwrite(&pix, 1, sizeof(float), floatfd);
 			fprintf(pixfd, "%f\n", pix);
 		}
+		free(pixelBuf);
 	}
 	fclose(pixfd);
 	rewind(floatfd);

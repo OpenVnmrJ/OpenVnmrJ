@@ -1125,7 +1125,7 @@ void jSetGraphicsWinId(char *idStr, int useX )
         }
         else
 	{
-	     if (nid == xid)
+	     if ((XID)nid == xid)
 	         return;
 	}
 	useXFunc = 1;
@@ -3316,7 +3316,7 @@ void restore_original_cursor()
  	jvnmr_cmd(JWINFREE);
 }
 
-void send_hourglass_cursor()
+void send_hourglass_cursor(int sig)
 {
         TIME_NODE  *tnode;
         struct timeval clock;
@@ -5536,8 +5536,8 @@ sun_ybars(int dfpnt, int depnt,
 {
 #ifdef MOTIF
   int i;
-#endif
   int index1, index2;
+#endif
 
     /* first check vertical limits */
     if (maxv)
@@ -5550,8 +5550,8 @@ sun_ybars(int dfpnt, int depnt,
         j_ybars(dfpnt,depnt,out,vertical,maxv,minv);
         return;
     }
-    index1 = index2 = 0;
 #ifdef MOTIF
+    index1 = index2 = 0;
     if (vertical)
     {  for (i=dfpnt; i<depnt; i++)
        {   if (out[i].mx>=out[i].mn) /* is in mnumypnts space */
@@ -5780,7 +5780,8 @@ void sun_box(int w, int h)
         return;
     if (isClearBox != 0)
         return;
-    if (w == 0) w = 1; if (h == 0) h = 1;
+    if (w == 0) w = 1;
+    if (h == 0) h = 1;
     my1 = mnumypnts-xgry-h;
     if (my1 < 0)
         my1 = 0;
@@ -6723,9 +6724,9 @@ set_jframe_id(int id)
               oldf->mouseActive = Wisactive_mouse();
               oldf->mouseJactive = WisJactive_mouse();
 #endif
-              sprintf(oldf->menu, "%s", help_name);
+              snprintf(oldf->menu, sizeof(oldf->menu), "%s", help_name);
               if (getGraphicsCmd() > 0)
-                  sprintf(oldf->graphMode, "%s", gmode);
+                  snprintf(oldf->graphMode, sizeof(oldf->graphMode), "%s", gmode);
           }
       }
 /*
@@ -6786,7 +6787,7 @@ set_jframe_id(int id)
            }
            if(strlen(frame->menu) > 0) {
                 if(strcmp(frame->menu, help_name) != 0) {
-                      sprintf(cmd, "menu('%s')\n", frame->menu);
+                      snprintf(cmd, sizeof(cmd), "menu('%s')\n", frame->menu);
                       execString(cmd);
                 }
            }
@@ -6906,7 +6907,7 @@ static void execPrtCmd(char *cmd, int type) {
 // old func for single viewport and single frame.
 // draw one frame only
 void window_redisplay() {
-    char *cmd, gcmd[68];
+    char *cmd, gcmd[64+16];
     int hasCmd;
     int hasDconi;
     int toSkip;
@@ -9691,24 +9692,22 @@ int    bold, italic, size;
 int    b_ascent;
 
 void
-banner_font(f, fontname)
-double f;
-char   *fontname;
+banner_font(double f, char *fontname)
 { 
-    int size;
 
 /*
    if (curwin <= 0)
 	return;
     size = (int)(xcharpixels * f);
 */
-    size = char_width;
 
     if (!useXFunc) {
        bannerSize = f;
        return;
     }
 #ifdef MOTIF
+    int size;
+    size = char_width;
     if (scalable_font < 0)
    	open_scalable_font("courier", size, 1);
     if (bannermap != 0)
@@ -10798,8 +10797,7 @@ char c;
     return(1);
 }
 
-void
-raster_dstring(s)        char *s;
+void raster_dstring(char *s)
 {
    int  len;
    char data;
@@ -10818,7 +10816,7 @@ void raster_dvchar_dvchar(char ch)
 {
     char  *cell, *data, *data2;
     unsigned char   bit1, bit2;
-    int    j, k, y;
+    int    j, k;
 
     if ( rasterFont == NULL || pixmap == NULL)
         return;
@@ -10831,7 +10829,7 @@ void raster_dvchar_dvchar(char ch)
     {
        return;
     }
-    y = xgry + rasterFont->ascent;
+//    y = xgry + rasterFont->ascent;
     cell = pixmap + xgry * raster_cols + (xgrx / 8);
     data = rasterFont->data + (ch - rasterFont->start) * rasterFont->bytes;
     k = xgrx % 8;
@@ -11172,7 +11170,7 @@ open_var_font(fname, index, which, size)
      }
      varFont[index]->order = 0;
 
-     sprintf(varFont[index]->name, "font%d", index);
+     snprintf(varFont[index]->name, sizeof(varFont[index]->name), "font%d", index);
      k = fscanf(fin, "%d%d%d", &varFont[index]->width, &varFont[index]->height,
 	       &varFont[index]->ascent);
      if (k != 3)
@@ -11337,13 +11335,13 @@ double   val1, val2;
           x_cross_len  =  mnumypnts - off1;
       if(yval) {
 	int dec = getDscaleDecimal(0)+2;
-        char str[16];
-        sprintf(str, "%%.%df(%%.3g)",dec);
+        char str[32];
+        snprintf(str, sizeof(str), "%%.%df(%%.3g)",dec);
         sprintf(x_cross_info, str,val1,val2);
       } else {
 	int dec = getDscaleDecimal(0)+2;
-	char str[16];
-        sprintf(str, "%%.%df",dec);
+	char str[32];
+        snprintf(str, sizeof(str), "%%.%df",dec);
         sprintf(x_cross_info, str,val1);
       }
       if (!winDraw)
@@ -13992,7 +13990,7 @@ XtIntervalId aip_addTimeOut(unsigned long msec, void (*func)(), char *retPtr)
         tnode->active = 1;
         tnode->func = func;
         if (retPtr != NULL) {
-            if (strlen(retPtr) > tnode->valSize) {
+            if (strlen(retPtr) > (size_t)tnode->valSize) {
                 if (tnode->valSize > 0)
                     free(tnode->retVal);
                 tnode->valSize = strlen(retPtr);
@@ -14531,11 +14529,13 @@ void close_jTable(int table_id, int all) {
 int
 jTable_changed(int argc, char *argv[] )
 {
+#ifdef XXX
     int table_id, row;
 
     table_id = atoi(argv[1]);
     row = atoi(argv[2]);   // changed row number from 0 ... n
     // argv[3] .... are data of columns
+#endif
 
     RETURN;
 }

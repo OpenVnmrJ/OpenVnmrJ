@@ -144,16 +144,19 @@ int ProcessProcpar(FILE *procparfd, class ManagedAttributeList& list,
 						if(fscanf(procparfd, "%s", str1) != 1)
 						{
 							fprintf(stderr, "Error reading string values...\n");
+							break;
 						}
 						k = 0;
 						if(str1[0] == '"') k++; /* skip leading quote */
 
 						for(k = k ; k < strlen(str1) ; k++)
 						{
-							str2[l++]=str1[k]; /* copy to str2 */
+							if(l < (int)sizeof(str2) - 1)
+								str2[l++]=str1[k]; /* copy to str2 */
 						}
 
-						if(str1[strlen(str1)-1] != '"') str2[l++]=' '; /* add white space */
+						if(str1[strlen(str1)-1] != '"' && l < (int)sizeof(str2) - 1) 
+							str2[l++]=' '; /* add white space */
 					} while(str1[strlen(str1)-1] != '"');
 
 					str2[--l]=0; /* NULL terminate */

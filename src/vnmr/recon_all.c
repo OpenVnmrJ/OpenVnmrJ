@@ -670,7 +670,7 @@ int recon_all(int argc, char *argv[], int retc, char *retv[]) {
         error=P_getstring(PROCESSED, "rcvrs", rcvrs_str, 1, MAXSTR);
         if (!error) {
             nchannels=strlen(rcvrs_str);
-            for (i=0; i<strlen(rcvrs_str); i++)
+            for (i=0; i<(int)strlen(rcvrs_str); i++)
                 if (*(rcvrs_str+i)!='y')
                     nchannels--;
         }
@@ -5465,13 +5465,13 @@ int write_fdf(imageno, datap, fI, image_orderP, display, arstr, threeD, channel)
         w3= (fI->echoes)> 999 ? 1 + (int)log10(fI->echoes) : 3;
       
        
-       (void)sprintf(str, "/slice%0*dimage%0*decho%0*d", w1,slice_pos, w2, imageno,
+       (void)snprintf(str, sizeof(str), "/slice%0*dimage%0*decho%0*d", w1,slice_pos, w2, imageno,
                        w3, fI->echo);
        
 
     (void)strcat(filename, str);
     if (channel) {
-        (void)sprintf(str, "coil%03d", channel);
+        (void)snprintf(str, sizeof(str), "coil%03d", channel);
         (void)strcat(filename, str);
     }
     (void)strcat(filename, ".fdf");
@@ -5604,110 +5604,110 @@ int write_fdf(imageno, datap, fI, image_orderP, display, arstr, threeD, channel)
       (void)strcat(hdr, "char  *type = \"phase\";\n");
     else
       (void)strcat(hdr, "char  *type = \"absval\";\n");
-    (void)sprintf(str, "float  matrix[] = {%d, %d};\n", fI->npe, fI->nro);
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "float  matrix[] = {%d, %d};\n", fI->npe, fI->nro);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     (void)strcat(hdr, "char  *abscissa[] = {\"cm\", \"cm\"};\n");
     (void)strcat(hdr, "char  *ordinate[] = { \"intensity\" };\n");
-    (void)sprintf(str, "float  span[] = {%.6f, %.6f};\n", fI->fovpe, fI->fovro);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  origin[] = {%.6f,%.6f};\n", orppe, orpro);
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "float  span[] = {%.6f, %.6f};\n", fI->fovpe, fI->fovro);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  origin[] = {%.6f,%.6f};\n", orppe, orpro);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     if (nmice) {
         /*       (void)sprintf(str,"int    coils = %d;\n",rInfo.nchannels); */
-        (void)sprintf(str, "int    coils = %d;\n", nmice);
-        (void)strcat(hdr, str);
-        (void)sprintf(str, "int    coil = %d;\n", channel);
-        (void)strcat(hdr, str);
-        (void)sprintf(str, "float  morigin = {%.6f,%.6f,%.6f};\n", orpro,
+        (void)snprintf(str, sizeof(str), "int    coils = %d;\n", nmice);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+        (void)snprintf(str, sizeof(str), "int    coil = %d;\n", channel);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+        (void)snprintf(str, sizeof(str), "float  morigin = {%.6f,%.6f,%.6f};\n", orpro,
                 orppe, orpss);
         /*       (void)sprintf(str,"float  morigin = {%.6f,%.6f,%.6f};\n",orppe,orpro,orpss); */
-        (void)strcat(hdr, str);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
         rppe *= (-1);
     }
-    (void)sprintf(str, "char  *nucleus[] = {\"%s\",\"%s\"};\n",fI->tn,fI->dn);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  nucfreq[] = {%.6f,%.6f};\n", fI->sfrq, fI->dfrq);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  location[] = {%.6f,%.6f,%.6f};\n", rppe, rpro,
+    (void)snprintf(str, sizeof(str), "char  *nucleus[] = {\"%s\",\"%s\"};\n",fI->tn,fI->dn);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  nucfreq[] = {%.6f,%.6f};\n", fI->sfrq, fI->dfrq);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  location[] = {%.6f,%.6f,%.6f};\n", rppe, rpro,
             rpss);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  roi[] = {%.6f,%.6f,%.6f};\n", fI->fovpe,
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  roi[] = {%.6f,%.6f,%.6f};\n", fI->fovpe,
             fI->fovro, fI->thickness);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  gap = %.6f;\n", fI->gap);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "char  *file = \"%s\";\n", fI->fidname);
-    (void)strcat(hdr, str);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  gap = %.6f;\n", fI->gap);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "char  *file = \"%s\";\n", fI->fidname);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     /*   (void)sprintf(str,"int    slice_no = %d;\n",slice_acq); */
-    (void)sprintf(str, "int    slice_no = %d;\n", slice_pos);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "int    slices = %d;\n", fI->slices);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "int    echo_no = %d;\n", fI->echo);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "int    echoes = %d;\n", fI->echoes);
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "int    slice_no = %d;\n", slice_pos);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "int    slices = %d;\n", fI->slices);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "int    echo_no = %d;\n", fI->echo);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "int    echoes = %d;\n", fI->echoes);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     if (!arraycheck("te", arstr)) {
-        (void)sprintf(str, "float  TE = %.3f;\n", te);
-        (void)strcat(hdr, str);
-        (void)sprintf(str, "float  te = %.6f;\n", MSEC_TO_SEC*te);
-        (void)strcat(hdr, str);
+        (void)snprintf(str, sizeof(str), "float  TE = %.3f;\n", te);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+        (void)snprintf(str, sizeof(str), "float  te = %.6f;\n", MSEC_TO_SEC*te);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     }
     if (!arraycheck("tr", arstr)) {
-        (void)sprintf(str, "float  TR = %.3f;\n", fI->tr);
-        (void)strcat(hdr, str);
-        (void)sprintf(str, "float  tr = %.6f;\n", MSEC_TO_SEC*fI->tr);
-        (void)strcat(hdr, str);
+        (void)snprintf(str, sizeof(str), "float  TR = %.3f;\n", fI->tr);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+        (void)snprintf(str, sizeof(str), "float  tr = %.6f;\n", MSEC_TO_SEC*fI->tr);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     }
-    (void)sprintf(str, "int ro_size = %d;\n", fI->ro_size);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "int pe_size = %d;\n", fI->pe_size);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "char *sequence = \"%s\";\n", fI->seqname);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "char *studyid = \"%s\";\n", fI->studyid);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "char *position1 = \"%s\";\n", fI->position1);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "char *position2 = \"%s\";\n", fI->position2);
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "int ro_size = %d;\n", fI->ro_size);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "int pe_size = %d;\n", fI->pe_size);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "char *sequence = \"%s\";\n", fI->seqname);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "char *studyid = \"%s\";\n", fI->studyid);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "char *position1 = \"%s\";\n", fI->position1);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "char *position2 = \"%s\";\n", fI->position2);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     if (!arraycheck("ti", arstr)) {
-        (void)sprintf(str, "float  TI =  %.3f;\n", fI->ti);
-        (void)strcat(hdr, str);
-        (void)sprintf(str, "float  ti =  %.6f;\n", MSEC_TO_SEC*fI->ti);
-        (void)strcat(hdr, str);
+        (void)snprintf(str, sizeof(str), "float  TI =  %.3f;\n", fI->ti);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+        (void)snprintf(str, sizeof(str), "float  ti =  %.6f;\n", MSEC_TO_SEC*fI->ti);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     }
     /*   (void)sprintf(str,"int    array_index = %d;\n",fI->array_index); */
-    (void)sprintf(str, "int    array_index = %d;\n", imageno);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  array_dim = %.4f;\n", fI->image);
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "int    array_index = %d;\n", imageno);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  array_dim = %.4f;\n", fI->image);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     /*  (void)sprintf(str,"float  image = %.4f;\n",fI->image); */
-    (void)sprintf(str, "float  image = 1.0;\n");
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "float  image = 1.0;\n");
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     /*   id = (slice_pos-1)*fI->image*fI->echoes + (imageno-1)*fI->echoes + (fI->echo-1); */
     id = (imageno-1)*fI->slices*fI->echoes+ (slice_pos-1)*fI->echoes+ (fI->echo-1);
     //if(rInfo.svinfo.look_locker)
     	// id=(slice_pos-1)*fI->image+ (imageno-1);
-    (void)sprintf(str, "int    display_order = %d;\n", id);
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "int    display_order = %d;\n", id);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 #ifdef LINUX
-    (void)sprintf(str, "int    bigendian = 0;\n");
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "int    bigendian = 0;\n");
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 #endif
-    (void)sprintf(str, "float  imagescale = %.9f;\n",rInfo.image_scale);
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "float  imagescale = %.9f;\n",rInfo.image_scale);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     if (!arraycheck("psi", arstr)) {
-        (void)sprintf(str, "float  psi = %.4f;\n", psi);
-        (void)strcat(hdr, str);
+        (void)snprintf(str, sizeof(str), "float  psi = %.4f;\n", psi);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     }
     if (!arraycheck("phi", arstr)) {
-        (void)sprintf(str, "float  phi = %.4f;\n", phi);
-        (void)strcat(hdr, str);
+        (void)snprintf(str, sizeof(str), "float  phi = %.4f;\n", phi);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     }
     if (!arraycheck("theta", arstr)) {
-        (void)sprintf(str, "float  theta = %.4f;\n", theta);
-        (void)strcat(hdr, str);
+        (void)snprintf(str, sizeof(str), "float  theta = %.4f;\n", theta);
+        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     }
 
     /* check for sviblist stuff */
@@ -5725,7 +5725,7 @@ int write_fdf(imageno, datap, fI, image_orderP, display, arstr, threeD, channel)
             {
                 error=P_getVarInfo(PROCESSED,svbname,&info);
                 if (error) {
-                    (void)sprintf(str,
+                    (void)snprintf(str, sizeof(str), 
                             "recon_all: write_fdf: Error getting %s", svbname);
                     /* Werrprintf("recon_all: write_fdf: Error getting something"); */
                     Winfoprintf(str);
@@ -5745,9 +5745,9 @@ int write_fdf(imageno, datap, fI, image_orderP, display, arstr, threeD, channel)
                             (void)recon_abort();
                             ABORT;
                         }
-                        (void)sprintf(str, "float  %s = %.6f;\n", svbname,
+                        (void)snprintf(str, sizeof(str), "float  %s = %.6f;\n", svbname,
                                 dtemp);
-                        (void)strcat(hdr, str);
+                        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
                     }
                         break;
                     case T_STRING: {
@@ -5758,9 +5758,9 @@ int write_fdf(imageno, datap, fI, image_orderP, display, arstr, threeD, channel)
                             (void)recon_abort();
                             ABORT;
                         }
-                        (void)sprintf(str, "char  *%s = \"%s\";\n", svbname,
+                        (void)snprintf(str, sizeof(str), "char  *%s = \"%s\";\n", svbname,
                                 ctemp);
-                        (void)strcat(hdr, str);
+                        (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
                     }
                         break;
                     default: {
@@ -5776,10 +5776,10 @@ int write_fdf(imageno, datap, fI, image_orderP, display, arstr, threeD, channel)
         }
     }
 
-    (void)sprintf(str,
+    (void)snprintf(str, sizeof(str), 
             "float  orientation[] = {%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f};\n",
             or0, or1, or2, or3, or4, or5, or6, or7, or8);
-    (void)strcat(hdr, str);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     (void)strcat(hdr, arstr); /* add array based parameters */
     (void)strcat(hdr, "int checksum = 1291708713;\n");
     (void)strcat(hdr, "\f\n");
@@ -5792,12 +5792,12 @@ int write_fdf(imageno, datap, fI, image_orderP, display, arstr, threeD, channel)
     pad_cnt = pad_cnt + align -1;
 
     /* Put in padding */
-    (void)sprintf(str, " ");
+    (void)snprintf(str, sizeof(str), " ");
     for (i=0; i<pad_cnt-1; i++)
         (void)strcat(str, " ");
 
     (void)strcat(str, "\n");
-    (void)strcat(hdr, str);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 
     hdrlen+=strlen(str);
 
@@ -5811,7 +5811,7 @@ int write_fdf(imageno, datap, fI, image_orderP, display, arstr, threeD, channel)
     } else {
         /* create the output directory and try again */
         if (access(dirname, F_OK)) {
-            (void)sprintf(str, "mkdir %s \n", dirname);
+            (void)snprintf(str, sizeof(str), "mkdir %s \n", dirname);
             ierr=system(str);
         }
         fdfMd=mOpen(filename, filesize, O_RDWR | O_CREAT);
@@ -5914,10 +5914,10 @@ int write_3Dfdf(datap, fI, arstr, channel)
     }
 
     if ((rInfo.smash)||(rInfo.sense))
-        (void)sprintf(str, "_slab%03dimage%03decho%03dchan%02d.fdf", fI->slice,
+        (void)snprintf(str, sizeof(str), "_slab%03dimage%03decho%03dchan%02d.fdf", fI->slice,
                 (int)(fI->image), fI->echo, (channel+1));
     else
-        (void)sprintf(str, "_slab%03dimage%03decho%03d.fdf", fI->slice,
+        (void)snprintf(str, sizeof(str), "_slab%03dimage%03decho%03d.fdf", fI->slice,
                 (int)(fI->image), fI->echo);
     (void)strcat(filename, str);
 
@@ -6050,36 +6050,36 @@ int write_3Dfdf(datap, fI, arstr, channel)
       (void)strcat(hdr, "char  *type = \"phase\";\n");
     else
       (void)strcat(hdr, "char  *type = \"absval\";\n");
-    (void)sprintf(str, "float  matrix[] = {%d, %d, %d};\n", fI->nro, fI->npe,
+    (void)snprintf(str, sizeof(str), "float  matrix[] = {%d, %d, %d};\n", fI->nro, fI->npe,
             fI->slices);
-    (void)strcat(hdr, str);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     (void)strcat(hdr, "char  *abscissa[] = {\"cm\", \"cm\", \"cm\"};\n");
     (void)strcat(hdr, "char  *ordinate[] = { \"intensity\" };\n");
-    (void)sprintf(str, "float  span[] = {%.6f, %.6f, %.6f};\n", fI->fovro,
+    (void)snprintf(str, sizeof(str), "float  span[] = {%.6f, %.6f, %.6f};\n", fI->fovro,
             fI->fovpe, fI->thickness);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  origin[] = {%.6f,%.6f,%.6f};\n", orro, orpe,
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  origin[] = {%.6f,%.6f,%.6f};\n", orro, orpe,
             orpe2);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "char  *nucleus[] = {\"%s\",\"%s\"};\n",fI->tn,fI->dn);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  nucfreq[] = {%.6f,%.6f};\n", fI->sfrq, fI->dfrq);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  location[] = {%.6f,%.6f,%.6f};\n", rpro, rppe,
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "char  *nucleus[] = {\"%s\",\"%s\"};\n",fI->tn,fI->dn);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  nucfreq[] = {%.6f,%.6f};\n", fI->sfrq, fI->dfrq);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  location[] = {%.6f,%.6f,%.6f};\n", rpro, rppe,
             rpss);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "float  roi[] = {%.6f,%.6f,%.6f};\n", fI->fovro,
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "float  roi[] = {%.6f,%.6f,%.6f};\n", fI->fovro,
             fI->fovpe, fI->thickness);
-    (void)strcat(hdr, str);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
     (void)sprintf(
             str,
             "float  orientation[] = {%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f};\n",
             or0, or1, or2, or3, or4, or5, or6, or7, or8);
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "char *array_name = \"%s\"; \n", "none");
-    (void)strcat(hdr, str);
-    (void)sprintf(str, "char  *file = \"%s\";\n", fI->fidname);
-    (void)strcat(hdr, str);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "char *array_name = \"%s\"; \n", "none");
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+    (void)snprintf(str, sizeof(str), "char  *file = \"%s\";\n", fI->fidname);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 
     /* THIS STUFF IS NOw APPRECIATED!! */
 //     (void)sprintf(str,"int    slice_no = %d;\n",slice_pos);
@@ -6087,80 +6087,80 @@ int write_3Dfdf(datap, fI, arstr, channel)
 //     (void)strcat(hdr,str);
 //     (void)sprintf(str,"int    slices = %d;\n",fI->slices);
 //     (void)strcat(hdr,str);
-     (void)sprintf(str,"int    slab_no = 1;\n");
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"int    slabs = %d;\n",rInfo.svinfo.slabs);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"int    echo_no = %d;\n",fI->echo);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"int    echoes = %d;\n",fI->echoes);
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "int    slab_no = 1;\n");
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "int    slabs = %d;\n",rInfo.svinfo.slabs);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "int    echo_no = %d;\n",fI->echo);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "int    echoes = %d;\n",fI->echoes);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      if(!arraycheck("te",arstr))
      {
-     (void)sprintf(str,"float  TE = %.3f;\n",te);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"float  te = %.6f;\n",MSEC_TO_SEC*te);
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "float  TE = %.3f;\n",te);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "float  te = %.6f;\n",MSEC_TO_SEC*te);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      }
      if(!arraycheck("tr",arstr))
      {
-     (void)sprintf(str,"float  TR = %.3f;\n",fI->tr);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"float  tr = %.6f;\n",MSEC_TO_SEC*fI->tr);
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "float  TR = %.3f;\n",fI->tr);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "float  tr = %.6f;\n",MSEC_TO_SEC*fI->tr);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      }
-     (void)sprintf(str,"int ro_size = %d;\n",fI->ro_size);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"int pe_size = %d;\n",fI->pe_size);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"char *sequence = \"%s\";\n",fI->seqname);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"char *studyid = \"%s\";\n",fI->studyid);
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "int ro_size = %d;\n",fI->ro_size);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "int pe_size = %d;\n",fI->pe_size);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "char *sequence = \"%s\";\n",fI->seqname);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "char *studyid = \"%s\";\n",fI->studyid);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      
-     (void)sprintf(str,"char *file = \"%s\";\n",filestr);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"char *position1 = \"%s\";\n",fI->position1);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"char *position2 = \"%s\";\n",fI->position2);
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "char *file = \"%s\";\n",filestr);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "char *position1 = \"%s\";\n",fI->position1);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "char *position2 = \"%s\";\n",fI->position2);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      if(!arraycheck("ti",arstr))
      {
-     (void)sprintf(str,"float  TI =  %.3f;\n",fI->ti);
-     (void)strcat(hdr,str);
-     (void)sprintf(str,"float  ti =  %.6f;\n",MSEC_TO_SEC*fI->ti);
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "float  TI =  %.3f;\n",fI->ti);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "float  ti =  %.6f;\n",MSEC_TO_SEC*fI->ti);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      }
      
-//     (void)sprintf(str,"int    array_index = 1;\n");
-//     (void)strcat(hdr,str);
-     (void)sprintf(str,"int  array_index = %d;\n",(int)(fI->image));
-     (void)strcat(hdr,str);
+//     (void)snprintf(str, sizeof(str), "int    array_index = 1;\n");
+//     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
+     (void)snprintf(str, sizeof(str), "int  array_index = %d;\n",(int)(fI->image));
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      
-     (void)sprintf(str,"float  image = 1.0;\n");
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "float  image = 1.0;\n");
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      id=1;
-     (void)sprintf(str,"int    display_order = %d;\n",id);
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "int    display_order = %d;\n",id);
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      #ifdef LINUX
-     (void)sprintf(str,"int    bigendian = 0;\n");
-     (void)strcat(hdr,str);
+     (void)snprintf(str, sizeof(str), "int    bigendian = 0;\n");
+     (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
      #endif
-    (void)sprintf(str, "float  imagescale = %.9f;\n",rInfo.image_scale);
-    (void)strcat(hdr, str);
+    (void)snprintf(str, sizeof(str), "float  imagescale = %.9f;\n",rInfo.image_scale);
+    (void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 
      
      if (!arraycheck("psi", arstr)) {
-		(void)sprintf(str, "float  psi = %.4f;\n", psi);
-		(void)strcat(hdr, str);
+		(void)snprintf(str, sizeof(str), "float  psi = %.4f;\n", psi);
+		(void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 	}
 	if (!arraycheck("phi", arstr)) {
-		(void)sprintf(str, "float  phi = %.4f;\n", phi);
-		(void)strcat(hdr, str);
+		(void)snprintf(str, sizeof(str), "float  phi = %.4f;\n", phi);
+		(void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 	}
 	if (!arraycheck("theta", arstr)) {
-		(void)sprintf(str, "float  theta = %.4f;\n", theta);
-		(void)strcat(hdr, str);
+		(void)snprintf(str, sizeof(str), "float  theta = %.4f;\n", theta);
+		(void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 	}
 
 	/* check for sviblist stuff */
@@ -6177,7 +6177,7 @@ int write_3Dfdf(datap, fI, arstr, channel)
 			if (!strstr(svbname, "TE")) {
 				error=P_getVarInfo(PROCESSED, svbname, &info);
 				if (error) {
-					(void)sprintf(str,
+					(void)snprintf(str, sizeof(str), 
 							"recon_all: write_3Dfdf: Error getting %s", svbname);
 					Winfoprintf(str);
 				} else {
@@ -6199,9 +6199,9 @@ int write_3Dfdf(datap, fI, arstr, channel)
 							(void)recon_abort();
 							ABORT;
 						}
-						(void)sprintf(str, "float  %s = %.6f;\n", svbname,
+						(void)snprintf(str, sizeof(str), "float  %s = %.6f;\n", svbname,
 								dtemp);
-						(void)strcat(hdr, str);
+						(void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 					}
 						break;
 					case T_STRING: {
@@ -6212,8 +6212,8 @@ int write_3Dfdf(datap, fI, arstr, channel)
 							(void)recon_abort();
 							ABORT;
 						}
-						(void)sprintf(str, "char  *%s = %s;\n", svbname, ctemp);
-						(void)strcat(hdr, str);
+						(void)snprintf(str, sizeof(str), "char  *%s = %s;\n", svbname, ctemp);
+						(void)strncat(hdr, str, sizeof(hdr) - strlen(hdr) - 1);
 					}
 						break;
 					default: {
@@ -6259,11 +6259,11 @@ int write_3Dfdf(datap, fI, arstr, channel)
         if (access(dirname, F_OK)) {
             (void)strcpy(dirname, curexpdir);
             (void)strcat(dirname, "/datadir3d");
-            (void)sprintf(str, "mkdir %s \n", dirname);
+            (void)snprintf(str, sizeof(str), "mkdir %s \n", dirname);
             ierr=system(str);
             (void)strcpy(dirname, curexpdir);
             (void)strcat(dirname, "/datadir3d/data");
-            (void)sprintf(str, "mkdir %s \n", dirname);
+            (void)snprintf(str, sizeof(str), "mkdir %s \n", dirname);
             ierr=system(str);
         }
 
@@ -6295,7 +6295,7 @@ int write_3Dfdf(datap, fI, arstr, channel)
         /* this will combine channels if necessary */
         for (islice=0; islice<fI->slices; islice++) {
             if (reallybig) {
-                (void)sprintf(str, "writing slice %d \n", islice);
+                (void)snprintf(str, sizeof(str), "writing slice %d \n", islice);
                 Winfoprintf(str);
             }
             (void)memset(mag2D, 0, npts2d*sizeof(*mag2D));    
@@ -6554,7 +6554,7 @@ int arrayfdf(int block, int np, arrayElement *arrayels, char *fdfstring)
                     (void)sprintf(fdfstring, "\n");
                     return (0); /* nothing to do */
                 }
-                (void)sprintf(str, "float  %s = %.6f;\n", name, dtemp);
+                (void)snprintf(str, sizeof(str), "float  %s = %.6f;\n", name, dtemp);
                 (void)strcat(fdfstring, str);
             }
                 break;
@@ -6565,7 +6565,7 @@ int arrayfdf(int block, int np, arrayElement *arrayels, char *fdfstring)
                     (void)recon_abort();
                     ABORT;
                 }
-                (void)sprintf(str, "char  *%s = %s;\n", name, ctemp);
+                (void)snprintf(str, sizeof(str), "char  *%s = %s;\n", name, ctemp);
                 (void)strcat(fdfstring, str);
             }
                 break;
@@ -6979,13 +6979,14 @@ int smartphsfit(float *input, double *inphs, int npts, double *outphs)
       {   Werrprintf("Cannot find the 'Console' parameter");
           return(-1);
       }
-      if (strcmp(tmpdir,"vnmrs") == 0) 
+      if (strcmp(tmpdir,"vnmrs") == 0)
+      {
          return(0);
-      
+      }
 
-         sprintf(tmpdir,"%s/.",curexpdir);
-         statvfs( tmpdir, &freeblocks_buf);
-         free_kbytes = (double) freeblocks_buf.f_bavail;
+      sprintf(tmpdir,"%s/.",curexpdir);
+      statvfs( tmpdir, &freeblocks_buf);
+      free_kbytes = (double) freeblocks_buf.f_bavail;
      
     	
         req_bytes = 4 * rInfo.svinfo.ro_size * rInfo.svinfo.pe_size;

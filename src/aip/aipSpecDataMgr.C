@@ -432,10 +432,10 @@ int SpecDataMgr::getYminmax(string nucleus,double &ymin, double &ymax) {
 	for(int i=1; i<(ss->rank); i++) {
 	   npnt *= ss->matrix[i];
 	} 
-	register float  *data = ss->data;
-	register float maxval = -0.1*FLT_MAX;
-	register float minval = FLT_MAX;
-	register float tmp;
+	float  *data = ss->data;
+	float maxval = -0.1*FLT_MAX;
+	float minval = FLT_MAX;
+	float tmp;
 	while (--npnt)
 	{
 	   tmp = *data++;

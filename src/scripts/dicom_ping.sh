@@ -1,4 +1,5 @@
-: '@(#)dicom_ping.sh 22.1 03/24/08 2003-2004 '
+#! /bin/sh
+# '@(#)dicom_ping.sh 22.1 03/24/08 2003-2004 '
 # 
 #
 # Copyright (C) 2015  University of Oregon
@@ -9,9 +10,6 @@
 # For more information, see the LICENSE file.
 # 
 #
-
-: /bin/sh
-
 #********************************************************************/
 #* Name        : dicom_ping                                         */
 #* This shell script which will ping dicom storage server.          */

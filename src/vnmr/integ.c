@@ -148,7 +148,7 @@ void dis_bcdata(int altmode, int order, int numpts, int scale, float smooth, str
 void setS_BCbit(int fileindex, int b);
 void clearBcdata();
 void initBCparam(int *altmode, int *scale, float *smooth, int *order);
-void writeFDFSpecfile(char *path, char *dataType, float *data, int numtraces, int datasize);
+int writeFDFSpecfile(char *path, char *dataType, float *data, int numtraces, int datasize, int msg);
 
 static float Sum(float *data, int startIndex, int endIndex)
 {
@@ -2653,7 +2653,7 @@ void bc_all(int altmode, int order, int numpts, int scale, float smooth, struct 
 
 // write fdf files to datdir. 
     sprintf(datdirPath, "%s/datdir/bc.fdf",curexpdir);
-    writeFDFSpecfile(datdirPath, "baseline", bcdata, numtraces, datasize);
+    (void)writeFDFSpecfile(datdirPath, "baseline", bcdata, numtraces, datasize, 0);
   
     clearBcdata();
     freebuffers(FALSE);

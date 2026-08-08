@@ -52,7 +52,7 @@ struct block { int           size;
 	       const char   *id;
 	       struct block *prev;
 	       struct block *next;
-	       char          data;
+	       char          data[];
 	     };
 static struct block *first = nil;
 static struct block *last  = nil;
@@ -70,8 +70,8 @@ static struct block *last  = nil;
 void *allocateWithId(size_t n, const char *id)
 {  struct block *p;
 
-   if ( (p=(struct block *)malloc(sizeof(struct block)+(n-1)+1)) )
-   {  ((char *)&(p->data))[n] = UNIQUE;
+   if ( (p=(struct block *)malloc(sizeof(struct block)+n+1)) )
+   {  p->data[n] = UNIQUE;
       p->size = n;
       p->id   = id;
       p->next = nil;
@@ -81,7 +81,7 @@ void *allocateWithId(size_t n, const char *id)
 	 first = p;
       p->prev = last;
       last    = p;
-      return(&(p->data));
+      return(p->data);
    }
    else
       return(nil);
@@ -184,7 +184,7 @@ static void releaseBlock(struct block *b)
       b->next->prev = b->prev;
    else
       last = b->prev;
-   if (((char *)&(b->data))[b->size]!=UNIQUE)
+   if (b->data[b->size]!=UNIQUE)
      Werrprintf("Memory allocation: End of buffer overwritten in %s",b->id);
    free(b);
 }
@@ -206,7 +206,7 @@ void releaseAll()
    p = first;
    while (p)
    {  q = p->next;
-      if (((char *)&(p->data))[p->size]!=UNIQUE)
+      if (p->data[p->size]!=UNIQUE)
         Werrprintf("Memory allocation: End of buffer overwritten in %s",p->id);
       free(p);
       p = q;
@@ -223,7 +223,7 @@ void releaseAllWithId(const char *id)
    while (p)
       if (id == nil || strcmp(p->id,id) == 0)
       {  q = p->next;
-	 release(&(p->data));
+	 release(p->data);
 	 p = q;
       }
       else
@@ -272,7 +272,7 @@ void *scanFor(const char *id, char **p, int *n, const char **i)
    while (q)
       if ( (id==nil) || (strcmp(q->id,id)==0) )
       {  *n = q->size;
-	 *p = &(q->data);
+	 *p = q->data;
 	 if (id == nil)
          {
 	    if (q->id)
@@ -280,7 +280,7 @@ void *scanFor(const char *id, char **p, int *n, const char **i)
 	    else
 	       *i = "<no id>";
          }
-	 return(&(q->data));
+	 return(q->data);
       }
       else
 	 q = q->next;
@@ -312,12 +312,12 @@ void *skyallocateWithId(size_t n, const char *id)
    if (id == nil)
       id = "<no id>";
 #ifdef AP
-   if (p=(struct block *)skymalloc(sizeof(struct block)+(n-1)+1))
+   if (p=(struct block *)skymalloc(sizeof(struct block)+n+1))
 #else 
-   if ( (p=(struct block *)malloc(sizeof(struct block)+(n-1)+1)) )
+   if ( (p=(struct block *)malloc(sizeof(struct block)+n+1)) )
 #endif 
    {  p->size                 = n;
-      (&(p->data))[n]         = UNIQUE;
+      p->data[n]              = UNIQUE;
     /*((char *)&(p->data))[n] = UNIQUE;*/
       p->id                   = id;
       p->next                 = nil;
@@ -329,9 +329,9 @@ void *skyallocateWithId(size_t n, const char *id)
       last    = p;
 #ifdef DEBUG
       if (Eflag)
-        fprintf(stderr,"(block 0x%08x) gives 0x%08x\n",p,&(p->data));
+        fprintf(stderr,"(block 0x%08x) gives 0x%08x\n",p,p->data);
 #endif
-      return(&(p->data));
+      return(p->data);
    }
    else
    {  if (Eflag)
@@ -363,7 +363,7 @@ void skyrelease(void *p)
    if (Eflag)
       fprintf(stderr,"(block 0x%08x) ",b);
 #endif
-   if (((char *)&(b->data))[b->size]!=UNIQUE)
+   if (b->data[b->size]!=UNIQUE)
      Werrprintf("Memory allocation: End of buffer overwritten in %s",b->id);
 #ifdef AP
    skyfree(b);
@@ -383,7 +383,7 @@ void skyreleaseAll()
    p = first;
    while (p)
    {  q = p->next;
-      if (((char *)&(p->data))[p->size]!=UNIQUE)
+      if (p->data[p->size]!=UNIQUE)
          Werrprintf("Memory allocation: End of buffer overwritten in %s",p->id);
 #ifdef AP
       skyfree(p);
@@ -408,7 +408,7 @@ void skyreleaseAllWithId(const char *id)
    while (p)
       if (id == nil || strcmp(p->id,id) == 0)
       {  q = p->next;
-	 skyrelease(&(p->data));
+	 skyrelease(p->data);
 	 p = q;
       }
       else

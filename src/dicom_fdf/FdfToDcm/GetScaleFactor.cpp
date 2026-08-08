@@ -69,8 +69,15 @@ int GetScaleFactor(const char *path, float *minPixel, float *maxPixel)
 			sprintf(filename, "%s/%s", path, namelist[nFiles]->d_name);
 
 			printf("Processing FID file: %s\n", namelist[nFiles]->d_name);
-			GetFIDMinMax(namelist[nFiles]->d_name, &tempMin, &tempMax);
-			nImageFiles++;
+			if(GetFIDMinMax(filename, &tempMin, &tempMax) == 0)
+			{
+				nImageFiles++;
+			}
+			else
+			{
+				fprintf(stderr, "Skipping min/max for unimplemented fid handling: %s\n", filename);
+				continue;
+			}
 		}
 		else
 		{
@@ -82,6 +89,7 @@ int GetScaleFactor(const char *path, float *minPixel, float *maxPixel)
 	}
 
 	printf("%d Files processed for min and max pixel values...\n", nImageFiles);
+	return 0;
 }
 
 int GetFDFMinMax(char *path, float *fileMin, float *fileMax)
@@ -148,6 +156,8 @@ int GetFDFMinMax(char *path, float *fileMin, float *fileMax)
 	printf("File: %s - Min Pixel: %f\n", path, minPixel);
 	printf("File: %s - Max Pixel: %f\n", path, maxPixel);
 
+	free(pixelBuf);
+
 	if(minPixel < *fileMin) *fileMin = minPixel;
 	if(maxPixel > *fileMax) *fileMax = maxPixel;
 
@@ -158,6 +168,15 @@ int GetFDFMinMax(char *path, float *fileMin, float *fileMax)
 
 int GetFIDMinMax(char *path, float *fileMin, float *fileMax)
 {
+	(void)path;
+	(void)fileMin;
+	(void)fileMax;
 
+	fprintf(stderr,
+            "WARNING: GetFIDMinMax('%s') is not yet implemented; "
+            "min/max pixel values for this fid file were NOT computed.\n",
+            path);
+
+	return -1;
 }
 

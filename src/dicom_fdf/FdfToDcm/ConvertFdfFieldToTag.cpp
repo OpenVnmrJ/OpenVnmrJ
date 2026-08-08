@@ -84,7 +84,7 @@ extern int convertFdfFieldToTag(char *fieldType, char *fieldName,
 		}
 	}
 	// If we didn't find a matching entry, return an error
-	if(fdfInput[i].name == NULL)
+	if(fdfInput[i].name[0] == '\0')
 	{
 		printf("Uknown field found, ignoring...\n");
 		return 1;
@@ -220,11 +220,35 @@ extern int convertFdfFieldToTag(char *fieldType, char *fieldName,
 	}
 	else if((strcmp(fieldName, fdfInput[i].name) == 0) && (strcmp(fieldName, "*position1") == 0))
 	{
-		strncpy(fdfValues->position1, &fieldValue[1], strlen(fieldValue)-2);
+		size_t len = strlen(fieldValue);
+		if(len >= 2)
+		{
+			size_t copyLen = len - 2;
+			if(copyLen >= sizeof(fdfValues->position1))
+				copyLen = sizeof(fdfValues->position1) - 1;
+			strncpy(fdfValues->position1, &fieldValue[1], copyLen);
+			fdfValues->position1[copyLen] = '\0';
+		}
+		else
+		{
+			fdfValues->position1[0] = '\0';
+		}
 	}
 	else if((strcmp(fieldName, fdfInput[i].name) == 0) && (strcmp(fieldName, "*position2") == 0))
 	{
-		strncpy(fdfValues->position2, &fieldValue[1], strlen(fieldValue)-2);
+		size_t len = strlen(fieldValue);
+		if(len >= 2)
+		{
+			size_t copyLen = len - 2;
+			if(copyLen >= sizeof(fdfValues->position2))
+				copyLen = sizeof(fdfValues->position2) - 1;
+			strncpy(fdfValues->position2, &fieldValue[1], copyLen);
+			fdfValues->position2[copyLen] = '\0';
+		}
+		else
+		{
+			fdfValues->position2[0] = '\0';
+		}
 	}
 	else if((strcmp(fieldName, fdfInput[i].name) == 0) && (strcmp(fieldName, "TI") == 0))
 	{

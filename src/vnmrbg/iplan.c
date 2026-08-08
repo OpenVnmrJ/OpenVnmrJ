@@ -1895,7 +1895,7 @@ void savePrescriptForType(char* path, int planType)
 {
    char parlist[MAXSTR], cmd[MAXSTR];
    getPlanParamNames(planType, parlist);
-   sprintf(cmd, "writeparam('%s','%s','current','add')\n",path,parlist);
+   snprintf(cmd, sizeof(cmd), "writeparam('%s','%s','current','add')\n",path,parlist);
    execString(cmd);
 }
 
@@ -1918,7 +1918,7 @@ void savePrescript(char* path)
 	    strcat(parlist,"iplanDefaultType");
 	    strcat(parlist,",");
 	    strcat(parlist,"iplanType");
-    	    sprintf(cmd, "writeparam('%s','%s','current','add')\n",path,parlist);
+    	    snprintf(cmd, sizeof(cmd), "writeparam('%s','%s','current','add')\n",path,parlist);
     	    execString(cmd);
          } else break;
        }
@@ -3470,12 +3470,14 @@ void calRadialHandles(float2* p, int* n, int* sliceInd,
     if(np > 0) {
       points = (float3*)malloc(sizeof(float3)*np);
       for(j=0; j<ns; j++)
+      {
         for(k=0; k<3; k++) {
           points[j][k] = stack->slices[j].center[0][k];
           points[ns+j][k] = stack->slices[ns-1-j].center[3][k];
           points[2*ns+j][k] = stack->slices[j].center[1][k];
           points[3*ns+j][k] = stack->slices[ns-1-j].center[2][k];
         }
+      }
 
         for(j=0; j<np; j++) {
                 transform(view->m2p, points[j]);
@@ -3673,7 +3675,9 @@ void calEnvelope(iplan_stack *stack, iplan_view *view, iplan_2Dstack *stack2)
 
         for(j=0; j<np; j++) {
               for(k=0; k<3; k++)
+              {
                 points[j][k] = stack->envelope.points[j][k];
+              }
 
 		transform(view->m2p, points[j]);
         }
@@ -4344,7 +4348,7 @@ void make3pointStack(iplan_stack* stack, int type, int ns,
 /******************/
 /* x, y are in cm, relative to the center of the image */
 {
-    float theta, psi, phi, orientation[9];
+    float theta=0, psi=0, phi=0, orientation[9];
     int view = activeView;
     if(view < 0 || view > currentViews->numOfViews) view = 0;
 

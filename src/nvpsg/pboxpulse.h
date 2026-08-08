@@ -225,7 +225,7 @@ PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
       strcpy(bar1,var1); 
       var2 = getname0("",shp2.seqName,"");
       strcpy(bar2,var2);
-      sprintf(lpattern,"%s%d_%s%d",bar1,shp1.nRec,bar2,shp2.nRec);
+      snprintf(lpattern, sizeof(lpattern), "%s%d_%s%d", bar1, shp1.nRec, bar2, shp2.nRec);
       shp.hasArray = hasarry(shp.array, lpattern);
       int lix = arryindex(shp.array);
       if (shp.calc > 0) {
@@ -233,7 +233,7 @@ PBOXPULSE combine_PBOXPULSE(PBOXPULSE shp1, PBOXPULSE shp2, int iRec, int calc)
          strcpy(bar1,var1); 
          var2 = getname0("",shp2.seqName,"");
          strcpy(bar2,var2);  
-         sprintf(shp.pattern,"%s%d_%s%d_%d",bar1,shp1.nRec,bar2,shp2.nRec,lix);
+         snprintf(shp.pattern, sizeof(shp.pattern), "%s%d_%s%d_%d", bar1, shp1.nRec, bar2, shp2.nRec, lix);
          if (shp.hasArray == 1) {
             int ret __attribute__((unused));
             sprintf(cmd,"Pbox %s.RF -w \"%s /%.7f %.2f %.2f %.2f %.2f\" \"%s /%.7f %.2f %.2f %.2f %.2f\" -stepsize 0.2" ,

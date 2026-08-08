@@ -138,7 +138,7 @@ static void p11TempName(char *buf)
     struct timeval clock;
 
     gettimeofday(&clock, NULL);
-    sprintf(buf,"/tmp/p11_%ld_%06ld", clock.tv_sec, clock.tv_usec);
+    snprintf(buf,MAXSTR,"/tmp/p11_%ld_%06ld", clock.tv_sec, clock.tv_usec);
 }
 
 /******************/
@@ -150,7 +150,7 @@ int getNumOfLines(char* path)
     char  buf[BUFSIZE];
 
     char test[100];
-    strcpy(test, markerString);
+    snprintf(test, sizeof(test), "%s", markerString);
 
     if((fp = fopen(path, "r"))) {
 
@@ -182,7 +182,7 @@ int fidCheckedOk()
     string path, str, curfid_linkpath;
     char *ptr;
 
-    sprintf(path,"%s%s",curexpdir,"/acqfil/fid");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/acqfil/fid");
 
     if(!fileExist(path)) {
 	/* fid does not exist in curexp. */
@@ -195,8 +195,10 @@ int fidCheckedOk()
 
 	ptr=curfid_linkpath;
         if(linked && strstr(ptr+strlen(curfid_linkpath)-3,"fid") != NULL) {
-            strcpy(str, "");
-            strncat(str, curfid_linkpath, strlen(curfid_linkpath)-3);
+            size_t take = strlen(curfid_linkpath);
+            if (take >= 3) take -= 3; else take = 0;
+            if (take >= sizeof(str)) take = sizeof(str) - 1;
+            snprintf(str, sizeof(str), "%.*s", (int)take, curfid_linkpath);
 
             if(debug)fprintf(stderr,"fidCheckOk linkpath %s\n", str);
 
@@ -211,12 +213,12 @@ int fidCheckedOk()
 /* rt_FDA always make link to fid if UserName matches, otherwise makes copy*/
 
 	// assume file parameter is a path to data
-        if(P_getstring(CURRENT, "file", str, 1, MAXSTR)) strcpy(str,"");
+        if(P_getstring(CURRENT, "file", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
         ptr=str;
-	if(!strrchr(ptr+strlen(str)-4,'.')) strcat(str,".fid");
+	if(!strrchr(ptr+strlen(str)-4,'.')) strncat(str, ".fid", sizeof(str) - strlen(str) - 1);
 
 	if(strstr(ptr+strlen(str)-4,".REC") != NULL || strstr(ptr+strlen(str)-4,".rec") != NULL) {
-	    strcat(str,"/acqfil");
+	    strncat(str, "/acqfil", sizeof(str) - strlen(str) - 1);
 	}
 	
         r = checkPart11Checksums0(str, NULL);
@@ -245,7 +247,7 @@ int isFDAmode()
 
 	i = fidCheckedOk();
 
-        sprintf(dir,"%s%s",curexpdir,"/acqfil/fid");
+        snprintf(dir, sizeof(dir), "%s%s", curexpdir, "/acqfil/fid");
         if (isSymLink(dir) == 0) { // fid is linked 
 
             linked = file_is_link(dir, "", curfid_linkpath );
@@ -254,7 +256,7 @@ int isFDAmode()
 
         } else { // fid is not linked
 
-            if(P_getstring(CURRENT, "file", str, 1, MAXSTR)) strcpy(str,"");
+            if(P_getstring(CURRENT, "file", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
 	    if(i == 1 && strstr(str,".REC") != NULL) i = 2;
 	    else if(i != 1) i = 0;
         }
@@ -277,7 +279,7 @@ int updateLinkIcon()
 
 #ifdef VNMRJ
 
-    sprintf(dir,"%s%s",curexpdir,"/acqfil/fid");
+    snprintf(dir, sizeof(dir), "%s%s", curexpdir, "/acqfil/fid");
 
     if(!fileExist(dir)) {
 	/* fid does not exist. */
@@ -289,13 +291,13 @@ int updateLinkIcon()
 
         if(linked && strstr(curfid_linkpath, ".REC") != NULL &&
            i == 1) {
-            sprintf(str,"p11link blueLink %s", curfid_linkpath); 
+            snprintf(str, sizeof(str), "p11link blueLink %s", curfid_linkpath); 
             writelineToVnmrJ("vnmrjcmd", str);
         } else if(i != 0) {
-            sprintf(str,"p11link yellowLink %s", curfid_linkpath); 
+            snprintf(str, sizeof(str), "p11link yellowLink %s", curfid_linkpath); 
             writelineToVnmrJ("vnmrjcmd", str);
         } else {
-            sprintf(str,"p11link redLink %s", curfid_linkpath); 
+            snprintf(str, sizeof(str), "p11link redLink %s", curfid_linkpath); 
             writelineToVnmrJ("vnmrjcmd", str);
         }
 
@@ -318,13 +320,13 @@ int updateLinkIcon()
 int updateSvfdirIconNew()
 {
     string dir, str;
-    if(P_getstring(GLOBAL,"svfdir",dir,1, MAXSTR)) strcpy(dir,"");
+    if(P_getstring(GLOBAL,"svfdir",dir,1, MAXSTR)) snprintf(dir, sizeof(dir), "%s", "");
     if(part11System) {
-	sprintf(str,"p11svfdir blue %s", dir); 
+	snprintf(str, sizeof(str), "p11svfdir blue %s", dir); 
 	writelineToVnmrJ("vnmrjcmd", str);
 	return(1);
     } else {
-	sprintf(str,"p11svfdir yellow %s", dir); 
+	snprintf(str, sizeof(str), "p11svfdir yellow %s", dir); 
 	writelineToVnmrJ("vnmrjcmd", str);
 	return(0);
     }
@@ -341,7 +343,7 @@ int updateSvfdirIcon()
     if(!part11System) return(-1);
 
 #ifdef VNMRJ
-    if(P_getstring(GLOBAL,"svfdir",dir,1, MAXSTR)) strcpy(dir,"");
+    if(P_getstring(GLOBAL,"svfdir",dir,1, MAXSTR)) snprintf(dir, sizeof(dir), "%s", "");
    
     if(strlen(dir) == 0) i = -1;
     else i = p11_isPart11Dir(dir);
@@ -349,10 +351,10 @@ int updateSvfdirIcon()
     if(i == -1) {
 	writelineToVnmrJ("vnmrjcmd", "p11svfdir none");
     } else if(i == 1) {
-	sprintf(str,"p11svfdir blue %s", dir); 
+	snprintf(str, sizeof(str), "p11svfdir blue %s", dir); 
 	writelineToVnmrJ("vnmrjcmd", str);
     } else {
-	sprintf(str,"p11svfdir yellow %s", dir); 
+	snprintf(str, sizeof(str), "p11svfdir yellow %s", dir); 
 	writelineToVnmrJ("vnmrjcmd", str);
     }
 #endif 
@@ -417,7 +419,7 @@ int p11_saveUserMacro(char* name)
 
     if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) RETURN;
 
-    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) strcpy(str, "");
+    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
     if(strcmp(str, "fidscan") == 0 || strcmp(str, "lock") == 0) RETURN;
 
     if(strstr(name, userdir) == NULL ||
@@ -427,12 +429,12 @@ int p11_saveUserMacro(char* name)
 	fprintf(stderr,"UserMacro %s\n", name);
 
     if(strlen(currentCmd) > 0 && strstr(name, currentCmd) != NULL)
-        strcpy(currentCmd, name);
+        snprintf(currentCmd, sizeof(currentCmd), "%s", name);
 
     /* copy macro only if path is not curexpdir/maclib */
 
     if(strstr(name, curexpdir) == NULL) {
-        sprintf(macroPath, "%s%s", curexpdir, "/maclib");
+        snprintf(macroPath, sizeof(macroPath), "%s%s", curexpdir, "/maclib");
 
         if(!fileExist(macroPath)) mkdir(macroPath, 0755);
 
@@ -460,7 +462,7 @@ void p11_writeCmdHistory(char* buf)
     double d;
     char str[1024];
 
-    strcpy(str, buf);
+    snprintf(str, sizeof(str), "%s", buf);
 
     /* don't save jFunc, vnmrjcmd, and empty lines to cmdHistory */
 
@@ -498,19 +500,19 @@ void p11_writeCmdHistory(char* buf)
 
         i = strcspn(str, ")") - 1;
         strptr = str+8;
-        strcpy(mi, "");
+        snprintf(mi, sizeof(mi), "%s", "");
         strncat(mi, strptr, i-7);
         i = atoi(mi);
 
 	P_getstring(GLOBAL, "mstring", currentCmd, i, sizeof(string) - 1);
-	strcat(currentCmd, "\n");
+	strncat(currentCmd, "\n", sizeof(currentCmd) - strlen(currentCmd) - 1);
 	p11_saveDisCmd();
 
 	if(debug)
             fprintf(stderr, "i %d %s\n", i, currentCmd);
     } else {
 
-    	strcpy(currentCmd, "");
+    	snprintf(currentCmd, sizeof(currentCmd), "%s", "");
     	strncat(currentCmd, str, sizeof(string)-1);
     }
 
@@ -542,9 +544,9 @@ int resetPart11()
 
     part11System = NONFDA;
     okFDAdata = 0;
-    strcpy(auditDir, "");
-    strcpy(part11RootPath, "");
-    strcpy(currentPart11Path, "");
+    snprintf(auditDir, sizeof(auditDir), "%s", "");
+    snprintf(part11RootPath, sizeof(part11RootPath), "%s", "");
+    snprintf(currentPart11Path, sizeof(currentPart11Path), "%s", "");
 
     if(part11_std_files != NULL) free(part11_std_files);
     part11_std_files = 
@@ -590,7 +592,7 @@ static int file_is_link(char* filepath, char* newpath, char* curfid_linkpath)
     ino_t           exp_ino, fid_ino;
     struct stat     stat_blk;
 
-    strcpy(curfid_linkpath, "");
+    snprintf(curfid_linkpath, MAXSTR, "%s", "");
 
     if (isSymLink( &filepath[ 0 ] ) != 0)
         return( 0 );
@@ -605,7 +607,7 @@ static int file_is_link(char* filepath, char* newpath, char* curfid_linkpath)
     rather it returns the number of characters in the symbolic link path.  */
 
     curfid_link[ ival ] = '\0';
-    strcpy(curfid_linkpath, curfid_link);
+    snprintf(curfid_linkpath, MAXSTR, "%s", curfid_link);
 
 /*
  *  The two file paths point to the same file if the device and I-node
@@ -630,7 +632,7 @@ static int file_is_link(char* filepath, char* newpath, char* curfid_linkpath)
     else 
         return( 2 );
 #else 
-    strcpy(curfid_linkpath, "");
+    snprintf(curfid_linkpath, MAXSTR, "%s", "");
     return( 0 );                    /* no special action required on VMS */
 #endif 
 }
@@ -777,7 +779,7 @@ void writeCmdHisMenu()
     char str[MAXSTR];
     FILE* fp;
 
-    sprintf(str, "%s%s", userdir, cmdHistoryMenu);
+    snprintf(str, sizeof(str), "%s%s", userdir, cmdHistoryMenu);
     if((fp = fopen(str, "w"))) {
     	fprintf(fp, "%s | %s | %s\n", cmdHisFile, "current data",
                 "cmdHistory");
@@ -802,7 +804,7 @@ void getUserPart11Dirs(char* user, string* dirs, int* ndirs)
 
     j = 0;
     // get dirs from /vnmr/adm/users/profiles/p11/
-    sprintf(str, "%s%s%s", systemdir, "/adm/users/profiles/p11/", user);
+    snprintf(str, sizeof(str), "%s%s%s", systemdir, "/adm/users/profiles/p11/", user);
     if((usrfp = fopen(str, "r"))) {
 
         while (fgets(buf,sizeof(buf),usrfp)) {
@@ -817,18 +819,18 @@ void getUserPart11Dirs(char* user, string* dirs, int* ndirs)
                     if(debug)
                         Winfoprintf("getUserPart11Dirs words %s\n", words[1]);	
 
-                    strcpy(dirs[j], words[1]);
+                    snprintf(dirs[j], sizeof(dirs[j]), "%s", words[1]);
                     j++;
 		}
 	    }
         }
         fclose(usrfp);
     } else {
-	sprintf(dirs[j], "%s/data/%s",sysFDAdir,user); 
+	snprintf(dirs[j], sizeof(dirs[j]), "%s/data/%s",sysFDAdir,user); 
     }
 
     // get dirs from /vnmr/adm/users/profiles/data/
-    sprintf(str, "%s%s%s", systemdir, "/adm/users/profiles/data/", user);
+    snprintf(str, sizeof(str), "%s%s%s", systemdir, "/adm/users/profiles/data/", user);
     if((usrfp = fopen(str, "r"))) {
 
         while (fgets(buf,sizeof(buf),usrfp)) {
@@ -843,7 +845,7 @@ void getUserPart11Dirs(char* user, string* dirs, int* ndirs)
                     if(debug)
                         Winfoprintf("getUserPart11Dirs words %s\n", words[1]);	
 
-                    strcpy(dirs[j], words[1]);
+                    snprintf(dirs[j], sizeof(dirs[j]), "%s", words[1]);
                     j++;
 		}
 	    }
@@ -867,7 +869,7 @@ void writeAuditMenu()
 /* write SystemAuditMenu */
 /* unix and auditing not implemented */
 
-    sprintf(str, "%s%s", userdir, systemAuditMenu);
+    snprintf(str, sizeof(str), "%s%s", userdir, systemAuditMenu);
     if(!fileExist(str) && (fp = fopen(str, "w"))) {
     	fprintf(fp, "%s%s | %s | %s\n", auditDir, "sessions", "sessions audit trails", 
 		"s_auditTrailFiles");
@@ -882,11 +884,11 @@ void writeAuditMenu()
 /* write RecordAuditMenu */
 /* based on /vnmr/adm/users/userlist and /vnmr/adm/users/profiles/p11 */
 
-    sprintf(str, "%s%s", userdir, recordAuditMenu);
+    snprintf(str, sizeof(str), "%s%s", userdir, recordAuditMenu);
     if(!fileExist(str) && (fp = fopen(str, "w"))) {
 	
 	/* user part11 dirs */
-    	sprintf(str, "%s%s", systemdir, "/adm/users/userlist");
+    	snprintf(str, sizeof(str), "%s%s", systemdir, "/adm/users/userlist");
 	if((usrfp = fopen(str, "r"))) {
 
             while (fgets(buf,sizeof(buf),usrfp)) {
@@ -923,10 +925,10 @@ void initSvfdir()
     string dir;
 
     if(P_getstring(GLOBAL, "svfdir", dir, 1, MAXSTR - 1))
-        strcpy(dir, "");
+        snprintf(dir, sizeof(dir), "%s", "");
 
     if(!part11System && p11_isPart11Dir(dir)) {
-        sprintf(dir, "%s%s", userdir, "/data");
+        snprintf(dir, sizeof(dir), "%s%s", userdir, "/data");
     } 
 /*
     if(part11System == FDA && !p11_isPart11Dir(dir)) {
@@ -937,9 +939,9 @@ void initSvfdir()
     if(strlen(dir) == 0 || dir[0] == '\n' || dir[0] == '\0') {
 
         if(part11System && nuserPart11Dirs > 0) {
-            strcpy(dir, userPart11Dirs[0]);
+            snprintf(dir, sizeof(dir), "%s", userPart11Dirs[0]);
         } else { 
-            sprintf(dir, "%s%s", userdir, "/data");
+            snprintf(dir, sizeof(dir), "%s%s", userdir, "/data");
         }
     }
      
@@ -961,13 +963,13 @@ void make_checksum(char *key, char *dest)
     int i, n, nf, k1, k2;
     FILE* fp;
     FILE* rfp;
-    sprintf(path, "%s/p11/%s", systemdir, "part11Config");
+    snprintf(path, sizeof(path), "%s/p11/%s", systemdir, "part11Config");
 
     if(!(fp = fopen(path, "r"))) return;
 
-    sprintf(filekey, "file:%s:", key); 
+    snprintf(filekey, sizeof(filekey), "file:%s:", key); 
     k1 = strlen(filekey);
-    sprintf(dirkey, "dir:%s:", key); 
+    snprintf(dirkey, sizeof(dirkey), "dir:%s:", key); 
     k2 = strlen(dirkey);
 
     n = 0;
@@ -975,11 +977,13 @@ void make_checksum(char *key, char *dest)
         if((ptr = strstr(buf,filekey)) == buf) {
             ptr += k1;
             if(strstr(ptr,":yes\n") != NULL) {
-                strcpy(str,"");
-                strncat(str, ptr, strlen(ptr)-5);
-		sprintf(file, "%s/%s", dest, str);
+                size_t take = strlen(ptr);
+                if (take >= 5) take -= 5; else take = 0;
+                if (take >= sizeof(str)) take = sizeof(str) - 1;
+                snprintf(str, sizeof(str), "%.*s", (int)take, ptr);
+		snprintf(file, sizeof(file), "%s/%s", dest, str);
 		if((rfp = fopen(file, "r"))) {
-                    strcpy(files[n],str);
+                    snprintf(files[n], sizeof(files[n]), "%s", str);
                     n++;
 		}
 
@@ -990,22 +994,24 @@ void make_checksum(char *key, char *dest)
             ptr += k2;
             nf = 0;
             if(strstr(ptr,":yes\n") != NULL) {
-                strcpy(str,"");
-                strncat(str, ptr, strlen(ptr)-5);
-                sprintf(path, "%s/%s", dest, str);
+                size_t take = strlen(ptr);
+                if (take >= 5) take -= 5; else take = 0;
+                if (take >= sizeof(str)) take = sizeof(str) - 1;
+                snprintf(str, sizeof(str), "%.*s", (int)take, ptr);
+                snprintf(path, sizeof(path), "%s/%s", dest, str);
 		if(!isAdirectory(path)) {
                     if((rfp = fopen(path, "r"))) {
-                        strcpy(files[n],str);
+                        snprintf(files[n], sizeof(files[n]), "%s", str);
                         n++;
                     }
                     if(rfp)
                         fclose(rfp);
 		} else {
-                    getFilenames(path, "", fs, &nf, MAXFILES);
+                    getFilenames(path, (string){0}, fs, &nf, MAXFILES);
                     for(i=0; i<nf; i++) {
-                        sprintf(file, "%s/%s", path, fs[i]);
+                        snprintf(file, sizeof(file), "%s/%s", path, fs[i]);
                         if((rfp = fopen(file, "r"))) {
-                            sprintf(files[n], "%s/%s", str, fs[i]);
+                            snprintf(files[n], sizeof(files[n]), "%s/%s", str, fs[i]);
                             n++;
                         }
                         if(rfp)
@@ -1058,8 +1064,8 @@ int p11_action(int argc, char *argv[], int retc, char *retv[])
 
     if ( ! strcmp(argv[1],"process") )
     {
-       strcpy(currentCmd,argv[2]);
-       strcat(currentCmd, "\n");
+       snprintf(currentCmd, sizeof(currentCmd), "%s", argv[2]);
+       strncat(currentCmd, "\n", sizeof(currentCmd) - strlen(currentCmd) - 1);
        p11_saveFDAfiles_processed("p11_action", "-", "datdir");
        start_from_ft = 1;
        RETURN;
@@ -1067,7 +1073,7 @@ int p11_action(int argc, char *argv[], int retc, char *retv[])
 
     if(!fileExist(argv[2]) || !isUserOwned(argv[2])) RETURN;
 
-    sprintf(str,"%s/checksum", argv[2]);
+    snprintf(str, sizeof(str), "%s/checksum", argv[2]);
     if(fileExist(str)) unlink(str);
 
     if(!strcasecmp(argv[1],"automation") || !strcasecmp(argv[1],"auto")) {
@@ -1089,12 +1095,12 @@ void getFullName(char *fullname)
    FILE* fp;
    char  buf[BUFSIZE];
    string path, operator;
-   sprintf(path, "%s%s", systemdir, "/adm/users/operators/operatorlist");
+   snprintf(path, sizeof(path), "%s%s", systemdir, "/adm/users/operators/operatorlist");
 
    if(P_getstring(GLOBAL, "operator", operator, 1, MAXSTR - 1))
-	strcpy(operator,UserName);
+	snprintf(operator, sizeof(operator), "%s", UserName);
 
-   strcpy(fullname,operator); 
+   snprintf(fullname, MAXSTR, "%s", operator); 
    if((fp = fopen(path, "r"))) {
       int len = strlen(operator);
       while (fgets(buf,sizeof(buf),fp)) {
@@ -1104,7 +1110,7 @@ void getFullName(char *fullname)
 	     int nwords = 0;
              getStrValues(buf, words, &nwords, ";"); 
 	     if(nwords == 5) {
-		strcpy(fullname,words[3]);
+		snprintf(fullname, MAXSTR, "%s", words[3]);
 	     }
 	   } 
 	}
@@ -1118,15 +1124,21 @@ void getSoftwareVersion(char *version)
    FILE* fp;
    char  buf[BUFSIZE];
    string path;
-   sprintf(path, "%s%s", systemdir, "/vnmrrev");
+   snprintf(path, sizeof(path), "%s%s", systemdir, "/vnmrrev");
 
-   strcpy(version,"");
+   snprintf(version, MAXSTR, "%s", "");
    if((fp = fopen(path, "r"))) {
       while (fgets(buf,sizeof(buf),fp)) {
         if(strlen(buf) > 1 && buf[0] != '#') {
-	   if(buf[strlen(buf)-1] == '\n') strncat(version,buf,strlen(buf)-1);
-           else strcat(version,buf);
-	   strcat(version," ");
+           size_t remaining = MAXSTR - strlen(version) - 1;
+	   if(buf[strlen(buf)-1] == '\n') {
+	      size_t take = strlen(buf)-1;
+	      if (take > remaining) take = remaining;
+	      strncat(version,buf,take);
+	   } else {
+	      strncat(version,buf,remaining);
+	   }
+	   strncat(version," ", MAXSTR - strlen(version) - 1);
         }
       }
       fclose(fp);
@@ -1152,12 +1164,12 @@ int p11_switchOpt(int argc, char *argv[], int retc, char *retv[])
 
     
         if(mode_of_vnmr != AUTOMATION) {
-            sprintf(auditTrail, "%s%s", userdir, sessionAudit);
+            snprintf(auditTrail, sizeof(auditTrail), "%s%s", userdir, sessionAudit);
             sessionAuditTrailFp = fopen(auditTrail, "w");
         } else sessionAuditTrailFp = NULL;
 
         if(mode_of_vnmr != AUTOMATION && part11_std_files->cmdHistory) {
-            sprintf(cmdHisFile, "%s%s", userdir, "/cmdHistory");
+            snprintf(cmdHisFile, sizeof(cmdHisFile), "%s%s", userdir, "/cmdHistory");
 /*
             if(fileExist(cmdHisFile)) cmdHistoryFp = fopen(cmdHisFile, "a");
             else 
@@ -1167,12 +1179,12 @@ int p11_switchOpt(int argc, char *argv[], int retc, char *retv[])
     }
 
     if(argc > 1) {
-        strcpy(str,argv[1]);
+        snprintf(str, sizeof(str), "%s", argv[1]);
     } else {
         P_getstring(GLOBAL, "operator", str, 1, MAXSTR - 1);
     } 
-    if(strlen(str) == 0) strcpy(str, "?");
-    sprintf(operatorID, "%s:%s", UserName, str);
+    if(strlen(str) == 0) snprintf(str, sizeof(str), "%s", "?");
+    snprintf(operatorID, sizeof(operatorID), "%s:%s", UserName, str);
 
     getFullName(operatorFullName);
 
@@ -1199,17 +1211,17 @@ int p11_init()
 /* get p11console name */
 
     P_getstring(SYSTEMGLOBAL, "Console", str, 1, MAXSTR - 1);
-    if(strlen(str) == 0) strcpy(str, "?");
+    if(strlen(str) == 0) snprintf(str, sizeof(str), "%s", "?");
 
-    sprintf(p11console, "%s:%s", HostName, str);
+    snprintf(p11console, sizeof(p11console), "%s:%s", HostName, str);
 
 /* init operatorID */
 
     P_getstring(GLOBAL, "operator", str, 1, MAXSTR - 1);
     if(strlen(str) == 0)
-        sprintf(operatorID, "%s", UserName);
+        snprintf(operatorID, sizeof(operatorID), "%s", UserName);
     else
-        sprintf(operatorID, "%s:%s", UserName, str);
+        snprintf(operatorID, sizeof(operatorID), "%s:%s", UserName, str);
 
     getFullName(operatorFullName);
     getSoftwareVersion(softwareVersion);
@@ -1238,7 +1250,7 @@ int p11_init()
 /* it is emptied when data is retrieved with rt */
 
     if(mode_of_vnmr != AUTOMATION && part11_std_files->cmdHistory) {
-        sprintf(cmdHisFile, "%s%s", userdir, "/cmdHistory");
+        snprintf(cmdHisFile, sizeof(cmdHisFile), "%s%s", userdir, "/cmdHistory");
 	cmdHistoryFp = fopen(cmdHisFile, "w");
     } else cmdHistoryFp = NULL;
 
@@ -1249,7 +1261,7 @@ int p11_init()
 /* do the following even not a part11System */
     getUserPart11Dirs(UserName, userPart11Dirs, &nuserPart11Dirs);
     for(i=0; i<nuserPart11Dirs; i++) {
-    	if(!strEndsWith(userPart11Dirs[i],"/")) strcat(userPart11Dirs[i], "/");
+    	if(!strEndsWith(userPart11Dirs[i],"/")) strncat(userPart11Dirs[i], "/", sizeof(userPart11Dirs[i]) - strlen(userPart11Dirs[i]) - 1);
     }
 
     //initSvfdir();
@@ -1270,7 +1282,7 @@ int p11_init()
   strcat(auditTrail, ".vaudit");
 */
     if(mode_of_vnmr != AUTOMATION) {
-        sprintf(auditTrail, "%s%s", userdir, sessionAudit);
+        snprintf(auditTrail, sizeof(auditTrail), "%s%s", userdir, sessionAudit);
         sessionAuditTrailFp = fopen(auditTrail, "a");
     } else sessionAuditTrailFp = NULL;
 /*
@@ -1375,18 +1387,18 @@ int readPart11Config()
     int i, nwords;
     string str, tmpstrs[MAXWORDS]; 
 
-    sprintf(part11RootPath, "%s%s", systemdir, "/p11/");
+    snprintf(part11RootPath, sizeof(part11RootPath), "%s%s", systemdir, "/p11/");
 
-    sprintf(sysOwnedSafecp, "%s%s", part11RootPath, "bin/safecp");
-    sprintf(usrOwnedSafecp, "%s%s", systemdir, "/bin/safecp");
+    snprintf(sysOwnedSafecp, sizeof(sysOwnedSafecp), "%s%s", part11RootPath, "bin/safecp");
+    snprintf(usrOwnedSafecp, sizeof(usrOwnedSafecp), "%s%s", systemdir, "/bin/safecp");
 
-    sprintf(path, "%s%s", part11RootPath, "dataID_off");
+    snprintf(path, sizeof(path), "%s%s", part11RootPath, "dataID_off");
     if ( ! access(path,F_OK) )
        showDataID = 0;
     else
        showDataID = 1;
 
-    sprintf(path, "%s%s", part11RootPath, "part11Config");
+    snprintf(path, sizeof(path), "%s%s", part11RootPath, "part11Config");
 
 /* sysOwnedSafecp has to exist for a part11System to cp session auditTrail */
 /* to part11/auditTrails. */
@@ -1395,12 +1407,12 @@ int readPart11Config()
 */
     if(!(fp = fopen(path, "r"))) {
 	
-        if(P_getstring(GLOBAL, "appmode", str, 1, MAXSTR)) strcpy(str, "");
+        if(P_getstring(GLOBAL, "appmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
 
 	if(strcmp(str,"imaging") == 0)
-            sprintf(path, "%s%s", systemdir, "/imaging/templates/vnmrj/properties/recConfig");
+            snprintf(path, sizeof(path), "%s%s", systemdir, "/imaging/templates/vnmrj/properties/recConfig");
 	else 
-            sprintf(path, "%s%s", systemdir, "/templates/vnmrj/properties/recConfig");
+            snprintf(path, sizeof(path), "%s%s", systemdir, "/templates/vnmrj/properties/recConfig");
 
         if(!(fp = fopen(path, "r"))) ABORT;
     }
@@ -1427,9 +1439,9 @@ int readPart11Config()
                         && strstr(words[1], "Both") != NULL) 
 		    part11System = FDA;
 		else if(strcmp(words[0], "auditDir") == 0) 
-                    strcpy(auditDir, words[1]);
+                    snprintf(auditDir, sizeof(auditDir), "%s", words[1]);
 		else if(strcmp(words[0], "part11Dir") == 0) 
-                    strcpy(sysFDAdir, words[1]);
+                    snprintf(sysFDAdir, sizeof(sysFDAdir), "%s", words[1]);
 		else if(strcmp(words[0], "file") == 0 
                         && strcmp(words[1], "standard") == 0
                         && strcmp(words[2], "fid") == 0 
@@ -1509,7 +1521,7 @@ int readPart11Config()
                         && strcmp(words[1], "additional") == 0
                         && strcmp(words[3], "yes") == 0 
                         && part11_add_files->numOfFiles < MAXWORDS) {
-                    strcpy(tmpstrs[part11_add_files->numOfFiles],words[2]);
+                    snprintf(tmpstrs[part11_add_files->numOfFiles], sizeof(tmpstrs[part11_add_files->numOfFiles]), "%s", words[2]);
                     (part11_add_files->numOfFiles)++;
                 }
             }
@@ -1527,7 +1539,7 @@ int readPart11Config()
 /* auditDir should end with "/" */
     i = strlen(auditDir);
     if(i > 0 && auditDir[i-1] != '/')
-        strcat(auditDir, "/");
+        strncat(auditDir, "/", sizeof(auditDir) - strlen(auditDir) - 1);
 
 /* copy additional file path */
     if(part11_add_files->numOfFiles > 0) {
@@ -1535,7 +1547,7 @@ int readPart11Config()
 	    (string*)realloc(part11_add_files->fullpaths, sizeof(string)*
                              (part11_add_files->numOfFiles));
 	for(i=0; i<part11_add_files->numOfFiles; i++)
-            strcpy(part11_add_files->fullpaths[i],tmpstrs[i]);
+            snprintf(part11_add_files->fullpaths[i], sizeof(part11_add_files->fullpaths[i]), "%s", tmpstrs[i]);
     }
  
     if(fp)
@@ -1598,8 +1610,8 @@ int isParfileDiff(char* file1, char* file2)
         return(1);
     }
 
-    strcpy(buf1, "");
-    strcpy(buf2, "");
+    snprintf(buf1, sizeof(buf1), "%s", "");
+    snprintf(buf2, sizeof(buf2), "%s", "");
     str1 = buf1;
     str2 = buf2;
     while(str1 != NULL || str2 != NULL) {
@@ -1642,12 +1654,12 @@ int hasParamChanged()
     int i = 0;
     string tmppar, prevpar; 
    
-    sprintf( prevpar, "%s%s", curexpdir, "/prevpar");
+    snprintf(prevpar, sizeof(prevpar), "%s%s", curexpdir, "/prevpar");
     if(!fileExist(prevpar)) i = 1;
     else {
   
         /* save params */
-        sprintf( tmppar, "%s%s", curexpdir, "/tmppar");
+        snprintf(tmppar, sizeof(tmppar), "%s%s", curexpdir, "/tmppar");
 	unlink(tmppar);
 	saveCurpar(tmppar);
 	i = isParfileDiff(tmppar, prevpar);
@@ -1668,7 +1680,7 @@ void p11_updateParamChanged()
 
     if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) return;
 
-    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) strcpy(str, "");
+    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
     if(strcmp(str, "fidscan") == 0 || strcmp(str, "lock") == 0) return;
 
     if(!paramNewCmd) return;
@@ -1692,7 +1704,7 @@ void p11_updateParamChangedOld()
 
     if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) return;
 
-    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) strcpy(str, "");
+    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
     if(strcmp(str, "fidscan") == 0 || strcmp(str, "lock") == 0) return;
 
     if(!paramNewCmd) return;
@@ -1705,7 +1717,7 @@ void p11_updateParamChangedOld()
            strstr(str,"/acqfil") == NULL) {
 	     char *ptr=str;
 	     if(strrchr(ptr+strlen(str)-4,'.')) {
-               strcat(str,"/acqfil");
+               strncat(str, "/acqfil", sizeof(str) - strlen(str) - 1);
              }
              checkPart11Checksums0(str, stdout);
         }
@@ -1764,7 +1776,7 @@ void p11_updateDisChanged()
 
     if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) return;
 
-    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) strcpy(str, "");
+    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
     if(strcmp(str, "fidscan") == 0 || strcmp(str, "lock") == 0) return;
 /*
     if(!part11Data) {
@@ -1828,7 +1840,7 @@ int safecp_file_verify(char* safecpPath, char* file_a, char* file_b )
 
     ival = strlen(safecpPath) + strlen(file_a) + strlen(file_b) + 3;
     if(ival > BUFSIZE) return(-1);
-    sprintf(cp_cmd, "%s %s %s", safecpPath, file_a, file_b );
+    snprintf(cp_cmd, sizeof(cp_cmd), "%s %s %s", safecpPath, file_a, file_b);
 
     ret = system( cp_cmd );
 
@@ -1874,20 +1886,22 @@ void writeLineForLoc(string path, char* type)
     string currentPart11Path;
 
     if(path[strlen(path)-1] == '/') { 
-	strcpy(currentPart11Path, "");
-	strncat(currentPart11Path, path, strlen(path)-1);
+	size_t take = strlen(path);
+	if (take > 0) take--;
+	if (take >= sizeof(currentPart11Path)) take = sizeof(currentPart11Path) - 1;
+	snprintf(currentPart11Path, sizeof(currentPart11Path), "%.*s", (int)take, path);
     } else {
-	strcpy(currentPart11Path, path);
+	snprintf(currentPart11Path, sizeof(currentPart11Path), "%s", path);
     }
 
     if (currentPart11Path[0]=='/')
-        strcpy(tmppath,currentPart11Path);
+        snprintf(tmppath, sizeof(tmppath), "%s", currentPart11Path);
     else
     {
         if (getcwd(tmppath,MAXPATH) == NULL)
-            strcpy(tmppath,"");
-        strcat(tmppath,"/");
-        strcat(tmppath,currentPart11Path);
+            snprintf(tmppath, sizeof(tmppath), "%s", "");
+        strncat(tmppath, "/", sizeof(tmppath) - strlen(tmppath) - 1);
+        strncat(tmppath, currentPart11Path, sizeof(tmppath) - strlen(tmppath) - 1);
         currentPart11Path[0] = '\0';
         strncat(currentPart11Path,tmppath,sizeof(string)-1);
         i = strlen(currentPart11Path);
@@ -1903,7 +1917,7 @@ void writeLineForLoc(string path, char* type)
             break;
         }
     }
-    sprintf(tmppath,"%s %s %s %s",UserName, type, ptmp,currentPart11Path);
+    snprintf(tmppath, sizeof(tmppath), "%s %s %s %s", UserName, type, ptmp, currentPart11Path);
     if (strlen(tmppath) > 3*MAXPATH)
         Winfoprintf("WARNING: %s cannot add file to database, filename too long!\n","svr");
     else {
@@ -1957,31 +1971,31 @@ static int save_acqfil(char* orig, char* dest)
 
     save_recordInfo();
 
-    if(!strEndsWith(orig,"/")) strcat(orig, "/");
-    if(!strEndsWith(dest,"/")) strcat(dest, "/");
+    if(!strEndsWith(orig,"/")) strncat(orig, "/", MAXPATH - strlen(orig) - 1);
+    if(!strEndsWith(dest,"/")) strncat(dest, "/", MAXPATH - strlen(dest) - 1);
 
 /*  save data in curexpdir/acqfil to currentPart11Path/acqfil */
 
     setSafecpPath(safecpPath, dest);
 
     if(part11_std_files->text) { 
-        sprintf( &origpath[ 0 ], "%s%s", orig, "text");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "text");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "text");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "text");
         if(!fileExist(origpath)) {
- 	   sprintf(origpath, "%s/text", curexpdir);
+ 	   snprintf(origpath, sizeof(origpath), "%s/text", curexpdir);
         }
         if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
     }
 
     if(part11_std_files->log) {
-        sprintf( &origpath[ 0 ], "%s%s", orig, "log");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "log");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "log");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "log");
         if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
     }
 
     if(part11_std_files->fid) {
-        sprintf( &origpath[ 0 ], "%s%s", orig, "fid");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "fid");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "fid");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "fid");
         if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
     }
 
@@ -1989,28 +2003,32 @@ static int save_acqfil(char* orig, char* dest)
 	string fidid, dataid, dataid2;
         P_getstring(CURRENT, "dataid", dataid, 1, MAXSTR); 
         if(!P_getstring(PROCESSED, "fidid", fidid, 1, MAXSTR) && strlen(fidid)>8) { 
-          sprintf(dataid2, "%.8s000", fidid);
+          snprintf(dataid2, sizeof(dataid2), "%.8s000", fidid);
           P_setstring(CURRENT, "dataid", dataid2, 1); 
     	}
 
-        sprintf( &origpath[ 0 ], "%s%s", orig, "procpar");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "procpar");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "procpar");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "procpar");
         if(fileExist(origpath)) unlink(origpath);
 	saveProcpar(origpath);
         if(fileExist(origpath)) {
 	  string tmp;
 	  safecp_file(safecpPath, origpath, destpath);
-	  strcpy(tmp,"");
-	  strncat(tmp,dest,strlen(dest)-7); 
-          sprintf( &destpath[ 0 ], "%s%s", tmp, "procpar");
+	  {
+	    size_t take = strlen(dest);
+	    if (take >= 7) take -= 7; else take = 0;
+	    if (take >= sizeof(tmp)) take = sizeof(tmp) - 1;
+	    snprintf(tmp, sizeof(tmp), "%.*s", (int)take, dest);
+	  }
+          snprintf(destpath, sizeof(destpath), "%s%s", tmp, "procpar");
 	  // save redundant procpar in .REC
 	  safecp_file(safecpPath, origpath, destpath);
 	}
 
         P_setstring(CURRENT, "dataid", dataid, 1); 
         /* save display params */
-        sprintf( &origpath[ 0 ], "%s%s", orig, "curpar");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "curpar");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "curpar");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "curpar");
         saveCurpar(origpath);
         if(fileExist(origpath)) {
             safecp_file(safecpPath, origpath, destpath);
@@ -2026,79 +2044,79 @@ static int save_acqfil(char* orig, char* dest)
     }
 
     if(part11_std_files->global) {
-        sprintf( &origpath[ 0 ], "%s%s", orig, "global");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "global");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "global");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "global");
         if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
     }
 
     if(part11_std_files->conpar) {
-        sprintf( &origpath[ 0 ], "%s%s", orig, "conpar");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "conpar");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "conpar");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "conpar");
         if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
     }
 
     if (mode_of_vnmr == AUTOMATION)
-       strcpy(infile,orig);
+       snprintf(infile, sizeof(infile), "%s", orig);
     else
-       strcpy(infile,curexpdir);
+       snprintf(infile, sizeof(infile), "%s", curexpdir);
 
     if(part11_std_files->usermaclib) {
 	
         nfiles = 0;
-        sprintf(file,"%s/%s",infile, "maclib");
-        getFilenames(file, "", files, &nfiles, MAXSTR);
+        snprintf(file, sizeof(file), "%s/%s", infile, "maclib");
+        getFilenames(file, (string){0}, files, &nfiles, MAXSTR);
         for(i=0; i<nfiles; i++) {
-            sprintf( &origpath[ 0 ], "%s/%s", file, files[i]);
-            sprintf( &destpath[ 0 ], "%s%s/%s", dest, "maclib", files[i]);
+            snprintf(origpath, sizeof(origpath), "%s/%s", file, files[i]);
+            snprintf(destpath, sizeof(destpath), "%s%s/%s", dest, "maclib", files[i]);
             if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
         }
     }
 
     if(part11_std_files->shims) {
         nfiles = 0;
-        sprintf(file,"%s/%s",infile, "shims");
-        getFilenames(file, "", files, &nfiles, MAXSTR);
+        snprintf(file, sizeof(file), "%s/%s", infile, "shims");
+        getFilenames(file, (string){0}, files, &nfiles, MAXSTR);
         for(i=0; i<nfiles; i++) {
-            sprintf( &origpath[ 0 ], "%s/%s", file, files[i]);
-            sprintf( &destpath[ 0 ], "%s%s/%s", dest, "shims", files[i]);
+            snprintf(origpath, sizeof(origpath), "%s/%s", file, files[i]);
+            snprintf(destpath, sizeof(destpath), "%s%s/%s", dest, "shims", files[i]);
             if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
         }
     }
 
     if(part11_std_files->waveforms) {
         nfiles = 0;
-        sprintf(file,"%s/%s",infile, "shapelib");
-        getFilenames(file, "", files, &nfiles, MAXSTR);
+        snprintf(file, sizeof(file), "%s/%s", infile, "shapelib");
+        getFilenames(file, (string){0}, files, &nfiles, MAXSTR);
         for(i=0; i<nfiles; i++) {
-            sprintf( &origpath[ 0 ], "%s/%s", file, files[i]);
-            sprintf( &destpath[ 0 ], "%s%s/%s", dest, "shapelib", files[i]);
+            snprintf(origpath, sizeof(origpath), "%s/%s", file, files[i]);
+            snprintf(destpath, sizeof(destpath), "%s%s/%s", dest, "shapelib", files[i]);
             if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
         }
     }
 
     if(part11_std_files->pulseSequence) {
         nfiles = 0;
-        sprintf(file,"%s/%s",infile, "psglib");
-        getFilenames(file, "", files, &nfiles, MAXSTR);
+        snprintf(file, sizeof(file), "%s/%s", infile, "psglib");
+        getFilenames(file, (string){0}, files, &nfiles, MAXSTR);
         for(i=0; i<nfiles; i++) {
-            sprintf( &origpath[ 0 ], "%s/%s", file, files[i]);
-            sprintf( &destpath[ 0 ], "%s%s/%s", dest, "psglib", files[i]);
+            snprintf(origpath, sizeof(origpath), "%s/%s", file, files[i]);
+            snprintf(destpath, sizeof(destpath), "%s%s/%s", dest, "psglib", files[i]);
             if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
         }
     }
 
     if(part11_std_files->cmdHistory) {
-        sprintf( &origpath[ 0 ], "%s%s", orig, "cmdHistory");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "cmdHistory");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "cmdHistory");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "cmdHistory");
         if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
     }
 
     if(incInc) {
         nfiles = 0;
-        getFilenames(incPath, "", files, &nfiles, MAXSTR);
+        getFilenames(incPath, (string){0}, files, &nfiles, MAXSTR);
         for(i=0; i<nfiles; i++) {
-            sprintf( &origpath[ 0 ], "%s%s", incPath, files[i]);
-            sprintf( &destpath[ 0 ], "%s%s/%s", dest, "incFiles", files[i]);
+            snprintf(origpath, sizeof(origpath), "%s%s", incPath, files[i]);
+            snprintf(destpath, sizeof(destpath), "%s%s/%s", dest, "incFiles", files[i]);
             if(fileExist(origpath)) safecp_file(safecpPath, origpath, destpath);
         }
     }
@@ -2113,8 +2131,8 @@ static int save_acqfil(char* orig, char* dest)
 
     if(part11System && strstr(dest,".REC") != NULL) {
 
-        sprintf( &origpath[ 0 ], "%s%s", orig, "auditTrail");
-        sprintf( &destpath[ 0 ], "%s%s", dest, "auditTrail");
+        snprintf(origpath, sizeof(origpath), "%s%s", orig, "auditTrail");
+        snprintf(destpath, sizeof(destpath), "%s%s", dest, "auditTrail");
 
 /* write audit trail to system/auditTrail and curexpdir/acqfil/auditTrail */
         writeAuditTrails("save_acqfil", orig, dest, orig); 
@@ -2126,7 +2144,7 @@ static int save_acqfil(char* orig, char* dest)
 
         if(strstr(safecpPath,"/p11/bin/safecp") == NULL) {
             int ret __attribute__((unused));
-            sprintf(str, "chmod -R g+w %s", dest);
+            snprintf(str, sizeof(str), "chmod -R g+w %s", dest);
             ret = system(str);
         }
     }
@@ -2146,7 +2164,7 @@ void p11_displayDataID(char* str)
 {
     string dataid, cmd;
 
-    strcpy(winCmd, str);
+    snprintf(winCmd, sizeof(winCmd), "%s", str);
 
     if(!part11System || !showDataID || !strStartsWith(str, "d")) return;
 
@@ -2156,8 +2174,8 @@ void p11_displayDataID(char* str)
     { 
    	if(!P_getstring(CURRENT, "fidid", dataid, 1, MAXSTR))
         {
-            sprintf(cmd, "%s%s%s","write('graphics',wc*0.5,wc2,'", dataid, "')\n");
-            sprintf(p11Id, "%s", dataid);
+            snprintf(cmd, sizeof(cmd), "%s%s%s", "write('graphics',wc*0.5,wc2,'", dataid, "')\n");
+            snprintf(p11Id, sizeof(p11Id), "%s", dataid);
             execString(cmd);
         }
     }
@@ -2166,8 +2184,8 @@ void p11_displayDataID(char* str)
    	if(!P_getstring(CURRENT, "fidid", dataid, 1, MAXSTR)
    	 && !P_getstring(CURRENT, "dataid", dataid, 1, MAXSTR))
         {
-            sprintf(cmd, "%s%s%s","write('graphics',wc*0.8,wc2,'", dataid, "')\n");
-            sprintf(p11Id, "%s", dataid);
+            snprintf(cmd, sizeof(cmd), "%s%s%s", "write('graphics',wc*0.8,wc2,'", dataid, "')\n");
+            snprintf(p11Id, sizeof(p11Id), "%s", dataid);
             execString(cmd);
         }
     }
@@ -2214,23 +2232,23 @@ static void save_datdir(char* orig, char* dest)
           setDataID(fidid,i);
           Wgetgraphicsdisplay(cmd, 16);
           if(strstr(cmd,"d") == cmd) {
-	     strcat(cmd,"\n");
+	     strncat(cmd, "\n", sizeof(cmd) - strlen(cmd) - 1);
 	     execString(cmd); 
 	  }  
 	}
     }
 
-    if(!strEndsWith(orig, "/")) strcat(orig, "/");
-    if(!strEndsWith(dest, "/")) strcat(dest, "/");
+    if(!strEndsWith(orig, "/")) strncat(orig, "/", MAXPATH - strlen(orig) - 1);
+    if(!strEndsWith(dest, "/")) strncat(dest, "/", MAXPATH - strlen(dest) - 1);
 
     flush(0,NULL,0,NULL);
-    sprintf(file, "%s%s", orig, "spec.jpeg");
+    snprintf(file, sizeof(file), "%s%s", orig, "spec.jpeg");
     if(fileExist(file)) unlink(file);
 
     if(part11_std_files->snapshot)
     {
        if(!strStartsWith(winCmd, "df") && strStartsWith(winCmd, "d")) {
-           sprintf(cdumpCmd, "%s%s%s", "vnmrjcmd('GRAPHICS', 'cdump', '", orig, "spec', 'jpeg')\n");
+           snprintf(cdumpCmd, sizeof(cdumpCmd), "%s%s%s", "vnmrjcmd('GRAPHICS', 'cdump', '", orig, "spec', 'jpeg')\n");
            execString(cdumpCmd);
        }
     }
@@ -2239,66 +2257,66 @@ static void save_datdir(char* orig, char* dest)
     setSafecpPath(safecpPath, dest);
 
     if(part11_std_files->procpar) {
-        sprintf(path1, "%s%s", orig, "procpar");
-        sprintf(path2, "%s%s", dest, "procpar");
+        snprintf(path1, sizeof(path1), "%s%s", orig, "procpar");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "procpar");
 	saveProcpar(path1);
         if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
 
         /* save display params */
-        sprintf(path1, "%s%s", orig, "curpar");
-        sprintf(path2, "%s%s", dest, "curpar");
+        snprintf(path1, sizeof(path1), "%s%s", orig, "curpar");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "curpar");
         saveCurpar(path1);
         if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
     }
    
     if(part11_std_files->phasefile) {
-        sprintf(path1, "%s%s", orig, "phasefile");
-        sprintf(path2, "%s%s", dest, "phasefile");
+        snprintf(path1, sizeof(path1), "%s%s", orig, "phasefile");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "phasefile");
         if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
     }
   
     if(part11_std_files->fdf) {
         nfiles = 0;
-        sprintf(file,"%s/%s",curexpdir, "recon");
+        snprintf(file, sizeof(file), "%s/%s", curexpdir, "recon");
         if(fileExist(file)) {
-            getFilenames(file, "", files, &nfiles, MAXSTR);
+            getFilenames(file, (string){0}, files, &nfiles, MAXSTR);
             for(i=0; i<nfiles; i++) {
-                sprintf( path1, "%s/%s", file, files[i]);
-                sprintf( path2, "%s%s/%s", dest, "recon", files[i]);
+                snprintf(path1, sizeof(path1), "%s/%s", file, files[i]);
+                snprintf(path2, sizeof(path2), "%s%s/%s", dest, "recon", files[i]);
                 if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
             }
         }
     }
    
     if(part11_std_files->data) {
-        sprintf(path1, "%s%s", orig, "data");
-        sprintf(path2, "%s%s", dest, "data");
+        snprintf(path1, sizeof(path1), "%s%s", orig, "data");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "data");
         if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
     }
    
     if(part11_std_files->cmdHistory) {
     	if(cmdHistoryFp != NULL) fflush(cmdHistoryFp);
-        sprintf(path2, "%s%s", dest, "cmdHistory");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "cmdHistory");
         if(fileExist(cmdHisFile)) safecp_file(safecpPath, cmdHisFile, path2);
     }
    
     if(part11_std_files->text) {
-        sprintf(path1, "%s/%s", curexpdir, "text");
-        sprintf(path2, "%s%s", dest, "text");
+        snprintf(path1, sizeof(path1), "%s/%s", curexpdir, "text");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "text");
         if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
     }
    
     if(part11_std_files->global) {
-        sprintf(path1, "%s%s", orig, "global");
-        sprintf(path2, "%s%s", dest, "global");
+        snprintf(path1, sizeof(path1), "%s%s", orig, "global");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "global");
         if(fileExist(path1)) unlink(path1); 
 	P_save(GLOBAL,path1);
         if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
     }
    
     if(part11_std_files->conpar) {
-        sprintf(path1, "%s%s", orig, "conpar");
-        sprintf(path2, "%s%s", dest, "conpar");
+        snprintf(path1, sizeof(path1), "%s%s", orig, "conpar");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "conpar");
         if(fileExist(path1)) unlink(path1); 
 	P_save(SYSTEMGLOBAL,path1);
         if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
@@ -2306,37 +2324,37 @@ static void save_datdir(char* orig, char* dest)
    
     if(part11_std_files->usermaclib) {
         nfiles = 0;
-        sprintf(file,"%s/%s",curexpdir, "maclib");
-        getFilenames(file, "", files, &nfiles, MAXSTR);
+        snprintf(file, sizeof(file), "%s/%s", curexpdir, "maclib");
+        getFilenames(file, (string){0}, files, &nfiles, MAXSTR);
         for(i=0; i<nfiles; i++) {
-            sprintf( path1, "%s/%s", file, files[i]);
-            sprintf( path2, "%s%s/%s", dest, "maclib", files[i]);
+            snprintf(path1, sizeof(path1), "%s/%s", file, files[i]);
+            snprintf(path2, sizeof(path2), "%s%s/%s", dest, "maclib", files[i]);
             if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
         }
     }
 
     if(incInc) {
         nfiles = 0;
-        getFilenames(incPath, "", files, &nfiles, MAXSTR);
+        getFilenames(incPath, (string){0}, files, &nfiles, MAXSTR);
         for(i=0; i<nfiles; i++) {
-            sprintf( path1, "%s%s", incPath, files[i]);
-            sprintf( path2, "%s%s/%s", dest, "incFiles", files[i]);
+            snprintf(path1, sizeof(path1), "%s%s", incPath, files[i]);
+            snprintf(path2, sizeof(path2), "%s%s/%s", dest, "incFiles", files[i]);
             if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
         }
     }
 
     if(part11_std_files->snapshot && mode_of_vnmr == AUTOMATION) {
         nfiles = 0;
-        getFilenames(orig, "", files, &nfiles, MAXSTR);
+        getFilenames(orig, (string){0}, files, &nfiles, MAXSTR);
         for(i=0; i<nfiles; i++) if(strncmp(files[i], "spec.", 5) == 0) {
-            sprintf( path1, "%s%s", orig, files[i]);
-            sprintf( path2, "%s%s", dest, files[i]);
+            snprintf(path1, sizeof(path1), "%s%s", orig, files[i]);
+            snprintf(path2, sizeof(path2), "%s%s", dest, files[i]);
             if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
         }
     } else if(part11_std_files->snapshot &&
               !strStartsWith(winCmd, "df") && strStartsWith(winCmd, "d")) {
-        sprintf(path1, "%s%s", orig, "spec.jpeg");
-        sprintf(path2, "%s%s", dest, "spec.jpeg");
+        snprintf(path1, sizeof(path1), "%s%s", orig, "spec.jpeg");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "spec.jpeg");
         sec = 0;
         while(sec < 5 && !fileExist(path1)) {
             sleep(1);
@@ -2365,15 +2383,15 @@ static void save_datdir(char* orig, char* dest)
     if(part11System && strstr(dest,".REC") != NULL) {
         writeAuditTrails("save_datdir", orig, dest, "datdir"); 
 
-        sprintf(path1, "%s%s", orig, "auditTrail");
-        sprintf(path2, "%s%s", dest, "auditTrail");
+        snprintf(path1, sizeof(path1), "%s%s", orig, "auditTrail");
+        snprintf(path2, sizeof(path2), "%s%s", dest, "auditTrail");
         if(fileExist(path1)) safecp_file(safecpPath, path1, path2);
 
     
         makeChecksums(dest, "checksum");
         if(strstr(safecpPath,"/p11/bin/safecp") == NULL) {
             int ret __attribute__((unused));
-            sprintf(str, "chmod -R g+w %s", dest);
+            snprintf(str, sizeof(str), "chmod -R g+w %s", dest);
             ret = system(str);
         }
 
@@ -2406,9 +2424,9 @@ void getFilenames_1level(string rootpath, string name, string* files, int* n, in
     string dir, child;
 
     if(rootpath[strlen(rootpath)-1] != '/')
-      sprintf(dir, "%s/%s", rootpath, name);
+      snprintf(dir, sizeof(dir), "%s/%s", rootpath, name);
     else 
-      sprintf(dir, "%s%s", rootpath, name);
+      snprintf(dir, sizeof(dir), "%s%s", rootpath, name);
 
     if(strlen(dir) == 0 || !fileExist(dir)) return;
 
@@ -2419,15 +2437,15 @@ void getFilenames_1level(string rootpath, string name, string* files, int* n, in
     } else {
         if ( (dirp = opendir(dir)) ) {
             if(strlen(name) > 0 && name[strlen(name)-1] != '/')
-                strcat(name,"/");
+                strncat(name,"/", MAXSTR - strlen(name) - 1);
             for (dp = readdir(dirp); dp != NULL && (*n) < (nmax-1); dp = readdir(dirp)) {
 
                 if(debug)
                     fprintf(stderr," dir %s %s\n", dir, dp->d_name);
                 if (*dp->d_name != '.') {
 
-                    sprintf(child,"%s%s",name,dp->d_name);
-        	    strcpy(files[*n], child);
+                    snprintf(child, sizeof(child), "%s%s", name, dp->d_name);
+        	    snprintf(files[*n], sizeof(files[*n]), "%s", child);
         	    (*n)++;	
                 }
             }
@@ -2448,11 +2466,11 @@ static int getLastVersion(char* path, char* name)
     string file, files[MAXSTR];
     int nfiles = 0;
 
-    getFilenames_1level(path, "", files, &nfiles, MAXSTR);
+    getFilenames_1level(path, (string){0}, files, &nfiles, MAXSTR);
 
     n = -1;
     for(i=0; i<nfiles; i++) {
-	sprintf(file, "%s/%s", path, files[i]);
+	snprintf(file, sizeof(file), "%s/%s", path, files[i]);
         if(isAdirectory(file) && (strstr(files[i], ".dat") != NULL ||
                                   strstr(files[i], "datdir") != NULL)) {
             t = getTimeSaved(file); 
@@ -2463,8 +2481,8 @@ static int getLastVersion(char* path, char* name)
 	}
     }
 
-    if(n != -1) strcpy(name,files[n]);
-    else strcpy(name, "");
+    if(n != -1) snprintf(name, MAXSTR, "%s", files[n]);
+    else snprintf(name, MAXSTR, "%s", "");
     return(n + 1);
 }
 
@@ -2477,7 +2495,7 @@ int getLastData(int argc, char *argv[], int retc, char *retv[])
 
     if (argc > 1) {
 
-	strcpy(path, argv[1]);
+	snprintf(path, sizeof(path), "%s", argv[1]);
 
 	ret = getLastVersion(path, name);
 
@@ -2499,19 +2517,19 @@ static int getLastVersionNum(char* path, char* prefix, char* version)
     int i, n, max = 999;
     char file[MAXSTR], last[MAXSTR];
 
-    strcpy(version, "");
+    snprintf(version, MAXSTR, "%s", "");
     for(i=1; i<max; i++) {
-        strcpy(last, version);
-   	if(i > 99) sprintf(version, "%d",i);
-   	else if(i > 9) sprintf(version, "0%d",i);
-   	else sprintf(version, "00%d",i);
+        snprintf(last, sizeof(last), "%s", version);
+   	if(i > 99) snprintf(version, MAXSTR, "%d",i);
+   	else if(i > 9) snprintf(version, MAXSTR, "0%d",i);
+   	else snprintf(version, MAXSTR, "00%d",i);
         
-	sprintf(file, "%s%s%s", path, prefix, version); 
+	snprintf(file, sizeof(file), "%s%s%s", path, prefix, version); 
 	
 	if(!fileExist(file)) break;
     }
 
-    strcpy(version, last);
+    snprintf(version, MAXSTR, "%s", last);
     return(i-1);
 }
 #endif
@@ -2527,14 +2545,14 @@ static int getNextVersion(char* path, char* prefix, char* version)
     char file[MAXSTR];
 
     for(i=1; i<max; i++) {
-   	if(i > 99) sprintf(version, "%d",i);
-   	else if(i > 9) sprintf(version, "0%d",i);
-   	else sprintf(version, "00%d",i);
+   	if(i > 99) snprintf(version, MAXSTR, "%d",i);
+   	else if(i > 9) snprintf(version, MAXSTR, "0%d",i);
+   	else snprintf(version, MAXSTR, "00%d",i);
         
-	sprintf(file, "%s%s%s", path, prefix, version); 
+	snprintf(file, sizeof(file), "%s%s%s", path, prefix, version); 
 	
 	if(!fileExist(file)) {
-	    strcat(file, ".dat");
+	    strncat(file, ".dat", sizeof(file) - strlen(file) - 1);
 	    if(!fileExist(file)) break;
 	}
     }
@@ -2571,17 +2589,17 @@ static int copy_fid(char* curr, char* rec)
     int ival = 1;
     char path[MAXSTR+16], recpath[MAXSTR+16];
 
-    if(!strEndsWith(curr, "/")) strcat(curr, "/");
-    if(!strEndsWith(rec, "/")) strcat(rec, "/");
+    if(!strEndsWith(curr, "/")) strncat(curr, "/", MAXPATH - strlen(curr) - 1);
+    if(!strEndsWith(rec, "/")) strncat(rec, "/", MAXPATH - strlen(rec) - 1);
 
-    sprintf(recpath, "%s%s", rec, "fid");
-    sprintf(path, "%s%s", curr, "fid");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "fid");
+    snprintf(path, sizeof(path), "%s%s", curr, "fid");
     if(fileExist(recpath)) {
         unlink(path);
 	ival = copy_file(recpath, path);
 
-     	sprintf(recpath, "%s%s", rec, "log");
-     	sprintf(path, "%s%s", curr, "log");
+     	snprintf(recpath, sizeof(recpath), "%s%s", rec, "log");
+     	snprintf(path, sizeof(path), "%s%s", curr, "log");
     	unlink(path);
      	if(fileExist(recpath)) {
 	    copy_file(recpath, path);
@@ -2604,17 +2622,17 @@ static int link_fid(char* curr, char* rec)
     int ival = 1;
     char path[MAXSTR], recpath[MAXSTR];
 
-    if(!strEndsWith(curr, "/")) strcat(curr, "/");
-    if(!strEndsWith(rec, "/")) strcat(rec, "/");
+    if(!strEndsWith(curr, "/")) strncat(curr, "/", MAXPATH - strlen(curr) - 1);
+    if(!strEndsWith(rec, "/")) strncat(rec, "/", MAXPATH - strlen(rec) - 1);
 
-    sprintf(recpath, "%s%s", rec, "fid");
-    sprintf(path, "%s%s", curr, "fid");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "fid");
+    snprintf(path, sizeof(path), "%s%s", curr, "fid");
     if(fileExist(recpath)) {
         unlink(path);
 	ival = link_file(recpath, path);
 
-        sprintf(recpath, "%s%s", rec, "log");
-        sprintf(path, "%s%s", curr, "log");
+        snprintf(recpath, sizeof(recpath), "%s%s", rec, "log");
+        snprintf(path, sizeof(path), "%s%s", curr, "log");
     	unlink(path);
         if(fileExist(recpath)) {
 	    link_file(recpath, path);
@@ -2631,106 +2649,106 @@ static int copy_acqfil(char* curr, char* rec)
 {
     char path[MAXSTR], recpath[MAXSTR];
 
-    if(!strEndsWith(curr, "/")) strcat(curr, "/");
-    if(!strEndsWith(rec, "/")) strcat(rec, "/");
+    if(!strEndsWith(curr, "/")) strncat(curr, "/", MAXPATH - strlen(curr) - 1);
+    if(!strEndsWith(rec, "/")) strncat(rec, "/", MAXPATH - strlen(rec) - 1);
 
-    sprintf(path, "%s%s", curr, "text");
+    snprintf(path, sizeof(path), "%s%s", curr, "text");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "procpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "procpar");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "global");
+    snprintf(path, sizeof(path), "%s%s", curr, "global");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "conpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "conpar");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curexpdir, "/maclib");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/maclib");
     if(fileExist(path)) rm_file(path);
-    sprintf(path, "%s%s", curexpdir, "/shims");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/shims");
     if(fileExist(path)) rm_file(path);
-    sprintf(path, "%s%s", curexpdir, "/shapelib");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/shapelib");
     if(fileExist(path)) rm_file(path);
-    sprintf(path, "%s%s", curexpdir, "/psglib");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/psglib");
     if(fileExist(path)) rm_file(path);
-    sprintf(path, "%s%s", curexpdir, "/incFiles");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/incFiles");
     if(fileExist(path)) rm_file(path);
-    sprintf(path, "%s%s", curr, "cmdHistory");
+    snprintf(path, sizeof(path), "%s%s", curr, "cmdHistory");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "auditTrail");
+    snprintf(path, sizeof(path), "%s%s", curr, "auditTrail");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "checksum");
+    snprintf(path, sizeof(path), "%s%s", curr, "checksum");
     if(fileExist(path)) unlink(path);
 
     /* also remove datdir files */
-    sprintf(path, "%s/datdir/procpar", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/procpar", curexpdir);
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s/datdir/curpar", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/curpar", curexpdir);
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s/datdir/cmdHistory", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/cmdHistory", curexpdir);
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s/datdir/auditTrail", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/auditTrail", curexpdir);
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s/datdir/checksum", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/checksum", curexpdir);
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s/datdir/text", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/text", curexpdir);
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s/datdir/global", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/global", curexpdir);
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s/datdir/conpar", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/conpar", curexpdir);
     if(fileExist(path)) unlink(path);
 
-    sprintf(recpath, "%s%s", rec, "text");
-    sprintf(path, "%s%s", curr, "text");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "text");
+    snprintf(path, sizeof(path), "%s%s", curr, "text");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "procpar");
-    sprintf(path, "%s%s", curr, "procpar");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "procpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "procpar");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "curpar");
-    sprintf(path, "%s%s", curr, "curpar");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "curpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "curpar");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "global");
-    sprintf(path, "%s%s", curr, "global");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "global");
+    snprintf(path, sizeof(path), "%s%s", curr, "global");
     if(fileExist(recpath)) copy_file(recpath, path);
    
-    sprintf(recpath, "%s%s", rec, "conpar");
-    sprintf(path, "%s%s", curr, "conpar");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "conpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "conpar");
     if(fileExist(recpath)) copy_file(recpath, path);
    
-    sprintf(recpath, "%s%s", rec, "shims");
-    sprintf(path, "%s%s", curexpdir, "/shims");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "shims");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/shims");
     if(fileExist(recpath)) copy_file(recpath, path);
    
-    sprintf(recpath, "%s%s", rec, "shapelib");
-    sprintf(path, "%s%s", curexpdir, "/shapelib");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "shapelib");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/shapelib");
     if(fileExist(recpath)) copy_file(recpath, path);
     
-    sprintf(recpath, "%s%s", rec, "psglib");
-    sprintf(path, "%s%s", curexpdir, "/psglib");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "psglib");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/psglib");
     if(fileExist(recpath)) copy_file(recpath, path);
     
-    sprintf(recpath, "%s%s", rec, "maclib");
-    sprintf(path, "%s%s", curexpdir, "/maclib");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "maclib");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/maclib");
     if(fileExist(recpath)) copy_file(recpath, path);
     
-    sprintf(recpath, "%s%s", rec, "incFiles");
-    sprintf(path, "%s%s", curexpdir, "/incFiles");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "incFiles");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/incFiles");
     if(fileExist(recpath)) copy_file(recpath, path);
     
-    sprintf(recpath, "%s%s", rec, "cmdHistory");
-    sprintf(path, "%s%s", curr, "cmdHistory");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "cmdHistory");
+    snprintf(path, sizeof(path), "%s%s", curr, "cmdHistory");
     if(fileExist(recpath)) copy_file(recpath, path);
 
     if(part11System) {
 
-        sprintf(recpath, "%s%s", rec, "auditTrail");
-        sprintf(path, "%s%s", curr, "auditTrail");
+        snprintf(recpath, sizeof(recpath), "%s%s", rec, "auditTrail");
+        snprintf(path, sizeof(path), "%s%s", curr, "auditTrail");
         if(fileExist(recpath)) copy_file(recpath, path);
 
         writeAuditTrails("copy_acqfil", rec, curr, "acqfil");
 
-        sprintf(recpath, "%s%s", rec, "checksum");
-        sprintf(path, "%s%s", curr, "checksum");
+        snprintf(recpath, sizeof(recpath), "%s%s", rec, "checksum");
+        snprintf(path, sizeof(path), "%s%s", curr, "checksum");
         if(fileExist(recpath)) copy_file(recpath, path);
     }
 
@@ -2794,8 +2812,7 @@ int p11_saveAuditTrail()
 
     currentDate(exitTime, MAXSTR);
 
-    sprintf(path, "%s%s%s^%s^%s^%s:%d.vaudit", auditDir, "sessions/", bootupTime, exitTime, 
-            p11console, operatorID, nlogin); 
+    snprintf(path, sizeof(path), "%s%s%s^%s^%s^%s:%d.vaudit", auditDir, "sessions/", bootupTime, exitTime, p11console, operatorID, nlogin); 
 
     if(fileExist(auditTrail)) {
 
@@ -2836,9 +2853,9 @@ int p11_writeAuditTrails_D(char* func, char* origpath, char* destpath, char* sub
     if(strcmp(subdir, "") == 0) return(-1);
 
     if(subdir[0] == '/') 
-        sprintf(file, "%s/auditTrail", subdir);
+        snprintf(file, sizeof(file), "%s/auditTrail", subdir);
     else
-        sprintf(file, "%s/%s/auditTrail", curexpdir, subdir);
+        snprintf(file, sizeof(file), "%s/%s/auditTrail", curexpdir, subdir);
 
     if(fileExist(file)) dataAuditTrailFp = fopen(file, "a");
     else dataAuditTrailFp = fopen(file, "w");
@@ -2886,45 +2903,45 @@ void p11_init_acqfil(char* func, char* orig, char* dest)
 */
 #endif 
 
-    sprintf(file, "%s/curpar", dest);
+    snprintf(file, sizeof(file), "%s/curpar", dest);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/global", dest);
+    snprintf(file, sizeof(file), "%s/global", dest);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/conpar", dest);
+    snprintf(file, sizeof(file), "%s/conpar", dest);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s%s", curexpdir, "/maclib");
+    snprintf(file, sizeof(file), "%s%s", curexpdir, "/maclib");
     if(fileExist(file)) rm_file(file);
-    sprintf(file, "%s%s", curexpdir, "/shims");
+    snprintf(file, sizeof(file), "%s%s", curexpdir, "/shims");
     if(fileExist(file)) rm_file(file);
-    sprintf(file, "%s%s", curexpdir, "/shapelib");
+    snprintf(file, sizeof(file), "%s%s", curexpdir, "/shapelib");
     if(fileExist(file)) rm_file(file);
-    sprintf(file, "%s%s", curexpdir, "/psglib");
+    snprintf(file, sizeof(file), "%s%s", curexpdir, "/psglib");
     if(fileExist(file)) rm_file(file);
-    sprintf(file, "%s%s", curexpdir, "/incFiles");
+    snprintf(file, sizeof(file), "%s%s", curexpdir, "/incFiles");
     if(fileExist(file)) rm_file(file);
-    sprintf(file, "%s/cmdHistory", dest);
+    snprintf(file, sizeof(file), "%s/cmdHistory", dest);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/auditTrail", dest);
+    snprintf(file, sizeof(file), "%s/auditTrail", dest);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/checksum", dest);
+    snprintf(file, sizeof(file), "%s/checksum", dest);
     if(fileExist(file)) unlink(file);
 
     /* also remove datdir files */
-    sprintf(file, "%s/datdir/procpar", curexpdir);
+    snprintf(file, sizeof(file), "%s/datdir/procpar", curexpdir);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/datdir/curpar", curexpdir);
+    snprintf(file, sizeof(file), "%s/datdir/curpar", curexpdir);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/datdir/cmdHistory", curexpdir);
+    snprintf(file, sizeof(file), "%s/datdir/cmdHistory", curexpdir);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/datdir/auditTrail", curexpdir);
+    snprintf(file, sizeof(file), "%s/datdir/auditTrail", curexpdir);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/datdir/checksum", curexpdir);
+    snprintf(file, sizeof(file), "%s/datdir/checksum", curexpdir);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/datdir/text", curexpdir);
+    snprintf(file, sizeof(file), "%s/datdir/text", curexpdir);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/datdir/global", curexpdir);
+    snprintf(file, sizeof(file), "%s/datdir/global", curexpdir);
     if(fileExist(file)) unlink(file);
-    sprintf(file, "%s/datdir/conpar", curexpdir);
+    snprintf(file, sizeof(file), "%s/datdir/conpar", curexpdir);
     if(fileExist(file)) unlink(file);
 
     if(!part11System) return;
@@ -2948,7 +2965,7 @@ int p11_saveFDAfiles_raw(char* func, char* orig, char* dest)
 
     if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) RETURN;
 
-    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) strcpy(str, "");
+    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
     if(strcmp(str, "fidscan") == 0 || strcmp(str, "lock") == 0) RETURN;
 
     if(part11_std_files == NULL) RETURN; 
@@ -2967,14 +2984,14 @@ int p11_saveFDAfiles_raw(char* func, char* orig, char* dest)
     if(part11_std_files->cmdHistory) {
 
 	if(cmdHistoryFp != NULL) fflush(cmdHistoryFp);
-	sprintf(destpath, "%s%s", dest, "/cmdHistory");
+	snprintf(destpath, sizeof(destpath), "%s%s", dest, "/cmdHistory");
 
 	if(fileExist(destpath)) unlink(destpath);
 	if(fileExist(cmdHisFile)) copy_file(cmdHisFile, destpath);
     } 
 
     if(part11_std_files->global) {
-	sprintf(destpath, "%s%s", dest, "/global");
+	snprintf(destpath, sizeof(destpath), "%s%s", dest, "/global");
 	if (P_save(GLOBAL,destpath))
         {   Werrprintf("Problem saving global parameters in '%s'.",destpath);
             ABORT;
@@ -2982,7 +2999,7 @@ int p11_saveFDAfiles_raw(char* func, char* orig, char* dest)
     }
 
     if(part11_std_files->conpar) {
-	sprintf(destpath, "%s%s", dest, "/conpar");
+	snprintf(destpath, sizeof(destpath), "%s%s", dest, "/conpar");
 	if (P_save(SYSTEMGLOBAL,destpath))
         {   Werrprintf("Problem saving conpar parameters in '%s'.",destpath);
             ABORT;
@@ -3013,7 +3030,7 @@ void writeChecksum(FILE* fp, char* rootpath, char* file, int nfiles)
     char sum[MAXSTR];
     string filename;
 
-    sprintf(filename, "%s%s", rootpath, file);
+    snprintf(filename, sizeof(filename), "%s%s", rootpath, file);
     if(debug)fprintf(stderr, "writeChecksum %s\n", filename);
     if(getChecksum(filename, sum)) {
 
@@ -3023,12 +3040,12 @@ void writeChecksum(FILE* fp, char* rootpath, char* file, int nfiles)
 	char str[MAXSTR];
 	int last;
         if(isdigit(sum[strlen(sum)-1])) {
-            sprintf(str,"%c",sum[strlen(sum)-1]);
+            snprintf(str, sizeof(str), "%c", sum[strlen(sum)-1]);
             last = atoi(str);
         } else last = 0;
 
-        sprintf(str, "%d", last+nfiles);
-        strcat(sum, str);
+        snprintf(str, sizeof(str), "%d", last+nfiles);
+        strncat(sum, str, sizeof(sum) - strlen(sum) - 1);
 
         fprintf(fp, "sum:%s:%s\n",file, sum);
     }
@@ -3045,9 +3062,9 @@ int makeChksums(char* path, char *checksumfile, string* files, int nfiles)
 
     currentDate(curTime, MAXSTR);
 
-    strcpy(rootpath,path);
+    snprintf(rootpath, sizeof(rootpath), "%s", path);
 
-    if(!strEndsWith(rootpath, "/")) strcat(rootpath, "/");
+    if(!strEndsWith(rootpath, "/")) strncat(rootpath, "/", sizeof(rootpath) - strlen(rootpath) - 1);
 
     p11TempName(sumfile);
 
@@ -3070,7 +3087,7 @@ int makeChksums(char* path, char *checksumfile, string* files, int nfiles)
     // copy checksum 
 
     setSafecpPath(safecpPath, rootpath);
-    sprintf(file, "%s%s", rootpath, checksumfile);
+    snprintf(file, sizeof(file), "%s%s", rootpath, checksumfile);
     if(fileExist(sumfile)) safecp_file(safecpPath, sumfile, file);
 
     unlink(sumfile);
@@ -3088,7 +3105,7 @@ int makeChecksums(char *rootpath, char *checksumFile)
     char files[MAXFILES][MAXSTR];
     int nfiles = 0;
 
-     getFilenames(rootpath, "", files, &nfiles, MAXFILES);
+     getFilenames(rootpath, (string){0}, files, &nfiles, MAXFILES);
     return makeChksums(rootpath, checksumFile, files, nfiles);
 }
 
@@ -3100,9 +3117,9 @@ int mkchecksums(char *path)
     int b = 0;
     string sumpath;
     if(isAdirectory(path)) { // use checksum file 
-       strcpy(sumpath,path);
-       if(path[strlen(path)-1] != '/') strcat(sumpath,"/");
-       strcat(sumpath,"checksum");
+       snprintf(sumpath, sizeof(sumpath), "%s", path);
+       if(path[strlen(path)-1] != '/') strncat(sumpath, "/", sizeof(sumpath) - strlen(sumpath) - 1);
+       strncat(sumpath, "checksum", sizeof(sumpath) - strlen(sumpath) - 1);
        if(fileExist(sumpath)) {
 	  Winfoprintf("Cannot generate checksum: %s already exists\n",sumpath); 
 	  return(0);
@@ -3111,11 +3128,11 @@ int mkchecksums(char *path)
        string dir,name,sumName;
        string files[1];
        brkPath(path, dir,name);
-       strcpy(files[0],name);
-       strcpy(sumName,"checksum_");
-       strcat(sumName,name);
-       strcpy(sumpath,dir);
-       strcat(sumpath,sumName);
+       snprintf(files[0], sizeof(files[0]), "%s", name);
+       snprintf(sumName, sizeof(sumName), "%s", "checksum_");
+       strncat(sumName, name, sizeof(sumName) - strlen(sumName) - 1);
+       snprintf(sumpath, sizeof(sumpath), "%s", dir);
+       strncat(sumpath, sumName, sizeof(sumpath) - strlen(sumpath) - 1);
        if(fileExist(sumpath)) {
 	  Winfoprintf("Cannot generate checksum: %s already exists\n",sumpath); 
 	  return(0);
@@ -3133,9 +3150,9 @@ int mkchecksums2(char *path, char *checksumFile)
 {
     int b = 0;
     string sumpath;
-    strcpy(sumpath,path);
-    if(path[strlen(path)-1] != '/') strcat(sumpath,"/");
-    strcat(sumpath,checksumFile);
+    snprintf(sumpath, sizeof(sumpath), "%s", path);
+    if(path[strlen(path)-1] != '/') strncat(sumpath, "/", sizeof(sumpath) - strlen(sumpath) - 1);
+    strncat(sumpath, checksumFile, sizeof(sumpath) - strlen(sumpath) - 1);
     if(fileExist(sumpath)) {
        Winfoprintf("Cannot generate checksum: %s already exists\n",sumpath); 
        return(0);
@@ -3147,7 +3164,7 @@ int mkchecksums2(char *path, char *checksumFile)
        string dir,name;
        string files[1];
        brkPath(path, dir,name);
-       strcpy(files[0],name);
+       snprintf(files[0], sizeof(files[0]), "%s", name);
        b = makeChksums(dir, checksumFile, files, 1);
     }
    
@@ -3190,26 +3207,26 @@ int chchsums(int argc, char *argv[], int retc, char *retv[])
     string tmpfile;
     int ret __attribute__((unused));
     
-    strcpy(cmd, "/vnmr/p11/bin/writeAaudit ");
+    snprintf(cmd, sizeof(cmd), "%s", "/vnmr/p11/bin/writeAaudit ");
 
     if (argc > 1) {
 
-	strcpy(path, argv[1]);
+	snprintf(path, sizeof(path), "%s", argv[1]);
 
         if(!isAdirectory(path)) { // see whether "checksum_" file exists
 	  string dir, name, sumfile;
        	  brkPath(path, dir,name);
           if(name[0] != '.') {
-	    strcpy(sumfile,dir);
-	    strcat(sumfile,"checksum_");
-	    strcat(sumfile,name);
-	    if(fileExist(sumfile)) strcpy(path, sumfile);
+	    snprintf(sumfile, sizeof(sumfile), "%s", dir);
+	    strncat(sumfile, "checksum_", sizeof(sumfile) - strlen(sumfile) - 1);
+	    strncat(sumfile, name, sizeof(sumfile) - strlen(sumfile) - 1);
+	    if(fileExist(sumfile)) snprintf(path, sizeof(path), "%s", sumfile);
 	  }
         } else { // see whether /checksum file exists.
 	  string sumfile;
-          if(path[strlen(path)-1] != '/') sprintf(sumfile,"%s/%s",path,"checksum");
-	  else sprintf(sumfile,"%s%s",path,"checksum");
-	  if(fileExist(sumfile)) strcpy(path, sumfile);
+          if(path[strlen(path)-1] != '/') snprintf(sumfile, sizeof(sumfile), "%s/%s", path, "checksum");
+	  else snprintf(sumfile, sizeof(sumfile), "%s%s", path, "checksum");
+	  if(fileExist(sumfile)) snprintf(path, sizeof(path), "%s", sumfile);
  	}
 
         if(strEndsWith(path,"acqfil") ||
@@ -3219,8 +3236,10 @@ int chchsums(int argc, char *argv[], int retc, char *retv[])
             bad = checkPart11Checksums0(path, stdout);
 	} else if(strEndsWith(path,"/checksum") || 
                   strEndsWith(path,"/checksum/")) {
-	    strcpy(tmpfile, "");
-            strncat(tmpfile,path,strlen(path)-9);
+	    size_t take = strlen(path);
+	    if (take >= 9) take -= 9; else take = 0;
+	    if (take >= sizeof(tmpfile)) take = sizeof(tmpfile) - 1;
+	    snprintf(tmpfile, sizeof(tmpfile), "%.*s", (int)take, path);
 	    bad = checkPart11Checksums0(tmpfile, stdout);
 	} else if(!isAdirectory(path)) { // file contains checksum(s)
 	    bad = checkChecksums("", path, stdout, "");
@@ -3228,9 +3247,8 @@ int chchsums(int argc, char *argv[], int retc, char *retv[])
    	    Winfoprintf("part11: check records in %s\n", path);
 	    bad = checkPart11Checksums(path, NULL);
 	}
-	sprintf(line, "%s %s %s %s %s, %d %s", cmdTime, 
-		"aaudit", UserName, "check records", path, bad, "corrupted");
-	sprintf(cmdLine, "%s -l \"%s\"", cmd, line);
+	snprintf(line, sizeof(line), "%s %s %s %s %s, %d %s", cmdTime, "aaudit", UserName, "check records", path, bad, "corrupted");
+	snprintf(cmdLine, sizeof(cmdLine), "%s -l \"%s\"", cmd, line);
 	ret = system(cmdLine);
 
    	Winfoprintf("part11: check records completed in %s, %d %s\n", path, bad, "corrupted");
@@ -3240,19 +3258,18 @@ int chchsums(int argc, char *argv[], int retc, char *retv[])
 
         getUserPart11Dirs(UserName, userPart11Dirs, &nuserPart11Dirs);
         for(i=0; i<nuserPart11Dirs; i++) {
-            if(!strEndsWith(userPart11Dirs[i],"/")) strcat(userPart11Dirs[i], "/");
-            strcpy(path, userPart11Dirs[i]);
+            if(!strEndsWith(userPart11Dirs[i],"/")) strncat(userPart11Dirs[i], "/", sizeof(userPart11Dirs[i]) - strlen(userPart11Dirs[i]) - 1);
+            snprintf(path, sizeof(path), "%s", userPart11Dirs[i]);
             Winfoprintf("part11: check records in %s\n", path);
             bad = checkPart11Checksums(path, NULL);
-            sprintf(line, "%s %s %s %s %s, %d %s", cmdTime,
-                    "aaudit", UserName, "check records", path, bad, "corrupted");
+            snprintf(line, sizeof(line), "%s %s %s %s %s, %d %s", cmdTime, "aaudit", UserName, "check records", path, bad, "corrupted");
             if(tmpfp != NULL) fprintf(tmpfp, "%s\n", line);
             Winfoprintf("part11: check records completed in %s, %d %s\n",
                         path, bad, "corrupted");
         }
         if(tmpfp)
              fflush(tmpfp);
-        sprintf(cmdLine, "%s -f %s", cmd, tmpfile);
+        snprintf(cmdLine, sizeof(cmdLine), "%s -f %s", cmd, tmpfile);
         if(debug) fprintf(stderr, "%s -f %s", cmd, tmpfile);
         ret = system(cmdLine);
 
@@ -3288,23 +3305,23 @@ int cpFilesInFile(int argc, char *argv[], int retc, char *retv[])
     (void) retv;
     if (argc > 1) {
         if(strstr(argv[1], "/") == NULL) {
-	    sprintf(dest, "%s%s", userdir, "/p11");  
+	    snprintf(dest, sizeof(dest), "%s%s", userdir, "/p11");  
             if(!fileExist(dest)) mkdir(dest, 0777);
-            sprintf(dest, "%s%s", userdir, "/p11/copies");
+            snprintf(dest, sizeof(dest), "%s%s", userdir, "/p11/copies");
             if(!fileExist(dest)) mkdir(dest, 0777);
-            sprintf(dest, "%s%s%s", userdir, "/p11/copies/", argv[1]);
-	} else strcpy(dest, argv[1]);
+            snprintf(dest, sizeof(dest), "%s%s%s", userdir, "/p11/copies/", argv[1]);
+	} else snprintf(dest, sizeof(dest), "%s", argv[1]);
     } else {
- 	sprintf(dest, "%s%s", userdir, "/p11");	
+ 	snprintf(dest, sizeof(dest), "%s%s", userdir, "/p11");	
 	if(!fileExist(dest)) mkdir(dest, 0777);
- 	sprintf(dest, "%s%s", userdir, "/p11/copies");	
+ 	snprintf(dest, sizeof(dest), "%s%s", userdir, "/p11/copies");	
 	if(!fileExist(dest)) mkdir(dest, 0777);
     }
 
     p11TempName(tmpfile);
     tmpfp = fopen(tmpfile, "w");
 
-    sprintf(path, "%s%s", userdir, auditTableSelection);
+    snprintf(path, sizeof(path), "%s%s", userdir, auditTableSelection);
     if((fp = fopen(path, "r"))) { 
     	while(fgets(buf,sizeof(buf),fp)) {
 
@@ -3312,10 +3329,9 @@ int cpFilesInFile(int argc, char *argv[], int retc, char *retv[])
                 nwords = MAXWORDS;
                 getStrValues(buf, words, &nwords, " "); 
                 if(strcmp(words[0], "path") == 0) { 
-                    sprintf(line, "%s %s %s %s %s to %s", cmdTime, 
-                            "aaudit", UserName, "copied records", words[1], dest);
+                    snprintf(line, sizeof(line), "%s %s %s %s %s to %s", cmdTime, "aaudit", UserName, "copied records", words[1], dest);
                     if(tmpfp != NULL) fprintf(tmpfp, "%s\n", line);
-                    sprintf(cmd, "cp -rf %s %s", words[1], dest);
+                    snprintf(cmd, sizeof(cmd), "cp -rf %s %s", words[1], dest);
                     ret = system(cmd);
                     Winfoprintf("part11: copy file %s to %s\n", words[1], dest);
                 }
@@ -3323,9 +3339,9 @@ int cpFilesInFile(int argc, char *argv[], int retc, char *retv[])
 	}
         if(tmpfp)
 	    fflush(tmpfp);
-    	strcpy(cmd,"/vnmr/p11/bin/writeAaudit -f ");
+    	snprintf(cmd, sizeof(cmd), "%s", "/vnmr/p11/bin/writeAaudit -f ");
 	if(debug) fprintf(stderr, "%s%s", cmd, tmpfile);
-	sprintf(cmdLine, "%s%s", cmd, tmpfile);
+	snprintf(cmdLine, sizeof(cmdLine), "%s%s", cmd, tmpfile);
         ret = system(cmdLine);
     } 
     if(fp)
@@ -3365,19 +3381,19 @@ void writeAudit_datdir(char* func, char* orig, char* dest)
     char ofile[MAXPATH], dfile[MAXPATH];
     char origpath[MAXSTR], destpath[MAXSTR];
 
-    sprintf(origpath, "%s/%s", curexpdir, orig);
-    sprintf(destpath, "%s/%s", curexpdir, dest);
-    if(!strEndsWith(origpath, "/")) strcat(origpath, "/");
-    if(!strEndsWith(destpath, "/")) strcat(destpath, "/");
+    snprintf(origpath, sizeof(origpath), "%s/%s", curexpdir, orig);
+    snprintf(destpath, sizeof(destpath), "%s/%s", curexpdir, dest);
+    if(!strEndsWith(origpath, "/")) strncat(origpath, "/", sizeof(origpath) - strlen(origpath) - 1);
+    if(!strEndsWith(destpath, "/")) strncat(destpath, "/", sizeof(destpath) - strlen(destpath) - 1);
 
 /* restart auditTrail if the data is processed the first time. */
 
     if(getProcessid()>0) {
-        sprintf(dfile, "%s/datdir/auditTrail", curexpdir);
+        snprintf(dfile, sizeof(dfile), "%s/datdir/auditTrail", curexpdir);
         if(fileExist(dfile)) unlink(dfile);
 
-        sprintf(ofile, "%s%s", origpath, "auditTrail");
-        sprintf(dfile, "%s%s", destpath, "auditTrail");
+        snprintf(ofile, sizeof(ofile), "%s%s", origpath, "auditTrail");
+        snprintf(dfile, sizeof(dfile), "%s%s", destpath, "auditTrail");
     
         if(fileExist(dfile)) unlink(dfile);
         if(fileExist(ofile)) copy_file(ofile, dfile);
@@ -3392,13 +3408,13 @@ void setDataID(string fidid, int processid)
     string dataid, str;
 
     if(strlen(fidid) < 1) return;
-    if(processid < 0) sprintf(str, "00%dn", processid);
-    else if(processid < 10) sprintf(str, "00%1d", processid);
-    else if(processid < 100) sprintf(str, "0%2d", processid);
-    else if(processid < 1000) sprintf(str, "%3d", processid);
-    else sprintf(str, "%d", processid);
+    if(processid < 0) snprintf(str, sizeof(str), "00%dn", processid);
+    else if(processid < 10) snprintf(str, sizeof(str), "00%1d", processid);
+    else if(processid < 100) snprintf(str, sizeof(str), "0%2d", processid);
+    else if(processid < 1000) snprintf(str, sizeof(str), "%3d", processid);
+    else snprintf(str, sizeof(str), "%d", processid);
 
-    sprintf(dataid, "%.8s%s", fidid, str);
+    snprintf(dataid, sizeof(dataid), "%.8s%s", fidid, str);
 
     P_setreal(PROCESSED, "processid", processid, 1);
     P_copyvar(PROCESSED,CURRENT,"processid","processid");
@@ -3422,7 +3438,7 @@ int p11_saveFDAfiles_processed(char* func, char* orig, char* dest)
 
     if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) RETURN;
 
-    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) strcpy(str, "");
+    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
     if(strcmp(str, "fidscan") == 0 || strcmp(str, "lock") == 0) RETURN;
 
     if(getProcessid()==0) 
@@ -3452,13 +3468,13 @@ int p11_saveFDAfiles_processed(char* func, char* orig, char* dest)
     readUserPart11Config();
 
     if(part11_std_files->procpar) {
-	sprintf(dfile, "%s%s", curexpdir, "/datdir/procpar");
+	snprintf(dfile, sizeof(dfile), "%s%s", curexpdir, "/datdir/procpar");
 	if(fileExist(dfile)) unlink(dfile);
 	saveProcpar(dfile);
     }
 
     if(part11_std_files->global) {
-	sprintf(dfile, "%s%s", curexpdir, "/datdir/global");
+	snprintf(dfile, sizeof(dfile), "%s%s", curexpdir, "/datdir/global");
 	if (P_save(GLOBAL,dfile))
         {   Werrprintf("Problem saving global parameters in '%s'.",dfile);
             ABORT;
@@ -3466,7 +3482,7 @@ int p11_saveFDAfiles_processed(char* func, char* orig, char* dest)
     }
 
     if(part11_std_files->conpar) {
-	sprintf(dfile, "%s%s", curexpdir, "/datdir/conpar");
+	snprintf(dfile, sizeof(dfile), "%s%s", curexpdir, "/datdir/conpar");
 	if (P_save(SYSTEMGLOBAL,dfile))
         {   Werrprintf("Problem saving conpar parameters in '%s'.",dfile);
             ABORT;
@@ -3474,9 +3490,9 @@ int p11_saveFDAfiles_processed(char* func, char* orig, char* dest)
     }
 
     if(part11_std_files->text) {
-    	sprintf(ofile, "%s/text", curexpdir);
+    	snprintf(ofile, sizeof(ofile), "%s/text", curexpdir);
     	if(fileExist(ofile)) {
-            sprintf(dfile, "%s/datdir", curexpdir);
+            snprintf(dfile, sizeof(dfile), "%s/datdir", curexpdir);
             copytext(curexpdir, dfile);
 	}
     }
@@ -3485,7 +3501,7 @@ int p11_saveFDAfiles_processed(char* func, char* orig, char* dest)
 
     	if(cmdHistoryFp != NULL) fflush(cmdHistoryFp);
 
-	sprintf(dfile, "%s%s", curexpdir, "/datdir/cmdHistory");
+	snprintf(dfile, sizeof(dfile), "%s%s", curexpdir, "/datdir/cmdHistory");
 
 	if(fileExist(dfile)) unlink(dfile);
  	if(fileExist(cmdHisFile)) copy_file(cmdHisFile, dfile);
@@ -3603,20 +3619,20 @@ static int copy_data(char* curr, char* rec)
     int ival = 1;
     char path[MAXSTR], recpath[MAXSTR]; 
 
-    if(!strEndsWith(curr, "/")) strcat(curr, "/");
-    if(!strEndsWith(rec, "/")) strcat(rec, "/");
+    if(!strEndsWith(curr, "/")) strncat(curr, "/", MAXPATH - strlen(curr) - 1);
+    if(!strEndsWith(rec, "/")) strncat(rec, "/", MAXPATH - strlen(rec) - 1);
 
-    sprintf(path, "%s%s", curr, "data");
+    snprintf(path, sizeof(path), "%s%s", curr, "data");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "phasefile");
+    snprintf(path, sizeof(path), "%s%s", curr, "phasefile");
     if(fileExist(path)) unlink(path);
 
-    sprintf(recpath, "%s%s", rec, "data");
-    sprintf(path, "%s%s", curr, "data");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "data");
+    snprintf(path, sizeof(path), "%s%s", curr, "data");
     if(fileExist(recpath)) copy_file(recpath, path);
    
-    sprintf(recpath, "%s%s", rec, "phasefile");
-    sprintf(path, "%s%s", curr, "phasefile");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "phasefile");
+    snprintf(path, sizeof(path), "%s%s", curr, "phasefile");
     if(fileExist(recpath)) copy_file(recpath, path);
 
     return(ival);
@@ -3628,32 +3644,32 @@ int copy_datdir(char* curr, char* rec)
 {
     char path[MAXSTR], recpath[MAXSTR];
 
-    if(!strEndsWith(curr, "/")) strcat(curr, "/");
-    if(!strEndsWith(rec, "/")) strcat(rec, "/");
+    if(!strEndsWith(curr, "/")) strncat(curr, "/", MAXPATH - strlen(curr) - 1);
+    if(!strEndsWith(rec, "/")) strncat(rec, "/", MAXPATH - strlen(rec) - 1);
 
-    sprintf(path, "%s%s", curr, "procpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "procpar");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "curpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "curpar");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "snapshot");
+    snprintf(path, sizeof(path), "%s%s", curr, "snapshot");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "cmdHistory");
+    snprintf(path, sizeof(path), "%s%s", curr, "cmdHistory");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "auditTrail");
+    snprintf(path, sizeof(path), "%s%s", curr, "auditTrail");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "checksum");
+    snprintf(path, sizeof(path), "%s%s", curr, "checksum");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "text");
+    snprintf(path, sizeof(path), "%s%s", curr, "text");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "global");
+    snprintf(path, sizeof(path), "%s%s", curr, "global");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curr, "conpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "conpar");
     if(fileExist(path)) unlink(path);
-    sprintf(path, "%s%s", curexpdir, "/maclib");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/maclib");
     if(fileExist(path)) rm_file(path);
-    sprintf(path, "%s%s", curexpdir, "/incFiles");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/incFiles");
     if(fileExist(path)) rm_file(path);
-    sprintf(path, "%s%s", curexpdir, "/recon");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/recon");
     if(fileExist(path)) rm_file(path);
 
 /* 
@@ -3666,47 +3682,47 @@ int copy_datdir(char* curr, char* rec)
    sprintf(path, "%s%s", curr, "curpar");
    if(fileExist(recpath)) copy_file(recpath, path);
 */
-    sprintf(recpath, "%s%s", rec, "snapshot");
-    sprintf(path, "%s%s", curr, "snapshot");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "snapshot");
+    snprintf(path, sizeof(path), "%s%s", curr, "snapshot");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "cmdHistory");
-    sprintf(path, "%s%s", curr, "cmdHistory");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "cmdHistory");
+    snprintf(path, sizeof(path), "%s%s", curr, "cmdHistory");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "text");
-    sprintf(path, "%s%s", curr, "text");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "text");
+    snprintf(path, sizeof(path), "%s%s", curr, "text");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "global");
-    sprintf(path, "%s%s", curr, "global");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "global");
+    snprintf(path, sizeof(path), "%s%s", curr, "global");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "conpar");
-    sprintf(path, "%s%s", curr, "conpar");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "conpar");
+    snprintf(path, sizeof(path), "%s%s", curr, "conpar");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "maclib");
-    sprintf(path, "%s%s", curexpdir, "/maclib");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "maclib");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/maclib");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "incFiles");
-    sprintf(path, "%s%s", curexpdir, "/incFiles");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "incFiles");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/incFiles");
     if(fileExist(recpath)) copy_file(recpath, path);
 
-    sprintf(recpath, "%s%s", rec, "recon");
-    sprintf(path, "%s%s", curexpdir, "/recon");
+    snprintf(recpath, sizeof(recpath), "%s%s", rec, "recon");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/recon");
     if(fileExist(recpath)) link_file(recpath, path);
 
     if(part11System) {
-        sprintf(recpath, "%s%s", rec, "auditTrail");
-        sprintf(path, "%s%s", curr, "auditTrail");
+        snprintf(recpath, sizeof(recpath), "%s%s", rec, "auditTrail");
+        snprintf(path, sizeof(path), "%s%s", curr, "auditTrail");
         if(fileExist(recpath)) copy_file(recpath, path);
 
         writeAuditTrails("copy_datdir", rec, curr, "datdir");
 
-        sprintf(recpath, "%s%s", rec, "checksum");
-        sprintf(path, "%s%s", curr, "checksum");
+        snprintf(recpath, sizeof(recpath), "%s%s", rec, "checksum");
+        snprintf(path, sizeof(path), "%s%s", curr, "checksum");
         if(fileExist(recpath)) copy_file(recpath, path);
     }
 
@@ -3743,16 +3759,16 @@ static int copytext(char *frompath, char *topath)
     FILE *infile,*outfile;
     int   ch;
 
-    if(!strEndsWith(frompath, "/")) strcat(frompath, "/");
-    if(!strEndsWith(topath, "/")) strcat(topath, "/");
+    if(!strEndsWith(frompath, "/")) strncat(frompath, "/", MAXPATH - strlen(frompath) - 1);
+    if(!strEndsWith(topath, "/")) strncat(topath, "/", MAXPATH - strlen(topath) - 1);
 
-    strcpy(path,frompath);
-    strcat(path,"text");
+    snprintf(path, sizeof(path), "%s", frompath);
+    strncat(path, "text", sizeof(path) - strlen(path) - 1);
 
     if ( (infile=fopen(path,"r")) )
     {
-        strcpy(path,topath);
-        strcat(path,"text");
+        snprintf(path, sizeof(path), "%s", topath);
+        strncat(path, "text", sizeof(path) - strlen(path) - 1);
 
         if ( (outfile=fopen(path,"w")) )
             while ((ch=getc(infile)) != EOF) putc(ch,outfile);
@@ -3803,54 +3819,54 @@ static void remove_3d(char* exppath )
 
 /*  Remove "datadir3d" subdirectory  */
 
-    strcpy( &subdirpath[ 0 ], exppath );
+    snprintf(subdirpath, sizeof(subdirpath), "%s", exppath);
 #ifdef UNIX
-    strcat( &subdirpath[ 0 ], "/datadir3d" );
-    strcpy( &remove_it_cmd[ 0 ], "rm -rf " );
+    strncat(subdirpath, "/datadir3d", sizeof(subdirpath) - strlen(subdirpath) - 1);
+    snprintf(remove_it_cmd, sizeof(remove_it_cmd), "%s", "rm -rf ");
 #else 
     vms_fname_cat( &subdirpath[ 0 ], "[.datadir3d]" );
-    strcpy( &remove_it_cmd[ 0 ], "rm_recur " );
+    snprintf(remove_it_cmd, sizeof(remove_it_cmd), "%s", "rm_recur ");
 #endif 
-    strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
+    strncat(remove_it_cmd, &subdirpath[ 0 ], sizeof(remove_it_cmd) - strlen(remove_it_cmd) - 1);
     system( &remove_it_cmd[ 0 ] );
 
 /*  Remove "info" subdirectory  */
 
-    strcpy( &subdirpath[ 0 ], exppath );
+    snprintf(subdirpath, sizeof(subdirpath), "%s", exppath);
 #ifdef UNIX
-    strcat( &subdirpath[ 0 ], "/info" );
-    strcpy( &remove_it_cmd[ 0 ], "rm -rf " );
+    strncat(subdirpath, "/info", sizeof(subdirpath) - strlen(subdirpath) - 1);
+    snprintf(remove_it_cmd, sizeof(remove_it_cmd), "%s", "rm -rf ");
 #else 
     vms_fname_cat( &subdirpath[ 0 ], "[.info]" );
-    strcpy( &remove_it_cmd[ 0 ], "rm_recur " );
+    snprintf(remove_it_cmd, sizeof(remove_it_cmd), "%s", "rm_recur ");
 #endif 
-    strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
+    strncat(remove_it_cmd, &subdirpath[ 0 ], sizeof(remove_it_cmd) - strlen(remove_it_cmd) - 1);
     system( &remove_it_cmd[ 0 ] );
 
 /*  Remove "auto" file  */
 
-    strcpy( &subdirpath[ 0 ], exppath );
+    snprintf(subdirpath, sizeof(subdirpath), "%s", exppath);
 #ifdef UNIX
-    strcat( &subdirpath[ 0 ], "/auto" );
-    strcpy( &remove_it_cmd[ 0 ], "rm -f " );
+    strncat(subdirpath, "/auto", sizeof(subdirpath) - strlen(subdirpath) - 1);
+    snprintf(remove_it_cmd, sizeof(remove_it_cmd), "%s", "rm -f ");
 #else 
-    strcat( &subdirpath[ 0 ], "auto;" );
-    strcpy( &remove_it_cmd[ 0 ], "delete " );
+    strncat(subdirpath, "auto;", sizeof(subdirpath) - strlen(subdirpath) - 1);
+    snprintf(remove_it_cmd, sizeof(remove_it_cmd), "%s", "delete ");
 #endif 
-    strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
+    strncat(remove_it_cmd, &subdirpath[ 0 ], sizeof(remove_it_cmd) - strlen(remove_it_cmd) - 1);
     system( &remove_it_cmd[ 0 ] );
 
 /*  Remove "coef" file  */
 
-    strcpy( &subdirpath[ 0 ], exppath );
+    snprintf(subdirpath, sizeof(subdirpath), "%s", exppath);
 #ifdef UNIX
-    strcat( &subdirpath[ 0 ], "/coef" );
-    strcpy( &remove_it_cmd[ 0 ], "rm -f " );
+    strncat(subdirpath, "/coef", sizeof(subdirpath) - strlen(subdirpath) - 1);
+    snprintf(remove_it_cmd, sizeof(remove_it_cmd), "%s", "rm -f ");
 #else 
-    strcat( &subdirpath[ 0 ], "coef;" );
-    strcpy( &remove_it_cmd[ 0 ], "delete " );
+    strncat(subdirpath, "coef;", sizeof(subdirpath) - strlen(subdirpath) - 1);
+    snprintf(remove_it_cmd, sizeof(remove_it_cmd), "%s", "delete ");
 #endif 
-    strcat( &remove_it_cmd[ 0 ], &subdirpath[ 0 ] );
+    strncat(remove_it_cmd, &subdirpath[ 0 ], sizeof(remove_it_cmd) - strlen(remove_it_cmd) - 1);
     system( &remove_it_cmd[ 0 ] );
 }
 #endif
@@ -3935,7 +3951,7 @@ int isFDAdir(int argc, char *argv[], int retc, char *retv[])
 
     if(argc < 2) i = 0;
     else {
-	strcpy(path, argv[1]);
+	snprintf(path, sizeof(path), "%s", argv[1]);
 	i = p11_isPart11Dir(path);
     }
  
@@ -4000,14 +4016,14 @@ int testPart11(int argc, char *argv[], int retc, char *retv[])
     (void) retv;
     p11_saveFDAfiles_raw("testPart11", "", "");
 
-    sprintf(path, "%s/datdir/data", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/data", curexpdir);
     if(fileExist(path)) rm_file(path);
-    sprintf(path, "%s/datdir/phasefile", curexpdir);
+    snprintf(path, sizeof(path), "%s/datdir/phasefile", curexpdir);
     if(fileExist(path)) rm_file(path);
 
     execString("clear(2)\n");
 
-    sprintf(path, "%s/acqfil/fid", curexpdir);
+    snprintf(path, sizeof(path), "%s/acqfil/fid", curexpdir);
     ival = file_is_link(path, "", linkpath );
 
     if(ival) {
@@ -4015,7 +4031,7 @@ int testPart11(int argc, char *argv[], int retc, char *retv[])
         copy_file(linkpath, path);
     }
 
-    sprintf(path, "%s/acqfil/log", curexpdir);
+    snprintf(path, sizeof(path), "%s/acqfil/log", curexpdir);
     ival = file_is_link(path, "", linkpath );
 
     if(ival) {
@@ -4030,16 +4046,16 @@ int testPart11(int argc, char *argv[], int retc, char *retv[])
     P_setstring(CURRENT,"username",UserName,1);
     P_setstring(CURRENT,"p11console",p11console,1);
 
-    sprintf(path, "%s/acqfil/procpar", curexpdir);
+    snprintf(path, sizeof(path), "%s/acqfil/procpar", curexpdir);
     if(fileExist(path)) rm_file(path);
     if (P_save(PROCESSED,path))
     {   Werrprintf("Problem saving processed parameters in '%s'.",path);
         ABORT;
     }
 
-    sprintf(path, "%s/acqfil/text", curexpdir);
+    snprintf(path, sizeof(path), "%s/acqfil/text", curexpdir);
     if(!fileExist(path)) {
-        sprintf(origpath, "%s/text", curexpdir);
+        snprintf(origpath, sizeof(origpath), "%s/text", curexpdir);
         copytext(origpath, path);
     }
 
@@ -4060,20 +4076,22 @@ void p11_saveDisCmd()
 
     if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) return;
 
-    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) strcpy(str, "");
+    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
     if(strcmp(str, "fidscan") == 0 || strcmp(str, "lock") == 0) return;
 
     if(!disNewCmd) return;
     disNewCmd = 0;
-    strcpy(cmd, "");
+    snprintf(cmd, sizeof(cmd), "%s", "");
     if(strStartsWith(currentCmd,"ds") || strStartsWith(currentCmd,"dcon") ||
        strStartsWith(currentCmd,"aipDisplay"))  
 	if(currentCmd[strlen(currentCmd)-1] == '\n') {
-	    strcpy(cmd, "");
-	    strncat(cmd, currentCmd, strlen(currentCmd)-1);
-	} else strcpy(cmd, currentCmd);
-    else if(getProcdim() == 2) strcpy(cmd, "dconi");
-    else if(getProcdim() == 1) strcpy(cmd, "ds");
+	    size_t take = strlen(currentCmd);
+	    if (take > 0) take--;
+	    if (take >= sizeof(cmd)) take = sizeof(cmd) - 1;
+	    snprintf(cmd, sizeof(cmd), "%.*s", (int)take, currentCmd);
+	} else snprintf(cmd, sizeof(cmd), "%s", currentCmd);
+    else if(getProcdim() == 2) snprintf(cmd, sizeof(cmd), "%s", "dconi");
+    else if(getProcdim() == 1) snprintf(cmd, sizeof(cmd), "%s", "ds");
 
     if(debug) 
 	fprintf(stderr, "******p11_saveDisCmd %s\n",cmd);
@@ -4135,13 +4153,13 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
     int part11Data = isPart11Data(); 
 
     readUserPart11Config();
-    strcpy(cmd,argv[0]);
-    if(strcmp(cmd,"svf") == 0 || strcmp(cmd,"SVF") == 0) strcpy(cmd,"svr_as");
+    snprintf(cmd, sizeof(cmd), "%s", argv[0]);
+    if(strcmp(cmd,"svf") == 0 || strcmp(cmd,"SVF") == 0) snprintf(cmd, sizeof(cmd), "%s", "svr_as");
 
     if(debug) displayPart11Config(stderr);
 
-    strcpy(name,"");
-    strcpy(recsuffix,"");
+    snprintf(name, sizeof(name), "%s", "");
+    snprintf(recsuffix, sizeof(recsuffix), "%s", "");
 
     nolog = FALSE; /* nolog is not used */
     no_arch = TRUE;
@@ -4170,29 +4188,33 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
 /* if a record does not contain fid, only data (and phasefile) will be linked by rt */
 /* if both fid and data are linked, the should link to the same record */
 
-    strcpy(linkpath, "");
+    snprintf(linkpath, sizeof(linkpath), "%s", "");
 
-    sprintf(path,"%s%s",curexpdir,"/acqfil/fid");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/acqfil/fid");
     fid_linked = file_is_link(path, "", curfid_linkpath );
 
     if(fid_linked && strlen(curfid_linkpath) > 10 &&
        (strEndsWith(curfid_linkpath, ".REC/acqfil/fid") ||
 	strEndsWith(curfid_linkpath, ".rec/acqfil/fid"))) {
-        strcpy(linkpath, "");
-        strncat(linkpath, curfid_linkpath, strlen(curfid_linkpath)-10);
+        {
+            size_t take = strlen(curfid_linkpath);
+            if (take >= 10) take -= 10; else take = 0;
+            if (take >= sizeof(linkpath)) take = sizeof(linkpath) - 1;
+            snprintf(linkpath, sizeof(linkpath), "%.*s", (int)take, curfid_linkpath);
+        }
     } else {
 	char str[MAXSTR];
         fid_linked = 0;
-        if(P_getstring(CURRENT, "file", str, 1, MAXSTR)) strcpy(str,"");
-        if(str[0] == '/' && !strEndsWith(str, "/")) strcat(str, "/");
+        if(P_getstring(CURRENT, "file", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
+        if(str[0] == '/' && !strEndsWith(str, "/")) strncat(str, "/", sizeof(str) - strlen(str) - 1);
         if(!access(str,F_OK) && 
 		(strEndsWith(str,".REC/") || strEndsWith(str,".rec/") )) {
-	   strcpy(linkpath,str);
-	   strcat(str,"/acqfil/fid");
+	   snprintf(linkpath, sizeof(linkpath), "%s", str);
+	   strncat(str, "/acqfil/fid", sizeof(str) - strlen(str) - 1);
 	   if(!access(str,F_OK)) {
 	       	fid_linked = 1;
-	   	strcpy(curfid_linkpath,str);
-	   } else strcpy(linkpath, "");
+	   	snprintf(curfid_linkpath, sizeof(curfid_linkpath), "%s", str);
+	   } else snprintf(linkpath, sizeof(linkpath), "%s", "");
 	}
     }
 
@@ -4206,7 +4228,7 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
                 "svr:cmd fid_linked dataProcessed paramChanged linkpath %s %d %d %d %s\n", 
                 cmd, fid_linked, dataProcessed, paramChanged, linkpath);
 
-    strcpy(currentPart11Path, "");
+    snprintf(currentPart11Path, sizeof(currentPart11Path), "%s", "");
 
 /* check arguments and get file name */
 /* dataProcessed is 0 if fid is not processed, otherwise 1. */
@@ -4216,7 +4238,7 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
         { Werrprintf("Abort: REC data not loaded.");
             ABORT;
         }
-	strcpy(currentPart11Path, linkpath);
+	snprintf(currentPart11Path, sizeof(currentPart11Path), "%s", linkpath);
     } else { 
         /* if path is not gaven as argv[1] */ 
         if (argc<2)
@@ -4231,7 +4253,7 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
             ABORT;
         }
         else
-            strcpy(filepath, argv[1]);
+            snprintf(filepath, sizeof(filepath), "%s", argv[1]);
         if ((int) strlen(filepath) >= (MAXPATH-32))
         { Werrprintf("file path too long");
             ABORT;
@@ -4244,47 +4266,55 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
         /* determine recsuffix */
 
         if(part11System && part11Data) {
-            strcpy(recsuffix, ".REC");
+            snprintf(recsuffix, sizeof(recsuffix), "%s", ".REC");
         } else { 
-            strcpy(recsuffix, ".rec");
+            snprintf(recsuffix, sizeof(recsuffix), "%s", ".rec");
         } 
 	// respect user if .rec is explicitly specfied
-        if(strEndsWith(filepath,".rec") || strEndsWith(filepath,".rec/")) strcpy(recsuffix,".rec");
+        if(strEndsWith(filepath,".rec") || strEndsWith(filepath,".rec/")) snprintf(recsuffix, sizeof(recsuffix), "%s", ".rec");
 
         /* if only a name, add rootPath */
         if(filepath[0] != '/' && filepath[0] != '~') {
              char tmpstr[MAXPATH];
 
 	     if (P_getstring(GLOBAL,"svfdir",tmpstr,1,MAXPATH))
-		sprintf(a_name,"%s/data/%s",userdir,filepath);
-	     else sprintf(a_name,"%s/%s",tmpstr,filepath); 
+		snprintf(a_name, sizeof(a_name), "%s/data/%s", userdir, filepath);
+	     else snprintf(a_name, sizeof(a_name), "%s/%s", tmpstr, filepath); 
 	     if(makeautoname("Svfname",a_name,"",path,FALSE,FALSE,recsuffix,recsuffix))
-	        sprintf(path,"%s/data/%s",userdir,filepath);	     
-        } else strcpy(path, filepath);
+	        snprintf(path, sizeof(path), "%s/data/%s", userdir, filepath);	     
+        } else snprintf(path, sizeof(path), "%s", filepath);
 
         if(strEndsWith(path,".REC") || strEndsWith(path,".rec")) {
-            strcpy(filepath, "");
-            strncat(filepath, path, strlen(path)-4);
-            strcat(filepath, recsuffix);
+            {
+                size_t take = strlen(path);
+                if (take >= 4) take -= 4; else take = 0;
+                if (take >= sizeof(filepath)) take = sizeof(filepath) - 1;
+                snprintf(filepath, sizeof(filepath), "%.*s", (int)take, path);
+            }
+            strncat(filepath, recsuffix, sizeof(filepath) - strlen(filepath) - 1);
         } else if(strEndsWith(path,".REC/") || strEndsWith(path,".rec/")) {
-            strcpy(filepath, "");
-            strncat(filepath, path, strlen(path)-5);
-            strcat(filepath, recsuffix);
+            {
+                size_t take = strlen(path);
+                if (take >= 5) take -= 5; else take = 0;
+                if (take >= sizeof(filepath)) take = sizeof(filepath) - 1;
+                snprintf(filepath, sizeof(filepath), "%.*s", (int)take, path);
+            }
+            strncat(filepath, recsuffix, sizeof(filepath) - strlen(filepath) - 1);
         } else {
-	    strcpy(filepath, path);
-            strcat(filepath, recsuffix);
+	    snprintf(filepath, sizeof(filepath), "%s", path);
+            strncat(filepath, recsuffix, sizeof(filepath) - strlen(filepath) - 1);
         }
 
-        strcpy(currentPart11Path, filepath);
+        snprintf(currentPart11Path, sizeof(currentPart11Path), "%s", filepath);
 
-        if(!strEndsWith(currentPart11Path,"/")) strcat(currentPart11Path, "/");
+        if(!strEndsWith(currentPart11Path,"/")) strncat(currentPart11Path, "/", sizeof(currentPart11Path) - strlen(currentPart11Path) - 1);
 
 	if(debug) 
             fprintf(stderr,"currentPart11Path curexpdir %s %s\n", 
                     currentPart11Path, curexpdir);
 
         if(fileExist(currentPart11Path) && strcmp(currentPart11Path, linkpath) == 0) {
-	    if(part11System == NONFDA) strcpy(cmd,"svr");
+	    if(part11System == NONFDA) snprintf(cmd, sizeof(cmd), "%s", "svr");
 	    else {
               Werrprintf("cannot copy: %s already linked to curexp. command aborted.\n",
                        linkpath);
@@ -4314,29 +4344,29 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
     Wturnoff_buttons();
     D_allrelease();
 
-    if(P_getstring(CURRENT,"datname",datname,1, MAXSTR)) strcpy(datname, "datdir");
-    if(strlen(datname) == 0) strcpy(datname, "datdir");
+    if(P_getstring(CURRENT,"datname",datname,1, MAXSTR)) snprintf(datname, sizeof(datname), "%s", "datdir");
+    if(strlen(datname) == 0) snprintf(datname, sizeof(datname), "%s", "datdir");
 
     disp_status("svr ");
 
 /* notice currentPart11Path and linkpath end with "/", curexpdir does not */
 
-    strcpy(destpath,"");
-    strcpy(origpath,"");
+    snprintf(destpath, sizeof(destpath), "%s", "");
+    snprintf(origpath, sizeof(origpath), "%s", "");
     if (strcmp(cmd,"svr_as") == 0) {
 /* save current acqfil and datdir to a new record */
 /* always remove and link curexpdir/acqfil to the new record */
 
-            sprintf(origpath, "%s%s", curexpdir, "/acqfil");
-            sprintf(destpath, "%s%s", currentPart11Path, "acqfil");
+            snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/acqfil");
+            snprintf(destpath, sizeof(destpath), "%s%s", currentPart11Path, "acqfil");
             save_acqfil(origpath, destpath);
 //    	    if(strEndsWith(filepath,".REC")) link_fid(origpath, destpath);
 
             if(dataProcessed) {
-                sprintf(origpath, "%s%s", curexpdir, "/datdir");
+                snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/datdir");
                 if(strcmp(datname, "datdir") == 0) 
-                    sprintf(destpath, "%s%s001", currentPart11Path, "datdir");
-                else sprintf(destpath, "%s%s%s", currentPart11Path, datname, "001.dat");
+                    snprintf(destpath, sizeof(destpath), "%s%s001", currentPart11Path, "datdir");
+                else snprintf(destpath, sizeof(destpath), "%s%s%s", currentPart11Path, datname, "001.dat");
                 save_datdir(origpath, destpath);
             }
 
@@ -4344,17 +4374,17 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
 /* save acqfil to a new record */
 /* don't change link. */
 
-        sprintf(origpath, "%s%s", curexpdir, "/acqfil");
-        sprintf(destpath, "%s%s", currentPart11Path, "acqfil");
+        snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/acqfil");
+        snprintf(destpath, sizeof(destpath), "%s%s", currentPart11Path, "acqfil");
         save_acqfil(origpath, destpath);
 
     } else if (strcmp(cmd,"svr_p")==0) {
 /* save datdir to a new record */
 
-        sprintf(origpath, "%s%s", curexpdir, "/datdir");
+        snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/datdir");
         if(strcmp(datname, "datdir") == 0) 
-            sprintf(destpath, "%s%s001", currentPart11Path, "datdir");
-        else sprintf(destpath, "%s%s%s", currentPart11Path, datname, "001.dat");
+            snprintf(destpath, sizeof(destpath), "%s%s001", currentPart11Path, "datdir");
+        else snprintf(destpath, sizeof(destpath), "%s%s%s", currentPart11Path, datname, "001.dat");
         save_datdir(origpath, destpath);
 
     } else {
@@ -4368,16 +4398,16 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
 /* curfid is not a link, save acqfil and datdir to currentPart11Path*/
 /* remove and link acqfil to the new recsuffix/acqfil */
 
-            sprintf(origpath, "%s%s", curexpdir, "/acqfil");
-            sprintf(destpath, "%s%s", currentPart11Path, "acqfil");
+            snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/acqfil");
+            snprintf(destpath, sizeof(destpath), "%s%s", currentPart11Path, "acqfil");
             save_acqfil(origpath, destpath);
             if(strEndsWith(filepath,".REC")) link_fid(origpath, destpath);
 
             if(dataProcessed) {
-                sprintf(origpath, "%s%s", curexpdir, "/datdir");
+                snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/datdir");
                 if(strcmp(datname, "datdir") == 0) 
-                    sprintf(destpath, "%s%s001", currentPart11Path, "datdir");
-                else sprintf(destpath, "%s%s%s", currentPart11Path, datname, "001.dat");
+                    snprintf(destpath, sizeof(destpath), "%s%s001", currentPart11Path, "datdir");
+                else snprintf(destpath, sizeof(destpath), "%s%s%s", currentPart11Path, datname, "001.dat");
                 save_datdir(origpath, destpath);
             }
 
@@ -4388,10 +4418,10 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
             if(dataProcessed && paramChanged) {
                 getNextVersion(currentPart11Path, datname, version);
 
-                sprintf(origpath, "%s%s", curexpdir, "/datdir");
+                snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/datdir");
                 if(strcmp(datname, "datdir") == 0) 
-                    sprintf(destpath, "%s%s%s", currentPart11Path, "datdir", version);
-                else sprintf(destpath, "%s%s%s.dat", currentPart11Path, datname, version);
+                    snprintf(destpath, sizeof(destpath), "%s%s%s", currentPart11Path, "datdir", version);
+                else snprintf(destpath, sizeof(destpath), "%s%s%s.dat", currentPart11Path, datname, version);
                 save_datdir(origpath, destpath);
             }
 
@@ -4402,10 +4432,10 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
     { 	FILE    *fd,*fd_text;
         double   loc;
         char    *ptr, solvent[20], tmp_text[130];
-        strcpy(path,currentPart11Path);
+        snprintf(path, sizeof(path), "%s", currentPart11Path);
         ptr = strrchr(path,'/');
-        if (ptr==0) strcpy(path,"doneQ");
-        else { *ptr = '\0'; strcat(path,"/doneQ"); }
+        if (ptr==0) snprintf(path, sizeof(path), "%s", "doneQ");
+        else { *ptr = '\0'; strncat(path, "/doneQ", sizeof(path) - strlen(path) - 1); }
         fd = fopen(path,"a");   /* append, or open if not existing */
         if (fd)
         {  P_getreal(PROCESSED,"loc",&loc,1);
@@ -4414,7 +4444,7 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
             fprintf(fd,"    MACRO: ??\n");
             P_getstring(PROCESSED,"solvent",solvent,1, 18);
             fprintf(fd,"  SOLVENT: %s\n",solvent);
-            strcpy(path,currentPart11Path); strcat(path,"text");
+            snprintf(path, sizeof(path), "%s", currentPart11Path); strncat(path, "text", sizeof(path) - strlen(path) - 1);
             fd_text = fopen(path,"r");
             if(fd_text) {
                 ptr = &tmp_text[0];
@@ -4425,7 +4455,7 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
                 fclose(fd_text); *ptr = '\0';
                 fprintf(fd,"     TEXT: %s\n",tmp_text);
                 /* chop '.fid' then only retain filename */
-                strcpy(path,currentPart11Path); ptr = strrchr(path,'.'); *ptr = '\0';
+                snprintf(path, sizeof(path), "%s", currentPart11Path); ptr = strrchr(path,'.'); *ptr = '\0';
                 ptr = strrchr(path,'/'); if (ptr==0) ptr=path; else ptr++;
                 fprintf(fd,"  USERDIR:\n");
                 fprintf(fd,"     DATA: %s\n",ptr);
@@ -4453,7 +4483,7 @@ int svr_FDA(int argc, char *argv[], int retc, char *retv[])
     if (retc > 1) retv[1]=newString(destpath);
 
     /* hasParamChanged uses curexpdir/prevpar */
-    sprintf(path, "%s%s", curexpdir, "/prevpar");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/prevpar");
     saveCurpar(path);
 
     disp_status("        ");
@@ -4487,28 +4517,28 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
     (void) nolog;
     //if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) RETURN;
 
-    if(filepath[strlen(filepath)-1] != '/') strcat(filepath, "/");
+    if(filepath[strlen(filepath)-1] != '/') strncat(filepath, "/", MAXPATH - strlen(filepath) - 1);
 
-    if(strstr(filepath, ".REC") != NULL) strcpy(recsuffix, ".REC");
-    else strcpy(recsuffix, ".rec");
+    if(strstr(filepath, ".REC") != NULL) snprintf(recsuffix, sizeof(recsuffix), "%s", ".REC");
+    else snprintf(recsuffix, sizeof(recsuffix), "%s", ".rec");
 
     if(strEndsWith(filepath, ".REC/")) {
         if(getLastVersion(filepath, datname)) {
-            strcat(filepath, datname);
-            strcat(filepath, "/");
+            strncat(filepath, datname, MAXPATH - strlen(filepath) - 1);
+            strncat(filepath, "/", MAXPATH - strlen(filepath) - 1);
             type = 2;
         } else {
-            strcat(filepath, "acqfil/");
+            strncat(filepath, "acqfil/", MAXPATH - strlen(filepath) - 1);
             type = 1;
         }
     }
     else if(strEndsWith(filepath, ".rec/")) {
         if(getLastVersion(filepath, datname)) {
-            strcat(filepath, datname);
-            strcat(filepath, "/");
+            strncat(filepath, datname, MAXPATH - strlen(filepath) - 1);
+            strncat(filepath, "/", MAXPATH - strlen(filepath) - 1);
             type = 4;
         } else {
-            strcat(filepath, "acqfil/");
+            strncat(filepath, "acqfil/", MAXPATH - strlen(filepath) - 1);
             type = 3;
         }
     }
@@ -4521,10 +4551,10 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
     /* filepath is acqfil or datdir depending on type */
     /* filepath0 is always acqfil dir */ 
     if(type == 1 || type == 3)
-     	strcpy(filepath0, filepath);
+     	snprintf(filepath0, sizeof(filepath0), "%s", filepath);
     else {
         brkPath(filepath, filepath0,datname);
-	strcat(filepath0, "acqfil/");
+	strncat(filepath0, "acqfil/", sizeof(filepath0) - strlen(filepath0) - 1);
     }
 
 /**** the following are retrieved from filepath ****/
@@ -4551,8 +4581,8 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
     /*Remove the ACQPAR file from the current experiment.  Prevents RA from
       working after RT is executed; you have to enter the GO command first.  */
 
-    strcpy( path, &curexpdir[0] );
-    strcat( path, "/acqfil/acqpar" );
+    snprintf(path, sizeof(path), "%s", &curexpdir[0]);
+    strncat(path, "/acqfil/acqpar", sizeof(path) - strlen(path) - 1);
     ret = unlink( &path[ 0 ] );             /* assume it works and ignore result */
 
     /* get individual param if rtv */
@@ -4571,7 +4601,7 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
   if(type == 1 || type == 3) sprintf(path, "%s%s", filepath, "procpar");
   else 
 */
-    sprintf(path, "%s%s", filepath, "procpar");
+    snprintf(path, sizeof(path), "%s%s", filepath, "procpar");
 
     if(fileExist(path)) {
         P_treereset(CURRENT);         /* clear the tree first */
@@ -4584,7 +4614,7 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
     }
 
     /* now copy text file */
-    sprintf(path, "%s%s", filepath, "text");
+    snprintf(path, sizeof(path), "%s%s", filepath, "text");
 
     if(fileExist(path)) {
         if (copytext(filepath,curexpdir))
@@ -4603,7 +4633,7 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
  *  problems, especially if these records are retrieved on a different
  *  spectrometer.
  */
-    sprintf(path, "%s%s", filepath, "global");
+    snprintf(path, sizeof(path), "%s%s", filepath, "global");
 
     if(fileExist(path)) {
         char saveOperator[MAXSTR] = "";
@@ -4619,7 +4649,7 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
         P_setstring(GLOBAL,"operator",saveOperator,1);
     }
 
-    sprintf(path, "%s%s", filepath, "conpar");
+    snprintf(path, sizeof(path), "%s%s", filepath, "conpar");
 
     if(fileExist(path)) {
         P_treereset(SYSTEMGLOBAL);         /* clear the tree first */
@@ -4676,15 +4706,15 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
 
 /* retrieve acqfil dir regardless the type */
 
-    strcpy(newpath,curexpdir);
-    strcat(newpath,"/acqfil");
+    snprintf(newpath, sizeof(newpath), "%s", curexpdir);
+    strncat(newpath, "/acqfil", sizeof(newpath) - strlen(newpath) - 1);
 
     /* now check whether fid is in file */
-    strcpy(path,filepath0);
-    strcat(path,"fid");
+    snprintf(path, sizeof(path), "%s", filepath0);
+    strncat(path, "fid", sizeof(path) - strlen(path) - 1);
 
     if(P_getstring(CURRENT, "username", dataOwner, 1, MAXSTR))
-	strcpy(dataOwner, "");
+	snprintf(dataOwner, sizeof(dataOwner), "%s", "");
 
     if (!access(path,F_OK) && strcmp(dataOwner, UserName) == 0) {
 
@@ -4746,8 +4776,8 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
 
     /* retrieve datdir */
     if(type == 2 || type == 4) {
-        strcpy(newpath,curexpdir);
-        strcat(newpath,"/datdir");
+        snprintf(newpath, sizeof(newpath), "%s", curexpdir);
+        strncat(newpath, "/datdir", sizeof(newpath) - strlen(newpath) - 1);
         copy_datdir(newpath, filepath);
         dataerr = copy_data(newpath, filepath);
     }
@@ -4755,8 +4785,12 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
     /* if everything ok, copy parameters to PROCESSED */
 
     brkPath(filepath, path,datname);
-    strcpy(filepath0,"");
-    strncat(filepath0,path,strlen(path)-1);
+    {
+        size_t take = strlen(path);
+        if (take > 0) take--;
+        if (take >= sizeof(filepath0)) take = sizeof(filepath0) - 1;
+        snprintf(filepath0, sizeof(filepath0), "%.*s", (int)take, path);
+    }
     P_setstring(CURRENT,"file",filepath0,0);
     P_treereset(PROCESSED);       /* clear the tree first */
     P_copy(CURRENT,PROCESSED);
@@ -4785,10 +4819,10 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
 
         // process,display spectrum 
         if(type == 1 || type == 3) {
-            sprintf(cmd,"recds('%s','%s')\n",filepath, "raw");
+            snprintf(cmd, sizeof(cmd), "recds('%s','%s')\n", filepath, "raw");
             execString(cmd);
         } else {
-            sprintf(cmd,"recds('%s','%s')\n",filepath, "processed");
+            snprintf(cmd, sizeof(cmd), "recds('%s','%s')\n", filepath, "processed");
             execString(cmd);
         }
 
@@ -4797,12 +4831,12 @@ int rt_FDA(int argc, char *argv[], int retc, char *retv[],
     }
 
     /* hasParamChanged uses curexpdir/prevpar */
-    sprintf(path, "%s%s", curexpdir, "/prevpar");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/prevpar");
     saveCurpar(path);
     /* save procpar and curpar to curexpdir/datdir, instead of copy from filepath */
-    sprintf(path, "%s%s", curexpdir, "/datdir/procpar");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/datdir/procpar");
     saveProcpar(path);
-    sprintf(path, "%s%s", curexpdir, "/datdir/curpar");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/datdir/curpar");
     saveCurpar(path);
 
     p11_restartCmdHis();
@@ -4845,10 +4879,10 @@ int readUserPart11Config()
     if(part11_std_files->snapshot != 2) part11_std_files->snapshot = 0;
     if(part11_std_files->cmdHistory != 2) part11_std_files->cmdHistory = 0;
     if(part11_std_files->pulseSequence != 2) part11_std_files->pulseSequence = 0;
-    strcpy(incPath, "");
+    snprintf(incPath, sizeof(incPath), "%s", "");
     incInc = 0;
 
-    sprintf(path, "%s%s", userdir, userConfig);
+    snprintf(path, sizeof(path), "%s%s", userdir, userConfig);
 
     if(!(fp = fopen(path, "r"))) ABORT;
 
@@ -4956,10 +4990,10 @@ int readUserPart11Config()
 		else if(strcmp(words[0], "file") == 0 
                         && strcmp(words[1], "include") == 0) { 
                     if(fileExist(words[2]) && isAdirectory(words[2])) {
-                        strcpy(incPath, words[2]);
+                        snprintf(incPath, sizeof(incPath), "%s", words[2]);
                     } 
                     if(strlen(incPath) > 0 && !strEndsWith(incPath, "/")) 
-			strcat(incPath, "/");
+			strncat(incPath, "/", sizeof(incPath) - strlen(incPath) - 1);
                     if(strlen(incPath) > 0 && strstr(words[3], "yes") != NULL) {
                         incInc = 1;
                     } 
@@ -4997,19 +5031,23 @@ int getFidName(int argc, char *argv[], int retc, char *retv[])
     (void) argc;
     (void) argv;
     /* get fid linkpath */
-    sprintf(path,"%s%s",curexpdir,"/acqfil/fid");
+    snprintf(path, sizeof(path), "%s%s", curexpdir, "/acqfil/fid");
     fid_linked = file_is_link(path, "", curfid_linkpath );
 
     if(fid_linked && (strstr(curfid_linkpath, ".REC") != NULL ||
                       strstr(curfid_linkpath, ".rec") != NULL)) {
-        strcpy(str,""); 
-        strncat(str, curfid_linkpath, strlen(curfid_linkpath)-11);
+        size_t take = strlen(curfid_linkpath);
+        if (take >= 11) take -= 11; else take = 0;
+        if (take >= sizeof(str)) take = sizeof(str) - 1;
+        snprintf(str, sizeof(str), "%.*s", (int)take, curfid_linkpath);
         brkPath(str, root, name);
     } else if(fid_linked) {
-        strcpy(str,""); 
-        strncat(str, curfid_linkpath, strlen(curfid_linkpath)-4);
+        size_t take = strlen(curfid_linkpath);
+        if (take >= 4) take -= 4; else take = 0;
+        if (take >= sizeof(str)) take = sizeof(str) - 1;
+        snprintf(str, sizeof(str), "%.*s", (int)take, curfid_linkpath);
         brkPath(str, root, name); 
-    } else strcpy(name, "");
+    } else snprintf(name, sizeof(name), "%s", "");
 
     if (retc > 0)
     {
@@ -5033,21 +5071,21 @@ void p11_setcurrfidid()
 
     if(!part11System && !P_getreal(GLOBAL, "recordSave", &d, 1) && d < 0.5) return;
 
-    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) strcpy(str, "");
+    if(P_getstring(GLOBAL, "acqmode", str, 1, MAXSTR)) snprintf(str, sizeof(str), "%s", "");
     if(strcmp(str, "fidscan") == 0 || strcmp(str, "lock") == 0) return;
 
-    sprintf(filename,"%s/acqfil/fid",curexpdir);
+    snprintf(filename, sizeof(filename), "%s/acqfil/fid", curexpdir);
 
     if(getChecksum(filename, sum)) {
 
 	if(isdigit(sum[strlen(sum)-1])) {
-            sprintf(str,"%c",sum[strlen(sum)-1]);
+            snprintf(str, sizeof(str), "%c", sum[strlen(sum)-1]);
             last = atoi(str);
 	} else last = 0;
 
-        sprintf(str, "%d", last+nfiles);
-    	strcat(sum, str);
-    } else strcat(sum, "none");
+        snprintf(str, sizeof(str), "%d", last+nfiles);
+    	strncat(sum, str, sizeof(sum) - strlen(sum) - 1);
+    } else strncat(sum, "none", sizeof(sum) - strlen(sum) - 1);
 
     P_setstring(PROCESSED, "fidid", sum, 1);
 
@@ -5082,7 +5120,7 @@ static void getStrValues(char* buf, string* words, int* n, char* delimiter)
     char  str[BUFSIZE];
 
     /* remove newline if exists */
-    strcpy(str, buf);
+    snprintf(str, sizeof(str), "%s", buf);
     if(str[strlen(str)-1] == '\n')
        str[strlen(str)-1] = '\0';
 
@@ -5091,7 +5129,7 @@ static void getStrValues(char* buf, string* words, int* n, char* delimiter)
     while ((tokptr = (char*) strtok(strptr, delimiter)) != (char *) 0) {
 
         if(strlen(tokptr) > 0) {
-            strcpy(words[*n], tokptr);
+            snprintf(words[*n], sizeof(words[*n]), "%s", tokptr);
             (*n)++;
         }
         strptr = (char *) 0;
@@ -5111,28 +5149,28 @@ static void getFilenames(string rootpath, string name, string* files, int* n, in
     string dir, child;
 
     if(rootpath[strlen(rootpath)-1] != '/')
-       sprintf(dir, "%s/%s", rootpath, name);
+       snprintf(dir, sizeof(dir), "%s/%s", rootpath, name);
     else
-       sprintf(dir, "%s%s", rootpath, name);
+       snprintf(dir, sizeof(dir), "%s%s", rootpath, name);
 
     if(strlen(dir) == 0 || !fileExist(dir)) return;
 
     if((*n) >= (nmax-1)) {
 	return;
     } else if(!isAdirectory(dir)) {
-        strcpy(files[*n], name);
+        snprintf(files[*n], sizeof(files[*n]), "%s", name);
         (*n)++;
     } else {
         if ( (dirp = opendir(dir)) ) {
             if(strlen(name) > 0 && name[strlen(name)-1] != '/')
-                strcat(name,"/");
+                strncat(name,"/", MAXSTR - strlen(name) - 1);
             for (dp = readdir(dirp); dp != NULL; dp = readdir(dirp)) {
 
                 if(debug)
                     fprintf(stderr," dir %s %s\n", dir, dp->d_name);
                 if (*dp->d_name != '.') {
 
-                    sprintf(child,"%s%s",name,dp->d_name);
+                    snprintf(child, sizeof(child), "%s%s", name, dp->d_name);
                     getFilenames(rootpath, child, files, n, nmax);
                 }
             }
@@ -5163,7 +5201,7 @@ int isUserOwned(string path)
 }
 
 /**************************/
-void getFileStat(string file, string key, string value)
+void getFileStat(string file, const char *key, string value)
 /**************************/
 /* acceptable key: owner, size, mtime... */
 {
@@ -5179,10 +5217,10 @@ void getFileStat(string file, string key, string value)
     if(i == 0) {
         if(strcmp(key,"owner") == 0) {
             ps = (struct passwd*)getpwuid(stat_path.st_uid);
-            if(ps != NULL) strcpy(value, ps->pw_name);
-            else strcpy(value, "");
+            if(ps != NULL) snprintf(value, MAXSTR, "%s", ps->pw_name);
+            else snprintf(value, MAXSTR, "%s", "");
         } else if(strcmp(key,"size") == 0) {
-            sprintf(value, "%d", (int) stat_path.st_size);
+            snprintf(value, MAXSTR, "%d", (int) stat_path.st_size);
         } else if(strcmp(key,"mtime") == 0) {
             strftime(value, MAXSTR, t_format, localtime(&(stat_path.st_mtime)));
         } else if(strcmp(key,"atime") == 0) {
@@ -5190,20 +5228,20 @@ void getFileStat(string file, string key, string value)
         } else if(strcmp(key,"ctime") == 0) {
             strftime(value,  MAXSTR, t_format, localtime(&(stat_path.st_ctime)));
         } else if(strcmp(key,"rdev") == 0) {
-            sprintf(value, "%d", (int) stat_path.st_rdev);
+            snprintf(value, MAXSTR, "%d", (int) stat_path.st_rdev);
         } else if(strcmp(key,"nlink") == 0) {
-            sprintf(value, "%d", (int) stat_path.st_nlink);
+            snprintf(value, MAXSTR, "%d", (int) stat_path.st_nlink);
         } else if(strcmp(key,"uid") == 0) {
-            sprintf(value, "%d", stat_path.st_uid);
+            snprintf(value, MAXSTR, "%d", stat_path.st_uid);
         } else if(strcmp(key,"gid") == 0) {
-            sprintf(value, "%d", stat_path.st_gid);
+            snprintf(value, MAXSTR, "%d", stat_path.st_gid);
         } else if(strcmp(key,"blksize") == 0) {
-            sprintf(value, "%d", (int) stat_path.st_blksize);
+            snprintf(value, MAXSTR, "%d", (int) stat_path.st_blksize);
         } else if(strcmp(key,"blocks") == 0) {
-            sprintf(value, "%d", (int) stat_path.st_blocks);
+            snprintf(value, MAXSTR, "%d", (int) stat_path.st_blocks);
         }
     } else {
-        strcpy(value, "");
+        snprintf(value, MAXSTR, "%s", "");
     }
 
     return;
@@ -5256,24 +5294,24 @@ int getDataStat(int argc, char *argv[], int retc, char *retv[])
 
     if(argc < 2) {
 
-        sprintf(exppath,"%s%s",curexpdir,"/acqfil/fid");
+        snprintf(exppath, sizeof(exppath), "%s%s", curexpdir, "/acqfil/fid");
 
         if(!fileExist(exppath)) {
             /* fid does not exist. */
             i = -1;
-            strcpy(path, "");
+            snprintf(path, sizeof(path), "%s", "");
         } else if (isSymLink(exppath) == 0) {
             /* fid is linked */
             linked = file_is_link(exppath, "", curfid_linkpath );
        
             if(!linked) {
                 i = -1;
-                strcpy(path, "");
+                snprintf(path, sizeof(path), "%s", "");
             } else {
 	  
                 if(!isUserOwned(curfid_linkpath)) {
                     i = 0;
-                    strcpy(path, "");
+                    snprintf(path, sizeof(path), "%s", "");
                 } else {
                     if(strstr(curfid_linkpath, ".rec") != NULL) i = 2;
                     else if(strstr(curfid_linkpath, ".REC") != NULL) i = 3;
@@ -5281,21 +5319,25 @@ int getDataStat(int argc, char *argv[], int retc, char *retv[])
                     else if(strstr(curfid_linkpath, ".par") != NULL) i = 1;
 
                     if(i == 1 || i == 2) {
-                        strcpy(path,""); 
-                        strncat(path, curfid_linkpath, strlen(curfid_linkpath)-11);
+                        size_t take = strlen(curfid_linkpath);
+                        if (take >= 11) take -= 11; else take = 0;
+                        if (take >= sizeof(path)) take = sizeof(path) - 1;
+                        snprintf(path, sizeof(path), "%.*s", (int)take, curfid_linkpath);
                     } else {
-                        strcpy(path,""); 
-                        strncat(path, curfid_linkpath, strlen(curfid_linkpath)-4);
+                        size_t take = strlen(curfid_linkpath);
+                        if (take >= 4) take -= 4; else take = 0;
+                        if (take >= sizeof(path)) take = sizeof(path) - 1;
+                        snprintf(path, sizeof(path), "%.*s", (int)take, curfid_linkpath);
                     }
                 }
             }
         } else {
             i = -1;
-            strcpy(path, "");
+            snprintf(path, sizeof(path), "%s", "");
         }
 
     } else {
-	strcpy(path, argv[1]);
+	snprintf(path, sizeof(path), "%s", argv[1]);
 	if(strstr(path, ".rec") == NULL 
            && strstr(path, ".REC") == NULL
            && strstr(path, ".fid") == NULL
@@ -5344,7 +5386,7 @@ int deleteREC(int argc, char *argv[], int retc, char *retv[])
       ABORT;
     }
 
-    strcpy(path, argv[1]);
+    snprintf(path, sizeof(path), "%s", argv[1]);
 
     if(!isUserOwned(path)) {
       Winfoprintf("Cannot delete %s: permission denied.", path);
@@ -5353,11 +5395,11 @@ int deleteREC(int argc, char *argv[], int retc, char *retv[])
 
     ptmp = path +strlen(path)-4;
     if ( strcmp(ptmp,".fid") == 0 || strcmp(ptmp,".par") == 0) {
-	strcpy(procparPath,path);
-	strcat(procparPath,"/procpar");
+	snprintf(procparPath, sizeof(procparPath), "%s", path);
+	strncat(procparPath, "/procpar", sizeof(procparPath) - strlen(procparPath) - 1);
     } else if( strcmp(ptmp,".REC") == 0 || strcmp(ptmp,".rec") == 0) {
-	strcpy(procparPath,path);
-	strcat(procparPath,"/acqfil/procpar");
+	snprintf(procparPath, sizeof(procparPath), "%s", path);
+	strncat(procparPath, "/acqfil/procpar", sizeof(procparPath) - strlen(procparPath) - 1);
     } else {
       Winfoprintf("Cannot delete %s: not valid path.", path);
       ABORT;
@@ -5389,65 +5431,97 @@ int deleteREC(int argc, char *argv[], int retc, char *retv[])
 	      	getStrValues(buf, words, &nwords, " ");
                 if(nwords > 1) {
 		  ptmp = words[1]; ptmp++;	
-                  strcpy(str,"");
-		  strncat(str,ptmp,strlen(words[1])-2);
-		} else strcpy(str,"?");
+                  {
+                    size_t take = strlen(words[1]);
+                    if (take >= 2) take -= 2; else take = 0;
+                    if (take >= sizeof(str)) take = sizeof(str) - 1;
+                    snprintf(str, sizeof(str), "%.*s", (int)take, ptmp);
+                  }
+		} else snprintf(str, sizeof(str), "%s", "?");
 	        fprintf(fp, "acq operator | %s\n", str); 
 	      } else if(strstr(buf,"fidid") == buf && fgets(buf,sizeof(buf),fpp)) {
 	      	getStrValues(buf, words, &nwords, " ");
                 if(nwords > 1) {
 		  ptmp = words[1]; ptmp++;	
-                  strcpy(str,"");
-		  strncat(str,ptmp,strlen(words[1])-2);
-		} else strcpy(str,"?");
+                  {
+                    size_t take = strlen(words[1]);
+                    if (take >= 2) take -= 2; else take = 0;
+                    if (take >= sizeof(str)) take = sizeof(str) - 1;
+                    snprintf(str, sizeof(str), "%.*s", (int)take, ptmp);
+                  }
+		} else snprintf(str, sizeof(str), "%s", "?");
 	     	fprintf(fp, "fidid | %s\n", str); 
 	      } else if(strstr(buf,"fidid") == buf && fgets(buf,sizeof(buf),fpp)) {
 	      	getStrValues(buf, words, &nwords, " ");
                 if(nwords > 1) {
 		  ptmp = words[1]; ptmp++;	
-                  strcpy(str,"");
-		  strncat(str,ptmp,strlen(words[1])-2);
-		} else strcpy(str,"?");
+                  {
+                    size_t take = strlen(words[1]);
+                    if (take >= 2) take -= 2; else take = 0;
+                    if (take >= sizeof(str)) take = sizeof(str) - 1;
+                    snprintf(str, sizeof(str), "%.*s", (int)take, ptmp);
+                  }
+		} else snprintf(str, sizeof(str), "%s", "?");
 	     	fprintf(fp, "dataid | %s\n", str); 
 	      } else if(strstr(buf,"console") == buf && fgets(buf,sizeof(buf),fpp)) {
 	      	getStrValues(buf, words, &nwords, " ");
                 if(nwords > 1) {
 		  ptmp = words[1]; ptmp++;	
-                  strcpy(str,"");
-		  strncat(str,ptmp,strlen(words[1])-2);
-		} else strcpy(str,"?");
+                  {
+                    size_t take = strlen(words[1]);
+                    if (take >= 2) take -= 2; else take = 0;
+                    if (take >= sizeof(str)) take = sizeof(str) - 1;
+                    snprintf(str, sizeof(str), "%.*s", (int)take, ptmp);
+                  }
+		} else snprintf(str, sizeof(str), "%s", "?");
 	     	fprintf(fp, "console | %s\n", str); 
 	      } else if(strstr(buf,"seqfil") == buf && fgets(buf,sizeof(buf),fpp)) {
 	      	getStrValues(buf, words, &nwords, " ");
                 if(nwords > 1) {
 		  ptmp = words[1]; ptmp++;	
-                  strcpy(str,"");
-		  strncat(str,ptmp,strlen(words[1])-2);
-		} else strcpy(str,"?");
+                  {
+                    size_t take = strlen(words[1]);
+                    if (take >= 2) take -= 2; else take = 0;
+                    if (take >= sizeof(str)) take = sizeof(str) - 1;
+                    snprintf(str, sizeof(str), "%.*s", (int)take, ptmp);
+                  }
+		} else snprintf(str, sizeof(str), "%s", "?");
 	     	fprintf(fp, "seqfil | %s\n", str); 
 	      } else if(strstr(buf,"samplename") == buf && fgets(buf,sizeof(buf),fpp)) {
 	      	getStrValues(buf, words, &nwords, " ");
                 if(nwords > 1) {
 		  ptmp = words[1]; ptmp++;	
-                  strcpy(str,"");
-		  strncat(str,ptmp,strlen(words[1])-2);
-		} else strcpy(str,"?");
+                  {
+                    size_t take = strlen(words[1]);
+                    if (take >= 2) take -= 2; else take = 0;
+                    if (take >= sizeof(str)) take = sizeof(str) - 1;
+                    snprintf(str, sizeof(str), "%.*s", (int)take, ptmp);
+                  }
+		} else snprintf(str, sizeof(str), "%s", "?");
 	     	fprintf(fp, "samplename | %s\n", str); 
 	      } else if(strstr(buf,"time_run") == buf && fgets(buf,sizeof(buf),fpp)) {
 	      	getStrValues(buf, words, &nwords, " ");
                 if(nwords > 1) {
 		  ptmp = words[1]; ptmp++;	
-                  strcpy(str,"");
-		  strncat(str,ptmp,strlen(words[1])-2);
-		} else strcpy(str,"?");
+                  {
+                    size_t take = strlen(words[1]);
+                    if (take >= 2) take -= 2; else take = 0;
+                    if (take >= sizeof(str)) take = sizeof(str) - 1;
+                    snprintf(str, sizeof(str), "%.*s", (int)take, ptmp);
+                  }
+		} else snprintf(str, sizeof(str), "%s", "?");
 	     	fprintf(fp, "time_run | %s\n", str); 
 	      } else if(strstr(buf,"time_saved") == buf && fgets(buf,sizeof(buf),fpp)) {
 	      	getStrValues(buf, words, &nwords, " ");
                 if(nwords > 1) {
 		  ptmp = words[1]; ptmp++;	
-                  strcpy(str,"");
-		  strncat(str,ptmp,strlen(words[1])-2);
-		} else strcpy(str,"?");
+                  {
+                    size_t take = strlen(words[1]);
+                    if (take >= 2) take -= 2; else take = 0;
+                    if (take >= sizeof(str)) take = sizeof(str) - 1;
+                    snprintf(str, sizeof(str), "%.*s", (int)take, ptmp);
+                  }
+		} else snprintf(str, sizeof(str), "%s", "?");
 	     	fprintf(fp, "time_saved | %s\n", str); 
 	      } 
  	   } 
@@ -5456,7 +5530,7 @@ int deleteREC(int argc, char *argv[], int retc, char *retv[])
 	    
 /* append tmp file to p11 trash */
 
-           sprintf(str, "%s%s %s %s\n", systemdir, "/p11/bin/writeTrash -f", tmpfile, UserName);
+           snprintf(str, sizeof(str), "%s%s %s %s\n", systemdir, "/p11/bin/writeTrash -f", tmpfile, UserName);
            ret = system(str);
 
            unlink(tmpfile);
@@ -5471,14 +5545,14 @@ int deleteREC(int argc, char *argv[], int retc, char *retv[])
       ABORT;
     }
 
-    sprintf(exppath,"%s%s",curexpdir,"/acqfil/fid");
+    snprintf(exppath, sizeof(exppath), "%s%s", curexpdir, "/acqfil/fid");
 
     linked = file_is_link(exppath, "", curfid_linkpath );
 
     if(linked && strstr(curfid_linkpath, path) != NULL) {
-     	    sprintf(exppath,"%s%s",curexpdir,"/acqfil/fid");
+     	    snprintf(exppath, sizeof(exppath), "%s%s", curexpdir, "/acqfil/fid");
             rm_file(exppath);
-     	    sprintf(exppath,"%s%s",curexpdir,"/acqfil/log");
+     	    snprintf(exppath, sizeof(exppath), "%s%s", curexpdir, "/acqfil/log");
             rm_file(exppath);
 #ifdef VNMRJ
 	    okFDAdata = 0;
@@ -5512,10 +5586,10 @@ static void copyFiles(char *safecpPath, char *orig, char *dest)
        if(fileExist(dest)) unlink(dest);
        safecp_file(safecpPath, orig, dest); 
     } else {
-      getFilenames(orig, "", files, &nfiles, MAXFILES);
+      getFilenames(orig, (string){0}, files, &nfiles, MAXFILES);
       for(i=0; i<nfiles; i++) {
-        sprintf( path1, "%s/%s", orig, files[i]);
-        sprintf( path2, "%s/%s", dest, files[i]);
+        snprintf(path1, sizeof(path1), "%s/%s", orig, files[i]);
+        snprintf(path2, sizeof(path2), "%s/%s", dest, files[i]);
         if(fileExist(path1)) {
            if(fileExist(path2)) unlink(path2);
 	   safecp_file(safecpPath, path1, path2);
@@ -5571,7 +5645,7 @@ int save_optFilesInParam(char* dest, char *param, char *type)
         tokptr = (char*) strtok(strptr, ":");
         if(!tokptr || strlen(tokptr) < 1) continue;
 
-        strcpy(name, tokptr);
+        snprintf(name, sizeof(name), "%s", tokptr);
 	if(strcmp(name,"fid") == 0 || strcmp(name,"procpar") == 0
 		|| strcmp(name,"log") == 0 || strcmp(name,"text") == 0) continue;
 
@@ -5579,57 +5653,57 @@ int save_optFilesInParam(char* dest, char *param, char *type)
         tokptr = (char*) strtok(NULL, ":");
         if(!tokptr || strlen(tokptr) < 1) continue;
 
-        strcpy(value, tokptr);
+        snprintf(value, sizeof(value), "%s", tokptr);
         if(strcmp(value,"no") == 0) continue;
 
 //        Winfoprintf("Save optional file %s/%s\n",dest,name);
 
         if(all && strcmp(name,"global") == 0) {
-	   sprintf(destpath, "%s%s", dest, "/global");
+	   snprintf(destpath, sizeof(destpath), "%s%s", dest, "/global");
            if (P_save(GLOBAL,destpath))
            {   Werrprintf("Problem saving global parameters in '%s'.",destpath);
                ABORT;
            }
         } else if(all && strcmp(name,"conpar") == 0) {
-	   sprintf(destpath, "%s%s", dest, "/conpar");
+	   snprintf(destpath, sizeof(destpath), "%s%s", dest, "/conpar");
            if (P_save(SYSTEMGLOBAL,destpath))
            {   Werrprintf("Problem saving conpar parameters in '%s'.",destpath);
                ABORT;
            }
         } else if(all && strcmp(name,"shims") == 0) {
 	   execString("prepRecFiles('shims')\n");
-           sprintf(origpath,"%s/%s",curexpdir, "shims");
-           sprintf(destpath,"%s/%s",dest, "shims");
+           snprintf(origpath, sizeof(origpath), "%s/%s", curexpdir, "shims");
+           snprintf(destpath, sizeof(destpath), "%s/%s", dest, "shims");
 	   if(fileExist(origpath)) copyFiles(safecpPath, origpath, destpath);
         } else if(all && strcmp(name,"waveforms") == 0) {
 	   execString("prepRecFiles('waveforms')\n");
-           sprintf(origpath,"%s/%s",curexpdir, "shapelib");
-           sprintf(destpath,"%s/%s",dest, "shapelib");
+           snprintf(origpath, sizeof(origpath), "%s/%s", curexpdir, "shapelib");
+           snprintf(destpath, sizeof(destpath), "%s/%s", dest, "shapelib");
 	   if(fileExist(origpath)) copyFiles(safecpPath, origpath, destpath);
         } else if(all && strcmp(name,"pulseSequence") == 0) {
 	   execString("prepRecFiles('pulseSequence')\n");
-           sprintf(origpath,"%s/%s",curexpdir, "psglib");
-           sprintf(destpath,"%s/%s",dest, "psglib");
+           snprintf(origpath, sizeof(origpath), "%s/%s", curexpdir, "psglib");
+           snprintf(destpath, sizeof(destpath), "%s/%s", dest, "psglib");
 	   if(fileExist(origpath)) copyFiles(safecpPath, origpath, destpath);
         } else if(processed && strcmp(name,"phasefile") == 0) {
-	   sprintf(origpath, "%s%s", curexpdir, "/datdir/phasefile");
-           sprintf(destpath, "%s%s", dest, "/datdir/phasefile");
+	   snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/datdir/phasefile");
+           snprintf(destpath, sizeof(destpath), "%s%s", dest, "/datdir/phasefile");
            if(fileExist(origpath)) copyFiles(safecpPath, origpath, destpath); 
         } else if(processed && strcmp(name,"data") == 0) {
-	   sprintf(origpath, "%s%s", curexpdir, "/datdir/data");
-           sprintf(destpath, "%s%s", dest, "/datdir/data");
+	   snprintf(origpath, sizeof(origpath), "%s%s", curexpdir, "/datdir/data");
+           snprintf(destpath, sizeof(destpath), "%s%s", dest, "/datdir/data");
            if(fileExist(origpath)) copyFiles(safecpPath, origpath, destpath); 
         } else if(processed && strcmp(name,"snapshot") == 0 && !Bnmr) {
            int sec = 0;
 	   string path1;
 	   FILE *fp = NULL;
-	   sprintf(destpath, "%s%s", dest, "/spec.jpeg");
+	   snprintf(destpath, sizeof(destpath), "%s%s", dest, "/spec.jpeg");
     	   if(fileExist(destpath)) unlink(destpath);
-           sprintf(cmd, "%s%s%s", "vnmrjcmd('GRAPHICS', 'cdump', '", dest, "/spec.', 'jpeg')\n");
+           snprintf(cmd, sizeof(cmd), "%s%s%s", "vnmrjcmd('GRAPHICS', 'cdump', '", dest, "/spec.', 'jpeg')\n");
            //Winfoprintf("Save snapshot file %s\n",cmd);
            execString(cmd);
-           strcpy(path1,dest);
-	   strcat(path1,"/spec.jpeg");
+           snprintf(path1, sizeof(path1), "%s", dest);
+	   strncat(path1, "/spec.jpeg", sizeof(path1) - strlen(path1) - 1);
            while(sec < 5 && !fileExist(path1)) {
             sleep(1);
             sec++;
@@ -5641,12 +5715,12 @@ int save_optFilesInParam(char* dest, char *param, char *type)
            if (fp)
               fclose(fp);
         } else if(all && strcmp(name,"usermaclib") == 0) {
-           sprintf(origpath,"%s/%s",curexpdir, "maclib");
-           sprintf(destpath,"%s/%s",dest, "maclib");
+           snprintf(origpath, sizeof(origpath), "%s/%s", curexpdir, "maclib");
+           snprintf(destpath, sizeof(destpath), "%s/%s", dest, "maclib");
 	   if(fileExist(origpath)) copyFiles(safecpPath, origpath, destpath);
         } else if(all && strcmp(name,"cmdHistory") == 0) {
 	   if(cmdHistoryFp != NULL) fflush(cmdHistoryFp);
-           sprintf(destpath, "%s%s", dest, "/cmdHistory");
+           snprintf(destpath, sizeof(destpath), "%s%s", dest, "/cmdHistory");
            if(fileExist(cmdHisFile)) copyFiles(safecpPath, cmdHisFile, destpath);
         }
     }
@@ -5671,7 +5745,7 @@ int getP11Dir(int argc, char *argv[], int retc, char *retv[])
    if(retc < 1) RETURN;
 
    string opt="user";
-   if(argc > 1) strcpy(opt,argv[1]);
+   if(argc > 1) snprintf(opt, sizeof(opt), "%s", argv[1]);
 
    if(strcmp(opt,"system") == 0) {
      retv[0] = newString(sysFDAdir); 
@@ -5681,7 +5755,7 @@ int getP11Dir(int argc, char *argv[], int retc, char *retv[])
 	retv[0] = newString(userPart11Dirs[0]); 
      else {
 	string str;
-	sprintf(str,"%s/data/%s",sysFDAdir,UserName);
+	snprintf(str, sizeof(str), "%s/data/%s", sysFDAdir, UserName);
 	retv[0] = newString(str); 
      }
    }
@@ -5706,8 +5780,8 @@ int p11datamirror(int argc, char *argv[], int retc, char *retv[])
    string safecpPath, dest, orig;
    if(argc < 3) RETURN;
    
-   strcpy(orig,argv[1]);
-   strcpy(dest,argv[2]);
+   snprintf(orig, sizeof(orig), "%s", argv[1]);
+   snprintf(dest, sizeof(dest), "%s", argv[2]);
    if(!fileExist(orig)) {
 	Winfoprintf("p11datamirror error: original path %s not exist.",orig);
 	ABORT;

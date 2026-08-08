@@ -110,7 +110,7 @@ const fdfInputEntry_t	fdfInput[] =
 		{ "float",  "orientation[]",	FDF_FLOATARRAY9 },
 		{ "int", 	"checksum", 		FDF_INT },
 		{ "char",	"appdirs",			FDF_CHARPTR	},
-		{ NULL, NULL, 0 }
+		{ '\0', '\0', 0 }
 };
 
 // Structure to hold FDF fields that have been converted to internal

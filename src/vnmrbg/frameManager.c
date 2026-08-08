@@ -363,7 +363,7 @@ void showText()
         if(strcasecmp(frames[i].displayType, "text") == 0 &&
           	frames[i].status == CLOSE) {
 	   frames[i].status = OPEN;
-          sprintf(cmd, "mfaction('displayText', '%s', %d, %d, %d, %d, %d,'%s',%d,'%s')\n",
+          snprintf(cmd, sizeof(cmd), "mfaction('displayText', '%s', %d, %d, %d, %d, %d,'%s',%d,'%s')\n",
            frames[i].displayCmd,
            i,
 	   frames[i].x,
@@ -491,7 +491,7 @@ fprintf(stderr, "addFrame %s %s %d %d %d %d %d\n", type, cmd, id, x, y, w, h);
    if(debug) printFrame(-1);
 
    if(strcmp(frames[id].displayType,"text") == 0) {
-        sprintf(str, "mfaction('displayText', '%s', %d, %d, %d, %d, %d,'%s',%d,'%s')\n",
+        snprintf(str, sizeof(str), "mfaction('displayText', '%s', %d, %d, %d, %d, %d,'%s',%d,'%s')\n",
            frames[id].displayCmd,
            id,
 	   frames[id].x,
@@ -880,7 +880,7 @@ int selectTextFrameByID(int id)
         retrievePars(currframe);	
     }
 
-    sprintf(cmd, "mfaction('updateText', '%s')\n", 
+    snprintf(cmd, sizeof(cmd), "mfaction('updateText', '%s')\n", 
 	   frames[id].displayCmd);
     execString(cmd);
     //redisplayFrame(id);
@@ -1273,7 +1273,7 @@ char *retv[];
 	}
 	frames[id].status = OPEN;
    	//jframeFunc("open", id, x0, y0, x1, y1);
-        sprintf(cmd, "mfaction('displayText', '%s', %d, %d, %d, %d, %d,'%s',%d,'%s')\n",
+        snprintf(cmd, sizeof(cmd), "mfaction('displayText', '%s', %d, %d, %d, %d, %d,'%s',%d,'%s')\n",
            frames[id].displayCmd,
            id,
 	   frames[id].x,
@@ -1377,7 +1377,7 @@ void updateFrameExp(int n)
 
      initZoomInfo(currframe);
 
-     sprintf(cmd, "mfaction('jexp',%d, %d)\n", n, currframe);
+     snprintf(cmd, sizeof(cmd), "mfaction('jexp',%d, %d)\n", n, currframe);
      execString(cmd);
 
      frames[currframe].expID = n;
@@ -1392,7 +1392,7 @@ void updateFrameRT(char *path)
 
      //if(currframe == 1) return; 
 
-     sprintf(cmd, "mfaction('rt','%s',%d, %d, %d)\n", path, currframe, 
+     snprintf(cmd, sizeof(cmd), "mfaction('rt','%s',%d, %d, %d)\n", path, currframe, 
 	frames[currframe].expID, frames[1].expID);
      execString(cmd);
 
@@ -1671,7 +1671,7 @@ static int showTextLayout(char *path)
 		strcpy(frames[id].textStyle, str);
 	   }
 //           jframeFunc("open", id, frames[id].x, frames[id].y, frames[id].w, frames[id].h);
-           sprintf(cmd, "mfaction('displayText', '%s', %d, %d, %d, %d, %d,'%s',%d,'%s')\n",
+           snprintf(cmd, sizeof(cmd), "mfaction('displayText', '%s', %d, %d, %d, %d, %d,'%s',%d,'%s')\n",
            frames[id].displayCmd,
            id,
 	   frames[id].x,

@@ -300,7 +300,7 @@ static int  inPrintMode = 0;  /* print screen  */
 static int  cmdLineOK = 1;  /* command line is enabled */
 static char escChar = '\033';
 static char *vjWinInfo = NULL;
-static char evalStr[ MAXPATH ];
+static char evalStr[ MAXPATH+16 ];
 static char showStr[ MAXPATH+16 ];
 static char tmpStr[ MAXPATH ];
 static char jexprDummyVar[ MAXPATH ] = "$VALUE";
@@ -406,8 +406,8 @@ catch_sigint()
 {
     struct sigaction	intserv;
     sigset_t		qmask;
-    void		gotInterupt();
-    extern void		send_hourglass_cursor();
+    void		gotInterupt(int sig);
+    extern void		send_hourglass_cursor(int sig);
  
     /* --- set up signal handler --- */
 
@@ -456,11 +456,11 @@ void setCancel(int doit, char *str)
    strcpy(cancelLabel,str);
 }
 
-void gotInterupt()
+void gotInterupt(int sig)
 {  if (working)
       if (interuption == 0)
       {  if (strlen(cancelLabel))
-            Werrprintf(cancelLabel);
+            Werrprintf("%s",cancelLabel);
          else
             Werrprintf("command canceled");
          if (doInteruption == 1)
@@ -488,7 +488,7 @@ void gotInterupt()
 static void get_vnmrj_addr(char *addr )
 {
    CommPort ptr = &vnmrj_comm_addr;
-   sprintf(addr, "%s %d %d", ptr->host,htons(ptr->port),ptr->pid);
+   sprintf(addr, "%.220s %d %d", ptr->host,htons(ptr->port),ptr->pid);
 }
 
 int get_vnmrj_port()
@@ -902,7 +902,7 @@ static void vnmr_argvec(int argc, char *argv[] )
 				break;
 		  case 'j':
 				vjWinInfo = (char *) malloc(strlen(argv[i]) + 2);
-			        sprintf(vjWinInfo, argv[i]);
+			        sprintf(vjWinInfo, "%s", argv[i]);
 				break;
 		  case 'K':     textWinHeight = atoi(p+1);
                                 break;
@@ -1477,7 +1477,7 @@ exec_message()
    int ret __attribute__((unused));
    int len;
    char *xstr;
-   extern void jNextPrev();
+   extern void jNextPrev(int cmd);
    acqProcBuf[acqProcBufPtr] = '\0';
    if (acqProcBufPtr <= 0)
        return;
@@ -1655,7 +1655,7 @@ Jexec_message()
    int len;
    int res;
    char *xstr;
-   extern void jNextPrev();
+   extern void jNextPrev(int cmd);
 
    static int xDrag = 0;
 
@@ -2002,7 +2002,7 @@ void readVSocket(int fd)
 |  Modified  for elimination of EOT.
 |				  2/08/91  Greg Brissey
 +-------------------------------------------------------------*/
-void AcqSocketIsRead(int (*reader)())
+void AcqSocketIsRead(int (*reader)(char *, int, int *))
 {  
    char tbuff[ACQMBUFSIZE];
    int  index,readchars,ovrrun;
@@ -2589,7 +2589,7 @@ static void jFindParamValue(char *param, char *paramb)
 void appendJvarlist(const char *name)
 {
 	int i,j=0,k,len;
-	char param[ MAXPATH ];
+	char param[ MAXPATH ] = {};
 	if (Jx_string == NULL)
 	  Jx_string = (char *)newStringId("    ","vjpnew");
 	len = strlen(name);
@@ -2610,7 +2610,7 @@ void appendJvarlist(const char *name)
 	  }
 	}
 	param[j] = '\0';
-        if (j > 0)
+   if (j > 0)
 	   addToJvarlist( param );
 }
 void releaseJvarlist()
@@ -3384,7 +3384,7 @@ static void jShowExpression(int exnum, char *express, char *format )
 		    }
 		    break;
 		  case T_STRING:
-		    { char mstr[MAXPATH];
+		    { char mstr[MAXPATH+8];
 		      /* if (info.size>1) {...} */
 		      strncpy(mstr, vinfo->R->v.s, MAXPATH);
 		      vnmrj_express_string(mstr);
@@ -3541,7 +3541,7 @@ static void jExecExpression(char *key, char *exnum, char *express, char *format 
 		      }
 		      break;
 		  case T_STRING:
-		      { char mstr[MAXPATH];
+		      { char mstr[MAXPATH+8];
 		      char tmpstr[MAXPATH];
 		      int i;
 		      Rval *p;
@@ -3593,7 +3593,7 @@ static void jExecExpression(char *key, char *exnum, char *express, char *format 
 		      }
 		      break;
 		  case T_STRING:
-		      { char mstr[MAXPATH];
+		      { char mstr[MAXPATH+8];
 		      if (vinfo->T.size>1)
                       {
                          sprintf(evalStr, "%s array", exnum);

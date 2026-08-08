@@ -12,7 +12,7 @@
 extern void insertAcqMsgEntry(char *acqmptr );
 extern void read_jcmd();
 extern void setCancel(int doit, char *str);
-extern void gotInterupt();
+extern void gotInterupt(int sig);
 extern int get_vnmrj_port();
 extern int get_vnmrj_socket();
 extern int init_vnmrj_comm(char *hostname, int port_num);
@@ -25,7 +25,7 @@ extern void long_event();
 extern void resetMasterSockets(); /* reset master sockets */
 extern void JSocketIsReadNew(char tbuff[], int readchars);
 extern void readVSocket(int fd);
-extern void AcqSocketIsRead(int (*reader)());
+extern void AcqSocketIsRead(int (*reader)(char *, int, int *));
 extern void insertAcqMsgEntry(char *acqmptr );
 extern void setVjGUiPort(int on);
 extern void setVjUiPort(int on);

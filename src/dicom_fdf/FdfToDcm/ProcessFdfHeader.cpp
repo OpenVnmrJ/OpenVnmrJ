@@ -52,6 +52,12 @@ int ProcessFdfHeader(FILE *fd, 	fdfEntries_t *fdfValues)
 	char		fieldName[PATH_MAX];
 	char		fieldValue[PATH_MAX];
 
+	if(fd == NULL)
+	{
+		fprintf(stderr, "ProcessFdfHeader: NULL file pointer passed in\n");
+		return(-1);
+	}
+	
 	// Read each field out of the FDF file and convert them to the appropriate
 	// DICOM tag and add to the list of tags that will be written to the converted
 	// file by the caller.

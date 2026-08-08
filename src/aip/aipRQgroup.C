@@ -352,10 +352,13 @@ RQgroup::makeChildren(const char *path)
       while (fgets(buf,sizeof(buf),fp)) {
         if(strlen(buf) > 1 && buf[0] != '#') {
            if(buf[0] != '/') {
-              sprintf(str, "%s/",path);
-	      strncat(str,buf,strlen(buf)-1);
+              snprintf(str, sizeof(str), "%s/",path);
+	      strncat(str,buf,sizeof(str) - strlen(str) - 1);
            } else {
-	      strncpy(str,buf,strlen(buf)-1);
+	      size_t take = strlen(buf);
+	      if (take > 0) take--;
+	      if (take >= sizeof(str)) take = sizeof(str) - 1;
+	      snprintf(str, sizeof(str), "%.*s", (int)take, buf);
 	   }
 
            found = strstr(str, ".fdf");
