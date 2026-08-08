@@ -36,7 +36,9 @@
 #include <fcntl.h>
 #include "mfileObj.h"
 #include "data.h"
+#ifdef VNMR_GPL
 #include <gsl/gsl_linalg.h>
+#endif
 #include "group.h"
 #include "tools.h"
 #include "vnmrsys.h"
@@ -58,6 +60,9 @@
 #define ERROR		1
 
 extern void Vperror(char *);
+#ifndef VNMR_GPL
+extern void gaussj(double **a, int n, double **b, int m);
+#endif 
 
 static  MFILE_ID pcmap_md = NULL;
 static  int explicit_open = FALSE;
@@ -773,12 +778,19 @@ int polyfit(double *input, int npts, double *output, int order)
 	   double sx2y = 0.0;
 	   double sx3=0.0;
 	   double x2;
+#ifdef VNMR_GPL
 	   double a_data[9];
 	   gsl_matrix_view A;
 	   gsl_vector_view bv;
 	   gsl_vector *xv;
 	   gsl_permutation *perm;
 	   int signum;
+#else   
+	   double a[3][3];	
+	   double b[3][1];
+	   double **aa, **bb;
+	   double a_data[9];
+#endif
 
 	   for (i=center-width;i<center+width;i++)
 	   {
@@ -793,6 +805,7 @@ int polyfit(double *input, int npts, double *output, int order)
 	       sx2y += x2*y;
 	       sx4 += x2*x2;
 	   }
+#ifdef VNMR_GPL
 	   /* set up 3x3 normal-equation system for GSL LU solve */
 	   a_data[0]=(double)nfit; a_data[1]=sx;  a_data[2]=ssx;
 	   a_data[3]=sx;           a_data[4]=ssx; a_data[5]=sx3;
@@ -814,6 +827,34 @@ int polyfit(double *input, int npts, double *output, int order)
 
 	   gsl_permutation_free(perm);
 	   gsl_vector_free(xv);
+#else
+	   /* set up pointers to pointers for NR routine */
+	  aa=(double **)malloc(3*sizeof(double*));
+	  bb=(double **)malloc(3*sizeof(double*));
+	  for (i=0;i<3;i++)
+	  {
+	      aa[i]=&(a[i][0])-1;
+	      bb[i]=&(b[i][0])-1;
+	  }
+	  /* fill in the matrices */
+	  a[0][0]=(double)nfit;
+	  a[0][1]=sx;
+	  a[0][2]=ssx;
+	  a[1][0]=sx;
+	  a[1][1]=ssx;
+	  a[1][2]=sx3;
+	  a[2][0]=ssx;
+	  a[2][1]=sx3;
+	  a[2][2]=sx4;
+	  b[0][0]=sy;
+	  b[1][0]=sxy;
+	  b[2][0]=sx2y;
+
+	  /* fire it up !*/
+	  (void)gaussj(aa-1, 3, bb-1,1);
+	  /* bb has the coefficients */
+	  b0=b[0][0]; b1=b[1][0]; b11=b[2][0];
+#endif
        	   /* generate evaluation */
 	   for(i=0;i<npts;i++)
 	   {
