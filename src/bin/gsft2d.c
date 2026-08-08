@@ -17,7 +17,7 @@
 	    output: filename.{1,A,B}.ri  - FT'ed multislice data
 
             gaussian filter applied
-            
+
 
 *****************************************************************************/
 
@@ -25,9 +25,14 @@
 #include        <stdlib.h>
 #include        <string.h>
 #include	<math.h>
+#include	"util.h"
+
+#ifdef VNMR_GPL
+#include	<fftw3.h>
+#else
 #include	"nrutil.h"
 #include	"nr.h"
-#include	"util.h"
+#endif
 
 
 /* indexing macro */
@@ -43,6 +48,130 @@
 /* I/O string */
 char		s[80];
 
+/* determine x/y gaussian filter step sizes; exits on illegal resolution */
+static void gauss_steps2d(char *prog, int xres, int yres,
+                           int *xstep, int *ystep)
+{
+    if (yres == 32) *ystep = 8;
+    else if (yres == 64) *ystep = 4;
+    else if (yres == 128) *ystep = 2;
+    else exitm(strcat(prog, ": Illegal size (phase)"));
+
+    if (xres == 32) *xstep = 8;
+    else if (xres == 64) *xstep = 4;
+    else if (xres == 128) *xstep = 2;
+    else exitm(strcat(prog, ": Illegal size (read)"));
+}
+
+/* reorder MSLICE-compressed raw data into standard cmapindex layout */
+static void mslice_reorder(float *raw, float *fraw, int zres, int yres, int xres)
+{
+    int y, z, i;
+    size_t linebytes = (size_t)xres * 2 * sizeof(float);
+    for (z = 0; z < zres; z++)
+      for (y = 0; y < yres; y++)
+      {
+        i = ((y*zres*xres)+(z*xres))*2;
+        memcpy(&fraw[cmapindex(z,y,0)], &raw[i], linebytes);
+      }
+}
+
+/* apply gaussian filter (2D) and phase alternation in place;
+   gfilter=0 skips the gf[] weighting but still phase-alternates */
+static void gauss_filter_2d(float *fraw, float *gf, int zres, int yres, int xres,
+                             int ystep, int xstep, int gfilter)
+{
+    int x, y, z, xi, yi;
+    for (z = 0; z < zres; z++)
+      for (y = 0, yi = 0; y < yres; y++, yi += ystep)
+        for (x = 0, xi = 0; x < xres; x++, xi += xstep)
+        {
+          float wgt  = gfilter ? gf[yi]*gf[xi] : 1.0f;
+          float sign = (float)(1 - 2*((y+x)%2));
+          fraw[cmapindex(z,y,x)]   = sign*wgt*fraw[cmapindex(z,y,x)];
+          fraw[cmapindex(z,y,x)+1] = sign*wgt*fraw[cmapindex(z,y,x)+1];
+        }
+}
+
+/* dc correction on all slices after 2D FFT */
+static void dc_correct_2d(float *fraw, int zres, int yres, int xres, float scale)
+{
+    int x, y, z;
+    for (z = 0; z < zres; z++)
+      for (y = 0; y < yres; y++)
+        for (x = 0; x < xres; x++)
+        {
+          float sign = (float)(1.0 - 2.0*((y+x)%2));
+          fraw[cmapindex(z,y,x)]   *= sign*scale;
+          fraw[cmapindex(z,y,x)+1] *= sign*scale;
+        }
+}
+
+/* swap pe2 (y) dimension after FFT into destination buffer. */
+static void pe2_swap(float *fraw, float *buf, int zres, int yres, int xres)
+{
+    int y, z, i;
+    size_t linebytes = (size_t)xres * 2 * sizeof(float);
+    for (z = 0; z < zres; z++)
+      for (y = 0; y < yres; y++)
+      {
+        i = ((z*yres*xres)+((yres-1-y)*xres))*2;
+        memcpy(&buf[cmapindex(z,y,0)], &fraw[i], linebytes);
+      }
+}
+
+#ifdef VNMR_GPL
+static fftwf_plan g_fft2d_batch_plan;
+#else
+static int	*g_mapsize;
+static float	*g_ftbuf;
+#endif
+
+static void fft2d_setup(float *fraw, int zres, int yres, int xres, int imgsize)
+{
+#ifdef VNMR_GPL
+    int n[2] = { yres, xres };
+    g_fft2d_batch_plan = fftwf_plan_many_dft(
+            2, n, zres,
+            (fftwf_complex *)fraw, NULL, 1, imgsize,
+            (fftwf_complex *)fraw, NULL, 1, imgsize,
+            FFTW_FORWARD, FFTW_ESTIMATE);
+#else
+    g_mapsize = ivector(1,2);
+    g_mapsize[2] = xres;
+    g_mapsize[1] = yres;
+    g_ftbuf = vector(0,2*imgsize);
+#endif
+}
+
+/* transforms all zres slices of fraw in place */
+static void do_2d_fft(float *fraw, int zres, int imgsize)
+{
+#ifdef VNMR_GPL
+    fftwf_execute_dft(g_fft2d_batch_plan,
+            (fftwf_complex *)fraw, (fftwf_complex *)fraw);
+#else
+    int z, i, ptr;
+    for (z = 0; z < zres; z++)
+    {
+        ptr = z*imgsize*2;
+        for (i = 0; i < imgsize*2; i++) g_ftbuf[i] = fraw[ptr+i];
+        fourn(g_ftbuf-1, g_mapsize, 2, -1);
+        for (i = 0; i < imgsize*2; i++) fraw[ptr+i] = g_ftbuf[i];
+    }
+#endif
+}
+
+static void fft2d_teardown(void)
+{
+#ifdef VNMR_GPL
+    fftwf_destroy_plan(g_fft2d_batch_plan);
+#else
+    free_ivector(g_mapsize,1,2);
+    free_vector(g_ftbuf,0,2*0);
+#endif
+}
+
 int main(int argc, char *argv[])
 {
     FILE	*rawfile,			/* raw data */
@@ -55,12 +184,10 @@ int main(int argc, char *argv[])
     int		xres,yres,zres;			/* map dimensions */
     float	xfov,yfov,zfov;
     float	delay,threshold, thresh;
-    int		*mapsize;			/* NR vector of dimensions */
     int		totalmapsize;			/* product of dimensions */
 
     float	*raw,*raw2,*raw3,*buf;		/* raw data */
     float	*fraw,*fraw2,*fraw3;		/* floated raw data */
-    float	*ftbuf,*ftbuf2,*ftbuf3;		/* ft buffer */
     int		args;				/* argument cntr */
 
     int		x,y,z,echo,block,i,ptr;		/* loop counters */
@@ -82,9 +209,6 @@ int main(int argc, char *argv[])
 
     /* check command string */
     checkargs(argv[0],argc,"rootfilename");
-
-     
-    mapsize = ivector(1,2); /* allocate space for mapsize (NR)vector */
 
      /* process arguments */
 
@@ -129,8 +253,6 @@ int main(int argc, char *argv[])
     sscanf(s,"%d",&slices);    
      /* calculate array size */
 
-    mapsize[2] = xres;  /* read */
-    mapsize[1] = yres;  /* pe */
     if(zres <= 1)
       zres = slices; 
     totalmapsize = zres*yres*xres;  /* r,p,s */
@@ -144,118 +266,41 @@ int main(int argc, char *argv[])
     raw2 = (float *) calloc((unsigned)(2*totalmapsize),sizeof(float));
     raw3 = (float *) calloc((unsigned)(2*totalmapsize),sizeof(float));
     
-    fraw = (float *) calloc((unsigned)(2*totalmapsize),sizeof(float));
+#ifdef VNMR_GPL
+    fraw  = (float *) fftwf_malloc(sizeof(float) * 2*totalmapsize);
+    fraw2 = (float *) fftwf_malloc(sizeof(float) * 2*totalmapsize);
+    fraw3 = (float *) fftwf_malloc(sizeof(float) * 2*totalmapsize);
+#else
+    fraw  = (float *) calloc((unsigned)(2*totalmapsize),sizeof(float));
     fraw2 = (float *) calloc((unsigned)(2*totalmapsize),sizeof(float));
     fraw3 = (float *) calloc((unsigned)(2*totalmapsize),sizeof(float));
+#endif
     buf = (float *) calloc((unsigned)(2*totalmapsize),sizeof(float));
-    
-    ftbuf = vector(0,2*imgsize);
-    ftbuf2 = vector(0,2*imgsize);
-    ftbuf3 = vector(0,2*imgsize);
+
+    fft2d_setup(fraw, zres, yres, xres, imgsize);
     
     /* process echo #1 */
     /* read in binary data */
     if ( fread(raw,sizeof(float), 2*totalmapsize, rawfile) != 2*totalmapsize )
 	exitm(strcat(argv[0],": map file read error"));
-	
+
     /* mslice data compressed, convert to standard format */
-    if(MSLICE)
-    {
-      for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-            {
-              i = ((y*zres*xres)+(z*xres)+x)*2;
-	      fraw[cmapindex(z,y,x)] = raw[i];
-	      fraw[cmapindex(z,y,x)+1] = raw[i+1];
-	    }     
-    }   
-	
+    mslice_reorder(raw, fraw, zres, yres, xres);
+
     /* check file size and apply gaussian filter */
-    /* gauss.h contains a 256 point, gaussian array, _step is resolution */ 
+    /* gauss.h contains a 256 point, gaussian array, _step is resolution */
+    gauss_steps2d(argv[0], xres, yres, &xstep, &ystep);
+    gauss_filter_2d(fraw, gf, zres, yres, xres, ystep, xstep, gfilter);
 
-    if (yres == 32)
-    	ystep = 8;
-    else if (yres == 64)
-            ystep = 4;
-    else if (yres == 128)
-        ystep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (phase)"));
-    if (xres == 32)
-    	xstep = 8;
-    else if (xres == 64)
-            xstep = 4;
-    else if (xres == 128)
-        xstep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (read)"));
+    /* 2D FFT on all slices */
+    do_2d_fft(fraw, zres, imgsize);
 
-    zs = 0; ys = 0; xs = 0;		/* starting point of filter array */    	
-    
-    /* apply gaussian filter and phase alternate and convert to float*/
-    if (gfilter) 
-    { 
-      for ( z=0,zi=zs ; z<zres ; z++, zi=zi+zstep ) 	
-	for ( y=0,yi=ys ; y<yres ; y++, yi=yi+ystep  )
-	{
-	    for ( x=0,xi=xs ; x<xres ; x++, xi=xi+xstep )
-	    {
-	        /****
-	        printf("z=%6.4f, y=%6.4f, x=%6.4f\n",gf[zi],gf[yi],gf[xi]);
-	        printf("zi=%d,zs=%d,yi=%d,ys=%d,xi=%d,xs=%d\n",zi,zs,yi,ys,xi,xs);
-	        printf("zstep=%d,ystep=%d,xstep=%d\n",zstep,ystep,xstep);
-	        ***/
-		fraw[cmapindex(z,y,x)] = 
-		    (1-2*((y+x)%2))*gf[yi]*gf[xi]*(fraw[cmapindex(z,y,x)]);
-		fraw[cmapindex(z,y,x)+1] = 
-		    (1-2*((y+x)%2))*gf[yi]*gf[xi]*(fraw[cmapindex(z,y,x)+1]);
-	    }
-	}
-    }
-    else 
-    {
-      /* alternate phase and float */
-      for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-	    {
-		fraw[cmapindex(z,y,x)] = 
-		    (1-2*((y+x)%2))*fraw[cmapindex(z,y,x)];
-		fraw[cmapindex(z,y,x)+1] = 
-		    (1-2*((y+x)%2))*fraw[cmapindex(z,y,x)+1];
-	    }
-    }	    
+    /* dc correction */
+    dc_correct_2d(fraw, zres, yres, xres, scale);
 
-    for ( z=0 ; z<zres ; z++ )
-    {
-        ptr = z*imgsize*2; /* pointer to next slice */
-        for(i=0; i<imgsize*2; i++)
-          ftbuf[i] = fraw[ptr+i];  
-        fourn(ftbuf-1, mapsize, 2, -1);  /* 2D FFT on each slice*/
-        for(i=0; i<imgsize*2; i++)
-          fraw[ptr+i] = ftbuf[i];        
-        /* dc correction */    
-	for ( y=0 ; y<yres ; y++ )
-	{
-	    for ( x=0 ; x<xres ; x++ )
-	    {
-		fraw[cmapindex(z,y,x)] *= (1.0-2.0*((y+x)%2))*scale;
-		fraw[cmapindex(z,y,x)+1] *= (1.0-2.0*((y+x)%2))*scale;			
-	    }
-	}
-    }
     /* swap pe2 dimension */
+    pe2_swap(fraw, buf, zres, yres, xres);
 
-       for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-            {
-              i = ((z*yres*xres)+((yres-1-y)*xres)+x)*2;
-	      buf[cmapindex(z,y,x)] = fraw[i];
-	      buf[cmapindex(z,y,x)+1] = fraw[i+1];
-	    }    
-                  
     /* write out the FT'ed complex data */
     fwrite(buf,sizeof(float),2*totalmapsize,phasefile);
 
@@ -263,104 +308,15 @@ int main(int argc, char *argv[])
     /* read in binary data */
     if ( fread(raw2,sizeof(float), 2*totalmapsize, rawfile2) != 2*totalmapsize )
 	exitm(strcat(argv[0],": map file read error"));
-	
-    /* mslice data compressed, convert to standard format */
-    if(MSLICE)
-    {
-      for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-            {
-              i = ((y*zres*xres)+(z*xres)+x)*2;
-	      fraw2[cmapindex(z,y,x)] = raw2[i];
-	      fraw2[cmapindex(z,y,x)+1] = raw2[i+1];
-	    }     
-    }   
-	
-    /* check file size and apply gaussian filter */
-    /* gauss.h contains a 256 point, gaussian array, _step is resolution */ 
 
-    if (yres == 32)
-    	ystep = 8;
-    else if (yres == 64)
-            ystep = 4;
-    else if (yres == 128)
-        ystep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (phase)"));
-    if (xres == 32)
-    	xstep = 8;
-    else if (xres == 64)
-            xstep = 4;
-    else if (xres == 128)
-        xstep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (read)"));
+    mslice_reorder(raw2, fraw2, zres, yres, xres);
+    gauss_steps2d(argv[0], xres, yres, &xstep, &ystep);
+    gauss_filter_2d(fraw2, gf, zres, yres, xres, ystep, xstep, gfilter);
 
-    zs = 0; ys = 0; xs = 0;		/* starting point of filter array */    	
-    
-    /* apply gaussian filter and phase alternate and convert to float*/
-    if (gfilter) 
-    { 
-      for ( z=0,zi=zs ; z<zres ; z++, zi=zi+zstep ) 	
-	for ( y=0,yi=ys ; y<yres ; y++, yi=yi+ystep  )
-	{
-	    for ( x=0,xi=xs ; x<xres ; x++, xi=xi+xstep )
-	    {
-	        /****
-	        printf("z=%6.4f, y=%6.4f, x=%6.4f\n",gf[zi],gf[yi],gf[xi]);
-	        printf("zi=%d,zs=%d,yi=%d,ys=%d,xi=%d,xs=%d\n",zi,zs,yi,ys,xi,xs);
-	        printf("zstep=%d,ystep=%d,xstep=%d\n",zstep,ystep,xstep);
-	        ***/
-		fraw2[cmapindex(z,y,x)] = 
-		    (1-2*((y+x)%2))*gf[yi]*gf[xi]*(fraw2[cmapindex(z,y,x)]);
-		fraw2[cmapindex(z,y,x)+1] = 
-		    (1-2*((y+x)%2))*gf[yi]*gf[xi]*(fraw2[cmapindex(z,y,x)+1]);
-	    }
-	}
-    }
-    else 
-    {
-      /* alternate phase and float */
-      for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-	    {
-		fraw2[cmapindex(z,y,x)] = 
-		    (1-2*((y+x)%2))*fraw2[cmapindex(z,y,x)];
-		fraw2[cmapindex(z,y,x)+1] = 
-		    (1-2*((y+x)%2))*fraw2[cmapindex(z,y,x)+1];
-	    }
-    }	    
+    do_2d_fft(fraw2, zres, imgsize);
+    dc_correct_2d(fraw2, zres, yres, xres, scale);
+    pe2_swap(fraw2, buf, zres, yres, xres);
 
-    for ( z=0 ; z<zres ; z++ )
-    {
-        ptr = z*imgsize*2; /* pointer to next slice */
-        for(i=0; i<imgsize*2; i++)
-          ftbuf2[i] = fraw2[ptr+i];  
-        fourn(ftbuf2-1, mapsize, 2, -1);  /* 2D FFT on each slice*/
-        for(i=0; i<imgsize*2; i++)
-          fraw2[ptr+i] = ftbuf2[i];        
-        /* dc correction */    
-	for ( y=0 ; y<yres ; y++ )
-	{
-	    for ( x=0 ; x<xres ; x++ )
-	    {
-		fraw2[cmapindex(z,y,x)] *= (1.0-2.0*((y+x)%2))*scale;
-		fraw2[cmapindex(z,y,x)+1] *= (1.0-2.0*((y+x)%2))*scale;			
-	    }
-	}
-    }
-
-       for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-            {
-              i = ((z*yres*xres)+((yres-1-y)*xres)+x)*2;
-	      buf[cmapindex(z,y,x)] = fraw2[i];
-	      buf[cmapindex(z,y,x)+1] = fraw2[i+1];
-	    }    
-	                     
     /* write out the FT'ed complex data */
     fwrite(buf,sizeof(float),2*totalmapsize,phasefile2);
 
@@ -368,106 +324,27 @@ int main(int argc, char *argv[])
     /* read in binary data */
     if ( fread(raw3,sizeof(float), 2*totalmapsize, rawfile3) != 2*totalmapsize )
 	exitm(strcat(argv[0],": map file read error"));
-	
-    /* mslice data compressed, convert to standard format */
-    if(MSLICE)
-    {
-      for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-            {
-              i = ((y*zres*xres)+(z*xres)+x)*2;
-	      fraw3[cmapindex(z,y,x)] = raw3[i];
-	      fraw3[cmapindex(z,y,x)+1] = raw3[i+1];
-	    }     
-    }   
-	
-    /* check file size and apply gaussian filter */
-    /* gauss.h contains a 256 point, gaussian array, _step is resolution */ 
 
-    if (yres == 32)
-    	ystep = 8;
-    else if (yres == 64)
-            ystep = 4;
-    else if (yres == 128)
-        ystep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (phase)"));
-    if (xres == 32)
-    	xstep = 8;
-    else if (xres == 64)
-            xstep = 4;
-    else if (xres == 128)
-        xstep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (read)"));
+    mslice_reorder(raw3, fraw3, zres, yres, xres);
+    gauss_steps2d(argv[0], xres, yres, &xstep, &ystep);
+    gauss_filter_2d(fraw3, gf, zres, yres, xres, ystep, xstep, gfilter);
 
-    zs = 0; ys = 0; xs = 0;		/* starting point of filter array */    	
-    
-    /* apply gaussian filter and phase alternate and convert to float*/
-    if (gfilter) 
-    { 
-      for ( z=0,zi=zs ; z<zres ; z++, zi=zi+zstep ) 	
-	for ( y=0,yi=ys ; y<yres ; y++, yi=yi+ystep  )
-	{
-	    for ( x=0,xi=xs ; x<xres ; x++, xi=xi+xstep )
-	    {
-	        /****
-	        printf("z=%6.4f, y=%6.4f, x=%6.4f\n",gf[zi],gf[yi],gf[xi]);
-	        printf("zi=%d,zs=%d,yi=%d,ys=%d,xi=%d,xs=%d\n",zi,zs,yi,ys,xi,xs);
-	        printf("zstep=%d,ystep=%d,xstep=%d\n",zstep,ystep,xstep);
-	        ***/
-		fraw3[cmapindex(z,y,x)] = 
-		    (1-2*((y+x)%2))*gf[yi]*gf[xi]*(fraw3[cmapindex(z,y,x)]);
-		fraw3[cmapindex(z,y,x)+1] = 
-		    (1-2*((y+x)%2))*gf[yi]*gf[xi]*(fraw3[cmapindex(z,y,x)+1]);
-	    }
-	}
-    }
-    else 
-    {
-      /* alternate phase and float */
-      for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-	    {
-		fraw3[cmapindex(z,y,x)] = 
-		    (1-2*((y+x)%2))*fraw3[cmapindex(z,y,x)];
-		fraw3[cmapindex(z,y,x)+1] = 
-		    (1-2*((y+x)%2))*fraw3[cmapindex(z,y,x)+1];
-	    }
-    }	    
+    do_2d_fft(fraw3, zres, imgsize);
+    dc_correct_2d(fraw3, zres, yres, xres, scale);
+    pe2_swap(fraw3, buf, zres, yres, xres);
 
-    for ( z=0 ; z<zres ; z++ )
-    {
-        ptr = z*imgsize*2; /* pointer to next slice */
-        for(i=0; i<imgsize*2; i++)
-          ftbuf3[i] = fraw3[ptr+i];  
-        fourn(ftbuf3-1, mapsize, 2, -1);  /* 2D FFT on each slice*/
-        for(i=0; i<imgsize*2; i++)
-          fraw3[ptr+i] = ftbuf3[i];        
-        /* dc correction */    
-	for ( y=0 ; y<yres ; y++ )
-	{
-	    for ( x=0 ; x<xres ; x++ )
-	    {
-		fraw3[cmapindex(z,y,x)] *= (1.0-2.0*((y+x)%2))*scale;
-		fraw3[cmapindex(z,y,x)+1] *= (1.0-2.0*((y+x)%2))*scale;			
-	    }
-	}
-    }
-       for ( z=0 ; z<zres ; z++ )
-	for ( y=0 ; y<yres ; y++ )
-	    for ( x=0 ; x<xres ; x++ )
-            {
-              i = ((z*yres*xres)+((yres-1-y)*xres)+x)*2;
-	      buf[cmapindex(z,y,x)] = fraw3[i];
-	      buf[cmapindex(z,y,x)+1] = fraw3[i+1];
-	    }    
-	                     
     /* write out the FT'ed complex data */
     fwrite(buf,sizeof(float),2*totalmapsize,phasefile3);
-        
+
+    fft2d_teardown();
+#ifdef VNMR_GPL
+    fftwf_free(fraw); fftwf_free(fraw2); fftwf_free(fraw3);
+#else
+    free(fraw); free(fraw2); free(fraw3);
+#endif
+    free(raw); free(raw2); free(raw3); free(buf);
+
+    return 0;
 }
 
 /******************************************************************************

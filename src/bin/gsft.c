@@ -31,9 +31,14 @@
 #include        <stdlib.h>
 #include        <string.h>
 #include	<math.h>
+#include	"util.h"
+
+#ifdef VNMR_GPL
+#include	<fftw3.h>
+#else
 #include	"nrutil.h"
 #include	"nr.h"
-#include	"util.h"
+#endif
 
 
 /* indexing macro */
@@ -46,6 +51,83 @@
 
 /* I/O string */
 char		s[80];
+
+/* determine x/y/z gaussian filter step sizes; exits on illegal resolution */
+static void gauss_steps3d(char *prog, int xres0, int yres0, int zres0,
+                           int *xstep, int *ystep, int *zstep)
+{
+    if (zres0 == 32) *zstep = 8;
+    else if (zres0 == 64) *zstep = 4;
+    else if (zres0 == 128) *zstep = 2;
+    else exitm(strcat(prog, ": Illegal size (slice)"));
+
+    if (yres0 == 32) *ystep = 8;
+    else if (yres0 == 64) *ystep = 4;
+    else if (yres0 == 128) *ystep = 2;
+    else exitm(strcat(prog, ": Illegal size (phase)"));
+
+    if (xres0 == 32) *xstep = 8;
+    else if (xres0 == 64) *xstep = 4;
+    else if (xres0 == 128) *xstep = 2;
+    else exitm(strcat(prog, ": Illegal size (read)"));
+}
+
+/* apply gaussian filter (3D) and phase alternation, raw -> graw;
+   gfilter=0 skips the gf[] weighting but still phase-alternates */
+static void gauss_filter_3d(float *raw, float *graw, float *gf,
+                             int zres0, int yres0, int xres0,
+                             int zstep, int ystep, int xstep, int gfilter)
+{
+    int x, y, z, xi, yi, zi;
+    for (z = 0, zi = 0; z < zres0; z++, zi += zstep)
+      for (y = 0, yi = 0; y < yres0; y++, yi += ystep)
+        for (x = 0, xi = 0; x < xres0; x++, xi += xstep)
+        {
+          float wgt  = gfilter ? gf[zi]*gf[yi]*gf[xi] : 1.0f;
+          float sign = (float)(1 - 2*((z+y+x)%2));
+          graw[mapindex(z,y,x)]   = sign*wgt*raw[mapindex(z,y,x)];
+          graw[mapindex(z,y,x)+1] = sign*wgt*raw[mapindex(z,y,x)+1];
+        }
+}
+
+#ifdef VNMR_GPL
+static fftwf_plan g_fft3d_plan;
+#else
+static int	*g_mapsize;
+#endif
+
+static void fft3d_setup(float *fraw, int zres, int yres, int xres)
+{
+#ifdef VNMR_GPL
+    g_fft3d_plan = fftwf_plan_dft_3d(zres, yres, xres,
+                    (fftwf_complex *)fraw, (fftwf_complex *)fraw,
+                    FFTW_FORWARD, FFTW_ESTIMATE);
+#else
+    g_mapsize = ivector(1,3);
+    g_mapsize[3] = xres;
+    g_mapsize[2] = yres;
+    g_mapsize[1] = zres;
+#endif
+}
+
+static void do_3d_fft(float *fraw)
+{
+#ifdef VNMR_GPL
+    fftwf_execute_dft(g_fft3d_plan,
+            (fftwf_complex *)fraw, (fftwf_complex *)fraw);
+#else
+    fourn(fraw-1, g_mapsize, 3, -1);
+#endif
+}
+
+static void fft3d_teardown(void)
+{
+#ifdef VNMR_GPL
+    fftwf_destroy_plan(g_fft3d_plan);
+#else
+    free_ivector(g_mapsize,1,3);
+#endif
+}
 
 int main(int argc, char *argv[])
 {
@@ -63,7 +145,6 @@ int main(int argc, char *argv[])
     int		zf;				/* zerofill, size, factor */
     float	xfov,yfov,zfov;
     float	delay,threshold, thresh;
-    int		*mapsize;			/* NR vector of dimensions */
     int		totalmapsize;			/* product of dimensions */
     int		totalmapsize0;			/* product of dimensions, raw data */
 
@@ -94,10 +175,6 @@ int main(int argc, char *argv[])
     /* check command string */
     checkargs(argv[0],argc,"rootfilename");
 
-     /* allocate space for mapsize vector (NR vector) */
-
-    mapsize = ivector(1,3);
-
      /* process arguments */
 
     args = 1;
@@ -124,9 +201,6 @@ int main(int argc, char *argv[])
      
     efgets(s,80,paramsfile);
     sscanf(s,"%d %d %d %d",&xres,&yres,&zres,&zf);  /* zf=1 default */
-    mapsize[3] = xres;    /* size refers to final output size after zerofill */
-    mapsize[2] = yres;
-    mapsize[1] = zres;
     if(zf == 1) {
       xres0 = xres;
       yres0 = yres;
@@ -158,13 +232,21 @@ int main(int argc, char *argv[])
      /* allocate space for raw, phase, and magnitude arrays */
 
     raw = (float *) calloc((unsigned)(2*totalmapsize0),sizeof(float));
+#ifdef VNMR_GPL
+    graw = (float *) calloc((unsigned)(2*totalmapsize0),sizeof(float));
+    fraw = (float *) fftwf_malloc(sizeof(float) * 2*totalmapsize);
+#else
     graw = vector(0,2*totalmapsize0);
     fraw = vector(0,2*totalmapsize);
-    freconphase = vector(0,totalmapsize);
-    freconphase2 = vector(0,totalmapsize);
-    field = vector(0,totalmapsize);
-    freconmag = vector(0,totalmapsize);
-    freconmag2 = vector(0,totalmapsize);
+#endif
+    freconphase  = (float *) calloc((unsigned)totalmapsize,sizeof(float));
+    freconphase2 = (float *) calloc((unsigned)totalmapsize,sizeof(float));
+    field        = (float *) calloc((unsigned)totalmapsize,sizeof(float));
+    freconmag    = (float *) calloc((unsigned)totalmapsize,sizeof(float));
+    freconmag2   = (float *) calloc((unsigned)totalmapsize,sizeof(float));
+
+    fft3d_setup(fraw, zres, yres, xres);
+
      /* process the first echo */
 
     /* read in */
@@ -172,67 +254,13 @@ int main(int argc, char *argv[])
 	exitm(strcat(argv[0],": map file read error"));
 
     /* check file size and apply gaussian filter */
-    /* gauss.h contains a 256 point, gaussian array, _step is resolution */ 
+    /* gauss.h contains a 256 point, gaussian array, _step is resolution */
+    gauss_steps3d(argv[0], xres0, yres0, zres0, &xstep, &ystep, &zstep);
+    gauss_filter_3d(raw, graw, gf, zres0, yres0, xres0,
+                     zstep, ystep, xstep, gfilter);
 
-     
-    if (zres0 == 32) 
-    	zstep = 8;
-    else if (zres0 == 64)
-        zstep = 4;
-    else if (zres0 == 128)
-        zstep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (slice)"));
-    if (yres0 == 32)
-    	ystep = 8;
-    else if (yres0 == 64)
-            ystep = 4;
-    else if (yres0 == 128)
-        ystep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (phase)"));
-    if (xres0 == 32)
-    	xstep = 8;
-    else if (xres0 == 64)
-            xstep = 4;
-    else if (xres0 == 128)
-        xstep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (read)"));
-
-    zs = 0; ys = 0; xs = 0;		/* starting point of filter array */    	
-    
-    /* apply gaussian filter and phase alternate and convert to float*/
-    if (gfilter) 
-    { 
-      for ( z=0,zi=zs ; z<zres0 ; z++, zi=zi+zstep ) 	
-	for ( y=0,yi=ys ; y<yres0 ; y++, yi=yi+ystep  )
-	{
-	    for ( x=0,xi=xs ; x<xres0 ; x++, xi=xi+xstep )
-	    {
-		graw[mapindex(z,y,x)] = 
-		    (1-2*((z+y+x)%2))*gf[zi]*gf[yi]*gf[xi]*(raw[mapindex(z,y,x)]);
-		graw[mapindex(z,y,x)+1] = 
-		    (1-2*((z+y+x)%2))*gf[zi]*gf[yi]*gf[xi]*(raw[mapindex(z,y,x)+1]);
-	    }
-	}
-    }
-    else 
-    {
-      /* alternate phase and float */
-      for ( z=0 ; z<zres0 ; z++ )
-	for ( y=0 ; y<yres0 ; y++ )
-	    for ( x=0 ; x<xres0 ; x++ )
-	    {
-		graw[mapindex(z,y,x)] = 
-		    (1-2*((z+y+x)%2))*raw[mapindex(z,y,x)];
-		graw[mapindex(z,y,x)+1] = 
-		    (1-2*((z+y+x)%2))*raw[mapindex(z,y,x)+1];
-	    }
-    }	    
     /* if totalmapsize > totalmapsize0, buffer padded with zeroes */
-      for(i=0; i<(totalmapsize*2); i++)   /* zero the buffer */
-        fraw[i] = 0;
+      memset(fraw, 0, sizeof(float) * 2 * totalmapsize);
       /* move raw data to work buffer */
       for(z=0; z<zres0; z++)
         for(y=0; y<yres0; y++)
@@ -242,7 +270,7 @@ int main(int argc, char *argv[])
           }
   
     /* 3D FFT */
-    fourn(fraw-1,mapsize,3,-1);
+    do_3d_fft(fraw);
 
     /* dc correction */
     for ( z=0 ; z<zres ; z++ )
@@ -266,67 +294,12 @@ int main(int argc, char *argv[])
 	exitm(strcat(argv[0],": map file read error"));
 
     /* check file size and apply gaussian filter */
-    /* gauss.h contains a 256 point, gaussian array, _step is resolution */ 
+    gauss_steps3d(argv[0], xres0, yres0, zres0, &xstep, &ystep, &zstep);
+    gauss_filter_3d(raw, graw, gf, zres0, yres0, xres0,
+                     zstep, ystep, xstep, gfilter);
 
-     
-    if (zres0 == 32) 
-    	zstep = 8;
-    else if (zres0 == 64)
-        zstep = 4;
-    else if (zres0 == 128)
-        zstep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (slice)"));
-    if (yres0 == 32)
-    	ystep = 8;
-    else if (yres0 == 64)
-            ystep = 4;
-    else if (yres0 == 128)
-        ystep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (phase)"));
-    if (xres0 == 32)
-    	xstep = 8;
-    else if (xres0 == 64)
-            xstep = 4;
-    else if (xres0 == 128)
-        xstep = 2;
-    else
-        exitm(strcat(argv[0],": Illegal size (read)"));
-
-    zs = 0; ys = 0; xs = 0;		/* starting point of filter array */    	
-    
-    /* apply gaussian filter and phase alternate and convert to float*/
-    if (gfilter) 
-    { 
-      for ( z=0,zi=zs ; z<zres0 ; z++, zi=zi+zstep ) 	
-	for ( y=0,yi=ys ; y<yres0 ; y++, yi=yi+ystep  )
-	{
-	    for ( x=0,xi=xs ; x<xres0 ; x++, xi=xi+xstep )
-	    {
-		graw[mapindex(z,y,x)] = 
-		    (1-2*((z+y+x)%2))*gf[zi]*gf[yi]*gf[xi]*(raw[mapindex(z,y,x)]);
-		graw[mapindex(z,y,x)+1] = 
-		    (1-2*((z+y+x)%2))*gf[zi]*gf[yi]*gf[xi]*(raw[mapindex(z,y,x)+1]);
-	    }
-	}
-    }
-    else 
-    {
-      /* alternate phase and float */
-      for ( z=0 ; z<zres0 ; z++ )
-	for ( y=0 ; y<yres0 ; y++ )
-	    for ( x=0 ; x<xres0 ; x++ )
-	    {
-		graw[mapindex(z,y,x)] = 
-		    (1-2*((z+y+x)%2))*raw[mapindex(z,y,x)];
-		graw[mapindex(z,y,x)+1] = 
-		    (1-2*((z+y+x)%2))*raw[mapindex(z,y,x)+1];
-	    }
-    }	    
     /* if totalmapsize > totalmapsize0, buffer padded with zeroes */
-      for(i=0; i<(totalmapsize*2); i++)   /* zero the buffer */
-        fraw[i] = 0;
+      memset(fraw, 0, sizeof(float) * 2 * totalmapsize);
       /* move raw data to work buffer */
       for(z=0; z<zres0; z++)
         for(y=0; y<yres0; y++)
@@ -336,7 +309,7 @@ int main(int argc, char *argv[])
           }
 
     /* 3D FFT */
-    fourn(fraw-1,mapsize,3,-1);
+    do_3d_fft(fraw);
 
     /* baseline correct */
     for ( z=0 ; z<zres ; z++ )
@@ -393,6 +366,20 @@ int main(int argc, char *argv[])
     
     /* write phase (field or freq) map */
     fwrite(field, sizeof(float), totalmapsize, fieldfile);
+
+    fft3d_teardown();
+#ifdef VNMR_GPL
+    fftwf_free(fraw);
+    free(graw);
+#else
+    free_vector(graw,0,0);
+    free_vector(fraw,0,0);
+#endif
+    free(raw);
+    free(freconphase); free(freconphase2);
+    free(field); free(freconmag); free(freconmag2);
+
+    return 0;
 }
 
 /******************************************************************************
