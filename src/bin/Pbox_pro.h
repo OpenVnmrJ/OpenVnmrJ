@@ -10,8 +10,7 @@
  */
 /* Pbox_pro.h - Pandora's Box Procedures */
 
-void setpbox(itnf)
-int itnf;
+void setpbox(int itnf)
 {
   int   i;
   FILE *fil;
@@ -53,8 +52,7 @@ int itnf;
   }
 }
 
-int loadshape(id)
-int id;
+int loadshape(int id)
 {
   int j;
 
@@ -96,7 +94,7 @@ int id;
     {
       Sh[id].set = getshape(Wv[id].dir, Wv[id].sh, &Sh[id], h.reps);
       if (!Sh[id].set) return 0; 
-      if ((Wv[id].dash >= 0.0) && (isname(&Sh[id].dash))) 
+      if ((Wv[id].dash >= 0.0) && (isname(Sh[id].dash))) 
       {
         setdash(&Sh[id], Wv[id].dash);
         if (strcmp(Wv[id].sh, "wurst") == 0) 
@@ -162,7 +160,7 @@ int setshapes()
 
     if (Wv[i].sfl < 0)
     { 
-      if (!isname(&Sh[i].su)) 
+      if (!isname(Sh[i].su)) 
         Wv[i].sfl = 0; 				/* if default = n */
       else
         { strcpy(Wv[i].su, Sh[i].su); Wv[i].sfl = 1; }
@@ -174,8 +172,8 @@ int setshapes()
       else strcat(strcat(str1, ","), Wv[i].su);
       h.itns++;
     }
-    if (isname(&Sh[i].df)) h.itnd++;
-    if (isname(&Sh[i].wf)) h.itnw++;
+    if (isname(Sh[i].df)) h.itnd++;
+    if (isname(Sh[i].wf)) h.itnw++;
   }
 
   if ((h.itns = nsuc(str1)) > 0)	/* setup supercycles */
@@ -194,7 +192,7 @@ int setshapes()
     wf = (Windw *) calloc(h.itnw, sizeof(Windw)); 
     for(i=0, j=0; i<h.itnf; i++) 
     {
-      if (isname(&Sh[i].wf))
+      if (isname(Sh[i].wf))
       {
         resetwindow(&wf[j]);
         e_str[0]='\0';
@@ -208,7 +206,7 @@ int setshapes()
     df = (Windw *) calloc(h.itnd, sizeof(Windw)); 
     for(i=0, j=0; i<h.itnf; i++) 
     {
-      if (isname(&Sh[i].df))
+      if (isname(Sh[i].df))
       {
         resetwindow(&df[j]);
         strcpy(e_str, "filters/");
@@ -220,9 +218,7 @@ int setshapes()
   return 1;
 }
 
-int resetpars(fln, inm)
-int inm;
-char fln[MAXSTR];
+int resetpars(char fln[MAXSTR], int inm)
 {
   FILE *fil;
   int i, j;
@@ -724,7 +720,7 @@ FSLG -  one of the versions disabled here. EK.
       if (j<0) return 0;
       imod += j;
 
-      if (isname(&Sh[i].wf))
+      if (isname(Sh[i].wf))
       {
         if(wmult(&Sh[i], &wf[h.itnw]) == 0) return 0;	/* windowing */
         h.itnw++;
@@ -765,7 +761,7 @@ FSLG -  one of the versions disabled here. EK.
       }
       if (Sh[i].dc) 
         rmdc(Sh[i].np);				/* remove dc */
-      if (isname(&Sh[i].df))
+      if (isname(Sh[i].df))
       {
         df[h.itnd].np = Sh[i].np;
         if(dfil(&df[h.itnd])==0) return 0; 	/* digital filtering */
