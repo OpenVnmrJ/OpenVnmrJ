@@ -11,7 +11,7 @@
 
 #ifdef VNMR_GPL
 #include <gsl/gsl_cdf.h>
-#define f_distribution(f,n1,n2) gsl_cdf_fdist_P( (f), (n1), (n2) )
+#define f_distribution(f,n1,n2) gsl_cdf_fdist_Q( (f), (n1), (n2) )
 
 #else
 
