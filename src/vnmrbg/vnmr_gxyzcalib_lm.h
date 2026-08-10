@@ -42,16 +42,15 @@ extern void lm_gxyz_covar(double x1[],double y1[], double w[], double sig[],
     double [], int));
 
 #define _LMX_CONV_TOL   0.1
-#define _LMX_CONV_COUNT 4
 #define _LMX_MAX_ITER   200
 
 static int _run_nr_lm2(double x1[], double y1[], double obs[], double sig[],
                        int ndata, double a[], int ia[], int ma,
-                       double **covar_out, double *chisq,
+                       double **covar_out, double *chisq, int itst_max,
                        void (*funcs)(double, double, double[], double*,
                                      double[], int))
 {
-    int i, j, k=0, itst=0, mfit=0;
+    int i, j, k=0, itst=0;
     double ochisq;
     double **alpha = _lmx_alloc_matrix(ma);
     double **covar = _lmx_alloc_matrix(ma);
@@ -65,26 +64,21 @@ static int _run_nr_lm2(double x1[], double y1[], double obs[], double sig[],
         lm_gxyz_iterate(x1,y1,obs,sig,ndata,a,ia,ma,covar,alpha,chisq,funcs);
         if (*chisq > ochisq) itst = 0;
         else if (fabs(ochisq - *chisq) < _LMX_CONV_TOL) itst++;
-    } while (itst < _LMX_CONV_COUNT && k < _LMX_MAX_ITER);
+    } while (itst < itst_max && k < _LMX_MAX_ITER);
     lm_gxyz_covar(x1,y1,obs,sig,ndata,a,ia,ma,covar,alpha,chisq,funcs);
-    /* undo NR internal chisq/(n-mfit) scaling */
-    for (i=1;i<=ma;i++) if (ia[i]) mfit++;
-    { int dof=ndata-mfit;
-      double sc2=(dof>0 && *chisq>0.0)?(*chisq/(double)dof):1.0;
-      for (i=1;i<=ma;i++) for(j=1;j<=ma;j++) covar_out[i][j]=covar[i][j]*sc2;
-    }
+    for (i=1;i<=ma;i++) for(j=1;j<=ma;j++) covar_out[i][j]=covar[i][j];
     _lmx_free_matrix(alpha); _lmx_free_matrix(covar); return 0;
 }
 
 static int vnmr_lm_width(double x1[], double y1[], double w[], double sig[],
                          int ndata, double a[], int ia[], int ma,
                          double **covar, double *chisq)
-{ return _run_nr_lm2(x1,y1,w,sig,ndata,a,ia,ma,covar,chisq,widthmodel); }
+{ return _run_nr_lm2(x1,y1,w,sig,ndata,a,ia,ma,covar,chisq,4,widthmodel); }
 
 static int vnmr_lm_midpoint(double x1[], double y1[], double m[], double sig[],
                              int ndata, double a[], int ia[], int ma,
                              double **covar, double *chisq)
-{ return _run_nr_lm2(x1,y1,m,sig,ndata,a,ia,ma,covar,chisq,midpointmodel); }
+{ return _run_nr_lm2(x1,y1,m,sig,ndata,a,ia,ma,covar,chisq,4,midpointmodel); }
 
 #else  /* VNMR_GPL */
 

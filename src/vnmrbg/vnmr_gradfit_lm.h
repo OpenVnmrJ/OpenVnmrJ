@@ -26,6 +26,8 @@ static void _lm_free_matrix(double **m) { if (m) { free(m[1]); free(m); } }
 
 #ifndef VNMR_GPL
 
+extern int interuption;
+
 extern void lm_g_init(double x[], double y[], double sig[], int ndata, double a[],
 	int ia[], int ma, double **covar, double **alpha, double *chisq,
 	void (*funcs)(double, double [], double *, double [], int));
@@ -37,15 +39,14 @@ extern void lm_g_covar(double x[], double y[], double sig[], int ndata, double a
 	void (*funcs)(double, double [], double *, double [], int));
 
 #define _LM_CONV_TOL   0.1
-#define _LM_CONV_COUNT 4
 #define _LM_MAX_ITER   500
 
 static int _run_nr_lm(double x[], double y[], double sig[], int ndata,
                       double a[], int ia[], int ma, double **covar_out,
-                      double *chisq,
+                      double *chisq, int itst_max,
                       void (*funcs)(double, double[], double*, double[], int))
 {
-    int i, j, k=0, itst=0, mfit=0;
+    int i, j, k=0, itst=0;
     double ochisq;
     double **alpha = _lm_alloc_matrix(ma);
     double **covar = _lm_alloc_matrix(ma);
@@ -55,30 +56,29 @@ static int _run_nr_lm(double x[], double y[], double sig[], int ndata,
     }
     lm_g_init(x,y,sig,ndata,a,ia,ma,covar,alpha,chisq,funcs);
     do {
+        if (interuption) {
+            Werrprintf("Fit halted\n");
+            _lm_free_matrix(alpha); _lm_free_matrix(covar); return 1;
+        }
         k++; ochisq = *chisq;
         lm_g_iterate(x,y,sig,ndata,a,ia,ma,covar,alpha,chisq,funcs);
         if (*chisq > ochisq) itst = 0;
         else if (fabs(ochisq - *chisq) < _LM_CONV_TOL) itst++;
-    } while (itst < _LM_CONV_COUNT && k < _LM_MAX_ITER);
+    } while (itst < itst_max && k < _LM_MAX_ITER);
     lm_g_covar(x,y,sig,ndata,a,ia,ma,covar,alpha,chisq,funcs);
-    /* undo NR internal chisq/(n-mfit) scaling -> return raw (J^T J)^-1 */
-    for (i=1;i<=ma;i++) if (ia[i]) mfit++;
-    { int dof=ndata-mfit;
-      double sc2=(dof>0 && *chisq>0.0)?(*chisq/(double)dof):1.0;
-      for (i=1;i<=ma;i++) for(j=1;j<=ma;j++) covar_out[i][j]=covar[i][j]*sc2;
-    }
+    for (i=1;i<=ma;i++) for(j=1;j<=ma;j++) covar_out[i][j]=covar[i][j];
     _lm_free_matrix(alpha); _lm_free_matrix(covar); return 0;
 }
 
 static int vnmr_lm_poly(double x[], double y[], double sig[], int ndata,
                         double a[], int ia[], int ma,
                         double **covar, double *chisq)
-{ return _run_nr_lm(x,y,sig,ndata,a,ia,ma,covar,chisq,polyfunc); }
+{ return _run_nr_lm(x,y,sig,ndata,a,ia,ma,covar,chisq,100,polyfunc); }
 
 static int vnmr_lm_exp(double x[], double y[], double sig[], int ndata,
                        double a[], int ia[], int ma,
                        double **covar, double *chisq)
-{ return _run_nr_lm(x,y,sig,ndata,a,ia,ma,covar,chisq,fitfunc); }
+{ return _run_nr_lm(x,y,sig,ndata,a,ia,ma,covar,chisq,60,fitfunc); }
 
 #else  /* VNMR_GPL */
 
