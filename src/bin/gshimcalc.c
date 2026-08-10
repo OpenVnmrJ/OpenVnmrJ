@@ -12,8 +12,7 @@
 #include        <stdlib.h>
 #include        <string.h>
 #include	<math.h>
-#include	"nrutil.h"
-#include	"nr.h"
+#include	"vnmr_svd.h"
 #include	"util.h"
 
 #define		TWOPI		(2.0 * 3.14159265358979323846)
@@ -23,6 +22,47 @@
 /* indexing calculations */
 #define 	refindex(s,p,r)	(s*prefres*rrefres+p*rrefres+r)
 #define 	mapindex(s,p,r)	(s*pmapres*rmapres+p*rmapres+r)
+
+static void memerror(char *error_text)
+{
+    fprintf(stderr,"Memory allocation error %s\n",error_text);
+    exit(1);
+}
+
+static double **dmatrix(int nrl, int nrh, int ncl, int nch)
+{
+    int i, nrow=nrh-nrl+1,ncol=nch-ncl+1;
+    double **m;
+    m=(double **) malloc((unsigned)((nrow+1)*sizeof(double*)));
+    if (!m) memerror("allocation failure 1 in dmatrix()");
+    m += 1;
+    m -= nrl;
+    m[nrl]=(double *) malloc((unsigned)((nrow*ncol+1)*sizeof(double)));
+    if (!m[nrl]) memerror("allocation failure 2 in dmatrix()");
+    m[nrl] += 1;
+    m[nrl] -= ncl;
+    for(i=nrl+1;i<=nrh;i++) m[i]=m[i-1]+ncol;
+    return m;
+}
+
+static void free_dmatrix(double **m, int nrl, int nrh, int ncl, int nch)
+{
+    free((char *) (m[nrl]+ncl-1));
+    free((char *) (m+nrl-1));
+}
+
+static double *dvector(int nl, int nh)
+{
+    double *v;
+    v=(double *)malloc((unsigned) (nh-nl+1)*sizeof(double));
+    if (!v) memerror("allocation failure in dvector()");
+    return v-nl;
+}
+
+static void free_dvector(double *v, int nl, int nh)
+{
+    free((char*) (v+nl));
+}
 
 /* shim names, units, offsets */
 char		shimname[TOTALSHIMS][10];	/* names of shims */
@@ -88,7 +128,6 @@ int main(int argc, char *argv[])
     int		rrefres,prefres,srefres;	/* size of reference maps */
     float	rreffov,preffov,sreffov;	/* FOV of field map image */    
     float	*onerefmap;			/* one whole reference map */
-    float	**A,**AA;			/* all extracted ref maps */
     float	mapdelay,refdelay;		/* delay (ms) between refs */
     float	minmapdelay,minrefdelay;	/* delay (ms) refs; short */
     /* field map */
@@ -103,7 +142,6 @@ int main(int argc, char *argv[])
     float	*map;				/* field map */
     float	*mag;				/* magnitude map */
     float	*mask;				/* extraction mask */
-    float	*B;				/* extracted field map */
 
     /* extraction masks */
     short int	*mapmask,*refmask;
@@ -111,14 +149,11 @@ int main(int argc, char *argv[])
     /* magnitude masking */
     float	maxmag,avmag,threshold,threshparam,threshpcref;
 
-    /* SVD factors */
-    float	**V,*W;				
-
-    /* solution */
-    float	*X;
-
-    /* residual */
-    float	*R;			
+    double	**A,**AA;		/* all extracted ref maps */
+    double	**V,*W;			/* SVD factors */
+    double	*B;				/* extracted field map */
+    double	*X;				/* solution */
+    double	*R;				/* residual */	
 
     /* analysis */
     float	minbefore = 10000.0 ,
@@ -129,9 +164,6 @@ int main(int argc, char *argv[])
 		maxafter = -10000.0,
 		meanafter = 0.0,
 		varafter = 0.0;
-    
-    /* functions */
-    int		atoi();
 
 /* check arguments */
 
@@ -441,6 +473,11 @@ int main(int argc, char *argv[])
 	numrefshims += shimused[shim];		/* shimused[0]=1 for z0 */
     }
 
+    if (numpoints < numshims) {
+		printf("ERROR: not enough points (%d) for %d shims\n",numpoints,numshims);
+		exit(1);
+    }
+	
     /*
      * read the reference maps
      * 
@@ -451,8 +488,8 @@ int main(int argc, char *argv[])
      */
 
     /* allocate space for the A matrix */
-    A = matrix(1,numpoints,1,numshims);
-    AA = matrix(1,numpoints,1,numshims);
+    A  = dmatrix(1,numpoints,1,numshims);
+    AA = dmatrix(1,numpoints,1,numshims);
 
     /* fill the first column of the matrix, for the z0 shim */
     for ( point=1 ; point<=numpoints ; point++ ) 
@@ -496,7 +533,7 @@ int main(int argc, char *argv[])
      */
 
     /* allocate space for the B matrix */
-    B = vector(1,numpoints);
+    B = dvector(1,numpoints);
 
     /* allocate space for the input map */
     map = (float *) calloc((unsigned)totalmapsize,sizeof(float));
@@ -515,16 +552,16 @@ int main(int argc, char *argv[])
      */
 
     /* allocate space for the decomposition, residual, and result */
-    W = vector(1,numshims);
-    V = matrix(1,numshims,1,numshims);
-    R = vector(1,numpoints);
-    X = vector(1,numshims);
+    W = dvector(1,numshims);
+    V = dmatrix(1,numshims,1,numshims);
+    R = dvector(1,numpoints);
+    X = dvector(1,numshims);
 
     /* perform the decomposition */
-    svdcmp(A,numpoints,numshims,W,V);
+    vnmr_svd(A,numpoints,numshims,W,V);
 
     /* solve */
-    svbksb(A,W,V,numpoints,numshims,B,X);
+    vnmr_svd_solve(A,W,V,numpoints,numshims,B,X);
 
     /* compute residual */
     for ( point=1 ; point<=numpoints ; point++ )
@@ -559,9 +596,9 @@ int main(int argc, char *argv[])
     for ( point=0 ; point<totalmapsize ; point++ )
     {
 	if ( mapmask[point] == 1 )
-	    map[point] = R[thispoint++];
+	    map[point] = (float) R[thispoint++];
 	else
-	    map[point] = 0.0;
+	    map[point] = 0.0f;
     }
     /* write out predicted field map */
     fwrite(map,sizeof(float),totalmapsize,outfieldfile);
@@ -685,6 +722,16 @@ int main(int argc, char *argv[])
     printf("Predicted change - %6.2f %%\n",res);
     printf("........................\n");
     printf("\n");
+
+    free_dmatrix(A,1,numpoints,1,numshims);
+    free_dmatrix(AA,1,numpoints,1,numshims);
+    free_dmatrix(V,1,numshims,1,numshims);
+    free_dvector(W,1,numshims);
+    free_dvector(B,1,numpoints);
+    free_dvector(X,1,numshims);
+    free_dvector(R,1,numpoints);
+
+    return 0;
 }
 
 /*****************************************************************************
