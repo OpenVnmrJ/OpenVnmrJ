@@ -11,16 +11,9 @@
 #include	<math.h>
 #include	<stdlib.h>
 
-#ifdef VNMR_GPL
-#include	<gsl/gsl_spline.h>
-#include	<gsl/gsl_errno.h>
-#endif /* VNMR_GPL */
-
 #include	"aipStderr.h"
 #include	"aipInterpolation.h"
-#ifndef VNMR_GPL
 #include	"vnmr_aipInterpolation.h"
-#endif /* !VNMR_GPL */
 
 #define		DEBUG1	  0 
 #define		DEBUG2	  0
@@ -33,48 +26,6 @@ simple_interpolation(int na,
 		     float *ya,
 		     int nb,
 		     float *yb );
-
-#ifdef VNMR_GPL
-static void
-cubic_spline_interpolation(int    na,
-                           float *ya,
-                           int    nb,
-                           float *yb)
-{
-    /* Need at least 2 points to define a spline. */
-    if (na < 2 || nb < 1) {
-        for (int k = 0; k < nb; k++) yb[k] = (na > 0) ? ya[0] : 0.0f;
-        return;
-    }
-
-    /* Build double-precision x/y arrays for GSL (x is simply 0..na-1). */
-    double *x = new double[na];
-    double *y = new double[na];
-    for (int i = 0; i < na; i++) {
-        x[i] = (double)i;
-        y[i] = (double)ya[i];
-    }
-
-    gsl_interp_accel *acc    = gsl_interp_accel_alloc();
-    gsl_spline       *spline = gsl_spline_alloc(gsl_interp_cspline, na);
-    gsl_spline_init(spline, x, y, na);
-
-    /* Output sample positions evenly cover [0, na-1]. */
-    double xmax = (double)(na - 1);
-    for (int j = 0; j < nb; j++) {
-        double t = (nb == 1) ? 0.0 : xmax * j / (double)(nb - 1);
-        /* Clamp to valid range to avoid GSL boundary errors. */
-        if (t < 0.0)   t = 0.0;
-        if (t > xmax)  t = xmax;
-        yb[j] = (float)gsl_spline_eval(spline, t, acc);
-    }
-
-    gsl_spline_free(spline);
-    gsl_interp_accel_free(acc);
-    delete [] x;
-    delete [] y;
-}
-#endif /* VNMR_GPL */
 
 /*==============================================================
 
