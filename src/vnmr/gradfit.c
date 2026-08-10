@@ -97,8 +97,6 @@
 
 #define NPTD 12000
 #define SPREAD 0.001
-#define NR_END 1
-#define FREE_ARG char*
 #define ERROR 1
 #define MAXLENGTH 128
 #define MAXPROF_PTS 100000
@@ -111,12 +109,6 @@
 
 /*  #define DEBUG_GRADFIT  1 */	
 
-static double *vector(long nl, long nh);
-static void free_vector(double *v, long nl, long nh);
-static void free_matrix(double **m, long nrl, long nrh, long ncl, long nch);
-static double **matrix(long nrl, long nrh, long ncl, long nch);
-static void polyfunc(double x, double a[], double *y, double dyda[], int na);
-static void fitfunc(double x, double a[], double *y, double dyda[], int na);
 extern int interuption;
 /* extern char userdir[]; */
 static int MAD,MA;
@@ -142,21 +134,17 @@ int gradfit(int argc, char *argv[])
 		*plotgrads,
 		*outgrads;
 	int 	i,
-		itst,
 		j,
-		k,
-		mfit,
 		np;
         int     ia[MAX_COEFS+1];
 	double	rms,chisq,
 		dum1,dum2,dum3,dum4,dum5,dum6,dum7,frscale,
-		ochisq,z,
+		z,
 		*x,
 		*y,*yerr,
 		*yc,
 		*sig,
 		**covar,
-		**alpha,
 		scale,
 		max_y,	
 		lowfrq,
@@ -202,7 +190,6 @@ disp_status("gradfit ");
         }
 
 
-	mfit=MA;
 	Wscrprintf("Diffusion coefficient for calibration = %e m2/s\n", D_value*1e-10);
 	Wscrprintf("Fitting of relative gradient as a function of frequency\n");
 	fprintf(fp,"Data discarded below %f\n",lowfrq);
@@ -374,44 +361,18 @@ disp_status("gradfit ");
 	        debug = fopen(rubbish,"a");             /* file for debugging information */
 	#endif
 		lm_g_init(x,y,sig,np,a,ia,MA,covar,alpha,&chisq,polyfunc);
-		k=1;
-		itst=0;
-		for (;;) {
-			if(interuption)
-			{
-				Werrprintf("Gradfit halted\n");
-				return(ERROR);
-			}	
-		
-			#ifdef DEBUG_GRADFIT
-				fprintf(debug,"\n%s %2d %17s %10.4f\n","Iteration #",k,
-					"chi-squared:",chisq);
-				fprintf(debug,"%8s\t%8s\t%8s\t%8s\t%8s\t%8s\t%8s\t%8s\t%8s\n",
-					"a[1]","a[2]","a[3]","a[4]","a[5]","a[6]","a[7]","a[8]","a[9]");
-				for (i=1;i<=MA;i++) Wscrprintf("%6.5e\t",a[i]);
-				fprintf(debug,"\n");
-			#endif
-			k++;
-			ochisq=chisq;
-			lm_g_iterate(x,y,sig,np,a,ia,MA,covar,alpha,&chisq,polyfunc);
-			if (chisq > ochisq)
-				itst=0;
-			else if (fabs(ochisq-chisq) < 0.1)
-				itst++;
-			if (itst < 100) continue;
-			lm_g_covar(x,y,sig,np,a,ia,MA,covar,alpha,&chisq,polyfunc);
-
-                        Wscrprintf("\nUncertainties for gradient fit parameters:\n");
-			scale = sqrt((np-MA)/chisq);
-                        for (i=1;i<=MA;i++) Wscrprintf("Coefficient no. %d   %9.4g\tstd. error \t%9.4g , %9.4g %% \n",i,a[i],(sqrt(covar[i][i]))/scale,fabs(100.0*sqrt(covar[i][i])/(scale*a[i])));
-			Wscrprintf("\n");
-
-			#ifdef DEBUG_GRADFIT
-				Wscrprintf("\nUncertainties for gradient fit parameters:\n");
-				for (i=1;i<=MA;i++) Wscrprintf("a[%d]\t%9.4e\n",i,(sqrt(covar[i][i]))/scale);
-			#endif
-			break;
-		}
+		Werrprintf("gradfit: polynomial fit failed\n");
+		free_vector(a,1,MA); free_vector(x,1,np); free_vector(y,1,np);
+		free_vector(yerr,1,np); free_vector(yc,1,np); free_vector(sig,1,np);
+		free_matrix(covar,1,MA,1,MA);
+		fclose(in); fclose(out); fclose(outgrads); fclose(plotgrads); fclose(fp);
+		disp_status("        ");
+		return(ERROR);
+	}
+	scale = sqrt((double)(np-MA)/chisq);
+	Wscrprintf("\nUncertainties for gradient fit parameters:\n");
+	for (i=1;i<=MA;i++) Wscrprintf("Coefficient no. %d   %9.4g\tstd. error \t%9.4g , %9.4g %% \n",i,a[i],(sqrt(covar[i][i]))/scale,fabs(100.0*sqrt(covar[i][i])/(scale*a[i])));
+	Wscrprintf("\n");
 				Wscrprintf("Value of chi squared is %f \n",chisq);
 				fprintf(fp,"chi squared is %f\n",chisq);
 				fprintf(fp,"Value of max_y is %f\n",max_y);
@@ -465,7 +426,6 @@ a[i]=0.0;
 	   fprintf(plotgrads,"%f\t%e\t\n",x[i],yc[i]);
 	}
 
-	free_matrix(alpha,1,MA,1,MA);
 	free_matrix(covar,1,MA,1,MA);
 	free_vector(yc,1,np);
 	free_vector(sig,1,np);
@@ -509,25 +469,21 @@ int powerfit(argc, argv, retc, retv)
 		rubbish[MAXLENGTH];
 	int 	i, 
 		r,
-		itst,
 		j,
-		k,
-		mfit,
 		pad,
 		np;
         int     ia[MAX_COEFS+1];
 	double 	xx,
 		dum2,dum3,
 		rms,chisq,
-		ochisq,z,
+		z,
 		*x,
 		scale,
 		*y,
 		*yc,
 		*x2,
 		*sig,
-		**covar,
-		**alpha;
+		**covar;
 	static double *a,*gues;
 
 
@@ -642,7 +598,6 @@ disp_status("powerfit");
 		fclose(fp);
         	return(ERROR);
         	}
-	mfit=MAD;
 		#ifdef DEBUG_GRADFIT
 			fprintf(debug,"powerfit :  mfit is %i  \n",mfit);
 			fprintf(debug,"Value of dosytimecubed is %e  \n",dosytimecubed);
@@ -680,29 +635,6 @@ disp_status("powerfit");
 	yc=vector(1,np);
 	sig=vector(1,np);
 	covar=matrix(1,MAD,1,MAD);
-	alpha=matrix(1,MAD,1,MAD);
-        if (abortflag)
-        {
-	   free_matrix(alpha,1,MAD,1,MAD);
-	   free_matrix(covar,1,MAD,1,MAD);
-	   free_vector(sig,1,np);
-	   free_vector(yc,1,np);
-	   free_vector(y,1,np);
-	   free_vector(x2,1,np);
-	   free_vector(x,1,np);
-	   free_vector(gues,1,MAD);
-	   free_vector(a,1,MAD);
-#ifdef DEBUG_GRADFIT
-	   fclose(debug);
-#endif
-	   fclose(plotstats);
-	   fclose(outstats);
-	   fclose(outcoeff);
-	   fclose(in);
-	   fclose(fp);
-           disp_status("        ");
-           return(ERROR);
-        }
 
 	for(i=0;i<=MAD;i++)
 	{
@@ -742,7 +674,7 @@ disp_status("powerfit");
 				fprintf(fp,"%f\t%f\t%f\n",y[i],x[i],sig[i]);
 		}
 		
-	for (i=1;i<=mfit;i++) ia[i]=1;
+	for (i=1;i<=MAD;i++) ia[i]=1;
 	for (i=1;i<=MAD;i++) a[i]=gues[i];
 /* GAM 7v03 */
 	a[1]=y[1];
@@ -866,7 +798,6 @@ disp_status("powerfit");
    		fprintf(plotstats,"%f\t%e\t\n",x[i]*32767.0*gcal_*32767.0*gcal_/dosyfactor,log(yc[i]));
 	}
 
-	free_matrix(alpha,1,MAD,1,MAD);
 	free_matrix(covar,1,MAD,1,MAD);
 	free_vector(x2,1,np);
 	free_vector(yc,1,np);
@@ -1296,63 +1227,6 @@ return 0;
 
 }
 
-static double *vector(long nl, long nh)
-/* allocate a float vector with subscript range v[nl..nh] */
-{
-	double *v;
-	v=(double *)malloc((size_t) ((nh-nl+1+NR_END)*sizeof(double)));
-	if (!v)
-        {
-           Werrprintf("allocation failure in vector()");
-           abortflag = 1;
-           return(v);
-        }
-	return v-nl+NR_END;
-}
-
-double **matrix(long nrl, long nrh, long ncl, long nch)
-/* allocate a float matrix with subscript range m[nrl..nrh][ncl..nch] */
-{
-	long i, nrow=nrh-nrl+1,ncol=nch-ncl+1;
-	double **m;
-	/* allocate pointers to rows */
-	m=(double **) malloc((size_t)((nrow+NR_END)*sizeof(double*)));
-	if (!m)
-        {
-           Werrprintf("allocation failure 1 in matrix()");
-           abortflag = 1;
-           return(m);
-        }
-	m += NR_END;
-	m -= nrl;
-	/* allocate rows and set pointers to them */
-	m[nrl]=(double *) malloc((size_t)((nrow*ncol+NR_END)*sizeof(double)));
-	if (!m[nrl])
-        {
-           Werrprintf("allocation failure 2 in matrix()");
-           abortflag = 1;
-           return(m);
-        }
-	m[nrl] += NR_END;
-	m[nrl] -= ncl;
-	for(i=nrl+1;i<=nrh;i++) m[i]=m[i-1]+ncol;
-	/* return pointer to array of pointers to rows */
-	return m;
-}
-void free_vector(double *v, long nl, long nh)
-/* free a float vector allocated with vector() */
-{
-   if (v)
-	free((FREE_ARG) (v+nl-NR_END));
-}
-void free_matrix(double **m, long nrl, long nrh, long ncl, long nch)
-/* free a float matrix allocated by matrix() */
-{
-   if (m && m[nrl])
-	free((FREE_ARG) (m[nrl]+ncl-NR_END));
-   if (m)
-	free((FREE_ARG) (m+nrl-NR_END));
-}
 void polyfunc(double x, double a[], double *y, double dyda[], int na)
 {
 	if (MA==9) {

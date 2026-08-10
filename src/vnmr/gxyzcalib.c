@@ -15,9 +15,8 @@
   #include <stdlib.h>
   #include <string.h>
   #include <math.h>
+  #include <stdio.h>
 
-  #define NR_END 1
-  #define FREE_ARG char*
   #define MAXLENGTH     512
   #define ERROR 1
   #define MA 5
@@ -34,20 +33,14 @@
   extern char  curexpdir[];
   extern int abortflag;
 
-  static void free_vector(double *v, long nl, long nh);
-  static double *vector(long nl, long nh);
-  static int *ivector(long nl, long nh);
-  static void free_ivector(int *v, long nl, long nh);
-  static double **matrix(long nrl, long nrh, long ncl, long nch);
-  static void free_matrix(double **m, long nrl, long nrh, long ncl, long nch);
   static double a[MA+1]= {0,0,0,0,0,0};
   static double gues[MA+1]= {0,0.1,1.0,0.1,0.01,0.01};
-  static double root=0;
   static double a1,a2,a3,a4,a5;
 
   static void widthmodel(double x1, double y1, 
                          double a[], double *w, double dyda[], int na)
   {
+  double root;
    root=sqrt((-a[5]+y1)*(-a[5]+y1)*a[2]*a[2]*cos(M_PI*a[3]/180)*
         cos(M_PI*a[3]/180)+
         ((-a[4]+x1)*a[1]+(-a[5]+y1)*a[2]*sin(M_PI*a[3]/180))*
@@ -99,9 +92,9 @@
    FILE *in,*out,*outreg;	
    char in_file[MAXLENGTH];
    char out_file[MAXLENGTH];
-   int i,*ia,itst,k,mfit=MA,npt,xmax,xmin;
-   double chisq,ochisq,*x,*x1,*y1,
-          *w,*sig,**covar,**alpha,*dummydyda,cwidth,cmidpoint,*m;
+   int i,npt,xmax,xmin;
+   double chisq,*x,*x1,*y1,
+          *w,*sig,**covar,cwidth,cmidpoint,*m;
    char fname[MAXLENGTH];
    int res __attribute__((unused));
 
@@ -147,33 +140,30 @@ printf("Number of data points:  %d\n",npt);
    fprintf(outreg,"profile widths in Hz\n");
    fprintf(outreg,"4\t%d\n",npt);
         
-        abortflag = 0;
-        ia=ivector(1,MA);
-	dummydyda=vector(1,MA);
-	x=vector(1,npt);
-	w=vector(1,npt);  /* width of profile */
-	sig=vector(1,npt);
-	covar=matrix(1,MA,1,MA);
-	alpha=matrix(1,MA,1,MA);
-        x1=vector(1,npt); 
-        y1=vector(1,npt); 
-	m=vector(1,npt);  /* midpoint of profile */
-        if (abortflag)
-        {
-		free_ivector(ia,1,MA);
-		free_vector(dummydyda,1,npt);
-		free_vector(x,1,npt);
-		free_vector(w,1,npt);
-		free_vector(sig,1,npt);
-		free_matrix(covar,1,MA,1,MA);
-        	free_matrix(alpha,1,MA,1,MA);
-		free_vector(x1,1,npt);
-		free_vector(y1,1,npt);
-		free_vector(m,1,npt);
-       	 	fclose(in);
-      		fclose(out);
-     	   	fclose(outreg);
-        	return(ERROR);
+        x   = (double *)calloc((size_t)(npt+1), sizeof(double));
+        w   = (double *)calloc((size_t)(npt+1), sizeof(double));
+        sig = (double *)calloc((size_t)(npt+1), sizeof(double));
+        x1  = (double *)calloc((size_t)(npt+1), sizeof(double));
+        y1  = (double *)calloc((size_t)(npt+1), sizeof(double));
+        m   = (double *)calloc((size_t)(npt+1), sizeof(double));
+        covar = (double **)calloc((size_t)(MA+1), sizeof(double *));
+        if (covar) {
+            double *cd = (double *)calloc((size_t)((MA+1)*(MA+1)), sizeof(double));
+            for (i = 1; i <= MA; i++) covar[i] = cd + i*(MA+1);
+        }
+        if (!x || !w || !sig || !x1 || !y1 || !m || !covar || !covar[1]) {
+            Werrprintf("calibxy: memory allocation failure\n");
+            free(x); 
+            free(w); 
+            free(sig); 
+            free(x1); 
+            free(y1); 
+            free(m);
+            if (covar) { free(covar[1]); free(covar); }
+            fclose(in); 
+            fclose(out); 
+            fclose(outreg);
+            return(ERROR);
         }
 
 /* read in profile widths */
@@ -183,19 +173,17 @@ printf("Number of data points:  %d\n",npt);
         if ((fscanf(in,"%lf %lf %lf \n", &x1[i],&y1[i],&w[i]))==EOF)
 		{
 		Werrprintf("Insufficient data in input file\n");
-		free_ivector(ia,1,MA);
-		free_vector(dummydyda,1,npt);
-		free_vector(x,1,npt);
-		free_vector(w,1,npt);
-		free_vector(sig,1,npt);
-		free_matrix(covar,1,MA,1,MA);
-        	free_matrix(alpha,1,MA,1,MA);
-		free_vector(x1,1,npt);
-		free_vector(y1,1,npt);
-		free_vector(m,1,npt);
-       	 	fclose(in);
-      		fclose(out);
-     	   	fclose(outreg);
+		free(x); 
+                free(w); 
+                free(sig); 
+                free(x1); 
+                free(y1); 
+                free(m);
+		free(covar[1]); 
+                free(covar);
+		fclose(in); 
+                fclose(out); 
+                fclose(outreg);
         	return(ERROR);
 		}
 	}
@@ -207,19 +195,17 @@ printf("Number of data points:  %d\n",npt);
         if ((fscanf(in,"%lf %lf %lf \n", &x1[i],&y1[i],&m[i]))==EOF)
 		{
 		Werrprintf("Insufficient data in input file\n");
-		free_ivector(ia,1,MA);
-		free_vector(dummydyda,1,npt);
-		free_vector(x,1,npt);
-		free_vector(w,1,npt);
-		free_vector(sig,1,npt);
-		free_matrix(covar,1,MA,1,MA);
-        	free_matrix(alpha,1,MA,1,MA);
-		free_vector(x1,1,npt);
-		free_vector(y1,1,npt);
-		free_vector(m,1,npt);
-       	 	fclose(in);
-      		fclose(out);
-     	   	fclose(outreg);
+		free(x); 
+                free(w); 
+                free(sig); 
+                free(x1); 
+                free(y1); 
+                free(m);
+		free(covar[1]); 
+                free(covar);
+		fclose(in); 
+                fclose(out); 
+                fclose(outreg);
         	return(ERROR);
 		}
 	}
@@ -256,26 +242,16 @@ printf("Number of data points found:  %d\n",i-1);
 
 /* start fitting widths */
 
-	for (i=1;i<=mfit;i++) ia[i]=1;
+	{ int ia[MA+1];
+	for (i=1;i<=MA;i++) ia[i]=1;
 	for (i=1;i<=MA;i++) a[i]=gues[i];
-        lm_gxyz_init(x1,y1,w,sig,npt,a,ia,MA,covar,alpha,&chisq,widthmodel);
-		k=1;
-		itst=0;
-		for (;;){
-			k++;
-#ifdef DEBUG
-printf("chi squared:  %f\n",chisq);
-#endif
-			ochisq=chisq;
-        lm_gxyz_iterate(x1,y1,w,sig,npt,a,ia,MA,covar,alpha,&chisq,widthmodel);
-
-			if (chisq > ochisq)
-			itst=0;
-			else if (fabs(ochisq-chisq) < 0.1)
-			itst++;
-			if (itst < 4) continue;
-	lm_gxyz_covar(x1,y1,w,sig,npt,a,ia,MA,covar,alpha,&chisq,widthmodel);
-			break;
+	if (vnmr_lm_width(x1,y1,w,sig,npt,a,ia,MA,covar,&chisq)) {
+		Werrprintf("calibxy: width fit failed\n");
+		free(x); free(w); free(sig); free(x1); free(y1); free(m);
+		free(covar[1]); free(covar);
+		fclose(in); fclose(out); fclose(outreg);
+		return(ERROR);
+	}
 	}
 
  
@@ -286,7 +262,7 @@ printf("chi squared:  %f\n",chisq);
    fprintf(out,"x1 shim value: \t y1 shim value: \t Profile width, Hz:\n");
 
    for(i=1;i<=npt; i++){
-   widthmodel(x1[i],y1[i], a, &cwidth, dummydyda, MA);
+   { double _dyda[MA+1]; widthmodel(x1[i],y1[i], a, &cwidth, _dyda, MA); }
    fprintf(out,"%f\t%f\t%f\n ",x1[i],y1[i],cwidth); 
    }
    
@@ -301,7 +277,7 @@ printf("chi squared:  %f\n",chisq);
    fprintf(out,"\n\n\n\n chi-squared=%f\n", chisq);
 
    for(i=1;i<=npt; i++){
-   widthmodel(x1[i],y1[i], a, &cwidth, dummydyda, MA);
+   { double _dyda[MA+1]; widthmodel(x1[i],y1[i], a, &cwidth, _dyda, MA); }
    fprintf(outreg,"%i\t%f\n ",i,cwidth);
    }
    for(i=1;i<=npt; i++){
@@ -314,27 +290,18 @@ a1=a[1]; a2=a[2]; a3=a[3]; a4=a[4]; a5=a[5];
 
 /* and start fitting midpoints */
 
+	{ int ia[MA+1];
+	for (i=1;i<=MA;i++) ia[i]=1;
 	ia[4]=0; ia[5]=0;
 	gues[1]=0.0; gues[2]=0.0; gues[3]=0.0;
 	for (i=1;i<=3;i++) a[i]=gues[i];
-        lm_gxyz_init(x1,y1,m,sig,npt,a,ia,3,covar,alpha,&chisq,midpointmodel);
-		k=1;
-		itst=0;
-		for (;;){
-			k++;
-#ifdef DEBUG
-printf("chi squared:  %f\n",chisq);
-#endif
-			ochisq=chisq;
-        lm_gxyz_iterate(x1,y1,m,sig,npt,a,ia,3,covar,alpha,&chisq,midpointmodel);
-
-			if (chisq > ochisq)
-			itst=0;
-			else if (fabs(ochisq-chisq) < 0.1)
-			itst++;
-			if (itst < 4) continue;
-	lm_gxyz_covar(x1,y1,m,sig,npt,a,ia,3,covar,alpha,&chisq,midpointmodel);
-			break;
+	if (vnmr_lm_midpoint(x1,y1,m,sig,npt,a,ia,MA,covar,&chisq)) {
+		Werrprintf("calibxy: midpoint fit failed\n");
+		free(x); free(w); free(sig); free(x1); free(y1); free(m);
+		free(covar[1]); free(covar);
+		fclose(in); fclose(out); fclose(outreg);
+		return(ERROR);
+	}
 	}
 
  
@@ -345,7 +312,7 @@ printf("chi squared:  %f\n",chisq);
    fprintf(out,"x1 shim value: \t y1 shim value: \t Profile midpoint, Hz:\n");
 
    for(i=1;i<=npt; i++){
-   midpointmodel(x1[i],y1[i], a, &cmidpoint, dummydyda, 3);
+    { double _dyda[MA+1]; midpointmodel(x1[i],y1[i], a, &cmidpoint, _dyda, 3); }
    fprintf(out,"%f\t%f\t%f\n ",x1[i],y1[i],cmidpoint); 
    }
    
@@ -358,7 +325,7 @@ printf("chi squared:  %f\n",chisq);
    fprintf(out,"\n\n\n\n chi-squared=%f\n", chisq);
 
    for(i=1;i<=npt; i++){
-   midpointmodel(x1[i],y1[i], a, &cmidpoint, dummydyda, 3);
+   { double _dyda[MA+1]; midpointmodel(x1[i],y1[i], a, &cmidpoint, _dyda, 3); }
    fprintf(outreg,"%i\t%f\n ",i,cmidpoint);
    }
    for(i=1;i<=npt; i++){
@@ -396,88 +363,17 @@ printf("chi squared:  %f\n",chisq);
    {
     retv[7]=realString((double) a[3]);   
    }
-        free_matrix(alpha,1,MA,1,MA);
-	free_matrix(covar,1,MA,1,MA);
-	free_vector(sig,1,npt);
-	free_vector(w,1,npt);
-	free_vector(dummydyda,1,npt);
-	free_vector(x1,1,npt);
-	free_vector(y1,1,npt);
-	free_vector(x,1,npt);
-	free_ivector(ia,1,MA);
-	free_vector(m,1,npt);
+	free(covar[1]); 
+        free(covar);
+	free(sig); 
+        free(w); 
+        free(x1); 
+        free(y1); 
+        free(x); 
+        free(m);
         fclose(in);
         fclose(out);
         fclose(outreg);
 	return 0;
    }
 
-static double *vector(long nl, long nh)
-  { double *v;
-   v=(double *)malloc((size_t)((nh-nl+1+NR_END)*sizeof(double)));
-   if (!v) {
-        Werrprintf("allocation failure in vector() of indices  %ld  and  %ld\n",nl,nh);
-        abortflag=1;
-        return(v);
-    }
-      return v-nl+NR_END;
-   }
-
-static int *ivector(long nl, long nh)
-    {
-        int *v;
-        v=(int *)malloc((size_t) ((nh-nl+1+NR_END)*sizeof(int)));
-        if (!v)
-        {
-            Werrprintf("allocation failure in ivector()\n");
-            abortflag=1;
-            return(v);
-        }
-        return v-nl+NR_END;
-    }
-
-static void free_vector(double *v, long nl, long nh)
-{
-   if (v)
-      free((FREE_ARG) (v+nl-NR_END));
-}
-
-static void free_ivector(int *v, long nl, long nh)
-{
-   if (v)
-        free((FREE_ARG) (v+nl-NR_END));
-}
-
-static double **matrix(long nrl, long nrh, long ncl, long nch)
-{
-        long i, nrow=nrh-nrl+1,ncol=nch-ncl+1;
-        double **m;
-        m=(double **) malloc((size_t)((nrow+NR_END)*sizeof(double*)));
-        if (!m)
-        {
-            Werrprintf("allocation failure 1 in matrix()");
-            abortflag=1;
-            return(m);
-        }
-        m += NR_END;
-        m -= nrl;
-        m[nrl]=(double *) malloc((size_t)((nrow*ncol+NR_END)*sizeof(double)));
-        if (!m[nrl])
-        {
-            Werrprintf("allocation failure 2 in matrix()");
-            abortflag=1;
-            return(m);
-        }
-        m[nrl] += NR_END;
-        m[nrl] -= ncl;
-        for(i=nrl+1;i<=nrh;i++) m[i]=m[i-1]+ncol;
-        return m;
-}
-
-static void free_matrix(double **m, long nrl, long nrh, long ncl, long nch)
-{
-   if (m && m[nrl])
-        free((FREE_ARG) (m[nrl]+ncl-NR_END));
-   if (m)
-        free((FREE_ARG) (m+nrl-NR_END));
-} 
