@@ -167,8 +167,8 @@ static void fft2d_teardown(void)
 #ifdef VNMR_GPL
     fftwf_destroy_plan(g_fft2d_batch_plan);
 #else
-    free_ivector(g_mapsize,1,2);
-    free_vector(g_ftbuf,0,2*0);
+    // free_ivector(g_mapsize,1,2);
+    // free_vector(g_ftbuf,0,2*0);
 #endif
 }
 

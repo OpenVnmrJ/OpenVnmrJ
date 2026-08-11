@@ -125,7 +125,7 @@ static void fft3d_teardown(void)
 #ifdef VNMR_GPL
     fftwf_destroy_plan(g_fft3d_plan);
 #else
-    free_ivector(g_mapsize,1,3);
+    // free_ivector(g_mapsize,1,3);
 #endif
 }
 
@@ -372,8 +372,8 @@ int main(int argc, char *argv[])
     fftwf_free(fraw);
     free(graw);
 #else
-    free_vector(graw,0,0);
-    free_vector(fraw,0,0);
+    // free_vector(graw,0,0);
+    // free_vector(fraw,0,0);
 #endif
     free(raw);
     free(freconphase); free(freconphase2);
