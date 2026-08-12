@@ -85,61 +85,49 @@ while [ $# -gt 0 ]; do
 done
 
 url="https://www.dropbox.com/s/jtpg43bm0jaunsx/vnmrjManuals.zip?dl=0"
-indexUrl="https://github.com/user-attachments/files/30808575/index.zip"
 
 downloadMac() {
-   local label="$1"; shift
    $OVJ_VECHO "Downloading Manual files to MacOS file system"
-   for dlurl in "$@"; do
-      $OVJ_VECHO "Downloading $label"
-      if [ "x${OVJ_LOG}" = "x" ] ; then
-         curl -L -O $dlurl
-      else
-         echo "Downloading $label" >> ${OVJ_LOG}
-         curl -L -O $dlurl 2>> ${OVJ_LOG}
-      fi
-   done
+   if [ "x${OVJ_LOG}" = "x" ] ; then
+      $OVJ_VECHO "Downloading VnmrJ 4.2 manuals"
+      curl -L -O $url
+   else
+      $OVJ_VECHO "Downloading VnmrJ 4.2 manuals"
+      echo "Downloading VnmrJ 4.2 manuals" >> ${OVJ_LOG}
+      curl -L -O $url 2>> ${OVJ_LOG}
+   fi
 }
 
 downloadLinux() {
-   local label="$1"; shift
    $OVJ_VECHO "Downloading Manual files to Linux file system"
-   for dlurl in "$@"; do
-      $OVJ_VECHO "Downloading $label"
-      if [ "x${OVJ_LOG}" = "x" ] ; then
-         wget $dlurl
-      else
-         echo "Downloading $label" >> ${OVJ_LOG}
-         wget -nv $dlurl 2>> ${OVJ_LOG}
-      fi
-   done
+   if [ "x${OVJ_LOG}" = "x" ] ; then
+      $OVJ_VECHO "Downloading VnmrJ 4.2 manuals"
+      wget $url
+   else
+      $OVJ_VECHO "Downloading VnmrJ 4.2 manuals"
+      echo "Downloading VnmrJ 4.2 manuals" >> ${OVJ_LOG}
+      wget  -nv $url 2>> ${OVJ_LOG}
+   fi
 }
 
 installIndexFile() {
-   local webHelpDir="/vnmr/help/WebHelp"
-   local indexZip="index.zip"
-   $OVJ_VECHO "Installing index.html into ${webHelpDir}"
+   local baseDir="${OVJ_INSTALL:-/vnmr/help}"
+   local webHelpDir="${baseDir}/WebHelp"
+   local indexSrc="/vnmr/adm/help/index.html"
    if [ ! -d "${webHelpDir}" ]; then
       echo "WebHelp directory not found: ${webHelpDir}"
       return 1
    fi
-   cd "${webHelpDir}"
-   if [ x$(uname -s) = "xDarwin" ]; then
-      downloadMac "index.html for WebHelp" "$indexUrl"
-      ditto -x -k ${indexZip} .
-   elif [ x$(uname -s) = "xLinux" ]; then
-      downloadLinux "index.html for WebHelp" "$indexUrl"
-      unzip -q -o ${indexZip}
-   else
-      echo "Can only download index.html with Linux or MacOS systems"
-      return 1
+   if [ ! -f "${indexSrc}" ]; then
+      $OVJ_VECHO "Skipping index.html symlink: ${indexSrc} not found"
+      return 0
    fi
+   ln -sf "${indexSrc}" "${webHelpDir}/index.html"
    if [[ $? -ne 0 ]]; then
-      echo "Failed to extract index.html into ${webHelpDir}"
+      echo "Failed to create index.html symlink in ${webHelpDir}"
       return 1
    fi
-   rm -f ${indexZip}
-   $OVJ_VECHO "index.html installed into ${webHelpDir}"
+   $OVJ_VECHO "Linked ${webHelpDir}/index.html -> ${indexSrc}"
    return 0
 }
 
@@ -158,9 +146,9 @@ downloadFiles() {
             fi
          fi
          if [ x$(uname -s) = "xDarwin" ]; then
-            downloadMac "VnmrJ 4.2 manuals" "$url"
+            downloadMac
          elif [ x$(uname -s) = "xLinux" ]; then
-            downloadLinux "VnmrJ 4.2 manuals" "$url"
+            downloadLinux
          else
             echo "Can only download VnmrJ manuals with Linux or MacOS systems"
             return 1
@@ -260,12 +248,14 @@ else
    unzip -q ${filename}*
 fi
 rm -f ${filename}*
+
 installIndexFile
 if [[ $? -ne 0 ]]; then
    $OVJ_VECHO " "
    $OVJ_VECHO "Warning: index.html installation into WebHelp failed"
    $OVJ_VECHO " "
 fi
+
 $OVJ_VECHO ""
 $OVJ_VECHO "VnmrJ 4.2 manuals installation complete"
 $OVJ_VECHO ""
