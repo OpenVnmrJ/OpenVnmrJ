@@ -85,7 +85,7 @@ while [ $# -gt 0 ]; do
 done
 
 url="https://www.dropbox.com/s/jtpg43bm0jaunsx/vnmrjManuals.zip?dl=0"
-indexUrl="https://github.com/user-attachments/files/30808575/index.zipp"
+indexUrl="https://github.com/user-attachments/files/30808575/index.zip"
 
 downloadMac() {
    local label="$1"; shift
