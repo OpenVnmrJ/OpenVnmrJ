@@ -423,9 +423,32 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             memorymonitor.setVisible(true);
         }
         
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            exitAll();
-        }));
+	    try {
+    	    Class<?> signalClass   = Class.forName("sun.misc.Signal");
+    	    Class<?> handlerClass  = Class.forName("sun.misc.SignalHandler");
+
+    	    Object termSignal = signalClass
+       	     .getConstructor(String.class)
+       	     .newInstance("TERM");
+
+    	    Object handler = java.lang.reflect.Proxy.newProxyInstance(
+            	getClass().getClassLoader(),
+            	new Class<?>[]{ handlerClass },
+            	(proxy, method, args) -> {
+             	 if ("handle".equals(method.getName())) {
+                  exitAll();
+           	 	}
+           	    return null;
+       	  	 }
+    	    );
+
+    	    signalClass.getMethod("handle", signalClass, handlerClass)
+               .invoke(null, termSignal, handler);
+
+		    } catch (Exception e) {
+    		    // sun.misc.Signal unavailable
+    		    System.err.println("Warning: Could not register SIGTERM handler: " + e);
+			    }
 
         DisplayOptions.updateUIColor();
         
