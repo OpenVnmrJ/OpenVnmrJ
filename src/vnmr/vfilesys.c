@@ -79,15 +79,16 @@ void winPathToUnix(char *path,char *buff,int maxlength) {
 /************************************************/
 /*  getLineFromFile returns the next line from a file	*/
 /************************************************/
-static int getLineFromFile(FILE *path, char line[], int limit)
+static int getLineFromFile(FILE *path, char line[], size_t limit)
 /**********************************/
 {
-  int ch,i;
+  int ch;
+  size_t i;
 
   line[0] = '\0';
   i = 0;
   ch = '\0';
-  while ((i < limit -1) && ((ch = getc(path)) != EOF) && (ch != '\n'))
+  while ((i < limit -2) && ((ch = getc(path)) != EOF) && (ch != '\n'))
     line[i++] = ch;
   line[i] = '\n';
   line[i+1] = '\0';
@@ -324,7 +325,7 @@ static void getappdirPaths()
 static char *appdirVal(char *info, int index)
 {
    int  findIndex = 1;
-   register char *infoPtr;
+   char *infoPtr;
    static char label[MAXPATH];
    char *labelPtr;
 

@@ -21,6 +21,7 @@
 #include "group.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include "pvars.h"
 #include "tools.h"
@@ -773,8 +774,7 @@ int savecolors(int argc, char *argv[], int retc, char *retv[])
 {   
     char  pltname[56];
     char  srcPath[256];
-    char  cmd[512];
-    FILE  *fd;
+    char  toFile[512];
 
     (void) argc;
     (void) argv;
@@ -785,12 +785,10 @@ int savecolors(int argc, char *argv[], int retc, char *retv[])
     if (strcmp(pltname, "DEFAULT") == 0)
         RETURN;
     sprintf(srcPath,"%s/templates/color/DEFAULT",userdir);
-    fd = fopen(srcPath, "r");
-    if (fd == NULL)
+    if (access(srcPath, R_OK))
         RETURN;
-    fclose(fd);
-    sprintf(cmd,"cp %s %s/templates/color/%s", srcPath, userdir, pltname);
-    system(cmd);
+    sprintf(toFile,"%s/templates/color/%s", userdir, pltname);
+    copyFile(srcPath, toFile, 0);
     RETURN;
 }
 #endif
