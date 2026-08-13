@@ -62,7 +62,7 @@ void RQimage::initImage(string str) {
     set_batch_function(1);  // turn on grahpics batch mode
     if (str.find("/", 0) == 0) { // str is key or path.
 
-        int i1;
+        size_t i1;
         if ((i1 = str.find_last_of(" ")) != string::npos) {
             copy = str.substr(i1);
             str = str.substr(0, i1);
@@ -112,7 +112,7 @@ void RQimage::initImage(string str) {
 
 void RQimage::getIndex4Key(string key, int *rank, int *slice, int *image,
         int *echo) {
-    int i1, i2;
+    size_t i1, i2;
 
     if ((i1 = key.find(" ", 1)) == string::npos)
         return;
@@ -121,11 +121,11 @@ void RQimage::getIndex4Key(string key, int *rank, int *slice, int *image,
 
     string fname = key.substr(i1+1, i2-i1-1);
 
-    int s = fname.find("slice", 0);
-    int i = fname.find("image", 0);
-    int e = fname.find("echo", 0);
-    int c = fname.find("coil", 0);
-    int l = fname.length();
+    size_t s = fname.find("slice", 0);
+    size_t i = fname.find("image", 0);
+    size_t e = fname.find("echo", 0);
+    size_t c = fname.find("coil", 0);
+    size_t l = fname.length();
 
     if (c == string::npos && s == 0&& i == 8&& e == 16) {
 
@@ -250,7 +250,7 @@ string RQimage::getStudyPath() {
     string path = getAttribute("dir");
     path = path.substr(0, path.find_last_of("/"));
 
-    int pos = path.find("/data", path.length()-5);
+    size_t pos = path.find("/data", path.length()-5);
     if (pos != string::npos)
         path = path.substr(0, path.length()-5);
 

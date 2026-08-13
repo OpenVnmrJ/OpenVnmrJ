@@ -122,7 +122,7 @@ int Polygon::findDuplicateVertex(int tolerance) {
 bool Polygon::insertVertex(int index, int x, int y) {
     int i;
 
-    if (index < 0|| npnts < 2|| pntPix.size() != npnts) {
+    if (index < 0|| npnts < 2|| (int) pntPix.size() != npnts) {
         return false;
     }
     if (closed) {
@@ -148,14 +148,14 @@ bool Polygon::insertVertex(int index, int x, int y) {
     calc_xyminmax();
     draw();
 
-    if (pntData->coords.size() >= index) {
+    if ((int) pntData->coords.size() >= index) {
         pnts3D_t::iterator itr2 = pntData->coords.begin();
         for (i=0; i<=index; i++, itr2++)
             ;
         pntData->coords.insert(itr2, D3Dpoint_t());
     }
 
-    if (magnetCoords->coords.size() >= index) {
+    if ((int) magnetCoords->coords.size() >= index) {
         pnts3D_t::iterator itr3 = magnetCoords->coords.begin();
         for (i=0; i<=index; i++, itr3++)
             ;
@@ -175,7 +175,7 @@ bool Polygon::insertVertex(int index, int x, int y) {
 bool Polygon::deleteVertex(int index) {
     int i;
 
-    if (index < 0|| index >= npnts || npnts <= 3|| pntPix.size() != npnts) {
+    if (index < 0|| index >= npnts || npnts <= 3|| (int) pntPix.size() != npnts) {
         return false;
     }
 
@@ -188,14 +188,14 @@ bool Polygon::deleteVertex(int index) {
     calc_xyminmax();
     //draw();
 
-    if (pntData->coords.size() > index) {
+    if ((int) pntData->coords.size() > index) {
         pnts3D_t::iterator itr = pntData->coords.begin();
         for (i=0; i<index; i++, itr++)
             ;
         pntData->coords.erase(itr);
     }
 
-    if (magnetCoords->coords.size() > index) {
+    if ((int) magnetCoords->coords.size() > index) {
         pnts3D_t::iterator itr = magnetCoords->coords.begin();
         for (i=0; i<index; i++, itr++)
             ;
@@ -213,7 +213,6 @@ bool Polygon::deleteVertex(int index) {
  * Update one vertex of a polygon.
  */
 ReactionType Polygon::create(short x, short y, short action) {
-    int i;
 
     // Check for the minimum and maximum limit of the graphics area
     //if ((x < 0) || (y < 0) ||
@@ -433,7 +432,7 @@ double Polygon::distanceFrom(int x, int y, double far) {
 
 int Polygon::closestSide(int x, int y, double& distance) {
     double d2;
-    int i, j;
+    int i;
 
     distance = distanceFromLine(x, y, pntPix[0].x, pntPix[0].y,
             pntPix[1%npnts].x, pntPix[1%npnts].y, -1);
@@ -637,8 +636,8 @@ void Polygon::load(ifstream &infile, bool pixflag) {
 
     ReviewQueue *rq = ReviewQueue::get();
 
-    DataManager *dm = DataManager::get();
-    DataMap *dataMap = dm->getDataMap();
+    // DataManager *dm = DataManager::get();
+    // DataMap *dataMap = dm->getDataMap();
 
     std::set<string> keylist = rq->getKeyset(binding);
     std::set<string>::iterator itr;

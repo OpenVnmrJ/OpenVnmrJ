@@ -161,7 +161,7 @@ RQnode::readNode(string attributes)
 // or <filenode key1 ="value1"  key2="value2" key3...\>
 // at least one space is required before the keys.
 
-    int p = attributes.find("<filenode", 0);
+    size_t p = attributes.find("<filenode", 0);
     if(p == string::npos) return;
 
     if(p > 0) attributes = attributes.substr(p);

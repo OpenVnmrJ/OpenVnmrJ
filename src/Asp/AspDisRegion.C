@@ -28,6 +28,7 @@ extern "C" {
 void BaselineFit(float *indata, int n, float *basemask, double smoothness);
 void BaseMask(float *inData, float *basmask, int n, int aScale);
 int calcBCFit(float *data, float *model, float *mask, int npts, int bcpts);
+int do_mkdir(const char *dir, int psub, mode_t mode);
 void window_redisplay();
 }
 
@@ -135,9 +136,11 @@ void AspDisRegion::save(spAspFrame_t frame, char *path) {
 
    struct stat fstat;
    if (stat(dir.c_str(), &fstat) != 0) {
-       char str[MAXSTR2];
-       (void)sprintf(str, "mkdir -p %s \n", dir.c_str());
-       (void)system(str);
+       if  ( do_mkdir(dir.c_str(), 1, 0777) )
+       {
+          Winfoprintf("Failed to make region directory %s.",dir.c_str());
+	  return;
+       }
    }
 
    FILE *fp;
