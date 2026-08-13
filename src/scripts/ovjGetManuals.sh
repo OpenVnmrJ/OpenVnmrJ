@@ -119,15 +119,15 @@ installIndexFile() {
       return 1
    fi
    if [ ! -f "${indexSrc}" ]; then
-      $OVJ_VECHO "Skipping index.html symlink: ${indexSrc} not found"
+      $OVJ_VECHO "Skipping index.html link: ${indexSrc} not found"
       return 0
    fi
-   ln -sf "${indexSrc}" "${webHelpDir}/index.html"
+   ln -f "${indexSrc}" "${webHelpDir}/index.html"
    if [[ $? -ne 0 ]]; then
-      echo "Failed to create index.html symlink in ${webHelpDir}"
+      echo "Failed to create index.html link in ${webHelpDir}"
       return 1
    fi
-   $OVJ_VECHO "Linked ${webHelpDir}/index.html -> ${indexSrc}"
+   $OVJ_VECHO "Hard linked ${webHelpDir}/index.html -> ${indexSrc}"
    return 0
 }
 
