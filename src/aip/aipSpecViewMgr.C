@@ -73,7 +73,7 @@ int SpecViewMgr::aipMakeMaps(int argc, char *argv[], int retc, char *retv[]) {
      else sprintf(path,"mmap_li_%.2f",freq_to_csPPM(freq));
   } else if(path[strlen(path)-1]=='_') {
      char tmp[MAXSTR]; 
-     sprintf(tmp,"%s%.2f",path,freq_to_csPPM(freq));
+     snprintf(tmp,sizeof(tmp),"%s%.2f",path,freq_to_csPPM(freq));
      strcpy(path,tmp);
   }
   if(path[0] != '/') {
@@ -677,7 +677,7 @@ void SpecViewMgr::selectSpecView(SpecViewList *specList, int ind, int mask) {
      sprintf(cmd,"csiSel('%s vox',%d)\n",key.c_str(), *ip);
      execString(cmd); 
    } else {
-     sprintf(cmd,"csiSel('%s vox',%d,'",key.c_str(), selectedViews.size());
+     sprintf(cmd,"csiSel('%s vox',%d,'",key.c_str(), (int)selectedViews.size());
      std::list<int>::iterator ip;
      for (ip = selectedViews.begin(); ip != selectedViews.end(); ++ip) {
 	sprintf(str,"%d ",*ip);
@@ -1213,7 +1213,7 @@ int SpecViewMgr::makeMaps(spGframe_t gf, char *mappath, string key, int flag,
        count++;
 
        // write map 
-       sprintf(path,"%s_roi%d.fdf",mappath,count);
+       snprintf(path,sizeof(path),"%s_roi%d.fdf",mappath,count);
 //return 1 if map writen
 // load path 
        aip_writeCSIMap(path,data,count,rows,cols,ppe,pro,lpe,lro); 
@@ -1249,7 +1249,7 @@ int SpecViewMgr::calcRatioMap(char *type,int flag, string key, string name) {
      else sprintf(path,"rmap_li_%.2f_%.2f",freq_to_csPPM(freq1),freq_to_csPPM(freq2));
   } else if(path[strlen(path)-1]=='_') {
      char tmp[MAXSTR];
-     sprintf(tmp,"%s%.2f_%.2f",path,freq_to_csPPM(freq1),freq_to_csPPM(freq2));
+     snprintf(tmp,sizeof(tmp),"%s%.2f_%.2f",path,freq_to_csPPM(freq1),freq_to_csPPM(freq2));
      strcpy(path,tmp);
   }
   if(path[0] != '/') {
@@ -1427,7 +1427,7 @@ int SpecViewMgr::calcRatioMap(char *type,int flag, string key, string name) {
        count++;
 
        // write map 
-       sprintf(path,"%s_roi%d.fdf",mappath,count);
+       snprintf(path,sizeof(path),"%s_roi%d.fdf",mappath,count);
        aip_writeCSIMap(path,data,count,rows,cols,ppe,pro,lpe,lro); 
 
        delete[] data;

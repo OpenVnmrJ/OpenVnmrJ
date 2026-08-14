@@ -1131,9 +1131,11 @@ int downsizefid(int argc, char *argv[], int retc, char *retv[])
        }
  
    // make procparpath
-      strcpy(procparpath,filepath);
-      procparpath[strlen(filepath)-3] = '\0';
-      strncat(procparpath,"procpar",7);
+      {
+      size_t flen = strlen(filepath);
+      snprintf(procparpath, sizeof(procparpath), "%.*sprocpar",
+               (int)(flen >= 3 ? flen - 3 : 0), filepath);
+      }
    }
 
    D_close(D_USERFILE);
@@ -1238,9 +1240,11 @@ int zerofillfid(int argc, char *argv[], int retc, char *retv[])
       }
  
    // make procparpath
-      strcpy(procparpath,filepath);
-      procparpath[strlen(filepath)-3] = '\0';
-      strncat(procparpath,"procpar",7);
+      {
+      size_t flen = strlen(filepath);
+      snprintf(procparpath, sizeof(procparpath), "%.*sprocpar",
+               (int)(flen >= 3 ? flen - 3 : 0), filepath);
+      }
    }
 
    D_close(D_USERFILE);
@@ -1339,9 +1343,11 @@ int leftshiftfid(int argc, char *argv[], int retc, char *retv[])
  
    }
    // make procparpath
-   strcpy(procparpath,filepath);
-   procparpath[strlen(filepath)-3] = '\0';
-   strncat(procparpath,"procpar",7);
+   {
+   size_t flen = strlen(filepath);
+   snprintf(procparpath, sizeof(procparpath), "%.*sprocpar",
+            (int)(flen >= 3 ? flen - 3 : 0), filepath);
+   }
 
    D_close(D_USERFILE);
    if (D_leftshiftfid(lsFID, filepath, &newnp))
@@ -1431,9 +1437,11 @@ int scalefid(int argc, char *argv[], int retc, char *retv[])
  
    }
    // make procparpath
-   strcpy(procparpath,filepath);
-   procparpath[strlen(filepath)-3] = '\0';
-   strncat(procparpath,"procpar",7);
+   {
+   size_t flen = strlen(filepath);
+   snprintf(procparpath, sizeof(procparpath), "%.*sprocpar",
+            (int)(flen >= 3 ? flen - 3 : 0), filepath);
+   }
 
    if (D_scalefid(scaling, filepath))
    { 
@@ -2257,12 +2265,11 @@ int rt(int argc, char *argv[], int retc, char *retv[])
   }
   // if filepath ends with .fid, but access failed, try to replace it with .REC or .rec
   if (access(filepath,F_OK) && strstr(pathptr+strlen(filepath)-4,".fid") != NULL) {
-     strncpy(path, filepath, strlen(filepath)-4);
-     strcat(path,".REC");
+     size_t fplen = strlen(filepath) - 4;
+     snprintf(path, sizeof(path), "%.*s.REC", (int)fplen, filepath);
      if(!access(path,F_OK)) strcpy(filepath,path);
      else {
-       strncpy(path, filepath, strlen(filepath)-4);
-       strcat(path,".rec");
+       snprintf(path, sizeof(path), "%.*s.rec", (int)fplen, filepath);
        if(!access(path,F_OK)) strcpy(filepath,path);
      }
   }

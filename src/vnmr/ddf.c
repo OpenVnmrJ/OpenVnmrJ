@@ -2540,7 +2540,7 @@ int makefid(int argc, char *argv[], int retc, char *retv[])
                                 argv[ 0 ], cur_fid_format);
             ABORT;
          }
-         else ;                /* do nothing if the two values match */
+         else { }                /* do nothing if the two values match */
       }
       else                    /* new fid format not defined */
          new_fid_format = cur_fid_format;

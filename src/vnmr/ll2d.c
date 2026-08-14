@@ -3075,13 +3075,13 @@ extern  int		dconi_reset(), dconi_cursor();
 		prev = gettrace(max_i-1,0);
 		trace = gettrace(max_i,0);
 		next = gettrace(max_i+1,0);
-		points[0] = *(trace+max_j-1);
-		points[1] = *(trace+max_j);
-		points[2] = *(trace+max_j+1);
+		points[1] = *(trace+max_j-1);
+		points[2] = *(trace+max_j);
+		points[3] = *(trace+max_j+1);
 		interpolate_cg(points,&fraction1,&amp1_pk);
-		points[0] = *(prev+max_j);
-		points[1] = *(trace+max_j);
-		points[2] = *(next+max_j);
+		points[1] = *(prev+max_j);
+		points[2] = *(trace+max_j);
+		points[3] = *(next+max_j);
 		interpolate_cg(points,&fraction2,&amp2_pk);
 		if (ch == peak_table->f1_label)  {  /* f1 is HORIZ */
 		  f1_pk = ll2d_dp_to_frq((double)(max_j)+fraction1,sw,fn);
@@ -4318,6 +4318,7 @@ peak_struct *create_peak(double f1, double f2, double amp)
     if ((peak = (peak_struct *)allocateWithId(sizeof(peak_struct),
 				"peak_table")) == 0) {
       Werrprintf("create_peak: cannot allocate peak");
+      return(NULL);
       }
     peak->label[0] = '\0';
     strcpy(peak->label,EMPTY_LABEL);

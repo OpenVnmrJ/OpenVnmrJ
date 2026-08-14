@@ -1681,14 +1681,14 @@ dosyfit (int argc, char *argv[], int retc, char *retv[])
 				    }
 				  if (kgrid == 1)
 				    {
-				      for (j = 1; j <= NPARAMS; j++)
+				      for (j = 0; j < NPARAMS; j++)
 					guessnr[j] = anr[j + 1];
 				      chigrid = chisq;
 				      kgrid = 0;
 				    }
 				  if (chisq < chigrid)
 				    {
-				      for (j = 1; j <= NPARAMS; j++)
+				      for (j = 0; j < NPARAMS; j++)
 					guessnr[j] = anr[j + 1];
 				      chigrid = chisq;
 				      /*covar is needed for sanity check */

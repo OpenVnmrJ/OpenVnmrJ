@@ -72,10 +72,12 @@ void getStrValues(char* buf, string* words, int* n, char* delimiter)
 
     /* remove newline if exists */
     if(buf[strlen(buf)-1] == '\n') {
-        strcpy(str, "");
-        strncat(str, buf, strlen(buf)-1);
+        size_t take = strlen(buf);
+        if (take > 0) take--;
+        if (take >= sizeof(str)) take = sizeof(str) - 1;
+        snprintf(str, sizeof(str), "%.*s", (int)take, buf);
     } else
-       strcpy(str, buf);
+       snprintf(str, sizeof(str), "%s", buf);
 
     strptr = str;
     *n = 0;

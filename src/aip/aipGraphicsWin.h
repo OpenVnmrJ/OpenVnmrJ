@@ -111,10 +111,12 @@ typedef enum {
 
 #endif
 
+#ifdef UNUSED
 Pixmap
 aipDisplayImage(float *data,
 		int width,
 		int height);/*TEST*/
+#endif
 
 Pixmap
 aipDisplayImage(colormapSegment_t idx,  /* index of palette to use */

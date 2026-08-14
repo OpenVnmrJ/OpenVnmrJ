@@ -24,6 +24,7 @@ using namespace std;
 #define MAXPEAKS 100
 
 extern "C" {
+int do_mkdir(const char *dir, int psub, mode_t mode);
 int pickLines(double noisemult, int pos, float *specData, int fpts, int npts, 
 	double thresh, double vScale, double *lineFrq, double *lineamp, int maxLines,double sw, double rflrfp, int fn);
 }
@@ -156,9 +157,11 @@ void AspDisPeaks::save(spAspFrame_t frame, char *path) {
 
    struct stat fstat;
    if (stat(dir.c_str(), &fstat) != 0) {
-       char str[MAXSTR2];
-       (void)sprintf(str, "mkdir -p %s \n", dir.c_str());
-       (void)system(str);
+       if ( do_mkdir(dir.c_str(), 1, 0777) )
+       {
+	  Winfoprintf("Failed to make peak directory %s.",dir.c_str());
+	  return;
+       }
    }
 
    FILE *fp;

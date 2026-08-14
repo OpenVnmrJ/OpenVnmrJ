@@ -13,6 +13,8 @@
 #include "AspFrameMgr.h"
 #include "AspUtil.h"
 
+extern "C" int do_mkdir(const char *dir, int psub, mode_t mode);
+
 AspRoiList::AspRoiList(int f, bool s) {
     frameID=f;
     roiList = new AspRoiMap;
@@ -250,9 +252,11 @@ void AspRoiList::saveRois(char *path) {
    
    struct stat fstat;
    if (stat(dir.c_str(), &fstat) != 0) {
-       char str[256];
-       (void)sprintf(str, "mkdir -p %s \n", dir.c_str());
-       (void)system(str);
+       if ( do_mkdir(dir.c_str(), 1, 0777) )
+       {
+	  Winfoprintf("Failed to make roi directory %s.",dir.c_str());
+	  return;
+       }
    }
 
    FILE *fp;

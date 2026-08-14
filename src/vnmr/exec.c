@@ -304,7 +304,7 @@ int procArgv(int i, node *n, int argc, char *argv[], char *macroName)
                     DPRINT2(3,"procArgv: argv[%d] = \"%s\"\n",i,argv[i]);
                 }
                 else
-                    DPRINT2(3,"procArgv: %d outside range (0..%d)\n",i,argc-1);
+                    { DPRINT2(3,"procArgv: %d outside range (0..%d)\n",i,argc-1); }
             }
             else
                 i = -1; /* so returns 0 */
@@ -395,10 +395,10 @@ int procRetv(int i, node *n, int retc, char *retv[], char *macroName)
 			}
                     }
                     else
-                        DPRINT1(3,"procRetv: ...retv[%d] was NULL\n",i);
+                        { DPRINT1(3,"procRetv: ...retv[%d] was NULL\n",i); }
                 }
                 else
-                    DPRINT1(3,"procRetv: ...retv[%d] is non-existant\n",i);
+                    { DPRINT1(3,"procRetv: ...retv[%d] is non-existant\n",i); }
             }
             else
             {
@@ -1195,8 +1195,9 @@ int execR(node *n, pair *p, char *macroName)
                         else
                         {
                            n = n->Lson;
-                         /* if oldnode->flavour == CM, fall through to CM case */
                         }
+                        /* if oldnode->flavour == CM */
+                        /* fall through */
           case CM:      if (execR(n->Lson,p, macroName))
                         {   pair Tp;
 

@@ -616,7 +616,7 @@ FILE   *fd,*fd2;
       else
       {  
          tmpPtr=sysgcoil;
-         sprintf(fullpath,"%s.%s",decclibpath,tmpPtr);
+         snprintf(fullpath,sizeof(fullpath),"%s.%s",decclibpath,tmpPtr);
       }
    }
    // Now all is saved,

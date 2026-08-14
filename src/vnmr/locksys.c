@@ -517,20 +517,26 @@ static int find_pid(int target_pid, char *curcmd )
 			found_it = 131071;
 #ifdef UNIX
 #if defined (IRIX) || (SOLARIS)
-			for (iter = 0;
-			     iter < strlen( &field4[ 0 ] ) - 3;
-			     iter++) {
-				is_vnmr = strncmp(
-					&field4[ iter ], "Vnmr", 4 ) == 0;
-				if (is_vnmr) break;
+			{
+			    int field4len = (int) strlen( &field4[ 0 ] );
+			    for (iter = 0;
+				 iter < field4len - 3;
+				 iter++) {
+				    is_vnmr = strncmp(
+					    &field4[ iter ], "Vnmr", 4 ) == 0;
+				    if (is_vnmr) break;
+			    }
 			}
 #else 
-			for (iter = 0;
-			     iter < strlen( &field5[ 0 ] ) - 3;
-			     iter++) {
-				is_vnmr = strncmp(
-					&field5[ iter ], "Vnmr", 4 ) == 0;
-				if (is_vnmr) break;
+			{
+			    int field5len = (int) strlen( &field5[ 0 ] );
+			    for (iter = 0;
+				 iter < field5len - 3;
+				 iter++) {
+				    is_vnmr = strncmp(
+					    &field5[ iter ], "Vnmr", 4 ) == 0;
+				    if (is_vnmr) break;
+			    }
 			}
 #endif 
 #else 
@@ -670,9 +676,9 @@ int locklc_(char *cmd, int pid)
     int ok = 1;
 
     mypid = pid ? pid : HostPid;
-    sprintf(path,"%s/acqqueue", systemdir);
-    sprintf(lockfile1,"%s/%s", path, basename);
-    sprintf(lockfile2,"%s/%s%d", path, basename, mypid);
+    snprintf(path,sizeof(path),"%s/acqqueue", systemdir);
+    snprintf(lockfile1,sizeof(lockfile1),"%s/%s", path, basename);
+    snprintf(lockfile2,sizeof(lockfile2),"%s/%s%d", path, basename, mypid);
 
     if (strcmp(cmd, "unlock") == 0) {
         unlink(lockfile2);
@@ -700,7 +706,7 @@ int locklc_(char *cmd, int pid)
                 } else {
                     /* Delete old lock file (maybe mine) */
                     char pathname[MAXPATH];
-                    sprintf(pathname,"%s/%s", path, name);
+                    snprintf(pathname,sizeof(pathname),"%s/%s", path, name);
                     unlink(pathname);
                 }
             }

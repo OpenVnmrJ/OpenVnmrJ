@@ -826,7 +826,7 @@ int getOrder(int* orders, int n, int j)
    if(orderMode) return orders[j];
    else 
    for(i=0; i<n; i++)
-      if(fabs(orders[i])-1 == j) return i+1;
+      if(abs(orders[i])-1 == j) return i+1;
 
    return -1; 
 }
@@ -2372,7 +2372,7 @@ void updateSExpansion(float2 p, float2 prevP)
     float z, angle;
     float3 p3, prevPoint, sCenter;
     float3 dp, hp[2];
-    float2 v1, v2, center, p1, p2;
+    float2 v1 = {0,0}, v2 = {0,0}, center, p1, p2;
     int k, slice, ns, nh = 0;
     iplan_stack *stack;
     iplan_2Dstack *overlay;
@@ -2599,7 +2599,7 @@ void updateExpansion(float2 p, float2 prevP)
     float z, angle;
     float3 dp, cp, hp[2];
     float3 p3, prevPoint, sCenter;
-    float2 v1, v2, center, p1, p2;
+    float2 v1 = {0,0}, v2 = {0,0}, center, p1, p2;
     int k, slice, ns, nh=0;
     iplan_stack *stack;
     iplan_2Dstack *overlay;
@@ -2841,7 +2841,7 @@ void updateExpansion(float2 p, float2 prevP)
 		     z = stack->ns* stack->thk;
               	     updateZforZ(z, activeStack);
 		  }
-	      	  z = fabs(stack->ns - ns)* (stack->gap + stack->thk); 
+	      	  z = abs(stack->ns - ns)* (stack->gap + stack->thk); 
 		  if(fixedSlice == -1) {
 	      	    if(stack->gap > 0 && cp[2] > 0) 
     	              stack->pss0 += usepos3*0.5*z;
@@ -3620,7 +3620,7 @@ int minEdge(int view, int stack)
     	x2 = currentOverlays->overlays[view].stacks[stack].handles.points[i][0];
     	y2 = currentOverlays->overlays[view].stacks[stack].handles.points[i][1];
 	d = sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
-	if(d > handleSize && d < dmin) dmin = d;
+	if(d > (int)handleSize && d < dmin) dmin = d;
     }
     return(dmin);
 }
@@ -3972,7 +3972,7 @@ void getLocation(float2 p, int* view, int* stack, int* slice,
             p1[1] = p2[1];
             p2[0] = overlay->handles.points[k][0];
             p2[1] = overlay->handles.points[k][1];
-	    if((overlaySize>handleSize || !onStack)) {
+	    if((overlaySize>(int)handleSize || !onStack)) {
 	      res=onLine(p, p1, p2, edgeRes);
 	      if(res < minRes) { // the closer edge is selected.
 	 	minRes=res;	
@@ -3989,7 +3989,7 @@ void getLocation(float2 p, int* view, int* stack, int* slice,
 	  h = -1;
 	  if(v1 == -1 || v2 == -1) {
 	   for(k=0; k<overlay->handles.np; k++) {
-            if((overlaySize>handleSize || !onStack) && containedInCircle(p, 
+            if((overlaySize>(int)handleSize || !onStack) && containedInCircle(p, 
 		overlay->handles.points[k], 
 	        cornerSize)) {
 		    h = k;
@@ -5807,7 +5807,7 @@ void deleteSlice()
 	activeStack >= currentOverlays->overlays[activeView].numOfStacks) return;
 
     currentStacks->stacks[activeStack].order[activeSlice] = 
-	-1*fabs(currentStacks->stacks[activeStack].order[activeSlice]);
+	-1*abs(currentStacks->stacks[activeStack].order[activeSlice]);
 /*
     drawActiveOverlay(0, activeStack);
 */
@@ -5836,13 +5836,13 @@ void restoreStack()
     if(currentStacks->stacks[act].type == REGULAR) 
       for(i=0; i<currentStacks->stacks[act].ns; i++) {
 	currentStacks->stacks[act].order[i] = 
-		(int)fabs(currentStacks->stacks[act].order[i]);	
+		abs(currentStacks->stacks[act].order[i]);	
 	currentStacks->stacks[act].pss[i][1] = 0.0;
       }
     else if(currentStacks->stacks[act].type == RADIAL)
       for(i=0; i<currentStacks->stacks[act].ns; i++) {
 	currentStacks->stacks[act].order[i] = 
-		(int)fabs(currentStacks->stacks[act].order[i]);	
+		abs(currentStacks->stacks[act].order[i]);	
 	currentStacks->stacks[act].radialAngles[i][1] = 0.0;
       }
 
@@ -6525,14 +6525,18 @@ static void brkPath2(char* path, char* root, char* name)
 
     brkPath(path, dir, base);
     if(dir[strlen(dir)-1] == '/') {
- 	strcpy(root, "");
-        strncat(root, dir, strlen(dir)-1);
-    } else strcpy(root, dir);
+        size_t len = strlen(dir);
+        if (len > 0) len--;
+        if (len >= MAXSTR) len = MAXSTR - 1;
+        snprintf(root, MAXSTR, "%.*s", (int)len, dir);
+    } else snprintf(root, MAXSTR, "%s", dir);
 	
     if(base[strlen(base)-1] == '/') {
- 	strcpy(name, "");
-        strncat(name, base, strlen(base)-1);
-    } else strcpy(name, base);
+        size_t len = strlen(base);
+        if (len > 0) len--;
+        if (len >= MAXSTR) len = MAXSTR - 1;
+        snprintf(name, MAXSTR, "%.*s", (int)len, base);
+    } else snprintf(name, MAXSTR, "%s", base);
 }
 
 /******************/
@@ -6560,9 +6564,9 @@ void updateScoutInfo(int len, int* ids)
 	brkPath2(buf, dir, name);
 	brkPath2(dir, dir2, name2);
 	if(strcmp(dir2, studyDataDir) == 0) {
-	    sprintf(path, "data/%s", name2);
+	    snprintf(path, sizeof(path), "data/%s", name2);
 	} else {
-	    sprintf(path, "%s/%s", dir2, name2);
+	    snprintf(path, sizeof(path), "%s/%s", dir2, name2);
 	}
 
 	/* check whether is a new path */
@@ -6590,9 +6594,10 @@ void updateScoutInfo(int len, int* ids)
 
     k = strlen(scoutpaths);
     if(k > 0 && scoutpaths[k-1] == ',') {
-	strcpy(str, "");
-	strncat(str, scoutpaths, k-1);
-    } else strcpy(str, scoutpaths);
+	size_t take = k-1;
+	if (take >= MAXSTR) take = MAXSTR - 1;
+	snprintf(str, MAXSTR, "%.*s", (int)take, scoutpaths);
+    } else snprintf(str, MAXSTR, "%s", scoutpaths);
     P_setstring(CURRENT, "scoutpaths", str, 1);
 }
 
@@ -6977,7 +6982,7 @@ void reDrawWindow(int id)
 	if(currentViews->ids[i] == id) nv = i;
 
 /* if there is a mark in the window, transform it location to the new window */
-    for(i=0; i<numOfMarks; i++) 
+    for(i=0; i<numOfMarks && i<3; i++) 
 	if(marks[i].isUsing && marks[i].view == nv) {
 	    m[i][0] = marks[i].currentLocation[0];
 	    m[i][1] = marks[i].currentLocation[1];
@@ -6987,7 +6992,7 @@ void reDrawWindow(int id)
 
     //getIBview(&(currentViews->views[nv]), id);
 
-    for(i=0; i<numOfMarks; i++) 
+    for(i=0; i<numOfMarks && i<3; i++) 
 	if(marks[i].isUsing && marks[i].view == nv) {
 	    transform(currentViews->views[nv].m2p, m[i]);
 	    marks[i].currentLocation[0] = m[i][0];
@@ -7345,6 +7350,7 @@ void draw3DMeshForStack(iplan_stack *stack, iplan_view *view, int lineColor,
      lines[i].p2[1] -= y0;
      lines[i].p2[2] -= z0;
      // rotate to magnet
+     /* No stringop-overflow here,  stack.u2m and view.m2p are both declared as float[3][4]  */
      transform(stack->u2m, lines[i].p1); 
      transform(stack->u2m, lines[i].p2); 
      // rotate to pixel

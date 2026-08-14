@@ -1023,6 +1023,7 @@ void AspMouse::event(int x, int y, int button, int mask, int dummy) {
 	default:
             break;
 	}
+	break;      
       case createInteg:
         switch (mask) {
 	   case mmove:

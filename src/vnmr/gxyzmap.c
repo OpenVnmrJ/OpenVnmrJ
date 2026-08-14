@@ -1143,11 +1143,11 @@ int gxyzmap(argc,argv,retc,retv)
     c=0;
     for (shim=2;shim<=nshims+1;shim++)
     {
-        sprintf(path,"%s/3Dshimlib/shimmaps/%s/shimmap%d",userdir,mapname,shim-1);
+        snprintf(path,sizeof(path),"%s/3Dshimlib/shimmaps/%s/shimmap%d",userdir,mapname,shim-1);
         j=1;
         k=0;
         strcpy(shimname,"        ");
-        for (i=0; i<strlen(mapshims); i++)
+        for (i=0; i<(int)strlen(mapshims); i++)
         {
             if (isspace(mapshims[i])) j++;
             if ((j==(shim-1))&&!(isspace(mapshims[i])))
@@ -2245,7 +2245,7 @@ static void getArgKey(char *key, char *arg) {
     int n;
     char *p = strchr(arg, '=');
     n = (p == NULL) ? 0 : p - arg;
-    strncpy(key, arg, n);
+    if (n > 0) strncpy(key, arg, n);
     key[n] = '\0';
     for (i = 0; i < n; i++) {
         if (isupper(key[i])) {

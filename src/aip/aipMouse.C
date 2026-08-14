@@ -202,6 +202,9 @@ void Mouse::wheelEvent(int clicks, double factor) {
 	  OrthoSlices::get()->setNext3Ppnt(mouseFrameID, clicks);
 	
 	break;
+
+      default:
+	break;
      } 
 }
 
@@ -227,10 +230,6 @@ void Mouse::event(int x, int y, int button, int mask, int dummy) {
 
     // mask: 27   26   25   24 . 20   19   18   17   16 . 10   9   8 . 7-0
     //       meta alt  ctrl shft mmove drag clik up   down b3   b2  b1  clicks
-
-    /* if ((mask & mmove) == 0) {
-     fprintf(stderr,"mask=0x%08x, button=%d\n", mask, button);
-     }/*CMP*/
 
     if (!aipHasScreen()) {
         // Someone else started using the screen w/o controlling the mouse.
@@ -415,7 +414,7 @@ void Mouse::event(int x, int y, int button, int mask, int dummy) {
                     break;
                 }
             }
-            if(roi = roim->activateRoi(x, y)) {
+            if((roi = roim->activateRoi(x, y))) {
                 graph_batch(1);
                 mouseHandled = true;
                 roi->setBase(x, y);
@@ -957,6 +956,8 @@ void Mouse::event(int x, int y, int button, int mask, int dummy) {
                     roi = new Polyline(gf, x, y);
                     setState(modifyPolyline);
                     break;
+                default:
+                    break;
                 }
                 if (roi != NULL) {
                     roi->setRolloverHandle(1);
@@ -1127,6 +1128,8 @@ void Mouse::event(int x, int y, int button, int mask, int dummy) {
         case b1+up:
             break;
         }
+        break;
+    default:
         break;
     }
 

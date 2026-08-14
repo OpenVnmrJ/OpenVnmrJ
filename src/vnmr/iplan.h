@@ -368,7 +368,7 @@ void make2pointStack(iplan_stack* stack, int type, int ns,
 	float thk, float angle, float3 c, float size);
 void make3pointStack(iplan_stack* stack, int type, int numSlices, 
 	float lpe, float lro, float lpe2, 
-	float thk, float2 p1, float2 p2, float2 p3, float3 c, float size);
+	float thk, float3 p1, float3 p2, float3 p3, float3 c, float size);
 
 void calEuler(float3 p1, float3 p2, float3 p3, float* theta, float* psi, float* phi);
 

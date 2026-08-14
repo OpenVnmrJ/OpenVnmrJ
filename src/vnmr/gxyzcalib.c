@@ -48,38 +48,38 @@
   static void widthmodel(double x1, double y1, 
                          double a[], double *w, double dyda[], int na)
   {
-   root=sqrt((-a[5]+y1)*(-a[5]+y1)*a[2]*a[2]*cos(3.14159265358979323846*a[3]/180)*
-        cos(3.14159265358979323846*a[3]/180)+
-        ((-a[4]+x1)*a[1]+(-a[5]+y1)*a[2]*sin(3.14159265358979323846*a[3]/180))*
-        ((-a[4]+x1)*a[1]+(-a[5]+y1)*a[2]*sin(3.14159265358979323846*a[3]/180)));
+   root=sqrt((-a[5]+y1)*(-a[5]+y1)*a[2]*a[2]*cos(M_PI*a[3]/180)*
+        cos(M_PI*a[3]/180)+
+        ((-a[4]+x1)*a[1]+(-a[5]+y1)*a[2]*sin(M_PI*a[3]/180))*
+        ((-a[4]+x1)*a[1]+(-a[5]+y1)*a[2]*sin(M_PI*a[3]/180)));
     
-   *w=sqrt((a[1]*(x1-a[4])+a[2]*(y1-a[5])*sin(a[3]*3.14159265358979323846/180))*
-            (a[1]*(x1-a[4])+a[2]*(y1-a[5])*sin(a[3]*3.14159265358979323846/180))+
-             a[2]*a[2]*(y1-a[5])*(y1-a[5])*cos(a[3]*3.14159265358979323846/180)*
-             cos(a[3]*3.14159265358979323846/180)); 
+   *w=sqrt((a[1]*(x1-a[4])+a[2]*(y1-a[5])*sin(a[3]*M_PI/180))*
+            (a[1]*(x1-a[4])+a[2]*(y1-a[5])*sin(a[3]*M_PI/180))+
+             a[2]*a[2]*(y1-a[5])*(y1-a[5])*cos(a[3]*M_PI/180)*
+             cos(a[3]*M_PI/180)); 
 
     dyda[1]=(-a[4]+x1)*((-a[4]+x1)*a[1]+
-            (-a[5]+y1)*a[2]*sin(3.14159265358979323846*a[3]/180))/root;
+            (-a[5]+y1)*a[2]*sin(M_PI*a[3]/180))/root;
 
 
-    dyda[2]=(2*(-a[5]+y1)*(-a[5]+y1)*a[2]*cos(3.14159265358979323846*a[3]/180)*
-            cos(3.14159265358979323846*a[3]/180)+
-            2*(-a[5]+y1)*sin(3.14159265358979323846*a[3]/180)*((-a[4]+x1)*a[1]+
-            (-a[5]+y1)*a[2]*sin(3.14159265358979323846*a[3]/180)))/(2*root);
+    dyda[2]=(2*(-a[5]+y1)*(-a[5]+y1)*a[2]*cos(M_PI*a[3]/180)*
+            cos(M_PI*a[3]/180)+
+            2*(-a[5]+y1)*sin(M_PI*a[3]/180)*((-a[4]+x1)*a[1]+
+            (-a[5]+y1)*a[2]*sin(M_PI*a[3]/180)))/(2*root);
 
-    dyda[3]=((-3.14159265358979323846/90)*(-a[5]+y1)*(-a[5]+y1)*a[2]*a[2]*
-            cos(3.14159265358979323846*a[3]/180)*sin(3.14159265358979323846*a[3]/180)+
-            (3.14159265358979323846/90)*(-a[5]+y1)*a[2]*cos(3.14159265358979323846*a[3]/180)*
+    dyda[3]=((-M_PI/90)*(-a[5]+y1)*(-a[5]+y1)*a[2]*a[2]*
+            cos(M_PI*a[3]/180)*sin(M_PI*a[3]/180)+
+            (M_PI/90)*(-a[5]+y1)*a[2]*cos(M_PI*a[3]/180)*
             ((-a[4]+x1)*a[1]+(-a[5]+y1)*a[2]*
-            sin(3.14159265358979323846*a[3]/180)))/(2*root);
+            sin(M_PI*a[3]/180)))/(2*root);
 
     dyda[4]=-(a[1]*((-a[4]+x1)*a[1]+(-a[5]+y1)*
-              a[2]*sin(3.14159265358979323846*a[3]/180)))/root;
+              a[2]*sin(M_PI*a[3]/180)))/root;
 
-    dyda[5]=-((-a[5]+y1)*a[2]*a[2]*cos(3.14159265358979323846*a[3]/180)*
-             cos(3.14159265358979323846*a[3]/180)+
-             a[2]*sin(3.14159265358979323846*a[3]/180)*((-a[4]+x1)*a[1]+
-             (-a[5]+y1)*a[2]*sin(3.14159265358979323846*a[3]/180)))/root;
+    dyda[5]=-((-a[5]+y1)*a[2]*a[2]*cos(M_PI*a[3]/180)*
+             cos(M_PI*a[3]/180)+
+             a[2]*sin(M_PI*a[3]/180)*((-a[4]+x1)*a[1]+
+             (-a[5]+y1)*a[2]*sin(M_PI*a[3]/180)))/root;
 
   }
 
@@ -87,11 +87,11 @@
                          double a[], double *f, double dyda[], int na)
   {
     
-   *f=a[1]+a[2]*(a1*(x1-a4)+a2*(y1-a5)*sin(a3*3.14159265358979323846/180))+a[3]*a2*(y1-a5)*cos(a3*3.14159265358979323846/180);
+   *f=a[1]+a[2]*(a1*(x1-a4)+a2*(y1-a5)*sin(a3*M_PI/180))+a[3]*a2*(y1-a5)*cos(a3*M_PI/180);
 
     dyda[1]=1.0;
-    dyda[2]=(a1*(x1-a4)+a2*(y1-a5)*sin(a3*3.14159265358979323846/180));
-    dyda[3]=a2*(y1-a5)*cos(a3*3.14159265358979323846/180);
+    dyda[2]=(a1*(x1-a4)+a2*(y1-a5)*sin(a3*M_PI/180));
+    dyda[3]=a2*(y1-a5)*cos(a3*M_PI/180);
   }
 
    int calibxy(int argc, char *argv[],int retc, char *retv[])
@@ -100,12 +100,13 @@
    char in_file[MAXLENGTH];
    char out_file[MAXLENGTH];
    int i,*ia,itst,k,mfit=MA,npt,xmax,xmin;
-   double gammaD2O,int_diam,chisq,ochisq,*x,*x1,*y1,
+   double chisq,ochisq,*x,*x1,*y1,
           *w,*sig,**covar,**alpha,*dummydyda,cwidth,cmidpoint,*m;
    char fname[MAXLENGTH];
+   int res __attribute__((unused));
 
-   gammaD2O=653.5;
-   int_diam=0.427;
+//   gammaD2O=653.5;
+//   int_diam=0.427;
 
 strcpy(in_file,curexpdir);
 strcat(in_file,"/xydata");
@@ -131,7 +132,7 @@ if ((outreg = fopen(fname,"w")) == NULL) {
  
         fprintf(out,"Output from calibxy\n");
 
-        fscanf(in,"%d  \n", &npt);
+        res = fscanf(in,"%d  \n", &npt);
    if ((npt>257)||(npt<2))
    {
         Werrprintf("Number of points %d  is unreasonable\n",npt);
@@ -313,7 +314,7 @@ a1=a[1]; a2=a[2]; a3=a[3]; a4=a[4]; a5=a[5];
 
 /* and start fitting midpoints */
 
-	for (i=1;i<=3;i++) ia[4]=0; ia[5]=0;
+	ia[4]=0; ia[5]=0;
 	gues[1]=0.0; gues[2]=0.0; gues[3]=0.0;
 	for (i=1;i<=3;i++) a[i]=gues[i];
         lm_gxyz_init(x1,y1,m,sig,npt,a,ia,3,covar,alpha,&chisq,midpointmodel);

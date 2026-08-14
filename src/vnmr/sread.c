@@ -253,7 +253,7 @@ static int distext()
         i++;
     }
   
-  if ((i<PAGELENGTH) && ((i & 2) == 1))
+  if ((i<PAGELENGTH) && ((i & 1) == 1))
     { xlpage[i] = ' ';
       i++;
     }
@@ -873,7 +873,7 @@ static int convertline(int grident)
 	  return 1;
       }
       strcpy(arrayn[pindex-1],name);
-      sprintf(tmpStr,"%s %d %s",arraystring,pindex,name);
+      snprintf(tmpStr,sizeof(tmpStr),"%s %d %s",arraystring,pindex,name);
       strcpy(arraystring,tmpStr);
 
       return 1;
@@ -1820,22 +1820,22 @@ static void setarray()
           else if (ret == 4)
           {
              if (a1 == a2)
-                sprintf(valofarray,"(%s,%s)", val1, val2);
+                snprintf(valofarray,sizeof(valofarray),"(%s,%s)", val1, val2);
              else
-                sprintf(valofarray,"%s,%s", val1, val2);
+                snprintf(valofarray,sizeof(valofarray),"%s,%s", val1, val2);
           }
           else if (ret == 6)
           {
              if ((a1 == a2) && (a1 == a3))
-                sprintf(valofarray,"(%s,%s,%s)", val1, val2, val3);
+                snprintf(valofarray,sizeof(valofarray),"(%s,%s,%s)", val1, val2, val3);
              else if (a1 == a2)
-                sprintf(valofarray,"(%s,%s),%s", val1, val2, val3);
+                snprintf(valofarray,sizeof(valofarray),"(%s,%s),%s", val1, val2, val3);
              else if (a1 == a3)
-                sprintf(valofarray,"(%s,%s),%s", val1, val3, val2);
+                snprintf(valofarray,sizeof(valofarray),"(%s,%s),%s", val1, val3, val2);
              else if (a2 == a3)
-                sprintf(valofarray,"%s,(%s,%s)", val1, val2, val3);
+                snprintf(valofarray,sizeof(valofarray),"%s,(%s,%s)", val1, val2, val3);
              else
-                sprintf(valofarray,"%s,%s,%s", val1, val2, val3);
+                snprintf(valofarray,sizeof(valofarray),"%s,%s,%s", val1, val2, val3);
           }
        }
     }

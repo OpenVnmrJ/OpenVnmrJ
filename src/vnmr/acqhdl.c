@@ -824,7 +824,7 @@ static int log_acq_message(int auto_mode, char *autodir, char *userdir, char *ex
 		break;
 
 	  case BS_CMPLT:
-		sprintf( &statusMsg[ 0 ], "BS %d completed", errorCode );
+		snprintf( &statusMsg[ 0 ], sizeof(statusMsg), "BS %d completed", errorCode );
 		break;
 
 	  case HARD_ERROR:
@@ -835,18 +835,18 @@ static int log_acq_message(int auto_mode, char *autodir, char *userdir, char *ex
                    char	msg[ 256 ];
                    getExpStatusInt(EXP_RCVRNPERR, &rcvr);
                    getExpStatusInt(EXP_NPERR, &nperr);
-		   sprintf( &msg[ 0 ], &tempbuf[ 0 ], rcvr, abs(nperr),
+		   snprintf( &msg[ 0 ], sizeof(msg), &tempbuf[ 0 ], rcvr, abs(nperr),
                    (nperr < 0) ? "greater than np." : "less than np.");
-		   sprintf( &statusMsg[ 0 ], "FID %d: %s",elemval, &msg[ 0 ]);
+		   snprintf( &statusMsg[ 0 ], sizeof(statusMsg), "FID %d: %s",elemval, &msg[ 0 ]);
                 }
                 else
-		   sprintf( &statusMsg[ 0 ], "FID %d: %s",elemval, &tempbuf[ 0 ]);
+		   snprintf( &statusMsg[ 0 ], sizeof(statusMsg), "FID %d: %s",elemval, &tempbuf[ 0 ]);
 		break;
 
 	  case SOFT_ERROR:
 	  case WARNING_MSG:
                 makeAcqerrMsg( &tempbuf[ 0 ], errorCode );
-		sprintf( &statusMsg[ 0 ], "FID %d: %s",elemval, &tempbuf[ 0 ]);
+		snprintf( &statusMsg[ 0 ], sizeof(statusMsg), "FID %d: %s",elemval, &tempbuf[ 0 ]);
 		break;
 
 	  case EXP_ABORTED:
@@ -1077,8 +1077,8 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
         if (mode_of_vnmr == AUTOMATION)
 	   strcpy( &statusMsg[ 0 ], "auto");
         else
-	   strcpy( &statusMsg[ 0 ], argv[ 1 ] );
-        strcat( &statusMsg[ 0 ], ":  " );
+	   snprintf( &statusMsg[ 0 ], sizeof(statusMsg), "%s", argv[ 1 ] );
+        strncat( &statusMsg[ 0 ], ":  ", sizeof(statusMsg) - strlen(statusMsg) - 1 );
 	switch (statusCode) {
 
 /*  strncat is used to prevent exceeding the bounds of the
@@ -1099,7 +1099,7 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
 	  case BS_CMPLT:
 		cur_element = elemval;
 		sprintf( &tempbuf[ 0 ], "BS %d completed", errorCode );
-		strncat( &statusMsg[ 0 ], &tempbuf[ 0 ], 80 );
+		strncat( &statusMsg[ 0 ], &tempbuf[ 0 ], sizeof(statusMsg) - strlen(statusMsg) - 1 );
 		acqhandler( argv[ 1 ], BS_CMPLT, errorCode, ctval );
 #ifdef VNMRJ
 		Wseterrorkey("ai");
@@ -1132,9 +1132,9 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
                    (nperr < 0) ? "greater than np." : "less than np.");
                 }
                 else
-		   strncat( temp2buf, &tempbuf[ 0 ], 80 );
+		   strncat( temp2buf, &tempbuf[ 0 ], sizeof(temp2buf) - strlen(temp2buf) - 1 );
 
-               strncat( statusMsg, temp2buf, 80 );
+               strncat( statusMsg, temp2buf, sizeof(statusMsg) - strlen(statusMsg) - 1 );
 
 #else
                 if (errorCode == (HDWAREERROR+STMERROR) )
@@ -1146,7 +1146,7 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
                    (nperr < 0) ? "greater than np." : "less than np.");
                 }
                 else
-		   strncat( &statusMsg[ 0 ], &tempbuf[ 0 ], 80 );
+		   strncat( &statusMsg[ 0 ], &tempbuf[ 0 ], sizeof(statusMsg) - strlen(statusMsg) - 1 );
 #endif
 		acqhandler( argv[ 1 ], HARD_ERROR, errorCode, 0 );
                 deleteAcqPar(argv[1]);
@@ -1157,7 +1157,7 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
 
 	  case SOFT_ERROR:
                 makeAcqerrMsg( &tempbuf[ 0 ], errorCode );
-		strncat( &statusMsg[ 0 ], &tempbuf[ 0 ], 80 );
+		strncat( &statusMsg[ 0 ], &tempbuf[ 0 ], sizeof(statusMsg) - strlen(statusMsg) - 1 );
 		acqhandler( argv[ 1 ], SOFT_ERROR, errorCode, 0 );
 #ifdef VNMRJ
 		Wseterrorkey("ae");
@@ -1166,7 +1166,7 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
 
 	  case WARNING_MSG:
                 makeAcqerrMsg( &tempbuf[ 0 ], errorCode );
-		strncat( &statusMsg[ 0 ], &tempbuf[ 0 ], 80 );
+		strncat( &statusMsg[ 0 ], &tempbuf[ 0 ], sizeof(statusMsg) - strlen(statusMsg) - 1 );
 		acqhandler( argv[ 1 ], SOFT_ERROR, errorCode, 0 );
 #ifdef VNMRJ
 		Wseterrorkey("aw");
@@ -1187,7 +1187,7 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
                 }
                 else
                 {
-		   strncat( &statusMsg[ 0 ], "Acquisition aborted", 80 );
+		   strncat( &statusMsg[ 0 ], "Acquisition aborted", sizeof(statusMsg) - strlen(statusMsg) - 1 );
                 }
                 setAbortMsg("");
 		acqhandler( argv[ 1 ], EXP_ABORTED, errorCode, 0 );
@@ -1195,7 +1195,7 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
 		break;
 
 	  case SETUP_CMPLT:
-		strncat( &statusMsg[ 0 ], "Setup Complete", 80 );
+		strncat( &statusMsg[ 0 ], "Setup Complete", sizeof(statusMsg) - strlen(statusMsg) - 1 );
 		acqhandler( argv[ 1 ], SETUP_CMPLT, errorCode, 0 );
 #ifdef VNMRJ
 		Wseterrorkey("ai");
@@ -1208,22 +1208,22 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
 	    But guard against those cases where it is not.	*/
 
 	  case STOP_CMPLT:
-		strncat( &statusMsg[ 0 ], "Acquisition stopped", 80 );
+		strncat( &statusMsg[ 0 ], "Acquisition stopped", sizeof(statusMsg) - strlen(statusMsg) - 1 );
 		cur_element = elemval;
 		acqhandler( argv[ 1 ], STOP_CMPLT, errorCode, ctval );
 		if (errorCode == STOP_EOS)
-		  strncat( &statusMsg[ 0 ], " at current transient", 80 );
+		  strncat( &statusMsg[ 0 ], " at current transient", sizeof(statusMsg) - strlen(statusMsg) - 1 );
 		else if (errorCode == STOP_EOB)
-		  strncat( &statusMsg[ 0 ], " at block size", 80 );
+		  strncat( &statusMsg[ 0 ], " at block size", sizeof(statusMsg) - strlen(statusMsg) - 1 );
 		else if (errorCode == STOP_EOF)
-		  strncat( &statusMsg[ 0 ], " at current FID", 80 );
+		  strncat( &statusMsg[ 0 ], " at current FID", sizeof(statusMsg) - strlen(statusMsg) - 1 );
 #ifdef VNMRJ
 		Wseterrorkey("ae");
 #endif 
 		break;
 
 	  case EXP_COMPLETE:
-		strncat( &statusMsg[ 0 ], "Acquisition complete", 80 );
+		strncat( &statusMsg[ 0 ], "Acquisition complete", sizeof(statusMsg) - strlen(statusMsg) - 1 );
 	        statusMsg[ 79 ] = '\0';	/* Insure string is terminated */
                 if (!silentMode)
 		{
@@ -1243,7 +1243,7 @@ int acqstatus(int argc, char *argv[], int retc, char *retv[])
 		break;
 
 	  case EXP_STARTED:
-		strncat( &statusMsg[ 0 ], "Experiment started", 80 );
+		strncat( &statusMsg[ 0 ], "Experiment started", sizeof(statusMsg) - strlen(statusMsg) - 1 );
 		cur_element = 0;
                 skipFlush = 1;
                 sprintf(tempbuf,"%s/acqqueue/acqmsg",systemdir);
