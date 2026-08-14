@@ -26,7 +26,12 @@ void setpbox(int itnf)
     fclose(fil); 
   }  
   if(home[0] == '\0')
-    (void) strcpy(home, (char *) getenv("HOME"));       /* then read local */
+  {
+    char *homedir = getenv("HOME");
+    if (homedir == NULL)
+      pxerr("Pbox: HOME environment variable not set");
+    (void) strcpy(home, homedir);       /* then read local */
+  }
   (void) strcat(strcpy(ifn, home), FN_GLO);
   if ((fil = fopen(ifn, "r")) != NULL)			/* load globals */
   {
@@ -48,6 +53,8 @@ void setpbox(int itnf)
   {
     Wv = (Wave *) calloc(itnf, sizeof(Wave));
     Sh = (Shape *) calloc(itnf, sizeof(Shape)); 
+    if ((Wv == NULL) || (Sh == NULL))
+      pxerr("allocation failure in setpbox()");
     for (i=0; i<itnf; i++) Sh[i].set = 0;
   }
 }
@@ -108,7 +115,7 @@ int loadshape(int id)
 
 /* -------------------------- Read Shapes from Wavelib ----------------------- */
 
-int setshapes()
+int setshapes(void)
 {
   int i, j;
   char str1[MAXSTR];
@@ -179,6 +186,8 @@ int setshapes()
   if ((h.itns = nsuc(str1)) > 0)	/* setup supercycles */
   {
     su = (Shape *) calloc(h.itns, sizeof(Shape)); 
+    if (su == NULL)
+      pxerr("allocation failure in setshapes()");
     for(i=0; i<h.itns; i++) 
     {
       resetshape(&su[i]); cutstr(su[i].sh, str1);   
@@ -190,6 +199,8 @@ int setshapes()
   if (h.itnw)
   {
     wf = (Windw *) calloc(h.itnw, sizeof(Windw)); 
+    if (wf == NULL)
+      pxerr("allocation failure in setshapes()");
     for(i=0, j=0; i<h.itnf; i++) 
     {
       if (isname(Sh[i].wf))
@@ -204,6 +215,8 @@ int setshapes()
   if (h.itnd)
   {
     df = (Windw *) calloc(h.itnd, sizeof(Windw)); 
+    if (df == NULL)
+      pxerr("allocation failure in setshapes()");
     for(i=0, j=0; i<h.itnf; i++) 
     {
       if (isname(Sh[i].df))
@@ -255,7 +268,7 @@ int resetpars(char fln[MAXSTR], int inm)
 }
 
 
-int closepbox()
+int closepbox(void)
 {
   FILE *fil, *fil2 = NULL;
   double **Sam = NULL, **Sph = NULL, **Wam = NULL, **Wph = NULL, **Wbs = NULL;
@@ -264,7 +277,7 @@ int closepbox()
   int i, j, k, n, m, nn, itr, nitr, inp, gate, minnumb, npmax;
   double mindelta, maxdelta, dumm, attf, pls, plu, sum, mxl;
   double B1max, b1max, qq, dj, itrerr, pw0, edB;
-  void   blqtph();
+  void   blqtph(Blodata *bl);
 
 /* ------------------------------- Reset parameters ------------------------- */
 
@@ -667,6 +680,8 @@ FSLG -  one of the versions disabled here. EK.
     {
       Sam = (double **) calloc(h.itns, sizeof(double *));
       Sph = (double **) calloc(h.itns, sizeof(double *));
+      if (!Sam || !Sph)
+        pxerr("allocation failure in closepbox()");
       for (i = 0; i < h.itns; i++)
       {
         Sam[i] = arry(su[i].dnp); 
@@ -680,6 +695,8 @@ FSLG -  one of the versions disabled here. EK.
       Wam = (double **) calloc(h.itnf, sizeof(double *));
       Wph = (double **) calloc(h.itnf, sizeof(double *));
       Wbs = (double **) calloc(h.itnf, sizeof(double *));
+      if ((Wam == NULL) || (Wph == NULL) || (Wbs == NULL))
+        pxerr("allocation failure in closepbox()");
       for (i = 0; i < h.itnf; i++)
       {
         Wam[i] = arry(h.npst+200); 
@@ -1431,7 +1448,11 @@ FSLG -  one of the versions disabled here. EK.
     MaxAmp = pboxRound(MaxAmp, g.amres);
 
   if (h.itns) 
-    free(Sam), free(Sph);
+  {
+    for (i=0; i<h.itns; i++) { free(Sam[i]); free(Sph[i]); }
+    free(Sam); free(Sph);
+    Sam = NULL; Sph = NULL;
+  }
 
   for (j = 0; j < h.np; j++)
     Pha[j] = scale(Pha[j]);
@@ -1881,5 +1902,10 @@ FSLG -  one of the versions disabled here. EK.
       pxout(e_str, -1);
     }
   }
+
+  if (Wam != NULL) { for (i=0; i<h.itnf; i++) free(Wam[i]); free(Wam); }
+  if (Wph != NULL) { for (i=0; i<h.itnf; i++) free(Wph[i]); free(Wph); }
+  if (Wbs != NULL) { for (i=0; i<h.itnf; i++) free(Wbs[i]); free(Wbs); }
+
   return 1;
 }

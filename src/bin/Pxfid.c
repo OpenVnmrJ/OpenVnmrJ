@@ -37,7 +37,7 @@
 int main(int argc, char *argv[])
 {
   FILE *inpf, *outf;
-  int i, j, k, nm, tokens, np, gt;
+  int i, j, k, nm, tokens, np, gt, c;
   float am, ph, fgt, re, im, ln, numb, tpa;
   double rd = PI / 180.0;
   char ch, str[MAXSTR];
@@ -86,13 +86,16 @@ int main(int argc, char *argv[])
     }
     else
     {
-      (void) strcpy(ifn, (char *) getenv("HOME"));
-      (void) strcat(ifn, SHAPELIB);
-      (void) strcat(ifn, argv[1]);
+      char *home = getenv("HOME");
+      if (home == NULL)
+      {
+        printf("Pxfid: HOME environment variable not set\n");
+        exit(1);
+      }
+      (void) snprintf(ifn, sizeof(ifn), "%s%s%s", home, SHAPELIB, argv[1]);
       if ((inpf = fopen(ifn, "r")) == NULL)	/* read file */
       {
-        (void) strcpy(ifn, SYSSHAPELIB);
-        (void) strcat(ifn, argv[1]);
+        (void) snprintf(ifn, sizeof(ifn), "%s%s", SYSSHAPELIB, argv[1]);
         if ((inpf = fopen(ifn, "r")) == NULL)     /* read file */
         {
           printf("Pxfid: cannot find input file %s\n", argv[1]);
@@ -107,8 +110,9 @@ int main(int argc, char *argv[])
   +---------------------*/
   np = 0;
   k = 0;
-  while ((ch = getc(inpf)) != EOF)
+  while ((c = getc(inpf)) != EOF)
   {
+    ch = (char) c;
     if ((ch != ' ') && (ch != '\n') && (ch != '\t') && (ch != '#'))
       k++;
     if (ch == '#')
@@ -133,7 +137,15 @@ int main(int argc, char *argv[])
   /*-----------------+
   | open output file |
   +-----------------*/
-  (void) strcpy(ofn, (char *) getenv("HOME"));
+  {
+    char *home = getenv("HOME");
+    if (home == NULL)
+    {
+      printf("Pxfid: HOME environment variable not set\n");
+      exit(1);
+    }
+    (void) strcpy(ofn, home);
+  }
   (void) strcat(ofn, SHAPELIB);
   (void) strcat(ofn, FNOUT);
   if ((outf = fopen(ofn, "w")) == NULL)
@@ -160,10 +172,20 @@ int main(int argc, char *argv[])
     numb = 0;
     for (i = 0; i < np; i++)
     {
-      fgets(str, MAXSTR, inpf);
+      if (fgets(str, MAXSTR, inpf) == NULL)
+      {
+        printf("Pxfid: file format error in %s\n", ifn);
+        fclose(inpf); fclose(outf); unlink(ofn); exit(1);
+      }
       while ((str[0] == '#') ||
              ((tokens = sscanf(str, "%f %f %f %f", &ph, &am, &ln, &fgt)) == 0))
-        fgets(str, MAXSTR, inpf);
+      {
+        if (fgets(str, MAXSTR, inpf) == NULL)
+        {
+          printf("Pxfid: file format error in %s\n", ifn);
+          fclose(inpf); fclose(outf); unlink(ofn); exit(1);
+        }
+      }
       if (tokens < 4)
         gt = 1;
       else
@@ -206,7 +228,7 @@ int main(int argc, char *argv[])
   +---------------------------------------*/
   else if (strcmp(ext, "DEC") == 0)
   {
-    j = fscanf(inpf, "%c %s %f %f %f %f %f\n", &ch, str, &ln, &ln, &ln, &ln, &am);
+    j = fscanf(inpf, "%c %511s %f %f %f %f %f\n", &ch, str, &ln, &ln, &ln, &ln, &am);
     if ((j == 7) && (ch == '#') && (str[0] == 'P') && (str[1] == 'b') && 
         (str[2] == 'o') && (str[3] == 'x'))
       tpa = ln;
@@ -215,10 +237,20 @@ int main(int argc, char *argv[])
     numb = 0;
     for (i = 0; i < np; i++)
     {
-      fgets(str, MAXSTR, inpf);
+      if (fgets(str, MAXSTR, inpf) == NULL)
+      {
+        printf("Pxfid: file format error in %s\n", ifn);
+        fclose(inpf); fclose(outf); unlink(ofn); exit(1);
+      }
       while ((str[0] == '#') ||
 	     ((tokens = sscanf(str, "%f %f %f %f", &ln, &ph, &am, &fgt)) == 0))
-        fgets(str, MAXSTR, inpf);
+      {
+        if (fgets(str, MAXSTR, inpf) == NULL)
+        {
+          printf("Pxfid: file format error in %s\n", ifn);
+          fclose(inpf); fclose(outf); unlink(ofn); exit(1);
+        }
+      }
       if (tokens < 4)
         gt = 1; 
       else    
@@ -263,10 +295,20 @@ int main(int argc, char *argv[])
     numb = 0;
     for (i = 0; i < np; i++)
     {
-      fgets(str, MAXSTR, inpf);
+      if (fgets(str, MAXSTR, inpf) == NULL)
+      {
+        printf("Pxfid: file format error in %s\n", ifn);
+        fclose(inpf); fclose(outf); unlink(ofn); exit(1);
+      }
       while ((str[0] == '#') ||
 	     ((tokens = sscanf(str, "%f %f", &am, &ln)) == 0))
-        fgets(str, MAXSTR, inpf);
+      {
+        if (fgets(str, MAXSTR, inpf) == NULL)
+        {
+          printf("Pxfid: file format error in %s\n", ifn);
+          fclose(inpf); fclose(outf); unlink(ofn); exit(1);
+        }
+      }
       if (tokens < 2)
         ln = 1.0;
       if (tokens == 0)

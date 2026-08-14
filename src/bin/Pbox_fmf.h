@@ -14,8 +14,7 @@
    of this file will need the main (Pbox) programm be recompiled.
    *********************************************************************** */
 
-void f1(s)		/* user #1 */
-Shape *s;
+void f1(Shape *s)  /* user #1 */
 {
   int j;
 
@@ -23,18 +22,7 @@ Shape *s;
     Pha[j] = 0.0;
 }
 
-void f2(s)		/* user #2 */
-Shape *s;
-{
-  int j;
-
-  for (j = 0; j < s->np; j++)
-    Pha[j] = 0.0;
-}
-
-
-void f3(s)		/* user #3 */
-Shape *s;
+void f2(Shape *s)  /* user #2 */
 {
   int j;
 
@@ -43,8 +31,16 @@ Shape *s;
 }
 
 
-void ls(s)				/* linear freq sweep (chirp) */
-Shape *s;
+void f3(Shape *s)  /* user #3 */
+{
+  int j;
+
+  for (j = 0; j < s->np; j++)
+    Pha[j] = 0.0;
+}
+
+
+void ls(Shape *s)  /* linear freq sweep (chirp) */
 {
   int j = 0;
   double ko = 0.0;
@@ -59,8 +55,7 @@ Shape *s;
 }
 
 
-void lzs(s)				/* CA Lorentzian sweep */
-Shape *s;
+void lzs(Shape *s)  /* CA Lorentzian sweep */
 {
   int     j;
   double  b, lambda;
@@ -76,8 +71,7 @@ Shape *s;
 }
 
 
-void ht(s)							/* tanh */
-Shape *s;
+void ht(Shape *s)  /* tanh */
 {
   int     j;
   double  tb, b, lambda; 
@@ -96,8 +90,7 @@ Shape *s;
 }
 
 
-void cs(s)					/* cos frequency sweep */
-Shape *s;
+void cs(Shape *s)  /* cos frequency sweep */
 {
   int j;
   double b;
@@ -112,8 +105,7 @@ Shape *s;
 }
 
 
-void ccs(s)					/* ca cos frequency sweep */
-Shape *s;
+void ccs(Shape *s)  /* ca cos frequency sweep */
 {
   int j;
   double b, b2, c;
@@ -129,8 +121,7 @@ Shape *s;
   s->pb1 = sqrt(2.0 * s->adb * fabs(s->pwsw));
 }
 
-void cs2(s)					/* ca cos^2 frequency sweep */
-Shape *s;
+void cs2(Shape *s)  /* ca cos^2 frequency sweep */
 {
   int j;
   double b, b2, c, c2;
@@ -148,8 +139,7 @@ Shape *s;
 }
 
 
-void ca(s)					/* CA phase modulation */
-Shape *s;
+void ca(Shape *s)  /* CA phase modulation */
 {
 int    i, j, k;
 double ph=0.0, ko=0.0;
@@ -190,8 +180,7 @@ double ph=0.0, ko=0.0;
 }
 
 
-void osm(s)					/* Optimized Spin Mixing */
-Shape *s;
+void osm(Shape *s)  /* Optimized Spin Mixing */
 {
   int     i, j, k;
   double  ko=0.0, ph = 0.0;
@@ -225,8 +214,7 @@ Shape *s;
 }
 
 
-void fm2pm(s)					/* FM to PM conversion */
-Shape *s;
+void fm2pm(Shape *s)  /* FM to PM conversion */
 {
 int     i, j = 0, k;
 double  ko=0, ph = 0.0;
@@ -266,8 +254,7 @@ double  ko=0, ph = 0.0;
 }
 
 
-void tns(s)				/* tan freq sweep */
-Shape *s;
+void tns(Shape *s)  /* tan freq sweep */
 {
   int j;
   double lambda, b, c;
@@ -283,8 +270,7 @@ Shape *s;
   s->pb1 = sqrt(2.0 * fabs(lambda) * b * s->adb / M_PI);
 }
 
-void ats(s)				/* arctan sweep*/
-Shape *s;
+void ats(Shape *s)  /* arctan sweep*/
 {
   int     j;
   double  b, lambda, b2, ta;
@@ -297,14 +283,13 @@ Shape *s;
   for (j = 0; j < s->np; j++)
   {
     tm = s->lft - s->rgt * (double) j / (s->np - 1);
-    Pha[j] = -lambda * tm * atan(b * tm) - ta * log(1.0 + b2 * tm * tm);;
+    Pha[j] = -lambda * tm * atan(b * tm) - ta * log1p(b2 * tm * tm);
   }
   s->pb1 = sqrt(2.0 * fabs(lambda) * b * s->adb / M_PI);
 }
 
 
-void cas(s)			/* constant adiab-ty sweep (CAP) */
-Shape *s;
+void cas(Shape *s)  /* constant adiab-ty sweep (CAP) */
 {
   int j;
   double c;	
@@ -319,8 +304,7 @@ Shape *s;
 }
 
 
-void fsw(s)				/* freq switched */
-Shape *s;
+void fsw(Shape *s)  /* freq switched */
 {
   int i, j, k;
   double ph = 0.0, ln = 0.0;
@@ -364,8 +348,7 @@ Shape *s;
 }
 */
   
-void fslg(s)				/* FSLG - phase not rounded */
-Shape *s;
+void fslg(Shape *s)  /* FSLG - phase not rounded */
 {
   int i, j, k;
   double ph0, phi;	
@@ -383,8 +366,7 @@ Shape *s;
 }
  
 
-void sqw(s)				/* sq waves */
-Shape *s;
+void sqw(Shape *s)  /* sq waves */
 {
   int i, j, k;
   double  ln = 0.0;

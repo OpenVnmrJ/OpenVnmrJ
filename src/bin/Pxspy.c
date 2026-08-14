@@ -52,11 +52,13 @@ int main(int argc, char *argv[])
 {
   FILE *inpf, *outf;
   char ch, ext[10], str[MAXSTR], name[MAXSTR], ifn[MAXSTR], ofn[MAXSTR];
-  int i, j, k, ip, nc, nr, np, gt, nm, ofs, tokens;
+  int i, j, k, ip, nc, nr, np, gt, nm, ofs, tokens, c;
   double am, ph, ln, re, im, cs, sn, ax, bx, dm, fgt, fla;
   double *Re, *Im, *an, *bn;
   double rd = PI / 180.0;
-  void   d_ft(), f_ft(), re_order();
+  void   d_ft(double *xRe[], double *xIm[], int np),
+         f_ft(double *xRe[], double *xIm[], int np),
+         re_order(double *xRe[], double *xIm[], int np);
 
   /*-----------------------------+   
   | check for filename extension |
@@ -91,13 +93,16 @@ int main(int argc, char *argv[])
     }
     else
     {
-      (void) strcpy(ifn, (char *) getenv("HOME"));
-      (void) strcat(ifn, SHAPELIB);
-      (void) strcat(ifn, argv[1]);
+      char *home = getenv("HOME");
+      if (home == NULL)
+      {
+        printf("Pxspy: HOME environment variable not set\n");
+        exit(1);
+      }
+      (void) snprintf(ifn, sizeof(ifn), "%s%s%s", home, SHAPELIB, argv[1]);
       if ((inpf = fopen(ifn, "r")) == NULL)     /* read file */
       {
-        (void) strcpy(ifn, SYSSHAPELIB);
-        (void) strcat(ifn, argv[1]);
+        (void) snprintf(ifn, sizeof(ifn), "%s%s", SYSSHAPELIB, argv[1]);
         if ((inpf = fopen(ifn, "r")) == NULL)     /* read file */
         {
           printf("Pxspy: cannot find input file %s\n", argv[1]);
@@ -113,8 +118,9 @@ int main(int argc, char *argv[])
   +---------------------*/
   nr = 0;
   k = 0;			/* find number of steps */
-  while ((ch = getc(inpf)) != EOF)
+  while ((c = getc(inpf)) != EOF)
   {
+    ch = (char) c;
     if ((ch != ' ') && (ch != '\n') && (ch != '\t') && (ch != '#'))
       k++;
     if (ch == '#')
@@ -199,8 +205,20 @@ int main(int argc, char *argv[])
   /*----------------------------------------+
   | allocate space for Fourier coefficients |
   +----------------------------------------*/
+  if (np <= 0)
+  {
+    printf("Pxspy: no usable shape / pattern data found in %s;\n", ifn);
+    printf("   no output produced.\n");
+    fclose(inpf);
+    exit(1);
+  }
   Re = (double *) calloc(np, sizeof(double));
   Im = (double *) calloc(np, sizeof(double));
+  if ((Re == NULL) || (Im == NULL))
+  {
+    printf("Pxspy: allocation failure\n");
+    exit(1);
+  }
 
 
   /*----------------------------------------+
@@ -223,9 +241,6 @@ int main(int argc, char *argv[])
       if((str[0] != '#') && (sscanf(str, "%lf", &ph) > 0)) 
       {
         tokens = sscanf(str, "%lf %lf %lf %lf", &ph, &am, &ln, &fgt);       
-        if (tokens < 4)
-        gt = 1;
-        
         if (tokens < 4)
           gt = 1;
         else
@@ -253,6 +268,7 @@ int main(int argc, char *argv[])
 
         for (k = 0; k < (int) ln; k++)
         {
+	  if (j >= np) break;
 	  Re[j] = re;
 	  Im[j] = im;
 	  j++;
@@ -301,8 +317,9 @@ int main(int argc, char *argv[])
         ax += fabs(cs) * ln;
         bx += fabs(sn) * ln;
 
-        for (k = 0; k < ln; k++)
+        for (k = 0; k < (int) ln; k++)
         {
+	  if (j >= np) break;
 	  Re[j] = re;
 	  Im[j] = im;
 	  j++;
@@ -328,8 +345,9 @@ int main(int argc, char *argv[])
         if (tokens < 2)
           ln = 1.0;
 
-        for (k = 0; k < ln; k++)
+        for (k = 0; k < (int) ln; k++)
         {
+	  if (j >= np) break;
 	  Re[j] = am;
 	  Im[j] = 0.0;
 	  j++;
@@ -366,8 +384,9 @@ int main(int argc, char *argv[])
   +----------------------------------------*/
   printf("\n  Enter the new shape/pattern name: ");
   i = 0; j = 0;
-  while ((i < MAXSTR) && ((ch = getchar()) != '\n'))
+  while ((i < MAXSTR) && ((c = getchar()) != '\n') && (c != EOF))
   {
+    ch = (char) c;
     name[i++] = ch;
     if (((ch >= 'a') && (ch <= 'z')) || ((ch >= 'A') && (ch <= 'Z')) ||
         ((ch >= '0') && (ch <= '9')))
@@ -388,8 +407,8 @@ int main(int argc, char *argv[])
   +--------------------------------------*/
   printf("  on-resonance flip angle in degees (default = 90) : ");
   i = 0;
-  while ((i < MAXSTR) && ((ch = getchar()) != '\n'))
-    str[i++] = ch;
+  while ((i < MAXSTR) && ((c = getchar()) != '\n') && (c != EOF))
+    str[i++] = ch = (char) c;
   str[i] = '\0';
   i = sscanf(str, "%lf", &am);
   if ((i == 0) || (i == EOF) || (am == 0.0))
@@ -405,8 +424,8 @@ int main(int argc, char *argv[])
   +---------------------------*/
   printf("  product of pulsewidth and bandwidth (default = 5.0) : ");
   i = 0;
-  while ((i < MAXSTR) && ((ch = getchar()) != '\n'))
-    str[i++] = ch;
+  while ((i < MAXSTR) && ((c = getchar()) != '\n') && (c != EOF))
+    str[i++] = ch = (char) c;
   str[i] = '\0';
   i = sscanf(str, "%lf", &ln); 
   if ((i == 0) || (i == EOF))
@@ -421,8 +440,8 @@ int main(int argc, char *argv[])
   +-------------------------------*/
   printf("  number of Fourier coefficients (default = 10) : ");
   i = 0;
-  while ((i < MAXSTR) && ((ch = getchar()) != '\n'))
-    str[i++] = ch;
+  while ((i < MAXSTR) && ((c = getchar()) != '\n') && (c != EOF))
+    str[i++] = ch = (char) c;
   str[i] = '\0';
   i = sscanf(str, "%d", &nc); 
   if ((i == 0) || (i == EOF) || (nc < 1))
@@ -430,11 +449,16 @@ int main(int argc, char *argv[])
     nc = 10;
     printf("     assuming %d Fourier coefficients\n", nc); 
   } 
+  if (nc > np)
+  {
+    nc = np;
+    printf("     number of Fourier coefficients limited to %d (data length)\n", nc);
+  }
 
   printf("  Relative offset in units of pw*bw (default = 0) : ");
   i = 0;
-  while ((i < MAXSTR) && ((ch = getchar()) != '\n'))
-    str[i++] = ch;
+  while ((i < MAXSTR) && ((c = getchar()) != '\n') && (c != EOF))
+    str[i++] = ch = (char) c;
   str[i] = '\0';
   i = sscanf(str, "%lf", &dm); 
   ofs = (int) dm;
@@ -446,6 +470,11 @@ int main(int argc, char *argv[])
 
   an = (double *) calloc(nc, sizeof(double));  
   bn = (double *) calloc(nc, sizeof(double));
+  if ((an == NULL) || (bn == NULL))
+  {
+    printf("Pxspy: allocation failure\n");
+    exit(1);
+  }
 
   /*-----------------+
   | Fourier analysis |
@@ -517,22 +546,30 @@ int main(int argc, char *argv[])
   /*-----------------+  
   | open output file |
   +-----------------*/
-  (void) strcpy(ofn, (char *) getenv("HOME"));
+  {
+  char *home = getenv("HOME");
+  if (home == NULL)
+  {
+    printf("Pxspy: HOME environment variable not set\n");
+    exit(1);
+  }
+  (void) strcpy(ofn, home);
   (void) strcat(ofn, WAVELIB);
   (void) strcat(ofn, name);
   
   if ((outf = fopen(ofn, "w")) == NULL)
   {
-    (void) strcpy(ifn, (char *) getenv("HOME"));
-    sprintf(str, "mkdir %s/vnmrsys/wavelib\n", ifn);
+    (void) strcpy(ifn, home);
+    { int _tn = snprintf(str, sizeof(str), "mkdir %s/vnmrsys/wavelib\n", ifn); (void) _tn; }
     system(str);  
-    sprintf(str, "mkdir %s/vnmrsys/wavelib/usr\n", ifn);
+    { int _tn = snprintf(str, sizeof(str), "mkdir %s/vnmrsys/wavelib/usr\n", ifn); (void) _tn; }
     system(str);     
     if ((outf = fopen(ofn, "w")) == NULL)
     {
       printf("Pxspy: cannot open output file %s\n", ofn);
       exit(1);
     }
+  }
   }
   
   fprintf(outf, "# %s\n", name);
@@ -561,20 +598,24 @@ int main(int argc, char *argv[])
   fclose(outf);			
   printf("\nShape definition written in\n");
   printf("        %s\n\n", ofn);
+  free(Re); free(Im); free(an); free(bn);
   return(0);
 }
 
 
 
-void re_order(xRe, xIm, np)
-int   np;
-double *xRe[], *xIm[];
+void re_order(double *xRe[], double *xIm[], int np)
 {
   int i, j, k;
   double *tRe, *tIm;
 
   tRe = (double *) calloc(np, sizeof(double));
   tIm = (double *) calloc(np, sizeof(double));
+  if ((tRe == NULL) || (tIm == NULL))
+  {
+    printf("Pxspy: allocation failure in re_order()\n");
+    exit(1);
+  }
 
   k = np/2 + np%2; 
   for(i=0; i<np; i++) 
@@ -589,9 +630,7 @@ double *xRe[], *xIm[];
 }
 
 
-void f_ft(xRe, xIm, np)
-int  np;
-double *xRe[], *xIm[];
+void f_ft(double *xRe[], double *xIm[], int np)
 {
   int	  i, j, k, m, istep;	
   double  tRe, tIm, cs, sn, wr, wi, teta, tm, dm;
@@ -641,9 +680,7 @@ double *xRe[], *xIm[];
   }
 }
 
-void d_ft(xRe, xIm, np)				/* discrete FT */
-double   *xRe[], *xIm[];
-int      np;
+void d_ft(double *xRe[], double *xIm[], int np)  /* discrete FT */
 {
   int     i, j;
   double   *tRe, *tIm, cs, sn;
@@ -651,6 +688,11 @@ int      np;
 
   tRe = (double *) calloc(np, sizeof(double));
   tIm = (double *) calloc(np, sizeof(double));
+  if ((tRe == NULL) || (tIm == NULL))
+  {
+    printf("Pxspy: allocation failure in d_ft()\n");
+    exit(1);
+  }
 
   for(i=0; i<np; i++) tRe[i] = 0.0, tIm[i] = 0.0;
   
@@ -671,6 +713,7 @@ int      np;
   for(i=0; i<np; i++) 
     (*xRe)[i] = tRe[i], (*xIm)[i] = -tIm[i];
     
+  free(tRe); free(tIm);
   return;
 }
 
