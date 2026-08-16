@@ -55,7 +55,7 @@ public class CSH_Util   {
             String mainFile = "/vnmr/help/WebHelp/VnmrJ.htm";
             UNFile file = new UNFile(mainFile);
             if(!file.exists()) {
-                mainFile = "/vnmr/help/WebHelp/index.htm";
+                mainFile = "/vnmr/help/WebHelp/index.html";
                 file = new UNFile(mainFile);
                 if(!file.exists()) {
                     mainFile = "/vnmr/help/WebHelp/Index.htm";
