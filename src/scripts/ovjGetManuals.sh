@@ -110,6 +110,27 @@ downloadLinux() {
    fi
 }
 
+installIndexFile() {
+   local baseDir="${OVJ_INSTALL:-/vnmr/help}"
+   local webHelpDir="${baseDir}/WebHelp"
+   local indexSrc="/vnmr/adm/help/index.html"
+   if [ ! -d "${webHelpDir}" ]; then
+      echo "WebHelp directory not found: ${webHelpDir}"
+      return 1
+   fi
+   if [ ! -f "${indexSrc}" ]; then
+      $OVJ_VECHO "Skipping index.html link: ${indexSrc} not found"
+      return 0
+   fi
+   ln -f "${indexSrc}" "${webHelpDir}/index.html"
+   if [[ $? -ne 0 ]]; then
+      echo "Failed to create index.html link in ${webHelpDir}"
+      return 1
+   fi
+   $OVJ_VECHO "Hard linked ${webHelpDir}/index.html -> ${indexSrc}"
+   return 0
+}
+
 downloadFiles() {
    $OVJ_VECHO "Download VnmrJ manuals files to $1"
    if [ -d "$1" ]; then
@@ -227,6 +248,14 @@ else
    unzip -q ${filename}*
 fi
 rm -f ${filename}*
+
+installIndexFile
+if [[ $? -ne 0 ]]; then
+   $OVJ_VECHO " "
+   $OVJ_VECHO "Warning: index.html installation into WebHelp failed"
+   $OVJ_VECHO " "
+fi
+
 $OVJ_VECHO ""
 $OVJ_VECHO "VnmrJ 4.2 manuals installation complete"
 $OVJ_VECHO ""
