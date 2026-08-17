@@ -155,10 +155,10 @@ class PlotArrowDraw implements PlotDefines
 	}
 	angle2 = angle - pi;
 	xs[0] = x2;  ys[0] = y2;
-	xs[1] = x2 + (int)(Math.cos(angle2 + 0.314) * aw);
-	ys[1] = y2 - (int)(Math.sin(angle2 + 0.314) * aw);
-	xs[2] = x2 + (int)(Math.cos(angle2 - 0.314) * aw);
-	ys[2] = y2 - (int)(Math.sin(angle2 - 0.314) * aw);
+	xs[1] = x2 + (int)(Math.cos(angle2 + pi/10) * aw);
+	ys[1] = y2 - (int)(Math.sin(angle2 + pi/10) * aw);
+	xs[2] = x2 + (int)(Math.cos(angle2 - pi/10) * aw);
+	ys[2] = y2 - (int)(Math.sin(angle2 - pi/10) * aw);
 	gc.fillPolygon(xs, ys, 3);
 	xs[0] = x2 + (int)(Math.cos(angle2) * gwidth);
 	ys[0] = y2 - (int)(Math.sin(angle2) * gwidth);
@@ -302,10 +302,10 @@ class PlotArrowDraw implements PlotDefines
    private int[] ldnxs, ldnys;
    private int[] xpnts = new int[4];
    private int[] ypnts = new int[4];
-   static final double pi = 3.1416;
-   static final double degree0 = 2.6182; /* 150 degree */
-   static final double deg60 = 1.047;  /* 60 degree */
-   static final double deg45 = 0.7854;  /* 45 degree */
+   static final double pi = Math.PI;
+   static final double degree0 = (150*pi/180); /* 150 degree */
+   static final double deg60 = (60*pi/180);  /* 60 degree */
+   static final double deg45 = (45*pi/180);  /* 45 degree */
 
 }
 
