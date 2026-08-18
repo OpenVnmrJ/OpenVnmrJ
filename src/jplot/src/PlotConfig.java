@@ -174,19 +174,24 @@ public class PlotConfig extends JFrame
         open_pre_template(true);
    }
 
-   public void closeFrame()
-   {
-    if (closingFlag)
-          return;
-    closingFlag = true;
-	dp.saveTemplate(".temp", true);
-	writePreference();
-	if (toVnmr != null) {
-	   String d = "jplot('-exit',"+inPort+")\n";
-	   toVnmr.send(d);
-	}
-        System.exit(0);
-   }
+	public void closeFrame()
+	{
+    	if (closingFlag)
+        	return;
+    	closingFlag = true;
+    	try {
+        	dp.saveTemplate(".temp", true);
+        	writePreference();
+        	if (toVnmr != null) {
+            	String d = "jplot('-exit',"+inPort+")\n";
+            	toVnmr.send(d);
+        	}
+    	} catch (Exception e) {
+        	System.err.println("Error JPlot: " + e.getMessage());
+    	} finally {
+        	System.exit(0);
+    	}
+}
 
    public void processData(String str) {
 	vnmrData = str;
