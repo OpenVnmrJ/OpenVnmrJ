@@ -161,32 +161,9 @@ public class PlotConfig extends JFrame
             public void windowClosing(WindowEvent e) { closeFrame(); } } );
       bimage = dp.createImage(pwidth, pheight);
 
-	try {
-    	Class<?> signalClass   = Class.forName("sun.misc.Signal");
-    	Class<?> handlerClass  = Class.forName("sun.misc.SignalHandler");
-
-    	Object termSignal = signalClass
-       	 .getConstructor(String.class)
-       	 .newInstance("TERM");
-
-    	Object handler = java.lang.reflect.Proxy.newProxyInstance(
-        	getClass().getClassLoader(),
-        	new Class<?>[]{ handlerClass },
-        	(proxy, method, args) -> {
-           	 if ("handle".equals(method.getName())) {
-                closeFrame();
-           	 	}
-           	 return null;
-       	  	 }
-    	);
-
-    	signalClass.getMethod("handle", signalClass, handlerClass)
-               .invoke(null, termSignal, handler);
-
-		} catch (Exception e) {
-    		// sun.misc.Signal unavailable
-    		System.err.println("Warning: Could not register SIGTERM handler: " + e);
-			}
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+          closeFrame();
+      }, "PlotShutdownHook"));
    }
 
 
@@ -199,6 +176,9 @@ public class PlotConfig extends JFrame
 
    public void closeFrame()
    {
+    if (closingFlag)
+          return;
+    closingFlag = true;
 	dp.saveTemplate(".temp", true);
 	writePreference();
 	if (toVnmr != null) {
@@ -2506,5 +2486,6 @@ public class PlotConfig extends JFrame
    
    public static String tmpDirUnix;
    public static String tmpDirSystem;
+   private static volatile boolean closingFlag = false;
 }
 

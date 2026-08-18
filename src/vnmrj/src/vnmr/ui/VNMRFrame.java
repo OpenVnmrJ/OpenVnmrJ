@@ -50,7 +50,7 @@ public class VNMRFrame extends JFrame implements AppInstaller {
     static String hostAddr;
     static VNMRFrame vnmrFrame=null;
     static String m_title;
-    static boolean exitingFlag=false;
+    static volatile boolean exitingFlag=false;
     static boolean nativeGraphics = true;
     static Process    updateDBProc;
     static MetalTheme theme = null;
@@ -423,32 +423,9 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             memorymonitor.setVisible(true);
         }
         
-	    try {
-    	    Class<?> signalClass   = Class.forName("sun.misc.Signal");
-    	    Class<?> handlerClass  = Class.forName("sun.misc.SignalHandler");
-
-    	    Object termSignal = signalClass
-       	     .getConstructor(String.class)
-       	     .newInstance("TERM");
-
-    	    Object handler = java.lang.reflect.Proxy.newProxyInstance(
-            	getClass().getClassLoader(),
-            	new Class<?>[]{ handlerClass },
-            	(proxy, method, args) -> {
-             	 if ("handle".equals(method.getName())) {
-                  exitAll();
-           	 	}
-           	    return null;
-       	  	 }
-    	    );
-
-    	    signalClass.getMethod("handle", signalClass, handlerClass)
-               .invoke(null, termSignal, handler);
-
-		    } catch (Exception e) {
-    		    // sun.misc.Signal unavailable
-    		    System.err.println("Warning: Could not register SIGTERM handler: " + e);
-			    }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            exitHook();
+        }, "VNMRShutdownHook"));
 
         DisplayOptions.updateUIColor();
         
@@ -577,6 +554,33 @@ public class VNMRFrame extends JFrame implements AppInstaller {
         doLogout();
         System.exit(0);
     }
+
+    private static void exitHook() {
+        if (exitingFlag)
+            return;
+        exitingFlag = true;
+
+        if (updateAttrThread != null)  updateAttrThread.interrupt();
+        if (updateThread != null)      updateThread.interrupt();
+        if (fillWorkspaceThread != null) fillWorkspaceThread.interrupt();
+        if (fillMacrosThread != null)  fillMacrosThread.interrupt();
+        if (dbStatus != null)          dbStatus.interrupt();
+        if (notifyListener != null)    notifyListener.interrupt();
+
+        try { Thread.sleep(100); }
+        catch (InterruptedException ie) {}
+
+        try {
+            javax.swing.SwingUtilities.invokeAndWait(() -> {
+                if (vnmrFrame != null)
+                    vnmrFrame.doLogout();
+            });
+        } catch (Exception e) {
+            if (vnmrFrame != null)
+                vnmrFrame.doLogout();
+        }
+        // No System.exit(0)
+    }   
 
     static public boolean exiting() {
         return exitingFlag;
