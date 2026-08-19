@@ -528,6 +528,8 @@ public class VNMRFrame extends JFrame implements AppInstaller {
     }
 
     public void exitAll() {
+        if (exitingFlag)
+            return;
         // Flag for anyone wanting to know if we are in the process of
         // shutting down.
         exitingFlag = true;
