@@ -158,11 +158,11 @@ public class PlotConfig extends JFrame
 	}
       addWindowListener(new WindowAdapter() {
             public void windowOpened(WindowEvent e) { openFrame();  }
-            public void windowClosing(WindowEvent e) { closeFrame(); } } );
+            public void windowClosing(WindowEvent e) { closeFrame(0); } } );
       bimage = dp.createImage(pwidth, pheight);
 
       Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-          closeFrame();
+          closeFrame(1);
       }, "PlotShutdownHook"));
    }
 
@@ -174,24 +174,20 @@ public class PlotConfig extends JFrame
         open_pre_template(true);
    }
 
-	public void closeFrame()
+	public void closeFrame(int fromHook)
 	{
     	if (closingFlag)
         	return;
     	closingFlag = true;
-    	try {
-        	dp.saveTemplate(".temp", true);
-        	writePreference();
-        	if (toVnmr != null) {
-            	String d = "jplot('-exit',"+inPort+")\n";
-            	toVnmr.send(d);
-        	}
-    	} catch (Exception e) {
-        	System.err.println("Error JPlot: " + e.getMessage());
-    	} finally {
-        	System.exit(0);
-    	}
-}
+		dp.saveTemplate(".temp", true);
+		writePreference();
+		if (toVnmr != null) {
+			String d = "jplot('-exit',"+inPort+")\n";
+			toVnmr.send(d);
+		}
+		if (fromHook == 0)
+			System.exit(0);
+	}
 
    public void processData(String str) {
 	vnmrData = str;
@@ -200,7 +196,7 @@ public class PlotConfig extends JFrame
 	    return;
 	}
 	if (str.equals("exit_jplot")) {
-	    closeFrame();
+	    closeFrame(0);
 	    return;
 	}
 
@@ -663,7 +659,7 @@ public class PlotConfig extends JFrame
       String arg = item.getText();
       if(arg.equals("Quit"))
       {
-	 closeFrame();
+	 closeFrame(0);
       }
       else if(arg.equals("Templates"))
       {
