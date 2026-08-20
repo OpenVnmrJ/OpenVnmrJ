@@ -9,12 +9,12 @@
 
 package vnmr.ui;
 
-// import java.awt.*;
+import java.awt.*;
 // import java.awt.peer.*;
 // import com.sun.java.swing.plaf.motif.*;
 import java.awt.datatransfer.*;
-import sun.awt.*;
-import java.lang.reflect.*;
+// import sun.awt.*;
+// import java.lang.reflect.*;
 
 import java.awt.dnd.*;
 import java.awt.event.*;
