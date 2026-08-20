@@ -1,12 +1,10 @@
 #!
-
+#   with_lc=1        include the LC/Corba subsystem (linux only, default 1)
 from __future__ import print_function
 import os
 import sys
 import shutil
 import datetime
-import string
-import platform
 
 # current working directory
 cwd = os.getcwd()
@@ -25,260 +23,1274 @@ if not os.path.exists(ovjtools):
 platform = sys.platform
 print(sys.platform)
 
-#
-# On Ubuntu 20, the jar action fails
-# I think it is a problem in scons version 3.
-# vers = 18
-# if os.path.exists('/etc/lsb-release'):
-#    with open('/etc/lsb-release') as fd:
-#       for line in fd:
-#          if (line.startswith('DISTRIB_RELEASE')):
-#             name,vers = line.split("=")
-#             vers,decimal = vers.split(".")   
-# 
-# version= int(vers)
-#
-# CentOS 7.8 also fails. Rather than trying to determine
-# if scons 2 or 3 is being used, just always use the scheme
-# for scons 3, which also works for scons 2.
+if platform.startswith('linux'):
+    javaBinDir = os.path.join(ovjtools, 'java', 'bin')
+elif platform == 'darwin':
+    javaBinDir = os.path.join('/', 'usr', 'bin')
+else:
+    print("Unknown platform:", platform)
+    sys.exit(1)
+
+jarBin = os.path.join(javaBinDir, 'jar')
+
+opts = Variables()
+opts.Add(BoolVariable('with_lc', 'Include LC/Corba subsystem (linux only)', 1))
+
+env = Environment(variables=opts)
+Help(opts.GenerateHelpText(env))
+
+with_lc = bool(int(env.get('with_lc', 1))) and platform.startswith('linux')
 
 version=20
-
-
-# If java 6 is being used
-if os.path.exists(os.path.join(ovjtools,'java','bin','javaws')):
-   Execute('cp java6/* ' + os.path.join('src','vnmr','ui'))
-
 
 # target
 vnmrjTarget = 'vnmrj.jar'
 vnmrjDashOTarget = "vnmrj.jar.dasho"
 vnmrjProGuardTarget = "vnmrj.jar.pro"
-vjmolTarget = 'vjmol.jar'
 
+# vjmol.jar is produced by src/vjmol/SConstruct
+vjmolSiblingJar = os.path.join(cwd, os.pardir, 'vjmol', 'vjmol.jar')
 
-# file base path
-fbpath= cwd
+fbpath = cwd
 
+jarHelpFileList = [
+    os.path.join(fbpath, 'jh.jar'),
+    os.path.join(fbpath, 'jhall.jar'),
+    os.path.join(fbpath, 'jhbasic.jar'),
+    os.path.join(fbpath, 'jhtools.jar'),
+    os.path.join(fbpath, 'jsearch.jar'),
+]
 
+jarFileList = [
+    os.path.join(fbpath, 'gluegen-rt.jar'),
+    os.path.join(fbpath, 'jogl-all.jar'),
+    os.path.join(fbpath, 'postgresql.jar'),
+    os.path.join(fbpath, 'JTattoo.jar'),
+    os.path.join(fbpath, 'xml.jar'),
+]
 
-# jar file lists
-jarHelpFileList = [os.path.join(fbpath, 'jh.jar'),
-                   os.path.join(fbpath, 'jhall.jar'),
-                   os.path.join(fbpath, 'jhbasic.jar'),
-                   os.path.join(fbpath, 'jhtools.jar'),
-                   os.path.join(fbpath, 'jsearch.jar')]
-
-jarFileList = [os.path.join(fbpath, 'gluegen-rt.jar'),
-               os.path.join(fbpath, 'jogl-all.jar'),
-               os.path.join(fbpath, 'lcaccess.jar'),
-               os.path.join(fbpath, 'msaccess.jar'),
-               os.path.join(fbpath, 'pdaaccess.jar'),
-               os.path.join(fbpath, 'postgresql.jar'),
-               os.path.join(fbpath, 'JTattoo.jar'),
-               os.path.join(fbpath, 'xml.jar')]
+lc_jar_list = [
+    os.path.join(fbpath, 'lcaccess.jar'),
+    os.path.join(fbpath, 'msaccess.jar'),
+    os.path.join(fbpath, 'pdaaccess.jar'),
+]
 
 propFileList = """
-                            AdmLabels_ja.properties
-                            Labels_ja.properties
-                            Options.properties
-                            AdmLabels.properties
-                            Labels.properties
-                            ShimLabels.properties
-                            AdmLabels_zh_CN.properties
-                            Labels_zh_CN.properties
-                            """.split()
+    AdmLabels_ja.properties
+    Labels_ja.properties
+    Options.properties
+    AdmLabels.properties
+    Labels.properties
+    ShimLabels.properties
+    AdmLabels_zh_CN.properties
+    Labels_zh_CN.properties
+    """.split()
 
+srcRoot = 'src'
 
-ThirdPartyJarPath = os.path.join(ovjtools, 'JavaPackages')
-ThirdPartyList = ['jmol.jar']
+def src(*parts):
+    return os.path.join(cwd, srcRoot, *parts)
 
-env = Environment()
-#platform = env['PLATFORM']
+def macos(*parts):
+    return os.path.join(cwd, 'macos', *parts)
 
-# Java envs
-# JAVABOOTCLASSPATH []
-# JAVAC javac
-# JAVACCOM ${TEMPFILE('$_JAVACCOM')}
-# JAVACFLAGS
-# JAVACLASSPATH []
-# JAVACLASSSUFFIX .class
-# JAVASOURCEPATH []
+def linux(*parts):
+    return os.path.join(cwd, 'linux', *parts)
 
-# paths
-classPath = cwd
+lc_corba_sources = [
+    src('vnmr', 'util', 'CorbaClient.java'),
+    src('vnmr', 'bo',   'VMsStatusButton.java'),
+    src('vnmr', 'lc', 'LcCorbaClient.java'),
+    src('vnmr', 'lc', 'MsCorbaClient.java'),
+    src('vnmr', 'lc', 'PdaCorbaClient.java'),
+]
+lc_sources = [
+    src('vnmr', 'lc', 'AS430Control.java'),
+    src('vnmr', 'lc', 'AS430Socket.java'),
+    src('vnmr', 'lc', 'AutoSampler.java'),
+    src('vnmr', 'lc', 'LcAnalysis.java'),
+    src('vnmr', 'lc', 'LcConfiguration.java'),
+    src('vnmr', 'lc', 'LcControl.java'),
+    src('vnmr', 'lc', 'LcCurrentMethod.java'),
+    src('vnmr', 'lc', 'LcData.java'),
+    src('vnmr', 'lc', 'LcDataListener.java'),
+    src('vnmr', 'lc', 'LcDataWriter.java'),
+    src('vnmr', 'lc', 'LcDatum.java'),
+    src('vnmr', 'lc', 'LcDef.java'),
+    src('vnmr', 'lc', 'LcEvent.java'),
+    src('vnmr', 'lc', 'LcFileRun.java'),
+    src('vnmr', 'lc', 'LcGpibModule.java'),
+    src('vnmr', 'lc', 'LcGraphicsPanel.java'),
+    src('vnmr', 'lc', 'LcInjectListener.java'),
+    src('vnmr', 'lc', 'LcMethod.java'),
+    src('vnmr', 'lc', 'LcMethodEditor.java'),
+    src('vnmr', 'lc', 'LcMethodParameter.java'),
+    src('vnmr', 'lc', 'LcMethodTableModel.java'),
+    src('vnmr', 'lc', 'LcMethodVarsPanel.java'),
+    src('vnmr', 'lc', 'LcMsg.java'),
+    src('vnmr', 'lc', 'LcPeak.java'),
+    src('vnmr', 'lc', 'LcRun.java'),
+    src('vnmr', 'lc', 'LcSlimIO.java'),
+    src('vnmr', 'lc', 'LcStatusListener.java'),
+    src('vnmr', 'lc', 'LcTableMenu.java'),
+    src('vnmr', 'lc', 'LcTristateButtonModel.java'),
+    src('vnmr', 'lc', 'LcTristateCheckBox.java'),
+    src('vnmr', 'lc', 'MsScanMenu.java'),
+    src('vnmr', 'lc', 'MsStatus.java'),
+    src('vnmr', 'lc', 'UvDetector.java'),
+    src('vnmr', 'lc', 'VLcMethodPlot.java'),
+    src('vnmr', 'lc', 'VLcParamTracker.java'),
+    src('vnmr', 'lc', 'VLcPlot.java'),
+    src('vnmr', 'lc', 'VLcTableItem.java'),
+    src('vnmr', 'lc', 'VMsPlot.java'),
+    src('vnmr', 'lc', 'VPdaImage.java'),
+    src('vnmr', 'lc', 'VPdaPlot.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbCommands.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbControl.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbDefs.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbIO.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbInputStream.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbInstrument.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbParameters.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbReplyListener.java'),
+    src('vnmr', 'lc', 'jumbuck', 'JbReplyProcessor.java'),
+]
 
+linux_only_sources = [
+    src('vnmr', 'util', 'VSliderMotifUI.java'),
+    src('vnmr', 'ui',   'VnmrTearCanvas.java'),
+]
 
-if (platform.startswith('linux')):
-   javaBinDir = os.path.join(ovjtools, 'java', 'bin')
-   jarBin = os.path.join(javaBinDir, 'jar')
-elif (platform=="darwin"):
-   javaBinDir = os.path.join('/', 'usr', 'bin')
-   jarBin = os.path.join(javaBinDir, 'jar')
-   Execute('rm -rf ' + os.path.join('src','vnmr','lc'))
-   Execute('rm -f ' + os.path.join('src','vnmr','util','CorbaClient.java'))
-   Execute('rm -f ' + os.path.join('src','vnmr','util','VSliderMotifUI.java'))
-   Execute('rm -f ' + os.path.join('src','vnmr','bo','VMsStatusButton.java'))
-   Execute('rm -f ' + os.path.join('src','vnmr','bo','VStatusButton.java'))
-   Execute('rm -f ' + os.path.join('src','vnmr','templates','LayoutBuilder.java'))
-   Execute('rm -f ' + os.path.join('src','vnmr','ui','ExpPanel.java'))
-   Execute('rm -f ' + os.path.join('src','vnmr','ui','VnmrTearCanvas.java'))
-   Execute(Copy(os.path.join('src','vnmr','bo','VStatusButton.java'),
-                os.path.join('macos','VStatusButton.java')))
-   Execute(Copy(os.path.join('src','vnmr','templates','LayoutBuilder.java'),
-                os.path.join('macos','LayoutBuilder.java')))
-   Execute(Copy(os.path.join('src','vnmr','ui','ExpPanel.java'),
-                os.path.join('macos','ExpPanel.java')))
-   Execute(Copy(os.path.join('src','vnmr','ui','VnmrCanvas.java'),
-                os.path.join('macos','VnmrCanvas.java')))
-   Execute(Copy(os.path.join('src','vnmr','util','ButtonIF.java'),
-                os.path.join('macos','ButtonIF.java')))
-   Execute(Copy(os.path.join('src','vnmr','util','CanvasIF.java'),
-                os.path.join('macos','CanvasIF.java')))
-else: 
-   print("Unknown Platform: ", platform)
-   sys.exit()
+macos_override_map = {
+    src('vnmr', 'bo',        'VStatusButton.java'):  macos('VStatusButton.java'),
+    src('vnmr', 'templates', 'LayoutBuilder.java'):  macos('LayoutBuilder.java'),
+    src('vnmr', 'ui',        'ExpPanel.java'):       macos('ExpPanel.java'),
+    src('vnmr', 'ui',        'VnmrCanvas.java'):     macos('VnmrCanvas.java'),
+    src('vnmr', 'util',      'ButtonIF.java'):       macos('ButtonIF.java'),
+    src('vnmr', 'util',      'CanvasIF.java'):       macos('CanvasIF.java'),
+}
 
-#print(javaBinDir)
-#print(jarBin)
+linux_nolc_override_map = {
+    src('vnmr', 'bo',        'VStatusButton.java'):  macos('VStatusButton.java'),
+    src('vnmr', 'templates', 'LayoutBuilder.java'):  macos('LayoutBuilder.java'),
+    src('vnmr', 'ui',        'ExpPanel.java'):       linux('ExpPanel.java'),
+}
 
-# make sure the path(s) exist
+linux_lc_override_map = {
+    src('vnmr', 'bo',        'VStatusButton.java'):  src('vnmr', 'bo',        'VStatusButton.java'),
+    src('vnmr', 'templates', 'LayoutBuilder.java'):  src('vnmr', 'templates', 'LayoutBuilder.java'),
+    src('vnmr', 'ui',        'ExpPanel.java'):       src('vnmr', 'ui',        'ExpPanel.java'),
+    src('vnmr', 'ui',        'VnmrCanvas.java'):     src('vnmr', 'ui',        'VnmrCanvas.java'),
+    src('vnmr', 'util',      'ButtonIF.java'):       src('vnmr', 'util',      'ButtonIF.java'),
+    src('vnmr', 'util',      'CanvasIF.java'):       src('vnmr', 'util',      'CanvasIF.java'),
+}
+
+common_sources = [
+    src('vnmr', 'bo', 'Access.java'),
+    src('vnmr', 'bo', 'ActionComponent.java'),
+    src('vnmr', 'bo', 'Autodir.java'),
+    src('vnmr', 'bo', 'AvailSubTypes.java'),
+    src('vnmr', 'bo', 'BorderDeli.java'),
+    src('vnmr', 'bo', 'CascadingMenu.java'),
+    src('vnmr', 'bo', 'ColorLookupTable.java'),
+    src('vnmr', 'bo', 'ColormapInfo.java'),
+    src('vnmr', 'bo', 'ComboSlider.java'),
+    src('vnmr', 'bo', 'EPSGraphics.java'),
+    src('vnmr', 'bo', 'EasyJTable.java'),
+    src('vnmr', 'bo', 'Exp.java'),
+    src('vnmr', 'bo', 'Group.java'),
+    src('vnmr', 'bo', 'ID.java'),
+    src('vnmr', 'bo', 'IPatTabFrame.java'),
+    src('vnmr', 'bo', 'ImageDirType.java'),
+    src('vnmr', 'bo', 'ImageFileType.java'),
+    src('vnmr', 'bo', 'LcStudyType.java'),
+    src('vnmr', 'bo', 'LockStatus.java'),
+    src('vnmr', 'bo', 'LoginService.java'),
+    src('vnmr', 'bo', 'Macro.java'),
+    src('vnmr', 'bo', 'PanelNComp.java'),
+    src('vnmr', 'bo', 'Param.java'),
+    src('vnmr', 'bo', 'PatientTableComm.java'),
+    src('vnmr', 'bo', 'PatientTableEvent.java'),
+    src('vnmr', 'bo', 'PatientTableListener.java'),
+    src('vnmr', 'bo', 'Plot.java'),
+    src('vnmr', 'bo', 'Plot2D.java'),
+    src('vnmr', 'bo', 'PlotBox.java'),
+    src('vnmr', 'bo', 'PlotPoint.java'),
+    src('vnmr', 'bo', 'Polyline.java'),
+    src('vnmr', 'bo', 'PpgmMacro.java'),
+    src('vnmr', 'bo', 'PrinterService.java'),
+    src('vnmr', 'bo', 'ProtocolType.java'),
+    src('vnmr', 'bo', 'Record.java'),
+    src('vnmr', 'bo', 'RecordData.java'),
+    src('vnmr', 'bo', 'SearchResults.java'),
+    src('vnmr', 'bo', 'SessionStorage.java'),
+    src('vnmr', 'bo', 'ShimSet.java'),
+    src('vnmr', 'bo', 'ShufflerItem.java'),
+    src('vnmr', 'bo', 'ShufflerParam.java'),
+    src('vnmr', 'bo', 'ShufflerService.java'),
+    src('vnmr', 'bo', 'StatementAdapter.java'),
+    src('vnmr', 'bo', 'StatementHistory.java'),
+    src('vnmr', 'bo', 'StatementListener.java'),
+    src('vnmr', 'bo', 'StudyType.java'),
+    src('vnmr', 'bo', 'TableMap.java'),
+    src('vnmr', 'bo', 'TableSorter.java'),
+    src('vnmr', 'bo', 'TrashType.java'),
+    src('vnmr', 'bo', 'User.java'),
+    src('vnmr', 'bo', 'VAnnotateBox.java'),
+    src('vnmr', 'bo', 'VAnnotateTable.java'),
+    src('vnmr', 'bo', 'VAnnotationIF.java'),
+    src('vnmr', 'bo', 'VAudit.java'),
+    src('vnmr', 'bo', 'VButton.java'),
+    src('vnmr', 'bo', 'VCaptureButton.java'),
+    src('vnmr', 'bo', 'VCaretEntry.java'),
+    src('vnmr', 'bo', 'VCascadingMenu.java'),
+    src('vnmr', 'bo', 'VCheck.java'),
+    src('vnmr', 'bo', 'VCheckBoxMenuItem.java'),
+    src('vnmr', 'bo', 'VClockDial.java'),
+    src('vnmr', 'bo', 'VColorChartSetter.java'),
+    src('vnmr', 'bo', 'VColorChooser.java'),
+    src('vnmr', 'bo', 'VColorControlLine.java'),
+    src('vnmr', 'bo', 'VColorImageInfo.java'),
+    src('vnmr', 'bo', 'VColorImageSelector.java'),
+    src('vnmr', 'bo', 'VColorImageViewer.java'),
+    src('vnmr', 'bo', 'VColorLineSetter.java'),
+    src('vnmr', 'bo', 'VColorLookupPanel.java'),
+    src('vnmr', 'bo', 'VColorMapEditor.java'),
+    src('vnmr', 'bo', 'VColorMapIF.java'),
+    src('vnmr', 'bo', 'VColorMapLabel.java'),
+    src('vnmr', 'bo', 'VColorMapNameEditor.java'),
+    src('vnmr', 'bo', 'VColorMapPanel.java'),
+    src('vnmr', 'bo', 'VColorMapSelector.java'),
+    src('vnmr', 'bo', 'VColorPicker.java'),
+    src('vnmr', 'bo', 'VColorPixelSetter.java'),
+    src('vnmr', 'bo', 'VColorScale.java'),
+    src('vnmr', 'bo', 'VComboBoxButton.java'),
+    src('vnmr', 'bo', 'VComboFileTable.java'),
+    src('vnmr', 'bo', 'VContainer.java'),
+    src('vnmr', 'bo', 'VEditIF.java'),
+    src('vnmr', 'bo', 'VEntry.java'),
+    src('vnmr', 'bo', 'VExperimentMeter.java'),
+    src('vnmr', 'bo', 'VExperimentSubMenu.java'),
+    src('vnmr', 'bo', 'VFileBrowser.java'),
+    src('vnmr', 'bo', 'VFileMenu.java'),
+    src('vnmr', 'bo', 'VFileTable.java'),
+    src('vnmr', 'bo', 'VFontChooser.java'),
+    src('vnmr', 'bo', 'VGrid.java'),
+    src('vnmr', 'bo', 'VGroup.java'),
+    src('vnmr', 'bo', 'VGroupIF.java'),
+    src('vnmr', 'bo', 'VGroupSave.java'),
+    src('vnmr', 'bo', 'VHardwareStatus.java'),
+    src('vnmr', 'bo', 'VLabel.java'),
+    src('vnmr', 'bo', 'VLcStatusButton.java'),
+    src('vnmr', 'bo', 'VLcStatusChart.java'),
+    src('vnmr', 'bo', 'VMagicButton.java'),
+    src('vnmr', 'bo', 'VMakePanelsTag.java'),
+    src('vnmr', 'bo', 'VMenu.java'),
+    src('vnmr', 'bo', 'VMenuLabel.java'),
+    src('vnmr', 'bo', 'VMenuitemIF.java'),
+    src('vnmr', 'bo', 'VMessage.java'),
+    src('vnmr', 'bo', 'VMessageBox.java'),
+    src('vnmr', 'bo', 'VObj.java'),
+    src('vnmr', 'bo', 'VObjAdapter.java'),
+    src('vnmr', 'bo', 'VObjDef.java'),
+    src('vnmr', 'bo', 'VObjDropHandler.java'),
+    src('vnmr', 'bo', 'VObjIF.java'),
+    src('vnmr', 'bo', 'VObjUtil.java'),
+    src('vnmr', 'bo', 'VPanelTab.java'),
+    src('vnmr', 'bo', 'VParamArray.java'),
+    src('vnmr', 'bo', 'VParamCreateEntry.java'),
+    src('vnmr', 'bo', 'VParameter.java'),
+    src('vnmr', 'bo', 'VPlot.java'),
+    src('vnmr', 'bo', 'VPopup.java'),
+    src('vnmr', 'bo', 'VRFMonButton.java'),
+    src('vnmr', 'bo', 'VRadio.java'),
+    src('vnmr', 'bo', 'VRedoButton.java'),
+    src('vnmr', 'bo', 'VScroll.java'),
+    src('vnmr', 'bo', 'VScrollTextPane.java'),
+    src('vnmr', 'bo', 'VSelFileMenu.java'),
+    src('vnmr', 'bo', 'VSelMenu.java'),
+    src('vnmr', 'bo', 'VShimSet.java'),
+    src('vnmr', 'bo', 'VSizeIF.java'),
+    src('vnmr', 'bo', 'VSlider.java'),
+    src('vnmr', 'bo', 'VSpinner.java'),
+    src('vnmr', 'bo', 'VSplitPane.java'),
+    src('vnmr', 'bo', 'VStatusChart.java'),
+    src('vnmr', 'bo', 'VStatusChartIF.java'),
+    src('vnmr', 'bo', 'VStatusIF.java'),
+    src('vnmr', 'bo', 'VStyleChooser.java'),
+    src('vnmr', 'bo', 'VSubFileMenu.java'),
+    src('vnmr', 'bo', 'VSubMenu.java'),
+    src('vnmr', 'bo', 'VSubMenuItem.java'),
+    src('vnmr', 'bo', 'VTab.java'),
+    src('vnmr', 'bo', 'VTabPage.java'),
+    src('vnmr', 'bo', 'VTabbedPane.java'),
+    src('vnmr', 'bo', 'VText.java'),
+    src('vnmr', 'bo', 'VTextFilePane.java'),
+    src('vnmr', 'bo', 'VTextFileWin.java'),
+    src('vnmr', 'bo', 'VTextMsg.java'),
+    src('vnmr', 'bo', 'VTextPane.java'),
+    src('vnmr', 'bo', 'VTextUndoMgr.java'),
+    src('vnmr', 'bo', 'VTextWin.java'),
+    src('vnmr', 'bo', 'VThermometer.java'),
+    src('vnmr', 'bo', 'VToggle.java'),
+    src('vnmr', 'bo', 'VToolBar.java'),
+    src('vnmr', 'bo', 'VToolBarButton.java'),
+    src('vnmr', 'bo', 'VTrayColor.java'),
+    src('vnmr', 'bo', 'VUndoButton.java'),
+    src('vnmr', 'bo', 'VUndoableText.java'),
+    src('vnmr', 'bo', 'VUpDownButton.java'),
+    src('vnmr', 'bo', 'VVsControl.java'),
+    src('vnmr', 'bo', 'VsCurveFunction.java'),
+    src('vnmr', 'bo', 'VsFunction.java'),
+    src('vnmr', 'bo', 'Workspace.java'),
+    src('vnmr', 'bo', 'patienttableui.java'),
+    src('vnmr', 'ui', 'AcceleratorKeyEditor.java'),
+    src('vnmr', 'ui', 'AcceleratorKeyTable.java'),
+    src('vnmr', 'ui', 'ActionBar.java'),
+    src('vnmr', 'ui', 'ActionHandler.java'),
+    src('vnmr', 'ui', 'Annotation.java'),
+    src('vnmr', 'ui', 'AppIF.java'),
+    src('vnmr', 'ui', 'AppInstaller.java'),
+    src('vnmr', 'ui', 'AquaTheme.java'),
+    src('vnmr', 'ui', 'BasicClockDialUI.java'),
+    src('vnmr', 'ui', 'CanvasObjIF.java'),
+    src('vnmr', 'ui', 'CanvasTransferable.java'),
+    src('vnmr', 'ui', 'ClockDial.java'),
+    src('vnmr', 'ui', 'ClockDialUI.java'),
+    src('vnmr', 'ui', 'ComboBoxTitleIF.java'),
+    src('vnmr', 'ui', 'ComboBoxTitleUI.java'),
+    src('vnmr', 'ui', 'ControlButtonBar.java'),
+    src('vnmr', 'ui', 'ControlPanel.java'),
+    src('vnmr', 'ui', 'CutCopyPaste.java'),
+    src('vnmr', 'ui', 'CutCopyPasteTarget.java'),
+    src('vnmr', 'ui', 'CutCopyTarget.java'),
+    src('vnmr', 'ui', 'DicomConf.java'),
+    src('vnmr', 'ui', 'DisplayPalette.java'),
+    src('vnmr', 'ui', 'DpsArrayPan.java'),
+    src('vnmr', 'ui', 'DpsChannel.java'),
+    src('vnmr', 'ui', 'DpsChannelName.java'),
+    src('vnmr', 'ui', 'DpsCmds.java'),
+    src('vnmr', 'ui', 'DpsDataPanel.java'),
+    src('vnmr', 'ui', 'DpsDef.java'),
+    src('vnmr', 'ui', 'DpsEventObj.java'),
+    src('vnmr', 'ui', 'DpsGraphPanel.java'),
+    src('vnmr', 'ui', 'DpsInfoPan.java'),
+    src('vnmr', 'ui', 'DpsObj.java'),
+    src('vnmr', 'ui', 'DpsOptions.java'),
+    src('vnmr', 'ui', 'DpsScopeContainer.java'),
+    src('vnmr', 'ui', 'DpsScopePanel.java'),
+    src('vnmr', 'ui', 'DpsScrollBar.java'),
+    src('vnmr', 'ui', 'DpsTimeLine.java'),
+    src('vnmr', 'ui', 'DpsUtil.java'),
+    src('vnmr', 'ui', 'DpsWindow.java'),
+    src('vnmr', 'ui', 'DraggableLabel.java'),
+    src('vnmr', 'ui', 'DroppableList.java'),
+    src('vnmr', 'ui', 'DummyRepaintManager.java'),
+    src('vnmr', 'ui', 'EPopButton.java'),
+    src('vnmr', 'ui', 'EPopListener.java'),
+    src('vnmr', 'ui', 'EditListenerIF.java'),
+    src('vnmr', 'ui', 'EmeraldTheme.java'),
+    src('vnmr', 'ui', 'ExpCards.java'),
+    src('vnmr', 'ui', 'ExpControlButton.java'),
+    src('vnmr', 'ui', 'ExpListenerIF.java'),
+    src('vnmr', 'ui', 'ExpPanInfo.java'),
+    src('vnmr', 'ui', 'ExpSelEntry.java'),
+    src('vnmr', 'ui', 'ExpSelTabEditor.java'),
+    src('vnmr', 'ui', 'ExpSelTree.java'),
+    src('vnmr', 'ui', 'ExpSelTreeEditor.java'),
+    src('vnmr', 'ui', 'ExpSelector.java'),
+    src('vnmr', 'ui', 'ExpStatusBar.java'),
+    src('vnmr', 'ui', 'ExpViewArea.java'),
+    src('vnmr', 'ui', 'ExpViewIF.java'),
+    src('vnmr', 'ui', 'FullScreenCtrl.java'),
+    src('vnmr', 'ui', 'GradCoilIdListener.java'),
+    src('vnmr', 'ui', 'GraphicsToolIF.java'),
+    src('vnmr', 'ui', 'GraphicsWinTool.java'),
+    src('vnmr', 'ui', 'HeaderValRenderer.java'),
+    src('vnmr', 'ui', 'HeaderValue.java'),
+    src('vnmr', 'ui', 'HelpBar.java'),
+    src('vnmr', 'ui', 'HelpOverlay.java'),
+    src('vnmr', 'ui', 'HoldingArea.java'),
+    src('vnmr', 'ui', 'HoldingCellRenderer.java'),
+    src('vnmr', 'ui', 'HoldingDataModel.java'),
+    src('vnmr', 'ui', 'HoldingDropTargetListener.java'),
+    src('vnmr', 'ui', 'HoldingTable.java'),
+    src('vnmr', 'ui', 'ImageFileTransferable.java'),
+    src('vnmr', 'ui', 'ImageViewPanel.java'),
+    src('vnmr', 'ui', 'IntegerRangeModel.java'),
+    src('vnmr', 'ui', 'LocalRefSelection.java'),
+    src('vnmr', 'ui', 'LogDateChooser.java'),
+    src('vnmr', 'ui', 'LogToCSVPanel.java'),
+    src('vnmr', 'ui', 'LoginBox.java'),
+    src('vnmr', 'ui', 'MPopButton.java'),
+    src('vnmr', 'ui', 'MasStatusListener.java'),
+    src('vnmr', 'ui', 'MenuPanel.java'),
+    src('vnmr', 'ui', 'MessageListenerIF.java'),
+    src('vnmr', 'ui', 'MotifUpDownButtonUI.java'),
+    src('vnmr', 'ui', 'NoteEntryComp.java'),
+    src('vnmr', 'ui', 'ParamArrayPanel.java'),
+    src('vnmr', 'ui', 'ParamArrayTable.java'),
+    src('vnmr', 'ui', 'ParamArrayValueTable.java'),
+    src('vnmr', 'ui', 'ParamLayout.java'),
+    src('vnmr', 'ui', 'ParamListenerIF.java'),
+    src('vnmr', 'ui', 'ParamListenerUtils.java'),
+    src('vnmr', 'ui', 'ParamPanel.java'),
+    src('vnmr', 'ui', 'ParameterPanel.java'),
+    src('vnmr', 'ui', 'ParameterTabControl.java'),
+    src('vnmr', 'ui', 'PasswordService.java'),
+    src('vnmr', 'ui', 'PasteTarget.java'),
+    src('vnmr', 'ui', 'PopButton.java'),
+    src('vnmr', 'ui', 'PopListener.java'),
+    src('vnmr', 'ui', 'ProbeButton.java'),
+    src('vnmr', 'ui', 'PublisherNotesComp.java'),
+    src('vnmr', 'ui', 'PulseTool.java'),
+    src('vnmr', 'ui', 'PushpinControler.java'),
+    src('vnmr', 'ui', 'PushpinIF.java'),
+    src('vnmr', 'ui', 'PushpinObj.java'),
+    src('vnmr', 'ui', 'PushpinPanel.java'),
+    src('vnmr', 'ui', 'PushpinTab.java'),
+    src('vnmr', 'ui', 'QueuePanel.java'),
+    src('vnmr', 'ui', 'RQPanel.java'),
+    src('vnmr', 'ui', 'ReviewQueue.java'),
+    src('vnmr', 'ui', 'RoboHelp_CSH.java'),
+    src('vnmr', 'ui', 'RobotViewComp.java'),
+    src('vnmr', 'ui', 'RubyTheme.java'),
+    src('vnmr', 'ui', 'SQUpdater.java'),
+    src('vnmr', 'ui', 'SessionShare.java'),
+    src('vnmr', 'ui', 'SpecPanel.java'),
+    src('vnmr', 'ui', 'Splash.java'),
+    src('vnmr', 'ui', 'StatusListenerIF.java'),
+    src('vnmr', 'ui', 'StatusManager.java'),
+    src('vnmr', 'ui', 'StudyQueue.java'),
+    src('vnmr', 'ui', 'SysToolBar.java'),
+    src('vnmr', 'ui', 'SysToolPanel.java'),
+    src('vnmr', 'ui', 'TabButton.java'),
+    src('vnmr', 'ui', 'TemplateLayout.java'),
+    src('vnmr', 'ui', 'TextImageIcon.java'),
+    src('vnmr', 'ui', 'ThreeButtonModel.java'),
+    src('vnmr', 'ui', 'ToolBarLayout.java'),
+    src('vnmr', 'ui', 'TrashCan.java'),
+    src('vnmr', 'ui', 'TwoLineButton.java'),
+    src('vnmr', 'ui', 'UnderlineButton.java'),
+    src('vnmr', 'ui', 'UpDownButton.java'),
+    src('vnmr', 'ui', 'UpDownButtonUI.java'),
+    src('vnmr', 'ui', 'VAdminIF.java'),
+    src('vnmr', 'ui', 'VBrowser.java'),
+    src('vnmr', 'ui', 'VComboBasicUI.java'),
+    src('vnmr', 'ui', 'VComboBoxUI.java'),
+    src('vnmr', 'ui', 'VComboMetalUI.java'),
+    src('vnmr', 'ui', 'VFileDialog.java'),
+    src('vnmr', 'ui', 'VIcon.java'),
+    src('vnmr', 'ui', 'VLimitListenerIF.java'),
+    src('vnmr', 'ui', 'VLoginPassword.java'),
+    src('vnmr', 'ui', 'VMenuBar.java'),
+    src('vnmr', 'ui', 'VMetalLookAndFeel.java'),
+    src('vnmr', 'ui', 'VNMRFrame.java'),
+    src('vnmr', 'ui', 'VPrint.java'),
+    src('vnmr', 'ui', 'VPrintDialog.java'),
+    src('vnmr', 'ui', 'VTabbedToolPanel.java'),
+    src('vnmr', 'ui', 'VTextBox.java'),
+    src('vnmr', 'ui', 'VToolPanel.java'),
+    src('vnmr', 'ui', 'VjToolBar.java'),
+    src('vnmr', 'ui', 'VnmrJTheme.java'),
+    src('vnmr', 'ui', 'VnmrPlot.java'),
+    src('vnmr', 'ui', 'VnmrjIF.java'),
+    src('vnmr', 'ui', 'VnmrjUI.java'),
+    src('vnmr', 'ui', 'VnmrjUiNames.java'),
+    src('vnmr', 'ui', 'VpLayoutInfo.java'),
+    src('vnmr', 'ui', 'XMLToolPanel.java'),
+    src('vnmr', 'ui', 'XmlToCsvUtil.java'),
+    src('vnmr', 'ui', 'shuf', 'AbstractCellEditor.java'),
+    src('vnmr', 'ui', 'shuf', 'AbstractTreeTableModel.java'),
+    src('vnmr', 'ui', 'shuf', 'AddToLocatorViaThread.java'),
+    src('vnmr', 'ui', 'shuf', 'CommandDefinition.java'),
+    src('vnmr', 'ui', 'shuf', 'CustomStatementRemoval.java'),
+    src('vnmr', 'ui', 'shuf', 'DBStatus.java'),
+    src('vnmr', 'ui', 'shuf', 'DateListener.java'),
+    src('vnmr', 'ui', 'shuf', 'DatePanel.java'),
+    src('vnmr', 'ui', 'shuf', 'DateRangePanel.java'),
+    src('vnmr', 'ui', 'shuf', 'DirFilter.java'),
+    src('vnmr', 'ui', 'shuf', 'FileNode.java'),
+    src('vnmr', 'ui', 'shuf', 'FileSystemModel.java'),
+    src('vnmr', 'ui', 'shuf', 'FileSystemModelBrowser.java'),
+    src('vnmr', 'ui', 'shuf', 'FillDBManager.java'),
+    src('vnmr', 'ui', 'shuf', 'FillMacrosTables.java'),
+    src('vnmr', 'ui', 'shuf', 'FillWorkspaceTable.java'),
+    src('vnmr', 'ui', 'shuf', 'ImportDialog.java'),
+    src('vnmr', 'ui', 'shuf', 'JTreeTable.java'),
+    src('vnmr', 'ui', 'shuf', 'JTreeTableImport.java'),
+    src('vnmr', 'ui', 'shuf', 'KeywordNvalue.java'),
+    src('vnmr', 'ui', 'shuf', 'LocAttrList.java'),
+    src('vnmr', 'ui', 'shuf', 'LocatorBrowser.java'),
+    src('vnmr', 'ui', 'shuf', 'LocatorHistory.java'),
+    src('vnmr', 'ui', 'shuf', 'LocatorHistoryList.java'),
+    src('vnmr', 'ui', 'shuf', 'LocatorPopup.java'),
+    src('vnmr', 'ui', 'shuf', 'MatchDialog.java'),
+    src('vnmr', 'ui', 'shuf', 'MergeSort.java'),
+    src('vnmr', 'ui', 'shuf', 'MountPaths.java'),
+    src('vnmr', 'ui', 'shuf', 'NotifyListener.java'),
+    src('vnmr', 'ui', 'shuf', 'OneTag.java'),
+    src('vnmr', 'ui', 'shuf', 'ProtocolBrowser.java'),
+    src('vnmr', 'ui', 'shuf', 'ProtocolBrowserCellRenderer.java'),
+    src('vnmr', 'ui', 'shuf', 'ProtocolBrowserDataModel.java'),
+    src('vnmr', 'ui', 'shuf', 'ProtocolBrowserPanel.java'),
+    src('vnmr', 'ui', 'shuf', 'ProtocolBrowserResults.java'),
+    src('vnmr', 'ui', 'shuf', 'ProtocolBrowserTable.java'),
+    src('vnmr', 'ui', 'shuf', 'ProtocolKeyword.java'),
+    src('vnmr', 'ui', 'shuf', 'ProtocolKeywords.java'),
+    src('vnmr', 'ui', 'shuf', 'ResultDataModel.java'),
+    src('vnmr', 'ui', 'shuf', 'ResultTable.java'),
+    src('vnmr', 'ui', 'shuf', 'SaveCustomLocatorStatement.java'),
+    src('vnmr', 'ui', 'shuf', 'SavedDirList.java'),
+    src('vnmr', 'ui', 'shuf', 'ScrollingMenu.java'),
+    src('vnmr', 'ui', 'shuf', 'SearchInfo.java'),
+    src('vnmr', 'ui', 'shuf', 'Shuf.java'),
+    src('vnmr', 'ui', 'shuf', 'ShufCellRenderer.java'),
+    src('vnmr', 'ui', 'shuf', 'ShufDBManager.java'),
+    src('vnmr', 'ui', 'shuf', 'ShufDataParam.java'),
+    src('vnmr', 'ui', 'shuf', 'Shuffler.java'),
+    src('vnmr', 'ui', 'shuf', 'ShufflerToolBar.java'),
+    src('vnmr', 'ui', 'shuf', 'SpotterButton.java'),
+    src('vnmr', 'ui', 'shuf', 'StartSearch.java'),
+    src('vnmr', 'ui', 'shuf', 'StatementDefinition.java'),
+    src('vnmr', 'ui', 'shuf', 'StatementElement.java'),
+    src('vnmr', 'ui', 'shuf', 'StatementView.java'),
+    src('vnmr', 'ui', 'shuf', 'SymLinkMap.java'),
+    src('vnmr', 'ui', 'shuf', 'TagAddRemoveDialog.java'),
+    src('vnmr', 'ui', 'shuf', 'TagButton.java'),
+    src('vnmr', 'ui', 'shuf', 'TagEditDialog.java'),
+    src('vnmr', 'ui', 'shuf', 'TagList.java'),
+    src('vnmr', 'ui', 'shuf', 'TrashInfo.java'),
+    src('vnmr', 'ui', 'shuf', 'TrashItem.java'),
+    src('vnmr', 'ui', 'shuf', 'TreeTableModel.java'),
+    src('vnmr', 'ui', 'shuf', 'TreeTableModelAdapter.java'),
+    src('vnmr', 'ui', 'shuf', 'UpdateAttributeList.java'),
+    src('vnmr', 'ui', 'shuf', 'UpdateDatabase.java'),
+    src('vnmr', 'ui', 'shuf', 'UpdatePBResultsViaThread.java'),
+    src('vnmr', 'ui', 'shuf', 'VJBrowserPopup.java'),
+    src('vnmr', 'ui', 'shuf', 'VJFileBrowser.java'),
+    src('vnmr', 'ui', 'shuf', 'VJOpenPopup.java'),
+    src('vnmr', 'ui', 'shuf', 'VJSavePopup.java'),
+    src('vnmr', 'jgl', 'ARBProgram.java'),
+    src('vnmr', 'jgl', 'CGLJNI.java'),
+    src('vnmr', 'jgl', 'FColor.java'),
+    src('vnmr', 'jgl', 'GLDemo.java'),
+    src('vnmr', 'jgl', 'GLRendererIF.java'),
+    src('vnmr', 'jgl', 'GLSLProgram.java'),
+    src('vnmr', 'jgl', 'GLUtil.java'),
+    src('vnmr', 'jgl', 'Gears.java'),
+    src('vnmr', 'jgl', 'JGLComListenerIF.java'),
+    src('vnmr', 'jgl', 'JGLComMgr.java'),
+    src('vnmr', 'jgl', 'JGLData.java'),
+    src('vnmr', 'jgl', 'JGLDataMgr.java'),
+    src('vnmr', 'jgl', 'JGLDef.java'),
+    src('vnmr', 'jgl', 'JGLDialog.java'),
+    src('vnmr', 'jgl', 'JGLFragmentShader.java'),
+    src('vnmr', 'jgl', 'JGLGraphics.java'),
+    src('vnmr', 'jgl', 'JGLRenderer.java'),
+    src('vnmr', 'jgl', 'JGLShader.java'),
+    src('vnmr', 'jgl', 'JGLShaderProgram.java'),
+    src('vnmr', 'jgl', 'JGLTex1DMgr.java'),
+    src('vnmr', 'jgl', 'JGLTex2DMgr.java'),
+    src('vnmr', 'jgl', 'JGLTex3DMgr.java'),
+    src('vnmr', 'jgl', 'JGLTexMgr.java'),
+    src('vnmr', 'jgl', 'JGLVertexShader.java'),
+    src('vnmr', 'jgl', 'JGLView.java'),
+    src('vnmr', 'jgl', 'JGears.java'),
+    src('vnmr', 'jgl', 'Point3D.java'),
+    src('vnmr', 'jgl', 'Volume.java'),
+    src('vnmr', 'sms', 'CaroPlate.java'),
+    src('vnmr', 'sms', 'CarouselLayout.java'),
+    src('vnmr', 'sms', 'GenPlateIF.java'),
+    src('vnmr', 'sms', 'GrkCompose.java'),
+    src('vnmr', 'sms', 'GrkLayout.java'),
+    src('vnmr', 'sms', 'GrkObj.java'),
+    src('vnmr', 'sms', 'GrkParser.java'),
+    src('vnmr', 'sms', 'GrkPlate.java'),
+    src('vnmr', 'sms', 'GrkUtil.java'),
+    src('vnmr', 'sms', 'GrkZone.java'),
+    src('vnmr', 'sms', 'RackInfo.java'),
+    src('vnmr', 'sms', 'RackObj.java'),
+    src('vnmr', 'sms', 'SampleInfo.java'),
+    src('vnmr', 'sms', 'SmsCmds.java'),
+    src('vnmr', 'sms', 'SmsColorEditor.java'),
+    src('vnmr', 'sms', 'SmsDef.java'),
+    src('vnmr', 'sms', 'SmsInfoObj.java'),
+    src('vnmr', 'sms', 'SmsInfoPanel.java'),
+    src('vnmr', 'sms', 'SmsLayout.java'),
+    src('vnmr', 'sms', 'SmsLayoutIF.java'),
+    src('vnmr', 'sms', 'SmsPanel.java'),
+    src('vnmr', 'sms', 'SmsPlate.java'),
+    src('vnmr', 'sms', 'SmsSample.java'),
+    src('vnmr', 'sms', 'SmsTray.java'),
+    src('vnmr', 'sms', 'SmsUtil.java'),
+    src('vnmr', 'sms', 'ZoneCreater.java'),
+    src('vnmr', 'cryo', 'CryoBay.java'),
+    src('vnmr', 'cryo', 'CryoConstants.java'),
+    src('vnmr', 'cryo', 'CryoControl.java'),
+    src('vnmr', 'cryo', 'CryoDiagnostics.java'),
+    src('vnmr', 'cryo', 'CryoPanel.java'),
+    src('vnmr', 'cryo', 'CryoPort.java'),
+    src('vnmr', 'cryo', 'CryoSocket.java'),
+    src('vnmr', 'cryo', 'CryoSocketControl.java'),
+    src('vnmr', 'cryo', 'CryoUtils.java'),
+    src('vnmr', 'cryo', 'MessageIF.java'),
+    src('vnmr', 'cryo', 'Priority.java'),
+    src('vnmr', 'util', 'AcqPanelTransformer.java'),
+    src('vnmr', 'util', 'AcqPanelUtility.java'),
+    src('vnmr', 'util', 'AddToolsDialog.java'),
+    src('vnmr', 'util', 'AnnotateObj.java'),
+    src('vnmr', 'util', 'AnnotationEditor.java'),
+    # ButtonIF.java 
+    src('vnmr', 'util', 'CSH_Util.java'),
+    # CanvasIF.java
+    src('vnmr', 'util', 'CanvasOutSocket.java'),
+    src('vnmr', 'util', 'CanvasSocket.java'),
+    src('vnmr', 'util', 'CaptureImage.java'),
+    src('vnmr', 'util', 'CheckTreeCellRenderer.java'),
+    src('vnmr', 'util', 'CheckTreeManager.java'),
+    src('vnmr', 'util', 'CheckTreeSelectionModel.java'),
+    src('vnmr', 'util', 'CommandInput.java'),
+    src('vnmr', 'util', 'Complex.java'),
+    src('vnmr', 'util', 'ContextMenu.java'),
+    # CorbaClient.java
+    src('vnmr', 'util', 'DebugOutput.java'),
+    src('vnmr', 'util', 'DisplayOptions.java'),
+    src('vnmr', 'util', 'DockButton.java'),
+    src('vnmr', 'util', 'DockConstants.java'),
+    src('vnmr', 'util', 'DoubleClicker.java'),
+    src('vnmr', 'util', 'ExitStatus.java'),
+    src('vnmr', 'util', 'ExpButton.java'),
+    src('vnmr', 'util', 'FileChangeEvent.java'),
+    src('vnmr', 'util', 'FileListener.java'),
+    src('vnmr', 'util', 'FileSystemModelAdmin.java'),
+    src('vnmr', 'util', 'FileUtil.java'),
+    src('vnmr', 'util', 'FileWatcher.java'),
+    src('vnmr', 'util', 'Fit.java'),
+    src('vnmr', 'util', 'Fmt.java'),
+    src('vnmr', 'util', 'Global.java'),
+    src('vnmr', 'util', 'GraphSeries.java'),
+    src('vnmr', 'util', 'GraphicsFont.java'),
+    src('vnmr', 'util', 'GridLayoutCol.java'),
+    src('vnmr', 'util', 'HashArrayList.java'),
+    src('vnmr', 'util', 'HomeFileSystemView.java'),
+    src('vnmr', 'util', 'ImageColorMapEditor.java'),
+    src('vnmr', 'util', 'ImageUtil.java'),
+    src('vnmr', 'util', 'ImagesToJpeg.java'),
+    src('vnmr', 'util', 'JComboButton.java'),
+    src('vnmr', 'util', 'JComponentVista.java'),
+    src('vnmr', 'util', 'JTextVista.java'),
+    src('vnmr', 'util', 'JTreeTableAdmin.java'),
+    src('vnmr', 'util', 'LinFit.java'),
+    src('vnmr', 'util', 'LinuxFocusBug.java'),
+    src('vnmr', 'util', 'ListItem.java'),
+    src('vnmr', 'util', 'ListItemRenderer.java'),
+    src('vnmr', 'util', 'MemoryMonitor.java'),
+    src('vnmr', 'util', 'MessageTool.java'),
+    src('vnmr', 'util', 'Messages.java'),
+    src('vnmr', 'util', 'ModalDialog.java'),
+    src('vnmr', 'util', 'ModalEntryDialog.java'),
+    src('vnmr', 'util', 'ModalPopup.java'),
+    src('vnmr', 'util', 'ModelessDialog.java'),
+    src('vnmr', 'util', 'ModelessPopup.java'),
+    src('vnmr', 'util', 'NLFit.java'),
+    src('vnmr', 'util', 'NumericStringComparator.java'),
+    src('vnmr', 'util', 'ParamBoder.java'),
+    src('vnmr', 'util', 'ParamEditUtil.java'),
+    src('vnmr', 'util', 'ParamIF.java'),
+    src('vnmr', 'util', 'ParamInfo.java'),
+    src('vnmr', 'util', 'ParamInfoPanel.java'),
+    src('vnmr', 'util', 'ParamResourceBundle.java'),
+    src('vnmr', 'util', 'Plotters.java'),
+    src('vnmr', 'util', 'PrinterPaper.java'),
+    src('vnmr', 'util', 'ProtocolLabelHandler.java'),
+    src('vnmr', 'util', 'QuotedStringTokenizer.java'),
+    src('vnmr', 'util', 'ReqparWarnDialog.java'),
+    src('vnmr', 'util', 'ResizableContainer.java'),
+    src('vnmr', 'util', 'Right.java'),
+    src('vnmr', 'util', 'RightsList.java'),
+    src('vnmr', 'util', 'SaveDataDialog.java'),
+    src('vnmr', 'util', 'SaveStudyDialog.java'),
+    src('vnmr', 'util', 'SerialSocketDeviceIO.java'),
+    src('vnmr', 'util', 'SimpleH2Layout.java'),
+    src('vnmr', 'util', 'SimpleHLayout.java'),
+    src('vnmr', 'util', 'SimpleVLayout.java'),
+    src('vnmr', 'util', 'SocketIF.java'),
+    src('vnmr', 'util', 'StatusProcess.java'),
+    src('vnmr', 'util', 'StatusSocket.java'),
+    src('vnmr', 'util', 'StrUtil.java'),
+    src('vnmr', 'util', 'StreamTokenizerQuotedNewlines.java'),
+    src('vnmr', 'util', 'SubButtonPanel.java'),
+    src('vnmr', 'util', 'SwingWorker.java'),
+    src('vnmr', 'util', 'TextboxEditor.java'),
+    src('vnmr', 'util', 'ToolPanelUtil.java'),
+    src('vnmr', 'util', 'TristateCheckBox.java'),
+    src('vnmr', 'util', 'UNFile.java'),
+    src('vnmr', 'util', 'Undo.java'),
+    src('vnmr', 'util', 'Util.java'),
+    src('vnmr', 'util', 'UtilB.java'),
+    src('vnmr', 'util', 'VActionBarLayout.java'),
+    src('vnmr', 'util', 'VAnnChooser.java'),
+    src('vnmr', 'util', 'VAnnotatePanel.java'),
+    src('vnmr', 'util', 'VArrowIcon.java'),
+    src('vnmr', 'util', 'VButtonBorder.java'),
+    src('vnmr', 'util', 'VButtonIcon.java'),
+    src('vnmr', 'util', 'VButtonOvalBorder.java'),
+    src('vnmr', 'util', 'VColorImageListenerIF.java'),
+    src('vnmr', 'util', 'VColorMapFile.java'),
+    src('vnmr', 'util', 'VColorMapListenerIF.java'),
+    src('vnmr', 'util', 'VColorModel.java'),
+    src('vnmr', 'util', 'VColorModelPool.java'),
+    src('vnmr', 'util', 'VCursor.java'),
+    src('vnmr', 'util', 'VDivider.java'),
+    src('vnmr', 'util', 'VDropHandlerIF.java'),
+    src('vnmr', 'util', 'VFontFactory.java'),
+    src('vnmr', 'util', 'VGaphDef.java'),
+    src('vnmr', 'util', 'VGraphics.java'),
+    src('vnmr', 'util', 'VGridLayout.java'),
+    src('vnmr', 'util', 'VJArrow.java'),
+    src('vnmr', 'util', 'VJBackRegion.java'),
+    src('vnmr', 'util', 'VJButton.java'),
+    src('vnmr', 'util', 'VJLine.java'),
+    src('vnmr', 'util', 'VJTable.java'),
+    src('vnmr', 'util', 'VJText.java'),
+    src('vnmr', 'util', 'VJYbar.java'),
+    src('vnmr', 'util', 'VLabelResource.java'),
+    src('vnmr', 'util', 'VLookAndFeelFactory.java'),
+    src('vnmr', 'util', 'VMouseDispatch.java'),
+    src('vnmr', 'util', 'VObjCommandFilter.java'),
+    src('vnmr', 'util', 'VObjDragListener.java'),
+    src('vnmr', 'util', 'VObjTimer.java'),
+    src('vnmr', 'util', 'VObjTimerListener.java'),
+    src('vnmr', 'util', 'VOnOffButton.java'),
+    src('vnmr', 'util', 'VOvalIcon.java'),
+    src('vnmr', 'util', 'VPDialog.java'),
+    src('vnmr', 'util', 'VPanel.java'),
+    src('vnmr', 'util', 'VPopupContainer.java'),
+    src('vnmr', 'util', 'VPopupIF.java'),
+    src('vnmr', 'util', 'VPopupManager.java'),
+    src('vnmr', 'util', 'VPropertyBundles.java'),
+    src('vnmr', 'util', 'VPseudo2.java'),
+    src('vnmr', 'util', 'VRectIcon.java'),
+    src('vnmr', 'util', 'VResizeButton.java'),
+    src('vnmr', 'util', 'VResourceBundle.java'),
+    src('vnmr', 'util', 'VRubberBarLayout.java'),
+    src('vnmr', 'util', 'VRubberPanLayout.java'),
+    src('vnmr', 'util', 'VSeparator.java'),
+    src('vnmr', 'util', 'VSliderMetalUI.java'),
+    # VSliderMotifUI.java
+    src('vnmr', 'util', 'VSliderUI.java'),
+    src('vnmr', 'util', 'VSpaceQuotedStringTokenizer.java'),
+    src('vnmr', 'util', 'VSplitListener.java'),
+    src('vnmr', 'util', 'VStrTokenizer.java'),
+    src('vnmr', 'util', 'VStretchConstants.java'),
+    src('vnmr', 'util', 'VTabBorder.java'),
+    src('vnmr', 'util', 'VTextIcon.java'),
+    src('vnmr', 'util', 'VTipManager.java'),
+    src('vnmr', 'util', 'VTitledBorder.java'),
+    src('vnmr', 'util', 'VTooltipIF.java'),
+    src('vnmr', 'util', 'Vista.java'),
+    src('vnmr', 'util', 'VjLogListener.java'),
+    src('vnmr', 'util', 'VnmrJHelp.java'),
+    src('vnmr', 'util', 'VnmrJLogWindow.java'),
+    src('vnmr', 'util', 'VnmrKey.java'),
+    src('vnmr', 'util', 'VnmrParameter.java'),
+    src('vnmr', 'util', 'VnmrProcess.java'),
+    src('vnmr', 'util', 'VnmrRgb.java'),
+    src('vnmr', 'util', 'VobjEditorIF.java'),
+    src('vnmr', 'util', 'XJButton.java'),
+    src('vnmr', 'util', 'XJComboBox.java'),
+    src('vnmr', 'util', 'XVButton.java'),
+    src('vnmr', 'admin', 'ui', 'DFFileTableModel.java'),
+    src('vnmr', 'admin', 'ui', 'DirViewDialog.java'),
+    src('vnmr', 'admin', 'ui', 'UserRightsPanel.java'),
+    src('vnmr', 'admin', 'ui', 'VDetailArea.java'),
+    src('vnmr', 'admin', 'ui', 'VItemArea1.java'),
+    src('vnmr', 'admin', 'ui', 'VItemArea2.java'),
+    src('vnmr', 'admin', 'ui', 'VItemAreaIF.java'),
+    src('vnmr', 'admin', 'ui', 'VUserToolBar.java'),
+    src('vnmr', 'admin', 'ui', 'WAdministrators.java'),
+    src('vnmr', 'admin', 'ui', 'WAutomation.java'),
+    src('vnmr', 'admin', 'ui', 'WConvertUsers.java'),
+    src('vnmr', 'admin', 'ui', 'WDialogHandler.java'),
+    src('vnmr', 'admin', 'ui', 'WDicom.java'),
+    src('vnmr', 'admin', 'ui', 'WFontColors.java'),
+    src('vnmr', 'admin', 'ui', 'WGlobal.java'),
+    src('vnmr', 'admin', 'ui', 'WGridLayout.java'),
+    src('vnmr', 'admin', 'ui', 'WInfoStat.java'),
+    src('vnmr', 'admin', 'ui', 'WInvestigator.java'),
+    src('vnmr', 'admin', 'ui', 'WItem.java'),
+    src('vnmr', 'admin', 'ui', 'WLocatorConfig.java'),
+    src('vnmr', 'admin', 'ui', 'WLoginBox.java'),
+    src('vnmr', 'admin', 'ui', 'WMultiUsers.java'),
+    src('vnmr', 'admin', 'ui', 'WOperators.java'),
+    src('vnmr', 'admin', 'ui', 'WPanelManager.java'),
+    src('vnmr', 'admin', 'ui', 'WPart11Dialog.java'),
+    src('vnmr', 'admin', 'ui', 'WPart11Notify.java'),
+    src('vnmr', 'admin', 'ui', 'WPart11Pnl.java'),
+    src('vnmr', 'admin', 'ui', 'WSharedConsoleCommands.java'),
+    src('vnmr', 'admin', 'ui', 'WSharedConsoleDialog.java'),
+    src('vnmr', 'admin', 'ui', 'WSharedConsoleDialogSingle.java'),
+    src('vnmr', 'admin', 'ui', 'WTrashCan.java'),
+    src('vnmr', 'admin', 'ui', 'WTrashItem.java'),
+    src('vnmr', 'admin', 'ui', 'WUserDefData.java'),
+    src('vnmr', 'admin', 'ui', 'WUsersConfig.java'),
+    src('vnmr', 'admin', 'ui', 'WandaMenuBar.java'),
+    src('vnmr', 'admin', 'util', 'AddRemoveTool.java'),
+    src('vnmr', 'admin', 'util', 'ScrollPopMenu.java'),
+    src('vnmr', 'admin', 'util', 'UserDirectoryDialog.java'),
+    src('vnmr', 'admin', 'util', 'WCurrInfo.java'),
+    src('vnmr', 'admin', 'util', 'WDirChooser.java'),
+    src('vnmr', 'admin', 'util', 'WDirTabPane.java'),
+    src('vnmr', 'admin', 'util', 'WFile.java'),
+    src('vnmr', 'admin', 'util', 'WFileUtil.java'),
+    src('vnmr', 'admin', 'util', 'WMRUCache.java'),
+    src('vnmr', 'admin', 'util', 'WMessage.java'),
+    src('vnmr', 'admin', 'util', 'WUserUtil.java'),
+    src('vnmr', 'admin', 'util', 'WUtil.java'),
+    src('vnmr', 'admin', 'vobj', 'WButton.java'),
+    src('vnmr', 'admin', 'vobj', 'WCheck.java'),
+    src('vnmr', 'admin', 'vobj', 'WColorChooser.java'),
+    src('vnmr', 'admin', 'vobj', 'WEntry.java'),
+    src('vnmr', 'admin', 'vobj', 'WGroup.java'),
+    src('vnmr', 'admin', 'vobj', 'WLabel.java'),
+    src('vnmr', 'admin', 'vobj', 'WMenu.java'),
+    src('vnmr', 'admin', 'vobj', 'WObj.java'),
+    src('vnmr', 'admin', 'vobj', 'WObjIF.java'),
+    src('vnmr', 'admin', 'vobj', 'WRadio.java'),
+    src('vnmr', 'admin', 'vobj', 'WSubMenuItem.java'),
+    src('vnmr', 'admin', 'vobj', 'WToggle.java'),
+    src('vnmr', 'print', 'ServicePopup.java'),
+    src('vnmr', 'print', 'SunAlternateMedia.java'),
+    src('vnmr', 'print', 'SunPageSelection.java'),
+    src('vnmr', 'print', 'VjMediaSizeObj.java'),
+    src('vnmr', 'print', 'VjPageAttributes.java'),
+    src('vnmr', 'print', 'VjPageLayout.java'),
+    src('vnmr', 'print', 'VjPaperMedia.java'),
+    src('vnmr', 'print', 'VjPlotDef.java'),
+    src('vnmr', 'print', 'VjPlotterArea.java'),
+    src('vnmr', 'print', 'VjPlotterConfig.java'),
+    src('vnmr', 'print', 'VjPlotterLayout.java'),
+    src('vnmr', 'print', 'VjPlotterObj.java'),
+    src('vnmr', 'print', 'VjPlotterPage.java'),
+    src('vnmr', 'print', 'VjPlotterParam.java'),
+    src('vnmr', 'print', 'VjPlotterTable.java'),
+    src('vnmr', 'print', 'VjPlotterType.java'),
+    src('vnmr', 'print', 'VjPrintDef.java'),
+    src('vnmr', 'print', 'VjPrintEvent.java'),
+    src('vnmr', 'print', 'VjPrintEventListener.java'),
+    src('vnmr', 'print', 'VjPrintFileChooser.java'),
+    src('vnmr', 'print', 'VjPrintFileDialog.java'),
+    src('vnmr', 'print', 'VjPrintPreview.java'),
+    src('vnmr', 'print', 'VjPrintService.java'),
+    src('vnmr', 'print', 'VjPrintUtil.java'),
+    src('vnmr', 'print', 'VjPrinterJob.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'About.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'AbstractBorderFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'AbstractIconFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'AbstractLookAndFeel.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'AbstractTheme.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'AbstractToolBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseBorders.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseButtonListener.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseCheckBoxMenuItemUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseCheckBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseComboBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseDesktopPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseEditorPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseFileChooserUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseFormattedTextFieldUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseIcons.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseInternalFrameTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseInternalFrameUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseLabelUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseMenuBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseMenuItemUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseMenuUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BasePanelUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BasePasswordFieldUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BasePopupMenuUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseProgressBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseRadioButtonMenuItemUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseRadioButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseRootPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseScrollBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseScrollButton.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseScrollPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseSeparatorUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseSliderUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseSpinnerUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseSplitPaneDivider.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseSplitPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseTabbedPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseTableHeaderUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseTableUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseTextAreaUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseTextFieldUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseTitleButton.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseToggleButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseToolTipUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'BaseTreeUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'ColorHelper.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'DecorationHelper.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'JTattooUtilities.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'LazyImageIcon.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'LazyMenuArrowImageIcon.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'NoFocusButton.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'VAbstractThemeIF.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'XPScrollBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'XPScrollButton.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiBorderFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiBorders.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiCheckBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiComboBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiDefaultTheme.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiIconFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiIcons.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiInternalFrameTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiInternalFrameUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiLabelUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiLookAndFeel.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiMenuBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiPanelUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiRadioButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiRootPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiScrollBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiScrollButton.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiScrollPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiSliderUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiTabbedPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiToggleButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiToolBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'hifi', 'HiFiUtils.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinBorderFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinBorders.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinCheckBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinComboBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinDefaultTheme.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinIconFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinIcons.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinInternalFrameTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinInternalFrameUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinLookAndFeel.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinMenuBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinPanelUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinRadioButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinRootPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinScrollPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinSliderUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinSplitPaneDivider.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinSplitPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinTabbedPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinToggleButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinToolBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'mcwin', 'McWinUtils.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'LunaIcons.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureBorderFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureBorders.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureCheckBoxMenuItemUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureCheckBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureComboBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureDefaultTheme.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureIconFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureIcons.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureInternalFrameTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureInternalFrameUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureLabelUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureLookAndFeel.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureMenuBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureMenuItemUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureMenuUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TexturePanelUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TexturePopupMenuSeparatorUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureRadioButtonMenuItemUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureRadioButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureRootPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureScrollBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureScrollButton.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureScrollPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureSeparatorUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureSliderUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureSplitPaneDivider.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureSplitPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureTabbedPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureToggleButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureToolBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'texture', 'TextureUtils.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumBorderFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumBorders.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumCheckBoxUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumDefaultTheme.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumDesktopPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumGradientPaint.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumIconFactory.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumIcons.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumInternalFrameTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumInternalFrameUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumLookAndFeel.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumMenuBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumPanelUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumPopupMenuSeparatorUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumRadioButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumRootPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumScrollPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumSliderUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumSplitPaneDivider.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumSplitPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumTabbedPaneUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumTitlePane.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumToggleButtonUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumToolBarUI.java'),
+    src('vnmr', 'vplaf', 'jtattoo', 'aluminium', 'AluminiumUtils.java'),
+    src('vnmr', 'images', 'VnmrImageUtil.java'),
+    src('vnmr', 'part11', 'Audit.java'),
+    src('vnmr', 'part11', 'ComboFileTable.java'),
+    src('vnmr', 'part11', 'FileMenu.java'),
+    src('vnmr', 'part11', 'FileTable.java'),
+    src('vnmr', 'part11', 'FileTableModel.java'),
+    src('vnmr', 'part11', 'MenuEditor.java'),
+    src('vnmr', 'part11', 'UserAuditTrail.java'),
+    src('vnmr', 'templates', 'CommandBuilder.java'),
+    src('vnmr', 'templates', 'ElementTree.java'),
+    src('vnmr', 'templates', 'GElement.java'),
+    # LayoutBuilder.java
+    src('vnmr', 'templates', 'PanelTemplate.java'),
+    src('vnmr', 'templates', 'ProtocolBuilder.java'),
+    src('vnmr', 'templates', 'ProtocolEditor.java'),
+    src('vnmr', 'templates', 'RQBuilder.java'),
+    src('vnmr', 'templates', 'RQParser.java'),
+    src('vnmr', 'templates', 'RQTreeTableModel.java'),
+    src('vnmr', 'templates', 'Reference.java'),
+    src('vnmr', 'templates', 'SQActionRenderer.java'),
+    src('vnmr', 'templates', 'SQBuild.java'),
+    src('vnmr', 'templates', 'SQBuilder.java'),
+    src('vnmr', 'templates', 'SQNode.java'),
+    src('vnmr', 'templates', 'SQNodeList.java'),
+    src('vnmr', 'templates', 'ShufflerStatementBuilder.java'),
+    src('vnmr', 'templates', 'Template.java'),
+    src('vnmr', 'templates', 'TreePanel.java'),
+    src('vnmr', 'templates', 'Types.java'),
+    src('vnmr', 'templates', 'VActionElement.java'),
+    src('vnmr', 'templates', 'VCommandDefinition.java'),
+    src('vnmr', 'templates', 'VElement.java'),
+    src('vnmr', 'templates', 'VFileElement.java'),
+    src('vnmr', 'templates', 'VObjElement.java'),
+    src('vnmr', 'templates', 'VProtocolElement.java'),
+    src('vnmr', 'templates', 'VStatementDefinition.java'),
+    src('vnmr', 'templates', 'VStatementElement.java'),
+    src('vnmr', 'templates', 'VTreeNodeElement.java'),
+]
+
+if with_lc:
+    print("LC/Corba subsystem: ENABLED")
+else:
+    print("LC/Corba subsystem: DISABLED  (pass with_lc=1 to enable)")
+
 classesPath = os.path.join(cwd, 'classes')
 if not os.path.exists(classesPath):
-   os.makedirs(classesPath)
-
-
-
-# method to copy files to remote directory
-def copyFilesHere(path, fileList):
-   for i in fileList:
-      shutil.copy(os.path.join(path, i), i)
-
-# copy jmol.jar to local directory
-copyFilesHere(ThirdPartyJarPath, ThirdPartyList)
-
+    os.makedirs(classesPath)
 
 # actions to perform at interpretation time
 # define with absolute path where built files will be copied
 installPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'java')
 # make sure the path(s) exist
 if not os.path.exists(installPath):
-   os.makedirs(installPath)
+    os.makedirs(installPath)
 
-for i in jarFileList:
-   Execute('cd ' + classesPath + ' && ' + jarBin + ' -xf ' + i)
-for i in jarHelpFileList:
-   Execute('cd ' + classesPath + ' && ' + jarBin + ' -xf ' + i)
+def unpack_jar(target, source, env):
+    import subprocess
+    for jar in source:
+        subprocess.check_call([jarBin, '-xf', jar.get_abspath()],
+                              cwd=classesPath)
+    meta_inf = os.path.join(classesPath, 'META-INF')
+    if os.path.exists(meta_inf):
+        import shutil as _shutil
+        _shutil.rmtree(meta_inf)
+    return None
 
-# Remove manifest stuff, if gets in the way
-Execute('rm -rf ' + os.path.join(classesPath, 'META-INF'))
+ThirdPartyJarPath = os.path.join(ovjtools, 'JavaPackages')
 
-# copy properties files to classes/properties directory
-Execute('rm -rf ' + os.path.join(classesPath, 'vnmr') + ' && ' + \
-        'cp -r ' + os.path.join(cwd, 'src', 'vnmr') + ' ' + classesPath)
+ThirdPartyJarNames = [
+    'gluegen-rt.jar',
+    'jogl-all.jar',
+    'postgresql.jar',
+    'JTattoo.jar',
+    'xml.jar',
+    'jmol.jar',
+    'jh.jar',
+    'jhall.jar',
+    'jhbasic.jar',
+    'jhtools.jar',
+    'jsearch.jar',
+]
+if with_lc:
+    ThirdPartyJarNames += ['lcaccess.jar', 'msaccess.jar', 'pdaaccess.jar']
 
-# define vjmol environment
-vjmolPath = os.path.join(cwd, 'vjmol')
-Execute(Mkdir(vjmolPath))
+for _jar in ThirdPartyJarNames:
+    _src = os.path.join(ThirdPartyJarPath, _jar)
+    if os.path.exists(_src):
+        shutil.copy(_src, os.path.join(cwd, _jar))
 
-if (platform!="darwin"):
-   vjmolEnv  = Environment(ENV = {'JAVA_HOME' : javaBinDir,
-                                  'CLASSPATH' : os.path.join(cwd, 'jmol.jar'),
-                                  'PATH' : javaBinDir + ':' + os.environ['PATH']})
+java6dir = os.path.join(ovjtools, 'java', 'bin', 'javaws')
+if os.path.exists(java6dir):
+    env.Install(os.path.join('src', 'vnmr', 'ui'),
+                Glob(os.path.join('java6', '*')))
 
-   # define build environment
-   jEnv = Environment(ENV = {'JAVA_HOME' : javaBinDir,
-                             'CLASSPATH' : classesPath,
-                             'PATH' : javaBinDir + ':' + os.environ['PATH']})
-elif (platform=="darwin"):
-   if not "JAVA_HOME" in os.environ:
-      os.environ['JAVA_HOME'] = os.popen('/usr/libexec/java_home -v 1.8').read()
+pathEnv = javaBinDir + ':' + os.environ.get('PATH', '')
 
-   vjmolEnv  = Environment(ENV = {'CLASSPATH' : os.path.join(cwd, 'jmol.jar'),
-                                  'JAVA_HOME' : os.environ['JAVA_HOME'],
-                                  'PATH' : javaBinDir + ':' + os.environ['PATH']})
+if platform == 'darwin':
+    if 'JAVA_HOME' not in os.environ:
+        import subprocess
+        os.environ['JAVA_HOME'] = subprocess.check_output(
+            ['/usr/libexec/java_home', '-v', '1.8']).decode().strip()
 
-   # define build environment
-   jEnv = Environment(ENV = {'CLASSPATH' : classesPath,
-                             'JAVA_HOME' : os.environ['JAVA_HOME'],
-                             'PATH' : javaBinDir + ':' + os.environ['PATH']})
+commonEnvDict = {
+    'JAVA_HOME': os.environ.get('JAVA_HOME', javaBinDir),
+    'PATH':      pathEnv,
+}
 
+all_cp_jars = jarFileList + jarHelpFileList
+if with_lc:
+    all_cp_jars += lc_jar_list
 
-print(jEnv['ENV'])
-#print(jEnv['JAVAC'])
-#print(jEnv['JAVACLASSPATH'])
-#dict = jEnv.Dictionary()
-#keys = dict.keys()
-#keys.sort()
-#for key in keys:
-#   print(key, dict[key])
+classpath_for_build = ':'.join([classesPath] + all_cp_jars)
 
+jEnv = Environment(ENV=dict(commonEnvDict, CLASSPATH=classpath_for_build))
 
-# just a double check of which javac is being used for the build
+print("Java build ENV:", jEnv['ENV'])
 jEnv.Execute('which javac')
 
-# actual VJMol.jar build
-javaBuildVJMol = vjmolEnv.Java(source = os.path.join(cwd, 'vjmol_src'),
-                               target = vjmolPath)
+jars_to_unpack = jarFileList + jarHelpFileList
+if with_lc:
+    jars_to_unpack += lc_jar_list
 
-findAction = 'find ' + os.path.join(cwd,'classes') + ' \( -name "*.java" -o -name "*.out" \) -exec rm -f {} \;'
-findAction2 = findAction
+def sync_vnmr_props(target, source, env):
+    """Copy src/vnmr property tree into classesPath/vnmr."""
+    dst = os.path.join(classesPath, 'vnmr')
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    shutil.copytree(os.path.join(cwd, 'src', 'vnmr'), dst)
+    return None
 
-# Do jar action here on Ubuntu 20
-if ( version > 19 ):
-  findAction2 = findAction+'; cd '+cwd+' && '+ jarBin+' cfm vnmrj.jar Manifest -C classes . ; cp '+ os.path.join(cwd, vnmrjTarget)+' '+installPath
+unpackNode = env.Command(
+    target = os.path.join(classesPath, '.jars_unpacked'),
+    source = jars_to_unpack,
+    action = [
+        unpack_jar,
+        sync_vnmr_props,
+        Touch('$TARGET'),
+    ],
+)
 
-# print(findAction)
-vjmolEnv.AddPostAction(javaBuildVJMol,
-                       Action(findAction))
-vjmolBuildObject = vjmolEnv.Jar(JAR      = jarBin,
-                                  source   = vjmolPath,
-                                  target   = vjmolTarget,
-                                  JARCHDIR = vjmolPath)
-
-# actual builds
-srcPath = os.path.join(cwd, 'src')
-javaBuildObject = jEnv.Java(JAVACFLAGS = '-J-mx256m',
-                            target     = classesPath,
-                            source     = srcPath)
-
-todaysDate = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
+todaysDate   = datetime.datetime.now().strftime("%B %e, %Y %T %Z")
 manifestFile = os.path.join(cwd, 'Manifest')
-f = open(manifestFile, 'w')
-f.write('Manifest-Version: 1.0 ')
-f.write(todaysDate)
-f.write('\n')
-f.write('Main-Class: vnmr.ui.VNMRFrame\n')
-f.close()
+with open(manifestFile, 'w') as mf:
+    mf.write('Manifest-Version: 1.0 ' + todaysDate + '\n')
+    mf.write('Main-Class: vnmr.ui.VNMRFrame\n')
 
-#jEnv.AddPostAction(javaBuildObject,
-#                   Action(os.path.join(cwd,'removeJava.sh')))
+def collect_java_files(directories, exclude_files=None):
+    """Walk directories and return all .java files, excluding given basenames."""
+    exclude_files = set(exclude_files or [])
+    found = []
+    for d in directories:
+        for root, dirs, files in os.walk(d):
+            for f in sorted(files):
+                if f.endswith('.java') and f not in exclude_files:
+                    found.append(os.path.join(root, f))
+    return found
 
-# print(findAction)
-jEnv.AddPostAction(javaBuildObject,
-                   Action(findAction2))
+if platform == 'darwin':
+    override_dirs   = [os.path.join(cwd, 'macos')]
+    excluded_in_src = {
+        'VStatusButton.java', 'LayoutBuilder.java', 'ExpPanel.java',
+        'VnmrCanvas.java', 'ButtonIF.java', 'CanvasIF.java',
+        'CorbaClient.java', 'VMsStatusButton.java',
+        'VSliderMotifUI.java', 'VnmrTearCanvas.java',
+        'LcCorbaClient.java', 'MsCorbaClient.java', 'PdaCorbaClient.java',
+    }
+elif with_lc:
+    override_dirs   = []
+    excluded_in_src = set()
+else:
+    override_dirs   = [os.path.join(cwd, 'macos'),
+                       os.path.join(cwd, 'linux')]
+    excluded_in_src = {
+        'VStatusButton.java', 'LayoutBuilder.java',
+        'ExpPanel.java',
+        'CorbaClient.java', 'VMsStatusButton.java',
+        'LcCorbaClient.java', 'MsCorbaClient.java', 'PdaCorbaClient.java',
+        'VnmrTearCanvas.java',
+    }
 
-# This jar action fails on Ubuntu 20
-if ( version <= 19 ):
-    jarBuildObject = jEnv.Jar(JAR      = jarBin,
-                            target   = vnmrjTarget,
-                            source   = [classesPath,
-                                        manifestFile],
-                            JARCHDIR = classesPath)
+def collect_src_files(src_root, exclude_files, exclude_lc):
+    """Walk src_root, skipping excluded filenames and optionally the lc/ tree."""
+    found = []
+    for root, dirs, files in os.walk(src_root):
+        if exclude_lc and os.path.basename(root) == 'lc':
+            dirs[:] = []
+            continue
+        for f in sorted(files):
+            if f.endswith('.java') and f not in exclude_files:
+                found.append(os.path.join(root, f))
+    return found
 
-binPath = os.path.join(cwd, os.pardir, os.pardir, os.pardir, 'vnmr', 'bin')
+exclude_lc_tree = (platform == 'darwin') or (not with_lc)
 
-moviePath = os.path.join(ovjtools, 'JMF-2.1.1e', 'src','simplemovie.jar')
-Execute(Copy(os.path.join(installPath,'simplemovie.jar'), moviePath))
+if platform.startswith('linux'):
+    macos_exclude = {'ButtonIF.java', 'CanvasIF.java', 'VnmrCanvas.java'}
+    if not with_lc:
+        macos_exclude.add('ExpPanel.java')
+else:
+    macos_exclude = set()
 
-#jEnv.AddPostAction(jarBuildObject,
-#                   Action(os.path.join(cwd,'removeJava.sh')))
+all_java_files = collect_src_files(os.path.join(cwd, 'src'),
+                                    excluded_in_src, exclude_lc_tree)
+if platform == 'darwin' or (not with_lc and platform.startswith('linux')):
+    all_java_files += collect_java_files([os.path.join(cwd, 'macos')],
+                                          macos_exclude)
+if not with_lc and platform.startswith('linux'):
+    all_java_files += collect_java_files([os.path.join(cwd, 'linux')])
 
-# actions to be performed after targets are built
-if ( version <= 19 ):
-  jEnv.AddPostAction(jarBuildObject,
-                      Action(Copy(installPath, os.path.join(cwd, vnmrjTarget))))
+javacBin = os.path.join(javaBinDir, 'javac')
+javacSentinel = os.path.join(classesPath, '.javac_done')
 
-# finally copy vjmol.jar
-vjmolEnv.AddPostAction(vjmolBuildObject,
-                         Action(Copy(installPath, os.path.join(cwd, vjmolTarget))))
+def run_javac(target, source, env):
+    import subprocess
+    cmd = ([javacBin, '-J-mx256m',
+            '-d',          classesPath,
+            '-classpath',  classpath_for_build,
+            '-sourcepath', os.path.join(cwd, 'src')] +
+           [str(s) for s in source])
+    subprocess.check_call(cmd)
+    return None
+
+javaBuildObject = env.Command(
+    target = javacSentinel,
+    source = all_java_files,
+    action = [run_javac, Touch('$TARGET')],
+)
+Depends(javaBuildObject, unpackNode)
+Depends(javaBuildObject, vjmolSiblingJar)
+
+# Jar + install after compile
+jarAndInstall = (
+    'cd ' + cwd +
+    ' && ' + jarBin + ' cfm vnmrj.jar Manifest -C classes .'
+    ' && cp ' + os.path.join(cwd, vnmrjTarget) + ' ' + installPath
+)
+env.AddPostAction(javaBuildObject, Action(jarAndInstall))
+
+moviePath = os.path.join(ovjtools, 'JMF-2.1.1e', 'src', 'simplemovie.jar')
+env.Install(installPath, moviePath)
+
+# vjmolSiblingJar resolves to  /src/vjmol/vjmol.jar
+env.Install(installPath, vjmolSiblingJar)
