@@ -1263,34 +1263,10 @@ if not with_lc and platform.startswith('linux'):
 javacBin = os.path.join(javaBinDir, 'javac')
 javacSentinel = os.path.join(classesPath, '.javac_done')
 
-def _java_major_version(javac_bin):
-    try:
-        import subprocess as _sp
-        out = _sp.check_output([javac_bin, '-version'],
-                               stderr=_sp.STDOUT).decode().strip()
-        ver = out.split()[-1]
-        parts = ver.split('.')
-        major = int(parts[0])
-        return 8 if major == 1 else major 
-    except Exception:
-        return 8 
-
-java_major = _java_major_version(javacBin)
-print('Java major version: %d' % java_major)
-
-if java_major >= 9 and platform.startswith('linux'):
-    java9_exports = [
-        '--add-exports', 'java.desktop/com.sun.java.swing.plaf.motif=ALL-UNNAMED',
-        '--add-exports', 'java.desktop/sun.awt=ALL-UNNAMED',
-    ]
-else:
-    java9_exports = []
-
 def run_javac(target, source, env):
     import subprocess
-    cmd = ([javacBin, '-J-mx256m'] +
-            java9_exports +
-            ['-d',          classesPath,
+    cmd = ([javacBin, '-J-mx256m',
+            '-d',          classesPath,
             '-classpath',  classpath_for_build,
             '-sourcepath', os.path.join(cwd, 'src')] +
            [str(s) for s in source])
