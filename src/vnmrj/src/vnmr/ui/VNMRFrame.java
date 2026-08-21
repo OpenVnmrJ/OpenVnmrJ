@@ -16,8 +16,6 @@ import javax.swing.*;
 import javax.swing.plaf.basic.*;
 import javax.swing.plaf.metal.*;
 
-import sun.misc.*;
-
 import vnmr.bo.*;
 import vnmr.util.*;
 import vnmr.ui.shuf.*;
@@ -52,7 +50,7 @@ public class VNMRFrame extends JFrame implements AppInstaller {
     static String hostAddr;
     static VNMRFrame vnmrFrame=null;
     static String m_title;
-    static boolean exitingFlag=false;
+    static volatile boolean exitingFlag=false;
     static boolean nativeGraphics = true;
     static Process    updateDBProc;
     static MetalTheme theme = null;
@@ -425,11 +423,9 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             memorymonitor.setVisible(true);
         }
         
-        Signal.handle(new Signal("TERM"), new SignalHandler() {
-             public void handle(Signal sig) {
-                exitAll();
-             }
-        });
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            exitHook();
+        }, "VNMRShutdownHook"));
 
         DisplayOptions.updateUIColor();
         
@@ -532,6 +528,8 @@ public class VNMRFrame extends JFrame implements AppInstaller {
     }
 
     public void exitAll() {
+        if (exitingFlag)
+            return;
         // Flag for anyone wanting to know if we are in the process of
         // shutting down.
         exitingFlag = true;
@@ -558,6 +556,33 @@ public class VNMRFrame extends JFrame implements AppInstaller {
         doLogout();
         System.exit(0);
     }
+
+    private static void exitHook() {
+        if (exitingFlag)
+            return;
+        exitingFlag = true;
+
+        if (updateAttrThread != null)  updateAttrThread.interrupt();
+        if (updateThread != null)      updateThread.interrupt();
+        if (fillWorkspaceThread != null) fillWorkspaceThread.interrupt();
+        if (fillMacrosThread != null)  fillMacrosThread.interrupt();
+        if (dbStatus != null)          dbStatus.interrupt();
+        if (notifyListener != null)    notifyListener.interrupt();
+
+        try { Thread.sleep(100); }
+        catch (InterruptedException ie) {}
+
+        try {
+            javax.swing.SwingUtilities.invokeAndWait(() -> {
+                if (vnmrFrame != null)
+                    vnmrFrame.doLogout();
+            });
+        } catch (Exception e) {
+            if (vnmrFrame != null)
+                vnmrFrame.doLogout();
+        }
+        // No System.exit(0)
+    }   
 
     static public boolean exiting() {
         return exitingFlag;
