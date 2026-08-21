@@ -390,12 +390,12 @@ public class ImportDialog extends ModalDialog implements ActionListener,
         stopPressed = false;
         updateTable();
     }
-
+/*
     public void freeObj() {
         System.gc();
         System.runFinalization();
     }
-
+*/
     public void destroy() {
         removeAll();
         treeTable.tree.removeTreeExpansionListener(tel);
@@ -415,8 +415,8 @@ public class ImportDialog extends ModalDialog implements ActionListener,
         timer = null;
         importDialog = null;
         this.dispose();
-        System.gc();
-        System.runFinalization();
+        // System.gc();
+        // System.runFinalization();
     }
 
     public void keyPressed(KeyEvent e) {
@@ -445,7 +445,7 @@ public class ImportDialog extends ModalDialog implements ActionListener,
             setVisible(false);
             if(timer.isRunning()) timer.stop();
             setLookAndFeel(defaultLookAndFeel);
-            freeObj();
+            // freeObj();
 
         }
         // Help
@@ -1241,8 +1241,8 @@ public class ImportDialog extends ModalDialog implements ActionListener,
 
     private void updateTree(String root) {
 
-        System.gc();
-        System.runFinalization();
+        // System.gc();
+        // System.runFinalization();
         setLookAndFeel("Metal");
         treeTableModel = new FileSystemModel(root);
         treeTable .setTreeTableModel(treeTableModel, dataDirs);

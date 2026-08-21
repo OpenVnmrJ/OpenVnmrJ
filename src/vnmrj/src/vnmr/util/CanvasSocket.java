@@ -17,7 +17,7 @@ import java.util.List;
 
 import javax.swing.SwingUtilities;
 
-public class CanvasSocket implements Runnable {
+public class CanvasSocket implements Runnable, AutoCloseable {
     private SocketIF  socketIf;
     private ThreadGroup  group;
     private ServerSocket svr;
@@ -72,8 +72,9 @@ public class CanvasSocket implements Runnable {
         }
     }
 
-    protected void finalize() throws Throwable {
-        svr.close();
+    @Override
+    public void close() throws IOException {
+        quit();
     }
 
     public void acceptit(Socket i)
@@ -191,12 +192,12 @@ public class CanvasSocket implements Runnable {
         public void quit() {
             done = true;
         }
-
+/*
         protected void finalize() throws Throwable {
             incoming.close();
             done = true;
         }
-
+*/
     }
 
     class ComSocketHandler extends Thread  {
@@ -286,11 +287,11 @@ public class CanvasSocket implements Runnable {
         public void quit() {
             finished = true;
         }
-
+/*
         protected void finalize() throws Throwable {
             incoming.close();
         }
-
+*/
     }
 
     class AlphaSocketHandler extends Thread  {
@@ -330,11 +331,11 @@ public class CanvasSocket implements Runnable {
         public void quit() {
             finished = true;
         }
-
+/*
         protected void finalize() throws Throwable {
             incoming.close();
         }
-
+*/
     }
 
     class MasterSocketHandler extends Thread  {
@@ -420,10 +421,11 @@ public class CanvasSocket implements Runnable {
         public void quit() {
             finished = true;
         }
-
+/*
         protected void finalize() throws Throwable {
             incoming.close();
         }
+*/
     }
 
     class PrintSocketHandler extends Thread  {
@@ -460,10 +462,11 @@ public class CanvasSocket implements Runnable {
         public void quit() {
             done = true;
         }
-
+/*
         protected void finalize() throws Throwable {
             incoming.close();
             done = true;
         }
+*/        
     }
 }

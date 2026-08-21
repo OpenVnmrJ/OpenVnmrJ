@@ -373,8 +373,8 @@ public class SaveStudyDialog extends ModalDialog
         if(dirPane2 != null) dirPane2.destroy();
         saveStudyDialog = null;
         removeAll();
-        System.gc();
-        System.runFinalization();
+        // System.gc();
+        // System.runFinalization();
     }
 
     private void okAction() {

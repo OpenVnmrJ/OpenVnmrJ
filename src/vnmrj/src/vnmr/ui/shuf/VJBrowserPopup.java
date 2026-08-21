@@ -21,6 +21,7 @@ import vnmr.bo.VObjDef;
 import vnmr.ui.*;
 import vnmr.util.Util;
 import vnmr.util.DisplayOptions;
+import vnmr.util.Messages;
 
 
 /********************************************************** <pre>
@@ -121,9 +122,10 @@ public class VJBrowserPopup extends JFrame implements PropertyChangeListener {
             writePersistence();
             DisplayOptions.removeChangeListener(this);
             dispose();
-            finalize();
+            // finalize();
         }
         catch (Throwable e) {
+            Messages.writeStackTrace(e);
         }
  
     

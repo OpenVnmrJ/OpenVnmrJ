@@ -547,7 +547,7 @@ public class ExpSelector extends JPanel implements DragSourceListener,
 
 
     // Cleanup
-    public void finalize() {
+    public void cleanup() {
         if (times != null)
             times.stop();
         times = null;

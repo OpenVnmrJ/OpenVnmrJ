@@ -47,7 +47,7 @@ import java.awt.KeyboardFocusManager;
 import java.awt.Font;
 import java.awt.event.*;
 import java.awt.Point;
-import java.io.FilePermission;
+// import java.io.FilePermission;
 import java.net.URI;
 import java.net.URL;
 import java.text.DecimalFormat;
@@ -72,6 +72,7 @@ import vnmr.ui.SessionShare;
 import vnmr.util.Util;
 import vnmr.bo.VColorChooser;
 import vnmr.util.SimpleHLayout;
+import vnmr.util.Messages;
 
 /**
  * A class which implements a cross-platform print dialog.
@@ -625,20 +626,21 @@ public class ServicePopup extends JDialog implements ActionListener,
     }
 
     public static void initResource() {
-        java.security.AccessController.doPrivileged(
+        /* java.security.AccessController.doPrivileged(
             new java.security.PrivilegedAction<Object>() {
-                public Object run() {
+                public Object run() { */
                     try {
                         messageRB = ResourceBundle.getBundle(strBundle);
-                        return null;
+                        // return null;
                     } catch (java.util.MissingResourceException e) {
+                        Messages.writeStackTrace(e);
                         // throw new Error("Fatal: Resource for ServiceUI " +
                         //                "is missing");
                     }
-                    return null;
-                }
+                    // return null;
+                /* }
             }
-        );
+        ); */
     }
 
 
@@ -652,6 +654,7 @@ public class ServicePopup extends JDialog implements ActionListener,
                String s = messageRB.getString(key);
                return s;
            } catch (java.util.MissingResourceException e) {
+                Messages.writeStackTrace(e);
             // throw new Error("Fatal: Resource for ServiceUI is broken; " +
             //                "there is no " + key + " key in resource");
            }
@@ -1228,7 +1231,7 @@ public class ServicePopup extends JDialog implements ActionListener,
         implements ActionListener, ItemListener, PopupMenuListener
     {
         private String strTitle;
-        private FilePermission printToFilePermission;
+        // private FilePermission printToFilePermission;
         private JButton btnProperties;
         // private JComboBox cbName;
         private JLabel lblType, lblStatus, lblInfo;
@@ -1454,14 +1457,15 @@ public class ServicePopup extends JDialog implements ActionListener,
          * We disable the "Print To File" checkbox if this returns false
          */
         private boolean allowedToPrintToFile() {
-            if (psCurrent == null)
+            /* if (psCurrent == null)
                 return true;
             try {
                 throwPrintToFile();
                 return true;
             } catch (SecurityException e) {
                 return false;
-            }
+            } */
+            return true;
         }
 
         /**
@@ -1469,7 +1473,7 @@ public class ServicePopup extends JDialog implements ActionListener,
          * specify printing to a file. In that case its probably right
          * to throw a SecurityException if the permission is not granted.
          */
-        private void throwPrintToFile() {
+        /* private void throwPrintToFile() {
             SecurityManager security = System.getSecurityManager();
             if (security != null) {
                 if (printToFilePermission == null) {
@@ -1478,7 +1482,7 @@ public class ServicePopup extends JDialog implements ActionListener,
                 }
                 security.checkPermission(printToFilePermission);
             }
-        }
+        } */
 
         //  class PrintServicePanel
         public void updateInfo() {

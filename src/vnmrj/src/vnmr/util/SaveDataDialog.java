@@ -146,8 +146,8 @@ public class SaveDataDialog extends ModalDialog
         dirPane.destroy();
         saveDataDialog = null;
         removeAll();
-        System.gc();
-        System.runFinalization();
+        // System.gc();
+        // System.runFinalization();
     }
 
     private void okAction() {

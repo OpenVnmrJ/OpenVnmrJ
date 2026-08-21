@@ -362,7 +362,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
 
 
     // Cleanup
-    public void finalize() {
+    public void cleanup() {
         if (times != null)
             times.stop();
         times = null;

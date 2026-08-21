@@ -265,8 +265,8 @@ public class LocatorBrowser extends JPanel  implements TreeExpansionListener,
             return;
 
          root = newRoot;
-         System.gc();
-         System.runFinalization();
+         // System.gc();
+         // System.runFinalization();
          treeModel = new FileSystemModelBrowser(root);
          tree = new BrowserJTree(treeModel);
          tree.addTreeExpansionListener(tel);

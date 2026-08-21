@@ -18,6 +18,7 @@ import java.beans.PropertyChangeListener;
 import vnmr.ui.*;
 import vnmr.util.Util;
 import vnmr.util.DisplayOptions;
+import vnmr.util.Messages;
 
 
 /********************************************************** <pre>
@@ -90,10 +91,10 @@ public class VJSavePopup extends JDialog implements PropertyChangeListener {
             writePersistence();
             DisplayOptions.removeChangeListener(this);
             dispose();
-            finalize();
+            // finalize();
         }
         catch (Throwable e) {
-            
+            Messages.writeStackTrace(e);
         }
     }
 
