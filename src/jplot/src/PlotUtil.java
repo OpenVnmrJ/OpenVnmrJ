@@ -87,7 +87,7 @@ public class PlotUtil implements PlotDefines {
             return;
         }
         if (str.equals("exit_jplot")) {
-            mainClass.closeFrame();
+            mainClass.closeFrame(0);
             return;
         }
 
