@@ -9164,7 +9164,7 @@ public class ExpPanel extends JPanel
             return;
         int pid;
         int k, m;
-        boolean doGc = false;
+        // boolean doGc = false;
         boolean goodFile = true;
         if (id >= 90)
             pid = id - 90;
@@ -9299,7 +9299,7 @@ public class ExpPanel extends JPanel
                         // TODO: need to add it somewhere else?
                         // System.gc();
                         // System.runFinalization();
-                        doGc = true;
+                        // doGc = true;
                     }
                     if (debug) {
                         Messages.postDebug("Panel removed: "+
@@ -9320,7 +9320,7 @@ public class ExpPanel extends JPanel
                     // TODO: need to add it somewhere else?
                     // System.gc();
                     // System.runFinalization();
-                    doGc = true;
+                    // doGc = true;
                 }
                 info.paramPanel = pan;
                 epi = new ExpPanInfo(info.id,
@@ -9348,10 +9348,10 @@ public class ExpPanel extends JPanel
             //    controlPanel.setParamPanel(info.name, pan);
             paramTabCtrl.setParamPanel(info.name, pan, info.fpathIn);
             pan = null;
-            if (doGc) {
+            /* if (doGc) {
                 System.gc();
                 System.runFinalization();
-            }
+            } */
             // if (info.isCurrent)
                 setPanelBusy(false);
             //    sendFree();
