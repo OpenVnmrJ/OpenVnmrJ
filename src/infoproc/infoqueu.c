@@ -110,12 +110,8 @@ int initregqueue()
 |       inetport - The inter-net port number of socket
 |
 +------------------------------------------------------------------*/
-int logstatusport(username,pid,hostname,inetport,inetent)
-int pid;              /* unique process's ID number */
-int inetport;           /* inter-net port number of socket */
-char *username;
-char *hostname;
-struct hostent *inetent;	/* host entry for system requesting status */
+int logstatusport(char *username, int pid, char *hostname,
+		  int inetport, struct hostent *inetent)
 {
     RegPacket *p;
     RegPacket *lastp;
@@ -321,9 +317,7 @@ static RegPacket *getRegPacket(char *username, int pid, char *hostname,
 |       else it returns 0.
 |        
 +-----------------------------------------------------------------*/
-static int rmstatusport(hostname,port)
-char *hostname;
-int port;
+static int rmstatusport(char *hostname, int port)
 {   int listpos;
     RegPacket *p;
     RegPacket *lastp;
@@ -413,9 +407,7 @@ static void SendAcqStat()
 extern struct hostent *this_hp;
 
 static void
-register_local_port( username, userpid )
-char *username;
-int userpid;
+register_local_port(char *username, int userpid )
 {
          if (Acqdebug)
 	     fprintf(stderr, "    register_local_port  %s\n", username);
@@ -425,10 +417,7 @@ int userpid;
 
 
 static void
-register_remote_port( username, userpid, messptrptr )
-char *username;
-int userpid;
-char **messptrptr;
+register_remote_port(char *username, int userpid, char **messptrptr )
 {
         int              stat_addr;
         char            *inet_addr_list[ 2 ];
@@ -440,7 +429,7 @@ char **messptrptr;
         stat_addr = getinttoken( messptrptr );
         stat_entry.h_addrtype = getinttoken( messptrptr );
         stat_entry.h_length = getinttoken( messptrptr );
-        if (stat_entry.h_length > sizeof( int )) {
+        if (stat_entry.h_length > (int) sizeof( int )) {
                 fprintf( stderr,
            "for remote host %s, received address length of %d, expected %zd\n",
 		 MessPacket.Hostname, stat_entry.h_length, sizeof( int ));
@@ -562,7 +551,7 @@ update_rfinfo(EXP_STATUS_STRUCT *statblock)
     static int ibuf = 0;	/* Where we are in the circular buffers */
     static unsigned int cbuf[4][30]; /* Circular buffers of past 10s values */
     static unsigned int rsum[4]; /* Running sum of long t.c. power */
-    const static int tinc = 10;	/* How often to update long t.c. power (s) */
+    static const int tinc = 10;	/* How often to update long t.c. power (s) */
     int rf[4];
     unsigned int limit[4];	/* microwatts */
     unsigned int pwr[4];	/* microwatts */
@@ -659,7 +648,7 @@ update_statinfo()
 	   fd = -1;
 	   return(0);
 	}
-	if (s.st_size < sizeof(EXP_STATUS_STRUCT))
+	if (s.st_size < (int) sizeof(EXP_STATUS_STRUCT))
 	{
 	   if (Acqdebug)
 	   {
@@ -759,10 +748,14 @@ update_statinfo()
        acqinfo.AcqZone = 0;
     }
  
-    strcpy(acqinfo.probeId1, statusBlk->csb.probeId1);
-    strcpy(acqinfo.gradCoilId, statusBlk->csb.gradCoilId);
-    strcpy(acqinfo.AcqUserID, statusBlk->UserID);
-    strcpy(acqinfo.AcqExpID, statusBlk->ExpID);
+    snprintf(acqinfo.probeId1, sizeof(acqinfo.probeId1), "%s",
+		    statusBlk->csb.probeId1);
+    snprintf(acqinfo.gradCoilId, sizeof(acqinfo.gradCoilId), "%s",
+		    statusBlk->csb.gradCoilId);
+    snprintf(acqinfo.AcqUserID, sizeof(acqinfo.AcqUserID), "%.9s",
+		    statusBlk->UserID);
+    snprintf(acqinfo.AcqExpID, sizeof(acqinfo.AcqExpID), "%.10s",
+		    statusBlk->ExpID);
     acqinfo.AcqLockGain = statusBlk->csb.AcqLockGain;
     acqinfo.AcqLockPower = statusBlk->csb.AcqLockPower;
     acqinfo.AcqLockPhase = statusBlk->csb.AcqLockPhase;
@@ -773,7 +766,7 @@ update_statinfo()
 #ifdef NIRVANA
     tmpRem = acqinfo.AcqRemTime;
 #endif
-    if((acqinfo.Acqstate != ACQ_INACTIVE) && (strlen(acqinfo.AcqExpID) > 0))
+    if((acqinfo.Acqstate != ACQ_INACTIVE) && (strlen(statusBlk->ExpID) > 0))
     {
        if ((acqinfo.Acqstate != ACQ_ACQUIRE) &&
            (acqinfo.Acqstate != ACQ_PAD) &&
@@ -854,6 +847,7 @@ static void setInfoTimer(int action)
          break;
      case TIME_ON:
          setupInfopoller();
+	 // Fall through
      case TIME_RESET:
          pollTime = 3.0;
          if (Acqdebug)
@@ -899,7 +893,7 @@ void Statuscheck(int sig)
     int		 timeit;
 
 
-
+    (void) sig;
     if (Acqdebug)
 	fprintf(stderr, "  Statuscheck\n");
     setInfoTimer(TIME_OFF);
