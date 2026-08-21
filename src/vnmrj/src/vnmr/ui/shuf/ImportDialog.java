@@ -800,7 +800,7 @@ public class ImportDialog extends ModalDialog implements ActionListener,
         try{
             updateLocatorInfo(allItems);
         } catch (Exception e) { }
-        freeObj();
+        // freeObj();
     }
 
     private void updateLocatorInfo(ArrayList allItems) {

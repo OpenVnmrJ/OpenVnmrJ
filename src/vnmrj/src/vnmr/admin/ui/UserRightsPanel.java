@@ -984,7 +984,7 @@ public class UserRightsPanel extends JFrame implements ActionListener
             // finalize();
         }
         catch(Throwable e) {
-            Messages.writeStackTrace(e);
+            
         }
     }
 

@@ -125,7 +125,7 @@ public class VJBrowserPopup extends JFrame implements PropertyChangeListener {
             // finalize();
         }
         catch (Throwable e) {
-            Messages.writeStackTrace(e);
+            
         }
  
     

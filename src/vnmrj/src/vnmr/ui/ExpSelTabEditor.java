@@ -323,7 +323,7 @@ public class ExpSelTabEditor extends ModalDialog implements ActionListener
             // finalize();
         }
         catch (Throwable e) {
-            Messages.writeStackTrace(e);
+            
         }
     }
     

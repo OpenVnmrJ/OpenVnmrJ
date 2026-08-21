@@ -94,7 +94,7 @@ public class VJSavePopup extends JDialog implements PropertyChangeListener {
             // finalize();
         }
         catch (Throwable e) {
-            Messages.writeStackTrace(e);
+            
         }
     }
 

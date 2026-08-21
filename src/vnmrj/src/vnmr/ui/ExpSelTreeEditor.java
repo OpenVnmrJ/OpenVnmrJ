@@ -474,7 +474,7 @@ public class ExpSelTreeEditor extends ModalDialog implements ActionListener
             // finalize();
         }
         catch (Throwable e) {
-            Messages.writeStackTrace(e);
+            
         }
     }
     

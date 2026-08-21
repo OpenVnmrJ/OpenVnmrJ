@@ -1088,7 +1088,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         for(int i=0; i < nviews; i++) 
             tp_paneInfo[i].clear();
         if (expCard != null) {
-            ((ExpCards) expCard).finalize();
+            ((ExpCards) expCard).cleanup();
             expCard = null;
         }
     }
