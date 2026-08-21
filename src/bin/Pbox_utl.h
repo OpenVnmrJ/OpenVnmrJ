@@ -11,7 +11,7 @@
 /* Pbox_utl.h - Pbox utilities */
 /************************************************************************/
 
-void setglo()			/* set Pbox globals */
+void setglo(void)			/* set Pbox globals */
 {
   FILE *fnm;
   
@@ -54,7 +54,7 @@ void setglo()			/* set Pbox globals */
   else g.Console = 'i';
 }
 
-void Usetglo()
+void Usetglo(void)
 {
   if (Usetdir == 1)
   {
@@ -63,8 +63,7 @@ void Usetglo()
   }
 }
 
-void getglo(fil)
-FILE *fil;
+void getglo(FILE *fil)
 {
   char val[MAXSTR];
   
@@ -131,8 +130,7 @@ FILE *fil;
 }
 
 
-char slrp(plw, r2)	        /* which SLURP */
-double plw, r2;
+char slrp(double plw, double r2)  /* which SLURP */
 {
   if(plw < (g.minpw*0.000001)) 
     plw = g.pw;
@@ -149,9 +147,7 @@ double plw, r2;
 }
 
 
-void clip(nn, clev)		/* clip amplitude */
-int nn;
-double clev;
+void clip(int nn, double clev)  /* clip amplitude */
 {
   int     j;
   double  mxl;
@@ -164,8 +160,7 @@ double clev;
   }
 }
 
-void rmdc(nn)
-int  nn;
+void rmdc(int nn)
 {
 int i;
 double dclev;
@@ -174,9 +169,7 @@ double dclev;
   for (i = 0; i < nn; i++) Amp[i] -= dclev;
 }
 
-double calib(ofs, nn)		/* pulse calibration */
-double ofs;
-int nn;
+double calib(double ofs, int nn)  /* pulse calibration */
 {
   double c, s, re, im, re0 = 0.0, im0 = 0.0;
   int j;
@@ -195,8 +188,7 @@ int nn;
   return re;
 }
 
-int getext(str1, str2)
-char *str1, *str2;
+int getext(char *str1, char *str2)
 {
 int i, j, k;
 
@@ -209,8 +201,7 @@ int i, j, k;
   return k;
 }
 
-FILE *openshape(fname)
-char *fname;
+FILE *openshape(char *fname)
 {
 FILE *inpf;
 
@@ -223,7 +214,12 @@ FILE *inpf;
     else
     {
       if(home[0]=='\0') 
-        (void) strcpy(home, (char *) getenv("HOME"));
+      {
+        char *homedir = getenv("HOME");
+        if (homedir == NULL)
+          pxerr("Pbox: HOME environment variable not set");
+        (void) strcpy(home, homedir);
+      }
       (void) strcat(strcpy(shapes, home), g.shdir);
       (void) strcat(strcpy(ifn, shapes), fname);
       if ((inpf = fopen(ifn, "r")) == NULL)     /* read file */
@@ -243,9 +239,7 @@ FILE *inpf;
 return inpf;
 }
 
-int getsimdata(bl, fil)
-Blodata *bl;
-FILE    *fil;
+int getsimdata(Blodata *bl, FILE *fil)
 {
 int i;
 char s[7][32], val[MAXSTR], str[MAXSTR];
@@ -272,8 +266,7 @@ char s[7][32], val[MAXSTR], str[MAXSTR];
 return i; 
 }
 
-double scale(phase)		/* scale if 0 > phase > 360 deg */
-double phase;
+double scale(double phase)  /* scale if 0 > phase > 360 deg */
 {
   if (phase >= 360)
     phase -= 360 * ((int) (phase / 360.0));
@@ -283,8 +276,7 @@ double phase;
 }
 
 
-int npsqw(s)		/* estimate np in sq wave */
-Shape *s;
+int npsqw(Shape *s)  /* estimate np in sq wave */
 {
   double sum = 0.0, ax;
   int i, j;
@@ -304,8 +296,7 @@ Shape *s;
 }
 
 
-int adjsqw(s)	/* adjust np in sq wave */
-Shape *s;
+int adjsqw(Shape *s)  /* adjust np in sq wave */
 {
   double sum = 0.0;
   int i, j;
@@ -326,8 +317,7 @@ Shape *s;
   return pboxRound(sum / s->dres, 1.0);
 }
 
-void shapeinfo(sh, opt)			/* not used */
-char  *sh, *opt;
+void shapeinfo(char *sh, char *opt)  /* not used */
 {
 FILE  *fil;
 char   str[MAXSTR];
@@ -343,6 +333,7 @@ char   str[MAXSTR];
   if (opt[0] == 't')
   {
     strcpy(opt, str);
+    fclose(fil);
     return;
   }
   printf("\n"); 
@@ -364,13 +355,11 @@ char   str[MAXSTR];
     exit(1);
 }
 
-int mkinp(fname, fnm)
-FILE *fnm;
-char *fname;
+int mkinp(char *fname, FILE *fnm)
 {
 FILE *fil;
 char str[MAXSTR], str1[MAXSTR], str2[MAXSTR];
-int  i;
+int  i = 0;
 
   if ((fil = fopen(fname, "r")) == NULL)
   {
@@ -378,17 +367,18 @@ int  i;
     return 0;
   }
 
+  str2[0] = '\0';
   while (strcmp(str2, "Pbox.inp"))
   {
-    fgets(str, MAXSTR, fil);
+    if (fgets(str, MAXSTR, fil) == NULL) { fclose(fil); return 0; }
     i = sscanf(str, "%s %s", str1, str2);
   }
 
   while ((str[0] == '#') && (str[1] != '#'))
   {
-    if (i > 1);
+    if (i > 1)
     { str[0] = ' '; fprintf(fnm, "%s", str); }
-    fgets(str, MAXSTR, fil);
+    if (fgets(str, MAXSTR, fil) == NULL) break;
     i = sscanf(str, "%s %s", str1, str2);
   }
   fclose(fil);
@@ -396,9 +386,7 @@ int  i;
   return 1;
 }
 
-int findcom(fnm, str)
-FILE *fnm;
-char *str;
+int findcom(FILE *fnm, char *str)
 {
   char str1[MAXSTR], str2[MAXSTR];
   int i = 0;
@@ -417,8 +405,7 @@ char *str;
   return i;
 }
 
-int getnf(fil)
-FILE *fil;
+int getnf(FILE *fil)
 {
 int  itnf = 0, i = 0;
 
@@ -441,8 +428,7 @@ int  itnf = 0, i = 0;
 }
 
 
-int setattn(str)
-char   *str;
+int setattn(char *str)
 {
   int i;
   char str1[16];
@@ -507,8 +493,7 @@ char   *str;
    return 1;
 }
 
-char ofres(str)
-char   *str;
+char ofres(char *str)
 {
 int i;
 char ch;
@@ -532,7 +517,7 @@ char ch;
        return 'n';
 }
 
-void reportheader()
+void reportheader(void)
 {
   printf("Input Data :\n");
   printf("~~~~~~~~~~~~\n");
@@ -558,9 +543,7 @@ void reportheader()
   printf("  ref_pw90 = %9.2f (us),        ref_pwr = %d (dB)\n\n", h.pw90, h.rfpwr);
 }
 
-void writeheader(fil, ch)
-FILE *fil;
-char ch;
+void writeheader(FILE *fil, char ch)
 {
   int i = 0;
 
@@ -646,7 +629,7 @@ char ch;
   return;
 }  
 
-void sethdrstr()
+void sethdrstr(void)
 {
   h.type[0]='n', h.type[1]='\0';
   sprintf(h.name, "Pbox");
@@ -685,7 +668,7 @@ void sethdrstr()
   Pfact=1.0, MaxIncr=0.0, B1rms=0.0, MaxAmp=0.0; RmsPwr=0;
 }
 
-void sethdr()
+void sethdr(void)
 {
   h.rfpwr = 0, h.itnf = 0; 
   h.tfl   = 0, h.sfl  =-1, h.reps  = 2, h.pad1 = 0, h.pad2 = 0;  
@@ -695,8 +678,7 @@ void sethdr()
   h.maxincr = g.maxincr, h.stepsize=0.0;  
 }
 
-void set_type(tp)
-char tp;
+void set_type(char tp)
 {
     switch (tp) 
     {
@@ -719,8 +701,7 @@ char tp;
     }
 }
 
-void setname(nm)
-char *nm;
+void setname(char *nm)
 {
   int  i=0;
 
@@ -752,8 +733,7 @@ char *nm;
   strcpy(h.name, nm); 
 }
 
-void gethdr(fil)
-FILE *fil;
+void gethdr(FILE *fil)
 {
   char val[MAXSTR];
   int  i;
@@ -786,22 +766,22 @@ FILE *fil;
   if (findpar(fil, "refofs", h.offset_) > 0)   	  	           /* offset */
     setunits(&h.offset, h.offset_); 
   if (findpar(fil, "sucyc", val) > 0) 	   			   /* supercyc */
-  { strcpy(h.su, val); val[0]='\0'; }
+  { safecpy(h.su, val, sizeof(h.su)); val[0]='\0'; }
   if (h.su[0] == 'd' && h.su[1] == '\0') h.sfl = -1;
   else if (h.su[0] == 'n' && h.su[1] == '\0') h.sfl = 0;
   else h.sfl = 1;
   if ((findpar(fil, "reps", h.reps_) > 0) && (isdigit(h.reps_[0]))) /* reports */
     h.reps = stoi(h.reps_);
   if (findpar(fil, "header", val) > 0) 
-  { strcpy(h.coms, val); val[0]='\0'; }                 	     /* comments */
+  { safecpy(h.coms, val, sizeof(h.coms)); val[0]='\0'; }                 	     /* comments */
   if ((findpar(fil, "pad1", h.pad1_) > 0) && (isdigit(h.pad1_[0])))  /* pad1 */
       h.pad1 = stoi(h.pad1_); 
   if ((findpar(fil, "pad2", h.pad2_) > 0) && (isdigit(h.pad2_[0])))  /* pad2 */
       h.pad2 = stoi(h.pad2_); 
   if (findpar(fil, "bscor", val) > 0) 
-  { strcpy(h.bscor, val); val[0]='\0'; }                 	     /* BS compensation */
+  { safecpy(h.bscor, val, sizeof(h.bscor)); val[0]='\0'; }                 	     /* BS compensation */
   if (findpar(fil, "bsim", val) > 0) 
-  { strcpy(h.bls, val);	 val[0]='\0'; }                              /* simulator */
+  { safecpy(h.bls, val, sizeof(h.bls));	 val[0]='\0'; }                              /* simulator */
   if (findpar(fil, "T1", h.T1_) > 0)                                 /* T1 */ 
     setunits(&h.T1, h.T1_);
   if (findpar(fil, "T2", h.T2_) > 0)                                 /* T2 */ 
@@ -822,7 +802,7 @@ FILE *fil;
     h.rfpwr = stoi(h.rfpwr_);
   else h.pw90 = 0.0;
   if (findpar(fil, "ptype", val) > 0) 
-  { strcpy(h.ptype, val); val[0]='\0'; }                        	/* ptype  */
+  { safecpy(h.ptype, val, sizeof(h.ptype)); val[0]='\0'; }                        	/* ptype  */
   if (findpar(fil, "mod", val) > 0) 		/* modulation mode */
   {
     if (val[0] == 's') h.mod[0] = 's';		/* DANTE + SAPS */
@@ -833,8 +813,7 @@ FILE *fil;
 }
 
 
-int ispar(prm)					/* is it a parameter */
-char *prm;
+int ispar(char *prm)  /* is it a parameter */
 {
 char str[10];
 int  i, k;
@@ -910,9 +889,7 @@ int  i, k;
   return (k);
 }
 
-void setpar(pid, val)					/* set h parameter */
-int pid;
-char *val;
+void setpar(int pid, char *val)  /* set h parameter */
 {
   int  i;
 
@@ -923,7 +900,7 @@ char *val;
       setattn(h.attn_);	
       break;
     case 2 :						/* Bloch simulator */	    
-      strcpy(h.bls, val);
+      safecpy(h.bls, val, sizeof(h.bls));
       break;
     case 3 :						/* dres */
       strcpy(h.dres_, val);
@@ -939,7 +916,7 @@ char *val;
       }
       break;
     case 5 : 						/* comments */
-      strcpy(h.coms, val);
+      safecpy(h.coms, val, sizeof(h.coms));
       break;
     case 6 : 						/* max incr */
       strcpy(h.maxincr_, val);
@@ -954,7 +931,7 @@ char *val;
       setname(val);
       break;
     case 8 :
-      strcpy(h.ptype, val);				/* ptype */
+      safecpy(h.ptype, val, sizeof(h.ptype));				/* ptype */
       break;
     case 9 :
       strcpy(h.rdc_, val);
@@ -1002,7 +979,7 @@ char *val;
         h.sfrq = stod(h.sfrq_);	
       break;
     case 17 :						/* supercyc */
-      strcpy(h.su, val);
+      safecpy(h.su, val, sizeof(h.su));
       if (h.su[0] == 'd' && h.su[1] == '\0') h.sfl = -1;
       else if (h.su[0] == 'n' && h.su[1] == '\0') h.sfl = 0;
       else h.sfl = 1;
@@ -1031,7 +1008,7 @@ char *val;
       strcpy(h.mod, val);
       break;
     case 24 : 						/* BS comp */
-      strcpy(h.bscor, val);
+      safecpy(h.bscor, val, sizeof(h.bscor));
       break;
     case 25 :						/* pad1 */
       strcpy(h.pad1_, val);
@@ -1049,9 +1026,7 @@ char *val;
 }
 
 
-void getcal(fil, tp)
-FILE *fil;
-char tp;
+void getcal(FILE *fil, char tp)
 {
   char val[MAXSTR];
    
@@ -1090,9 +1065,7 @@ void resetwave(Wave *wa)
   wa->php = -1.0;
 }
 
-int setwave(wa, tfl)
-Wave *wa;
-int  tfl;
+int setwave(Wave *wa, int tfl)
 {
 char ch, wstr[512], str[256], prm[256];
 int i=0, j, k=1;
@@ -1108,6 +1081,7 @@ int i=0, j, k=1;
     while ((k) && (i < 14) && (k=getprm(prm, wstr)) && (prm[0] != '}'))
     {
       j = strlen(prm)-1; 
+      if (j < 0) j = 0;
       if (prm[j] == '}') 
         prm[j] = '\0', k = 0, j--;
       if ((prm[0] != 'n') || (i == 0))
@@ -1118,7 +1092,7 @@ int i=0, j, k=1;
             cutstr2(wa->dir, prm, '/');
             if ((j = cutstr2(wa->sh, prm, '-')) > 0)
               wa->dash = stod(prm);
-            else strcpy(wa->sh, prm);
+            else safecpy(wa->sh, prm, sizeof(wa->sh));
             break;
           case 1 :						/* pw*bw */
             if(prm[j]=='/') prm[j]='\0';
@@ -1191,10 +1165,7 @@ int i=0, j, k=1;
     return i;
 }
 
-int getwave(fil, wa, tfl)
-FILE *fil;
-Wave *wa;
-int  tfl;
+int getwave(FILE *fil, Wave *wa, int tfl)
 {
 char str[256], prm[256];
 int i=0, j=0, k=1;
@@ -1212,7 +1183,7 @@ int i=0, j=0, k=1;
   while ((k) && (i < 12) && (k = fscanf(fil, "%s", prm)) && (prm[0] != '}'))
   {
     j = strlen(prm);
-    if (prm[j-1] == '}') prm[j-1] = '\0', k = 0; 
+    if ((j > 0) && (prm[j-1] == '}')) prm[j-1] = '\0', k = 0; 
     strcat(strcat(wa->str, prm), " ");
     i++;
   }
@@ -1223,14 +1194,12 @@ int i=0, j=0, k=1;
 }
 
 
-void reportwave(wa, reps)
-Wave *wa;
-int   reps;
+void reportwave(Wave *wa, int reps)
 {
     printf("  sh = %s,\n  su = %s,\n", wa->sh, wa->su);
     printf("  bw = %5.1f,    pw = %9.7f, ofs = %5.1f,  st = %5.1f\n", 
               wa->bw, wa->pw, wa->of, wa->st);
-    printf("  fla = %5.1f,    ph = %5.1f,     trev = %5.1f\n", 
+    printf("  fla = %5.1f,    ph = %5.1f,     trev = %5d\n", 
               wa->fla, wa->ph, wa->trev);
     printf("  d0 = %7.6f,  d1 = %7.6f,  d2 = %7.6f\n", 
               wa->d0, wa->d1, wa->d2);
@@ -1245,8 +1214,7 @@ int   reps;
 }
 
 
-int nsuc(str)
-char *str;
+int nsuc(char *str)
 {
   char **str1;
   int i, j, nsu;
@@ -1264,6 +1232,8 @@ char *str;
   else if (nsu > 1)
   {
     str1 = (char **) calloc(nsu, sizeof(char *)); 
+    if (str1 == NULL)
+      pxerr("allocation failure in nsuc()");
     for(i=0; i<nsu; i++)
     {
       str1[i] = (char *) calloc(NAMLEN, sizeof(char));
@@ -1286,7 +1256,7 @@ char *str;
 
     i=1;
     strcpy(str, str1[0]);
-    for(j=1; j<nsu; j++) 
+    for (j=1; j<nsu; j++) 
     {
       if(str1[j][0] != '\0')
       {
@@ -1295,13 +1265,13 @@ char *str;
         i++;
       }
     }
+    for (j=0; j<nsu; j++) free(str1[j]);
+    free(str1);
   }
   return i;
 }
 
-int minnmb(s, maxincr)
-Shape *s;
-double maxincr;
+int minnmb(Shape *s, double maxincr)
 {
 int nn;
 
@@ -1321,8 +1291,7 @@ int nn;
 return nn;
 }
 
-void reset_shn(s)
-Shape *s;
+void reset_shn(Shape *s)
 {
   s->co = 0, s->dc = 0, s->np = 0, s->dnp = 0;
   s->of = 0.0, s->dres = 0.0, s->srev = 0.0, s->fla = 0.0;
@@ -1337,8 +1306,7 @@ Shape *s;
 }
 
 
-void resetshape(s)
-Shape *s;
+void resetshape(Shape *s)
 {
   reset_shn(s);
 
@@ -1366,8 +1334,7 @@ Shape *s;
   s->st_[0]='n',   s->st_[1]='\0';
 }
 
-void resetwindow(wn)
-Windw *wn;
+void resetwindow(Windw *wn)
 {
   wn->n = 0, wn->m = 0;
   wn->np = 0, wn->dnp = 0.0; 
@@ -1377,8 +1344,7 @@ Windw *wn;
   wn->max = 1.0, wn->min = 0.0, wn->lft = 0.0, wn->rgt = 1.0;
 }
 
-void reflect(s)					/* reflect shape */
-Shape *s;
+void reflect(Shape *s)  /* reflect shape */
 {
   int i, j;
 
@@ -1388,9 +1354,7 @@ Shape *s;
     Amp[j] = s->rfl*Amp[i];
 }
 
-void tmrev(a, np)					/* time reverse */
-double *a[];
-int     np;
+void tmrev(double *a[], int np)  /* time reverse */
 {
   int i, j;
   double b;
@@ -1403,14 +1367,12 @@ int     np;
   }
 }
 
-void swrev(srev, np)					/* reverse the sweep */
-int    np;
-double srev;
+void swrev(double srev, int np)  /* reverse the sweep */
 {
   int j, k;
 
   if (srev > 1.0) 
-    srev = 1.0;
+    srev = 1.0, j = 0;
   else if (srev < 0.0)					/* find the maximum */
   {
     for (j = 0, k = 0, tm = 0.0; j < np; j++)
@@ -1426,10 +1388,9 @@ double srev;
     Pha[j] = -Pha[j];
 }
 
-int ampmod(s)
-Shape *s;
+int ampmod(Shape *s)
 {
-  int i = 1, ee();
+  int i = 1;
 
   if (strcmp(s->am, "sq") == 0) { sq(s); i=0; }	/* square */
   else if (strcmp(s->am, "sqa") == 0) sqa(s);	/* square wave AM */
@@ -1461,8 +1422,7 @@ Shape *s;
   return i;
 }
 
-int dfil(wn)					/* Digital Filters */
-Windw *wn;
+int dfil(Windw *wn)  /* Digital Filters */
 {
   int i, j, k, m, zf;
   double  *re0, *im0, *re, *im, x;
@@ -1474,6 +1434,8 @@ Windw *wn;
   im0 = (double *) calloc(zf, sizeof(double));
   re = (double *) calloc(zf, sizeof(double));
   im = (double *) calloc(zf, sizeof(double));
+  if ((re0 == NULL) || (im0 == NULL) || (re == NULL) || (im == NULL))
+    pxerr("allocation failure in dfil()");
 
   for (j = 0; j < zf; j++)
     re[j] = 0.0, im[j] = 0.0;	
@@ -1546,9 +1508,7 @@ Windw *wn;
   return 1;
 }
 
-int wmult(s, wn)
-Shape  *s;
-Windw *wn;
+int wmult(Shape *s, Windw *wn)
 {
   int j;
   double mx=0.0;
@@ -1558,7 +1518,7 @@ Windw *wn;
   resetshape(&swn);
   swn.np = s->np; 
   strcpy(swn.sh, wn->sh), strcpy(swn.am, wn->am);
-  swn.c1 = wn->c1,   swn.c3 = wn->c2,   swn.c3 = wn->c3;
+  swn.c1 = wn->c1,   swn.c2 = wn->c2,   swn.c3 = wn->c3;
   swn.dnp = wn->dnp, swn.min = wn->min, swn.max = wn->max;
   swn.lft = 1.0 - 2.0*wn->lft; swn.rgt = wn->rgt*(1.0 + swn.lft);
   swn.rfl = wn->rfl;
@@ -1570,8 +1530,7 @@ Windw *wn;
   return 1;
 }
 
-void setsw(s)
-Shape *s;
+void setsw(Shape *s)
 {
 int    j = 0;
 double b, c;
@@ -1608,11 +1567,8 @@ double b, c;
   }
 }
 
-int frqmod(s)
-Shape *s;
+int frqmod(Shape *s)
 {
-  int ee();
- 
   setsw(s);
   s->adb /= pi2; 
 
@@ -1647,9 +1603,7 @@ Shape *s;
   return 1;
 }
 
-void stretch(s, nn)
-Shape *s;
-int   nn;
+void stretch(Shape *s, int nn)
 {
   int i, j, k, nn2;
   double pwsw, ph0, phincr, ko;
@@ -1685,9 +1639,7 @@ int   nn;
   }
 }
 
-int wrap(wrf, nn)
-int    nn;
-double wrf;
+int wrap(double wrf, int nn)
 {
   int i, j, nn1;
   double *tmpa, *tmph;
@@ -1722,16 +1674,14 @@ double wrf;
 }
 
 
-int getsu(s, sam, sph)					/* get supercycle */
-Shape *s;
-double *sam[], *sph[];
+int getsu(Shape *s, double *sam[], double *sph[])  /* get supercycle */
 {
   int i, j;
 
     if (s->np < 1) s->np = s->dnp;
-    if (s->np < 1) 
+    if (s->np < 2) 
     { 
-      sprintf(e_str, "Undefined number of steps in %s", s->sh);
+      sprintf(e_str, "Undefined or insufficient number of steps in %s (need at least 2)", s->sh);
       pxerr(e_str);
       return 0;
     }
@@ -1762,8 +1712,7 @@ double *sam[], *sph[];
   return 1; 
 }
 
-void reportshape(s)
-Shape *s;
+void reportshape(Shape *s)
 {
   int i, j, k;
     printf("\n                  Shape Parameters\n");
@@ -1797,8 +1746,7 @@ Shape *s;
   }
 }
 
-void reportwindow(wn)
-Windw *wn;
+void reportwindow(Windw *wn)
 {
   int i, j, k;
     printf("  name = %s\n", wn->sh);
@@ -1820,8 +1768,7 @@ Windw *wn;
   }
 }
 
-FILE *findwave(lib, dir, sh, shf)
-char  *lib, *dir, *sh, *shf;
+FILE *findwave(char *lib, char *dir, char *sh, char *shf)
 {
   FILE *fil;
   int  i = 0, j;
@@ -1837,17 +1784,19 @@ char  *lib, *dir, *sh, *shf;
   }   
   if (fil != NULL)
   {
-    i--;
     strcpy(shf, str); 
-    if (j == 0) sprintf(dir, "%s", wv.dir[i]);
-    else if (i > 0) strcpy(dir, strcat(strcpy(str, dir), wv.dir[i]));
+    if (i > 0)
+    {
+      i--;
+      if (j == 0) sprintf(dir, "%s", wv.dir[i]);
+      else if (i > 0) strcpy(dir, strcat(strcpy(str, dir), wv.dir[i]));
+    }
   }  
   return fil;
 }
 
 
-int printcoms(dir, sh, opt)
-char  *dir, *sh, opt;
+int printcoms(char *dir, char *sh, char opt)
 {
   FILE *fil;
   char shape[MAXSTR], str[MAXSTR];
@@ -1859,19 +1808,23 @@ char  *dir, *sh, opt;
     err(sh); return 0;
   }
 
-  fgets(shape, MAXSTR, fil);
+  if (fgets(shape, MAXSTR, fil) == NULL)
+  {
+    fclose(fil);
+    return 0;
+  }
   sscanf(shape, "%s", str);
   if (opt == 't')
   {
     if (str[0] == '#')
-      sprintf(dir, "%s", shape);
+    { int _tn = snprintf(dir, NAMLEN, "%s", shape); (void) _tn; }
   }
   else
   {
     while (str[0] == '#')
     {
       printf("%s", shape);
-      fgets(shape, MAXSTR, fil);
+      if (fgets(shape, MAXSTR, fil) == NULL) break;
       sscanf(shape, "%s", str);
     }
     if (opt == 'i')
@@ -1886,10 +1839,7 @@ char  *dir, *sh, opt;
 }
 
 
-int getshape(dir, sh, s, reps)
-char  *dir, *sh;
-Shape *s;
-int  reps;
+int getshape(char *dir, char *sh, Shape *s, int reps)
 {
   FILE *fil;
   char str[MAXSTR], str1[MAXSTR];
@@ -1932,10 +1882,10 @@ int  reps;
   {
     err(sh); return 0;
   }
-  fscanf(fil, "%s", str);
+  if (fscanf(fil, "%s", str) == EOF) { err(sh); return 0; }
   while (str[0] == '#')
   {
-    fgets(str, MAXSTR, fil);
+    if (fgets(str, MAXSTR, fil) == NULL) { err(sh); return 0; }
     fscanf(fil, "%s", str);
   }
 		/* Shape parameters */  
@@ -1957,48 +1907,48 @@ int  reps;
        (s->fm[0] == '\0')) s->ffl = 0;
     else s->ffl = -1;
   }
-  if (findpar(fil, "su", str) > 0) strcpy(s->su, str);		/* supercycle */
-  if (findpar(fil, "wf", str) > 0) strcpy(s->wf, str);		/* window fun */
-  if (findpar(fil, "dsp", str) > 0) strcpy(s->df, str);		/* dig filter */
-  if (findpar(fil, "fla", str) > 0) strcpy(s->fla_, str);	/* flipangle  */
+  if (findpar(fil, "su", str) > 0) safecpy(s->su, str, sizeof(s->su));		/* supercycle */
+  if (findpar(fil, "wf", str) > 0) safecpy(s->wf, str, sizeof(s->wf));		/* window fun */
+  if (findpar(fil, "dsp", str) > 0) safecpy(s->df, str, sizeof(s->df));		/* dig filter */
+  if (findpar(fil, "fla", str) > 0) safecpy(s->fla_, str, sizeof(s->fla_));	/* flipangle  */
   {
     s->oflg = ofres(s->fla_);
     s->fla = stod(s->fla_); 
   }
-  if (findpar(fil, "pwbw", str) > 0) s->pwb = stod(strcpy(s->pwb_, str));
-  if (findpar(fil, "pwb1", str) > 0) s->pb1 = stod(strcpy(s->pb1_, str));
-  if (findpar(fil, "pwsw", str) > 0) s->pwsw = stod(strcpy(s->pwsw_, str));
-  if (findpar(fil, "adb", str) > 0) s->adb = stod(strcpy(s->adb_, str));
-  if (findpar(fil, "ofs", str) > 0) s->of = stod(strcpy(s->of_, str));
-  if (findpar(fil, "dres", str) > 0) s->dres = stod(strcpy(s->dres_, str)); 
-  if (findpar(fil, "st", str) > 0) s->st = stod(strcpy(s->st_, str));
-  if (findpar(fil, "dash", str) > 0) strcpy(s->dash, str);
-  if (findpar(fil, "c1", str) > 0) s->c1 = stod(strcpy(s->c1_, str));
-  if (findpar(fil, "c2", str) > 0) s->c2 = stod(strcpy(s->c2_, str));
-  if (findpar(fil, "c3", str) > 0) s->c3 = stod(strcpy(s->c3_, str));
-  if (findpar(fil, "d1", str) > 0) s->d1 = stod(strcpy(s->d1_, str));
-  if (findpar(fil, "d2", str) > 0) s->d2 = stod(strcpy(s->d2_, str));
+  if (findpar(fil, "pwbw", str) > 0) s->pwb = stod(safecpy(s->pwb_, str, sizeof(s->pwb_)));
+  if (findpar(fil, "pwb1", str) > 0) s->pb1 = stod(safecpy(s->pb1_, str, sizeof(s->pb1_)));
+  if (findpar(fil, "pwsw", str) > 0) s->pwsw = stod(safecpy(s->pwsw_, str, sizeof(s->pwsw_)));
+  if (findpar(fil, "adb", str) > 0) s->adb = stod(safecpy(s->adb_, str, sizeof(s->adb_)));
+  if (findpar(fil, "ofs", str) > 0) s->of = stod(safecpy(s->of_, str, sizeof(s->of_)));
+  if (findpar(fil, "dres", str) > 0) s->dres = stod(safecpy(s->dres_, str, sizeof(s->dres_))); 
+  if (findpar(fil, "st", str) > 0) s->st = stod(safecpy(s->st_, str, sizeof(s->st_)));
+  if (findpar(fil, "dash", str) > 0) safecpy(s->dash, str, sizeof(s->dash));
+  if (findpar(fil, "c1", str) > 0) s->c1 = stod(safecpy(s->c1_, str, sizeof(s->c1_)));
+  if (findpar(fil, "c2", str) > 0) s->c2 = stod(safecpy(s->c2_, str, sizeof(s->c2_)));
+  if (findpar(fil, "c3", str) > 0) s->c3 = stod(safecpy(s->c3_, str, sizeof(s->c3_)));
+  if (findpar(fil, "d1", str) > 0) s->d1 = stod(safecpy(s->d1_, str, sizeof(s->d1_)));
+  if (findpar(fil, "d2", str) > 0) s->d2 = stod(safecpy(s->d2_, str, sizeof(s->d2_)));
   if (findpar(fil, "dutyc", str) > 0) 
   {
-    s->duty = stod(strcpy(s->duty_, str));
+    s->duty = stod(safecpy(s->duty_, str, sizeof(s->duty_)));
     if ((s->duty > 0.0001) && (s->duty < 1.0))
       s->d1 = s->d2 = (0.5 / s->duty) - 0.5;
     else 
       s->duty = 1.0;
   }
-  if (findpar(fil, "steps", str) > 0) s->dnp = stoi(strcpy(s->dnp_, str));
+  if (findpar(fil, "steps", str) > 0) s->dnp = stoi(safecpy(s->dnp_, str, sizeof(s->dnp_)));
 
 		/* Truncation Parameters */
-  if (findpar(fil, "min", str) > 0) s->min = stod(strcpy(s->min_, str));
-  if (findpar(fil, "max", str) > 0) s->max = stod(strcpy(s->max_, str));
-  if (findpar(fil, "left", str) > 0) s->lft = stod(strcpy(s->lft_, str));
-  if (findpar(fil, "right", str) > 0) s->rgt = stod(strcpy(s->rgt_, str));
-  if (findpar(fil, "cmplx", str) > 0) s->co = stoi(strcpy(s->co_, str));
-  if (findpar(fil, "wrap", str) > 0) s->wr = stod(strcpy(s->wr_, str));
-  if (findpar(fil, "stretch", str) > 0) s->stch = stod(strcpy(s->stch_, str));
-  if (findpar(fil, "trev", str) > 0) s->trev = stoi(strcpy(s->trev_, str));
-  if (findpar(fil, "srev", str) > 0) s->srev = stod(strcpy(s->srev_, str));
-  if (findpar(fil, "reflect", str) > 0) s->rfl = stod(strcpy(s->rfl_, str));
+  if (findpar(fil, "min", str) > 0) s->min = stod(safecpy(s->min_, str, sizeof(s->min_)));
+  if (findpar(fil, "max", str) > 0) s->max = stod(safecpy(s->max_, str, sizeof(s->max_)));
+  if (findpar(fil, "left", str) > 0) s->lft = stod(safecpy(s->lft_, str, sizeof(s->lft_)));
+  if (findpar(fil, "right", str) > 0) s->rgt = stod(safecpy(s->rgt_, str, sizeof(s->rgt_)));
+  if (findpar(fil, "cmplx", str) > 0) s->co = stoi(safecpy(s->co_, str, sizeof(s->co_)));
+  if (findpar(fil, "wrap", str) > 0) s->wr = stod(safecpy(s->wr_, str, sizeof(s->wr_)));
+  if (findpar(fil, "stretch", str) > 0) s->stch = stod(safecpy(s->stch_, str, sizeof(s->stch_)));
+  if (findpar(fil, "trev", str) > 0) s->trev = stoi(safecpy(s->trev_, str, sizeof(s->trev_)));
+  if (findpar(fil, "srev", str) > 0) s->srev = stod(safecpy(s->srev_, str, sizeof(s->srev_)));
+  if (findpar(fil, "reflect", str) > 0) s->rfl = stod(safecpy(s->rfl_, str, sizeof(s->rfl_)));
   if ((findpar(fil, "dcflag", str) > 0) && (str[0] == 'y')) 
     { strcpy(s->dc_, "y"); s->dc = 1; }
 		/* Additional Data Matrix */
@@ -2021,10 +1971,7 @@ int  reps;
 }
 
 
-int getwindow(dir, sh, wn, reps)
-char  *dir, *sh;
-Windw *wn;
-int  reps;
+int getwindow(char *dir, char *sh, Windw *wn, int reps)
 {
   FILE *fil;
   char shape[MAXSTR], str[MAXSTR];
@@ -2036,10 +1983,10 @@ int  reps;
     err(sh); return 0;
   }
 
-  fscanf(fil, "%s", str);
+  if (fscanf(fil, "%s", str) == EOF) { err(sh); return 0; }
   while (str[0] == '#')
   {
-    fgets(str, MAXSTR, fil);
+    if (fgets(str, MAXSTR, fil) == NULL) { err(sh); return 0; }
     fscanf(fil, "%s", str);
   }
 		/* Window parameters */
@@ -2079,10 +2026,7 @@ int  reps;
 }
 
 
-int findparm(fnm, str, val, ip)
-FILE *fnm;
-char *val, *str;
-int  ip;
+int findparm(FILE *fnm, char *str, char *val, int ip)
 {
   char chr[MAXSTR];
   
@@ -2105,10 +2049,7 @@ int  ip;
 }
 
 
-void modpars(fil, s, ip)
-FILE *fil;
-Shape *s;
-int  ip;
+void modpars(FILE *fil, Shape *s, int ip)
 {
   char str[MAXSTR];
   int i, j, k=0;
@@ -2118,7 +2059,7 @@ int  ip;
   if (findeqnm(fil, "amf", str, ip)) 
   { 
     strcpy(s->am, str);	                                    /* AM funct */
-    sprintf(s->modpar, "%s#    amf = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    amf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (s->am[0] == 'n' && s->am[1] == '\0') strcpy(s->am, "sq");
   if (s->am[0] == 's' && s->am[1] == 'q' && s->am[2] == '\0')
@@ -2127,97 +2068,97 @@ int  ip;
   if (findeqnm(fil, "fmf", str, ip)) 
   {
     strcpy(s->fm, str);                                     /* FM funct */
-    sprintf(s->modpar, "%s#    fmf = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    fmf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (s->fm[0] == 'n' && s->fm[1] == '\0') s->ffl = 0;
   else s->ffl = 1;
   if (findeqnm(fil, "pmf", str, ip)) 	                    /* PM funct */
   {
     strcpy(s->fm, str);
-    sprintf(s->modpar, "%s#    pmf = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    pmf = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
     if (s->fm[0] == 'n' && s->fm[1] == '\0') s->ffl = 0;
     else s->ffl = -1;
   }
   if (findparm(fil, "su", str, ip)) 
   {
-    strcpy(s->su, str);	                                  /* supercycle */
-    sprintf(s->modpar, "%s#    su = %s\n", s->modpar, str);
+    safecpy(s->su, str, sizeof(s->su));	                                  /* supercycle */
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    su = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "fla", str, ip))                      /* flipangle */
   {
-    sprintf(s->modpar, "%s#    fla = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    fla = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
     s->oflg = ofres(str);
     s->fla = stod(str); 
   }
   if (findparm(fil, "pwbw", str, ip)) 
   {
     s->pwb = stod(str);
-    sprintf(s->modpar, "%s#    pwbw = %s\n", s->modpar, str);    
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    pwbw = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }    
   }
   if (findparm(fil, "pwb1", str, ip)) 
   {
     s->pb1 = stod(str);
-    sprintf(s->modpar, "%s#    pb1 = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    pb1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }    
   if (findparm(fil, "pwsw", str, ip)) 
   {
     s->pwsw = stod(str);
-    sprintf(s->modpar, "%s#    pwsw = %s\n", s->modpar, str);    
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    pwsw = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }    
   }
   if (findparm(fil, "adb", str, ip)) 
   {
     s->adb = stod(str);
-    sprintf(s->modpar, "%s#    adb = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    adb = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "ofs", str, ip)) 
   {
     s->of = stod(str);
-    sprintf(s->modpar, "%s#    ofs = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    ofs = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "dres", str, ip)) 
   {
     s->dres = stod(str);
-    sprintf(s->modpar, "%s#    dres = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    dres = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "st", str, ip)) 
   {
     s->st = stod(str);
-    sprintf(s->modpar, "%s#    st = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    st = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "dash", str, ip)) 
   {
-    strcpy(s->dash, str);
-    sprintf(s->modpar, "%s#    dash = %s\n", s->modpar, str);
+    safecpy(s->dash, str, sizeof(s->dash));
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    dash = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "c1", str, ip)) 
   {
     s->c1 = stod(str);
-    sprintf(s->modpar, "%s#    c1 = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    c1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "c2", str, ip)) 
   {
     s->c2 = stod(str);
-    sprintf(s->modpar, "%s#    c2 = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    c2 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "c3", str, ip)) 
   {
     s->c3 = stod(str);
-    sprintf(s->modpar, "%s#    c3 = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    c3 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "d1", str, ip)) 
   {
     s->d1 = stod(str);
-    sprintf(s->modpar, "%s#    d1 = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    d1 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "d2", str, ip)) 
   {
     s->d2 = stod(str);
-    sprintf(s->modpar, "%s#    d2 = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    d2 = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "dutyc", str, ip)) 
   {
     s->duty = stod(str);
-    sprintf(s->modpar, "%s#    dutyc = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    dutyc = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
     if ((s->duty > 0.0001) && (s->duty < 1.0))
       s->d1 = s->d2 = (0.5 / s->duty) - 0.5;
     else 
@@ -2226,75 +2167,75 @@ int  ip;
   if (findparm(fil, "steps", str, ip)) 
   {
     s->dnp = stoi(str); 
-    sprintf(s->modpar, "%s#    steps = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    steps = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
 
 		/* Truncation Parameters */
   if (findparm(fil, "min", str, ip)) 
   {
     s->min = stod(str); 
-    sprintf(s->modpar, "%s#    min = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    min = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "max", str, ip)) 
   {
     s->max = stod(str); 
-    sprintf(s->modpar, "%s#    max = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    max = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "left", str, ip)) 
   {
     s->lft = stod(str);
-    sprintf(s->modpar, "%s#    left = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    left = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "right", str, ip)) 
   {
     s->rgt = stod(str);
-    sprintf(s->modpar, "%s#    right = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    right = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "cmplx", str, ip)) 
   {
     s->co = stoi(str);
-    sprintf(s->modpar, "%s#    cmplx = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    cmplx = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "wrap", str, ip)) 
   {
     s->wr = stod(str);
-    sprintf(s->modpar, "%s#    wrap = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    wrap = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "stretch", str, ip)) 
   {
     s->stch = stod(str);
-    sprintf(s->modpar, "%s#    stretch = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    stretch = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "trev", str, ip)) 
   {
     s->trev = stoi(str);
-    sprintf(s->modpar, "%s#    trev = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    trev = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "srev", str, ip)) 
   {
     s->srev = stod(str);
-    sprintf(s->modpar, "%s#    srev = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    srev = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if (findparm(fil, "reflect", str, ip)) 
   {
     s->rfl = stod(str);
-    sprintf(s->modpar, "%s#    reflect = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    reflect = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if ((findparm(fil, "dcflag", str, ip)) && (str[0] == 'y')) 
   {
     s->dc = 1;
-    sprintf(s->modpar, "%s#    dcflag = y\n", s->modpar);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    dcflag = y\n"); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
 		/* Additional Data Matrix */
-  if (i=findparm(fil, "cols", str, ip)) 
+  if ((i=findparm(fil, "cols", str, ip))) 
   {
     s->n = stoi(str);
-    sprintf(s->modpar, "%s#    cols = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    cols = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }    
-  if (j=findparm(fil, "rows", str, ip)) 
+  if ((j=findparm(fil, "rows", str, ip))) 
   {
     s->m = stoi(str);
-    sprintf(s->modpar, "%s#    rows = %s\n", s->modpar, str);
+    { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#    rows = %s\n", str); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
   }
   if ((i) || (j))
   {
@@ -2302,14 +2243,14 @@ int  ip;
     s->f = arry(k); k=0;     
     for(i = 0; i< s->m; i++) 
     {
-      sprintf(s->modpar, "%s#      ", s->modpar);
+      { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#      "); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
       for(j = 0; j< s->n; j++) 	
       {
 	fscanf(fil, "%lf", &s->f[k]);
-	sprintf(s->modpar, "%s %12.6f  ", s->modpar, s->f[k]);
+	{ char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), " %12.6f  ", s->f[k]); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
 	k++;			
       }
-      sprintf(s->modpar, "%s \n", s->modpar);
+      { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), " \n"); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
     }
   }
   if ((strcmp(s->fm, "sqw") == 0) || (strcmp(s->fm, "fsw") == 0))
@@ -2319,9 +2260,7 @@ int  ip;
 }
 
 
-void setdash(s, dash)
-Shape *s;
-double dash;
+void setdash(Shape *s, double dash)
 {
   if (strcmp(s->dash, "fla") == 0) s->fla = dash;
   else if (strcmp(s->dash, "pwbw") == 0) s->pwb = dash;
@@ -2355,7 +2294,7 @@ double dash;
   6 - Amplitude Modulated & Phase Modulated	e.g. WURST
 */
 
-void set_Stype()
+void set_Stype(void)
 {
   int     i=0, j=0, ics=0, isn=0;
   double  minph=rd*g.phres; 
@@ -2378,9 +2317,9 @@ void set_Stype()
   ics -= h.np, isn -= h.np; 
   
   i=1;
-  while((Amp[i] == Amp[i-1]) && (i < h.np)) i++;
+  while((i < h.np) && (Amp[i] == Amp[i-1])) i++;
   j=1;
-  while((Pha[j] == Pha[j-1]) && (j < h.np)) j++;
+  while((j < h.np) && (Pha[j] == Pha[j-1])) j++;
 
   if ((i == h.np) && (j == h.np)) 
     Stype = 1;                        /* no AM, no PM */

@@ -10,8 +10,7 @@
  */
 /* Pbox_pro.h - Pandora's Box Procedures */
 
-void setpbox(itnf)
-int itnf;
+void setpbox(int itnf)
 {
   int   i;
   FILE *fil;
@@ -27,7 +26,12 @@ int itnf;
     fclose(fil); 
   }  
   if(home[0] == '\0')
-    (void) strcpy(home, (char *) getenv("HOME"));       /* then read local */
+  {
+    char *homedir = getenv("HOME");
+    if (homedir == NULL)
+      pxerr("Pbox: HOME environment variable not set");
+    (void) strcpy(home, homedir);       /* then read local */
+  }
   (void) strcat(strcpy(ifn, home), FN_GLO);
   if ((fil = fopen(ifn, "r")) != NULL)			/* load globals */
   {
@@ -49,12 +53,13 @@ int itnf;
   {
     Wv = (Wave *) calloc(itnf, sizeof(Wave));
     Sh = (Shape *) calloc(itnf, sizeof(Shape)); 
+    if ((Wv == NULL) || (Sh == NULL))
+      pxerr("allocation failure in setpbox()");
     for (i=0; i<itnf; i++) Sh[i].set = 0;
   }
 }
 
-int loadshape(id)
-int id;
+int loadshape(int id)
 {
   int j;
 
@@ -82,7 +87,7 @@ int id;
 
   if (!Sh[id].set)
   {
-    if (j = is_reserved(Wv[id].sh))   /* set NULL and RDC shapes */
+    if ((j = is_reserved(Wv[id].sh)))   /* set NULL and RDC shapes */
     {
       Sh[id].set = j; 
       if(j == 2)
@@ -96,7 +101,7 @@ int id;
     {
       Sh[id].set = getshape(Wv[id].dir, Wv[id].sh, &Sh[id], h.reps);
       if (!Sh[id].set) return 0; 
-      if ((Wv[id].dash >= 0.0) && (isname(&Sh[id].dash))) 
+      if ((Wv[id].dash >= 0.0) && (isname(Sh[id].dash))) 
       {
         setdash(&Sh[id], Wv[id].dash);
         if (strcmp(Wv[id].sh, "wurst") == 0) 
@@ -110,7 +115,7 @@ int id;
 
 /* -------------------------- Read Shapes from Wavelib ----------------------- */
 
-int setshapes()
+int setshapes(void)
 {
   int i, j;
   char str1[MAXSTR];
@@ -162,7 +167,7 @@ int setshapes()
 
     if (Wv[i].sfl < 0)
     { 
-      if (!isname(&Sh[i].su)) 
+      if (!isname(Sh[i].su)) 
         Wv[i].sfl = 0; 				/* if default = n */
       else
         { strcpy(Wv[i].su, Sh[i].su); Wv[i].sfl = 1; }
@@ -174,13 +179,15 @@ int setshapes()
       else strcat(strcat(str1, ","), Wv[i].su);
       h.itns++;
     }
-    if (isname(&Sh[i].df)) h.itnd++;
-    if (isname(&Sh[i].wf)) h.itnw++;
+    if (isname(Sh[i].df)) h.itnd++;
+    if (isname(Sh[i].wf)) h.itnw++;
   }
 
   if ((h.itns = nsuc(str1)) > 0)	/* setup supercycles */
   {
     su = (Shape *) calloc(h.itns, sizeof(Shape)); 
+    if (su == NULL)
+      pxerr("allocation failure in setshapes()");
     for(i=0; i<h.itns; i++) 
     {
       resetshape(&su[i]); cutstr(su[i].sh, str1);   
@@ -192,9 +199,11 @@ int setshapes()
   if (h.itnw)
   {
     wf = (Windw *) calloc(h.itnw, sizeof(Windw)); 
-    for(i=0, j=0; i<h.itnw; i++) 
+    if (wf == NULL)
+      pxerr("allocation failure in setshapes()");
+    for(i=0, j=0; i<h.itnf; i++) 
     {
-      if (isname(&Sh[i].wf))
+      if (isname(Sh[i].wf))
       {
         resetwindow(&wf[j]);
         e_str[0]='\0';
@@ -206,9 +215,11 @@ int setshapes()
   if (h.itnd)
   {
     df = (Windw *) calloc(h.itnd, sizeof(Windw)); 
-    for(i=0, j=0; i<h.itnd; i++) 
+    if (df == NULL)
+      pxerr("allocation failure in setshapes()");
+    for(i=0, j=0; i<h.itnf; i++) 
     {
-      if (isname(&Sh[i].df))
+      if (isname(Sh[i].df))
       {
         resetwindow(&df[j]);
         strcpy(e_str, "filters/");
@@ -220,9 +231,7 @@ int setshapes()
   return 1;
 }
 
-int resetpars(fln, inm)
-int inm;
-char fln[MAXSTR];
+int resetpars(char fln[MAXSTR], int inm)
 {
   FILE *fil;
   int i, j;
@@ -259,16 +268,16 @@ char fln[MAXSTR];
 }
 
 
-int closepbox()
+int closepbox(void)
 {
-  FILE *fil, *fil2;
-  double **Sam, **Sph, **Wam, **Wph, **Wbs;
+  FILE *fil, *fil2 = NULL;
+  double **Sam = NULL, **Sph = NULL, **Wam = NULL, **Wph = NULL, **Wbs = NULL;
   char str1[MAXSTR], str2[MAXSTR];
   static char fnm[MAXSTR], fcl[MAXSTR];
   int i, j, k, n, m, nn, itr, nitr, inp, gate, minnumb, npmax;
   double mindelta, maxdelta, dumm, attf, pls, plu, sum, mxl;
   double B1max, b1max, qq, dj, itrerr, pw0, edB;
-  void   blqtph();
+  void   blqtph(Blodata *bl);
 
 /* ------------------------------- Reset parameters ------------------------- */
 
@@ -671,6 +680,8 @@ FSLG -  one of the versions disabled here. EK.
     {
       Sam = (double **) calloc(h.itns, sizeof(double *));
       Sph = (double **) calloc(h.itns, sizeof(double *));
+      if (!Sam || !Sph)
+        pxerr("allocation failure in closepbox()");
       for (i = 0; i < h.itns; i++)
       {
         Sam[i] = arry(su[i].dnp); 
@@ -684,6 +695,8 @@ FSLG -  one of the versions disabled here. EK.
       Wam = (double **) calloc(h.itnf, sizeof(double *));
       Wph = (double **) calloc(h.itnf, sizeof(double *));
       Wbs = (double **) calloc(h.itnf, sizeof(double *));
+      if ((Wam == NULL) || (Wph == NULL) || (Wbs == NULL))
+        pxerr("allocation failure in closepbox()");
       for (i = 0; i < h.itnf; i++)
       {
         Wam[i] = arry(h.npst+200); 
@@ -724,7 +737,7 @@ FSLG -  one of the versions disabled here. EK.
       if (j<0) return 0;
       imod += j;
 
-      if (isname(&Sh[i].wf))
+      if (isname(Sh[i].wf))
       {
         if(wmult(&Sh[i], &wf[h.itnw]) == 0) return 0;	/* windowing */
         h.itnw++;
@@ -765,7 +778,7 @@ FSLG -  one of the versions disabled here. EK.
       }
       if (Sh[i].dc) 
         rmdc(Sh[i].np);				/* remove dc */
-      if (isname(&Sh[i].df))
+      if (isname(Sh[i].df))
       {
         df[h.itnd].np = Sh[i].np;
         if(dfil(&df[h.itnd])==0) return 0; 	/* digital filtering */
@@ -1047,11 +1060,11 @@ FSLG -  one of the versions disabled here. EK.
     if (h.tfl > 0)
     {
       printf("   sh       pw        ofs   st  ph  su  lev(%s) ", "%");
-      if (Wv[i].php > 0.0) printf("trev   d1   d2   d0   wrp  php\n");
-      else if (Wv[i].wrp > 0.0) printf("trev   d1   d2   d0   wrp\n");
-      else if ((Wv[i].d0 - Wv[i].d1) > 0.0) printf("trev  d1  d2  d0\n");
-      else if (Wv[i].d2 > 0.0) printf("trev  d1  d2\n");
-      else if (Wv[i].d1 > 0.0) printf("trev  d1\n");
+      if (Wv[h.itnf-1].php > 0.0) printf("trev   d1   d2   d0   wrp  php\n");
+      else if (Wv[h.itnf-1].wrp > 0.0) printf("trev   d1   d2   d0   wrp\n");
+      else if ((Wv[h.itnf-1].d0 - Wv[h.itnf-1].d1) > 0.0) printf("trev  d1  d2  d0\n");
+      else if (Wv[h.itnf-1].d2 > 0.0) printf("trev  d1  d2\n");
+      else if (Wv[h.itnf-1].d1 > 0.0) printf("trev  d1\n");
       else printf("trev\n");
       for (i = 0; i < h.itnf; i++)
       {
@@ -1077,11 +1090,11 @@ FSLG -  one of the versions disabled here. EK.
     else
     {
       printf("   sh      bw      pw        ofs   st  ph  su  fla ");
-      if (Wv[i].php > 1.0e-8) printf("trev   d1   d2   d0   wrp  php\n");
-      else if (Wv[i].wrp > 1.0e-8) printf("trev   d1   d2   d0   wrp\n");
-      else if ((Wv[i].d0 - Wv[i].d1) > 1.0e-8) printf("trev  d1  d2  d0\n");
-      else if (Wv[i].d2 > 1.0e-8) printf("trev  d1  d2\n");
-      else if (Wv[i].d1 > 1.0e-8) printf("trev  d1\n");
+      if (Wv[h.itnf-1].php > 1.0e-8) printf("trev   d1   d2   d0   wrp  php\n");
+      else if (Wv[h.itnf-1].wrp > 1.0e-8) printf("trev   d1   d2   d0   wrp\n");
+      else if ((Wv[h.itnf-1].d0 - Wv[h.itnf-1].d1) > 1.0e-8) printf("trev  d1  d2  d0\n");
+      else if (Wv[h.itnf-1].d2 > 1.0e-8) printf("trev  d1  d2\n");
+      else if (Wv[h.itnf-1].d1 > 1.0e-8) printf("trev  d1\n");
       else printf("trev\n");
       for (i = 0; i < h.itnf; i++)
       {
@@ -1113,7 +1126,8 @@ FSLG -  one of the versions disabled here. EK.
       printf("\nWaveform # %d, %s :\n", i+1, Wv[i].sh);
       j = strlen(Wv[i].sh);
       printf("================"); 
-      for(k=0; k<j; k++) printf("="); printf("\n");
+      for(k=0; k<j; k++) { printf("="); }
+      printf("\n");
       reportwave(&Wv[i], h.reps);
       printf("\n");
       if(Sh[i].set == 1)
@@ -1434,7 +1448,11 @@ FSLG -  one of the versions disabled here. EK.
     MaxAmp = pboxRound(MaxAmp, g.amres);
 
   if (h.itns) 
-    free(Sam), free(Sph);
+  {
+    for (i=0; i<h.itns; i++) { free(Sam[i]); free(Sph[i]); }
+    free(Sam); free(Sph);
+    Sam = NULL; Sph = NULL;
+  }
 
   for (j = 0; j < h.np; j++)
     Pha[j] = scale(Pha[j]);
@@ -1602,8 +1620,8 @@ FSLG -  one of the versions disabled here. EK.
         {
           if (h.tfl < 0)
           {
-	    while ((Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
-	           (sum < 360.0) && (j + 1 < h.np))
+	    while ((j + 1 < h.np) && (Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
+	           (sum < 360.0))
 	    {
 	      sum += dumm;
 	      j++;
@@ -1611,8 +1629,8 @@ FSLG -  one of the versions disabled here. EK.
           }
           else
           {
-	    while ((Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
-	           (sum < 255.0) && (j + 1 < h.np))
+	    while ((j + 1 < h.np) && (Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
+	           (sum < 255.0))
 	    {
 	      sum += dumm;
 	      j++;
@@ -1634,8 +1652,8 @@ FSLG -  one of the versions disabled here. EK.
         {
           if (h.tfl < 0)
           {
-	      while ((Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
-	             (sum < 360.0) && (j + 1 < h.np))
+	      while ((j + 1 < h.np) && (Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
+	             (sum < 360.0))
 	      {
 	        sum += dumm;
 	        j++;
@@ -1643,8 +1661,8 @@ FSLG -  one of the versions disabled here. EK.
           }
           else
           {
-	      while ((Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
-	             (sum < 255.0) && (j + 1 < h.np))
+      while ((j + 1 < h.np) && (Amp[j] == Amp[j + 1]) && (Pha[j] == Pha[j + 1]) &&
+	             (sum < 255.0))
 	      {
 	        sum += dumm;
 	        j++;
@@ -1884,5 +1902,10 @@ FSLG -  one of the versions disabled here. EK.
       pxout(e_str, -1);
     }
   }
+
+  if (Wam != NULL) { for (i=0; i<h.itnf; i++) free(Wam[i]); free(Wam); }
+  if (Wph != NULL) { for (i=0; i<h.itnf; i++) free(Wph[i]); free(Wph); }
+  if (Wbs != NULL) { for (i=0; i<h.itnf; i++) free(Wbs[i]); free(Wbs); }
+
   return 1;
 }

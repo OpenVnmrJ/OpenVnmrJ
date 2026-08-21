@@ -22,9 +22,9 @@
 
 int main(int argc, char *argv[])
 {
-  FILE *fil;
+  FILE *fil = NULL;
   char opt = ' ', verb = 'n', un, val[10], fn_inp[MAXSTR], h_name[MAXSTR];
-  int  i, j, k, ip, narg, inm;
+  int  i, j, k, ip, narg, inm=0;
 
 /* ------------------------------- Check the Options -----------------------*/
 
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         switch(argv[j][i])
         {
           case 'f': if ((argc > j+1) && (argv[j+1][0] != '-'))
-                      (void) strcpy(fn_inp, argv[j+1]); 
+                      (void) safecpy(fn_inp, argv[j+1], sizeof(fn_inp)); 
                     else
                       pxerr("Option -f : filename is missing");
                     opt='f';
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
           case 'i': opt='n'; break;
           case 'o': opt='n'; break;
           case 'r': if ((argc > j+1) && (argv[j+1][0] != '-'))
-                      strcpy(h_name, argv[j+1]);
+                      safecpy(h_name, argv[j+1], sizeof(h_name));
                     else
                       pxerr("Option -r : filename is missing");
                     opt='r'; 
@@ -67,7 +67,8 @@ int main(int argc, char *argv[])
                       pxerr("Option -u : invalid filename");
                     break;
           case 'v': verb='y';
-		    if (opt == ' ') opt = 'n'; break; 
+                    if ((opt == ' ') && (argc == 2)) opt = 'n';
+                    break; 
           case 'w': opt='n'; break; 
           case 'x': opt='n'; break; 
         }
@@ -142,7 +143,7 @@ int main(int argc, char *argv[])
                   while((k<=narg) && (j+k<argc) && (argv[j+k][0] != '-'))
                   {
                     if(verb=='y') printf(", option = %s, ", argv[j+k]); 
-                    (void) strcpy(h.bls, argv[j+k]);
+                    (void) safecpy(h.bls, argv[j+k], sizeof(h.bls));
                     k++; 
                   }
                   if(verb=='y') printf("\n"); 
@@ -178,7 +179,7 @@ int main(int argc, char *argv[])
                   while((k<=narg) && (j+k<argc) && (argv[j+k][0] != '-'))
                   {
                     if(verb=='y') printf("%s, ", argv[j+k]); 
-                    (void) strcpy(h.pw90_ , argv[j+k]);
+                    (void) safecpy(h.pw90_ , argv[j+k], sizeof(h.pw90_));
                     h.pw90=stod(argv[j+k]);
                     h.Bref = 250.0 / h.pw90;
                     k++; 
@@ -190,7 +191,7 @@ int main(int argc, char *argv[])
                   while((k<=narg) && (j+k<argc) && (argv[j+k][0] != '-'))
                   {
                     if(verb=='y') printf("%s, ", argv[j+k]); 
-                    (void) strcpy(h.maxincr_, argv[j+k]);
+                    (void) safecpy(h.maxincr_, argv[j+k], sizeof(h.maxincr_));
                     if (isdigit(h.maxincr_[0]))
                     {
                       h.maxincr = stod(h.maxincr_);
@@ -225,7 +226,7 @@ int main(int argc, char *argv[])
                   while((k<=narg) && (j+k<argc) && (argv[j+k][0] != '-'))
                   {
                     if(verb=='y') printf("%s, ", argv[j+k]); 
-                    (void) strcpy(h.rfpwr_ , argv[j+k]);
+                    (void) safecpy(h.rfpwr_ , argv[j+k], sizeof(h.rfpwr_));
                     h.rfpwr=stoi(argv[j+k]);
                     k++; 
                   }
@@ -239,13 +240,13 @@ int main(int argc, char *argv[])
                   while((k<=narg) && (j+k<argc) && (argv[j+k][0] != '-'))
                   {
                     if(verb=='y') printf("%s, ", argv[j+k]);
-                    (void) strcpy(h.stepsize_, argv[j+k]);
-                    ip=sscanf(h.stepsize_, "%[0-9.]%c", val, &un);
+                    (void) safecpy(h.stepsize_, argv[j+k], sizeof(h.stepsize_));
+                    ip=sscanf(h.stepsize_, "%9[0-9.]%c", val, &un);
                     if ((ip==1) && (isdigit(val[0])))
                       h.stepsize = stod(val);		/* default is us */
                     else if (ip > 1)
                     {
-                      h.stepsize = setunits(h.stepsize_);
+                      setunits(&h.stepsize, h.stepsize_);
                       h.stepsize *= 1000000.0;  	/* convert to us */
                     }
                     if (h.stepsize > g.tmres) 
@@ -372,6 +373,8 @@ int main(int argc, char *argv[])
 
   Wv = (Wave *) calloc(h.itnf, sizeof(Wave)); 
   Sh = (Shape *) calloc(h.itnf, sizeof(Shape)); 
+  if ((Wv == NULL) || (Sh == NULL))
+    pxerr("allocation failure in main()");
   for (i=0; i<h.itnf; i++) Sh[i].set = 0; 
   
   if (h.reps > 1)
@@ -393,7 +396,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < h.itnf; i++, inm++)
     {
       resetwave(&Wv[i]); 
-      strcat(strcat(Wv[i].str, argv[inm]), " }"); 
+      snprintf(Wv[i].str, sizeof(Wv[i].str), "{ %s }", argv[inm]);
       if (setwave(&Wv[i], h.tfl) == 0)
         pxerr("Pbox wave definition error : unrecognized shapename"); 
     }
@@ -401,6 +404,8 @@ int main(int argc, char *argv[])
   }
   else
   {
+    if (fil == NULL)
+      pxerr("Pbox error : no input file to open");
     fseek(fil, 0, 0); 
     for (i = 0; i < h.itnf; i++)
     {
