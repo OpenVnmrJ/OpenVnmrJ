@@ -17,7 +17,6 @@ import java.util.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.event.*;
-import sun.misc.*;
 
 // import PlotEditTool.*;
 // import PlotItemPref.*;
@@ -159,14 +158,12 @@ public class PlotConfig extends JFrame
 	}
       addWindowListener(new WindowAdapter() {
             public void windowOpened(WindowEvent e) { openFrame();  }
-            public void windowClosing(WindowEvent e) { closeFrame(); } } );
+            public void windowClosing(WindowEvent e) { closeFrame(0); } } );
       bimage = dp.createImage(pwidth, pheight);
 
-      Signal.handle(new Signal("TERM"), new SignalHandler() {
-             public void handle(Signal sig) {
-		closeFrame();
-             }
-        });
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+          closeFrame(1);
+      }, "PlotShutdownHook"));
    }
 
 
@@ -177,16 +174,20 @@ public class PlotConfig extends JFrame
         open_pre_template(true);
    }
 
-   public void closeFrame()
-   {
-	dp.saveTemplate(".temp", true);
-	writePreference();
-	if (toVnmr != null) {
-	   String d = "jplot('-exit',"+inPort+")\n";
-	   toVnmr.send(d);
+	public void closeFrame(int fromHook)
+	{
+    	if (closingFlag)
+        	return;
+    	closingFlag = true;
+		dp.saveTemplate(".temp", true);
+		writePreference();
+		if (toVnmr != null) {
+			String d = "jplot('-exit',"+inPort+")\n";
+			toVnmr.send(d);
+		}
+		if (fromHook == 0)
+			System.exit(0);
 	}
-        System.exit(0);
-   }
 
    public void processData(String str) {
 	vnmrData = str;
@@ -195,7 +196,7 @@ public class PlotConfig extends JFrame
 	    return;
 	}
 	if (str.equals("exit_jplot")) {
-	    closeFrame();
+	    closeFrame(0);
 	    return;
 	}
 
@@ -658,7 +659,7 @@ public class PlotConfig extends JFrame
       String arg = item.getText();
       if(arg.equals("Quit"))
       {
-	 closeFrame();
+	 closeFrame(0);
       }
       else if(arg.equals("Templates"))
       {
@@ -2486,5 +2487,6 @@ public class PlotConfig extends JFrame
    
    public static String tmpDirUnix;
    public static String tmpDirSystem;
+   private static volatile boolean closingFlag = false;
 }
 
