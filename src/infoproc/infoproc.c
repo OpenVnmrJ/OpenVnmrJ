@@ -278,6 +278,7 @@ sigio_irpt(int sig)
 	fd_set			readfd;
 	struct timeval		nowait;
 
+	(void) sig;
 /*  You have to tell select() not to wait; with an address of NULL, it
     waits until there is activity on one of the selected file descriptors.  */
 
@@ -327,6 +328,7 @@ static void setup_sigio()
 static void
 dontdie(int sig)
 {
+    (void) sig;
     if (Acqdebug)
         fprintf(stderr,"DONTDIE(): write to a closed pipe occured\n");
 }
@@ -362,6 +364,7 @@ void setuppipehandler()
 static void
 terminated(int sig)
 {
+    (void) sig;
 #ifdef USE_RPC
     close_rpc();
 #endif
@@ -371,6 +374,7 @@ terminated(int sig)
 static void
 SigQuit(int sig)
 {
+    (void) sig;
 #ifdef USE_RPC
     close_rpc();
 #endif
