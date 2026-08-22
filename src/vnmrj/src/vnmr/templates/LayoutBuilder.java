@@ -597,7 +597,7 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
     //----------------------------------------------------------------
     /** Create sax parser. */
     //----------------------------------------------------------------
-    private Parser makeSaxParser() {
+    private XMLReader makeSaxParser() {
         try {
             SAXParserFactory factory = SAXParserFactory.newInstance();
             factory.setNamespaceAware(false);
