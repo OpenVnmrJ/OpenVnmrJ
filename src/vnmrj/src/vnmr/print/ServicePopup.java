@@ -72,7 +72,6 @@ import vnmr.ui.SessionShare;
 import vnmr.util.Util;
 import vnmr.bo.VColorChooser;
 import vnmr.util.SimpleHLayout;
-import vnmr.util.Messages;
 
 /**
  * A class which implements a cross-platform print dialog.
@@ -633,7 +632,6 @@ public class ServicePopup extends JDialog implements ActionListener,
                         messageRB = ResourceBundle.getBundle(strBundle);
                         // return null;
                     } catch (java.util.MissingResourceException e) {
-                        Messages.writeStackTrace(e);
                         // throw new Error("Fatal: Resource for ServiceUI " +
                         //                "is missing");
                     }
@@ -654,7 +652,6 @@ public class ServicePopup extends JDialog implements ActionListener,
                String s = messageRB.getString(key);
                return s;
            } catch (java.util.MissingResourceException e) {
-                Messages.writeStackTrace(e);
             // throw new Error("Fatal: Resource for ServiceUI is broken; " +
             //                "there is no " + key + " key in resource");
            }
