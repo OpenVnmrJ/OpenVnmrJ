@@ -538,9 +538,9 @@ public class VLcTableItem extends VObj
         } else if (m_strType.equals(INT_TYPE)) {
             Integer val;
             try {
-                val = new Integer(((JTextField)m_valueItem).getText());
+                val = Integer.valueOf(((JTextField) m_valueItem).getText());
             } catch (NumberFormatException nfe) {
-                val = new Integer(0);
+                val = Integer.valueOf(0);
             }
             return val;
         } else if (m_strType.equals(DOUBLE_TYPE)) {
@@ -552,7 +552,7 @@ public class VLcTableItem extends VObj
             }
             return val;
         } else if (m_strType.equals(BOOLEAN_TYPE)) {
-            return new Boolean(((AbstractButton)m_valueItem).isSelected());
+            return Boolean.valueOf(((AbstractButton) m_valueItem).isSelected());
         } else if (m_strType.equals(MS_SCAN_TYPE)) {
             return ((JComboBox)m_valueItem).getSelectedItem().toString();
         } else {

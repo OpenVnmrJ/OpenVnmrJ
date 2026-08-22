@@ -43,9 +43,9 @@ public class RQTreeTableModel extends AbstractTreeTableModel {
 
     static public String treeTableXml = null;
     static public Hashtable cList = new Hashtable();
-    static public Boolean b_no = new Boolean(false);
-    static public Boolean b_yes = new Boolean(true);
-    static public Boolean b_dis = new Boolean("");
+    static public Boolean b_no = Boolean.FALSE;
+    static public Boolean b_yes = Boolean.TRUE;
+    static public Boolean b_dis = Boolean.valueOf("");
 
     static protected ArrayList cNames = new ArrayList(); 
     static protected ArrayList cTypes = new ArrayList(); 
@@ -154,7 +154,7 @@ public class RQTreeTableModel extends AbstractTreeTableModel {
 	Object obj = cWidths.get(column);
 	if(obj == null) return 0;
 	else {
-	   return (new Integer((String)obj)).intValue();
+	   return (Integer.valueOf((String) obj)).intValue();
 	}
     }
 
@@ -568,7 +568,7 @@ public class RQTreeTableModel extends AbstractTreeTableModel {
 		if(str != null && str.length() > 0) rqmacro = str;
 		str = attr.getValue("visiblecolumns");
 		if(str != null) {
-		    vColumnCount = (new Integer(str)).intValue();
+		    vColumnCount = (Integer.valueOf(str)).intValue();
 		}
 	    } else if (qName.equals("column")) {
 	      header = attr.getValue("header");

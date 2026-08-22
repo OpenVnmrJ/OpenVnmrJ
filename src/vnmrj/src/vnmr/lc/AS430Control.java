@@ -148,61 +148,61 @@ public class AS430Control implements AutoSampler {
      * Translation from status values to status text.
      */
     private final static Object[][] STATUS_VALUES = {
-        {new Integer(0),   "Not running"},
-        {new Integer(10),  "Running"},
-        {new Integer(20),  "Searching vial"},
-        {new Integer(30),  "Flushing"},
-        {new Integer(40),  "Analysis timer running"},
-        {new Integer(50),  "Filling sample loop"},
-        {new Integer(51),  "Freeze active, holds injection valve from switching"},
-        {new Integer(55),  "Inject marker"},
-        {new Integer(60),  "Washing"},
-        {new Integer(70),  "Segment missing"},
-        {new Integer(71),  "Plate missing"},
-        {new Integer(72),  "Change plate"},
-        {new Integer(73),  "Plate still in clamp"},
-        {new Integer(74),  "Moving right lift"},
-        {new Integer(75),  "Moving left lift"},
-        {new Integer(76),  "Wait for next right lift position"},
-        {new Integer(77),  "Wait for next left lift position"},
-        {new Integer(80),  "Vial missing"},
-        {new Integer(90),  "Rinsing, first air segment, uL pick-up injection"},
-        {new Integer(100), "Rinsing, first air segment, uL pick-up injection"},
-        {new Integer(110), "Withdraw transport solvent, uL pick-up injection"},
-        {new Integer(120), "Rinse buffer tubing"},
-        {new Integer(130), "Dispense, Mixmethod and Userprog."},
-        {new Integer(140), "Aspirate, Mixmethod and Userprog."},
-        {new Integer(151), "Waiting for LOAD command"},
-        {new Integer(152), "Waiting for next injection command"},
-        {new Integer(159), "Waiting, Mixmethod and Userprog."},
-        {new Integer(170), "Injection valve position: INJECT"},
-        {new Integer(171), "Injection valve position: LOAD"},
-        {new Integer(172), "Syringe valve position: Injection valve"},
-        {new Integer(173), "Syringe LOAD"},
-        {new Integer(174), "Syringe UNLOAD"},
-        {new Integer(175), "Syringe HOME"},
-        {new Integer(180), "Wait for input"},
-        {new Integer(200), "Tray advancing"},
-        {new Integer(300), "Running selftest"},
-        {new Integer(310), "Initializing motors"},
-        {new Integer(900), "Stop process"},
-        {new Integer(910), "Initial wash"},
-        {new Integer(920), "Prime solvent selection valve"},
-        {new Integer(921), "Moving syringe to HOME"},
-        {new Integer(922), "Moving syringe to END"},
-        {new Integer(923), "Waiting for syringe HOME command"},
-        {new Integer(924), "Moving plate to EXCHANGE position"},
-        {new Integer(925), "Moving plate to HOME position"},
-        {new Integer(926), "Waiting for plate HOME command"},
-        {new Integer(927), "Check for plate in left lift"},
-        {new Integer(930), "Needle unit moving to FRONT position"},
-        {new Integer(931), "Needle unit moving to HOME position"},
-        {new Integer(932), "Needle unit waiting for HOME command"},
+        {Integer.valueOf(0),   "Not running"},
+        {Integer.valueOf(10),  "Running"},
+        {Integer.valueOf(20),  "Searching vial"},
+        {Integer.valueOf(30),  "Flushing"},
+        {Integer.valueOf(40),  "Analysis timer running"},
+        {Integer.valueOf(50),  "Filling sample loop"},
+        {Integer.valueOf(51),  "Freeze active, holds injection valve from switching"},
+        {Integer.valueOf(55),  "Inject marker"},
+        {Integer.valueOf(60),  "Washing"},
+        {Integer.valueOf(70),  "Segment missing"},
+        {Integer.valueOf(71),  "Plate missing"},
+        {Integer.valueOf(72),  "Change plate"},
+        {Integer.valueOf(73),  "Plate still in clamp"},
+        {Integer.valueOf(74),  "Moving right lift"},
+        {Integer.valueOf(75),  "Moving left lift"},
+        {Integer.valueOf(76),  "Wait for next right lift position"},
+        {Integer.valueOf(77),  "Wait for next left lift position"},
+        {Integer.valueOf(80),  "Vial missing"},
+        {Integer.valueOf(90),  "Rinsing, first air segment, uL pick-up injection"},
+        {Integer.valueOf(100), "Rinsing, first air segment, uL pick-up injection"},
+        {Integer.valueOf(110), "Withdraw transport solvent, uL pick-up injection"},
+        {Integer.valueOf(120), "Rinse buffer tubing"},
+        {Integer.valueOf(130), "Dispense, Mixmethod and Userprog."},
+        {Integer.valueOf(140), "Aspirate, Mixmethod and Userprog."},
+        {Integer.valueOf(151), "Waiting for LOAD command"},
+        {Integer.valueOf(152), "Waiting for next injection command"},
+        {Integer.valueOf(159), "Waiting, Mixmethod and Userprog."},
+        {Integer.valueOf(170), "Injection valve position: INJECT"},
+        {Integer.valueOf(171), "Injection valve position: LOAD"},
+        {Integer.valueOf(172), "Syringe valve position: Injection valve"},
+        {Integer.valueOf(173), "Syringe LOAD"},
+        {Integer.valueOf(174), "Syringe UNLOAD"},
+        {Integer.valueOf(175), "Syringe HOME"},
+        {Integer.valueOf(180), "Wait for input"},
+        {Integer.valueOf(200), "Tray advancing"},
+        {Integer.valueOf(300), "Running selftest"},
+        {Integer.valueOf(310), "Initializing motors"},
+        {Integer.valueOf(900), "Stop process"},
+        {Integer.valueOf(910), "Initial wash"},
+        {Integer.valueOf(920), "Prime solvent selection valve"},
+        {Integer.valueOf(921), "Moving syringe to HOME"},
+        {Integer.valueOf(922), "Moving syringe to END"},
+        {Integer.valueOf(923), "Waiting for syringe HOME command"},
+        {Integer.valueOf(924), "Moving plate to EXCHANGE position"},
+        {Integer.valueOf(925), "Moving plate to HOME position"},
+        {Integer.valueOf(926), "Waiting for plate HOME command"},
+        {Integer.valueOf(927), "Check for plate in left lift"},
+        {Integer.valueOf(930), "Needle unit moving to FRONT position"},
+        {Integer.valueOf(931), "Needle unit moving to HOME position"},
+        {Integer.valueOf(932), "Needle unit waiting for HOME command"},
     };
 
     private final static Object[][] INJECT_VALUES = {
-        {new Integer(0),   "inject"},
-        {new Integer(1),   "load"},
+        {Integer.valueOf(0),   "inject"},
+        {Integer.valueOf(1),   "load"},
     };
 
     /**
@@ -210,25 +210,25 @@ public class AS430Control implements AutoSampler {
      * (Currently a selection of the most used PFCs.)
      */
     private final static Object[][] FUNCTION_CODES = {
-        {new Integer(100),   "Analysis Time"},
-        {new Integer(107),   "Loop Volume"},
-        {new Integer(108),   "First Vial"},
-        {new Integer(109),   "Last Vial"},
-        {new Integer(111),   "Flush Volume"},
-        {new Integer(112),   "Injections per Vial"},
-        {new Integer(117),   "Priority Vial Number"},
-        {new Integer(122),   "Tray Cooling On/Off"},
-        {new Integer(124),   "Injection Mode"},
-        {new Integer(152),   "Status"},
-        {new Integer(155),   "Error Code"},
-        {new Integer(156),   "Reset Error"},
-        {new Integer(210),   "Injection Volume"},
-        {new Integer(500),   "Wash Between"},
-        {new Integer(1000),  "Send Programmed Value"},
-        {new Integer(1001),  "Send Actual Value"},
-        {new Integer(5100),  "Start Method"},
-        {new Integer(5105),  "Switch Injector"},
-        {new Integer(5130),  "Initial Wash"},
+        {Integer.valueOf(100),   "Analysis Time"},
+        {Integer.valueOf(107),   "Loop Volume"},
+        {Integer.valueOf(108),   "First Vial"},
+        {Integer.valueOf(109),   "Last Vial"},
+        {Integer.valueOf(111),   "Flush Volume"},
+        {Integer.valueOf(112),   "Injections per Vial"},
+        {Integer.valueOf(117),   "Priority Vial Number"},
+        {Integer.valueOf(122),   "Tray Cooling On/Off"},
+        {Integer.valueOf(124),   "Injection Mode"},
+        {Integer.valueOf(152),   "Status"},
+        {Integer.valueOf(155),   "Error Code"},
+        {Integer.valueOf(156),   "Reset Error"},
+        {Integer.valueOf(210),   "Injection Volume"},
+        {Integer.valueOf(500),   "Wash Between"},
+        {Integer.valueOf(1000),  "Send Programmed Value"},
+        {Integer.valueOf(1001),  "Send Actual Value"},
+        {Integer.valueOf(5100),  "Start Method"},
+        {Integer.valueOf(5105),  "Switch Injector"},
+        {Integer.valueOf(5130),  "Initial Wash"},
     };
 
     public AS430Control(String host,
@@ -1115,7 +1115,7 @@ public class AS430Control implements AutoSampler {
      * @param value The value to set.
      */
     protected void setConfirmation(int key, int value) {
-        m_resultTable.put(new Integer(key), new Integer(value));
+        m_resultTable.put(Integer.valueOf(key), Integer.valueOf(value));
     }
 
     /**
@@ -1123,7 +1123,7 @@ public class AS430Control implements AutoSampler {
      * @param key The key to remove.
      */
     protected void clearConfirmation(int key) {
-        m_resultTable.remove(new Integer(key));
+        m_resultTable.remove(Integer.valueOf(key));
     }
 
 
@@ -1203,7 +1203,7 @@ public class AS430Control implements AutoSampler {
 
         public void addCommand(byte[] msg, int cmd) {
             Object[] cmdMessage = new Object[2];
-            cmdMessage[0] = new Integer(cmd);
+            cmdMessage[0] = Integer.valueOf(cmd);
             cmdMessage[1] = msg;
             mm_commandList.add(cmdMessage);
         }

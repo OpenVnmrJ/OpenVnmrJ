@@ -459,7 +459,7 @@ public class PlotBox extends JPanel implements Printable {
      *  @return The legend label, or null if there is none.
      */
     public synchronized String getLegend(int dataset) {
-        int idx = _legendDatasets.indexOf(new Integer(dataset), 0);
+        int idx = _legendDatasets.indexOf(Integer.valueOf(dataset), 0);
         if (idx != -1) {
             return _legendStrings.elementAt(idx);
         } else {
@@ -763,9 +763,9 @@ public class PlotBox extends JPanel implements Printable {
     public void setShown(int dataset, boolean flag) {
         boolean prev = isShown(dataset);
         while (_datasetPlotFlags.size() <= dataset) {
-            _datasetPlotFlags.add(new Boolean(true));
+            _datasetPlotFlags.add(Boolean.TRUE);
         }
-        _datasetPlotFlags.set(dataset, new Boolean(flag));
+        _datasetPlotFlags.set(dataset, Boolean.valueOf(flag));
         if (prev != flag) {
             repaint();
         }
@@ -999,13 +999,13 @@ public class PlotBox extends JPanel implements Printable {
             }
             Set<Integer> datasetList;
             datasetList = (Set<Integer>)button.getClientProperty("datasets");
-            datasetList.add(new Integer(dataset));
+            datasetList.add(Integer.valueOf(dataset));
         } else {
             button = new JToggleButton(legend, icon, true);
             button.setFont(_labelFont);
             button.addActionListener(_legendListener);
             Set<Integer> datasetList = new TreeSet<Integer>();
-            datasetList.add(new Integer(dataset));
+            datasetList.add(Integer.valueOf(dataset));
             button.putClientProperty("datasets", datasetList);
             button.setHorizontalTextPosition(SwingConstants.LEFT);
             button.setMargin(new Insets(0, 2, 0, 4));

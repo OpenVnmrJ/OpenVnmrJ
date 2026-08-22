@@ -403,7 +403,7 @@ public class Util implements VnmrKey {
     public static String getLabel(int a){
         if(elabels==null)
             setAttributeLabels();
-        Integer key=new Integer(a);
+        Integer key= Integer.valueOf(a);
         String sym=elabels.get(key);
         if(sym==null){
             if(DebugOutput.isSetFor("labels"))
@@ -561,7 +561,7 @@ public class Util implements VnmrKey {
                 if (img.getWidth() < 100 && img.getHeight() < 100) {
                    fileNameCache.put(f, fpath);
                    fileIconCache.put(f, imageIcon);
-                   fileDateCache.put(f, new Long(fd.lastModified()));
+                   fileDateCache.put(f, Long.valueOf(fd.lastModified()));
                 }
                 else {
                    fileIconCache.remove(f);

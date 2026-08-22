@@ -596,7 +596,7 @@ public class ProtocolKeywords {
         int newPosition;
         // Convert string to int
         try {
-            Integer inter = new Integer(strPosition);
+            Integer inter = Integer.valueOf(strPosition);
             newPosition = inter.intValue();
         }
         catch(Exception ex) {

@@ -3119,8 +3119,8 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
                 imgGrayNums = pv[1];
                 imgGrayStart = pv[0];
                 if (hs != null) {
-                    hs.put("imgGrayNums", new Integer(imgGrayNums));
-                    hs.put("imgGrayStart", new Integer(imgGrayStart));
+                    hs.put("imgGrayNums", Integer.valueOf(imgGrayNums));
+                    hs.put("imgGrayStart", Integer.valueOf(imgGrayStart));
                 }
             }
             setImageGrayMap();

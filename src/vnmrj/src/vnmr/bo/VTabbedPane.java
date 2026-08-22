@@ -101,7 +101,7 @@ public class VTabbedPane extends JTabbedPane
             String title=((VObjIF)comp).getAttribute(LABEL);
             if(title != null)
                 setTitleAt(i,title);
-            m_aListInitialized.add(i, new Boolean(false));
+            m_aListInitialized.add(i, Boolean.FALSE);
             m_tabs.add(i, comp);
             VGroup grp=(VGroup)comp;
             grp.setFolder(this);
@@ -238,7 +238,7 @@ public class VTabbedPane extends JTabbedPane
         try
         {
             if (!bInitialized)
-                m_aListInitialized.set(getSelectedIndex(), new Boolean(true));
+                m_aListInitialized.set(getSelectedIndex(), Boolean.TRUE);
         }
         catch (Exception e) {}
         for (int i=0; i<m_tabs.size(); i++) {

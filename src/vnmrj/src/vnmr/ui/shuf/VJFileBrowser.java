@@ -1991,7 +1991,7 @@ class VCustomFileChooser extends JFileChooser
             if(objType.equals(Shuf.DB_VNMR_DATA) || 
                     objType.equals(Shuf.DB_VNMR_PAR) || objType.equals(Shuf.DB_VNMR_RECORD)
                     || objType.equals(Shuf.DB_CRFT) || objType.equals(Shuf.DB_VFS))
-                traversable = new Boolean(false);
+                traversable = Boolean.FALSE;
         }
         return (traversable != null && traversable.booleanValue());
     }

@@ -5119,11 +5119,11 @@ public class ExpPanel extends JPanel
                 continue;
             }
             if(par1.startsWith("width:")) {
-                width = (new Integer(par1.substring(6))).intValue();
+                width = (Integer.valueOf(par1.substring(6))).intValue();
                 continue;
             }
             if(par1.startsWith("height:")) {
-                height = (new Integer(par1.substring(7))).intValue();
+                height = (Integer.valueOf(par1.substring(7))).intValue();
                 continue;
             }
             if (par1.startsWith("help:")) {
@@ -5334,8 +5334,8 @@ public class ExpPanel extends JPanel
             if(par1.startsWith("location:")) location = par1.substring(9);
             if (par1.startsWith(strRebuild))
                 strRebuild = par1.substring(strRebuild.length());
-            if(par1.startsWith("width:")) width = (new Integer(par1.substring(6))).intValue();
-            if(par1.startsWith("height:"))  height = (new Integer(par1.substring(7))).intValue();
+            if(par1.startsWith("width:")) width = (Integer.valueOf(par1.substring(6))).intValue();
+            if(par1.startsWith("height:"))  height = (Integer.valueOf(par1.substring(7))).intValue();
             if (par1.startsWith("help:"))
                 strHelpFile = par1.substring(5);
             if (par1.startsWith("close:"))
@@ -8380,7 +8380,7 @@ public class ExpPanel extends JPanel
                 td.height = titleHeight;
             else if (td.height != titleHeight) {
                 titleHeight = td.height;
-                sshare.putProperty("titleHeight", new Integer(titleHeight));
+                sshare.putProperty("titleHeight", Integer.valueOf(titleHeight));
             }
             x = xGap;
             if (pt.x < 10 && pt.y < 10) { //  on top left corner
@@ -8887,9 +8887,9 @@ public class ExpPanel extends JPanel
 
     public void  saveLcInfo() {
         String sData = "lcSize"+this.winId;
-        sshare.putProperty(sData, new Integer(iLcSize));
+        sshare.putProperty(sData, Integer.valueOf(iLcSize));
         sData = "lcPos"+this.winId;
-        sshare.putProperty(sData, new Integer(iLcPos));
+        sshare.putProperty(sData, Integer.valueOf(iLcPos));
     }
 
     public void  initLcInfo() {

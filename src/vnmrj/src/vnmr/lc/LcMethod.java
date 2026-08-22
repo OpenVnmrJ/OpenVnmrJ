@@ -1028,7 +1028,7 @@ public class LcMethod {
                     double p = p0 + (time - t0) * (p1 - p0) / (t1 - t0);
                     Messages.postDebug("loopCollect","getValue(" + name + ", "
                                        + Fmt.f(2, time) + ")=" + Fmt.f(2, p));
-                    value = new Integer((int)(p + 0.5));
+                    value = Integer.valueOf((int) (p + 0.5));
                 }
             }
         }

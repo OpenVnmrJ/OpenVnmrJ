@@ -1024,7 +1024,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         if (hs == null || tabbedPane == null)
             return;
         if (tabbedPane.getTabCount() > 0) {
-            Integer hashValue = new Integer(tabbedPane.getSelectedIndex()); 
+            Integer hashValue = Integer.valueOf(tabbedPane.getSelectedIndex());
             hs.put("tabbedToolPanel", hashValue);
         }
         putHsLayout(vpId);

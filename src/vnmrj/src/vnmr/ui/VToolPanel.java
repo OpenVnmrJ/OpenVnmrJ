@@ -372,7 +372,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         for (int j=0; j<spanes.size(); j++) {
             JSplitPane jsp = (JSplitPane) spanes.get(j);
             int sv = jsp.getDividerLocation();
-            tp_dividers.put("pane"+j, new Integer(sv));
+            tp_dividers.put("pane"+j, Integer.valueOf(sv));
             JComponent obj = (JComponent) jsp.getBottomComponent();
             if (obj instanceof PushpinIF) {
                ((PushpinIF) obj).setDividerLoc(sv);
@@ -454,7 +454,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         for(Enumeration e=tp_dividers.keys(); e.hasMoreElements();) {
            String key = (String)e.nextElement();
            int value = ((Integer)tp_dividers.get(key)).intValue();
-           info.tp_dividers.put(key, new Integer(value));
+           info.tp_dividers.put(key, Integer.valueOf(value));
         }
     }
 
@@ -478,7 +478,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
 
            if(value1 != value2) {
                 tp_dividers.remove(key);
-                tp_dividers.put(key, new Integer(value2));
+                tp_dividers.put(key, Integer.valueOf(value2));
                 b = true;
            } 
         }

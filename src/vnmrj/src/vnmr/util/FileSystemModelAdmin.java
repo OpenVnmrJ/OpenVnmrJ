@@ -34,7 +34,7 @@ implements TreeTableModel
     static protected Class[]  cTypes = {TreeTableModel.class, Integer.class, String.class};
 
     // The the returned file length for directories. 
-    public static final Integer ZERO = new Integer( 0 ); 
+    public static final Integer ZERO = Integer.valueOf(0);
 
     public FileSystemModelAdmin() { 
 	super(new FileNode(new File(File.separator))); 
@@ -104,7 +104,7 @@ implements TreeTableModel
 	      case 1:
 		if( !file.isFile() )
 		{
-		  bytes = (new Integer((int)file.length())).toString() + spaces;
+		  bytes = (Integer.valueOf((int) file.length())).toString() + spaces;
 		  return bytes;
 	        }
 	    }

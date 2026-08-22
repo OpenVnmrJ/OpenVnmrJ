@@ -198,7 +198,7 @@ public class RQBuilder extends Template
         for (int i = 0; i <treemodel.getColumnCount(); i++) {
 	    cwidth = treemodel.getColumnWidth(i);
 	    if(cwidth == 0) cwidth = width/(vColumnCount+1);
-	    widths.add(new Integer(cwidth));
+	    widths.add(Integer.valueOf(cwidth));
         }
 
 	int cwidth0 = width;
@@ -1958,10 +1958,10 @@ public class RQBuilder extends Template
             elem=(VElement)node;
             if(gid.equals("-1") &&
                 elem.getAttribute(ATTR_DISPLAY).equals("yes")) {
-                treemodel.setValueAt(new Boolean(false), elem, dcol);
+                treemodel.setValueAt(Boolean.FALSE, elem, dcol);
             } else if(gid.equals(getGroupID(elem)) &&
                 elem.getAttribute(ATTR_DISPLAY).equals("yes")) {
-                treemodel.setValueAt(new Boolean(false), elem, dcol);
+                treemodel.setValueAt(Boolean.FALSE, elem, dcol);
                 break;
             }
             node=treewalker.getNext();
@@ -1990,10 +1990,10 @@ public class RQBuilder extends Template
             elem=(VElement)node;
             if(gid.equals("-1") &&
                 elem.getAttribute(ATTR_DISPLAY).equals("no")) {
-                treemodel.setValueAt(new Boolean(true), elem, dcol);
+                treemodel.setValueAt(Boolean.TRUE, elem, dcol);
             } else if(gid.equals(getGroupID(elem)) &&
                 elem.getAttribute(ATTR_DISPLAY).equals("no")) {
-                treemodel.setValueAt(new Boolean(true), elem, dcol);
+                treemodel.setValueAt(Boolean.TRUE, elem, dcol);
                 break;
             }
             node=treewalker.getNext();

@@ -226,7 +226,7 @@ public class FileTable extends JTable implements VTooltipIF
 	      String value = (String)table.get(key);
 	      if(value != null && value.equals("1") && !isRowFlaged(i)) { 
 		m_flags.remove(ind[i]);
-		m_flags.add(ind[i], new Boolean(true));
+		m_flags.add(ind[i], Boolean.TRUE);
 	      }
         }
 

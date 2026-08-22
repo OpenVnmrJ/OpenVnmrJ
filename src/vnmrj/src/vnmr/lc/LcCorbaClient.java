@@ -1435,7 +1435,7 @@ public class LcCorbaClient extends CorbaClient implements LcStatusListener {
                                 msg += (m_flow / 1000.0) + " mL/min";
                             }
                             m_expPanel.processStatusData(msg);
-                            state.put("flow", new Integer(m_flow));
+                            state.put("flow", Integer.valueOf(m_flow));
                             Messages.postDebug("gpibStatus",
                                                "gpibStatus: " + msg);
 
@@ -1499,7 +1499,7 @@ public class LcCorbaClient extends CorbaClient implements LcStatusListener {
 
                         if (methodState != status[15]) {
                             methodState = status[15];
-                            state.put("state", new Integer(methodState));
+                            state.put("state", Integer.valueOf(methodState));
                             change = true;
                             String strMethodState;
                             switch (methodState) {

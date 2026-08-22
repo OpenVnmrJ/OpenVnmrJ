@@ -328,9 +328,9 @@ public class VPDialog extends ModelessPopup implements ActionListener
 
         public HashMapAttrs(String strVp)
         {
-            nVp = new Integer(strVp);
+            nVp = Integer.valueOf(strVp);
             if (nVp == null)
-                nVp = new Integer(0);
+                nVp = Integer.valueOf(0);
         }
 
         public int compareTo(Object obj)

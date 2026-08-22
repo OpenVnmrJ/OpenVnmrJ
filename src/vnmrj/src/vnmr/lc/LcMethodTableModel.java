@@ -24,7 +24,7 @@ import vnmr.util.Util;
 public class LcMethodTableModel implements TableModel {
 
     private static final Class<?> sm_objectClass = new Object().getClass();
-    private static final Class<?> sm_integerClass = new Integer(0).getClass();
+    private static final Class<?> sm_integerClass = Integer.valueOf(0).getClass();
     private static String sm_nameOfIndexColumn = "lctlLineNumber";
     private static String sm_labelOfIndexColumn
         = Util.getLabel(sm_nameOfIndexColumn);

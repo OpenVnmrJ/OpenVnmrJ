@@ -1421,8 +1421,8 @@ public class Plot extends PlotBox implements Cloneable {
         while (dataset >= _points.size()) {
             _points.add(new ArrayList<PlotPoint>());
             _formats.add(new Format());
-            _prevx.add(new Long(0));
-            _prevy.add(new Long(0));
+            _prevx.add(Long.valueOf(0));
+            _prevy.add(Long.valueOf(0));
         }
     }
 

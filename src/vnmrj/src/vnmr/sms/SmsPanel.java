@@ -638,7 +638,7 @@ public class SmsPanel extends JPanel
 
     public void setTrayTooltip() {
         if (sshare != null)
-            sshare.putProperty("trayTooltip", new Boolean(bTrayTooltip));
+            sshare.putProperty("trayTooltip", Boolean.valueOf(bTrayTooltip));
         if (tray != null)
             tray.showTooltip(bTrayTooltip);
     }
