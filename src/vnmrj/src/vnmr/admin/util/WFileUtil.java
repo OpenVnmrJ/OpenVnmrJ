@@ -1182,13 +1182,13 @@ public class WFileUtil
             hmUser.put(strKey, strValue);
         }
         // get the absolute values, ie., resolve $home and $userdir items
-        hmUser = getAbsoluteValues((HashMap<String, String>)hmUser.clone());
+        hmUser = getAbsoluteValues(new HashMap<String, String>(hmUser));
 
         return hmUser;
     }
 
 
-    protected static HashMap<String, String> getAbsoluteValues(HashMap hmItem)
+    protected static HashMap<String, String> getAbsoluteValues(HashMap<String, String> hmItem)
     {
         Iterator keySetItr = hmItem.keySet().iterator();
         String strKey = null;
