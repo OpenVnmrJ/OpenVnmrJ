@@ -52,7 +52,7 @@ public class WMultiUsers extends WConvertUsers implements ActionListener
     JPanel    pnlcd                     = null;
     JPanel    pnlradio                  = null;
     JCheckBox ckBox                     = null;
-    protected Boolean useFileInput      = false;
+    protected Boolean useFileInput      = Boolean.FALSE;
     HashMap<String,HashMap> userInfoFromFile=null;
 
 
@@ -204,7 +204,7 @@ public class WMultiUsers extends WConvertUsers implements ActionListener
                     m_browseBtn.setVisible(true);
                     pnlItype.setVisible(false);
                     pnlcd.setVisible(true);
-                    useFileInput = true;
+                    useFileInput = Boolean.TRUE;
                     setCloseButtonText(true);
                 }
                 else {
@@ -213,7 +213,7 @@ public class WMultiUsers extends WConvertUsers implements ActionListener
                     m_browseBtn.setVisible(false);
                     pnlItype.setVisible(true);
                     pnlcd.setVisible(false);
-                    useFileInput = false;
+                    useFileInput = Boolean.FALSE;
                     setCloseButtonText(false);
                 }
             }
@@ -272,7 +272,7 @@ public class WMultiUsers extends WConvertUsers implements ActionListener
             String strNamesOrPath = m_txfNames.getText();
             if (strNamesOrPath != null && strNamesOrPath.length() > 0) {
                 setVisible(false);
-                if(useFileInput) {
+                if(useFileInput.booleanValue()) {
                     // strNamesOrPath should be a path to the text
                     // input file.  We are not ready to use all the
                     // info in that file, but we need to know if we
@@ -301,7 +301,7 @@ public class WMultiUsers extends WConvertUsers implements ActionListener
                 addUsers(strNamesOrPath);
             }
             else {
-                if(useFileInput) {
+                if(useFileInput.booleanValue()) {
                     Messages.postWarning("Please enter file path with users to add.");
                 }
                 else {
@@ -313,7 +313,7 @@ public class WMultiUsers extends WConvertUsers implements ActionListener
             String strPath = m_txfNames.getText();
             if (strPath != null && strPath.length() > 0) {
                 setVisible(false);
-                if(useFileInput) {
+                if(useFileInput.booleanValue()) {
                     // strPath should be a path to the text
                     // input file.  We are not ready to use all the
                     // info in that file, but we need to know if we
@@ -394,7 +394,7 @@ public class WMultiUsers extends WConvertUsers implements ActionListener
         final HashMap hmUsers = new HashMap();
         String strItype;
         
-        if(useFileInput) {
+        if(useFileInput.booleanValue()) {
             String filepath = m_txfNames.getText();
             aListNames = new ArrayList<String>();
             // Retrieve info from the file.  We get back a HashMap

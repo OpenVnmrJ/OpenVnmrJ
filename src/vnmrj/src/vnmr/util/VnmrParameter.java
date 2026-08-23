@@ -55,7 +55,7 @@ public class VnmrParameter {
         if ((parValues.size() > idx)
                 && ((obj = parValues.get(idx)) instanceof Double))
         {
-            rtn = (Double)obj;
+            rtn = ((Double) obj).doubleValue();
         }
         return rtn;
     }
@@ -169,7 +169,7 @@ public class VnmrParameter {
             for (idx = 0; idx < nVals && toker.hasMoreTokens(); idx++) {
                 Object val = toker.nextToken();
                 if (!isString) {
-                    val = Double.parseDouble((String)val);
+                    val = Double.valueOf(Double.parseDouble((String) val));
                 }
                 parValues.add(val);
             }

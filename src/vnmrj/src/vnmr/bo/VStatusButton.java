@@ -525,7 +525,7 @@ public class VStatusButton extends TwoLineButton
             break;
         case NUMDIGIT:
             try {
-                numdigits=Integer.valueOf(c);
+                numdigits= Integer.valueOf(c).intValue();
             } catch (NumberFormatException nfe) { break; }
             precision = c;
             break;       

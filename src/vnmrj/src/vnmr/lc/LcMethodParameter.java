@@ -519,7 +519,7 @@ public class LcMethodParameter {
         if (obj == null) {
             rtn = "null";
         } else if (obj instanceof Boolean) {
-            rtn = (Boolean)obj ? "y" : "n";
+            rtn = ((Boolean) obj).booleanValue() ? "y" : "n";
         } else {
             rtn = obj.toString();
         }

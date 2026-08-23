@@ -326,12 +326,12 @@ public class VjPrintFileDialog extends JDialog
         cancelButton = new JButton(cancelStr);
         String previewStr = Util.getLabel("_Preview", previewCmd);
         previewButton = new JButton(previewStr);
-        if(Util.labelExists("blmsave")) {
+        if(Util.labelExists("blmsave").booleanValue()) {
             okStr = Util.getLabel("blmSave");
             char chOk = okStr.charAt(0);
             saveButton.setMnemonic(chOk);
         }
-        if(Util.labelExists("blmCancel")) {
+        if(Util.labelExists("blmCancel").booleanValue()) {
             cancelStr = Util.getLabel("blmCancel");
             char chCancel = cancelStr.charAt(0);
             cancelButton.setMnemonic(chCancel);

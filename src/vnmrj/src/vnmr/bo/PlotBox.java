@@ -135,7 +135,7 @@ public class PlotBox extends JPanel implements Printable {
     public synchronized void addLegend(int dataset, String legend) {
         if (legend == null || legend.equals("")) return;
         _legendStrings.addElement(legend);
-        _legendDatasets.addElement(dataset);
+        _legendDatasets.addElement(Integer.valueOf(dataset));
     }
 
     /** Specify a tick mark for the X axis.  The label given is placed

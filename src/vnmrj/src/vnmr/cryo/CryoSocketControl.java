@@ -1214,7 +1214,7 @@ public class CryoSocketControl implements CryoBay {
         }
 
         if (cmd.startsWith("<GETSTATE")) {
-            status = m_statusNames.get(Integer.parseInt(values[0]));
+            status = m_statusNames.get(Integer.valueOf(Integer.parseInt(values[0])));
             m_cryoMsg.postDebug("cryomsg",
                                 "CryoSocketControl status: " + status);
             if(getStatus) {
@@ -1639,7 +1639,7 @@ public class CryoSocketControl implements CryoBay {
     protected boolean waitForConfirmation(int key) {
         boolean result = false;
         while (!result) {
-            boolean nResult = m_resultTable.remove(key);
+            boolean nResult = m_resultTable.remove(Integer.valueOf(key)).booleanValue();
             /*if (nResult == null) {
                 // TODO: (Java 5) Use semaphore
                 try {

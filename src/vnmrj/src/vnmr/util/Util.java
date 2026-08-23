@@ -192,13 +192,13 @@ public class Util implements VnmrKey {
         String label = null;
         try {
             label = labels.getString(symbol);
-            return true;
+            return Boolean.TRUE;
         } catch(MissingResourceException e) {
             try {
                 label = admlabels.getString(symbol);
-                return true;
+                return Boolean.TRUE;
             } catch(MissingResourceException e2) {
-                return false;
+                return Boolean.FALSE;
             }
         }
     }

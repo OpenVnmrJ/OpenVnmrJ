@@ -43,7 +43,7 @@ public class JbParameters
             Parameter p = (Parameter)itr.next();
             System.out.println(p.getName() + " = " + p.getValue());
             nameSort.add(p.getName().toLowerCase());
-            indexSort.put(p.getIndex(), p.getName());
+            indexSort.put(Integer.valueOf(p.getIndex()), p.getName());
         }
 
         System.out.println("\nTable in sorted order:");

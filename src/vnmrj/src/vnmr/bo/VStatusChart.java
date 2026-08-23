@@ -587,7 +587,7 @@ public class VStatusChart extends JPanel
             if (c != null)
             {
                precision = c;
-               numdigits=Integer.valueOf(c);
+               numdigits= Integer.valueOf(c).intValue();
             }
             break;
         case STATCOL:

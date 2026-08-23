@@ -2787,8 +2787,8 @@ public class Plot extends PlotBox implements Cloneable {
         long xpos = _ulx + (long)((pt.x - _xMin) * _xscale);
 
         // Draw the line to the previous point.
-        long prevx = _prevx.get(dataset);
-        long prevy = _prevy.get(dataset);
+        long prevx = _prevx.get(dataset).longValue();
+        long prevy = _prevy.get(dataset).longValue();
         // MIN_VALUE is a flag that there has been no previous x or y.
         if (pt.connected) {
             _drawLine(graphics, dataset, xpos, ypos, prevx, prevy, true);
@@ -2796,8 +2796,8 @@ public class Plot extends PlotBox implements Cloneable {
 
         // Save the current point as the "previous" point for future
         // line drawing.
-        _prevx.set(dataset, xpos);
-        _prevy.set(dataset, ypos);
+        _prevx.set(dataset, Long.valueOf(xpos));
+        _prevy.set(dataset, Long.valueOf(ypos));
 
         // Draw decorations that may be specified on a per-dataset basis
         Format fmt = _formats.get(dataset);
@@ -2846,12 +2846,12 @@ public class Plot extends PlotBox implements Cloneable {
         long ypos = _lry - (long)((pt.y - _yMin) * _yscale);
         ypos = Math.min(Integer.MAX_VALUE, Math.max(Integer.MIN_VALUE, ypos));
         y[index - offset] = (int)ypos;
-        _prevy.set(dataset, ypos);
+        _prevy.set(dataset, Long.valueOf(ypos));
 
         long xpos = _ulx + (long)((pt.x - _xMin) * _xscale);
         xpos = Math.min(Integer.MAX_VALUE, Math.max(Integer.MIN_VALUE, xpos));
         x[index - offset] = (int)xpos;
-        _prevx.set(dataset, xpos);
+        _prevx.set(dataset, Long.valueOf(xpos));
 
         return pt.connected;
     }

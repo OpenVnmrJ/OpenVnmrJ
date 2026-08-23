@@ -141,7 +141,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
         if (m_validateReplies && ok) {
             synchronized (m_expectedReplyList) {
                 int reply = JbInstrument.getReplyFor(code);
-                m_expectedReplyList.add(reply);
+                m_expectedReplyList.add(Integer.valueOf(reply));
                 if (LcMsg.isSetFor("jbio")) {
                     LcMsg.postDebug("Sent command: 0x"
                                     + Integer.toHexString(code)
@@ -406,7 +406,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
                     len = validateLength(code, len);
                 } else if (n == 1) {
                     // Bad code, but correct value is known
-                    int c = m_expectedReplyList.remove(0);
+                    int c = m_expectedReplyList.remove(0).intValue();
                     LcMsg.postError("Bad msg code from 335 PDA: expected 0x"
                                     + Integer.toHexString(c)
                                     + ", got 0x" + Integer.toHexString(code));
@@ -425,8 +425,8 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
                                             + "Got 0x"
                                             + Integer.toHexString(code)
                                             + ", but length is correct for 0x"
-                                            + Integer.toHexString(ic));
-                            code = ic;
+                                            + Integer.toHexString(ic.intValue()));
+                            code = ic.intValue();
                             m_expectedReplyList.remove(i);
                             guessed = true;
                             break;

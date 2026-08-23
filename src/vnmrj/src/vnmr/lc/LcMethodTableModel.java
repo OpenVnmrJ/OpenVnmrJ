@@ -236,7 +236,7 @@ public class LcMethodTableModel implements TableModel {
      */
     public Object getValueAt(int rowIndex, int columnIndex) {
         if (columnIndex == 0) {
-            return rowIndex;
+            return Integer.valueOf(rowIndex);
         } else {
             LcMethodParameter par = getParameterByIndex(columnIndex);
             if (par != null) {

@@ -722,7 +722,7 @@ public class AS430Control implements AutoSampler {
         setConfirmation(what, value);
         sendToMacro(what, value);
         if (value == -NACK || value == -NACK0) {
-            String msg = m_pfcNames.get(what);
+            String msg = m_pfcNames.get(Integer.valueOf(what));
             if (msg == null) {
                 msg = "function #" + what;
             }
@@ -987,7 +987,7 @@ public class AS430Control implements AutoSampler {
     public void setMacro(ButtonIF vnmrIf, int id, String macro) {
         m_vnmrIf = vnmrIf;
         if (macro == null || macro.length() == 0) {
-            m_macroTable.remove(id);
+            m_macroTable.remove(Integer.valueOf(id));
         } else {
             String pfx = macro;
             String sfx = "";
@@ -1001,7 +1001,7 @@ public class AS430Control implements AutoSampler {
                     sfx = macro.substring(idx);
                 }
             }
-            m_macroTable.put(id, new MacroFmt(pfx, sfx, valFlag));
+            m_macroTable.put(Integer.valueOf(id), new MacroFmt(pfx, sfx, valFlag));
         }
     }
 
@@ -1009,7 +1009,7 @@ public class AS430Control implements AutoSampler {
         Messages.postDebug("430Comm",
                            "sendToMacro(" + what + ", " + value + ")");
 
-        MacroFmt macro = (MacroFmt)m_macroTable.get(what);
+        MacroFmt macro = (MacroFmt)m_macroTable.get(Integer.valueOf(what));
         if (macro != null && m_vnmrIf != null) {
             String str = macro.prefix;
             if (macro.valueFlag) {
@@ -1034,7 +1034,7 @@ public class AS430Control implements AutoSampler {
             return;
         }
         int key = iWhat * 10000 + iValue;
-        String msg = m_statusMessages.get(key);
+        String msg = m_statusMessages.get(Integer.valueOf(key));
         if (msg == null) {
             msg = "" + iValue;
         }
@@ -1074,7 +1074,7 @@ public class AS430Control implements AutoSampler {
         int size = entries.length;
         for (int i = 0; i < size; i++) {
             int key = 10000 * type + ((Integer)entries[i][0]).intValue();
-            m_statusMessages.put(key, (String)entries[i][1]);
+            m_statusMessages.put(Integer.valueOf(key), (String)entries[i][1]);
         }
     }
 
@@ -1094,7 +1094,7 @@ public class AS430Control implements AutoSampler {
     protected int waitForConfirmation(int key) {
         int result = -1;
         while (result == -1) {
-            Integer nResult = m_resultTable.remove(key);
+            Integer nResult = m_resultTable.remove(Integer.valueOf(key));
             if (nResult == null) {
                 // TODO: (Java 5) Use semaphore
                 try {
@@ -1102,7 +1102,7 @@ public class AS430Control implements AutoSampler {
                 } catch (InterruptedException ie) {
                 }
             } else {
-                result = nResult;
+                result = nResult.intValue();
             }
         }
         return result;

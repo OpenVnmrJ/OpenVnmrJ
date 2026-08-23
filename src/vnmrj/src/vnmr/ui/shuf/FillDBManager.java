@@ -5886,7 +5886,7 @@ public class FillDBManager {
                                 // If protocol AND param is sfrq, then we
                                 // want to calc a field in Tesla and add it
                                 if(objType.equals(Shuf.DB_PROTOCOL) && param.equals("sfrq")) {
-                                    double field = convertFreqToTesla(tok.sval);
+                                    double field = convertFreqToTesla(tok.sval).doubleValue();
                                     valuesAsString.add(Double.toString(field));
                                     addRowToDBSetAttr(objType, "field", dataType,
                                             valuesAsString, dhostFullpath,
@@ -9098,7 +9098,7 @@ return list;
             field = 18.8;
 
 
-        return field;
+        return Double.valueOf(field);
     }
 
 

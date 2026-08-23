@@ -197,7 +197,7 @@ public class SQActionRenderer extends VObj {
         try {
             if (m_model != null) {
                 String str = m_model.getAttribute(ATTR_PROGRESS);
-                progress = Double.valueOf(str);
+                progress = Double.valueOf(str).doubleValue();
             }
         } catch (NumberFormatException nfe) {
         }

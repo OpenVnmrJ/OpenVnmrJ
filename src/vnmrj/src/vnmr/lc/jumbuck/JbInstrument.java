@@ -321,8 +321,8 @@ public class JbInstrument implements JbDefs {
     }
 
     public static int getReplyFor(int command) {
-        Integer itmp = sm_REPLIES.get(command);
-        return (itmp == null) ? ID_RSP_UNKNOWN_COMMAND : itmp;
+        Integer itmp = sm_REPLIES.get(Integer.valueOf(command));
+        return (itmp == null) ? ID_RSP_UNKNOWN_COMMAND : itmp.intValue();
     }
 
 

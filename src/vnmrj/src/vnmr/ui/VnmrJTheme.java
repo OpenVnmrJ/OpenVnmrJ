@@ -268,7 +268,7 @@ public class VnmrJTheme extends OceanTheme {
         
         Object entryBorder = new UIDefaults.ProxyLazyValue(
                 "javax.swing.plaf.BorderUIResource$BevelBorderUIResource",
-                new Object[] {javax.swing.border.BevelBorder.LOWERED});
+                new Object[] {Integer.valueOf(javax.swing.border.BevelBorder.LOWERED)});
 
         Object[] defaults = new Object[] {
                 "ToolTip.background",                   DEFAULTBG,

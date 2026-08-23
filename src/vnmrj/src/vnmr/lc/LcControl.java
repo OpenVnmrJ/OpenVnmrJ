@@ -433,7 +433,7 @@ public class LcControl
                 Messages.postError("Unknown \"lccmd\": " + str);
                 return false;
             } else {
-                return execCommand(cmd, nCmd, tok);
+                return execCommand(cmd, nCmd.intValue(), tok);
             }
         }
         return false;
@@ -1830,11 +1830,11 @@ public class LcControl
         Object oState = state.get("state");
         double dflow = m_currentMethod.getInitialFlow(); // mL/min
         Messages.postDebug("InitialFlow=" + dflow);
-        Integer flow = (int)Math.round(1000 * dflow); // uL/min
+        Integer flow = Integer.valueOf((int) Math.round(1000 * dflow)); // uL/min
         double[] pcts = m_currentMethod.getInitialPercents();
         Double[] percents = new Double[pcts.length];
         for (int i = 0; i < pcts.length; i++) {
-            percents[i] = pcts[i];
+            percents[i] = Double.valueOf(pcts[i]);
         }
         Object pctA = state.get("percentA");
         Object pctB = state.get("percentB");
@@ -1853,7 +1853,7 @@ public class LcControl
                 && percents[1].equals(pctB)
                 && percents[2].equals(pctC)
                 && flow.equals(state.get("flow"))
-                && (oState.equals(PUMP_READY) || oState.equals(PUMP_RUNNING)));
+                && (oState.equals(Integer.valueOf(PUMP_READY)) || oState.equals(Integer.valueOf(PUMP_RUNNING))));
     }
 
     private void waitForPump(StringTokenizer toker) {
@@ -3139,12 +3139,12 @@ public class LcControl
             m_percents = new Double[3];
             for (int i = 0; i < 3; i++) {
                 if (i < percents.length) {
-                    m_percents[i] = percents[i];
+                    m_percents[i] = Double.valueOf(percents[i]);
                 } else {
-                    m_percents[i] = 0.0;
+                    m_percents[i] = Double.valueOf(0.0);
                 }
             }
-            m_flow = (int)Math.round(1000 * flow); // uL / min
+            m_flow = Integer.valueOf((int) Math.round(1000 * flow)); // uL / min
             m_command = command;
         }
 
@@ -3163,7 +3163,7 @@ public class LcControl
                 && m_percents[1].equals(state.get("percentB"))
                 && m_percents[2].equals(state.get("percentC"))
                 && m_flow.equals(state.get("flow"))
-                && (oState.equals(PUMP_READY) || oState.equals(PUMP_RUNNING)))
+                && (oState.equals(Integer.valueOf(PUMP_READY)) || oState.equals(Integer.valueOf(PUMP_RUNNING))))
             {
                 sendToVnmr(m_command);
                 m_gpib.removePumpStatusListener(this);
