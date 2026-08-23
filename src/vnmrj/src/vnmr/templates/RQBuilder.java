@@ -27,7 +27,6 @@ import javax.swing.event.*;
 import javax.swing.table.TableColumn;
 import javax.swing.table.DefaultTableCellRenderer;
 import org.w3c.dom.*;
-import com.sun.xml.tree.*;
 import java.lang.Integer;
 import javax.swing.DefaultCellEditor;
 import javax.swing.table.TableCellRenderer;

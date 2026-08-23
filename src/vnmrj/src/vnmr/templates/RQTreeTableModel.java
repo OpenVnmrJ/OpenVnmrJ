@@ -25,7 +25,6 @@ import vnmr.util.*;
 import javax.swing.tree.*;
 import javax.swing.event.*;
 import org.w3c.dom.*;
-import com.sun.xml.tree.*;
 import java.lang.Integer;
 
 import java.awt.font.*;
