@@ -1,0 +1,92 @@
+// Run 'gradle wrapper' once if you want gradlew scripts.
+// gradle build
+// gradle rewriteRun
+//
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'org.openrewrite.rewrite' version '7.39.0'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+    url = 'https://artifacts.codegenomeproject.org/maven'
+    credentials {
+      // https://codegenomeproject.org/token
+      username = 'USERNAME'
+      password = 'TOKEN'
+     }
+    }
+}
+
+rewrite {
+  // https://docs.openrewrite.org/recipes/java/
+  // gradle rewriteDiscover
+  activeRecipe(
+      //'org.openrewrite.java.OrderImports',
+      //'org.openrewrite.recipes.InlineDeprecatedMethods',
+      'org.openrewrite.staticanalysis.PrimitiveWrapperClassConstructorToValueOf',
+      'org.openrewrite.java.cleanup.ReplaceDeprecatedRuntimeExecMethods',
+      'org.openrewrite.java.migrate.net.URLConstructorToURICreate',
+      'org.openrewrite.java.migrate.net.URLConstructorsToNewURI',
+      'org.openrewrite.java.migrate.io.FileToURL',
+      'org.openrewrite.staticanalysis.NoEmptyCollectionWithRawType',
+      'org.openrewrite.java.migrate.lang.var.UseVarForGenericsConstructors',
+  )
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = [
+                'src',
+            ]
+        }
+        resources {
+            srcDirs = ['src']
+            include '**/*.properties'
+        }
+    }
+}
+
+dependencies {
+    // OpenGL / JOGL
+    //compileOnly 'org.jogamp.gluegen:gluegen-rt-main:2.4.0'
+    //compileOnly 'org.jogamp.jogl:jogl-all-main:2.4.0'
+    compileOnly files('gluegen-rt.jar', 'jogl-all.jar')
+
+    // PostgreSQL JDBC
+    compileOnly 'org.postgresql:postgresql:42.7.13'
+
+    // JTattoo look and feel
+    compileOnly 'com.jtattoo:JTattoo:1.6.13'
+
+    // JavaHelp
+    compileOnly 'javax.help:javahelp:2.0.05'
+
+    // XML
+    compileOnly files('xml.jar')
+
+    // CORBA omgapi
+    compileOnly 'org.glassfish.corba:glassfish-corba-omgapi:5.0.2'
+
+    // LC
+    compileOnly files('lcaccess.jar', 'msaccess.jar', 'pdaaccess.jar' )
+
+    //
+    rewrite(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
+    rewrite("org.openrewrite.recipe:rewrite-static-analysis")
+    rewrite("org.openrewrite.recipe:rewrite-migrate-java")
+    rewrite("org.openrewrite.recipe:rewrite-rewrite")
+    rewrite("org.openrewrite.recipe:rewrite-third-party")
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xmaxerrs', '-1', '-Xlint:deprecation', '-Xlint:unchecked']
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
