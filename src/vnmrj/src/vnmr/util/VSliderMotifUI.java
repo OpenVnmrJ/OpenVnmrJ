@@ -15,14 +15,15 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.plaf.*;
+import javax.swing.Timer.*;
 
 import javax.swing.plaf.basic.BasicSliderUI;
-// import com.sun.java.swing.plaf.motif.MotifSliderUI;
+import com.sun.java.swing.plaf.motif.MotifSliderUI;
 
 /**
  * Motif VSlider
  */
-public class VSliderMotifUI extends BasicSliderUI implements VSliderUI {
+public class VSliderMotifUI extends MotifSliderUI implements VSliderUI {
     private sliderMouseListener ml;
     private boolean inThumb = false;
     private int smallStep = 1;
@@ -179,8 +180,8 @@ public class VSliderMotifUI extends BasicSliderUI implements VSliderUI {
 	    }
 	    button = 1;
 	    moveStep = smallStep;
-	    int modify = e.getModifiersEx();
-	    if ((modify & InputEvent.getMaskForButton(2)) != 0) {
+	    int modify = e.getModifiers();
+	    if ((modify & InputEvent.BUTTON2_MASK) != 0) {
 		button = 2;
 	        switch ( slider.getOrientation() ) {
               	    case JSlider.VERTICAL:
@@ -195,7 +196,7 @@ public class VSliderMotifUI extends BasicSliderUI implements VSliderUI {
 		inThumb = true;
 		return;
 	    }
-	    if ((modify & InputEvent.getMaskForButton(3)) != 0) {
+	    if ((modify & InputEvent.BUTTON2_MASK) != 0) {
 		button = 3;
 	        moveStep = largeStep;
 	    }
