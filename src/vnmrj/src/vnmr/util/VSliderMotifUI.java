@@ -196,7 +196,7 @@ public class VSliderMotifUI extends MotifSliderUI implements VSliderUI {
 		inThumb = true;
 		return;
 	    }
-	    if ((modify & InputEvent.BUTTON2_MASK) != 0) {
+	    if ((modify & InputEvent.BUTTON3_MASK) != 0) {
 		button = 3;
 	        moveStep = largeStep;
 	    }
