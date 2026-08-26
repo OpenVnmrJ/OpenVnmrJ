@@ -29,7 +29,7 @@ public interface JbDefs {
     public static final Integer FORTY = Integer.valueOf(40);
     public static final Integer MINUS_ONE = Integer.valueOf(-1);
 
-    public static final Float F_ZERO = new Float(0);
+    public static final Float F_ZERO = Float.valueOf(0);
 
 
     // Codes for 335 commands

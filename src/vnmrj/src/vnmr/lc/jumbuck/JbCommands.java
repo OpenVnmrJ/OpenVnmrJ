@@ -658,7 +658,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
             pars.set(name, ival);
             nbytes -= wbytes;
         } else if (oval instanceof Float) {
-            Float fval = new Float(in.readFloat());
+            Float fval = Float.valueOf(in.readFloat());
             if (dbg) {
                 LcMsg.postDebug("receiveMessage: "
                                 + fval + "\t (" + name

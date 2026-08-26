@@ -255,15 +255,15 @@ public class VnmrJTheme extends OceanTheme {
                 "javax.swing.plaf.BorderUIResource$LineBorderUIResource",
                 new Object[] { FOCUS });
         java.util.List buttonGradient = Arrays.asList(
-                 new Object[] {new Float(.3f), new Float(0.2f),
+                 new Object[] {Float.valueOf(.3f), Float.valueOf(0.2f),
                          GRADIENT1, CRTLHILIGHT , GRADIENT2 });
 
         java.util.List checkBoxGradient = Arrays.asList(
-                 new Object[] {new Float(.3f), new Float(0.2f),
+                 new Object[] {Float.valueOf(.3f), Float.valueOf(0.2f),
                          ENTRYBG, ENTRYBG , ENTRYBG });
 
         java.util.List sliderGradient = Arrays.asList(new Object[] {
-                new Float(.3f), new Float(.2f),
+                Float.valueOf(.3f), Float.valueOf(.2f),
                 GRADIENT1, CRTLHILIGHT, GRADIENT2 });
         
         Object entryBorder = new UIDefaults.ProxyLazyValue(

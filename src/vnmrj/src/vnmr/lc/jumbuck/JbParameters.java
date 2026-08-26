@@ -120,7 +120,7 @@ public class JbParameters
         Object newVal = null;
         try {
             if (oldVal instanceof Float) {
-                newVal = new Float(value);
+                newVal = Float.valueOf(value);
             } else if (oldVal instanceof Integer) {
                 newVal = Integer.valueOf(value);
             } else if (oldVal instanceof String) {
@@ -149,7 +149,7 @@ public class JbParameters
     }
 
     public boolean set(String name, float value) {
-        return set(name, new Float(value));
+        return set(name, Float.valueOf(value));
     }
 
     /**
@@ -315,12 +315,12 @@ public class JbParameters
         {"Bandwidth Filter Size", Integer.valueOf(-1)}, // Req for user mode
         // Method Lines
         {"Run Time",                   ZERO},
-        {"Param Wavelength 1",         new Float(190)},
-        {"Param Wavelength 2",         new Float(395)},
+        {"Param Wavelength 1",         Float.valueOf(190)},
+        {"Param Wavelength 2",         Float.valueOf(395)},
         {"Param Autozero 1",           ZERO},
         {"Param Autozero 2",           ZERO},
-        {"Param Analog 1 Attn",        new Float(2)},
-        {"Param Analog 2 Attn",        new Float(2)},
+        {"Param Analog 1 Attn",        Float.valueOf(2)},
+        {"Param Analog 2 Attn",        Float.valueOf(2)},
         {"Param Output Relay 1",       ZERO},
         {"Param Output Relay 2",       ZERO},
         {"Param Output Relay 3",       ZERO},
@@ -330,7 +330,7 @@ public class JbParameters
         {"Param Peaksense S N Ratio",  TWO},
         {"Param Time Slice Trigger",   TIME_SLICE_TRIGGER_OFF},
         {"Param Time Slice Period", Integer.valueOf(1000)}, // ms
-        {"Param Level Sense Threshold", new Float(0.1)}, // AU
+        {"Param Level Sense Threshold", Float.valueOf(0.1)}, // AU
         {"Param Method End",           END_RUN_HOLD},
 
         // These codes should be considered read only
@@ -359,7 +359,7 @@ public class JbParameters
         {"Lamp",                       LAMP_BOTH},
         {"Lamp Action",                LAMP_OFF},
         // Flow Cell
-        {"CellRatio",                  new Float(0)},
+        {"CellRatio",                  Float.valueOf(0)},
         {"CellType",                   CELL_TYPE_4x0},
         // Set IP
         {"SetFixedIP",                 JbControl.intIpAddress("172.16.0.60")},

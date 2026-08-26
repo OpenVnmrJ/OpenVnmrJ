@@ -983,10 +983,10 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
         Rectangle r = getBounds();
         float f1 = (float) ((float) controlX / (float) r.width);
         float f2 = (float) ((float) controlY / (float) r.height);
-        hs.put("paramLocX", new Float(f1));
-        hs.put("paramLocY", new Float(f2));
-        hs.put("paramRx", new Float(paramRx));
-        hs.put("paramRy", new Float(paramRy));
+        hs.put("paramLocX", Float.valueOf(f1));
+        hs.put("paramLocY", Float.valueOf(f2));
+        hs.put("paramRx", Float.valueOf(paramRx));
+        hs.put("paramRy", Float.valueOf(paramRy));
         str = paramPinPan.getStatus(); 
         if (str != null)
             hs.put("paramPin.status", str);

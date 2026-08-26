@@ -520,8 +520,8 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
                pobj = (PushpinIF) obj;
                name = "tool."+id+"."+pobj.getName()+".";
                hs.put(name+"dividerLoc", Integer.valueOf(pobj.getDividerLoc()));
-               hs.put(name+"refY", new Float(pobj.getRefY()));
-               hs.put(name+"refH", new Float(pobj.getRefH()));
+               hs.put(name+"refY", Float.valueOf(pobj.getRefY()));
+               hs.put(name+"refH", Float.valueOf(pobj.getRefH()));
                key = pobj.getStatus();
                if (key != null)
                   hs.put(name+"status", key);

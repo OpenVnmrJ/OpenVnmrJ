@@ -432,9 +432,9 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
             if (obj != null && (obj instanceof PushpinIF)) {
                 pobj = (PushpinIF) obj;
                 name = "tabTool."+id+"."+pobj.getName()+".";
-                hs.put(name+"refY", new Float(pobj.getRefY()));
-                hs.put(name+"refX", new Float(pobj.getRefX()));
-                hs.put(name+"refH", new Float(pobj.getRefH()));
+                hs.put(name+"refY", Float.valueOf(pobj.getRefY()));
+                hs.put(name+"refX", Float.valueOf(pobj.getRefX()));
+                hs.put(name+"refH", Float.valueOf(pobj.getRefH()));
                 key = "open";
                 if (pobj.isHide())
                     key = "hide";

@@ -868,7 +868,7 @@ public class ServicePopup extends JDialog implements ActionListener,
 
          try {
              if (s.length() > 0)
-                 retVal = new Float(s);
+                 retVal = Float.valueOf(s);
          }
          catch (NumberFormatException e0) {
              retVal = null;
@@ -877,7 +877,7 @@ public class ServicePopup extends JDialog implements ActionListener,
              return retVal;
 
          try {
-             retVal = new Float(def);
+             retVal = Float.valueOf(def);
          }
          catch (NumberFormatException e1) {
               retVal = null;
@@ -1059,8 +1059,8 @@ public class ServicePopup extends JDialog implements ActionListener,
             ms = MediaSize.NA.LETTER;
         double w = VjPaperMedia.getPixelWidth(ms);
         double h = VjPaperMedia.getPixelHeight(ms);
-        hs.put(VjPrintDef.PRINT_WIDTH, new Float(w));
-        hs.put(VjPrintDef.PRINT_HEIGHT, new Float(h));
+        hs.put(VjPrintDef.PRINT_WIDTH, Float.valueOf(w));
+        hs.put(VjPrintDef.PRINT_HEIGHT, Float.valueOf(h));
     }
 
     @SuppressWarnings("unchecked")
@@ -1078,8 +1078,8 @@ public class ServicePopup extends JDialog implements ActionListener,
         String s;
         Float fval;
         Point pt = this.getLocation();
-        hs.put(VjPrintDef.PRINT_LOCX, new Float((float)pt.x));
-        hs.put(VjPrintDef.PRINT_LOCY, new Float((float)pt.y));
+        hs.put(VjPrintDef.PRINT_LOCX, Float.valueOf((float)pt.x));
+        hs.put(VjPrintDef.PRINT_LOCY, Float.valueOf((float)pt.y));
         hs.put(VjPrintDef.DESTIONATION, VjPrintDef.PRINTER);
         hs.put(VjPrintDef.PRINT_MARGIN_UNIT, VjPrintDef.MM);
         hs.put(VjPrintDef.FILE_MARGIN_UNIT, VjPrintDef.MM);
@@ -1146,13 +1146,13 @@ public class ServicePopup extends JDialog implements ActionListener,
         }
         if (leftMargin != null) {
             fval = (Float)leftMargin.getValue();
-            hs.put(VjPrintDef.PRINT_LEFT_MARGIN, new Float(fval.floatValue()));
+            hs.put(VjPrintDef.PRINT_LEFT_MARGIN, Float.valueOf(fval.floatValue()));
             fval = (Float)rightMargin.getValue();
-            hs.put(VjPrintDef.PRINT_RIGHT_MARGIN, new Float(fval.floatValue()));
+            hs.put(VjPrintDef.PRINT_RIGHT_MARGIN, Float.valueOf(fval.floatValue()));
             fval = (Float)topMargin.getValue();
-            hs.put(VjPrintDef.PRINT_TOP_MARGIN, new Float(fval.floatValue()));
+            hs.put(VjPrintDef.PRINT_TOP_MARGIN, Float.valueOf(fval.floatValue()));
             fval = (Float)bottomMargin.getValue();
-            hs.put(VjPrintDef.PRINT_BOTTOM_MARGIN, new Float(fval.floatValue()));
+            hs.put(VjPrintDef.PRINT_BOTTOM_MARGIN, Float.valueOf(fval.floatValue()));
         }
         s = VjPrintDef.NORMAL_RES;
         if (rbDraft != null) {
@@ -1168,7 +1168,7 @@ public class ServicePopup extends JDialog implements ActionListener,
             if (f < 1.0f)
                 f = 1.0f;
         }
-        hs.put(VjPrintDef.PRINT_COPIES, new Float(f));
+        hs.put(VjPrintDef.PRINT_COPIES, Float.valueOf(f));
         hs.put(VjPrintDef.PRINT_FORMAT, getFormat());
         saveMedia();
     }
@@ -2025,8 +2025,8 @@ public class ServicePopup extends JDialog implements ActionListener,
             format.setParseIntegerOnly(false);
             format.setDecimalSeparatorAlwaysShown(true);
             NumberFormatter nf = new NumberFormatter(format);
-            nf.setMinimum(new Float(0.0f));
-            nf.setMaximum(new Float(999.0f));
+            nf.setMinimum(Float.valueOf(0.0f));
+            nf.setMaximum(Float.valueOf(999.0f));
             nf.setAllowsInvalid(true);
             nf.setCommitsOnValidEdit(true);
 
@@ -2097,9 +2097,9 @@ public class ServicePopup extends JDialog implements ActionListener,
 
             Float fv;
             if (units == MediaPrintableArea.MM)
-                fv = new Float(20.0f);
+                fv = Float.valueOf(20.0f);
             else
-                fv = new Float(1.0f);
+                fv = Float.valueOf(1.0f);
             leftMargin.setValue(fv);
             rightMargin.setValue(fv);
             topMargin.setValue(fv);
@@ -2480,10 +2480,10 @@ public class ServicePopup extends JDialog implements ActionListener,
             rmVal = mediaSize.getX(units) - pax - paw;
             bmVal = mediaSize.getY(units) - pay - pah;
 
-            lmObj = new Float(lmVal);
-            rmObj = new Float(rmVal);
-            tmObj = new Float(tmVal);
-            bmObj = new Float(bmVal);
+            lmObj = Float.valueOf(lmVal);
+            rmObj = Float.valueOf(rmVal);
+            tmObj = Float.valueOf(tmVal);
+            bmObj = Float.valueOf(bmVal);
 
             /* Now we know the values to use, we need to assign them
              * to the fields appropriate for the orientation.
