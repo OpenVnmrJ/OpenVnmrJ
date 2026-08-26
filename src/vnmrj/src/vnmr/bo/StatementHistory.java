@@ -738,10 +738,10 @@ public class StatementHistory  implements  Serializable {
 
         curStatement = getCurrentStatement();
 
-        curStatement.put("colWidth0", new Double(colWidth0));
-        curStatement.put("colWidth1", new Double(colWidth1));
-        curStatement.put("colWidth2", new Double(colWidth2));
-        curStatement.put("colWidth3", new Double(colWidth3));
+        curStatement.put("colWidth0", Double.valueOf(colWidth0));
+        curStatement.put("colWidth1", Double.valueOf(colWidth1));
+        curStatement.put("colWidth2", Double.valueOf(colWidth2));
+        curStatement.put("colWidth3", Double.valueOf(colWidth3));
  
     }
 } // class StatementHistory

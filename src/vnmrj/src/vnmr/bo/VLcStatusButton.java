@@ -685,14 +685,14 @@ public class VLcStatusButton extends TwoLineButton
     {Util.getLabel("mlFalse"), Util.getLabel("mlTrue")};
 
     private final static Object[][] attributes = {
-        {new Integer(TITLE),     Util.getLabel("lcTITLE"),},
-        {new Integer(STATCOL),   Util.getLabel(STATCOL),"menu",status_color},
-        {new Integer(STATKEY),   Util.getLabel(STATKEY),"menu",status_key},
-        {new Integer(PANEL_NAME),Util.getLabel("lcPANEL_NAME")},
-        {new Integer(VALUES),    Util.getLabel("lcVALUES")},
-        {new Integer(SHOWMAX),   Util.getLabel("lcSHOWMAX"),"menu", true_false},
-        {new Integer(COLOR1),    Util.getLabel("lcCOLOR1"),"color"},
-        {new Integer(COLOR2),    Util.getLabel("lcCOLOR2"),"color"},
+        {Integer.valueOf(TITLE),     Util.getLabel("lcTITLE"),},
+        {Integer.valueOf(STATCOL),   Util.getLabel(STATCOL),"menu",status_color},
+        {Integer.valueOf(STATKEY),   Util.getLabel(STATKEY),"menu",status_key},
+        {Integer.valueOf(PANEL_NAME),Util.getLabel("lcPANEL_NAME")},
+        {Integer.valueOf(VALUES),    Util.getLabel("lcVALUES")},
+        {Integer.valueOf(SHOWMAX),   Util.getLabel("lcSHOWMAX"),"menu", true_false},
+        {Integer.valueOf(COLOR1),    Util.getLabel("lcCOLOR1"),"color"},
+        {Integer.valueOf(COLOR2),    Util.getLabel("lcCOLOR2"),"color"},
     };
 
     class ChartFrame extends JDialog {

@@ -546,9 +546,9 @@ public class VLcTableItem extends VObj
         } else if (m_strType.equals(DOUBLE_TYPE)) {
             Double val;
             try {
-                val = new Double(((JTextField)m_valueItem).getText());
+                val = Double.valueOf(((JTextField)m_valueItem).getText());
             } catch (NumberFormatException nfe) {
-                val = new Double(0);
+                val = Double.valueOf(0);
             }
             return val;
         } else if (m_strType.equals(BOOLEAN_TYPE)) {
@@ -573,15 +573,15 @@ public class VLcTableItem extends VObj
         = {"yes", "no", "always", "never", "invisible"};
 
     private final static Object[][] attributes = {
-        {new Integer(LABEL),    "Label of item:"},
-        {new Integer(VARIABLE), "Vnmr variables:"},
-        {new Integer(SUBTYPE),  "Type:", "menu", types},
-        {new Integer(SETVAL),   "Value:"},
-        {new Integer(TABLED),   "Put in table:", "menu", tableOptions},
-        {new Integer(SIZE1),    "Label Width:"},
-        {new Integer(SIZE2),    "Entry Width:"},
-        {new Integer(UNITS),    "Units:"},
-        {new Integer(LAYOUT),   "Layout hints:"},
+        {Integer.valueOf(LABEL),    "Label of item:"},
+        {Integer.valueOf(VARIABLE), "Vnmr variables:"},
+        {Integer.valueOf(SUBTYPE),  "Type:", "menu", types},
+        {Integer.valueOf(SETVAL),   "Value:"},
+        {Integer.valueOf(TABLED),   "Put in table:", "menu", tableOptions},
+        {Integer.valueOf(SIZE1),    "Label Width:"},
+        {Integer.valueOf(SIZE2),    "Entry Width:"},
+        {Integer.valueOf(UNITS),    "Units:"},
+        {Integer.valueOf(LAYOUT),   "Layout hints:"},
     };
 
     public void addLayoutComponent(String name, Component comp) {}

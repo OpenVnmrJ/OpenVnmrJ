@@ -805,11 +805,11 @@ public class VStatusChart extends JPanel
     public Object[][] getAttributes()  { return attributes; }
 
     private final static Object[][] attributes = {
-        {new Integer(TITLE),     Util.getLabel("lcTITLE")},
-        {new Integer(STATCOL),   Util.getLabel(STATCOL),"menu",status_color},
-        {new Integer(STATKEY),   Util.getLabel(STATKEY)},
-        {new Integer(VALUES),    Util.getLabel("lcVALUES")},
-        {new Integer(SHOWMAX),   Util.getLabel("lcSHOWMAX"), "menu", true_false},
+        {Integer.valueOf(TITLE),     Util.getLabel("lcTITLE")},
+        {Integer.valueOf(STATCOL),   Util.getLabel(STATCOL),"menu",status_color},
+        {Integer.valueOf(STATKEY),   Util.getLabel(STATKEY)},
+        {Integer.valueOf(VALUES),    Util.getLabel("lcVALUES")},
+        {Integer.valueOf(SHOWMAX),   Util.getLabel("lcSHOWMAX"), "menu", true_false},
     };
    
 

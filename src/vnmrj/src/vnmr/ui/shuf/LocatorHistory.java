@@ -517,7 +517,7 @@ public class LocatorHistory {
 	    history = (StatementHistory)statementHistory.get(keysArr[i]);
 	    bufferList.add(history.getBuffer());
 	    // Convert int to Integer to put into ArrayList
-	    bufPointerList.add(new Integer(history.getBufPointer()));
+	    bufPointerList.add(Integer.valueOf(history.getBufPointer()));
 	    objTypeList.add(keysArr[i]);
 	}
 

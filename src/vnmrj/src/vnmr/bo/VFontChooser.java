@@ -57,12 +57,12 @@ implements VObjIF, VObjDef, VEditIF, ActionListener,PropertyChangeListener
     private String vnmrCmd = null;
     
     private  Object[][] attributes = {
-	{new Integer(VARIABLE),		Util.getLabel(VARIABLE)},
-	{new Integer(SETVAL),		Util.getLabel(SETVAL)},
-	{new Integer(KEYSTR),		"Font value"},
-	{new Integer(SHOW),			Util.getLabel(SHOW)},
-	{new Integer(CMD),			Util.getLabel(CMD)},
-	{new Integer(DISPLAY),Util.getLabel("fcDISPLAY"),"menu",(types=DisplayOptions.getShowTypes())},};
+	{Integer.valueOf(VARIABLE),		Util.getLabel(VARIABLE)},
+	{Integer.valueOf(SETVAL),		Util.getLabel(SETVAL)},
+	{Integer.valueOf(KEYSTR),		"Font value"},
+	{Integer.valueOf(SHOW),			Util.getLabel(SHOW)},
+	{Integer.valueOf(CMD),			Util.getLabel(CMD)},
+	{Integer.valueOf(DISPLAY),Util.getLabel("fcDISPLAY"),"menu",(types=DisplayOptions.getShowTypes())},};
 	 
     public VFontChooser(SessionShare ss, ButtonIF vif, String typ) {
     	this.sshare = ss;

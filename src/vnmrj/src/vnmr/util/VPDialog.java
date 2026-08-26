@@ -187,16 +187,16 @@ public class VPDialog extends ModelessPopup implements ActionListener
                     if (strVpNum != null && strVpNum.equals("1"))
                         strComp = ">";
                     HashMapAttrs hmAttrs = new HashMapAttrs(strVpNum);
-                    hmAttrs.put(new Integer(VObjDef.ICON), strLabel);
-					hmAttrs.put(new Integer(VObjDef.SUBTYPE), Global.VIEWPORT+strVpNum);
-                 //  hmAttrs.put(new Integer(VObjDef.CMD), "M@vplayout"+strVpNum);
-                    hmAttrs.put(new Integer(VObjDef.CMD), "vnmrjcmd('vpactive "+strVpNum+"')");
-					hmAttrs.put(new Integer(VObjDef.SETVAL), "$VALUE=jviewportlabel["+
+                    hmAttrs.put(Integer.valueOf(VObjDef.ICON), strLabel);
+					hmAttrs.put(Integer.valueOf(VObjDef.SUBTYPE), Global.VIEWPORT+strVpNum);
+                 //  hmAttrs.put(Integer.valueOf(VObjDef.CMD), "M@vplayout"+strVpNum);
+                    hmAttrs.put(Integer.valueOf(VObjDef.CMD), "vnmrjcmd('vpactive "+strVpNum+"')");
+					hmAttrs.put(Integer.valueOf(VObjDef.SETVAL), "$VALUE=jviewportlabel["+
                                                               strVpNum+"]");
-                    hmAttrs.put(new Integer(VObjDef.SHOW), "if jviewports[1]"+strComp+
+                    hmAttrs.put(Integer.valueOf(VObjDef.SHOW), "if jviewports[1]"+strComp+
                                                            strVpNum+" then $VALUE=1 " +
                                                            "else $VALUE=0 endif");
-					hmAttrs.put(new Integer(VObjDef.VARIABLE), "jviewports jviewportlabel");
+					hmAttrs.put(Integer.valueOf(VObjDef.VARIABLE), "jviewports jviewportlabel");
 					m_aListLabel.add(hmAttrs);
 				}
             }

@@ -157,16 +157,16 @@ public class VCaretEntry extends JTextField
 
     /** The array of the attributes that are displayed in the edit template.*/
     private final static Object[][] m_attributes = {
-	{new Integer(VARIABLE),	"Vnmr variables:    "},
-	{new Integer(SETVAL),   "Text query:"},
-	{new Integer(CMD),      "Text command:"},
-	{new Integer(SETVAL2),  "Caret query:"},
-	{new Integer(CMD2),     "Caret command:"},
-	{new Integer(SHOW),	    "Enable condition:"},
-	{new Integer(NUMDIGIT), "Decimal Places:"},
-	{new Integer(BGCOLOR),  "Background color:","color"},
-	{new Integer(COLOR2),   "Caret color:","color"},
-	{new Integer(DISABLE),  "Disable style:", "menu", m_arrStrDisAbl}
+	{Integer.valueOf(VARIABLE),	"Vnmr variables:    "},
+	{Integer.valueOf(SETVAL),   "Text query:"},
+	{Integer.valueOf(CMD),      "Text command:"},
+	{Integer.valueOf(SETVAL2),  "Caret query:"},
+	{Integer.valueOf(CMD2),     "Caret command:"},
+	{Integer.valueOf(SHOW),	    "Enable condition:"},
+	{Integer.valueOf(NUMDIGIT), "Decimal Places:"},
+	{Integer.valueOf(BGCOLOR),  "Background color:","color"},
+	{Integer.valueOf(COLOR2),   "Caret color:","color"},
+	{Integer.valueOf(DISABLE),  "Disable style:", "menu", m_arrStrDisAbl}
     };
 
     /**

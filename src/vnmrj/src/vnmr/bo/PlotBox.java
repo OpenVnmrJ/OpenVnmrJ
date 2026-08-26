@@ -151,7 +151,7 @@ public class PlotBox extends JPanel implements Printable {
             _xticks = new Vector<Double>();
             _xticklabels = new Vector<String>();
         }
-        _xticks.addElement(new Double(position));
+        _xticks.addElement(Double.valueOf(position));
         _xticklabels.addElement(label);
     }
 
@@ -168,7 +168,7 @@ public class PlotBox extends JPanel implements Printable {
             _yticks = new Vector<Double>();
             _yticklabels = new Vector<String>();
         }
-        _yticks.addElement(new Double(position));
+        _yticks.addElement(Double.valueOf(position));
         _yticklabels.addElement(label);
     }
 
@@ -2702,8 +2702,8 @@ public class PlotBox extends JPanel implements Printable {
                 String min = (line.substring(7, comma)).trim();
                 String max = (line.substring(comma+1)).trim();
                 try {
-                    Double dmin = new Double(min);
-                    Double dmax = new Double(max);
+                    Double dmin = Double.valueOf(min);
+                    Double dmax = Double.valueOf(max);
                     setXRange(dmin.doubleValue(), dmax.doubleValue());
                 } catch (NumberFormatException e) {
                     // ignore if format is bogus.
@@ -2716,8 +2716,8 @@ public class PlotBox extends JPanel implements Printable {
                 String min = (line.substring(7, comma)).trim();
                 String max = (line.substring(comma+1)).trim();
                 try {
-                    Double dmin = new Double(min);
-                    Double dmax = new Double(max);
+                    Double dmin = Double.valueOf(min);
+                    Double dmax = Double.valueOf(max);
                     setYRange(dmin.doubleValue(), dmax.doubleValue());
                 } catch (NumberFormatException e) {
                     // ignore if format is bogus.
@@ -3186,7 +3186,7 @@ public class PlotBox extends JPanel implements Printable {
         // grid marks.
 
         Vector<Double> grid = new Vector<Double>(10);
-        //grid.addElement(new Double(0.0));
+        //grid.addElement(Double.valueOf(0.0));
         double ratio = Math.pow(10.0, step);
         int ngrid = 1;
         if (labeled) {
@@ -3246,13 +3246,13 @@ public class PlotBox extends JPanel implements Printable {
                             oldgrid.elementAt(oldgridi).doubleValue()
                             - logval)
                             > 0.00001) {
-                        grid.addElement(new Double(logval));
+                        grid.addElement(Double.valueOf(logval));
                     }
                 } else {
-                   grid.addElement(new Double(logval));
+                   grid.addElement(Double.valueOf(logval));
                 }
             } else {
-                grid.addElement(new Double(logval));
+                grid.addElement(Double.valueOf(logval));
             }
         }
 

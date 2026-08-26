@@ -486,20 +486,20 @@ implements VObjIF, VEditIF, StatusListenerIF, VObjDef,
     }
 
     private final static Object[][] attributes = {
-        {new Integer(STATPAR),  "Status parameter to display:"},
-        {new Integer(VARIABLE), "Vnmr variables:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(SETVAL),   "Vnmr expression to display:"},
-        {new Integer(NUMDIGIT), "Number of digits:"},
+        {Integer.valueOf(STATPAR),  "Status parameter to display:"},
+        {Integer.valueOf(VARIABLE), "Vnmr variables:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(SETVAL),   "Vnmr expression to display:"},
+        {Integer.valueOf(NUMDIGIT), "Number of digits:"},
     };
     
     private final static Object[][] attributes_H = {
-        {new Integer(STATPAR),  "Status parameter to display:"},
-        {new Integer(VARIABLE), "Vnmr variables:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(SETVAL),   "Vnmr expression to display:"},
-        {new Integer(NUMDIGIT), "Number of digits:"},
-        {new Integer(HELPLINK), Util.getLabel("blHelp")}
+        {Integer.valueOf(STATPAR),  "Status parameter to display:"},
+        {Integer.valueOf(VARIABLE), "Vnmr variables:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(SETVAL),   "Vnmr expression to display:"},
+        {Integer.valueOf(NUMDIGIT), "Number of digits:"},
+        {Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}
     };
     
     public void setModalMode(boolean s) {}

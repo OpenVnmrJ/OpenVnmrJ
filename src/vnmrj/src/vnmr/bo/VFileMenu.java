@@ -1479,16 +1479,16 @@ public class VFileMenu extends JComboBox
 
     protected final static String[] m_aStrEditable = { "Yes", "No" };
     private final static Object[][] attributes = {
-    {new Integer(LABEL),        "Label of item:"},
-    {new Integer(VARIABLE),             "Selection variables:"},
-    {new Integer(VAR2),             "Content variables:"},
-    {new Integer(SETVAL),               "Value of item:"},
-    {new Integer(SHOW),             "Enable condition:"},
-    {new Integer(CMD),                  "Vnmr command:"},
-    {new Integer(PANEL_FILE),   "Menu source:"},
-    {new Integer(PANEL_TYPE),   "Menu type:","radio",m_types},
-    {new Integer(STATSHOW),     "Show Dot Files:","radio",m_aStrShow},
-    { new Integer(EDITABLE), "Editable:", "radio", m_aStrEditable },
+    {Integer.valueOf(LABEL),        "Label of item:"},
+    {Integer.valueOf(VARIABLE),             "Selection variables:"},
+    {Integer.valueOf(VAR2),             "Content variables:"},
+    {Integer.valueOf(SETVAL),               "Value of item:"},
+    {Integer.valueOf(SHOW),             "Enable condition:"},
+    {Integer.valueOf(CMD),                  "Vnmr command:"},
+    {Integer.valueOf(PANEL_FILE),   "Menu source:"},
+    {Integer.valueOf(PANEL_TYPE),   "Menu type:","radio",m_types},
+    {Integer.valueOf(STATSHOW),     "Show Dot Files:","radio",m_aStrShow},
+    { Integer.valueOf(EDITABLE), "Editable:", "radio", m_aStrEditable },
     };
     public Object[][] getAttributes()  { return attributes; }
 

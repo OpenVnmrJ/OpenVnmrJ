@@ -2065,10 +2065,10 @@ public class Plot extends PlotBox implements Cloneable {
                         barwidth = (line.substring(5)).trim();
                     }
                     try {
-                        Double bwidth = new Double(barwidth);
+                        Double bwidth = Double.valueOf(barwidth);
                         double boffset = _baroffset;
                         if (baroffset != null) {
-                            boffset = (new Double(baroffset)).
+                            boffset = (Double.valueOf(baroffset)).
                                 doubleValue();
                         }
                         setBars(bwidth.doubleValue(), boffset);
@@ -2126,8 +2126,8 @@ public class Plot extends PlotBox implements Cloneable {
                     y = (y.substring(0, fieldsplit2)).trim();
                 }
                 try {
-                    Double xpt = new Double(x);
-                    Double ypt = new Double(y);
+                    Double xpt = Double.valueOf(x);
+                    Double ypt = Double.valueOf(y);
                     if (fieldsplit2 > 0) {
                         // There was one separator after the y value, now
                         // look for another separator.
@@ -2145,8 +2145,8 @@ public class Plot extends PlotBox implements Cloneable {
                             String yl = (line.substring(0,
                                     fieldsplit3)).trim();
                             String yh = (line.substring(fieldsplit3+1)).trim();
-                            Double yLowEB = new Double(yl);
-                            Double yHighEB = new Double(yh);
+                            Double yLowEB = Double.valueOf(yl);
+                            Double yHighEB = Double.valueOf(yh);
                             connected = _addLegendIfNecessary(connected);
                             addPointWithErrorBars(_currentdataset,
                                     xpt.doubleValue(),

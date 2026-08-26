@@ -758,7 +758,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         {ENABLE, Util.getLabel("vgENABLE"), "radio", m_arrStrYesNo},
         {JUSTIFY,      "Label justification:", "menu", m_arrStrTtlJust},
         {TOOLTIP,      Util.getLabel(TOOLTIP)},
-        {new Integer(HELPLINK), Util.getLabel("blHelp")}
+        {Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}
    };
 
     public void setModalMode(boolean s) {

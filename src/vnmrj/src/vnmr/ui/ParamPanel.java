@@ -676,7 +676,7 @@ public class ParamPanel extends JPanel
     // VObjDef interface
 
     private Object[][] attributes = {
-    {new Integer(PANEL_FILE),  "Default Directory:"},
+    {Integer.valueOf(PANEL_FILE),  "Default Directory:"},
     };
     public Object[][] getAttributes() { return attributes; }
     public void setAttributes(Object[][] a) { attributes=a; }

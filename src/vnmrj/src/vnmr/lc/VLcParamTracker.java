@@ -177,9 +177,9 @@ public class VLcParamTracker extends VObj {
             }
         } else if (subtype.equals(DOUBLE_TYPE)) {
             if (strValue.length() == 0) {
-                return new Double(0);
+                return Double.valueOf(0);
             } else {
-                return new Double(strValue);
+                return Double.valueOf(strValue);
             }
         } else if (subtype.equals(BOOLEAN_TYPE)) {
             return Boolean.valueOf(isTrue(strValue));

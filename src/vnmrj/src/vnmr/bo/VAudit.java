@@ -543,13 +543,13 @@ public class VAudit extends JPanel
     "cmdHistory", "s_auditTrail", "d_auditTrail" };
 
     private final static Object[][] attributes = {
-    {new Integer(VARIABLE),		"Selection variables:"},
-    {new Integer(VAR2),		    "Content variables:"},
-    {new Integer(SETVAL),		"Value of item:"},
-    {new Integer(SHOW),		    "Enable condition:"},
-    {new Integer(CMD),			"Vnmr command:"},
-    {new Integer(PANEL_FILE),	"Table source:"},
-    {new Integer(PANEL_TYPE),	"Table type:",m_types},
+    {Integer.valueOf(VARIABLE),		"Selection variables:"},
+    {Integer.valueOf(VAR2),		    "Content variables:"},
+    {Integer.valueOf(SETVAL),		"Value of item:"},
+    {Integer.valueOf(SHOW),		    "Enable condition:"},
+    {Integer.valueOf(CMD),			"Vnmr command:"},
+    {Integer.valueOf(PANEL_FILE),	"Table source:"},
+    {Integer.valueOf(PANEL_TYPE),	"Table type:",m_types},
     };
     public Object[][] getAttributes()  { return attributes; }
 

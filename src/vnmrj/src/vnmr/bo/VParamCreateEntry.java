@@ -777,18 +777,18 @@ public class VParamCreateEntry extends JPanel
     private final static String[] yes_no = {"yes","no"};
 
     private final static Object[][] attributes = {
-	{new Integer(LABEL), 		"Label of item:"},
-	{new Integer(VARIABLE),		"Vnmr variables:    "},
-	{new Integer(SHOW),			"Show condition:"},
-	{new Integer(CMD),      	"Vnmr command on show:"},
-	{new Integer(CMD2),      	"Vnmr command on hide:"},
-    {new Integer(BGCOLOR),		"Background color:", "color"},
-	{new Integer(BORDER), 		"Border type:", "menu", bdrTypes},
-	{new Integer(SIDE),			"Label position:", "menu", ttlPosn},
-	{new Integer(JUSTIFY), 		"Label justification:", "menu", ttlJust},
-	{new Integer(TAB), 			"Tab to this group:", "radio", yes_no},
-	{new Integer(USEREF), 		"Save as Reference:", "radio", yes_no},
-        {new Integer(VALUE),            "Value:" },
+	{Integer.valueOf(LABEL), 		"Label of item:"},
+	{Integer.valueOf(VARIABLE),		"Vnmr variables:    "},
+	{Integer.valueOf(SHOW),			"Show condition:"},
+	{Integer.valueOf(CMD),      	"Vnmr command on show:"},
+	{Integer.valueOf(CMD2),      	"Vnmr command on hide:"},
+    {Integer.valueOf(BGCOLOR),		"Background color:", "color"},
+	{Integer.valueOf(BORDER), 		"Border type:", "menu", bdrTypes},
+	{Integer.valueOf(SIDE),			"Label position:", "menu", ttlPosn},
+	{Integer.valueOf(JUSTIFY), 		"Label justification:", "menu", ttlJust},
+	{Integer.valueOf(TAB), 			"Tab to this group:", "radio", yes_no},
+	{Integer.valueOf(USEREF), 		"Save as Reference:", "radio", yes_no},
+        {Integer.valueOf(VALUE),            "Value:" },
     };
 
     private void setBorder() {

@@ -416,8 +416,8 @@ public class VTabbedPane extends JTabbedPane
     private final static String[] tside = {"Top","Bottom","Left", "Right"};
     public Object[][] getAttributes() { return attributes; }
     private final static Object[][] attributes = {
-    {new Integer(LABEL),        "Name of Item:"},
-    {new Integer(SIDE),         "Location of Tabs:", "menu", tside}
+    {Integer.valueOf(LABEL),        "Name of Item:"},
+    {Integer.valueOf(SIDE),         "Location of Tabs:", "menu", tside}
     };
 
     public void setModalMode(boolean s) {}

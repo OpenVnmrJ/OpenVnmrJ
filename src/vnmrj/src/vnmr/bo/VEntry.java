@@ -86,26 +86,26 @@ public class VEntry extends JTextField
 
     /** The array of the attributes that are displayed in the edit template.*/
     private final static Object[][] m_attributes = {
-        {new Integer(VARIABLE), "Vnmr variables:    "},
-        {new Integer(SETVAL),   "Value of item:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(CMD),      "Vnmr command:"},
-        {new Integer(NUMDIGIT), "Decimal Places:"},
-        {new Integer(DISABLE),  "Disable Style:", "menu", m_arrStrDisAbl},
-        {new Integer(STATPAR),  "Status parameter:"},
-        {new Integer(TOOLTIP),  Util.getLabel(TOOLTIP) }
+        {Integer.valueOf(VARIABLE), "Vnmr variables:    "},
+        {Integer.valueOf(SETVAL),   "Value of item:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(CMD),      "Vnmr command:"},
+        {Integer.valueOf(NUMDIGIT), "Decimal Places:"},
+        {Integer.valueOf(DISABLE),  "Disable Style:", "menu", m_arrStrDisAbl},
+        {Integer.valueOf(STATPAR),  "Status parameter:"},
+        {Integer.valueOf(TOOLTIP),  Util.getLabel(TOOLTIP) }
     };
     
     private final static Object[][] m_attributes_H = {
-        {new Integer(VARIABLE), "Vnmr variables:    "},
-        {new Integer(SETVAL),   "Value of item:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(CMD),      "Vnmr command:"},
-        {new Integer(NUMDIGIT), "Decimal Places:"},
-        {new Integer(DISABLE),  "Disable Style:", "menu", m_arrStrDisAbl},
-        {new Integer(STATPAR),  "Status parameter:"},
-        {new Integer(TOOLTIP),  Util.getLabel(TOOLTIP) },
-        {new Integer(HELPLINK), Util.getLabel("blHelp")}
+        {Integer.valueOf(VARIABLE), "Vnmr variables:    "},
+        {Integer.valueOf(SETVAL),   "Value of item:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(CMD),      "Vnmr command:"},
+        {Integer.valueOf(NUMDIGIT), "Decimal Places:"},
+        {Integer.valueOf(DISABLE),  "Disable Style:", "menu", m_arrStrDisAbl},
+        {Integer.valueOf(STATPAR),  "Status parameter:"},
+        {Integer.valueOf(TOOLTIP),  Util.getLabel(TOOLTIP) },
+        {Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}
     };
 
     public VEntry(SessionShare sshare, ButtonIF vif, String typ) {

@@ -480,19 +480,19 @@ public class VClockDial extends ClockDial implements VObjIF, VEditIF,
     private final static String[] yes_no = {"yes", "no"};
     private final static String[] one_two = {"1", "2"};
     private final static Object[][] attributes = {
-	{new Integer(VARIABLE), "Vnmr variables:"},
-	{new Integer(SETVAL), "Value of item:"},
-	{new Integer(SHOW), "Enable condition:"},
-	{new Integer(STATPAR), "Status variables:"},
-	{new Integer(MIN), "Min value:"},
-	{new Integer(MAX), "Max value:"},
-	{new Integer(ELASTIC), "Max value elastic:", "radio", yes_no},
-	{new Integer(COUNT), "Number of hands:", "radio", one_two},
-	{new Integer(DIGITAL), "Digital readout:", "radio", yes_no},
-	{new Integer(SHOWMAX), "Show max value:", "radio", yes_no},
-	{new Integer(COLOR1), "Max marker color:", "color"},
-	{new Integer(DECOR1), "Show pie slice:", "radio", yes_no},
-	{new Integer(DECOR2), "Show color bars:", "radio", yes_no},
+	{Integer.valueOf(VARIABLE), "Vnmr variables:"},
+	{Integer.valueOf(SETVAL), "Value of item:"},
+	{Integer.valueOf(SHOW), "Enable condition:"},
+	{Integer.valueOf(STATPAR), "Status variables:"},
+	{Integer.valueOf(MIN), "Min value:"},
+	{Integer.valueOf(MAX), "Max value:"},
+	{Integer.valueOf(ELASTIC), "Max value elastic:", "radio", yes_no},
+	{Integer.valueOf(COUNT), "Number of hands:", "radio", one_two},
+	{Integer.valueOf(DIGITAL), "Digital readout:", "radio", yes_no},
+	{Integer.valueOf(SHOWMAX), "Show max value:", "radio", yes_no},
+	{Integer.valueOf(COLOR1), "Max marker color:", "color"},
+	{Integer.valueOf(DECOR1), "Show pie slice:", "radio", yes_no},
+	{Integer.valueOf(DECOR2), "Show color bars:", "radio", yes_no},
     };
 
     public void setModalMode(boolean s) {}

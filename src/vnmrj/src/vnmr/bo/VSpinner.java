@@ -59,8 +59,8 @@ public class VSpinner extends JSpinner implements VObjIF, VEditIF,
     public boolean digital = false;
     private String incr = null;
     private String limitPar = null;
-    private Double min = new Double(-0xfffffff);
-    private Double max = new Double(0xfffffff);
+    private Double min = Double.valueOf(-0xfffffff);
+    private Double max = Double.valueOf(0xfffffff);
     private String minStr = null;
     private String maxStr = null;
     private VObjIF minMax = null;
@@ -235,7 +235,7 @@ public class VSpinner extends JSpinner implements VObjIF, VEditIF,
         double k;
         if (incr == null) {
             k = 1;
-            model.setStepSize(new Double(k));
+            model.setStepSize(Double.valueOf(k));
         }
         else
             model.setStepSize(Double.valueOf(incr));
@@ -570,15 +570,15 @@ public class VSpinner extends JSpinner implements VObjIF, VEditIF,
             = {"0","50","100","200","Disable Drag"};
 
     private final static Object[][] attributes = {
-        {new Integer(VARIABLE), "Vnmr variables:    "},
-        {new Integer(SETVAL),   "Value of item:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(CMD),      "Vnmr command:"},
-        {new Integer(STATPAR),  "Status parameter:"},
-        {new Integer(VAR2),     "Limits parameter:"},
-        {new Integer(MIN),      "Min displayed value:"},
-        {new Integer(MAX),      "Max displayed value:"},
-        {new Integer(INCR1),    "Mouse click adjustment value:"},
+        {Integer.valueOf(VARIABLE), "Vnmr variables:    "},
+        {Integer.valueOf(SETVAL),   "Value of item:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(CMD),      "Vnmr command:"},
+        {Integer.valueOf(STATPAR),  "Status parameter:"},
+        {Integer.valueOf(VAR2),     "Limits parameter:"},
+        {Integer.valueOf(MIN),      "Min displayed value:"},
+        {Integer.valueOf(MAX),      "Max displayed value:"},
+        {Integer.valueOf(INCR1),    "Mouse click adjustment value:"},
     };
 
     public void setModalMode(boolean s) {

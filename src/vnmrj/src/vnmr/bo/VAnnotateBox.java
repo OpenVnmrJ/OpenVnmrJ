@@ -116,7 +116,7 @@ public class VAnnotateBox extends JPanel
                 "Fixed and Fit"};
 
     private final static Object[][] attributes2 = {
-       {new Integer(ELASTIC), "Font Size:", "menu", m_sizeStr}
+       {Integer.valueOf(ELASTIC), "Font Size:", "menu", m_sizeStr}
     };
 
     public VAnnotateBox(SessionShare sshare, ButtonIF vif, String typ) {
@@ -1335,10 +1335,10 @@ public class VAnnotateBox extends JPanel
        {"Top","AboveTop","BelowTop","Bottom","AboveBottom","BelowBottom"};
     private final static String[] ttlJust = {"Left","Right","Center"};
     private final static Object[][] attributes = {
-       {new Integer(DIGITAL),      "Number of Layers:"},
-       {new Integer(COUNT),        "Edit Layer:"},
-       {new Integer(SHOW),         "Show condition:"},
-       {new Integer(DOCKAT),      "Dock at:", "menu", dockChoice}
+       {Integer.valueOf(DIGITAL),      "Number of Layers:"},
+       {Integer.valueOf(COUNT),        "Edit Layer:"},
+       {Integer.valueOf(SHOW),         "Show condition:"},
+       {Integer.valueOf(DOCKAT),      "Dock at:", "menu", dockChoice}
     };
 
 

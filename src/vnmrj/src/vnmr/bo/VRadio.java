@@ -577,14 +577,14 @@ public class VRadio extends JRadioButton implements VObjIF, VObjDef, VEditIF,
     }
 
     private final static Object[][] attributes = {
-            { new Integer(LABEL), Util.getLabel(LABEL) },
-            { new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-            { new Integer(SETVAL), Util.getLabel(SETVAL) },
-            { new Integer(SHOW), Util.getLabel(SHOW) },
-            { new Integer(CMD), Util.getLabel(CMD) },
-            { new Integer(CMD2), Util.getLabel(CMD2) },
-            { new Integer(STATPAR), Util.getLabel(STATPAR) }, 
-            { new Integer(TOOLTIP), Util.getLabel(TOOLTIP) }
+            { Integer.valueOf(LABEL), Util.getLabel(LABEL) },
+            { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+            { Integer.valueOf(SETVAL), Util.getLabel(SETVAL) },
+            { Integer.valueOf(SHOW), Util.getLabel(SHOW) },
+            { Integer.valueOf(CMD), Util.getLabel(CMD) },
+            { Integer.valueOf(CMD2), Util.getLabel(CMD2) },
+            { Integer.valueOf(STATPAR), Util.getLabel(STATPAR) }, 
+            { Integer.valueOf(TOOLTIP), Util.getLabel(TOOLTIP) }
     };
 
 }

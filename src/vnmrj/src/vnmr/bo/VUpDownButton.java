@@ -667,19 +667,19 @@ public class VUpDownButton extends UpDownButton implements VObjIF, VEditIF,
 
     private final static String[] true_false = {"true", "false"};
     private final static Object[][] attributes = {
-    {new Integer(VARIABLE),	"Vnmr Variables:"},
-    {new Integer(SETVAL),	"Value of item:"},
-    {new Integer(LABEL),	"Label:"},
-    {new Integer(CMD),	"Vnmr command:"},
-    {new Integer(STATPAR),	"Status parameter:"},
-    {new Integer(VAR2),	"Limits parameter:"},
-    {new Integer(MIN),	"Min allowed value:"},
-    {new Integer(MAX),	"Max allowed value:"},
-    {new Integer(POINTY),	"Pointy style:", "menu", true_false},
-    {new Integer(ROCKER),	"Rocker style:", "menu", true_false},
-    {new Integer(ARROW),	"Arrow feedback:", "menu", true_false},
-    {new Integer(ARROW_COLOR),	"Arrow color:", "color"},
-    {new Integer(WRAP),	"Values wrap around:", "menu", true_false},
+    {Integer.valueOf(VARIABLE),	"Vnmr Variables:"},
+    {Integer.valueOf(SETVAL),	"Value of item:"},
+    {Integer.valueOf(LABEL),	"Label:"},
+    {Integer.valueOf(CMD),	"Vnmr command:"},
+    {Integer.valueOf(STATPAR),	"Status parameter:"},
+    {Integer.valueOf(VAR2),	"Limits parameter:"},
+    {Integer.valueOf(MIN),	"Min allowed value:"},
+    {Integer.valueOf(MAX),	"Max allowed value:"},
+    {Integer.valueOf(POINTY),	"Pointy style:", "menu", true_false},
+    {Integer.valueOf(ROCKER),	"Rocker style:", "menu", true_false},
+    {Integer.valueOf(ARROW),	"Arrow feedback:", "menu", true_false},
+    {Integer.valueOf(ARROW_COLOR),	"Arrow color:", "color"},
+    {Integer.valueOf(WRAP),	"Values wrap around:", "menu", true_false},
     };
 
     public void setModalMode(boolean s) {

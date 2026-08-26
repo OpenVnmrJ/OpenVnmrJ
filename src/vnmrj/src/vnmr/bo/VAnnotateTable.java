@@ -1322,10 +1322,10 @@ public class VAnnotateTable extends JPanel
     } // drop
 
     private final static Object[][] attributes = {
-       {new Integer(ROWS),      "Number of Rows:"},
-       {new Integer(COLUMNS),   "Number of Cols:"},
-       {new Integer(SHOW),      "Show condition:"},
-       {new Integer(DOCKAT),    "Dock at:", "menu", dockChoice}
+       {Integer.valueOf(ROWS),      "Number of Rows:"},
+       {Integer.valueOf(COLUMNS),   "Number of Cols:"},
+       {Integer.valueOf(SHOW),      "Show condition:"},
+       {Integer.valueOf(DOCKAT),    "Dock at:", "menu", dockChoice}
     };
 
     public Object[][] getAttributes() {

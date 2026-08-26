@@ -45,11 +45,11 @@ implements VObjIF, VObjDef, VEditIF, ActionListener,PropertyChangeListener
     private String vnmrCmd = null;
 
     private  Object[][] attributes = {
-    {new Integer(VARIABLE), "Vnmr variables:    "},
-    {new Integer(SETVAL),   "Value of item:  "},
-    {new Integer(KEYSTR),           "Style value"},
-    {new Integer(SHOW), "Enable condition:    "},
-    {new Integer(CMD),  "Vnmr command:      "}};
+    {Integer.valueOf(VARIABLE), "Vnmr variables:    "},
+    {Integer.valueOf(SETVAL),   "Value of item:  "},
+    {Integer.valueOf(KEYSTR),           "Style value"},
+    {Integer.valueOf(SHOW), "Enable condition:    "},
+    {Integer.valueOf(CMD),  "Vnmr command:      "}};
     
     public VStyleChooser(SessionShare ss, ButtonIF vif, String typ) {
         this.sshare = ss;

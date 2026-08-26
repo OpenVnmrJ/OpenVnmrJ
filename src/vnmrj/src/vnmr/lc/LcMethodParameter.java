@@ -210,7 +210,7 @@ public class LcMethodParameter {
         } else if (m_type.equals(INT_TYPE)) {
             return Integer.valueOf(0);
         } else if (m_type.equals(DOUBLE_TYPE)) {
-            return new Double(0.0);
+            return Double.valueOf(0.0);
         } else {                // Default is BOOLEAN_TYPE
             return Boolean.FALSE;
         }

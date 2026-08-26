@@ -9069,7 +9069,7 @@ return list;
     public static Double convertFreqToTesla(String h1freq) {
         if(h1freq == null)
             h1freq = "0";
-        Double field = new Double(h1freq);
+        Double field = Double.valueOf(h1freq);
         return convertFreqToTesla(field.doubleValue());
     }
     

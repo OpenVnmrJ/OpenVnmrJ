@@ -716,7 +716,7 @@ public class VjToolBar extends JToolBar
         for (int i = 0; i < nVP; i++)
         {
             HashMap hmVpAttrs = (HashMap)aListVP.get(i);
-			strLabel = (String)hmVpAttrs.get(new Integer(VObjDef.ICON));
+			strLabel = (String)hmVpAttrs.get(Integer.valueOf(VObjDef.ICON));
 			if (i > 0)
 			    x = x + w;
             //addTools(strLabel, strLabel, x, y, vpPanel, "", "", false);

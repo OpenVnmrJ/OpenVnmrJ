@@ -615,9 +615,9 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
         key = name+"Y";
         hs.put(key, Integer.valueOf(pt.y));
         key = name+"Orient";
-        hs.put(key, new Integer(bar.getDefaultOrientation()));
+        hs.put(key, Integer.valueOf(bar.getDefaultOrientation()));
         key = name+"Dock";
-        hs.put(key, new Integer(bar.getDockPosition()));
+        hs.put(key, Integer.valueOf(bar.getDockPosition()));
     }
 
     private void setToolBarDefaults(GraphicsToolIF bar, String name) {
@@ -2462,7 +2462,7 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
        paramPinPan.setOpaque(true);
        add(paramPinPan, defaultLayer);
        paramPanel = (JComponent) paramPinPan;
-       // add(controlPanel, new Integer(LAYER1));
+       // add(controlPanel, Integer.valueOf(LAYER1));
 
        if (bRebuild)
            commandArea = oldVjUI.commandArea;

@@ -229,7 +229,7 @@ public class RQBuilder extends Template
 
 	int count = Math.min(treemodel.getVisibleColumnCount(),treemodel.getColumnCount());
 	for(int i=0; i<count; i++)
-	   widths.add(new Integer(treemodel.getColumnWidth(i)));
+	   widths.add(Integer.valueOf(treemodel.getColumnWidth(i)));
 
 	return widths;
     }
