@@ -330,7 +330,7 @@ public class JbParameters
         {"Param Peaksense S N Ratio",  TWO},
         {"Param Time Slice Trigger",   TIME_SLICE_TRIGGER_OFF},
         {"Param Time Slice Period", Integer.valueOf(1000)}, // ms
-        {"Param Level Sense Threshold", Float.valueOf(0.1)}, // AU
+        {"Param Level Sense Threshold", new Float(0.1)}, // AU
         {"Param Method End",           END_RUN_HOLD},
 
         // These codes should be considered read only

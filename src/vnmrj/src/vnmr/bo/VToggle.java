@@ -845,8 +845,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         rWidth2 = rWidth;
     }
 
-    @Override
-    public void setBounds(int x, int y, int w, int h) {
+    public void reshape(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
            defLoc.y = y;
@@ -865,7 +864,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
                 adjustFont();
             }
         }
-        super.setBounds(x, y, w, h);
+        super.reshape(x, y, w, h);
     }
 
      public Point getLocation() {

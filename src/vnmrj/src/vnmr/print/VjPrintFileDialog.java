@@ -829,8 +829,8 @@ public class VjPrintFileDialog extends JDialog
             ms = MediaSize.NA.LETTER;
         double w = VjPaperMedia.getPixelWidth(ms);
         double h = VjPaperMedia.getPixelHeight(ms);
-        hs.put(VjPrintDef.PRINT_WIDTH, Float.valueOf(w));
-        hs.put(VjPrintDef.PRINT_HEIGHT, Float.valueOf(h));
+        hs.put(VjPrintDef.PRINT_WIDTH, new Float(w));
+        hs.put(VjPrintDef.PRINT_HEIGHT, new Float(h));
     }
 
    
