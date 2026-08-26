@@ -113,7 +113,7 @@ public class VAnnotateTable extends JPanel
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         informEditor();
@@ -1365,7 +1365,8 @@ public class VAnnotateTable extends JPanel
         return tmpLoc;
     }
 
-    public void reshape(int x, int y, int w, int h)
+    @Override
+    public void setBounds(int x, int y, int w, int h)
     {
         if (inEditMode) {
             defLoc.x = x;
@@ -1379,7 +1380,7 @@ public class VAnnotateTable extends JPanel
         curDim.height = h;
         rowGap = h / numRows;
         colGap = w / numCols;
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation()

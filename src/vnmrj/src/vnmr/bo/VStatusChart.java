@@ -758,7 +758,8 @@ public class VStatusChart extends JPanel
             setBounds(curLoc.x, curLoc.y, curDim.width, curDim.height);
     }
 
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
             defLoc.x = x;
             defLoc.y = y;
@@ -769,7 +770,7 @@ public class VStatusChart extends JPanel
         curDim.height = h;
         curLoc.x = x;
         curLoc.y = y;
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation() {

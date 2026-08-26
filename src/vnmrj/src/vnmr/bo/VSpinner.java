@@ -106,7 +106,7 @@ public class VSpinner extends JSpinner implements VObjIF, VEditIF,
         addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0 && inEditMode) {
                     if (clicks >= 2) {
                         ParamEditUtil.setEditObj(m_spinner);
@@ -615,7 +615,8 @@ public class VSpinner extends JSpinner implements VObjIF, VEditIF,
             setBounds(curLoc.x, curLoc.y, curDim.width, curDim.height);
     }
 
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
            defLoc.y = y;
@@ -631,7 +632,7 @@ public class VSpinner extends JSpinner implements VObjIF, VEditIF,
               adjustFont(w, h);
            }
         }
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation() {

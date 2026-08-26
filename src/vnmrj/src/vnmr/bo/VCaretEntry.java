@@ -90,7 +90,7 @@ public class VCaretEntry extends JTextField
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2)
                         ParamEditUtil.setEditObj((VObjIF) evt.getSource());
@@ -598,7 +598,8 @@ public class VCaretEntry extends JTextField
          return tmpLoc;
     }
 
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
            defLoc.y = y;
@@ -614,7 +615,7 @@ public class VCaretEntry extends JTextField
               adjustFont(w, h);
            }
         }
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation() {
