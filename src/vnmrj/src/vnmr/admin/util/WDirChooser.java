@@ -258,13 +258,12 @@ public class WDirChooser extends JFileChooser
             
             try {
                 // Create a directory owned by the currently edited user
-                String cmd = WGlobal.SUDO + " /bin/mkdir " + folderpath;
-                Runtime rt = Runtime.getRuntime();
                 Process prcs = null;
                 BufferedReader str=null;
                 String output=null;
                 try {
-                    prcs = rt.exec(cmd);
+                    prcs = new ProcessBuilder(WGlobal.SUDO, "/bin/mkdir",
++                                              folderpath.getPath()).start();
                     // Wait for it to complete creating the folder
                     prcs.waitFor();
 
@@ -303,9 +302,8 @@ public class WDirChooser extends JFileChooser
 
                 try {
                     // Now we need to change the owner to the desired user
-                    cmd = WGlobal.SUDO + " /bin/chown " + user + " " 
-                        + folderpath;
-                    prcs = rt.exec(cmd);
+                    prcs = new ProcessBuilder(WGlobal.SUDO, "/bin/chown",
++                                              user, folderpath.getPath()).start();
                     // Wait for it to complete creating the folder
                     prcs.waitFor();
 
