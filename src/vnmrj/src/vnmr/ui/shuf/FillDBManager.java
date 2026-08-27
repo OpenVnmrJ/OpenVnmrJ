@@ -2905,7 +2905,8 @@ public class FillDBManager {
             if(DebugOutput.isSetFor("destroydb"))
                Messages.postDebug("destroyDB executing 'dropdb vnmr'");
 
-            if(UtilB.OSNAME.startsWith("Windows"))
+            try {
+                if(UtilB.OSNAME.startsWith("Windows"))
                     chkit = new ProcessBuilder(sysdir + "/pgsql/bin/dropdb.exe",
                                                dbName).start();
                 else
@@ -8023,13 +8024,10 @@ return list;
         Process   proc=null;
         String   owner="";
         try {
-            Runtime rt = Runtime.getRuntime();
             String dir = System.getProperty("sysdir");
 
             // If a file or directory does not exist, fileowner will
             // return an owner of 'root'
-            String cmd;
-
             proc = new ProcessBuilder(dir + "/bin/fileowner", fullpath).start();
 
             BufferedReader str = (new BufferedReader
