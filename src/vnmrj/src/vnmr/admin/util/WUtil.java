@@ -271,9 +271,7 @@ public class WUtil
         {
             if (bPostMsg)
                 Messages.postDebug("Running script: " + cmd);
-            Runtime rt = Runtime.getRuntime();
-
-            prcs = rt.exec(cmd);
+            prcs = new ProcessBuilder(cmd.split("\\s+")).start();
 
             if (prcs == null)
                 return msg;
@@ -388,10 +386,8 @@ public class WUtil
         try
         {
             if (bShowMesg)
-                Messages.postDebug("Running script: " + cmd[2]);
-            Runtime rt = Runtime.getRuntime();
-
-            prcs = rt.exec(cmd);
+                Messages.postDebug("Running script: " + Arrays.toString(cmd));
+            prcs = new ProcessBuilder(cmd).start();
 
             if (prcs == null)
                 return msg;
@@ -466,8 +462,7 @@ public class WUtil
         {
             if (bPostMsg)
                 Messages.postDebug("Running script: " + cmd);
-            Runtime rt = Runtime.getRuntime();
-            prcs = rt.exec(cmd);
+            prcs = new ProcessBuilder(cmd.split("\\s+")).start();
         }
         catch (Exception e)
         {
@@ -513,9 +508,8 @@ public class WUtil
         try
         {
             if (bPostMsg)
-                Messages.postDebug("Running script: " + cmd[2]);
-            Runtime rt = Runtime.getRuntime();
-            prcs = rt.exec(cmd);
+                Messages.postDebug("Running script: " + Arrays.toString(cmd));
+            prcs = new ProcessBuilder(cmd).start();
         }
         catch (Exception e)
         {

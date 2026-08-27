@@ -932,11 +932,11 @@ public class CryoSocketControl implements CryoBay {
     }
 
     private void hideFile(String path) {
-        // TODO: in Java 7 use File.toPath().setAttribute("dos:hidden", true)
         if (!isUnix()) {
             try {
-                Runtime.getRuntime().exec("attrib +h " + path);
-            } catch (IOException e) {
+                java.nio.file.Files.setAttribute(
+                    java.nio.file.Paths.get(path), "dos:hidden", true);
+            } catch (Exception e) {
             }
         }
     }

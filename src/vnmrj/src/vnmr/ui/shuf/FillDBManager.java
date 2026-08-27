@@ -2905,13 +2905,11 @@ public class FillDBManager {
             if(DebugOutput.isSetFor("destroydb"))
                Messages.postDebug("destroyDB executing 'dropdb vnmr'");
 
-            if(UtilB.OSNAME.startsWith("Windows")) 
-                cmd = sysdir + "/pgsql/bin/dropdb.exe " + dbName;
-            else
-                cmd = "dropdb " + dbName;
-
-            try {
-                chkit = rt.exec(cmd);
+            if(UtilB.OSNAME.startsWith("Windows"))
+                    chkit = new ProcessBuilder(sysdir + "/pgsql/bin/dropdb.exe",
+                                               dbName).start();
+                else
+                    chkit = new ProcessBuilder("dropdb", dbName).start();
                 // Wait here as long is the process is alive.
                 chkit.waitFor();
             }
@@ -8031,15 +8029,8 @@ return list;
             // If a file or directory does not exist, fileowner will
             // return an owner of 'root'
             String cmd;
-            
-            // Windows needs double quotes around the filename in case
-            // there are any spaces.  Unix fileowner did not like the quotes.
-            if(UtilB.OSNAME.startsWith("Windows"))
-                cmd = dir +"/bin/fileowner \"" + fullpath + "\"";
-            else
-                cmd = dir +"/bin/fileowner " + fullpath ;
 
-            proc = rt.exec(cmd);
+            proc = new ProcessBuilder(dir + "/bin/fileowner", fullpath).start();
 
             BufferedReader str = (new BufferedReader
                                       (new InputStreamReader

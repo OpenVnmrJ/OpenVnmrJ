@@ -1016,39 +1016,44 @@ public class RoboHelp_CSH
 										String a_pszMapId,
 										String a_pszTopicURL)
 	{
-		String strCommandLine = a_pszViewerPath;
-		
 		
 		boolean bRetVal = false;
 		if(DoesFileExists(a_pszViewerPath))
 		{
-			strCommandLine += " -csh" ;
+			java.util.List<String> cmdList = new java.util.ArrayList<String>();
+			cmdList.add(a_pszViewerPath);
+			cmdList.add("-csh");
 			if( a_pszHelpId.length() > 0)
 			{
-				strCommandLine += " helpid \"" + a_pszHelpId + "\"" ; 
+				cmdList.add("helpid");
+				cmdList.add(a_pszHelpId);
 			}
 			
 			if(a_pszWindowName.length()>0)
 			{
-				strCommandLine += " window \"" + a_pszWindowName + "\"" ; 
+				cmdList.add("window");
+				cmdList.add(a_pszWindowName);
 			}
 			
 			if(a_pszTopicURL.length() > 0)
 			{
-				strCommandLine += " topicurl \"" + a_pszTopicURL + "\"" ; 
+				cmdList.add("topicurl");
+				cmdList.add(a_pszTopicURL);
 			}
 			
 			else if(a_pszMapId.length() > 0)
 			{
-				strCommandLine += " mapid \"" + a_pszMapId + "\"" ; 
+				cmdList.add("mapid");
+				cmdList.add(a_pszMapId);
 			}
 			else
 			{
-				strCommandLine += " mapnumber " + ulMapNum;
+				cmdList.add("mapnumber");
+				cmdList.add(String.valueOf(ulMapNum));
 			}
 			try
 			{
-				Runtime.getRuntime().exec(strCommandLine);
+				new ProcessBuilder(cmdList).start();
 				bRetVal = true;
 			}
 			catch(Exception e)
