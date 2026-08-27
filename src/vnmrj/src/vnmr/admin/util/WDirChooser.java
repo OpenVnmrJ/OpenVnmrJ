@@ -263,7 +263,7 @@ public class WDirChooser extends JFileChooser
                 String output=null;
                 try {
                     prcs = new ProcessBuilder(WGlobal.SUDO, "/bin/mkdir",
-+                                              folderpath.getPath()).start();
+                                              folderpath.getPath()).start();
                     // Wait for it to complete creating the folder
                     prcs.waitFor();
 
@@ -303,7 +303,7 @@ public class WDirChooser extends JFileChooser
                 try {
                     // Now we need to change the owner to the desired user
                     prcs = new ProcessBuilder(WGlobal.SUDO, "/bin/chown",
-+                                              user, folderpath.getPath()).start();
+                                              user, folderpath.getPath()).start();
                     // Wait for it to complete creating the folder
                     prcs.waitFor();
 
