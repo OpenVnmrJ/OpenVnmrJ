@@ -869,8 +869,12 @@ public class RoboHelp_CSH
 
 				String localNew0 = tuHtmlToText(local);
 				String localNew = GetNormalizedLocal(localNew0);
-				return baseNew.toURI().resolve(localNew).toURL();
-		}
+				try {
+					return baseNew.toURI().resolve(localNew).toURL();
+				} catch (URISyntaxException e) {
+					throw new MalformedURLException(e.getMessage());
+				}
+    	}
 		catch (MalformedURLException x) {
 			x.printStackTrace();
 
@@ -892,11 +896,12 @@ public class RoboHelp_CSH
 				// should display a dialog box here
 				// and now try the secondary URL
 
-				return base.toURI().resolve(url).toURL();
+				try {
+					return base.toURI().resolve(url).toURL();
+				} catch (URISyntaxException e) {
+					throw new MalformedURLException(e.getMessage());
+				}
 			}
-		}
-		catch (URISyntaxException e) {
-			throw new MalformedURLException(e.getMessage());
 		}
 	}
 	
