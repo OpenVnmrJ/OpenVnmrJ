@@ -247,7 +247,7 @@ public class RoboHelp_CSH
 
                 if (strHostName.length() > 0)
                 {              
-                    url = new URL("http://" + strHostName + "/robo/bin/robo.dll?mgr=sys&cmd=updinf");
+                    url = URI.create("http://" + strHostName + "/robo/bin/robo.dll?mgr=sys&cmd=updinf").toURL();
                     urlConnect = url.openConnection();
                     urlConnect.setDoInput(true);
                     urlConnect.setDoOutput(true);
@@ -258,14 +258,14 @@ public class RoboHelp_CSH
                     dataOut.flush();
                     dataOut.close();
 
-                    dataIn = new DataInputStream(urlConnect.getInputStream());
+                    BufferedReader brIn = new BufferedReader(new InputStreamReader(urlConnect.getInputStream()));
 
                     String strTemp="";
-                    while (null != ((strTemp = dataIn.readLine())))
+                    while (null != ((strTemp = brIn.readLine())))
                     {
                         strResult += strTemp + "\n";
                     }
-                    dataIn.close();
+                    brIn.close();
                 }
             }
             catch (MalformedURLException e) {
@@ -373,7 +373,7 @@ public class RoboHelp_CSH
         {
             boolean bResult = true;
             try{
-                URL newURL = new URL(fileURL);
+                URL newURL = URI.create(fileURL).toURL();
                 
                 BufferedInputStream bis = new BufferedInputStream(newURL.openConnection().getInputStream());
                 BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(newFileLocation));
@@ -860,11 +860,16 @@ public class RoboHelp_CSH
 				String fileNew0 = tuHtmlToText(file);
 				String fileNew1 = GetNormalizedLocal(fileNew0);
 				String fileNew	= TruncURLtoQuestionMark(fileNew1);
-				URL baseNew = new URL(protocol,host,port,fileNew);
+				URL baseNew;
+				try {
+					baseNew = new URI(protocol, null, host, port, fileNew, null, null).toURL();
+				} catch (URISyntaxException e) {
+					throw new MalformedURLException(e.getMessage());
+				}
 
 				String localNew0 = tuHtmlToText(local);
 				String localNew = GetNormalizedLocal(localNew0);
-				return new URL (baseNew, localNew);
+				return baseNew.toURI().resolve(localNew).toURL();
 		}
 		catch (MalformedURLException x) {
 			x.printStackTrace();
@@ -879,7 +884,7 @@ public class RoboHelp_CSH
 				// "file:/" onto it and opening it - even
 				// though the slashes will be all funny
 				// this seems to work!
-				return new URL ("file:/" + local);
+				return new File(local).toURI().toURL();
 			}
 			else {
 
@@ -887,8 +892,11 @@ public class RoboHelp_CSH
 				// should display a dialog box here
 				// and now try the secondary URL
 
-				return new URL (base, url);
+				return base.toURI().resolve(url).toURL();
 			}
+		}
+		catch (URISyntaxException e) {
+			throw new MalformedURLException(e.getMessage());
 		}
 	}
 	
