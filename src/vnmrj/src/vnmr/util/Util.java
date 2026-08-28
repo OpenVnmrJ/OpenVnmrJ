@@ -2103,7 +2103,7 @@ public class Util implements VnmrKey {
         String[] defaultDays;
         String[] Days;
 
-        symbols = new DateFormatSymbols(new Locale("en","US")); // for default locale
+        symbols = new DateFormatSymbols(Locale.US); // for default locale
         defaultDays = symbols.getShortWeekdays();
         symbols=new DateFormatSymbols(); // for current locale
         Days=symbols.getShortWeekdays();
@@ -2123,7 +2123,7 @@ public class Util implements VnmrKey {
         DateFormatSymbols symbols;
         String[] defaultDays;
         String[] Days;
-        symbols = new DateFormatSymbols(new Locale("en","US")); // for default locale
+        symbols = new DateFormatSymbols(Locale.US); // for default locale
         defaultDays = symbols.getShortWeekdays();
         symbols=new DateFormatSymbols(); // for current locale
         Days=symbols.getShortWeekdays();

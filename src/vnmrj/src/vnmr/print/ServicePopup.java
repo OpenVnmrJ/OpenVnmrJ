@@ -1059,8 +1059,8 @@ public class ServicePopup extends JDialog implements ActionListener,
             ms = MediaSize.NA.LETTER;
         double w = VjPaperMedia.getPixelWidth(ms);
         double h = VjPaperMedia.getPixelHeight(ms);
-        hs.put(VjPrintDef.PRINT_WIDTH, new Float(w));
-        hs.put(VjPrintDef.PRINT_HEIGHT, new Float(h));
+        hs.put(VjPrintDef.PRINT_WIDTH, Float.valueOf((float) w));
+        hs.put(VjPrintDef.PRINT_HEIGHT, Float.valueOf((float) h));
     }
 
     @SuppressWarnings("unchecked")
