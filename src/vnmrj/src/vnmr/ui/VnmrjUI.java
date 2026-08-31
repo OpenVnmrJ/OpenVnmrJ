@@ -296,7 +296,7 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
                         int kcode = e.getKeyCode();
                         if (kcode == KeyEvent.VK_CONTROL || kcode == KeyEvent.VK_ESCAPE || 
                         	kcode == KeyEvent.VK_ALT) {
-                            int mod = e.getModifiers();
+                            int mod = e.getModifiersEx();
                             if (mod == 0 && commandArea != null) {
                                 if (commandArea.isVisible()) {
                                     setCommandLineFocus();

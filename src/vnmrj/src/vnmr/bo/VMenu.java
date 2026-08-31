@@ -178,7 +178,7 @@ public class VMenu extends JComboBox implements VGroupSave, VObjIF, VObjDef,
             public void mouseClicked(MouseEvent evt) {
                 if(inEditMode) {
                     int clicks = evt.getClickCount();
-                    int modifier = evt.getModifiers();
+                    int modifier = evt.getModifiersEx();
                     if((modifier & (1 << 4)) != 0) {
                         if(clicks >= 2) {
                             if(!m_bParameter) {

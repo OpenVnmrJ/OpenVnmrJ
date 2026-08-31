@@ -200,10 +200,10 @@ public class VStatusChart extends JPanel
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
-                if((modifier & InputEvent.BUTTON3_MASK) !=0)
+                int modifier = evt.getModifiersEx();
+                if((modifier & InputEvent.getMaskForButton(3)) !=0)
                     menuAction(evt);
-                else if ((modifier & InputEvent.BUTTON1_MASK) != 0 && clicks >= 2)
+                else if ((modifier & InputEvent.getMaskForButton(1)) != 0 && clicks >= 2)
                     ParamEditUtil.setEditObj((VObjIF) evt.getSource());
             }
         };

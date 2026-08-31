@@ -115,7 +115,7 @@ public class VColorImageSelector extends JPanel
         ml = new MouseAdapter() {
               public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         informEditor(evt);

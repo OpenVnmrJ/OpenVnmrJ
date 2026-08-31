@@ -274,8 +274,8 @@ public class ExpSelector extends JPanel implements DragSourceListener,
                         // If the Ctrl key was held down, go for the system
                         // protocol if there is one
                         ShufflerItem shufflerItem;
-                        int modifierMask = e.getModifiers();
-                        if((modifierMask & ActionEvent.CTRL_MASK) != 0) {
+                        int modifierMask = e.getModifiersEx();
+                        if((modifierMask & InputEvent.CTRL_DOWN_MASK) != 0) {
                             // We need to get the system protocol
                             String systemProtPath = getSystemProtPath(label.name);
                             if(systemProtPath != null)

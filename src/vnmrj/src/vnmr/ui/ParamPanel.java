@@ -100,9 +100,9 @@ public class ParamPanel extends JPanel
 	        }
 			public void mouseClicked(MouseEvent evt) {
 				int clicks = evt.getClickCount();
-				int modifier = evt.getModifiers();
+				int modifier = evt.getModifiersEx();
                 ParamEditUtil.clickInPanel(evt);
-				if ((modifier & InputEvent.BUTTON3_MASK) != 0) {
+				if ((modifier & InputEvent.getMaskForButton(3)) != 0) {
 					ParamEditUtil.menuAction(evt);
 				} else if ((modifier & (1 << 4)) != 0) {
 					if (clicks >= 2) {

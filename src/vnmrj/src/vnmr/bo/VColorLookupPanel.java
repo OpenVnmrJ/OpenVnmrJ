@@ -1141,7 +1141,7 @@ public class VColorLookupPanel extends JPanel implements ActionListener, VColorM
                 new KeyEventDispatcher() {
                     public boolean dispatchKeyEvent(KeyEvent e) {
                        if (e.getID() == KeyEvent.KEY_RELEASED) {
-                          int mod = e.getModifiers();
+                          int mod = e.getModifiersEx();
                           if (mod != 0)
                               return false;
                           int kcode = e.getKeyCode();

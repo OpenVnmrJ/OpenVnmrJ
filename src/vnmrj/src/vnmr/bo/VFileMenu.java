@@ -166,7 +166,7 @@ public class VFileMenu extends JComboBox
             public void mouseClicked(MouseEvent evt) {
                 if(inEditMode) {
                    int clicks = evt.getClickCount();
-                   int modifier = evt.getModifiers();
+                   int modifier = evt.getModifiersEx();
                    if ((modifier & (1 << 4)) != 0) {
                       if (clicks >= 2) {
                         Component comp = (Component)evt.getSource();

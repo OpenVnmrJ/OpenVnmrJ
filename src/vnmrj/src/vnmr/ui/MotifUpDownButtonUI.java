@@ -337,11 +337,11 @@ public class MotifUpDownButtonUI extends UpDownButtonUI
 
     private int getButtonNumber(MouseEvent e) {
 	int n = 0;
-	int bits = e.getModifiers();
+	int bits = e.getModifiersEx();
 	//System.out.println("Button mask = " + bits);/*CMP*/
-	if ((bits & InputEvent.BUTTON3_MASK) != 0) { n = 3; }
-	if ((bits & InputEvent.BUTTON2_MASK) != 0) { n = 2; }
-	if ((bits & InputEvent.BUTTON1_MASK) != 0) { n = 1; }
+	if ((bits & InputEvent.getMaskForButton(3)) != 0) { n = 3; }
+	if ((bits & InputEvent.getMaskForButton(2)) != 0) { n = 2; }
+	if ((bits & InputEvent.getMaskForButton(1)) != 0) { n = 1; }
 	return n;
     }
 

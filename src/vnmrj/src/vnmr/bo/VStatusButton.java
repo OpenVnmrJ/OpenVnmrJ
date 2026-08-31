@@ -120,9 +120,9 @@ public class VStatusButton extends TwoLineButton
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if (inEditMode) {
-                    if ((modifier & InputEvent.BUTTON1_MASK) != 0 && clicks >= 2)
+                    if ((modifier & InputEvent.getMaskForButton(1)) != 0 && clicks >= 2)
                         ParamEditUtil.setEditObj( (VObjIF) evt.getSource());
                 } else {
                     requestFocusInWindow();
