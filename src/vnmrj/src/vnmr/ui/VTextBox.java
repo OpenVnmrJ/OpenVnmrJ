@@ -548,6 +548,7 @@ public class VTextBox implements CanvasObjIF
          newFontFs = fontFs;
          th = fm.getAscent() + fm.getDescent();
          sLen = longStr.length();
+         Canvas canvas = new Canvas();
          if (dw > 10 && dh > lineNum) { // increases font size
              sw = lw;
              fw = (float) width;
@@ -566,7 +567,7 @@ public class VTextBox implements CanvasObjIF
                            newFontFs += 2.0f;
                   }
                   newFont = font.deriveFont(newFontFs);
-                  newFm = getFontMetrics(newFont);
+                  newFm = canvas.getFontMetrics(newFont);
                   sw = newFm.stringWidth(longStr);
                   dw = width - sw;
                   th = newFm.getAscent() + newFm.getDescent();
@@ -611,7 +612,7 @@ public class VTextBox implements CanvasObjIF
                   if (dw >= sLen * 2)
                       newFontFs -= 2.0f;
                   newFont = font.deriveFont(newFontFs);
-                  newFm = getFontMetrics(newFont);
+                  newFm = canvas.getFontMetrics(newFont);
                   sw = newFm.stringWidth(longStr);
                   dw = sw - width;
                   th = newFm.getAscent() + newFm.getDescent();
@@ -632,6 +633,7 @@ public class VTextBox implements CanvasObjIF
         float fs = fontFs;
         float newW, newH;
         float difW, difH;
+        Canvas canvas = new Canvas();
         newFont = font;
         newFm = fm;
         if (fw < fh)
@@ -652,7 +654,7 @@ public class VTextBox implements CanvasObjIF
                      fs -= 1.0f;
              } 
              newFont = font.deriveFont(fs);
-             newFm = getFontMetrics(newFont);
+             newFm = canvas.getFontMetrics(newFont);
              newW = (float) newFm.stringWidth(longStr);
              charH = newFm.getAscent() + newFm.getDescent();
              newH = (float) charH * lineNum;
@@ -756,7 +758,7 @@ public class VTextBox implements CanvasObjIF
 
          font = new Font(fontName, style ,size);
 
-         fm = getFontMetrics(font);
+         fm = new Canvas().getFontMetrics(font);
          fontAscent = fm.getAscent();
          fontDescent = fm.getDescent();
          fontH = fontAscent + fontDescent;
