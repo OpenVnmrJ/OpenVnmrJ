@@ -139,23 +139,23 @@ public class FileTableModel extends DefaultTableModel
     // input type.
     private String m_type = null;
     // input path(s).
-    private Vector m_paths = new Vector();
+    private Vector<String> m_paths = new Vector<>();
     // row values of the given type.
-    private Vector m_rowValues = new Vector();
+    private Vector<String> m_rowValues = new Vector<>();
     // output types of the given type.
-    private Vector m_outputTypes = new Vector();
+    private Vector<String> m_outputTypes = new Vector<>();
     // table header of the given type.
-    private Vector m_header = new Vector();
+    private Vector<String> m_header = new Vector<>();
     // 2D vectors of table content.
-    private Vector m_values2D = new Vector();
+    private Vector<Vector<String>> m_values2D = new Vector<>();
 
-    private Vector m_flags = new Vector();
+    private Vector<Boolean> m_flags = new Vector<>();
     private int m_goodRows = 0;
     private int m_badRows = 0;
-    Hashtable m_months = null;
+    Hashtable<String, String> m_months = null;
 
     private void makeMonths() {
-       m_months = new Hashtable();
+       m_months = new Hashtable<>();
        m_months.put("Jan", "1");
        m_months.put("Feb", "2");
        m_months.put("Mar", "3");
@@ -185,7 +185,7 @@ public class FileTableModel extends DefaultTableModel
     setOutputTypes();
     }
 
-    public FileTableModel(Vector paths, String type) {
+    public FileTableModel(Vector<String> paths, String type) {
 
     m_type = type;
     m_paths.clear();
@@ -197,7 +197,7 @@ public class FileTableModel extends DefaultTableModel
     setOutputTypes();
     }
 
-    public void updateModel(Vector paths, String type)
+    public void updateModel(Vector<String> paths, String type)
     {
         m_type = type;
         m_paths.clear();
@@ -241,11 +241,11 @@ public class FileTableModel extends DefaultTableModel
     else return(null);
     }
 
-    public Vector getFlags() {
+    public Vector<Boolean> getFlags() {
     return(m_flags);
     }
 
-    public Vector getOutputTypes() {
+    public Vector<String> getOutputTypes() {
     return(m_outputTypes);
     }
 
@@ -258,7 +258,7 @@ public class FileTableModel extends DefaultTableModel
 
     if (m_outputTypes == null)
     {
-        m_outputTypes = new Vector();
+        m_outputTypes = new Vector<>();
     }
     m_outputTypes.clear();
 
@@ -455,7 +455,7 @@ public class FileTableModel extends DefaultTableModel
 
     /* add current session to s_auditTrailFiles */
     if(m_type.equals("s_auditTrailFiles") && !(Util.getAppIF() instanceof VAdminIF)) {
-        Vector row = new Vector();
+        Vector<String> row = new Vector<>();
             row.addElement("current");
             row.addElement("current");
         String usr=System.getProperty("user.name");
@@ -482,7 +482,7 @@ public class FileTableModel extends DefaultTableModel
     }
 
     if(m_values2D.size() == 0) {
-        Vector row = new Vector();
+        Vector<String> row = new Vector<>();
         for(int i=0; i<m_header.size(); i++) row.addElement("");
         m_values2D.addElement(row);
         m_rowValues.addElement("");
@@ -588,7 +588,7 @@ public class FileTableModel extends DefaultTableModel
                 if(tok.hasMoreElements())
                 cmds+=" ";
             }
-            Vector row = new Vector();
+            Vector<String> row = new Vector<>();
             row.addElement(convertTime(time.trim()));
             row.addElement(cmds.trim());
             row.addElement(getDescription(cmds.trim()));
@@ -643,7 +643,7 @@ public class FileTableModel extends DefaultTableModel
 
     BufferedReader text = new BufferedReader(fr);
 
-    Vector row = null;
+    Vector<String> row = null;
 
     try
     {
@@ -671,7 +671,7 @@ public class FileTableModel extends DefaultTableModel
                 cmds+=" ";
               }
             }
-            row = new Vector();
+            row = new Vector<>();
             row.addElement(convertTime(time.trim()));
             //row.addElement(func.trim());
             row.addElement(cmds.trim());
@@ -718,7 +718,7 @@ public class FileTableModel extends DefaultTableModel
                 cmds+=" ";
               }
             }
-            row = new Vector();
+            row = new Vector<>();
             row.addElement(convertTime(time.trim()));
             row.addElement(console.trim());
             row.addElement(user.trim());
@@ -800,7 +800,7 @@ public class FileTableModel extends DefaultTableModel
     String console=tok.nextToken();
     String user=tok.nextToken();
     user = user.substring(0, user.lastIndexOf(".vaudit"));
-    Vector row = new Vector();
+    Vector<String> row = new Vector<>();
     row.addElement(convertTime(logintime.trim()));
     row.addElement(convertStrTime(logouttime.trim()));
     row.addElement(user.trim());
@@ -959,7 +959,7 @@ public class FileTableModel extends DefaultTableModel
             line=text.readLine();
         }
         }
-        Vector row = new Vector();
+        Vector<String> row = new Vector<>();
 	if(time_saved.length() <= 1) time_saved = time_run;
         row.addElement(convertTime(time_saved.trim()));
         row.addElement(dataid);
@@ -1032,7 +1032,7 @@ public class FileTableModel extends DefaultTableModel
             if(tok.hasMoreElements())
             info+=" ";
         }
-        Vector row = new Vector();
+        Vector<String> row = new Vector<>();
             row.addElement(convertTime(time.trim()));
         row.addElement(info.trim());
         m_rowValues.addElement(info.trim());
@@ -1118,7 +1118,7 @@ public class FileTableModel extends DefaultTableModel
               if(tok.hasMoreElements())
               info+=" ";
             }
-            Vector row = new Vector();
+            Vector<String> row = new Vector<>();
             row.addElement(convertTime(time.trim()));
             row.addElement(user.trim());
             row.addElement(cmds.trim());
@@ -1390,7 +1390,7 @@ public class FileTableModel extends DefaultTableModel
         if(key.equals("usrlvl")) level = value;
         if(key.equals("access")) access = value;
         }
-        Vector row = new Vector();
+        Vector<String> row = new Vector<>();
         row.addElement(user.trim());
         row.addElement(name.trim());
         row.addElement(level.trim());
@@ -1441,7 +1441,7 @@ public class FileTableModel extends DefaultTableModel
 
     String timeb=tok.nextToken();
     String timet=tok.nextToken();
-    Vector row = new Vector();
+    Vector<String> row = new Vector<>();
     row.addElement(convertTime(timeb.trim()));
     row.addElement(convertStrTime(timet.trim()));
 
@@ -1483,7 +1483,7 @@ public class FileTableModel extends DefaultTableModel
     String timeb=tok.nextToken();
     String timet=tok.nextToken();
     String console=tok.nextToken();
-    Vector row = new Vector();
+    Vector<String> row = new Vector<>();
     row.addElement(convertTime(timeb.trim()));
     row.addElement(convertStrTime(timet.trim()));
     row.addElement(console.trim());
@@ -1554,7 +1554,7 @@ public class FileTableModel extends DefaultTableModel
            info = tok.nextToken();
         }
 
-        Vector row = new Vector();
+        Vector<String> row = new Vector<>();
         row.addElement(convertTime(time.trim()));
         row.addElement(admin.trim());
         row.addElement(user.trim());
@@ -1630,7 +1630,7 @@ public class FileTableModel extends DefaultTableModel
         String filepath = null;
         String owner = null;
         String info = null;
-	Vector paths = new Vector();
+	Vector<String> paths = new Vector<>();
 
         String line=null;
         while((line=text.readLine()) !=null){
@@ -1699,7 +1699,7 @@ public class FileTableModel extends DefaultTableModel
             }
             count++;
             if(count >= 6) {
-            Vector row = new Vector();
+            Vector<String> row = new Vector<>();
             row.addElement(convertTime(time.trim()));
             row.addElement(action.trim());
             row.addElement(user.trim());
@@ -1811,7 +1811,7 @@ public class FileTableModel extends DefaultTableModel
             }
             count++;
             if(count >= 5) {
-            Vector row = new Vector();
+            Vector<String> row = new Vector<>();
             row.addElement(convertTime(time.trim()));
             row.addElement(action.trim());
             row.addElement(user.trim());
@@ -1919,7 +1919,7 @@ public class FileTableModel extends DefaultTableModel
             count++;
             if(info.indexOf("failure") != -1 && count >= 6) {
 
-              Vector row = new Vector();
+              Vector<String> row = new Vector<>();
               row.addElement(convertTime(time.trim()));
               row.addElement(action.trim());
               row.addElement(user.trim());
@@ -1976,7 +1976,7 @@ public class FileTableModel extends DefaultTableModel
 
     String timeb=tok.nextToken();
     String timet=tok.nextToken();
-    Vector row = new Vector();
+    Vector<String> row = new Vector<>();
     row.addElement(convertTime(timeb.trim()));
     row.addElement(convertStrTime(timet.trim()));
 
@@ -2121,7 +2121,7 @@ public class FileTableModel extends DefaultTableModel
 
 	    if(count == 11) {
 
-            	Vector row = new Vector();
+            	Vector<String> row = new Vector<>();
 	        if(time_saved.length() <= 1) time_saved = time_run;
             	row.addElement(convertTime(time_saved));
             	row.addElement(dataid);
@@ -2161,7 +2161,7 @@ public class FileTableModel extends DefaultTableModel
 		String samplename = tok.nextToken().trim();
 		String seqfil = tok.nextToken().trim();
 
-            	Vector row = new Vector();
+            	Vector<String> row = new Vector<>();
             	row.addElement(convertTime(time_delete));
             	row.addElement(fullpath);
             	row.addElement(user);
