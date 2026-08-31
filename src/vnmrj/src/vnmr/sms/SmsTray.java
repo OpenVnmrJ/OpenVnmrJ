@@ -408,8 +408,8 @@ public class SmsTray extends JScrollPane
        if (!bSelectable)
            return;
        int buttonId = 1;
-       int modif = ev.getModifiers();
-       if ((modif & InputEvent.BUTTON1_MASK) == 0) {
+       int modif = ev.getModifiersEx();
+       if ((modif & InputEvent.getMaskForButton(1)) == 0) {
            buttonId = 2;
        }
        buttonId = ev.getButton();
@@ -568,10 +568,10 @@ public class SmsTray extends JScrollPane
            return;
        if (ev.getButton() != 3)
            return;
-       int modif = ev.getModifiers();
-       if ((modif & Event.SHIFT_MASK) != 0)
+       int modif = ev.getModifiersEx();
+       if ((modif & InputEvent.SHIFT_DOWN_MASK) != 0)
            return;
-       if ((modif & Event.CTRL_MASK) != 0)
+       if ((modif & InputEvent.CTRL_DOWN_MASK) != 0)
            return;
        int x = ev.getX();
        int y = ev.getY();

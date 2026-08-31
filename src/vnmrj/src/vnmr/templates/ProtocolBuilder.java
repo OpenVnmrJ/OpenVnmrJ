@@ -151,8 +151,8 @@ public class ProtocolBuilder extends Template
     private int m_modifier=0;
 
     public String getMod() {
-        if ((m_modifier & InputEvent.CTRL_MASK) != 0 ) return "ctrl";
-        else if ((m_modifier & InputEvent.SHIFT_MASK) != 0 ) return "shift";
+        if ((m_modifier & InputEvent.CTRL_DOWN_MASK) != 0 ) return "ctrl";
+        else if ((m_modifier & InputEvent.SHIFT_DOWN_MASK) != 0 ) return "shift";
         else return "";
     }
 
@@ -1957,8 +1957,8 @@ public class ProtocolBuilder extends Template
         public void mouseClicked(MouseEvent e) {
             Messages.postDebug("SQMouse", "Mouse clicked in tree");/*TMP*/
             int clicks = e.getClickCount();
-            int modifier = e.getModifiers();
-            if ((modifier & InputEvent.BUTTON1_MASK) != 0){
+            int modifier = e.getModifiersEx();
+            if ((modifier & InputEvent.getMaskForButton(1)) != 0){
                 if (clicks == 2){
                     TreePath path=getElementPath(e.getX(), e.getY());
                     Messages.postDebug("SQMouse", "Path=" + path);/*TMP*/
@@ -2010,7 +2010,7 @@ public class ProtocolBuilder extends Template
 
         public void dragDropEnd (DragSourceDropEvent evt)       { }
         public void dragEnter (DragSourceDragEvent evt)         {
-	    m_modifier = evt.getGestureModifiers();
+	    m_modifier = evt.getGestureModifiersEx();
             //debugDnD("dragEnter");
         }
         public void dragExit (DragSourceEvent evt)              {

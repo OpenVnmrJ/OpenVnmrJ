@@ -154,11 +154,11 @@ public class FileUtil
             Variant=dir;
         
         if(Country==null)
-            Locale.setDefault(new Locale(Language));
+            Locale.setDefault(new Locale.Builder().setLanguage(Language).build());
         else if(Variant==null)
-            Locale.setDefault(new Locale(Language,Country));
+            Locale.setDefault(new Locale.Builder().setLanguage(Language).setRegion(Country).build());
         else
-            Locale.setDefault(new Locale(Language,Country,Variant));
+            Locale.setDefault(new Locale.Builder().setLanguage(Language).setRegion(Country).setVariant(Variant).build());
                     
         dir=System.getProperty("sysdir");
         SysDir=(dir==null)?SYS_VNMR:dir;
@@ -332,7 +332,7 @@ public class FileUtil
     //----------------------------------------------------------------
     public static void setLanguage(String s) {
         Language=s;
-        Locale.setDefault(new Locale(s));
+        Locale.setDefault(new Locale.Builder().setLanguage(s).build());
     }
 
     public static void setLanguage(String s, String c) {
@@ -340,7 +340,7 @@ public class FileUtil
 	else {
           Language=s;
 	  Country =c;
-	  Locale.setDefault(new Locale(s, c));
+	  Locale.setDefault(new Locale.Builder().setLanguage(s).setRegion(c).build());
 	}
     }
 

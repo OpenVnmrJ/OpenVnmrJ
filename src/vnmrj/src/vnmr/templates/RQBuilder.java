@@ -1325,8 +1325,8 @@ public class RQBuilder extends Template
 
         public void mouseClicked(MouseEvent e) {
             int clicks = e.getClickCount();
-            int modifier = e.getModifiers();
-	    if ((modifier & InputEvent.BUTTON1_MASK) != 0){
+            int modifier = e.getModifiersEx();
+	    if ((modifier & InputEvent.getMaskForButton(1)) != 0){
             if (clicks >= 2){
 		Point p = new Point(e.getX(), e.getY());
 		int row = rowAtPoint(p);
@@ -1337,11 +1337,11 @@ public class RQBuilder extends Template
                 if (tpath !=null) {
 		    VElement elem=(VElement)tpath.getLastPathComponent();
 		    if(elem.getAttribute(ATTR_TYPE).equals(STUDY)) return;
-                    if ((modifier & InputEvent.SHIFT_MASK) != 0){
+                    if ((modifier & InputEvent.SHIFT_DOWN_MASK) != 0){
                         doDoubleClick(elem, "shiftdoubleclick");
-                    } else if ((modifier & InputEvent.CTRL_MASK) != 0){
+                    } else if ((modifier & InputEvent.CTRL_DOWN_MASK) != 0){
                         doDoubleClick(elem, "ctrldoubleclick");
-                    } else if ((modifier & InputEvent.ALT_MASK) != 0){
+                    } else if ((modifier & InputEvent.ALT_DOWN_MASK) != 0){
                         doDoubleClick(elem, "altdoubleclick");
 		    } else if(name.equals(ATTR_GROUP)) {
                         doDoubleClick(elem, "doubleclickgroup");
@@ -1427,7 +1427,7 @@ public class RQBuilder extends Template
 	 }
 
         public void dragEnter (DragSourceDragEvent evt)         {
-	   m_modifier = evt.getGestureModifiers();
+	   m_modifier = evt.getGestureModifiersEx();
             //debugDnD("dragEnter");
         }
         public void dragExit (DragSourceEvent evt)              {
@@ -1889,8 +1889,8 @@ public class RQBuilder extends Template
 */
 
     public String getMod() {
-	if ((m_modifier & InputEvent.CTRL_MASK) != 0 ) return "ctrl";
-        else if ((m_modifier & InputEvent.SHIFT_MASK) != 0 ) return "shift";
+	if ((m_modifier & InputEvent.CTRL_DOWN_MASK) != 0 ) return "ctrl";
+        else if ((m_modifier & InputEvent.SHIFT_DOWN_MASK) != 0 ) return "shift";
 	else return "";
     }
 

@@ -659,8 +659,7 @@ public class WUtil
      */
     public static boolean isRightMouseClick(MouseEvent e)
     {
-        return ((e.getModifiers() & InputEvent.BUTTON3_MASK)
-                            == InputEvent.BUTTON3_MASK);
+        return ((e.getModifiersEx() & InputEvent.getMaskForButton(3)) != 0);
     }
 
     /**
@@ -668,8 +667,7 @@ public class WUtil
      */
     public static boolean isLeftMouseClick(MouseEvent e)
     {
-        return ((e.getModifiers() & InputEvent.BUTTON1_MASK)
-                            == InputEvent.BUTTON1_MASK);
+        return ((e.getModifiersEx() & InputEvent.getMaskForButton(1)) != 0);
     }
 
     public static void setCurrentAdmin(String name)
