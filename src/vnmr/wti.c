@@ -1138,7 +1138,7 @@ static int wti_mouse(int butnum, int updown, int x, int y0)
                            }
                          else
                            { if (wtp.lb<0) time = -time;
-                             wtp.lb = 0.318/time;
+                             wtp.lb = M_1_PI/time;
                            }
                          P_setreal(CURRENT,wtp.lbname,wtp.lb,0);
                          P_getreal(CURRENT,wtp.lbname,&wtp.lb,1);

@@ -86,6 +86,10 @@ extern void clearGraphFunc();
 #define MINTIM       1e-7      /* minimun timer word in secs    */
 #define digit(c)     (('0' <= c) && (c <= '9'))
 #define letter(c)  (((c>='a') && (c<='z')) || (c=='$') || (c=='#') || (c==' '))
+#ifndef M_PI         
+#define M_PI         3.14159265358979323846
+#define M_1_PI       (1/M_PI)
+#endif
 
 static char arraystring[STR128];
 static int decplaces = 0,mult;            /* parameter characteristics */
@@ -911,7 +915,7 @@ static int convertline(int grident)
 		{   partype = 0;
 		    if (!vnmr && t6[2]=='y')
                     {
-                       lbval = -0.318/stringReal(t16b);
+                       lbval = -M_1_PI/stringReal(t16b);
                     }
 		}
            else if (strcmp(name,"re2"   )==0) partype = 0;

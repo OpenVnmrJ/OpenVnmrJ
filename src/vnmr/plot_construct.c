@@ -943,11 +943,11 @@ draw_garrow(int argc, char **argv)
         }
         angle2 = angle - pi;
 	amove(x2, y2);
-	dx = (int)(cos(angle2 + 0.314) * w);
-        dy = (int)(sin(angle2 + 0.314) * w);
+	dx = (int)(cos(angle2 + pi/10.0) * w);
+        dy = (int)(sin(angle2 + pi/10.0) * w);
 	fprintf(plotfile,"%d %d rlineto\n", dx, -dy);
-	dx2 = (int)(cos(angle2 - 0.314) * w);
-        dy2 = (int)(sin(angle2 - 0.314) * w);
+	dx2 = (int)(cos(angle2 - pi/10.0) * w);
+        dy2 = (int)(sin(angle2 - pi/10.0) * w);
 	fprintf(plotfile,"%d %d rlineto\n", dx2 - dx, dy - dy2);
 	fprintf(plotfile,"closepath fill\n");
 	ps_flush();
