@@ -1611,7 +1611,7 @@ public class SaveStudyDialog extends ModalDialog
                 > 0; j--) {
 
                 // Swap rows j and j-1
-                Object a = v.elementAt(j);
+                String a = v.elementAt(j);
                 v.remove(j);
                 v.add(j, v.elementAt(j-1));
                 v.remove(j-1);
@@ -1716,7 +1716,7 @@ public class SaveStudyDialog extends ModalDialog
     protected Hashtable<String, String> parentDirs_ds = null;
     protected Hashtable<String, String> childDirs = null;
     protected Hashtable<String, String> allKeysTypes = null;
-    protected Hashtable<String, Long> allKeysSpaces = null;
+    protected Hashtable<String, String> allKeysSpaces = null;
     protected Hashtable<String, String> allKeysPaths = null;
     protected Vector<String> allKeys = null;
     protected Hashtable<String, String> allLongKeysPaths = null;
