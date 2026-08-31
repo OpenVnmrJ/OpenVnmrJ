@@ -3974,15 +3974,15 @@ public class PlotBox extends JPanel implements Printable {
             //   buttons.
             // This problem affects Netscape 4.61 under Digital Unix and
             // 4.51 under Solaris
-            if ((event.getModifiers() & MouseEvent.BUTTON1_MASK) != 0
-                || event.getModifiers() == 0)
+            if ((event.getModifiersEx() & MouseEvent.getMaskForButton(1)) != 0
+                || event.getModifiersEx() == 0)
             {
                 PlotBox.this._zoomStart(event.getX(), event.getY());
             }
         }
         public void mouseReleased(MouseEvent event) {
-            if ((event.getModifiers() & MouseEvent.BUTTON1_MASK) != 0 ||
-                    event.getModifiers() == 0) {
+            if ((event.getModifiersEx() & MouseEvent.getMaskForButton(1)) != 0 ||
+                    event.getModifiersEx() == 0) {
                 PlotBox.this._zoom(event.getX(), event.getY());
             }
         }

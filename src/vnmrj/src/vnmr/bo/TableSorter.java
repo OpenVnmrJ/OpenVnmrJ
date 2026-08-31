@@ -312,7 +312,7 @@ public class TableSorter extends TableMap {
                 int column = tableView.convertColumnIndexToModel(viewColumn);
                 if (e.getClickCount() == 1 && column != -1) {
                     //System.out.println("Sorting ...");
-                    int shiftPressed = e.getModifiers()&InputEvent.SHIFT_MASK;
+                    //int shiftPressed = e.getModifiers()&InputEvent.SHIFT_MASK;
                     //boolean ascending = (shiftPressed == 0);
                     sorter.sortByColumn(column, ascending);
                     ascending = !ascending;

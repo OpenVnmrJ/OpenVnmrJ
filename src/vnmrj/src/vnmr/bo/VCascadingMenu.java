@@ -56,8 +56,8 @@ public class VCascadingMenu extends VObj implements ActionListener {
 
         MouseListener mouseListener = new MouseAdapter() {
             public void mousePressed(MouseEvent me) {
-                int modifier = me.getModifiers();
-                if ((modifier & BUTTON1_MASK) == BUTTON1_MASK) {
+                int modifier = me.getModifiersEx();
+                if ((modifier & InputEvent.getMaskForButton(1)) != 0) {
                     Component comp = me.getComponent();
                     buildMenu(m_popupMenu, "", m_sMenuDirPath);
                     m_popupMenu.show(comp, 0, comp.getHeight());
