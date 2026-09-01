@@ -23,7 +23,7 @@ public class FileTable extends JTable implements VTooltipIF
 {
     private FileTableModel m_tableModel;
     private String m_type = "";
-    private Vector m_flags = null;
+    private Vector<Boolean> m_flags = null;
 
     public FileTable() {
     super();
@@ -35,19 +35,19 @@ public class FileTable extends JTable implements VTooltipIF
     super();
         setOpaque(false);
 
-    Vector paths = new Vector();
+    Vector<String> paths = new Vector<String>();
     paths.addElement(path);
     makeFileTable(paths, type);
     }
 
-    public FileTable(Vector paths, String type) {
+    public FileTable(Vector<String> paths, String type) {
     super();
         setOpaque(false);
 
     makeFileTable(paths, type);
     }
 
-    public boolean makeFileTable(Vector paths, String type) {
+    public boolean makeFileTable(Vector<String> paths, String type) {
 
     m_type = type;
 
@@ -98,7 +98,7 @@ public class FileTable extends JTable implements VTooltipIF
         return(b);
     }
 
-    public boolean updateFileTable(Vector paths, String type) {
+    public boolean updateFileTable(Vector<String> paths, String type) {
 
     m_type = type;
 
@@ -215,7 +215,7 @@ public class FileTable extends JTable implements VTooltipIF
 // when access rowValue through FileTable's getRowValue, used i;
 // when access rowValue through FileTableModel's getRowValue, used ind[i].
 
-	Hashtable table = Audit.flagtable;
+	Hashtable<String,String> table = Audit.flagtable;
 
 	if(table == null || m_type == null || 
 		!m_type.equals("records") || table.size() <= 0) return;
@@ -240,7 +240,7 @@ public class FileTable extends JTable implements VTooltipIF
     } else return(false);
     }
 
-    public Vector getOutputTypes() {
+    public Vector<String> getOutputTypes() {
         return(this.m_tableModel.getOutputTypes());
     }
 

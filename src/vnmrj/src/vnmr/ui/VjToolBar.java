@@ -35,17 +35,17 @@ public class VjToolBar extends JToolBar
     PropertyChangeListener, VObjDef
 {
     private Vector<String> m_vecDefaultTools	= new Vector<String>();
-    private static ArrayList  m_vecAvailToolsV	= new ArrayList();
-    private static ArrayList  m_vecPositionV	= new ArrayList();
-    private static Vector     m_vecCurrentOrderedPos = new Vector();
-    private static ArrayList  m_vecSortedPos	= new ArrayList();
+    private static ArrayList<String> m_vecAvailToolsV = new ArrayList<String>();
+    private static ArrayList<Object> m_vecPositionV = new ArrayList<Object>();
+    private static Vector<String> m_vecCurrentOrderedPos = new Vector<String>();
+    private static ArrayList<Object> m_vecSortedPos = new ArrayList<Object>();
     private static Vector<String> m_vecUndotoollist = new Vector<String>();
-    private static ArrayList  m_vecToolsLoc	= new ArrayList();
-    private static Vector     m_vecUndoPosList	= new Vector();
-    private static Vector     m_vecUndolist	= new Vector();
-    private static Vector     m_vecDeltoollist	= new Vector();
+    private static ArrayList<Object> m_vecToolsLoc = new ArrayList<Object>();
+    private static Vector<String> m_vecUndoPosList = new Vector<String>();
+    private static Vector<String> m_vecUndolist = new Vector<String>();
+    private static Vector<String> m_vecDeltoollist = new Vector<String>();
 
-    private static HashMap  m_hmTools 	= new HashMap();
+    private static HashMap<String,String> m_hmTools = new HashMap<String,String>();
 
     private final  static int	YPOS		= 2;
     private static boolean	m_bIsDefaultTools  = true;
@@ -265,7 +265,7 @@ public class VjToolBar extends JToolBar
             vpNumObj.updateValue();
     }
 
-	public void updateValue(Vector params)
+	public void updateValue(Vector<String> params)
 	{
 	    updateValue(params, m_pnlDisplay);
 		updateValue(params, vpPanel);
@@ -276,7 +276,7 @@ public class VjToolBar extends JToolBar
                 vpNumObj.updateValue();
 	}
 
-    public void updateValue (Vector params, JComponent toolbar) {
+    public void updateValue(Vector<String> params, JComponent toolbar) {
         int k = toolbar.getComponentCount();
         for (int i = 0; i < k; i++) {
             Component comp = toolbar.getComponent(i);
@@ -290,7 +290,7 @@ public class VjToolBar extends JToolBar
 		updateAllValue(params, toolbar);
     }
 
-    public void updateAllValue(Vector params, JComponent toolbar)
+    public void updateAllValue(Vector<String> params, JComponent toolbar)
     {
         int nums = toolbar.getComponentCount();
         for (int i = 0; i < nums; i++) {
@@ -478,7 +478,7 @@ public class VjToolBar extends JToolBar
 	    }
 	}
 
-    public Vector getCurrentToolList()
+    public Vector<String> getCurrentToolList()
     {
         return  m_vecCurrentOrderedPos;
     }
@@ -688,12 +688,12 @@ public class VjToolBar extends JToolBar
 	/**
 	 *  Adds the viewport buttons to the toolbar.
 	 */
-    public void addVP(ArrayList aListVP)
+    public void addVP(ArrayList<Object> aListVP)
     {
         int nCompCount = vpPanel.getComponentCount();
         Component comp;
         VToolBarButton btnTool;
-        ArrayList aListComp = new ArrayList();
+        ArrayList<Component> aListComp = new ArrayList<Component>();
 
         removeAllVpTools();
 
@@ -709,13 +709,13 @@ public class VjToolBar extends JToolBar
 		int w = (m_resetComp == null || m_resetComp.getWidth() <= 0) ? 60
 					: m_resetComp.getWidth();
 
-        ArrayList aListBtns = getVpBtns(nVP);
+        ArrayList<VToolBarButton> aListBtns = getVpBtns(nVP);
         VToolBarButton btn;
 
         // Put the viewport buttons on the toolbar
         for (int i = 0; i < nVP; i++)
         {
-            HashMap hmVpAttrs = (HashMap)aListVP.get(i);
+            HashMap<String,Object> hmVpAttrs = (HashMap<String,Object>)aListVP.get(i);
 			strLabel = (String)hmVpAttrs.get(Integer.valueOf(VObjDef.ICON));
 			if (i > 0)
 			    x = x + w;
@@ -735,10 +735,10 @@ public class VjToolBar extends JToolBar
 		validateToolbar();
     }
 
-    protected ArrayList getVpBtns(int nVp)
+    protected ArrayList<VToolBarButton> getVpBtns(int nVp)
     {
         int nCompCount = vpPanel.getComponentCount();
-        ArrayList aListBtns = new ArrayList();
+        ArrayList<VToolBarButton> aListBtns = new ArrayList<VToolBarButton>();
         Component comp;
 
         for (int i = 0; i < nCompCount; i++)
@@ -777,7 +777,7 @@ public class VjToolBar extends JToolBar
 	/**
 	 *  Sets the attributes for each toolbar button.
 	 */
-	protected void setAttrs(HashMap hmVpAttrs, VToolBarButton btn)
+	protected void setAttrs(HashMap<String,Object> hmVpAttrs, VToolBarButton btn)
 	{
 		if (hmVpAttrs == null || hmVpAttrs.isEmpty())
 			return;
@@ -1374,7 +1374,7 @@ public class VjToolBar extends JToolBar
     }
 
     /* Get undo tool index */
-   private int getHLIndex( Vector list, String label )
+   private int getHLIndex(Vector<String> list, String label)
    {
       String str = "";
 

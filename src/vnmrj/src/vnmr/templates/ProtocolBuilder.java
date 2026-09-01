@@ -62,9 +62,9 @@ public class ProtocolBuilder extends Template
     boolean             allow_nesting=true;
     boolean             validate_move=false;
     boolean             validate_copy=false;
-    Hashtable           excluded=null;
+    Hashtable<String,String> excluded = null;
     String				studyPath="";
-    protected ArrayList aListProtocol = new ArrayList();
+    protected ArrayList<VElement> aListProtocol = new ArrayList<VElement>();
 //    private static LayoutManager layout = null;
     //private SQActionRenderer m_executingAction = new SQActionRenderer();
     //protected Rectangle m_executingNodeRect = new Rectangle();
@@ -176,7 +176,7 @@ public class ProtocolBuilder extends Template
             c=DisplayOptions.getColor("Selected");
         renderer.setBackgroundSelectionColor(c);
         DisplayOptions.addChangeListener(this);
-        excluded=new Hashtable();
+        excluded = new Hashtable<String,String>();
         excluded.put(ATTR_TIME,ATTR_TIME);
         excluded.put(ATTR_DATA,ATTR_DATA);
         excluded.put(ATTR_STATUS,ATTR_STATUS);
@@ -788,8 +788,8 @@ public class ProtocolBuilder extends Template
     //----------------------------------------------------------------
     /** Return all Element attributes.  */
     //----------------------------------------------------------------
-    public ArrayList getAttributes(VElement obj) {
-        ArrayList list=new ArrayList();
+    public ArrayList<String> getAttributes(VElement obj) {
+        ArrayList<Object> list = new ArrayList<Object>();
         list.add(ATTR_TYPE);
         list.add(obj.getAttribute(ATTR_TYPE));
 
@@ -849,7 +849,7 @@ public class ProtocolBuilder extends Template
     /** Set attribute for all Elements before target . */
     //----------------------------------------------------------------
     public void setBefore(VElement elem, int type, String attr, String value) {
-        ArrayList list=getElementsBefore(elem,type);
+        ArrayList<VElement> list = getElementsBefore(elem,type);
         for(int i=0;i<list.size();i++){
             VElement obj=(VElement)list.get(i);
             setAttribute(obj,attr,value);
@@ -860,7 +860,7 @@ public class ProtocolBuilder extends Template
     /** Set attribute for all Elements after target . */
     //----------------------------------------------------------------
     public void setAfter(VElement elem, int type, String attr, String value) {
-        ArrayList list=getElementsAfter(elem,type);
+        ArrayList<VElement> list = getElementsAfter(elem,type);
         for(int i=0;i<list.size();i++){
             VElement obj=(VElement)list.get(i);
             setAttribute(obj,attr,value);
@@ -878,7 +878,7 @@ public class ProtocolBuilder extends Template
     /** Set attribute for all Elements . */
     //----------------------------------------------------------------
     public void setAll(VElement elem, int type, String attr, String value) {
-        ArrayList list=getElements(elem,type);
+        ArrayList<VElement> list = getElements(elem,type);
         for(int i=0;i<list.size();i++){
             VElement obj=(VElement)list.get(i);
             obj.setAttribute(attr,value);
@@ -957,8 +957,8 @@ public class ProtocolBuilder extends Template
     //----------------------------------------------------------------
     /** Get typed elements in subtree elem. */
     //----------------------------------------------------------------
-    public ArrayList getElements(VElement obj, int cond, int type) {
-        ArrayList list=new ArrayList();
+    public ArrayList<VElement> getElements(VElement obj, int cond, int type) {
+        ArrayList<Object> list = new ArrayList<Object>();
         if(obj==null)
             obj=rootElement();
         switch(cond){
@@ -1073,7 +1073,7 @@ public class ProtocolBuilder extends Template
     /** Get typed element before node with specified Id.  */
     //----------------------------------------------------------------
     public VElement getElementBefore(VElement elem, int type) {
-        ArrayList list=getElementsBefore(elem,type);
+        ArrayList<VElement> list = getElementsBefore(elem,type);
         if(list.size()==0)
             return null;
         return (VElement)list.get(list.size()-1); // last element
@@ -1109,7 +1109,7 @@ public class ProtocolBuilder extends Template
     /** Get typed element after node with specified Id.  */
     //----------------------------------------------------------------
     public VElement getElementAfter(VElement elem, int type) {
-        ArrayList list=getElementsAfter(elem,type);
+        ArrayList<VElement> list = getElementsAfter(elem,type);
         if(list.size()==0)
             return null;
         return (VElement)list.get(0);  // first element
@@ -1262,12 +1262,12 @@ public class ProtocolBuilder extends Template
 
     }
 
-    public ArrayList getHiddenNodes()
+    public ArrayList<VElement> getHiddenNodes()
     {
         return aListProtocol;
     }
 
-    public void setHiddenNodes(ArrayList alist)
+    public void setHiddenNodes(ArrayList<VElement> alist)
     {
         aListProtocol = alist;
     }
@@ -1601,7 +1601,7 @@ public class ProtocolBuilder extends Template
         //protocolupdate.update();
     }
 
-    public void showElement(ArrayList aListElem, String value)
+    public void showElement(ArrayList<VElement> aListElem, String value)
     {
         if (value == null || value.equals(""))
             return;
@@ -2796,7 +2796,7 @@ public class ProtocolBuilder extends Template
     class ProtocolUpdate implements TreeExpansionListener, TreeSelectionListener
     {
         protected JTree m_tree;
-        protected Set m_aListExpandedPath = new HashSet();
+        protected Set<TreePath> m_aListExpandedPath = new HashSet<TreePath>();
         protected TreePath[] m_selectedPath = new TreePath[0];
         protected boolean m_bSelected = false;
 

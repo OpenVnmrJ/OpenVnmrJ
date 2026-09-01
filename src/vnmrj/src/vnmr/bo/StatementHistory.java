@@ -35,7 +35,7 @@ public class StatementHistory  implements  Serializable {
     /** shuffler service */
     private ShufflerService shufflerService;
     /** History buffer. Place latest statements at end. */
-    private Vector buffer=null;
+    private Vector<Hashtable<String,Object>> buffer = null;
     /** Buffer pointer. The buffer pointer points at the statement
      * currently being displayed. If the buffer is empty, the pointer
      * has value -1. */
@@ -45,9 +45,9 @@ public class StatementHistory  implements  Serializable {
     /** Most previous active bufPointer when append occured  */
     private int prevBufPointer;
     /** statement listeners */
-    private Vector listeners;
+    private Vector<StatementHistoryListenerIF> listeners;
     /** previous statements, keyed by type */
-    private Hashtable prevStatements;
+    private Hashtable<String,Hashtable<String,Object>> prevStatements;
     /** object type this StatementHistory is used for. */
     private String objectType;
 
@@ -56,7 +56,7 @@ public class StatementHistory  implements  Serializable {
      * @param shufflerService
      */
     public StatementHistory(ShufflerService shufflerService, String objType,
-                            Vector buf, int bufPointer){
+                            Vector<Hashtable<String,Object>> buf, int bufPointer){
         this.shufflerService = shufflerService;
         objectType = objType;
         this.buffer = buf;
@@ -64,9 +64,9 @@ public class StatementHistory  implements  Serializable {
 
 
         if(buffer == null)
-            buffer = new Vector(MAXLEN);
-        listeners = new Vector();
-        prevStatements = new Hashtable();
+            buffer = new Vector<Hashtable<String,Object>>(MAXLEN);
+        listeners = new Vector<StatementHistoryListenerIF>();
+        prevStatements = new Hashtable<String,Hashtable<String,Object>>();
     } // StatementHistory()
 
     /**
@@ -83,7 +83,7 @@ public class StatementHistory  implements  Serializable {
      * resets the buffer pointer to the end.
      * @param statement statement
      */
-    public void append(Hashtable statement) {
+    public void append(Hashtable<String,Object> statement) {
         if(statement == null)
             return;
 
@@ -117,9 +117,9 @@ public class StatementHistory  implements  Serializable {
         String str1, str2, str3;
         String val;
 
-        Hashtable statement = getCurrentStatement();
+        Hashtable<String,Object> statement = getCurrentStatement();
         if (statement != null) {
-            Hashtable newStatement = (Hashtable)statement.clone();
+            Hashtable<String,Object> newStatement = (Hashtable<String,Object>)statement.clone();
             newStatement.put(key, value);
 
 
@@ -224,7 +224,7 @@ public class StatementHistory  implements  Serializable {
      */
     public void appendLastOfType(String statementType) {
         prevBufPointer = bufPointer;
-        Hashtable statement = (Hashtable)prevStatements.get(statementType);
+        Hashtable<String,Object> statement = prevStatements.get(statementType);
 
         if (statement == null)
             statement = shufflerService.getDefaultStatement(statementType);
@@ -243,9 +243,9 @@ public class StatementHistory  implements  Serializable {
      *
      *****************************************************************/
 
-    public Hashtable getLastOfType(String statementType) {
+    public Hashtable<String,Object> getLastOfType(String statementType) {
         prevBufPointer = bufPointer;
-        Hashtable statement = (Hashtable)prevStatements.get(statementType);
+        Hashtable<String,Object> statement = prevStatements.get(statementType);
 
         if (statement == null)
             statement = shufflerService.getDefaultStatement(statementType);
@@ -309,7 +309,7 @@ public class StatementHistory  implements  Serializable {
     public void goBack() {
         if (bufPointer > 0) {
             bufPointer--;
-            Hashtable statement = (Hashtable)buffer.elementAt(bufPointer);
+            Hashtable<String,Object> statement = buffer.elementAt(bufPointer);
             for (Enumeration en = listeners.elements();
                  en.hasMoreElements(); ) {
                 StatementListener listener =
@@ -338,7 +338,7 @@ public class StatementHistory  implements  Serializable {
     public void goForward() {
         if (bufPointer + 1 < buffer.size()) {
             bufPointer++;
-            Hashtable statement = (Hashtable)buffer.elementAt(bufPointer);
+            Hashtable<String,Object> statement = buffer.elementAt(bufPointer);
             for (Enumeration en = listeners.elements();
                  en.hasMoreElements(); ) {
                 StatementListener listener =
@@ -354,9 +354,9 @@ public class StatementHistory  implements  Serializable {
      * get current statement
      * @return current
      */
-    public Hashtable getCurrentStatement() {
+    public Hashtable<String,Object> getCurrentStatement() {
         if (0 <= bufPointer && bufPointer < buffer.size()) {
-            return (Hashtable)buffer.elementAt(bufPointer);
+            return buffer.elementAt(bufPointer);
         }
         else {
             String statementType = shufflerService.getDefaultStatementType();
@@ -380,7 +380,7 @@ public class StatementHistory  implements  Serializable {
             return;
 
         try {
-            Hashtable statement = getCurrentStatement();
+            Hashtable<String,Object> statement = getCurrentStatement();
             // If there is nothing in 'buffer', then append this one
             if(buffer.size() == 0) {
                 append(statement);
@@ -426,7 +426,7 @@ public class StatementHistory  implements  Serializable {
             // and test it until we find one which is not by that name.
             while (bufPointer >= 0 && buffer.size() > 0) {
 
-                statement = (Hashtable)buffer.elementAt(bufPointer);
+                statement = buffer.elementAt(bufPointer);
                 String menuString = (String) statement.get("MenuString");
                 if(!menuString.endsWith("internal use")) {
                     // We found one that is not 'internal use', so break out
@@ -475,7 +475,7 @@ public class StatementHistory  implements  Serializable {
      *
      */
     public void writeCurStatement(String name, String label) {
-        Hashtable curStatement;
+        Hashtable<String,Object> curStatement;
         //String dir, shufDir;
         String filepath;
         String filename;
@@ -562,7 +562,7 @@ public class StatementHistory  implements  Serializable {
         String filename;
         ObjectInputStream in;
         //String dir;
-        Hashtable statement;
+        Hashtable<String,Object> statement;
 
         //dir = System.getProperty("userdir");
 
@@ -630,14 +630,14 @@ public class StatementHistory  implements  Serializable {
         String dir;
         String statementType;
         File file;
-        Hashtable statement;
+        Hashtable<String,Object> statement;
         LocatorHistory lHistory;
-        ArrayList allObjTypes;
+        ArrayList<String> allObjTypes;
         /** list of custom saved statement menu entries in the form 
             of a list of nameNlabel items */
-        ArrayList menuList=null;
+        ArrayList<ArrayList<String>> menuList = null;
         /** list of 2 items, filename and menu label */
-        ArrayList nameNlabel;
+        ArrayList<String> nameNlabel;
         ObjectInputStream in;
 
         dir=FileUtil.savePath("USER/LOCATOR");
@@ -651,8 +651,8 @@ public class StatementHistory  implements  Serializable {
 
         SessionShare sshare = ResultTable.getSshare();
         lHistory = sshare.getLocatorHistory();
-        ArrayList allStatementTypes = lHistory.getallStatementTypes();
-        menuList = new ArrayList();
+        ArrayList<String> allStatementTypes = lHistory.getallStatementTypes();
+        menuList = new ArrayList<ArrayList<String>>();
         // Go thru the files and only keep the ones with spotter types
         // which are current.
         
@@ -685,7 +685,7 @@ public class StatementHistory  implements  Serializable {
                 // this item into the menu.
                 String menuLabel = (String)statement.get("MenuLabel");
                 if(menuLabel == null) {
-                    nameNlabel = new ArrayList(2);
+                    nameNlabel = new ArrayList<String>(2);
                     String name = list[i].getName();
                     // Convert all '_' to spaces.
                     name = name.replace('_', ' ');
@@ -695,7 +695,7 @@ public class StatementHistory  implements  Serializable {
                     menuList.add(nameNlabel);
                 }
                 else if(!menuLabel.equals("**skip**")) {
-                    nameNlabel = new ArrayList(2);
+                    nameNlabel = new ArrayList<String>(2);
                     String name = list[i].getName();
                     // Convert all '_' to spaces.
                     name = name.replace('_', ' ');
@@ -715,7 +715,7 @@ public class StatementHistory  implements  Serializable {
         return shufflerService;
     }
 
-    public Vector getBuffer() {
+    public Vector<Hashtable<String,Object>> getBuffer() {
         return buffer;
     }
 
@@ -733,7 +733,7 @@ public class StatementHistory  implements  Serializable {
      </pre> **************************************************/
     public  void updateCurStatementWidth(double colWidth0, double colWidth1,
                                          double colWidth2, double colWidth3) {
-        Hashtable curStatement;
+        Hashtable<String,Object> curStatement;
         
 
         curStatement = getCurrentStatement();
