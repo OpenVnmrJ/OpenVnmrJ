@@ -12,7 +12,6 @@ package vnmr.util;
 import java.awt.*;
 import java.awt.print.*;
 import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.util.*;
 
 import javax.print.PrintService;
@@ -274,14 +273,14 @@ public class JTextVista extends JComponentVista implements Printable {
             if (compBottom >= compHeight) {
                 compBottom = compHeight - 1;
             } else {
-                int idx = jtc.viewToModel2D(new Point(0, compBottom));
+                int idx = jtc.viewToModel(new Point(0, compBottom));
                 try {
-                    Rectangle2D r2d = new Rectangle2D.Float();
-                    for (r2d = jtc.modelToView2D(idx);
-                         (int)r2d.getY() > compBottom;
-                         r2d = jtc.modelToView2D(--idx))
+                    Rectangle r = new Rectangle();
+                    for (r = jtc.modelToView(idx);
+                         r.y > compBottom;
+                         r = jtc.modelToView(--idx))
                     {}
-                    compBottom = (int)r2d.getY();
+                    compBottom = r.y;
                 } catch (javax.swing.text.BadLocationException ble) {
                     Messages.writeStackTrace(ble);
                 }
