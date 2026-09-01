@@ -747,7 +747,7 @@ public class VjToolBar extends JToolBar
             if (comp instanceof VToolBarButton)
             {
                 if (aListBtns.size() < nVp)
-                    aListBtns.add(comp);
+                    aListBtns.add((VToolBarButton)comp);
                 /*else
                     ((VToolBarButton)comp).setAttribute(VObjDef.SHOW, "$VALUE=-1");*/
             }

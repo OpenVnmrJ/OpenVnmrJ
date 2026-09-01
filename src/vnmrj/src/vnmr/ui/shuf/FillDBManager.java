@@ -1586,7 +1586,7 @@ public class FillDBManager {
     }
 
 
-    public ArrayList<Object> fillATable(String objType, String dir, String user,
+    public ArrayList<UNFile> fillATable(String objType, String dir, String user,
                                 boolean recursive, DBCommunInfo info,
                                 long sleepMs) {
 
@@ -1596,7 +1596,7 @@ public class FillDBManager {
 
     }
 
-    public ArrayList<Object> fillATable(String objType, String dir, String user,
+    public ArrayList<UNFile> fillATable(String objType, String dir, String user,
                                 boolean recursive, DBCommunInfo info) {
 
         // Call fillATable with a sleepMs = 0
@@ -1616,7 +1616,7 @@ public class FillDBManager {
      *
      </pre> **************************************************/
 
-    public ArrayList<Object> fillATable(String objType, String dir, String user,
+    public ArrayList<UNFile> fillATable(String objType, String dir, String user,
                           boolean recursive, DBCommunInfo info, long sleepMs,
                           String attrName, String attrVal) {
         String suffix="", prefix="";
@@ -2192,7 +2192,7 @@ public class FillDBManager {
                     // the type is.  For example any attribute starting
                     // with "time_" could be set to date.
                     ArrayList<String> List = new ArrayList<String>();
-                    List.add(attribList.get(key));
+                    List.add((String)attribList.get(key));
                     ok = addRowToDBSetAttr(objType, key, "text",
                                            List , name, info);
                 }
@@ -6102,7 +6102,7 @@ public class FillDBManager {
         }
     }
 
-    public void getFileListing(ArrayList<Object> fileList, String prefix,
+    public void getFileListing(ArrayList<UNFile> fileList, String prefix,
                                     String suffix, String directory,
                                     boolean recursive, String objType) {
         int entryCounter = 0;
@@ -6144,7 +6144,7 @@ public class FillDBManager {
      *    found.
      *
      </pre> **************************************************/
-    private void getFileListingRecursive(ArrayList<Object> fileList, String prefix,
+    private void getFileListingRecursive(ArrayList<UNFile> fileList, String prefix,
                                          String suffix, String directory,
                                          boolean recursive, String objType,
                                          int entryCounter) {
@@ -6541,7 +6541,7 @@ public class FillDBManager {
 
                     // Add cDataDirs to dirChecked for future checks
                     for(int j=0; j < cDataDirs.size(); j++) {
-                        dirChecked.add(cDataDirs.get(j));
+                        dirChecked.add((String)cDataDirs.get(j));
                     }
 
                     // Check this users list of directories in SavedDirList
@@ -6577,7 +6577,7 @@ public class FillDBManager {
                     // cDataDirs and dirChecked
                     for(int j=0; j < cSavedDirList.size(); j++) {
                         cDataDirs.add(cSavedDirList.get(j));
-                        dirChecked.add(cSavedDirList.get(j));
+                        dirChecked.add((String)cSavedDirList.get(j));
                     }
 
 

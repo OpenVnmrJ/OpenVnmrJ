@@ -173,8 +173,8 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         appIF = appIF;
     }
 
-    private Constructor getTool(String key) {
-        return ( (Constructor) vobjs.get(key) );
+    private Constructor<?> getTool(String key) {
+        return vobjs.get(key);
     }
 
     private void displayTool(Component comp) {
@@ -1114,7 +1114,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
                 /* get VToolPanel only */
                 String key = "Locator"; 
                 PushpinIF pObj;
-                Constructor c = (Constructor)getTool(key);
+                Constructor<?> c = getTool(key);
                 Object[] vargs = new Object[1];
                 vargs[0] = sshare;
                 if (c != null) {
@@ -1197,7 +1197,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
             PushpinIF pObj = null;
             lastName = attr.getValue("name");
             String helplink = attr.getValue("helplink");
-            Constructor c = (Constructor)getTool(lastName);
+            Constructor<?> c = getTool(lastName);
             Object[] vargs;
             String toolFile; 
             if (lastName.equals("XMLToolPanel")) {

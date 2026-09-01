@@ -730,7 +730,7 @@ public class WUserUtil
                     boolean bUnixUser = isUnixUser(strOperator);
                     strName = "null";
                     if (isVjUser(strOperator))
-                        strName = WFileUtil.getHashMapUser(strOperator).get("name");
+                        strName = (String)WFileUtil.getHashMapUser(strOperator).get("name");
                     else {
                         // If this came from adding via text file, there may
                         // be an operator and it's full name, try it.

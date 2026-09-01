@@ -45,7 +45,7 @@ public class StatementHistory  implements  Serializable {
     /** Most previous active bufPointer when append occured  */
     private int prevBufPointer;
     /** statement listeners */
-    private Vector<StatementHistoryListenerIF> listeners;
+    private Vector<StatementListener> listeners;
     /** previous statements, keyed by type */
     private Hashtable<String,Hashtable<String,Object>> prevStatements;
     /** object type this StatementHistory is used for. */
@@ -65,7 +65,7 @@ public class StatementHistory  implements  Serializable {
 
         if(buffer == null)
             buffer = new Vector<Hashtable<String,Object>>(MAXLEN);
-        listeners = new Vector<StatementHistoryListenerIF>();
+        listeners = new Vector<StatementListener>();
         prevStatements = new Hashtable<String,Hashtable<String,Object>>();
     } // StatementHistory()
 
@@ -91,7 +91,8 @@ public class StatementHistory  implements  Serializable {
         while (buffer.size() >= MAXLEN) {
             buffer.removeElementAt(0);
         }
-        buffer.addElement(statement.clone());
+        Hashtable<String,Object> statementClone = (Hashtable<String,Object>)statement.clone();
+        buffer.addElement(statementClone);
         bufPointer = buffer.size() - 1;
 
         String statementType = (String)statement.get("Statement_type");

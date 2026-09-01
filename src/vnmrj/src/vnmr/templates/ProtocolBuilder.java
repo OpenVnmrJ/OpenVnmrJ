@@ -789,7 +789,7 @@ public class ProtocolBuilder extends Template
     /** Return all Element attributes.  */
     //----------------------------------------------------------------
     public ArrayList<String> getAttributes(VElement obj) {
-        ArrayList<Object> list = new ArrayList<Object>();
+        ArrayList<String> list = new ArrayList<String>();
         list.add(ATTR_TYPE);
         list.add(obj.getAttribute(ATTR_TYPE));
 
@@ -958,7 +958,7 @@ public class ProtocolBuilder extends Template
     /** Get typed elements in subtree elem. */
     //----------------------------------------------------------------
     public ArrayList<VElement> getElements(VElement obj, int cond, int type) {
-        ArrayList<Object> list = new ArrayList<Object>();
+        ArrayList<VElement> list = new ArrayList<VElement>();
         if(obj==null)
             obj=rootElement();
         switch(cond){

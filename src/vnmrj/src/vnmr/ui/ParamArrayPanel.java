@@ -164,7 +164,7 @@ public class ParamArrayPanel extends ModelessDialog implements ActionListener, V
     protected TableModel paramTableModel;
     protected TableModel valueTableModel;
     protected VParamArray vtotalTime;
-    protected Vector<Vector<String>> arrayedParams = null;
+    protected Vector arrayedParams = null;
     private ButtonIF vnmrIf;
     public static final int MAXLENGTH = 256;
     protected boolean origArrays = true;
@@ -351,7 +351,7 @@ public class ParamArrayPanel extends ModelessDialog implements ActionListener, V
             }
         });
 
-        ArrayList<String> styles = new ArrayList<String>();
+        ArrayList styles = new ArrayList();
         styles.add(linearStyle);
         styles.add(expStyle);
         //styles.add("None");
@@ -575,10 +575,10 @@ readButton.setEnabled(false);
 
     public void initializeParamTable() {
 
-	Vector<Vector<String>> values2D = new Vector<Vector<String>>();
+	Vector values2D = new Vector();
         // Create a vector for each row.
 
-        Vector<String> row1 = new Vector<String>(5);
+        Vector row1 = new Vector(5);
 	for(int i=0; i < 5; i++) {
 	    row1.add("");
 	}
@@ -615,12 +615,12 @@ readButton.setEnabled(false);
      *	can be called to do the Table update.
      </pre> **************************************************/
 
-    public void updateArrayParamTable(Vector<String> values) {
+    public void updateArrayParamTable(Vector values) {
 
         // test whether update is necessary.
 
         if(paramTable != null) {
-             Vector<Vector<String>> currentValues = getTableValues(paramTable);
+             Vector currentValues = getTableValues(paramTable);
              if(!has2DValueChanged(currentValues, values)) return;
         }
 
@@ -648,15 +648,15 @@ readButton.setEnabled(false);
 */
     }
 
-    public void makeArrayParamTable(Vector<String> values) {
-	Vector<String> param = new Vector<String>();
-	Vector<String> order = new Vector<String>();
-	Vector<String> size = new Vector<String>();
+    public void makeArrayParamTable(Vector values) {
+	Vector param=new Vector();
+	Vector order=new Vector();
+	Vector size =new Vector();
 	JTable oldTable;
 
 	// Table
-	Vector<String> header;
-	header = new Vector<String>(5);
+	Vector header;
+	header = new Vector(5);
 	header.add(Util.getLabel("_Param_Name"));
 	header.add(Util.getLabel("_Description"));
 	header.add(Util.getLabel("_Size"));
@@ -754,7 +754,7 @@ readButton.setEnabled(false);
      *	can be called to do the Table update.
      </pre> **************************************************/
 
-    public void updateValueTable(String paramName, Vector<String> values, String type) {
+    public void updateValueTable(String paramName, Vector values, String type) {
 
 	int index = getRowByParamName(paramName);
         if(index == -1) return;
@@ -765,7 +765,7 @@ readButton.setEnabled(false);
 
 	String activeParam = getActiveParamName();
         if(valueTable != null && activeParam.equals(paramName)) {
-             Vector<Object> currentValues = getTableColumnValues(valueTable, 1);
+             Vector currentValues = getTableColumnValues(valueTable, 1);
              if(!hasValueChanged(currentValues, values)) return;
         }
 
@@ -787,32 +787,32 @@ readButton.setEnabled(false);
                 Vector values = getValues(paramName);
                 makeValueTable(paramName, values);
             } else {
-                Vector<Object> values = new Vector<Object>();
+                Vector values = new Vector();
                 values.add(((ArrayedParam)arrayedParams.elementAt(index)).currentValue);
                 makeValueTable(paramName, values);
             }
         }
     }
 
-    public void makeValueTable(String paramName, Vector<String> values) {
+    public void makeValueTable(String paramName, Vector values) {
 	JTable oldTable;
 
-	Vector<Vector<String>> values2D = new Vector<Vector<String>>();
+	Vector values2D = new Vector();
 	// Table
-	Vector<String> header;
-	header = new Vector<String>(2);
+	Vector header;
+	header = new Vector(2);
 	header.add(Util.getLabel("_Position"));
 	header.add(Util.getLabel("_Value"));
 
 	// Now put the values into a 2D vector with the first column
 	// counting up from 1.
 	if(values == null) {
-	    values = new Vector<Object>();
+	    values = new Vector();
 	    values.add("NA");
 	}
 	for(int i=1; i <= values.size(); i++) {
 	    // Each vector has the values for one row.
-	    Vector<Object> row = new Vector<Object>(2);
+	    Vector row = new Vector(2);
 	    row.add(String.valueOf(i));
 	    row.add(values.elementAt(i-1));
 	    values2D.add(row);
@@ -1037,7 +1037,7 @@ readButton.setEnabled(false);
 	}
     }
 
-    private void sendArrayValuesToVnmr(String paramName, Vector<Object> v) {
+    private void sendArrayValuesToVnmr(String paramName, Vector v) {
 
 	// use this method to update vnmrbg whenever the values
 	// of valueTable changed.
@@ -1096,7 +1096,7 @@ readButton.setEnabled(false);
 	    paramScrollpane.setPreferredSize(dim);
 
         // set default order as max order + 1.
-	     Vector<Object> orders = getTableColumnValues(paramTable, paramTable.ORDERCOL);
+	     Vector orders = getTableColumnValues(paramTable, paramTable.ORDERCOL);
 	     String newOrder = getMaxValue(orders);
 	     if(!isDigits(newOrder)) newOrder = "1";
 	     else newOrder = String.valueOf(1+Float.valueOf(newOrder).intValue());
@@ -1170,7 +1170,7 @@ readButton.setEnabled(false);
 		current = "1";
 	        setCurrentValue(current);
 	    }
-	    Vector<Object> values = new Vector<Object>();
+	    Vector values = new Vector();
 	    values.add(String.valueOf(current));
 	    makeValueTable(paramName, values);
 	    setSizeValue("1");
@@ -1207,7 +1207,7 @@ readButton.setEnabled(false);
         }
     }
 
-    public void updatePnewParams(Vector<String> paramVector) {
+    public void updatePnewParams(Vector paramVector) {
 	if(paramArrayPanel == null || paramVector == null) return;
 	if(!paramArrayPanel.isVisible()) return;
 
@@ -1251,7 +1251,7 @@ readButton.setEnabled(false);
 	    return "0";
 	}
 
-        ArrayList<String> orders = new ArrayList<String>();
+        ArrayList orders = new ArrayList();
 
 	// Now calc array size
 	int totalSize = 1;
@@ -1312,7 +1312,7 @@ readButton.setEnabled(false);
 
     }
 
-    private String getMaxValue(Vector<String> values) {
+    private String getMaxValue(Vector values) {
 
         if(values == null || values.size() == 0) return "";
 
@@ -1337,7 +1337,7 @@ readButton.setEnabled(false);
         return String.valueOf(max);
     }
 
-    private String getIncrement(Vector<String> values, String style) {
+    private String getIncrement(Vector values, String style) {
 
 	// used only in valueTableAction and initilizing arrayedParams.
 	//sort needed if values are randomized.
@@ -1385,9 +1385,9 @@ readButton.setEnabled(false);
         return prevDelta;
     }
 
-    public Vector<Object> getTableRowValues(JTable t, int row) {
+    public Vector getTableRowValues(JTable t, int row) {
 
-        Vector<Object> values = new Vector<Object>();
+        Vector values = new Vector();
 
 	if(t.getColumnCount() > 0)
         for(int i=0; i<t.getColumnCount(); i++) values.add(t.getValueAt(row,i));
@@ -1395,18 +1395,18 @@ readButton.setEnabled(false);
         return values;
     }
 
-    public Vector<Object> getTableColumnValues(JTable t, int col) {
+    public Vector getTableColumnValues(JTable t, int col) {
 
-        Vector<Object> values = new Vector<Object>();
+        Vector values = new Vector();
 	if(t.getRowCount() > 0)
         for(int i=0; i<t.getRowCount(); i++) values.add(t.getValueAt(i,col));
 
         return values;
     }
 
-    public Vector<Vector<Object>> getTableValues(JTable t) {
+    public Vector getTableValues(JTable t) {
 
-        Vector<Vector<String>> values2D = new Vector<Vector<String>>();
+        Vector values2D = new Vector();
 	if(t.getRowCount() > 0)
         for(int i=0; i<t.getRowCount(); i++)
             values2D.add(getTableRowValues(t, i));
@@ -1414,7 +1414,7 @@ readButton.setEnabled(false);
         return values2D;
     }
 
-    public boolean hasValueChanged(Vector<Object> v1, Vector<Object> v2) {
+    public boolean hasValueChanged(Vector v1, Vector v2) {
 
         if(v1.size() != v2.size()) return true;
 
@@ -1484,7 +1484,7 @@ readButton.setEnabled(false);
 	if(size > 0 && first != null && last != null) {
 	    float firstValue = Float.valueOf(first).floatValue();
 	    float lastValue = Float.valueOf(last).floatValue();
-	    Vector<Object> values = new Vector<Object>();
+	    Vector values = new Vector();
 	    values.add(first);
 	    values.add(last);
 	    if(style.equals(expStyle)) {
@@ -1703,7 +1703,7 @@ readButton.setEnabled(false);
 	protected String order = "";
 	protected String on_off = "Off";
 	protected String currentValue = "";
-	protected Vector<Object> values = new Vector<Object>();
+	protected Vector values = new Vector();
 	protected String firstValue = "";
 	protected String lastValue = "";
 	protected String increment = "";
@@ -2184,7 +2184,7 @@ readButton.setEnabled(false);
     }
 
     public Vector getValues(String paramName) {
-	Vector<Object> values = new Vector<Object>();
+	Vector values = new Vector();
 	int index = getArrayParamIndex(paramName);
         if(index != -1 )
 	    values = ((ArrayedParam)arrayedParams.elementAt(index)).values;
@@ -2345,7 +2345,7 @@ readButton.setEnabled(false);
 
     public Vector getValuesOfArrayedParams() {
 
-	Vector<Object> values = new Vector<Object>();
+	Vector values = new Vector();
 	if(arrayedParams != null)
 	    for(int i=0; i<arrayedParams.size(); i++)
 	        if(!((ArrayedParam)arrayedParams.elementAt(i)).unArray)
@@ -2390,7 +2390,7 @@ readButton.setEnabled(false);
             System.err.println(" Error: jFunc(28) output.");
             return;
         }
-        Vector<Object> values = new Vector<Object>();
+        Vector values = new Vector();
 	String value;
         for (int i=0; i<row; i++) {
 	    if(type.equals("s")) value = tok.nextToken(";\n");
@@ -3082,7 +3082,7 @@ readButton.setEnabled(false);
 	if(ord.equals("0")) {
             int index = getArrayParamIndex(paramName);
             if(index != -1) {
-		Vector<Object> values = new Vector<Object>();
+		Vector values = new Vector();
 		values.add(current);
 		((ArrayedParam)arrayedParams.elementAt(index)).updateValues(values);
 	        updateArrayedParam(paramName, current, ArrayedParam.CURRENT);

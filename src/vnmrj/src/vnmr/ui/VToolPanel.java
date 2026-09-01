@@ -88,7 +88,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
     int nviews = 1;
     int openComps = 0;
     Hashtable<String,String>[] tp_paneInfo = new Hashtable[maxViews+1];
-    public Hashtable<String,String> tp_dividers = new Hashtable<String,String>();
+    public Hashtable<String,Object> tp_dividers = new Hashtable<String,Object>();
     boolean bSwitching = false;
     boolean RQinit = false;
     String tp_rqtype = "";
