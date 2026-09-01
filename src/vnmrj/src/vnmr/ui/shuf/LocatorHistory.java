@@ -19,17 +19,17 @@ import vnmr.templates.*;
 
 public class LocatorHistory {
     /** List of StatementHistory */
-    private HashMap statementHistory;
+    private HashMap<String,StatementHistory> statementHistory;
     /** Active ObjType to retrieve statementHistory from HashMap */
     private String activeObjType;
     private String prevActiveObjType;
     private ShufDBManager dbManager;
-    private HashMap allMenuStrings;
+    private HashMap<String,String[]> allMenuStrings;
     private String[] allObjTypes;
-    private ArrayList allStatementTypes;
-    private ArrayList bufferList=null;
-    private ArrayList bufPointerList;
-    private ArrayList objTypeList;
+    private ArrayList<String> allStatementTypes;
+    private ArrayList<Vector<Hashtable<String,Object>>> bufferList = null;
+    private ArrayList<Integer> bufPointerList;
+    private ArrayList<String> objTypeList;
     /** This is the part of the .xml file name following "locator_statements_".
 	It is used here for naming the persistence file. */
     private String    key;
@@ -48,19 +48,19 @@ public class LocatorHistory {
      * 
      </pre> **************************************************/
     public LocatorHistory(String filepath, String key) {
-	ArrayList  statementGroupList;
+	ArrayList<StatementDefinition> statementGroupList;
 	StatementHistory history;
  	ShufflerService shufServ;
-	ArrayList statementDefinitionList;
+	ArrayList<StatementDefinition> statementDefinitionList;
 	String groupType;
-	Vector buffer=null;
+	Vector<Hashtable<String,Object>> buffer = null;
 	int    bufPointer=0;
 	String objType;
 
 	this.key = key;
 
 	dbManager = ShufDBManager.getdbManager();
-	statementHistory = new HashMap(20);
+	statementHistory = new HashMap<String,StatementHistory>(20);
 
 	// Connect to the DB
 	dbManager.checkDBConnection();
@@ -87,9 +87,9 @@ public class LocatorHistory {
 
 	    for(int i=0;  i < bufferList.size(); i++ ) {
 
-		buffer = (Vector)bufferList.get(i);
-		bufPointer = ((Integer)bufPointerList.get(i)).intValue();
-		objType = (String)objTypeList.get(i);
+		buffer = bufferList.get(i);
+		bufPointer = bufPointerList.get(i).intValue();
+		objType = objTypeList.get(i);
 		persistObjTypes[i] = objType;
 		// Create a ShufflerService with this objType to be put into
 		// the StatementHistory.
@@ -150,13 +150,13 @@ public class LocatorHistory {
 
     public StatementHistory getStatementHistory() {
 	StatementHistory sh;
-	sh = (StatementHistory)statementHistory.get(activeObjType);
+	sh = statementHistory.get(activeObjType);
 	return sh;
     }
 
     public StatementHistory getStatementHistory(String objType) {
 	StatementHistory sh;
-	sh = (StatementHistory)statementHistory.get(objType);
+	sh = statementHistory.get(objType);
 	return sh;
     }
 
@@ -209,12 +209,12 @@ public class LocatorHistory {
 	// Loop through all StatementHistory's and add this listener to them.
 
 	// Get keys in as a Set
-	Set keys = statementHistory.keySet();
+	Set<String> keys = statementHistory.keySet();
 	// Convert to String array for access.
 	String[] keysArr = new String[keys.size()];
 	keys.toArray(keysArr);
 	for(int i=0; i < keysArr.length; i++) {
-	    history = (StatementHistory)statementHistory.get(keysArr[i]);
+	    history = statementHistory.get(keysArr[i]);
 	    history.addStatementListener(listener);
 	}
     }
@@ -314,14 +314,14 @@ public class LocatorHistory {
      *
      *</pre>
      */
-    public ArrayList readStatementDefinitionFile(String filepath) {
+    public ArrayList<StatementDefinition> readStatementDefinitionFile(String filepath) {
 	StatementDefinition statementDefinition;
 	StatementElement stElem, stElem2;
-	ArrayList eList;
-	ArrayList  statementDefinitionList;
+	ArrayList<Object> eList;
+	ArrayList<StatementDefinition> statementDefinitionList;
 	
-	statementDefinitionList = new ArrayList();
-	allStatementTypes = new ArrayList();
+	statementDefinitionList = new ArrayList<StatementDefinition>();
+	allStatementTypes = new ArrayList<String>();
 
 
 
@@ -349,11 +349,11 @@ public class LocatorHistory {
 	    // even though the file is missing.
 
 	    // Init eList for the Statement
-	    eList  = new ArrayList();
+	    eList = new ArrayList<Object>();
 
 	    // Forget the previous statementDefinitionList in case it
 	    // has partial info from an aborted read.
-	    statementDefinitionList = new ArrayList();
+	    statementDefinitionList = new ArrayList<StatementDefinition>();
 
 	    stElem = new StatementElement("ObjectType",
 					  Shuf.DB_VNMR_DATA,false);
@@ -411,7 +411,7 @@ public class LocatorHistory {
 	// Fill in the member variables, allObjTypes and allMenuStrings
 	StatementDefinition sd;
 	HashArrayList objtypeList = new HashArrayList();
-	ArrayList al;
+	ArrayList<String> al;
 	String objType;
 	String menuString;
 	// We need to go through the StatementDefinition's and accumulate
@@ -419,7 +419,7 @@ public class LocatorHistory {
 	// menuStrings, one for each objType.  Keep the array Lists in
 	// a Hashtable for easy access by objType.
 	for(int i=0; i < statementDefinitionList.size(); i++) {
-	    sd = (StatementDefinition) statementDefinitionList.get(i);
+	    sd = statementDefinitionList.get(i);
 	    // We need all of the ObjTypes, without duplicating.  Is this
 	    // ObjType already in the hashtable?
 	    objType = sd.getobjType();
@@ -446,11 +446,11 @@ public class LocatorHistory {
 
 	    if(!objtypeList.containsKey(objType)){
 		// No, so add it along with an empty arrayList
-		al = new ArrayList();
+		al = new ArrayList<String>();
 		objtypeList.put(objType, al);
 	    }
 	    // Now add the menuString to the arrayList for this objType
-	    al = (ArrayList) objtypeList.get(objType);
+	    al = (ArrayList<String>) objtypeList.get(objType);
 	    menuString = sd.getmenuString();
 
             al.add(menuString);
@@ -458,7 +458,7 @@ public class LocatorHistory {
             allStatementTypes.add(objType + "/" + menuString);
 	}
 
-	allMenuStrings = new HashMap();
+	allMenuStrings = new HashMap<String,String[]>();
 	allObjTypes = new String[objtypeList.size()];
 
 	for(int i=0; i < objtypeList.size() ; i++) {
@@ -467,10 +467,10 @@ public class LocatorHistory {
 
 	    // Each item in the allMenuStrings Hashtable is a String[] 
 	    // for that ObjType.  Get the ArrayList for this objType.
-	    al = (ArrayList) objtypeList.get(i);
+	    al = (ArrayList<String>) objtypeList.get(i);
 	    // Convert to String[] and fill hashtable.
 	    String[] sa = new String[1]; // Dummy variable to specify type
-	    String[] strarr = (String[]) al.toArray(sa);
+	    String[] strarr = al.toArray(sa);
 	    // allMenuStrings is a hashtable with objType as key and
 	    // an array of menu strings as the value.
 	    allMenuStrings.put(allObjTypes[i], strarr);
@@ -491,9 +491,9 @@ public class LocatorHistory {
     public void writePersistence() {
 	String filepath;
 	ObjectOutput out;
-	ArrayList bufferList;
-	ArrayList bufPointerList;
-	ArrayList objTypeList;
+	ArrayList<Vector<Hashtable<String,Object>>> bufferList;
+	ArrayList<Integer> bufPointerList;
+	ArrayList<String> objTypeList;
 	HistoryPersistence historyPersistence;
 	StatementHistory history;
 
@@ -505,16 +505,16 @@ public class LocatorHistory {
 	// Assemble the histories and bufPointers for each objType into 
 	// a single object for writing out to a persistence file.
 	// We need ArrayList's for the buffer's and the bufPointer's
-	bufferList = new ArrayList(20);
-	bufPointerList = new ArrayList(20);
-	objTypeList = new ArrayList(20);
+	bufferList = new ArrayList<Vector<Hashtable<String,Object>>>(20);
+	bufPointerList = new ArrayList<Integer>(20);
+	objTypeList = new ArrayList<String>(20);
 
-	Set keys = statementHistory.keySet();
+	Set<String> keys = statementHistory.keySet();
 	// Convert to String array for access.
 	String[] keysArr = new String[keys.size()];
 	keys.toArray(keysArr);
 	for(int i=0; i < keysArr.length; i++) {
-	    history = (StatementHistory)statementHistory.get(keysArr[i]);
+	    history = statementHistory.get(keysArr[i]);
 	    bufferList.add(history.getBuffer());
 	    // Convert int to Integer to put into ArrayList
 	    bufPointerList.add(Integer.valueOf(history.getBufPointer()));
@@ -553,7 +553,7 @@ public class LocatorHistory {
 	String dir;
 	Integer bufP;
 	HistoryPersistence historyPersistence;
-	Vector buffer;
+	Vector<Hashtable<String,Object>> buffer;
 	int bufPointer;
 	File file;
 	
@@ -603,7 +603,7 @@ public class LocatorHistory {
 	activeObjType = historyPersistence.activeObjectType;
 
 	if(activeObjType == null && objTypeList != null) {
-	    activeObjType = (String)objTypeList.get(0);
+	    activeObjType = objTypeList.get(0);
         }
         // If the user had double clicked on a record and was display
         // rec_data with the return icon, we want to return him to
@@ -615,7 +615,7 @@ public class LocatorHistory {
 	// is valid.  If not, remove it.
 	// While in here,  check to see if a statement of type activeObjType
 	// exists.  If not, reset activeObjType
-	Hashtable statement;
+	Hashtable<String,Object> statement;
 	String statementType;
 	StatementDefinition sd;
 	String objType;
@@ -623,11 +623,11 @@ public class LocatorHistory {
 	boolean foundObjType=false;
 
 	for(int k=0; k < bufferList.size(); k++) {
-	    buffer = (Vector)bufferList.get(k);
-	    bufPointer = ((Integer)bufPointerList.get(k)).intValue();
+	    buffer = bufferList.get(k);
+	    bufPointer = bufPointerList.get(k).intValue();
 
 	    for(int i=0; buffer != null && i < buffer.size(); i++) {
-		statement = (Hashtable)buffer.elementAt(i);
+		statement = buffer.elementAt(i);
 		// Get the statementType from this statement
 		statementType = (String)statement.get("Statement_type");
 		String objtype = (String)statement.get("ObjectType");
@@ -672,15 +672,15 @@ public class LocatorHistory {
 
     }
 
-    public ArrayList getallObjTypes() {
-	ArrayList outList = new ArrayList();
+    public ArrayList<String> getallObjTypes() {
+	ArrayList<String> outList = new ArrayList<String>();
 	for(int i=0; i < allObjTypes.length; i++) {
 	    outList.add(allObjTypes[i]);
 	}
 	return outList;
     }
 
-    public ArrayList getallStatementTypes() {
+    public ArrayList<String> getallStatementTypes() {
 	return allStatementTypes;
     }
 
@@ -728,15 +728,15 @@ public class LocatorHistory {
 /** This is a container to hold histories of all object types in one place
     for the purpose of saving in a persistence file. */
 class HistoryPersistence implements Serializable {
-    public ArrayList bufferList;      // List of Vector objects
-    public ArrayList bufPointerList;  // List of Integer objects
-    public ArrayList objTypeList;     // List of String objects
+    public ArrayList<Vector<Hashtable<String,Object>>> bufferList; // List of Vector objects
+    public ArrayList<Integer> bufPointerList;                      // List of Integer objects
+    public ArrayList<String> objTypeList;                          // List of String objects
     public String activeObjectType;
     // date stamp of locator_statements file
     public long locatorStatementsTimeSaved=0;     
 
-    public HistoryPersistence(ArrayList bufferList, ArrayList bufPointerList,
-			      ArrayList objTypeList, String activeObjectType,
+    public HistoryPersistence(ArrayList<Vector<Hashtable<String,Object>>> bufferList, ArrayList<Integer> bufPointerList,
+			      ArrayList<String> objTypeList, String activeObjectType,
                               long timeSaved) {
 	this.bufferList = bufferList;
 	this.bufPointerList = bufPointerList;
