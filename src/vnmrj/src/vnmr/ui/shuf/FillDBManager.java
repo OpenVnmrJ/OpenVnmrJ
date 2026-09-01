@@ -6199,7 +6199,7 @@ public class FillDBManager {
                 // Transfser the files found to the output list
                 if(files != null) {
                     for(int i=0; i < files.length; i++) {
-                        fileList.add(files[i]);
+                        fileList.add((UNFile)files[i]);
                     }
                 }
 
@@ -6242,7 +6242,7 @@ public class FillDBManager {
                 if(files != null) {
                     // Transfser the files found to the output list
                     for(int i=0; i < files.length; i++)
-                        fileList.add(files[i]);
+                        fileList.add((UNFile)files[i]);
                 }
             }
         }
