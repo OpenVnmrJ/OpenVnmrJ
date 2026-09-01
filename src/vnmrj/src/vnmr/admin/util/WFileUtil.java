@@ -549,7 +549,7 @@ public class WFileUtil
      *   and if the key is public.
      */
     protected static Value getKeyValLine(int nComp, JPanel pnlArea, String strName,
-                                            HashMap<String,String> hmDefaults, HashMap<String,String> hmUser)
+                                            HashMap<String,?> hmDefaults, HashMap<String,String> hmUser)
     {
         String strValue = null;
         String strLine =  null;
@@ -1051,7 +1051,7 @@ public class WFileUtil
         return objFile;
     }
 
-    protected static HashMap<String,String> makeNewHM(HashMap<String,WUserDefData> hmUserDef, String strUser, String strItype)
+    protected static HashMap<String,String> makeNewHM(HashMap<String,?> hmUserDef, String strUser, String strItype)
     {
         String strKey = null;
         WUserDefData userData = null;
@@ -1072,7 +1072,8 @@ public class WFileUtil
             while(keySetItr.hasNext())
             {
                 strKey = keySetItr.next();
-                userData = hmUserDef.get(strKey);
+                Object _val1 = hmUserDef.get(strKey);
+                userData = (_val1 instanceof WUserDefData) ? (WUserDefData)_val1 : null;
                 if (userData != null)
                     strValue = userData.getValue();
 
@@ -1128,7 +1129,7 @@ public class WFileUtil
 
     // Create a HashMap for a user.  Start with the defaults and then modify
     // as per the options supplied.
-    protected static HashMap<String,String> makeNewHM(HashMap<String,WUserDefData> hmUserDef, String strUser,
+    protected static HashMap<String,String> makeNewHM(HashMap<String,?> hmUserDef, String strUser,
                                        HashMap<String,String> userInfo)
     {
         String strKey = null;
@@ -1154,7 +1155,8 @@ public class WFileUtil
             while(keySetItr.hasNext())
             {
                 strKey = keySetItr.next();
-                userData = hmUserDef.get(strKey);
+                Object _val2 = hmUserDef.get(strKey);
+                userData = (_val2 instanceof WUserDefData) ? (WUserDefData)_val2 : null;
                 if (userData != null)
                     strValue = userData.getValue();
 
