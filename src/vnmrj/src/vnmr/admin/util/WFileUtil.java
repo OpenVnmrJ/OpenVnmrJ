@@ -297,7 +297,7 @@ public class WFileUtil
             return false;
 
         String strName = changeBtnName(objVal);
-        HashMap hmDefaults = getUserDefaults();
+        HashMap<String,WUserDefData> hmDefaults = getUserDefaults();
         Value objValue = null;
         // write the file in the following format:
         // key   value
@@ -425,17 +425,17 @@ public class WFileUtil
         String strValue = null;
         String strLine = null;
 
-        HashMap hmDef = getUserDefaults();
+        HashMap<String,WUserDefData> hmDef = getUserDefaults();
         StringBuffer sbPbLine = new StringBuffer();
         StringBuffer sbPrvLine = new StringBuffer();
-        Iterator keySetItr = hmItem.keySet().iterator();
+        Iterator<String> keySetItr = hmItem.keySet().iterator();
 
 
         try
         {
             while(keySetItr.hasNext())
             {
-                strKey = (String)keySetItr.next();
+                strKey = keySetItr.next();
                 strValue = (String)hmItem.get(strKey);
                 if (strValue == null)
                     strValue = "";
@@ -1051,7 +1051,7 @@ public class WFileUtil
         return objFile;
     }
 
-    protected static HashMap<String,String> makeNewHM(HashMap<String,String> hmUserDef, String strUser, String strItype)
+    protected static HashMap<String,String> makeNewHM(HashMap<String,WUserDefData> hmUserDef, String strUser, String strItype)
     {
         String strKey = null;
         WUserDefData userData = null;
@@ -1061,7 +1061,7 @@ public class WFileUtil
         if (hmUserDef == null)
             return hmUser;
 
-        Iterator keySetItr = hmUserDef.keySet().iterator();
+        Iterator<String> keySetItr = hmUserDef.keySet().iterator();
 
         try
         {
@@ -1071,8 +1071,8 @@ public class WFileUtil
             // and make a hashmap for the user with key and value.
             while(keySetItr.hasNext())
             {
-                strKey = (String)keySetItr.next();
-                userData = (WUserDefData)hmUserDef.get(strKey);
+                strKey = keySetItr.next();
+                userData = hmUserDef.get(strKey);
                 if (userData != null)
                     strValue = userData.getValue();
 
@@ -1128,8 +1128,8 @@ public class WFileUtil
 
     // Create a HashMap for a user.  Start with the defaults and then modify
     // as per the options supplied.
-    protected static HashMap makeNewHM(HashMap hmUserDef, String strUser, 
-                                       HashMap userInfo)
+    protected static HashMap<String,String> makeNewHM(HashMap<String,WUserDefData> hmUserDef, String strUser,
+                                       HashMap<String,String> userInfo)
     {
         String strKey = null;
         WUserDefData userData = null;
@@ -1143,7 +1143,7 @@ public class WFileUtil
         // The hmUser HashMap needs to have Strings for values
         // Thus we have to loop through and create the hmUser HashMap.
         // First just make one that has the defaults.
-        Iterator keySetItr = hmUserDef.keySet().iterator();
+        Iterator<String> keySetItr = hmUserDef.keySet().iterator();
 
         try
         {
@@ -1153,8 +1153,8 @@ public class WFileUtil
             // and make a hashmap for the user with key and value.
             while(keySetItr.hasNext())
             {
-                strKey = (String)keySetItr.next();
-                userData = (WUserDefData)hmUserDef.get(strKey);
+                strKey = keySetItr.next();
+                userData = hmUserDef.get(strKey);
                 if (userData != null)
                     strValue = userData.getValue();
 
@@ -1173,11 +1173,11 @@ public class WFileUtil
         // We will go through the options and modify hmUser based on those.
         // The HashMap, userInfo, has option keywords as keys (see userDefaults)
         // and values are the values for that option.
-        keySetItr = userInfo.keySet().iterator();
-        while(keySetItr.hasNext())
+        Iterator<String> keySetItr2 = userInfo.keySet().iterator();
+        while(keySetItr2.hasNext())
         {
-            strKey = (String)keySetItr.next();
-            strValue = (String)userInfo.get(strKey);
+            strKey = keySetItr2.next();
+            strValue = userInfo.get(strKey);
             // Overwrite entries in hmUser with any that were specified
             // in userInfo.
             hmUser.put(strKey, strValue);
@@ -1191,7 +1191,7 @@ public class WFileUtil
 
     protected static HashMap<String, String> getAbsoluteValues(HashMap<String, String> hmItem)
     {
-        Iterator keySetItr = hmItem.keySet().iterator();
+        Iterator<String> keySetItr = hmItem.keySet().iterator();
         String strKey = null;
         String strValue = null;
 
@@ -1351,9 +1351,9 @@ public class WFileUtil
         }
     }
 
-    protected static HashMap<String,String> getUserDefaults()
+    protected static HashMap<String,WUserDefData> getUserDefaults()
     {
-        HashMap<String,String> hmDef = null;
+        HashMap<String,WUserDefData> hmDef = null;
         if (Util.getAppIF() instanceof VAdminIF)
         {
             hmDef = ((VAdminIF)Util.getAppIF()).getUserDefaults();
