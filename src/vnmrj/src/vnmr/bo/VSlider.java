@@ -202,7 +202,7 @@ public class VSlider extends ComboSlider implements VObjIF, VEditIF,
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         ParamEditUtil.setEditObj(me);
@@ -885,19 +885,19 @@ public class VSlider extends ComboSlider implements VObjIF, VEditIF,
             "Disable Drag" };
 
     private final static Object[][] attributes = {
-            { new Integer(VARIABLE), Util.getLabel(VARIABLE)},
-            { new Integer(SETVAL), Util.getLabel(SETVAL) },
-            { new Integer(SHOW), Util.getLabel(SHOW) },
-            { new Integer(CMD), Util.getLabel(CMD) },
-            { new Integer(STATPAR), Util.getLabel(STATPAR) },
-            { new Integer(VAR2), "Limits parameter:" },
-            { new Integer(MIN), Util.getLabel(MIN) },
-            { new Integer(MAX),  Util.getLabel(MAX) },
-            { new Integer(INCR2), "Coarse adjustment value:" },
-            { new Integer(INCR1), "Fine adjustment value:" },
-            { new Integer(NUMDIGIT), "Number of digits displayed:" },
-            { new Integer(TOOLTIP), Util.getLabel(TOOLTIP) },
-            { new Integer(DRAG), "Ms between updates while dragging:", "menu",
+            { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE)},
+            { Integer.valueOf(SETVAL), Util.getLabel(SETVAL) },
+            { Integer.valueOf(SHOW), Util.getLabel(SHOW) },
+            { Integer.valueOf(CMD), Util.getLabel(CMD) },
+            { Integer.valueOf(STATPAR), Util.getLabel(STATPAR) },
+            { Integer.valueOf(VAR2), "Limits parameter:" },
+            { Integer.valueOf(MIN), Util.getLabel(MIN) },
+            { Integer.valueOf(MAX),  Util.getLabel(MAX) },
+            { Integer.valueOf(INCR2), "Coarse adjustment value:" },
+            { Integer.valueOf(INCR1), "Fine adjustment value:" },
+            { Integer.valueOf(NUMDIGIT), "Number of digits displayed:" },
+            { Integer.valueOf(TOOLTIP), Util.getLabel(TOOLTIP) },
+            { Integer.valueOf(DRAG), "Ms between updates while dragging:", "menu",
                     throttle_menu }, };
 
     public void setModalMode(boolean s) {

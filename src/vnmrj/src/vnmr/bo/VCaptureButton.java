@@ -55,16 +55,16 @@ public class VCaptureButton extends VButton
 
     /** The array of the attributes that are displayed in the edit template.*/
     private final static Object[][] attributes = {
-    {new Integer(LABEL), 	"Label of item:"},
-    {new Integer(ICON), 	"Icon of item:"},
-    {new Integer(VARIABLE),	"Vnmr variables:    "},
-    {new Integer(SHOW),	"Enable condition:"},
-    {new Integer(CMD),      "Vnmr command:"},
-    {new Integer(STATPAR),	"Status parameter:"},
-    {new Integer(STATSHOW),	"Enable status values:"},
-    {new Integer(PANEL_FILE),	"Directory:"},
-    {new Integer(PREFIX),	"File Name Prefix:"},
-    {new Integer(PANEL_TYPE),	"Action:","radio",m_types}
+    {Integer.valueOf(LABEL), 	"Label of item:"},
+    {Integer.valueOf(ICON), 	"Icon of item:"},
+    {Integer.valueOf(VARIABLE),	"Vnmr variables:    "},
+    {Integer.valueOf(SHOW),	"Enable condition:"},
+    {Integer.valueOf(CMD),      "Vnmr command:"},
+    {Integer.valueOf(STATPAR),	"Status parameter:"},
+    {Integer.valueOf(STATSHOW),	"Enable status values:"},
+    {Integer.valueOf(PANEL_FILE),	"Directory:"},
+    {Integer.valueOf(PREFIX),	"File Name Prefix:"},
+    {Integer.valueOf(PANEL_TYPE),	"Action:","radio",m_types}
     };
 
     public Object[][] getAttributes()  { return attributes; }

@@ -63,11 +63,11 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
     private static int  LAYER2 = LAYER0 + 20;
     private static int  LAYER3 = LAYER0 + 30;
     private static int  LAYER4 = LAYER0 + 40;
-    private Integer     defaultLayer = new Integer(LAYER0+5);
-    private Integer     layer1 = new Integer(LAYER1);
-    private Integer     layer2 = new Integer(LAYER2);
-    private Integer     layer3 = new Integer(LAYER3);
-    private Integer     layer4 = new Integer(LAYER4);
+    private Integer     defaultLayer = Integer.valueOf(LAYER0 + 5);
+    private Integer     layer1 = Integer.valueOf(LAYER1);
+    private Integer     layer2 = Integer.valueOf(LAYER2);
+    private Integer     layer3 = Integer.valueOf(LAYER3);
+    private Integer     layer4 = Integer.valueOf(LAYER4);
     private int         messageRH;
     private int         messageY;
     private int         prePos = 0;
@@ -296,7 +296,7 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
                         int kcode = e.getKeyCode();
                         if (kcode == KeyEvent.VK_CONTROL || kcode == KeyEvent.VK_ESCAPE || 
                         	kcode == KeyEvent.VK_ALT) {
-                            int mod = e.getModifiers();
+                            int mod = e.getModifiersEx();
                             if (mod == 0 && commandArea != null) {
                                 if (commandArea.isVisible()) {
                                     setCommandLineFocus();
@@ -611,13 +611,13 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
               }
            }
         String key = name+"X";
-        hs.put(key, new Integer(pt.x));
+        hs.put(key, Integer.valueOf(pt.x));
         key = name+"Y";
-        hs.put(key, new Integer(pt.y));
+        hs.put(key, Integer.valueOf(pt.y));
         key = name+"Orient";
-        hs.put(key, new Integer(bar.getDefaultOrientation()));
+        hs.put(key, Integer.valueOf(bar.getDefaultOrientation()));
         key = name+"Dock";
-        hs.put(key, new Integer(bar.getDockPosition()));
+        hs.put(key, Integer.valueOf(bar.getDockPosition()));
     }
 
     private void setToolBarDefaults(GraphicsToolIF bar, String name) {
@@ -949,23 +949,23 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
             return;
         String str;
         Dimension  dim = Toolkit.getDefaultToolkit().getScreenSize();
-        hs.put("screenWidth", new Integer(dim.width));
-        hs.put("screenHeight", new Integer(dim.height));
+        hs.put("screenWidth", Integer.valueOf(dim.width));
+        hs.put("screenHeight", Integer.valueOf(dim.height));
         VNMRFrame frame = VNMRFrame.getVNMRFrame();
         Point pt = frame.getLocation();
         dim = frame.getSize();
-        hs.put("frameX", new Integer(pt.x));
-        hs.put("frameY", new Integer(pt.y));
-        hs.put("frameWidth", new Integer(dim.width));
-        hs.put("frameHeight", new Integer(dim.height));
+        hs.put("frameX", Integer.valueOf(pt.x));
+        hs.put("frameY", Integer.valueOf(pt.y));
+        hs.put("frameWidth", Integer.valueOf(dim.width));
+        hs.put("frameHeight", Integer.valueOf(dim.height));
         if ((topMenuBar != null) && (topMenuBar.isVisible()))
             hs.put("mainMenu", "on");
         else
             hs.put("mainMenu", "off");
-        hs.put("topMenuH", new Integer(topMenuH));
-        hs.put("sysToolH", new Integer(sysToolH));
-        hs.put("usrToolH", new Integer(usrToolH));
-        hs.put("systoolTop", new Integer(sysToolAtTop));
+        hs.put("topMenuH", Integer.valueOf(topMenuH));
+        hs.put("sysToolH", Integer.valueOf(sysToolH));
+        hs.put("usrToolH", Integer.valueOf(usrToolH));
+        hs.put("systoolTop", Integer.valueOf(sysToolAtTop));
         if ((sysToolPan != null) && (sysToolPan.isVisible()))
             hs.put("systoolBar", "on");
         else
@@ -978,15 +978,15 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
             hs.put("infoBar", "on");
         else
             hs.put("infoBar", "off");
-        hs.put("usrInSys", new Integer(usrToolInSysTool));
+        hs.put("usrInSys", Integer.valueOf(usrToolInSysTool));
 
         Rectangle r = getBounds();
         float f1 = (float) ((float) controlX / (float) r.width);
         float f2 = (float) ((float) controlY / (float) r.height);
-        hs.put("paramLocX", new Float(f1));
-        hs.put("paramLocY", new Float(f2));
-        hs.put("paramRx", new Float(paramRx));
-        hs.put("paramRy", new Float(paramRy));
+        hs.put("paramLocX", Float.valueOf(f1));
+        hs.put("paramLocY", Float.valueOf(f2));
+        hs.put("paramRx", Float.valueOf(paramRx));
+        hs.put("paramRy", Float.valueOf(paramRy));
         str = paramPinPan.getStatus(); 
         if (str != null)
             hs.put("paramPin.status", str);
@@ -998,13 +998,13 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
         {
             str = commandArea.isVisible() ? "on" : "off";
             hs.put("commandArea", str);
-            hs.put("commandAreaHeight", new Integer(commandRH));
+            hs.put("commandAreaHeight", Integer.valueOf(commandRH));
         }
         if (messageArea != null)
         {
             str = (messageArea.isVisible() && commandArea.isVisible()) ? "on" : "off";
             hs.put("messageArea", str);
-            hs.put("messageAreaHeight", new Integer(messageRH));
+            hs.put("messageAreaHeight", Integer.valueOf(messageRH));
         }
 
         if (bChangeLayout)
@@ -1014,7 +1014,7 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
 
         if (graphicsToolBar != null) {
             r = graphicsToolBar.getBounds();
-            hs.put("buttonPanHeight", new Integer(r.height));
+            hs.put("buttonPanHeight", Integer.valueOf(r.height));
             if (csiButtonPalette.isShow())
                 saveToolBarDefaults(graphicsToolBar, graph2ToolKey);
             else
@@ -2462,7 +2462,7 @@ public class VnmrjUI extends AppIF implements VnmrjIF, VnmrKey, DockConstants, V
        paramPinPan.setOpaque(true);
        add(paramPinPan, defaultLayer);
        paramPanel = (JComponent) paramPinPan;
-       // add(controlPanel, new Integer(LAYER1));
+       // add(controlPanel, Integer.valueOf(LAYER1));
 
        if (bRebuild)
            commandArea = oldVjUI.commandArea;

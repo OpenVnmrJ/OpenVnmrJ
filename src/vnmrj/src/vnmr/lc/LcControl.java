@@ -433,7 +433,7 @@ public class LcControl
                 Messages.postError("Unknown \"lccmd\": " + str);
                 return false;
             } else {
-                return execCommand(cmd, nCmd, tok);
+                return execCommand(cmd, nCmd.intValue(), tok);
             }
         }
         return false;
@@ -1830,11 +1830,11 @@ public class LcControl
         Object oState = state.get("state");
         double dflow = m_currentMethod.getInitialFlow(); // mL/min
         Messages.postDebug("InitialFlow=" + dflow);
-        Integer flow = (int)Math.round(1000 * dflow); // uL/min
+        Integer flow = Integer.valueOf((int) Math.round(1000 * dflow)); // uL/min
         double[] pcts = m_currentMethod.getInitialPercents();
         Double[] percents = new Double[pcts.length];
         for (int i = 0; i < pcts.length; i++) {
-            percents[i] = pcts[i];
+            percents[i] = Double.valueOf(pcts[i]);
         }
         Object pctA = state.get("percentA");
         Object pctB = state.get("percentB");
@@ -1853,7 +1853,7 @@ public class LcControl
                 && percents[1].equals(pctB)
                 && percents[2].equals(pctC)
                 && flow.equals(state.get("flow"))
-                && (oState.equals(PUMP_READY) || oState.equals(PUMP_RUNNING)));
+                && (oState.equals(Integer.valueOf(PUMP_READY)) || oState.equals(Integer.valueOf(PUMP_RUNNING))));
     }
 
     private void waitForPump(StringTokenizer toker) {
@@ -3139,12 +3139,12 @@ public class LcControl
             m_percents = new Double[3];
             for (int i = 0; i < 3; i++) {
                 if (i < percents.length) {
-                    m_percents[i] = percents[i];
+                    m_percents[i] = Double.valueOf(percents[i]);
                 } else {
-                    m_percents[i] = 0.0;
+                    m_percents[i] = Double.valueOf(0.0);
                 }
             }
-            m_flow = (int)Math.round(1000 * flow); // uL / min
+            m_flow = Integer.valueOf((int) Math.round(1000 * flow)); // uL / min
             m_command = command;
         }
 
@@ -3163,7 +3163,7 @@ public class LcControl
                 && m_percents[1].equals(state.get("percentB"))
                 && m_percents[2].equals(state.get("percentC"))
                 && m_flow.equals(state.get("flow"))
-                && (oState.equals(PUMP_READY) || oState.equals(PUMP_RUNNING)))
+                && (oState.equals(Integer.valueOf(PUMP_READY)) || oState.equals(Integer.valueOf(PUMP_RUNNING))))
             {
                 sendToVnmr(m_command);
                 m_gpib.removePumpStatusListener(this);
@@ -3328,119 +3328,119 @@ public class LcControl
      * List of possible LC commands and their Integer codes.
      */
     private static final Object[][] CMD_TABLE = {
-        {"openSlimPort",        new Integer(OPEN_SLIM_PORT)},
-        {"checkSlimPort",       new Integer(CHECK_SLIM_PORT)},
-        {"editMethod",          new Integer(EDIT_METHOD)},
-        {"loadMethod",          new Integer(LOAD_METHOD)},
-        {"saveCurrentMethod",   new Integer(SAVE_CURRENT_METHOD)},
-        {"printSchedule",       new Integer(PRINT_SCHEDULE)},
-        {"setMethodVariable",   new Integer(SET_METHOD_VARIABLE)},
-        {"repaintLcGraph",      new Integer(REPAINT_LC_GRAPH)},
-        {"showLcGraph",         new Integer(SHOW_LC_GRAPH)},
-        {"showMsGraph",         new Integer(SHOW_MS_GRAPH)},
-        {"updateMsGraph",       new Integer(UPDATE_MS_GRAPH)},
-        {"updatePdaGraph",      new Integer(UPDATE_PDA_GRAPH)},
-        {"hideLcGraph",         new Integer(HIDE_LC_GRAPH)},
-        {"printLcGraph",        new Integer(PRINT_LC_GRAPH)},
-        {"printMsGraph",        new Integer(PRINT_MS_GRAPH)},
-        {"printPdaGraph",       new Integer(PRINT_PDA_GRAPH)},
-        {"showPdaSpectrum",     new Integer(SHOW_PDA_SPECTRUM)},
-        {"printHtml",           new Integer(PRINT_HTML)},
-        {"analyzeLc",           new Integer(ANALYZE_LC)},
-        {"updateMethodPanel",   new Integer(UPDATE_METHOD_PANEL)},
-        {"readData",            new Integer(READ_DATA)},
-        {"downloadMethod",      new Integer(DOWNLOAD_METHOD)},
-        {"checkMethodDownloads", new Integer(CHECK_METHOD_DOWNLOADS)},
-        {"test",                new Integer(TEST)},
-        {"corbaCmd",            new Integer(CORBA_CMD)},
-        {"setThresh",           new Integer(SET_THRESH)},
-        {"setPeakDet",          new Integer(SET_PEAK_DET)},
-        {"setPeakDetType",      new Integer(SET_PEAK_DET_TYPE)},
-        {"setTransferTimes",    new Integer(SET_TRANSFER_TIMES)},
-        {"setReferenceTime",    new Integer(SET_REFERENCE_TIME)},
-        {"testPeakDetect",      new Integer(TEST_PEAK_DETECT)},
-        {"setDelay",            new Integer(SET_DELAY)},
-        {"gpib",                new Integer(GPIB_MSG)},
-        {"holdNow",             new Integer(HOLD_NOW)},
-        {"translateData",       new Integer(TRANSLATE_DATA)},
-        {"pdastart",            new Integer(PDA_START)},
-        {"pdastop",             new Integer(PDA_STOP)},
-        {"pdaautozero",         new Integer(PDA_BASELINE)},
-        {"pdareset",            new Integer(PDA_RESET)},
-        {"pdalampOn",           new Integer(PDA_LAMP_ON)},
-        {"pdalampOff",          new Integer(PDA_LAMP_OFF)},
-        {"pdadownloadMethod",   new Integer(PDA_LOAD_METHOD)},   
-        {"pdaValidate",         new Integer(PDA_VALIDATE)},
-        {"pdaD2Reset",          new Integer(PDA_D2RESET)},
-        {"pdaHgReset",          new Integer(PDA_HGRESET)},
-        {"pdaSaveData",         new Integer(PDA_SAVE_DATA)},
-        {"pdaGetImage",         new Integer(PDA_IMAGE)},
-        {"downloadMsMethod",    new Integer(DOWNLOAD_MS_METHOD)},
-        {"setMsFile",           new Integer(SET_MS_FILE)},
-        {"makeupPumpOn",        new Integer(MAKEUP_PUMP_ON)},
-        {"makeupPumpOff",       new Integer(MAKEUP_PUMP_OFF)},
-        {"makeupPumpGetFlow",   new Integer(MAKEUP_PUMP_FLOW)},
-        {"makeupPumpGetPress",  new Integer(MAKEUP_PUMP_PRESS)},
-        {"waitForPump",         new Integer(WAIT_FOR_PUMP)},
-        {"waitForTime",         new Integer(WAIT_FOR_TIME)},
-        {"setPauseDuration",    new Integer(SET_PAUSE_DURATION)},
-        {"clearEvents",         new Integer(CLEAR_EVENTS)},
-        {"setMsAnalogOut",      new Integer(SET_MS_ANALOG_OUT)},
-        {"init",                new Integer(INIT)},
-        {"step",                new Integer(STEP)},
-        {"stopRun",             new Integer(STOP_RUN)},
-        {"pauseRun",            new Integer(PAUSE_RUN)},
-        {"stopFlowNmr",         new Integer(STOP_FLOW_NMR)},
-        {"timeSliceNmr",        new Integer(TIME_SLICE_NMR)},
-        {"holdDelayed",         new Integer(HOLD)},
-        {"startRun",            new Integer(START_RUN)},
-        {"startAdc",            new Integer(START_ADC)},
-        {"slimCmd",             new Integer(SLIM_CMD)},
-        {"restartRun",          new Integer(RESTART_RUN)},
-        {"nmrDone",             new Integer(NMR_DONE)},
-        {"restartRunAppend",    new Integer(RESTART_RUN_APPEND)},
-        {"toCollector",         new Integer(TO_COLLECTOR)},
-        {"toColumn",            new Integer(TO_COLUMN)},
-        {"toNmr",               new Integer(TO_NMR)},
-        {"toWaste",             new Integer(TO_WASTE)},
-        {"setNmrBypass",        new Integer(NMR_BYPASS_VALVE)},
-        {"enableTrigger",       new Integer(ENABLE_TRIGGER)},
-        {"disableTrigger",      new Integer(DISABLE_TRIGGER)},
-        {"enableHeartbeat",     new Integer(ENABLE_HEARTBEAT)},
-        {"disableHeartbeat",    new Integer(DISABLE_HEARTBEAT)},
-        {"collectLoop",         new Integer(COLLECT_LOOP)},
-        {"gotoLoop",            new Integer(GOTO_LOOP)},
-        {"getSlimVersion",      new Integer(GET_SLIM_VERSION)},
-        {"serialIO",            new Integer(SERIAL_IO)},
-        {"getPcFile",           new Integer(GET_PC_FILE)},
-        {"msPumpControl",       new Integer(MS_PUMP_CONTROL)},
-        {"peakAction",          new Integer(PEAK_ACTION)},
-        {"nmrDoneAction",       new Integer(NMR_DONE_ACTION)},
-        {"startChromatogram",   new Integer(START_CHROMATOGRAM)},
-        {"pauseChromatogram",   new Integer(PAUSE_CHROMATOGRAM)},
-        {"resumeChromatogram",  new Integer(RESUME_CHROMATOGRAM)},
-        {"stopChromatogram",    new Integer(STOP_CHROMATOGRAM)},
-        {"manualFlowControl",   new Integer(MANUAL_FLOW_CONTROL)},
-        {"msStatus",            new Integer(MS_STATUS)},
-        {"connectUv",           new Integer(CONNECT_UV)},
-        {"connectPump",         new Integer(CONNECT_PUMP)},
-        {"connectMs",           new Integer(CONNECT_MS)},
-        {"setFlowCell",         new Integer(SET_FLOW_CELL)},
-        {"adcToUvStatus",       new Integer(ADC_TO_UV_STATUS)},
-        {"connectAutosamp",     new Integer(CONNECT_AS)},
-        {"autosampSetMacro",    new Integer(AS_SETMACRO)},
-        {"autosampCmd",         new Integer(AS_CMD)},
-        {"slimPulse",           new Integer(SLIM_PULSE)},
-        {"inject",              new Integer(INJECT)},
-        {"clearPlots",          new Integer(CLEAR_PLOTS)},
-        {"configGraphPanel",    new Integer(CONFIG_GRAPH_PANEL)},
-        {"writeMethodToFile",   new Integer(WRITE_METHOD_TO_FILE)},
-        {"readMethodFromFile",  new Integer(READ_METHOD_FROM_FILE)},
-        {"printMethod",         new Integer(PRINT_METHOD)},
-        {"acToNmr",             new Integer(AC_TO_NMR)},
-        {"acToWaste",           new Integer(AC_TO_WASTE)},
-        {"sfStop",              new Integer(SF_STOP)},
-        {"sfFlow",              new Integer(SF_FLOW)},
+        {"openSlimPort", Integer.valueOf(OPEN_SLIM_PORT)},
+        {"checkSlimPort", Integer.valueOf(CHECK_SLIM_PORT)},
+        {"editMethod", Integer.valueOf(EDIT_METHOD)},
+        {"loadMethod", Integer.valueOf(LOAD_METHOD)},
+        {"saveCurrentMethod", Integer.valueOf(SAVE_CURRENT_METHOD)},
+        {"printSchedule", Integer.valueOf(PRINT_SCHEDULE)},
+        {"setMethodVariable", Integer.valueOf(SET_METHOD_VARIABLE)},
+        {"repaintLcGraph", Integer.valueOf(REPAINT_LC_GRAPH)},
+        {"showLcGraph", Integer.valueOf(SHOW_LC_GRAPH)},
+        {"showMsGraph", Integer.valueOf(SHOW_MS_GRAPH)},
+        {"updateMsGraph", Integer.valueOf(UPDATE_MS_GRAPH)},
+        {"updatePdaGraph", Integer.valueOf(UPDATE_PDA_GRAPH)},
+        {"hideLcGraph", Integer.valueOf(HIDE_LC_GRAPH)},
+        {"printLcGraph", Integer.valueOf(PRINT_LC_GRAPH)},
+        {"printMsGraph", Integer.valueOf(PRINT_MS_GRAPH)},
+        {"printPdaGraph", Integer.valueOf(PRINT_PDA_GRAPH)},
+        {"showPdaSpectrum", Integer.valueOf(SHOW_PDA_SPECTRUM)},
+        {"printHtml", Integer.valueOf(PRINT_HTML)},
+        {"analyzeLc", Integer.valueOf(ANALYZE_LC)},
+        {"updateMethodPanel", Integer.valueOf(UPDATE_METHOD_PANEL)},
+        {"readData", Integer.valueOf(READ_DATA)},
+        {"downloadMethod", Integer.valueOf(DOWNLOAD_METHOD)},
+        {"checkMethodDownloads", Integer.valueOf(CHECK_METHOD_DOWNLOADS)},
+        {"test", Integer.valueOf(TEST)},
+        {"corbaCmd", Integer.valueOf(CORBA_CMD)},
+        {"setThresh", Integer.valueOf(SET_THRESH)},
+        {"setPeakDet", Integer.valueOf(SET_PEAK_DET)},
+        {"setPeakDetType", Integer.valueOf(SET_PEAK_DET_TYPE)},
+        {"setTransferTimes", Integer.valueOf(SET_TRANSFER_TIMES)},
+        {"setReferenceTime", Integer.valueOf(SET_REFERENCE_TIME)},
+        {"testPeakDetect", Integer.valueOf(TEST_PEAK_DETECT)},
+        {"setDelay", Integer.valueOf(SET_DELAY)},
+        {"gpib", Integer.valueOf(GPIB_MSG)},
+        {"holdNow", Integer.valueOf(HOLD_NOW)},
+        {"translateData", Integer.valueOf(TRANSLATE_DATA)},
+        {"pdastart", Integer.valueOf(PDA_START)},
+        {"pdastop", Integer.valueOf(PDA_STOP)},
+        {"pdaautozero", Integer.valueOf(PDA_BASELINE)},
+        {"pdareset", Integer.valueOf(PDA_RESET)},
+        {"pdalampOn", Integer.valueOf(PDA_LAMP_ON)},
+        {"pdalampOff", Integer.valueOf(PDA_LAMP_OFF)},
+        {"pdadownloadMethod", Integer.valueOf(PDA_LOAD_METHOD)},
+        {"pdaValidate", Integer.valueOf(PDA_VALIDATE)},
+        {"pdaD2Reset", Integer.valueOf(PDA_D2RESET)},
+        {"pdaHgReset", Integer.valueOf(PDA_HGRESET)},
+        {"pdaSaveData", Integer.valueOf(PDA_SAVE_DATA)},
+        {"pdaGetImage", Integer.valueOf(PDA_IMAGE)},
+        {"downloadMsMethod", Integer.valueOf(DOWNLOAD_MS_METHOD)},
+        {"setMsFile", Integer.valueOf(SET_MS_FILE)},
+        {"makeupPumpOn", Integer.valueOf(MAKEUP_PUMP_ON)},
+        {"makeupPumpOff", Integer.valueOf(MAKEUP_PUMP_OFF)},
+        {"makeupPumpGetFlow", Integer.valueOf(MAKEUP_PUMP_FLOW)},
+        {"makeupPumpGetPress", Integer.valueOf(MAKEUP_PUMP_PRESS)},
+        {"waitForPump", Integer.valueOf(WAIT_FOR_PUMP)},
+        {"waitForTime", Integer.valueOf(WAIT_FOR_TIME)},
+        {"setPauseDuration", Integer.valueOf(SET_PAUSE_DURATION)},
+        {"clearEvents", Integer.valueOf(CLEAR_EVENTS)},
+        {"setMsAnalogOut", Integer.valueOf(SET_MS_ANALOG_OUT)},
+        {"init", Integer.valueOf(INIT)},
+        {"step", Integer.valueOf(STEP)},
+        {"stopRun", Integer.valueOf(STOP_RUN)},
+        {"pauseRun", Integer.valueOf(PAUSE_RUN)},
+        {"stopFlowNmr", Integer.valueOf(STOP_FLOW_NMR)},
+        {"timeSliceNmr", Integer.valueOf(TIME_SLICE_NMR)},
+        {"holdDelayed", Integer.valueOf(HOLD)},
+        {"startRun", Integer.valueOf(START_RUN)},
+        {"startAdc", Integer.valueOf(START_ADC)},
+        {"slimCmd", Integer.valueOf(SLIM_CMD)},
+        {"restartRun", Integer.valueOf(RESTART_RUN)},
+        {"nmrDone", Integer.valueOf(NMR_DONE)},
+        {"restartRunAppend", Integer.valueOf(RESTART_RUN_APPEND)},
+        {"toCollector", Integer.valueOf(TO_COLLECTOR)},
+        {"toColumn", Integer.valueOf(TO_COLUMN)},
+        {"toNmr", Integer.valueOf(TO_NMR)},
+        {"toWaste", Integer.valueOf(TO_WASTE)},
+        {"setNmrBypass", Integer.valueOf(NMR_BYPASS_VALVE)},
+        {"enableTrigger", Integer.valueOf(ENABLE_TRIGGER)},
+        {"disableTrigger", Integer.valueOf(DISABLE_TRIGGER)},
+        {"enableHeartbeat", Integer.valueOf(ENABLE_HEARTBEAT)},
+        {"disableHeartbeat", Integer.valueOf(DISABLE_HEARTBEAT)},
+        {"collectLoop", Integer.valueOf(COLLECT_LOOP)},
+        {"gotoLoop", Integer.valueOf(GOTO_LOOP)},
+        {"getSlimVersion", Integer.valueOf(GET_SLIM_VERSION)},
+        {"serialIO", Integer.valueOf(SERIAL_IO)},
+        {"getPcFile", Integer.valueOf(GET_PC_FILE)},
+        {"msPumpControl", Integer.valueOf(MS_PUMP_CONTROL)},
+        {"peakAction", Integer.valueOf(PEAK_ACTION)},
+        {"nmrDoneAction", Integer.valueOf(NMR_DONE_ACTION)},
+        {"startChromatogram", Integer.valueOf(START_CHROMATOGRAM)},
+        {"pauseChromatogram", Integer.valueOf(PAUSE_CHROMATOGRAM)},
+        {"resumeChromatogram", Integer.valueOf(RESUME_CHROMATOGRAM)},
+        {"stopChromatogram", Integer.valueOf(STOP_CHROMATOGRAM)},
+        {"manualFlowControl", Integer.valueOf(MANUAL_FLOW_CONTROL)},
+        {"msStatus", Integer.valueOf(MS_STATUS)},
+        {"connectUv", Integer.valueOf(CONNECT_UV)},
+        {"connectPump", Integer.valueOf(CONNECT_PUMP)},
+        {"connectMs", Integer.valueOf(CONNECT_MS)},
+        {"setFlowCell", Integer.valueOf(SET_FLOW_CELL)},
+        {"adcToUvStatus", Integer.valueOf(ADC_TO_UV_STATUS)},
+        {"connectAutosamp", Integer.valueOf(CONNECT_AS)},
+        {"autosampSetMacro", Integer.valueOf(AS_SETMACRO)},
+        {"autosampCmd", Integer.valueOf(AS_CMD)},
+        {"slimPulse", Integer.valueOf(SLIM_PULSE)},
+        {"inject", Integer.valueOf(INJECT)},
+        {"clearPlots", Integer.valueOf(CLEAR_PLOTS)},
+        {"configGraphPanel", Integer.valueOf(CONFIG_GRAPH_PANEL)},
+        {"writeMethodToFile", Integer.valueOf(WRITE_METHOD_TO_FILE)},
+        {"readMethodFromFile", Integer.valueOf(READ_METHOD_FROM_FILE)},
+        {"printMethod", Integer.valueOf(PRINT_METHOD)},
+        {"acToNmr", Integer.valueOf(AC_TO_NMR)},
+        {"acToWaste", Integer.valueOf(AC_TO_WASTE)},
+        {"sfStop", Integer.valueOf(SF_STOP)},
+        {"sfFlow", Integer.valueOf(SF_FLOW)},
     };
 
 }

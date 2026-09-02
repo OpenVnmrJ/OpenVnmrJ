@@ -135,7 +135,7 @@ public class PlotBox extends JPanel implements Printable {
     public synchronized void addLegend(int dataset, String legend) {
         if (legend == null || legend.equals("")) return;
         _legendStrings.addElement(legend);
-        _legendDatasets.addElement(dataset);
+        _legendDatasets.addElement(Integer.valueOf(dataset));
     }
 
     /** Specify a tick mark for the X axis.  The label given is placed
@@ -151,7 +151,7 @@ public class PlotBox extends JPanel implements Printable {
             _xticks = new Vector<Double>();
             _xticklabels = new Vector<String>();
         }
-        _xticks.addElement(new Double(position));
+        _xticks.addElement(Double.valueOf(position));
         _xticklabels.addElement(label);
     }
 
@@ -168,7 +168,7 @@ public class PlotBox extends JPanel implements Printable {
             _yticks = new Vector<Double>();
             _yticklabels = new Vector<String>();
         }
-        _yticks.addElement(new Double(position));
+        _yticks.addElement(Double.valueOf(position));
         _yticklabels.addElement(label);
     }
 
@@ -459,7 +459,7 @@ public class PlotBox extends JPanel implements Printable {
      *  @return The legend label, or null if there is none.
      */
     public synchronized String getLegend(int dataset) {
-        int idx = _legendDatasets.indexOf(new Integer(dataset), 0);
+        int idx = _legendDatasets.indexOf(Integer.valueOf(dataset), 0);
         if (idx != -1) {
             return _legendStrings.elementAt(idx);
         } else {
@@ -763,9 +763,9 @@ public class PlotBox extends JPanel implements Printable {
     public void setShown(int dataset, boolean flag) {
         boolean prev = isShown(dataset);
         while (_datasetPlotFlags.size() <= dataset) {
-            _datasetPlotFlags.add(new Boolean(true));
+            _datasetPlotFlags.add(Boolean.TRUE);
         }
-        _datasetPlotFlags.set(dataset, new Boolean(flag));
+        _datasetPlotFlags.set(dataset, Boolean.valueOf(flag));
         if (prev != flag) {
             repaint();
         }
@@ -999,13 +999,13 @@ public class PlotBox extends JPanel implements Printable {
             }
             Set<Integer> datasetList;
             datasetList = (Set<Integer>)button.getClientProperty("datasets");
-            datasetList.add(new Integer(dataset));
+            datasetList.add(Integer.valueOf(dataset));
         } else {
             button = new JToggleButton(legend, icon, true);
             button.setFont(_labelFont);
             button.addActionListener(_legendListener);
             Set<Integer> datasetList = new TreeSet<Integer>();
-            datasetList.add(new Integer(dataset));
+            datasetList.add(Integer.valueOf(dataset));
             button.putClientProperty("datasets", datasetList);
             button.setHorizontalTextPosition(SwingConstants.LEFT);
             button.setMargin(new Insets(0, 2, 0, 4));
@@ -2702,8 +2702,8 @@ public class PlotBox extends JPanel implements Printable {
                 String min = (line.substring(7, comma)).trim();
                 String max = (line.substring(comma+1)).trim();
                 try {
-                    Double dmin = new Double(min);
-                    Double dmax = new Double(max);
+                    Double dmin = Double.valueOf(min);
+                    Double dmax = Double.valueOf(max);
                     setXRange(dmin.doubleValue(), dmax.doubleValue());
                 } catch (NumberFormatException e) {
                     // ignore if format is bogus.
@@ -2716,8 +2716,8 @@ public class PlotBox extends JPanel implements Printable {
                 String min = (line.substring(7, comma)).trim();
                 String max = (line.substring(comma+1)).trim();
                 try {
-                    Double dmin = new Double(min);
-                    Double dmax = new Double(max);
+                    Double dmin = Double.valueOf(min);
+                    Double dmax = Double.valueOf(max);
                     setYRange(dmin.doubleValue(), dmax.doubleValue());
                 } catch (NumberFormatException e) {
                     // ignore if format is bogus.
@@ -3186,7 +3186,7 @@ public class PlotBox extends JPanel implements Printable {
         // grid marks.
 
         Vector<Double> grid = new Vector<Double>(10);
-        //grid.addElement(new Double(0.0));
+        //grid.addElement(Double.valueOf(0.0));
         double ratio = Math.pow(10.0, step);
         int ngrid = 1;
         if (labeled) {
@@ -3246,13 +3246,13 @@ public class PlotBox extends JPanel implements Printable {
                             oldgrid.elementAt(oldgridi).doubleValue()
                             - logval)
                             > 0.00001) {
-                        grid.addElement(new Double(logval));
+                        grid.addElement(Double.valueOf(logval));
                     }
                 } else {
-                   grid.addElement(new Double(logval));
+                   grid.addElement(Double.valueOf(logval));
                 }
             } else {
-                grid.addElement(new Double(logval));
+                grid.addElement(Double.valueOf(logval));
             }
         }
 
@@ -3974,15 +3974,15 @@ public class PlotBox extends JPanel implements Printable {
             //   buttons.
             // This problem affects Netscape 4.61 under Digital Unix and
             // 4.51 under Solaris
-            if ((event.getModifiers() & MouseEvent.BUTTON1_MASK) != 0
-                || event.getModifiers() == 0)
+            if ((event.getModifiersEx() & MouseEvent.getMaskForButton(1)) != 0
+                || event.getModifiersEx() == 0)
             {
                 PlotBox.this._zoomStart(event.getX(), event.getY());
             }
         }
         public void mouseReleased(MouseEvent event) {
-            if ((event.getModifiers() & MouseEvent.BUTTON1_MASK) != 0 ||
-                    event.getModifiers() == 0) {
+            if ((event.getModifiersEx() & MouseEvent.getMaskForButton(1)) != 0 ||
+                    event.getModifiersEx() == 0) {
                 PlotBox.this._zoom(event.getX(), event.getY());
             }
         }

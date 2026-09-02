@@ -90,7 +90,7 @@ public class VCaretEntry extends JTextField
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2)
                         ParamEditUtil.setEditObj((VObjIF) evt.getSource());
@@ -157,16 +157,16 @@ public class VCaretEntry extends JTextField
 
     /** The array of the attributes that are displayed in the edit template.*/
     private final static Object[][] m_attributes = {
-	{new Integer(VARIABLE),	"Vnmr variables:    "},
-	{new Integer(SETVAL),   "Text query:"},
-	{new Integer(CMD),      "Text command:"},
-	{new Integer(SETVAL2),  "Caret query:"},
-	{new Integer(CMD2),     "Caret command:"},
-	{new Integer(SHOW),	    "Enable condition:"},
-	{new Integer(NUMDIGIT), "Decimal Places:"},
-	{new Integer(BGCOLOR),  "Background color:","color"},
-	{new Integer(COLOR2),   "Caret color:","color"},
-	{new Integer(DISABLE),  "Disable style:", "menu", m_arrStrDisAbl}
+	{Integer.valueOf(VARIABLE),	"Vnmr variables:    "},
+	{Integer.valueOf(SETVAL),   "Text query:"},
+	{Integer.valueOf(CMD),      "Text command:"},
+	{Integer.valueOf(SETVAL2),  "Caret query:"},
+	{Integer.valueOf(CMD2),     "Caret command:"},
+	{Integer.valueOf(SHOW),	    "Enable condition:"},
+	{Integer.valueOf(NUMDIGIT), "Decimal Places:"},
+	{Integer.valueOf(BGCOLOR),  "Background color:","color"},
+	{Integer.valueOf(COLOR2),   "Caret color:","color"},
+	{Integer.valueOf(DISABLE),  "Disable style:", "menu", m_arrStrDisAbl}
     };
 
     /**
@@ -598,7 +598,8 @@ public class VCaretEntry extends JTextField
          return tmpLoc;
     }
 
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
            defLoc.y = y;
@@ -614,7 +615,7 @@ public class VCaretEntry extends JTextField
               adjustFont(w, h);
            }
         }
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation() {

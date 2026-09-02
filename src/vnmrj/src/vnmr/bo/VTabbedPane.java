@@ -58,7 +58,7 @@ public class VTabbedPane extends JTabbedPane
         ml = new MouseAdapter() {
             public void  mouseClicked(MouseEvent evt) {
                 int  clicks = evt.getClickCount();
-                int  modifier = evt.getModifiers();
+                int  modifier = evt.getModifiersEx();
                 if((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2){
                         VObjIF sel=(VObjIF)evt.getSource();
@@ -101,7 +101,7 @@ public class VTabbedPane extends JTabbedPane
             String title=((VObjIF)comp).getAttribute(LABEL);
             if(title != null)
                 setTitleAt(i,title);
-            m_aListInitialized.add(i, new Boolean(false));
+            m_aListInitialized.add(i, Boolean.FALSE);
             m_tabs.add(i, comp);
             VGroup grp=(VGroup)comp;
             grp.setFolder(this);
@@ -238,7 +238,7 @@ public class VTabbedPane extends JTabbedPane
         try
         {
             if (!bInitialized)
-                m_aListInitialized.set(getSelectedIndex(), new Boolean(true));
+                m_aListInitialized.set(getSelectedIndex(), Boolean.TRUE);
         }
         catch (Exception e) {}
         for (int i=0; i<m_tabs.size(); i++) {
@@ -416,8 +416,8 @@ public class VTabbedPane extends JTabbedPane
     private final static String[] tside = {"Top","Bottom","Left", "Right"};
     public Object[][] getAttributes() { return attributes; }
     private final static Object[][] attributes = {
-    {new Integer(LABEL),        "Name of Item:"},
-    {new Integer(SIDE),         "Location of Tabs:", "menu", tside}
+    {Integer.valueOf(LABEL),        "Name of Item:"},
+    {Integer.valueOf(SIDE),         "Location of Tabs:", "menu", tside}
     };
 
     public void setModalMode(boolean s) {}

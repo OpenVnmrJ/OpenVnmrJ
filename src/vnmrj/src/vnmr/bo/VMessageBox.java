@@ -127,8 +127,8 @@ public class VMessageBox extends JPanel
                     m_window = new MessageWindow(m_table);
                 }
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
-                if ((modifier & InputEvent.BUTTON3_MASK) != 0) {
+                int modifier = evt.getModifiersEx();
+                if ((modifier & InputEvent.getMaskForButton(3)) != 0) {
                     m_window.menuAction(evt);
                 } else if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2)
@@ -145,9 +145,9 @@ public class VMessageBox extends JPanel
                 }
                 Object obj = evt.getSource();
                 if (obj instanceof MessageButton) {
-                    int modifiers = evt.getModifiers();
-                    int onMask = MouseEvent.BUTTON1_MASK;
-                    if ((modifiers & onMask) == onMask) {
+                    int modifiers = evt.getModifiersEx();
+                    int onMask = InputEvent.getMaskForButton(1);
+                    if ((modifiers & onMask) != 0) {
                         MessageButton button = (MessageButton)obj;
                         int x = evt.getX();
                         int y = evt.getY();
@@ -997,8 +997,8 @@ public class VMessageBox extends JPanel
             menu=new SubMenu();
             ma=new MouseAdapter() {
                 public void mouseClicked(MouseEvent evt) {
-                    int modifier = evt.getModifiers();
-                    if((modifier & InputEvent.BUTTON3_MASK) !=0)
+                    int modifier = evt.getModifiersEx();
+                    if((modifier & InputEvent.getMaskForButton(3)) !=0)
                         menuAction(evt);
                 }
             };

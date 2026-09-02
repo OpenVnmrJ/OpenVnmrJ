@@ -245,12 +245,12 @@ public class AddRemoveTool extends ModelessDialog implements ActionListener
     {
         if (e.getActionCommand().equals("east"))
         {
-            Object[] aItems = m_listLeft.getSelectedValues();
+            Object[] aItems = m_listLeft.getSelectedValuesList().toArray();
             doAddRemove(false, aItems);
         }
         else
         {
-            Object[] aItems = m_listRight.getSelectedValues();
+            Object[] aItems = m_listRight.getSelectedValuesList().toArray();
             doAddRemove(true, aItems);
         }
 

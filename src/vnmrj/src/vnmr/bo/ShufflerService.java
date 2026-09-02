@@ -30,7 +30,7 @@ import vnmr.templates.*;
  **/
 
 public class ShufflerService {
-    private ArrayList	  statementDefinitionList;
+    private ArrayList<StatementDefinition> statementDefinitionList;
     /** all Menu Strings for all Object Types keyed by ObjType. Each item 
         in the HashArray is an ArrayList of menuStrings for that ObjType. */
     private HashArrayList allMenuStrings;
@@ -47,11 +47,11 @@ public class ShufflerService {
      *   - Read the Shuffler Statement Config file and fill the
      *     statementDefinitionList with the entries.
      </pre> **************************************************/
-    public ShufflerService(ArrayList statDefList, String objType,
+    public ShufflerService(ArrayList<StatementDefinition> statDefList, String objType,
 			   HashMap allStatementsNames, String[] allObjTypes) {
         String type;
         String[] origNames;
-        ArrayList newNames;
+        ArrayList<String> newNames;
         String name;
 
         allMenuStrings = new HashArrayList();        
@@ -75,7 +75,7 @@ public class ShufflerService {
         // have a list of unknown size.
         for(int i = 0; i < allObjTypes.length; i++) {
             type = allObjTypes[i];
-            newNames = new ArrayList();
+            newNames = new ArrayList<String>();
             origNames = (String[]) allStatementsNames.get(type);
             for(int k = 0; k < origNames.length; k++) {
                 name = origNames[k];
@@ -205,8 +205,8 @@ public class ShufflerService {
      * Build a default statement, in the form of a hashtable.
      * @return default statement
      */
-    public Hashtable getDefaultStatement(String statementType) {
-	Hashtable statement = new Hashtable();
+    public Hashtable<String,Object> getDefaultStatement(String statementType) {
+	Hashtable<String,Object> statement = new Hashtable<String,Object>();
 	ArrayList  list;
 	String[]  headers;
 
@@ -217,7 +217,7 @@ public class ShufflerService {
 	StatementDefinition sd=null;
 	boolean foundit=false;
 	for(int i=0; i < statementDefinitionList.size(); i++) {
-	    sd = (StatementDefinition) statementDefinitionList.get(i);
+	    sd = statementDefinitionList.get(i);
 
 	    if(statementType.equals(sd.getobjType() + "/" +sd.getmenuString())){
 		foundit = true;
@@ -232,7 +232,7 @@ public class ShufflerService {
 	}
 
 	// Loop thru the StatementDefinition's elementList to get each item.
-	ArrayList elemList = sd.getelementList();
+	ArrayList<Object> elemList = sd.getelementList();
 	StatementElement elem;
 	String[] elemValues;
 	String   elemType;
@@ -285,7 +285,7 @@ public class ShufflerService {
     public StatementDefinition getAStatement(String statementType) {
 	StatementDefinition sd;
 	for(int i=0; i < statementDefinitionList.size(); i++) {
-	    sd = (StatementDefinition) statementDefinitionList.get(i);
+	    sd = statementDefinitionList.get(i);
 
 	    if(statementType.equals(sd.getobjType() + "/" +sd.getmenuString())){
 		return sd;

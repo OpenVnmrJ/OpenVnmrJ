@@ -121,7 +121,7 @@ public class VAnnotatePanel extends JPanel implements VObjDef,
             public void mouseClicked(MouseEvent evt) {
                  int clicks = evt.getClickCount();
                  if (clicks >= 2) {
-                     int modifier = evt.getModifiers();
+                     // int modifier = evt.getModifiers();
                           selectNextVobj(evt);
 /*
                      if ((modifier & (1 << 4)) != 0) {
@@ -154,10 +154,10 @@ public class VAnnotatePanel extends JPanel implements VObjDef,
              public void keyReleased(KeyEvent e) {
                  e.consume();
                  int k = e.getKeyCode();
-                 int m = e.getModifiers();
+                 int m = e.getModifiersEx();
                  if (m == 0)
                       keyMove(k);
-                 else if (m == Event.CTRL_MASK)
+                 else if (m == InputEvent.CTRL_DOWN_MASK)
                       keyResize(k);
              }
          };
@@ -1168,9 +1168,9 @@ public class VAnnotatePanel extends JPanel implements VObjDef,
         JComponent comp = (JComponent)e.getSource();
         int mx = e.getX();
         int my = e.getY();
-        int md = e.getModifiers();
+        int md = e.getModifiersEx();
 
-        if ((md & InputEvent.BUTTON1_MASK) != 0) {
+        if ((md & InputEvent.getMaskForButton(1)) != 0) {
             mDrag(e);
             return;
         }
@@ -1621,9 +1621,9 @@ public class VAnnotatePanel extends JPanel implements VObjDef,
         else {
             if (cursor != Cursor.DEFAULT_CURSOR) {
                int oldCursor = cursor;
-               int md = e.getModifiers();
+               int md = e.getModifiersEx();
                boolean forward = true;
-               if ((md & InputEvent.BUTTON3_MASK) != 0)
+               if ((md & InputEvent.getMaskForButton(3)) != 0)
                    forward = false;
                VAnnotateBox box = (VAnnotateBox) editVObj;
                box.showNextGrp(forward);
@@ -1958,7 +1958,7 @@ public class VAnnotatePanel extends JPanel implements VObjDef,
             addMouseListener(new MouseAdapter() {
                public void mouseClicked(MouseEvent evt) {
                    int clicks = evt.getClickCount();
-                   int modifier = evt.getModifiers();
+                   int modifier = evt.getModifiersEx();
                    if ((modifier & (1 << 4)) != 0) {
                       if (clicks >= 2)
                           informControl();

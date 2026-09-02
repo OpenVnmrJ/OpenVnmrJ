@@ -108,7 +108,7 @@ public class VButton extends JButton implements VObjIF, VObjDef, VEditIF,
         mlEditor = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if((modifier & (1 << 4)) != 0) {
                     if(clicks >= 2) {
                         ParamEditUtil.setEditObj((VObjIF)evt.getSource());
@@ -186,36 +186,36 @@ public class VButton extends JButton implements VObjIF, VObjDef, VEditIF,
     private final static String[] m_arrStrTtlJust = {"Left","Center","Right"};
     /** The array of the attributes that are displayed in the edit template. */
     private final static Object[][] attributes = {
-            { new Integer(LABEL), Util.getLabel(LABEL) },
-            { new Integer(ICON), Util.getLabel(ICON) },
-            { new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-            { new Integer(SHOW), Util.getLabel(SHOW) },
-            { new Integer(CMD), Util.getLabel(CMD) },
-            { new Integer(STATPAR), Util.getLabel(STATPAR) },
-            { new Integer(STATSHOW), Util.getLabel(STATSHOW) },
-            { new Integer(VAR2), Util.getLabel(LABELVARIABLE) },
-	    { new Integer(SETVAL),   Util.getLabel(LABELVALUE) },
-            { new Integer(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
-            { new Integer(TOOLTIP), Util.getLabel(TOOLTIP) },
-            { new Integer(BGCOLOR), Util.getLabel(BGCOLOR), "color" }
+            { Integer.valueOf(LABEL), Util.getLabel(LABEL) },
+            { Integer.valueOf(ICON), Util.getLabel(ICON) },
+            { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+            { Integer.valueOf(SHOW), Util.getLabel(SHOW) },
+            { Integer.valueOf(CMD), Util.getLabel(CMD) },
+            { Integer.valueOf(STATPAR), Util.getLabel(STATPAR) },
+            { Integer.valueOf(STATSHOW), Util.getLabel(STATSHOW) },
+            { Integer.valueOf(VAR2), Util.getLabel(LABELVARIABLE) },
+	    { Integer.valueOf(SETVAL),   Util.getLabel(LABELVALUE) },
+            { Integer.valueOf(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
+            { Integer.valueOf(TOOLTIP), Util.getLabel(TOOLTIP) },
+            { Integer.valueOf(BGCOLOR), Util.getLabel(BGCOLOR), "color" }
     };
-           //  { new Integer(DECOR1), Util.getLabel("vbDECOR1"), "radio",
+           //  { Integer.valueOf(DECOR1), Util.getLabel("vbDECOR1"), "radio",
            //          m_arrStrYesNo }
 
     private final static Object[][] attributes_H = {
-        { new Integer(LABEL), Util.getLabel(LABEL) },
-        { new Integer(ICON), Util.getLabel(ICON) },
-        { new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-        { new Integer(SHOW), Util.getLabel(SHOW) },
-        { new Integer(CMD), Util.getLabel(CMD) },
-        { new Integer(STATPAR), Util.getLabel(STATPAR) },
-        { new Integer(STATSHOW), Util.getLabel(STATSHOW) },
-        { new Integer(VAR2), Util.getLabel(LABELVARIABLE) },
-	{ new Integer(SETVAL),   Util.getLabel(LABELVALUE) },
-        { new Integer(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
-        { new Integer(TOOLTIP), Util.getLabel(TOOLTIP) },
-        { new Integer(BGCOLOR), Util.getLabel(BGCOLOR), "color" },
-        {new Integer(HELPLINK), Util.getLabel("blHelp")}
+        { Integer.valueOf(LABEL), Util.getLabel(LABEL) },
+        { Integer.valueOf(ICON), Util.getLabel(ICON) },
+        { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+        { Integer.valueOf(SHOW), Util.getLabel(SHOW) },
+        { Integer.valueOf(CMD), Util.getLabel(CMD) },
+        { Integer.valueOf(STATPAR), Util.getLabel(STATPAR) },
+        { Integer.valueOf(STATSHOW), Util.getLabel(STATSHOW) },
+        { Integer.valueOf(VAR2), Util.getLabel(LABELVARIABLE) },
+	{ Integer.valueOf(SETVAL),   Util.getLabel(LABELVALUE) },
+        { Integer.valueOf(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
+        { Integer.valueOf(TOOLTIP), Util.getLabel(TOOLTIP) },
+        { Integer.valueOf(BGCOLOR), Util.getLabel(BGCOLOR), "color" },
+        {Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}
     };
 
     public Object[][] getAttributes() {

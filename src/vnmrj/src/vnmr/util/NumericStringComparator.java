@@ -20,10 +20,10 @@ import java.util.*;
  *	    See String.CASE_INSENSITIVE_ORDER
  </pre> **********************************************************/
 public class NumericStringComparator
-    		implements Comparator, java.io.Serializable {
-    public int compare(Object o1, Object o2) {
-	String s1 = (String) o1;
-	String s2 = (String) o2;
+    		implements Comparator<String>, java.io.Serializable {
+    public int compare(String o1, String o2) {
+	String s1 = o1;
+	String s2 = o2;
 	int nd1=0, nd2=0;
 	int n1=s1.length(), n2=s2.length();
 	boolean numeric=true;

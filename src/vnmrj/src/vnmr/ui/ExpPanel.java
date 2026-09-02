@@ -734,16 +734,16 @@ public class ExpPanel extends JPanel
     public void mouseProc(MouseEvent ev, int release, int drag) {
         int  modify, but, bx, by;
 
-        modify = ev.getModifiers();
+        modify = ev.getModifiersEx();
 
         but = 0;
         gok = false;
-        if ((modify & (1 << 1)) != 0) // Control key pressed
+        if ((modify & InputEvent.CTRL_DOWN_MASK) != 0) // Control key pressed
         {    return; }
         else {
-             if ((modify & (1 << 2)) != 0) // button 3
+             if ((modify & InputEvent.BUTTON3_DOWN_MASK) != 0) // button 3
                 but = 2;
-             else if ((modify & (1 << 3)) != 0)
+             else if ((modify & InputEvent.BUTTON2_DOWN_MASK) != 0)
                 but = 1;
         }
         bx = ev.getX() - xGap;
@@ -5119,11 +5119,11 @@ public class ExpPanel extends JPanel
                 continue;
             }
             if(par1.startsWith("width:")) {
-                width = (new Integer(par1.substring(6))).intValue();
+                width = Integer.parseInt(par1.substring(6));
                 continue;
             }
             if(par1.startsWith("height:")) {
-                height = (new Integer(par1.substring(7))).intValue();
+                height = Integer.parseInt(par1.substring(7));
                 continue;
             }
             if (par1.startsWith("help:")) {
@@ -5334,8 +5334,8 @@ public class ExpPanel extends JPanel
             if(par1.startsWith("location:")) location = par1.substring(9);
             if (par1.startsWith(strRebuild))
                 strRebuild = par1.substring(strRebuild.length());
-            if(par1.startsWith("width:")) width = (new Integer(par1.substring(6))).intValue();
-            if(par1.startsWith("height:"))  height = (new Integer(par1.substring(7))).intValue();
+            if(par1.startsWith("width:")) width = Integer.parseInt(par1.substring(6));
+            if(par1.startsWith("height:"))  height = Integer.parseInt(par1.substring(7));
             if (par1.startsWith("help:"))
                 strHelpFile = par1.substring(5);
             if (par1.startsWith("close:"))
@@ -8380,7 +8380,7 @@ public class ExpPanel extends JPanel
                 td.height = titleHeight;
             else if (td.height != titleHeight) {
                 titleHeight = td.height;
-                sshare.putProperty("titleHeight", new Integer(titleHeight));
+                sshare.putProperty("titleHeight", Integer.valueOf(titleHeight));
             }
             x = xGap;
             if (pt.x < 10 && pt.y < 10) { //  on top left corner
@@ -8833,9 +8833,9 @@ public class ExpPanel extends JPanel
         StringBuffer sbcmd = new StringBuffer().append(JFUNC).append(XMASK).
             append(",").append(InputEvent.SHIFT_DOWN_MASK).append(",").append(InputEvent.CTRL_DOWN_MASK).
             append(", ").append(InputEvent.META_DOWN_MASK).append(", ").append(InputEvent.ALT_DOWN_MASK).
-            append(", ").append(InputEvent.BUTTON1_MASK).append(", ").
-            append(InputEvent.BUTTON2_MASK).append(", ").
-            append(InputEvent.BUTTON3_MASK).append(LINE);
+            append(", ").append(InputEvent.getMaskForButton(1)).append(", ").
+            append(InputEvent.getMaskForButton(2)).append(", ").
+            append(InputEvent.getMaskForButton(3)).append(LINE);
 
         sendToVnmr(sbcmd.toString());
 
@@ -8887,9 +8887,9 @@ public class ExpPanel extends JPanel
 
     public void  saveLcInfo() {
         String sData = "lcSize"+this.winId;
-        sshare.putProperty(sData, new Integer(iLcSize));
+        sshare.putProperty(sData, Integer.valueOf(iLcSize));
         sData = "lcPos"+this.winId;
-        sshare.putProperty(sData, new Integer(iLcPos));
+        sshare.putProperty(sData, Integer.valueOf(iLcPos));
     }
 
     public void  initLcInfo() {
@@ -9235,7 +9235,7 @@ public class ExpPanel extends JPanel
             return;
         int pid;
         int k, m;
-        boolean doGc = false;
+        // boolean doGc = false;
         boolean goodFile = true;
         if (id >= 90)
             pid = id - 90;
@@ -9370,7 +9370,7 @@ public class ExpPanel extends JPanel
                         // TODO: need to add it somewhere else?
                         // System.gc();
                         // System.runFinalization();
-                        doGc = true;
+                        // doGc = true;
                     }
                     if (debug) {
                         Messages.postDebug("Panel removed: "+
@@ -9391,7 +9391,7 @@ public class ExpPanel extends JPanel
                     // TODO: need to add it somewhere else?
                     // System.gc();
                     // System.runFinalization();
-                    doGc = true;
+                    // doGc = true;
                 }
                 info.paramPanel = pan;
                 epi = new ExpPanInfo(info.id,
@@ -9419,10 +9419,10 @@ public class ExpPanel extends JPanel
             //    controlPanel.setParamPanel(info.name, pan);
             paramTabCtrl.setParamPanel(info.name, pan, info.fpathIn);
             pan = null;
-            if (doGc) {
+ /*           if (doGc) {
                 System.gc();
                 System.runFinalization();
-            }
+            } */
             // if (info.isCurrent)
                 setPanelBusy(false);
             //    sendFree();

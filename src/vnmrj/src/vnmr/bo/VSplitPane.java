@@ -246,9 +246,9 @@ public class VSplitPane extends VGroup implements LayoutManager {
      *  Attribute array for panel editor (ParamInfoPanel)
      */
     private final static Object[][] attributes = {
-        {new Integer(VARIABLE),     "Vnmr variables:"},
-        {new Integer(SETVAL),       "Orientation expression:"},
-        {new Integer(SHOW),         "Enable condition:"},
+        {Integer.valueOf(VARIABLE),     "Vnmr variables:"},
+        {Integer.valueOf(SETVAL),       "Orientation expression:"},
+        {Integer.valueOf(SHOW),         "Enable condition:"},
     };
 
     public void loadPanes() {

@@ -488,7 +488,7 @@ public class AcqPanelUtility implements XMLReader {
             String startGroup = st.nextToken();
 
             String groupName = st.nextToken();
-            int groupNum = (new Integer(st.nextToken()) ).intValue();
+            int groupNum = (Integer.valueOf(st.nextToken())).intValue();
             String[] gInfo = GroupedLayout.getGroupInfo(groupNum);
             groupAtts.setAttribute(0,"","loc","loc","loc",gInfo[0]);
             groupAtts.setAttribute(1,"","size","size","size",gInfo[1]);

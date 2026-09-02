@@ -42,10 +42,8 @@ public class StatusProcess implements Runnable {
 
    public void run() {
        try {
-           String cmd = "Infostat -port "+socketPort;
-           Runtime rt = Runtime.getRuntime();
-           // exec and get back a Process class
-           chkit = rt.exec(cmd);
+           chkit = new ProcessBuilder("Infostat", "-port",
+                                      String.valueOf(socketPort)).start();
            int ret = chkit.waitFor();
            chkit = null;
            socketIf.statusProcessExit();

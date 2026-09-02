@@ -247,7 +247,7 @@ public class RoboHelp_CSH
 
                 if (strHostName.length() > 0)
                 {              
-                    url = new URL("http://" + strHostName + "/robo/bin/robo.dll?mgr=sys&cmd=updinf");
+                    url = URI.create("http://" + strHostName + "/robo/bin/robo.dll?mgr=sys&cmd=updinf").toURL();
                     urlConnect = url.openConnection();
                     urlConnect.setDoInput(true);
                     urlConnect.setDoOutput(true);
@@ -258,14 +258,14 @@ public class RoboHelp_CSH
                     dataOut.flush();
                     dataOut.close();
 
-                    dataIn = new DataInputStream(urlConnect.getInputStream());
+                    BufferedReader brIn = new BufferedReader(new InputStreamReader(urlConnect.getInputStream()));
 
                     String strTemp="";
-                    while (null != ((strTemp = dataIn.readLine())))
+                    while (null != ((strTemp = brIn.readLine())))
                     {
                         strResult += strTemp + "\n";
                     }
-                    dataIn.close();
+                    brIn.close();
                 }
             }
             catch (MalformedURLException e) {
@@ -373,7 +373,7 @@ public class RoboHelp_CSH
         {
             boolean bResult = true;
             try{
-                URL newURL = new URL(fileURL);
+                URL newURL = URI.create(fileURL).toURL();
                 
                 BufferedInputStream bis = new BufferedInputStream(newURL.openConnection().getInputStream());
                 BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(newFileLocation));
@@ -860,12 +860,21 @@ public class RoboHelp_CSH
 				String fileNew0 = tuHtmlToText(file);
 				String fileNew1 = GetNormalizedLocal(fileNew0);
 				String fileNew	= TruncURLtoQuestionMark(fileNew1);
-				URL baseNew = new URL(protocol,host,port,fileNew);
+				URL baseNew;
+				try {
+					baseNew = new URI(protocol, null, host, port, fileNew, null, null).toURL();
+				} catch (URISyntaxException e) {
+					throw new MalformedURLException(e.getMessage());
+				}
 
 				String localNew0 = tuHtmlToText(local);
 				String localNew = GetNormalizedLocal(localNew0);
-				return new URL (baseNew, localNew);
-		}
+				try {
+					return baseNew.toURI().resolve(localNew).toURL();
+				} catch (URISyntaxException e) {
+					throw new MalformedURLException(e.getMessage());
+				}
+    	}
 		catch (MalformedURLException x) {
 			x.printStackTrace();
 
@@ -879,7 +888,7 @@ public class RoboHelp_CSH
 				// "file:/" onto it and opening it - even
 				// though the slashes will be all funny
 				// this seems to work!
-				return new URL ("file:/" + local);
+				return new File(local).toURI().toURL();
 			}
 			else {
 
@@ -887,7 +896,11 @@ public class RoboHelp_CSH
 				// should display a dialog box here
 				// and now try the secondary URL
 
-				return new URL (base, url);
+				try {
+					return base.toURI().resolve(url).toURL();
+				} catch (URISyntaxException e) {
+					throw new MalformedURLException(e.getMessage());
+				}
 			}
 		}
 	}
@@ -1016,39 +1029,44 @@ public class RoboHelp_CSH
 										String a_pszMapId,
 										String a_pszTopicURL)
 	{
-		String strCommandLine = a_pszViewerPath;
-		
 		
 		boolean bRetVal = false;
 		if(DoesFileExists(a_pszViewerPath))
 		{
-			strCommandLine += " -csh" ;
+			java.util.List<String> cmdList = new java.util.ArrayList<String>();
+			cmdList.add(a_pszViewerPath);
+			cmdList.add("-csh");
 			if( a_pszHelpId.length() > 0)
 			{
-				strCommandLine += " helpid \"" + a_pszHelpId + "\"" ; 
+				cmdList.add("helpid");
+				cmdList.add(a_pszHelpId);
 			}
 			
 			if(a_pszWindowName.length()>0)
 			{
-				strCommandLine += " window \"" + a_pszWindowName + "\"" ; 
+				cmdList.add("window");
+				cmdList.add(a_pszWindowName);
 			}
 			
 			if(a_pszTopicURL.length() > 0)
 			{
-				strCommandLine += " topicurl \"" + a_pszTopicURL + "\"" ; 
+				cmdList.add("topicurl");
+				cmdList.add(a_pszTopicURL);
 			}
 			
 			else if(a_pszMapId.length() > 0)
 			{
-				strCommandLine += " mapid \"" + a_pszMapId + "\"" ; 
+				cmdList.add("mapid");
+				cmdList.add(a_pszMapId);
 			}
 			else
 			{
-				strCommandLine += " mapnumber " + ulMapNum;
+				cmdList.add("mapnumber");
+				cmdList.add(String.valueOf(ulMapNum));
 			}
 			try
 			{
-				Runtime.getRuntime().exec(strCommandLine);
+				new ProcessBuilder(cmdList).start();
 				bRetVal = true;
 			}
 			catch(Exception e)

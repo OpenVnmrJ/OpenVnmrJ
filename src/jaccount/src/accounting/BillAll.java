@@ -21,6 +21,8 @@ import java.text.*;
 import java.awt.print.*;
 import java.net.*;
 import java.util.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 
 public class BillAll extends JPanel implements Printable {
@@ -94,7 +96,9 @@ public class BillAll extends JPanel implements Printable {
         Font f = new Font("Ariel",Font.BOLD, 16);
         headerLabel[0].setFont(f);
         add(headerLabel[0]);
-        headerLabel[1] = new JLabel(new Date().toLocaleString());
+        String now = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("MMM d, yyyy h:mm:ss a"));
+        headerLabel[1] = new JLabel(now);        
         headerLabel[1].setFont(font);
         add(headerLabel[1]);
 
@@ -122,8 +126,9 @@ public class BillAll extends JPanel implements Printable {
         } 
     }
 
-    public void paint(Graphics g) {
-        super.paint(g);
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
         ((Graphics2D)g).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
             RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         if (!bSummary)

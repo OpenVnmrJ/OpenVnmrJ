@@ -981,7 +981,7 @@ public class UserRightsPanel extends JFrame implements ActionListener
     public void destroyPanel() {
         try {
             dispose();
-            finalize();
+            // finalize();
         }
         catch(Throwable e) {
             

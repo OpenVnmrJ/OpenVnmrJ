@@ -11,6 +11,7 @@ package vnmr.sms;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.util.*;
 
 
@@ -289,9 +290,9 @@ public class CaroPlate extends GenPlateIF implements  SmsDef
        if (clicks >= 2) {
            return false;
        }
-       if ((key & Event.CTRL_MASK) != 0)
+       if ((key & InputEvent.CTRL_DOWN_MASK) != 0)
            ctrlKey = true;
-       else if ((key & Event.SHIFT_MASK) != 0)
+       else if ((key & InputEvent.SHIFT_DOWN_MASK) != 0)
            shiftKey = true;
        if (!SmsUtil.isUsable(obj)) {
           if (!shiftKey)
@@ -371,7 +372,7 @@ public class CaroPlate extends GenPlateIF implements  SmsDef
        }
        key = 0;
        if (lastSelected > 0)
-           key = Event.CTRL_MASK;
+           key = InputEvent.CTRL_DOWN_MASK;
        bGot = setSelect(obj.locX + 1, obj.locY + 1, key, 1);
        return bGot;
    }

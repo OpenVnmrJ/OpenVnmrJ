@@ -312,8 +312,8 @@ public class JbControl extends UvDetector
      * Tell the detector what flow cell is installed.
      */
     public void setFlowCell(int n, double r) {
-        setParam("CellType", n);
-        setParam("CellRatio", (float)r);
+        setParam("CellType", Integer.valueOf(n));
+        setParam("CellRatio", Float.valueOf((float) r));
         sendCommand(ID_CMD_SET_CELL_PARAMS);
     }
 
@@ -321,7 +321,7 @@ public class JbControl extends UvDetector
      * Select the lamp(s) to be controlled by ID_CMD_LAMP commands.
      */
     public void selectLamp(int n) {
-        setParam("Lamp", n);
+        setParam("Lamp", Integer.valueOf(n));
     }
 
     private static void initSlits() {
@@ -445,12 +445,12 @@ public class JbControl extends UvDetector
         MethodParams mp = null;
         if (p != null) {
             mp = new MethodParams(p);
-            setParam("Param Wavelength 1", (float)mp.lambda1);
-            setParam("Param Wavelength 2", (float)mp.lambda2);
-            setParam("Min Wavelength", mp.lambdaMin);
-            setParam("Max Wavelength", mp.lambdaMax);
-            setParam("Slit Width", mp.slitNumber);
-            setParam("Bunching Size", mp.bunchingFactor);
+            setParam("Param Wavelength 1", Float.valueOf((float) mp.lambda1));
+            setParam("Param Wavelength 2", Float.valueOf((float) mp.lambda2));
+            setParam("Min Wavelength", Integer.valueOf(mp.lambdaMin));
+            setParam("Max Wavelength", Integer.valueOf(mp.lambdaMax));
+            setParam("Slit Width", Integer.valueOf(mp.slitNumber));
+            setParam("Bunching Size", Integer.valueOf(mp.bunchingFactor));
         }
         m_methodParams = null;
         boolean ok = sendCommand(ID_CMD_METHOD_HEADER_335);
@@ -842,7 +842,7 @@ public class JbControl extends UvDetector
             rtnCode &= 0x3fff;
             // Error codes to avoid showing to user:
             boolean isOk = (rtnCode == 9008);
-            String errStr = (String)m_errorTable.get(rtnCode);
+            String errStr = (String)m_errorTable.get(Integer.valueOf(rtnCode));
             if (errStr == null) {
                 if (isOk) {
                     LcMsg.postDebug("Unknown PDA error received: " + rtnCode);
@@ -910,7 +910,7 @@ public class JbControl extends UvDetector
                 String errString
                         = m_detectorParameters.getString ("StringDescription");
                 if (errString != null && errString.length() > 0) {
-                    m_errorTable.put(errCode, errString);
+                    m_errorTable.put(Integer.valueOf(errCode), errString);
                 }
                 LcMsg.postDebug("jberrors", "err #" + errCode
                                 + ": " + errString);
@@ -1119,7 +1119,7 @@ public class JbControl extends UvDetector
         } catch (NumberFormatException nfe) {
             return null;
         }
-        return rtn;
+        return Integer.valueOf(rtn);
     }
 
     /**

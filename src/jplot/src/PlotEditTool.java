@@ -182,8 +182,8 @@ class PlotEditTool extends JPanel implements  ActionListener, PlotDefines, PlotO
 			PlotUtil.setTextWindow(textInput);
 	    		textInput.setTextColor(fg);
 		    }
-	    	    textInput.show();
-	    	    textInput.setState(Frame.NORMAL);
+	    	    textInput.setVisible(true);
+	    	    textInput.setExtendedState(Frame.NORMAL);
 		    return;
 	 case COLORBUT:
 	    	    color_proc();
@@ -539,7 +539,7 @@ class PlotEditTool extends JPanel implements  ActionListener, PlotDefines, PlotO
 	    clearActions();
 	    return;
 	}
-	pmode = evt.getModifiers();
+	pmode = evt.getModifiersEx();
 	switch (evt.getID()) {
 	 case MouseEvent.MOUSE_PRESSED:
 			
@@ -748,7 +748,7 @@ class PlotEditTool extends JPanel implements  ActionListener, PlotDefines, PlotO
 	font_size = textInput.getFontSize();
 	font = new Font(font_family, font_style, (int)(font_size * ratio));
 	mygc.setFont(font);
-	fontMetric = mygc.getFontMetrics();
+	fontMetric = p_object.getFontMetrics(font);
         textwidth = fontMetric.stringWidth(inputStr);
         textheight = fontMetric.getHeight();
 	text_img = null;
@@ -770,7 +770,7 @@ class PlotEditTool extends JPanel implements  ActionListener, PlotDefines, PlotO
 	inputStr = s.getValue();
 	font = new Font(font_family, font_style, (int)(font_size * ratio));
 	mygc.setFont(font);
-	fontMetric = mygc.getFontMetrics();
+	fontMetric = p_object.getFontMetrics(font);
         textwidth = fontMetric.stringWidth(inputStr);
         textheight = fontMetric.getHeight();
 	text_img = null;
@@ -1137,8 +1137,8 @@ class PlotEditTool extends JPanel implements  ActionListener, PlotDefines, PlotO
     {
 	if (ipPref == null)
 	    return;
-	ipPref.show();
-	ipPref.setState(Frame.NORMAL);
+	ipPref.setVisible(true);
+	ipPref.setExtendedState(Frame.NORMAL);
     }
 
     static String checkString(String s)
@@ -1229,7 +1229,7 @@ class PlotEditTool extends JPanel implements  ActionListener, PlotDefines, PlotO
 		return;
 	    font = new Font(font_family, font_style, (int)(font_size * ratio));
 	    mygc.setFont(font);
-	    fontMetric = mygc.getFontMetrics();
+	    fontMetric = p_object.getFontMetrics(font);
             textwidth = fontMetric.stringWidth(inputStr);
             textheight = fontMetric.getHeight();
 	    text_img = null;
@@ -1398,7 +1398,7 @@ class PlotEditTool extends JPanel implements  ActionListener, PlotDefines, PlotO
     }
 
 
-    private Vector  item_list = new Vector();
+    private Vector<EditItemIF>  item_list = new Vector<EditItemIF>();
     private int	    x1, x2, y1, y2;
     private int	    p_width, p_height;
     private double  ratio = 1.0;

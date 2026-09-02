@@ -293,7 +293,7 @@ public class TableSorter extends TableMap {
     public void sortByColumn(int column, boolean ascending) {
         this.ascending = ascending;
         sortingColumns.removeAllElements();
-        sortingColumns.addElement(new Integer(column));
+        sortingColumns.addElement(Integer.valueOf(column));
         sort(this);
         super.tableChanged(new TableModelEvent(this));
     }
@@ -312,7 +312,7 @@ public class TableSorter extends TableMap {
                 int column = tableView.convertColumnIndexToModel(viewColumn);
                 if (e.getClickCount() == 1 && column != -1) {
                     //System.out.println("Sorting ...");
-                    int shiftPressed = e.getModifiers()&InputEvent.SHIFT_MASK;
+                    //int shiftPressed = e.getModifiers()&InputEvent.SHIFT_MASK;
                     //boolean ascending = (shiftPressed == 0);
                     sorter.sortByColumn(column, ascending);
                     ascending = !ascending;
