@@ -71,7 +71,7 @@ public class StatementDefinition extends JComponent {
         StatementElement element;
         String etype;
         String evalues[];
-        ArrayList menuList;
+        ArrayList<String> menuList;
         EPopButton  popupMenu;  
         DateRangePanel dateRangePanel;
         boolean gotColumns=false;
@@ -453,7 +453,7 @@ public class StatementDefinition extends JComponent {
                     // Get all of the attribute names in the DB and then
                     // keep only the ones which start with time_.
                     // Put those into the menu.
-                    ArrayList values = 
+                    ArrayList<String> values = 
                            FillDBManager.attrList.getAttrNamesLimited(objType);
                     ArrayList<String> timevalues = new ArrayList<String>();
                     String str;
@@ -768,7 +768,7 @@ public class StatementDefinition extends JComponent {
 
                         // Lets update the menu list in case something
                         // has be added to the DB.
-                        ArrayList menulist;
+                        ArrayList<String> menulist;
                         menulist = getUserMenuList(string, Shuf.DB_VNMR_DATA);
                         popButton.resetMenuChoices(menulist);
                     }
@@ -800,7 +800,7 @@ public class StatementDefinition extends JComponent {
                             getElementThisEtype(attrval);
                         // Get the new values list
                         ShufDBManager dbMg = ShufDBManager.getdbManager();
-                        ArrayList list = dbMg.attrList.getAttrValueListSort(
+                        ArrayList<String> list = dbMg.attrList.getAttrValueListSort(
                             str, objType);
                         if(list == null) {
                             list = new ArrayList<String>();
@@ -944,7 +944,7 @@ public class StatementDefinition extends JComponent {
                             }
 
                             ShufDBManager dbMg = ShufDBManager.getdbManager();
-                            ArrayList list = dbMg.attrList.getAttrValueListSort(
+                            ArrayList<String> list = dbMg.attrList.getAttrValueListSort(
                                                          attrName, objType);
                             if(list == null) {
                                 list = new ArrayList<String>();
@@ -1004,7 +1004,7 @@ public class StatementDefinition extends JComponent {
 
                             // Get the new values list
                             ShufDBManager dbMg = ShufDBManager.getdbManager();
-                            ArrayList list = dbMg.attrList.getAttrValueListSort(
+                            ArrayList<String> list = dbMg.attrList.getAttrValueListSort(
                                                         str, objType);
                             if(list == null) {
                                 list = new ArrayList<String>();
@@ -1058,7 +1058,7 @@ public class StatementDefinition extends JComponent {
                             }
 
                             ShufDBManager dbMg = ShufDBManager.getdbManager();
-                            ArrayList list = dbMg.attrList.getAttrValueListSort(
+                            ArrayList<String> list = dbMg.attrList.getAttrValueListSort(
                                                             attrName, objType);
                             if(list == null) {
                                 list = new ArrayList<String>();
@@ -1156,7 +1156,7 @@ public class StatementDefinition extends JComponent {
         String           vals[];
         String           value;
         String           attrName;
-        ArrayList       accInv;
+        ArrayList<String>       accInv;
         LoginService    loginService;
         Hashtable       accessHash;
         String          curuser;
@@ -1413,7 +1413,7 @@ public class StatementDefinition extends JComponent {
             // If the first item in the access list is 'all' then ignore
             // the list and use instead, all of the users found in the DB.
             if(info.accessibleUsers.get(0).equals("all")) {
-                ArrayList strarr = shufflerService.
+                ArrayList<String> strarr = shufflerService.
                     queryCategoryValues(info.objectType, "owner");
                 if(strarr.size() == 0) {
                     // We show nothing in the DB, perhaps the locattrlist is
@@ -1491,7 +1491,7 @@ public class StatementDefinition extends JComponent {
         }
         // Create a pop up menu
         // Get list of values to put into menu.
-        ArrayList list = 
+        ArrayList<String> list = 
                   dbManager.attrList.getAttrValueListSort(userType, objType);
         if(list == null) {
             Messages.postError("Problem getting attribute list for "
@@ -1504,19 +1504,19 @@ public class StatementDefinition extends JComponent {
         // Now trim down the list to include ONLY entries accessible
         // by this owner.
         // Get the access list.
-        ArrayList menulist;
+        ArrayList<String> menulist;
         String curuser = System.getProperty("user.name");
         Hashtable accessHash = LoginService.getaccessHash();
         Access access  = (Access) accessHash.get(curuser);
-        ArrayList accList = access.getlist();
-        ArrayList accGroups = access.getgroups();
+        ArrayList<String> accList = access.getlist();
+        ArrayList<String> accGroups = access.getgroups();
 
         // If accList is anything but 'all'
         if(!accList.get(0).equals("all")) {
             // Go thru the list from the DB and check to see if 
             // it is an accessible user.  Skip the last entry 
             // which should be everyone.
-            ArrayList alist = new ArrayList<String>();
+            ArrayList<String> alist = new ArrayList<String>();
             for(int i=0; i < list.size() -1; i++) {
                 if(accList.contains(list.get(i))) {
                                 // This entry is valid, keep it

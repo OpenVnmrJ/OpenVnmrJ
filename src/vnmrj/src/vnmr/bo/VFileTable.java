@@ -111,7 +111,7 @@ public class VFileTable extends JScrollPane
         return((String)m_tableModel.getRowValue(row));
     }
 
-    public Vector getOutputTypes() {
+    public Vector<String> getOutputTypes() {
         return(m_tableModel.getOutputTypes());
     }
 
@@ -141,7 +141,7 @@ public class VFileTable extends JScrollPane
     if(debug)
         System.out.println("VFileTable.file: "+str +" "+fileType);
 
-    Vector paths = new Vector();
+    Vector<String> paths = new Vector<String>();
     paths.addElement(str);
 
     boolean b = m_table.makeFileTable(paths, fileType);
@@ -238,7 +238,7 @@ public class VFileTable extends JScrollPane
     }
 
     public void setAttribute(int attr, String c) {
-        Vector v;
+        Vector<String> v;
         int k;
 
         switch (attr) {
@@ -351,7 +351,7 @@ public class VFileTable extends JScrollPane
 
     // ExpListenerIF interface
 
-    public void  updateValue(Vector params){
+    public void  updateValue(Vector<String> params){
     if (vnmrIf == null)
         return;
     if(debug)
@@ -377,7 +377,7 @@ public class VFileTable extends JScrollPane
         }
     }
 
-    private void  updateContent(Vector params){
+    private void  updateContent(Vector<String> params){
         if (vnmrIf == null || fileName == null)
         return;
         String  vars=getAttribute(VAR2);

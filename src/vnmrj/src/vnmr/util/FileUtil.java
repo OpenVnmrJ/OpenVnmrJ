@@ -300,7 +300,7 @@ public class FileUtil
     //----------------------------------------------------------------
     /** Return list of file search base directories. */
     //----------------------------------------------------------------
-    public static ArrayList getAppDirs() {
+    public static ArrayList<String> getAppDirs() {
         init_dirs();
         return appDirs;
     }
@@ -308,7 +308,7 @@ public class FileUtil
     //----------------------------------------------------------------
     /** Return list of file search base directory labels. */
     //----------------------------------------------------------------
-    public static ArrayList getAppDirLabels() {
+    public static ArrayList<String> getAppDirLabels() {
         init_dirs();
         return appDirLabels;
     }
@@ -316,7 +316,7 @@ public class FileUtil
     //----------------------------------------------------------------
     /** Return list of file search extensions. */
     //----------------------------------------------------------------
-    public static ArrayList getAppTypes() {
+    public static ArrayList<String> getAppTypes() {
         return appTypes;
     }
 
@@ -778,7 +778,7 @@ public class FileUtil
                                      boolean firstOnly, boolean dirsOnly) {
         String path = null;
         File file;
-        ArrayList list = null;  // Only create it if needed
+        ArrayList<String> list = null;  // Only create it if needed
         String[] rtn = null;    // Create it when size is known
 
         if (f == null)
@@ -807,7 +807,7 @@ public class FileUtil
                         break;
                     } else {
                         if (list == null) {
-                            list = new ArrayList();
+                            list = new ArrayList<String>();
                         }
                         if (!dirsOnly || file.isDirectory()) {
                             list.add(dir);

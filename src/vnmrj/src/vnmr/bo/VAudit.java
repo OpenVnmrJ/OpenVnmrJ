@@ -132,11 +132,11 @@ public class VAudit extends JPanel
 	if(auditTselect[i] < auditTablemin) auditTablemin = auditTselect[i];
     }
 	
-        Vector paths1 = new Vector();
+        Vector<String> paths1 = new Vector<String>();
     paths1.addElement(str);
     String label1 = "Select a path";
 
-        Vector paths2 = new Vector();
+        Vector<String> paths2 = new Vector<String>();
     paths2.addElement(filepath);
     String label2 = "Select a type";
 
@@ -244,7 +244,7 @@ public class VAudit extends JPanel
     }
 
     public void setAttribute(int attr, String c) {
-        Vector v;
+        Vector<String> v;
         switch (attr) {
         case TYPE:
             type = c;
@@ -346,7 +346,7 @@ public class VAudit extends JPanel
 
     // ExpListenerIF interface
 
-    public void  updateValue(Vector params){
+    public void  updateValue(Vector<String> params){
     if (vnmrIf == null)
         return;
     if(debug)
@@ -372,7 +372,7 @@ public class VAudit extends JPanel
         }
     }
 
-    private void  updateContent(Vector params){
+    private void  updateContent(Vector<String> params){
         if (vnmrIf == null || fileName == null)
         return;
         String  vars=getAttribute(VAR2);

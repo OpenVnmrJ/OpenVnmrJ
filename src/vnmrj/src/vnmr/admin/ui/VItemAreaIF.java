@@ -60,7 +60,7 @@ DragSourceListener, DropTargetListener, Cloneable
     protected static String m_strInfoDir;
 
     /** The list of the names of the items in this panel.  */
-    protected ArrayList m_aListNames = new ArrayList();
+    protected ArrayList<String> m_aListNames = new ArrayList<String>();
 
     protected WPart11Pnl m_pnlPart11;
 
@@ -223,7 +223,7 @@ DragSourceListener, DropTargetListener, Cloneable
      *                          should be display e.g. names in a current group
      *                          false if all the names should be displayed
      */
-    public ArrayList getNamesList(boolean bCurViewNames)
+    public ArrayList<String> getNamesList(boolean bCurViewNames)
     {
         return m_aListNames;
     }
@@ -232,7 +232,7 @@ DragSourceListener, DropTargetListener, Cloneable
      *  Sets the list of items for this panel.
      *  @param aListNames   new list of items.
      */
-    public void setNamesList(ArrayList aListNames)
+    public void setNamesList(ArrayList<String> aListNames)
     {
         m_aListNames = aListNames;
     }
@@ -345,7 +345,7 @@ DragSourceListener, DropTargetListener, Cloneable
                     setInfoDir(strInfoDir);
                 }
                 //ArrayList aListNames = readSpaceSepLine(strLine);
-                ArrayList aListNames = WUtil.strToAList(strLine);
+                ArrayList<String> aListNames = WUtil.strToAList(strLine);
                 setNamesList(aListNames);
                 sortItems(aListNames, "");
             }
@@ -462,7 +462,7 @@ DragSourceListener, DropTargetListener, Cloneable
         BufferedReader reader = WFileUtil.openReadFile(strPath);
         StringBuffer sbData = new StringBuffer();
         StringTokenizer sTokLine;
-        HashMap hmUser = new HashMap();
+        HashMap<String,String> hmUser = new HashMap<String,String>();
         String strLine = null;
         String strDelName;
         String strKey;
@@ -521,7 +521,7 @@ DragSourceListener, DropTargetListener, Cloneable
 
     public void writeItemFile(String strPath)
     {
-        ArrayList aNameList = getNamesList(false);
+        ArrayList<String> aNameList = getNamesList(false);
         //System.out.println("In write file  thefsdfo " + strPath);
         StringBuffer sbData = new StringBuffer();
 
@@ -610,11 +610,11 @@ DragSourceListener, DropTargetListener, Cloneable
             String filepath = FileUtil.savePath("USER"+File.separator+"PERSISTENCE"+
                                 File.separator+"tmpAudit");
 
-            Vector paths1 = new Vector();
+            Vector<String> paths1 = new Vector<String>();
             paths1.addElement(str);
             String label1 = "Select a path";
 
-            Vector paths2 = new Vector();
+            Vector<String> paths2 = new Vector<String>();
             paths2.addElement(filepath);
             String label2 = "Select a type";
 
@@ -704,12 +704,12 @@ DragSourceListener, DropTargetListener, Cloneable
      *  Parses the string and adds the names of the items to the arraylist.
      *  @param strLine  the line that contains the names of the items.
      */
-    protected ArrayList readSpaceSepLine(String strLine)
+    protected ArrayList<String> readSpaceSepLine(String strLine)
     {
         int nBegIndex = 0;
         int nSepIndex = 0;
         String strName;
-        ArrayList aListNames = new ArrayList();
+        ArrayList<String> aListNames = new ArrayList<String>();
         StringTokenizer strTokNames = new StringTokenizer(strLine);
 
         while(strTokNames.hasMoreTokens())
@@ -726,7 +726,7 @@ DragSourceListener, DropTargetListener, Cloneable
      *  Displays the list of the items in the panel in a sorted manner.
      *  @param aListNames   the list of the names of the items in the panel.
      */
-    protected void displayItems(ArrayList aListNames)
+    protected void displayItems(ArrayList<String> aListNames)
     {
         if (aListNames == null)
             return;
@@ -813,7 +813,7 @@ DragSourceListener, DropTargetListener, Cloneable
 
         if (objValue != null && (objValue instanceof ArrayList))
         {
-            ArrayList aListItems = (ArrayList)objValue;
+            ArrayList<String> aListItems = (ArrayList<String>)objValue;
             bInList = aListItems.contains(strName);
 
             /*for (int j = 0; j < aListItems.size(); j++)
@@ -835,7 +835,7 @@ DragSourceListener, DropTargetListener, Cloneable
      */
     protected void sortItems(String strSelection)
     {
-        ArrayList aListItems = getItems(true);
+        ArrayList<String> aListItems = getItems(true);
         sortItems(aListItems, strSelection);
     }
 
@@ -843,7 +843,7 @@ DragSourceListener, DropTargetListener, Cloneable
      *  Sorts the item list given the list and the menu selection string,
      *  and displays the sorted items in the panel.
      */
-    protected void sortItems(ArrayList aListItems, String strSelection)
+    protected void sortItems(ArrayList<String> aListItems, String strSelection)
     {
         aListItems = sort(aListItems, strSelection);
 
@@ -870,7 +870,7 @@ DragSourceListener, DropTargetListener, Cloneable
      *  @param aListItems   the list of items to be sorted.
      *  @param strSelection the string that describes how the items should be sorted.
      */
-    protected ArrayList sort(ArrayList aListItems, String strSelection)
+    protected ArrayList<String> sort(ArrayList<String> aListItems, String strSelection)
     {
         if (strSelection != null && aListItems != null)
         {
@@ -894,9 +894,9 @@ DragSourceListener, DropTargetListener, Cloneable
      *  @param bStringVals  if true arraylist of item names should be returned,
      *                      else arraylist of witems should be returned.
      */
-    protected ArrayList getItems(boolean bStringVals)
+    protected ArrayList<String> getItems(boolean bStringVals)
     {
-        ArrayList aListItems = new ArrayList();
+        ArrayList<String> aListItems = new ArrayList<String>();
         int nCompCount = getComponentCount();
         WItem objItem;
         String strItem;
