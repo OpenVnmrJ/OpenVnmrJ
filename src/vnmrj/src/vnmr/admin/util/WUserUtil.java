@@ -386,7 +386,7 @@ public class WUserUtil
      *                      else if creating a new user by using defaults, then it's null.
      */
     public static boolean writeNewUserFile(String strUser, String strItype,
-                                            HashMap<String,String> hmUserDef, boolean bConvert,
+                                            HashMap<String,?> hmUserDef, boolean bConvert,
                                             JPanel pnlItem, HashMap<String,String> userInfo)
     {
         String strPbPath = FileUtil.openPath(SYSPROFILE + File.separator + strUser);
@@ -510,7 +510,7 @@ public class WUserUtil
     }
 
     protected static void writeUserFile(String strPbPath, String strPrvPath,
-                                            HashMap<String,String> hmUser, HashMap<String,String> hmUserDef)
+                                            HashMap<String,String> hmUser, HashMap<String,?> hmUserDef)
     {
         Iterator keySetItr = hmUser.keySet().iterator();
         String strKey = null;
