@@ -726,7 +726,7 @@ DragSourceListener, DropTargetListener, Cloneable
      *  Displays the list of the items in the panel in a sorted manner.
      *  @param aListNames   the list of the names of the items in the panel.
      */
-    protected void displayItems(ArrayList<Object> aListNames)
+    protected void displayItems(ArrayList<String> aListNames)
     {
         if (aListNames == null)
             return;
@@ -835,7 +835,7 @@ DragSourceListener, DropTargetListener, Cloneable
      */
     protected void sortItems(String strSelection)
     {
-        ArrayList<Object> aListItems = getItems(true);
+        ArrayList<String> aListItems = (ArrayList<String>)(ArrayList<?>)getItems(true);
         sortItems(aListItems, strSelection);
     }
 
@@ -843,7 +843,7 @@ DragSourceListener, DropTargetListener, Cloneable
      *  Sorts the item list given the list and the menu selection string,
      *  and displays the sorted items in the panel.
      */
-    protected void sortItems(ArrayList<Object> aListItems, String strSelection)
+    protected void sortItems(ArrayList<String> aListItems, String strSelection)
     {
         aListItems = sort(aListItems, strSelection);
 
@@ -870,7 +870,7 @@ DragSourceListener, DropTargetListener, Cloneable
      *  @param aListItems   the list of items to be sorted.
      *  @param strSelection the string that describes how the items should be sorted.
      */
-    protected ArrayList<Object> sort(ArrayList<Object> aListItems, String strSelection)
+    protected ArrayList<String> sort(ArrayList<String> aListItems, String strSelection)
     {
         if (strSelection != null && aListItems != null)
         {
