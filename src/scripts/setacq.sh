@@ -388,13 +388,9 @@ setupServices() {
 # enable rsh, tftp, time via inetd (Ubuntu)
 #-----------------------------------------------------------------
    if [ x$useupdateinetd = "xy" ] ; then
+     if [[ -f /etc/inetd.conf ]] ; then
       ## enable rsh server
       sudo update-inetd --enable shell
-
-      ## remove incorrect tftp entry
-      # sudo update-inetd  --remove tftp
-      ## add corrected entry for tftp
-      # sudo update-inetd --add 'tftp\t\tdgram\tudp\twait\tnobody\t/usr/sbin/tcpd\t/usr/sbin/in.tftpd -s /tftpboot'
 
       ## enable time for rdate of console
       ## sudo update-inetd --comment-chars '#' --enable time
@@ -404,7 +400,6 @@ setupServices() {
       sudo update-inetd --add  'time\t\tstream\ttcp\tnowait\troot\tinternal'
       # using update-inetd  insures the inetd daemon re-reads the inetd.conf file
       update-inetd --enable tftpd-hpa
-      systemctl start tftpd-hpa.service
 
       # for Ubuntu we have to modify the /etc/pam.d/rsh file
       # add: auth    required        pam_permit.so
@@ -415,6 +410,8 @@ setupServices() {
          modEtcPamdRsh
          sudo /etc/init.d/openbsd-inetd reload > /dev/null
       fi
+     fi
+      systemctl start tftpd-hpa.service
 
    else  # RHEL CentOS xinetd config
 
