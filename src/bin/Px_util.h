@@ -10,6 +10,8 @@
  */
 /* Px_util.h - utility functions for Pbox Px-routines */
 
+#include <ctype.h>
+
 static char shapes[MAXSTR];
 
 typedef struct {
@@ -18,16 +20,14 @@ double *Mx, *My, *Mz, *Scf;
 double  T1, T2, rdc, B1max, pw, st, sw, ofs;
 } Blodata;
 
-double stod(str)		/* string to double conversion */
-char str[16];
+double stod(char str[16])  /* string to double conversion */
 {
 double dn;
 (void) sscanf(str, "%lf", &dn);
 return dn;
 }
 
-int stoi(str)		/* string to integer conversion */
-char str[16];
+int stoi(char str[16])  /* string to integer conversion */
 {
 int in;
 double dn;
@@ -36,19 +36,20 @@ in = (int) (dn + 0.001);
 return in;
 }
 
-double *arry(nl)
-int nl;
+double *arry(int nl)
 {
   double *ar;
 
   ar = (double *) calloc(nl, sizeof(double));
   if (!ar)
+  {
     printf("allocation failure in arry()");
+    exit(1);
+  }
   return ar;
 }
 
-int getext(str1, str2)
-char *str1, *str2;
+int getext(char *str1, char *str2)
 {
 int i, j, k;
 
@@ -62,9 +63,7 @@ int i, j, k;
 }
 
 
-int findpar2(fnm, str, val)
-FILE *fnm;
-char *val, *str;
+int findpar2(FILE *fnm, char *str, char *val)
 {
   char ch, str1[MAXSTR];
   int i = 0;
@@ -72,8 +71,8 @@ char *val, *str;
   fseek(fnm, 0, 0);
   while ((ch = getc(fnm)) == '#')
   {
-    fgets(val, MAXSTR, fnm);
-    sscanf(val, "%s", str1);
+    if (fgets(val, MAXSTR, fnm) == NULL) break;
+    sscanf(val, "%255s", str1);
     if ((str[0] == str1[0]) && (strcmp(str,str1) == 0))
     {
       i++;
@@ -85,16 +84,14 @@ char *val, *str;
 }
 
 
-int getsimdata(bl, fil)
-Blodata *bl;
-FILE    *fil;
+int getsimdata(Blodata *bl, FILE *fil)
 {
 int i;
 char s[7][32], val[MAXSTR], str[MAXSTR];
 
   if (findpar2(fil, "Pxsim", val) > 0)
   {
-    i = sscanf(val, "%s %s %s %s %s %s %s %s",str,s[0],s[1],s[2],s[3],s[4],s[5],s[6]);
+    i = sscanf(val, "%255s %31s %31s %31s %31s %31s %31s %31s",str,s[0],s[1],s[2],s[3],s[4],s[5],s[6]);
     if (i < 4) i = 0;
     else
     {
@@ -113,26 +110,24 @@ char s[7][32], val[MAXSTR], str[MAXSTR];
 return i; 
 }
 
-void skipcomms(fnm)
-FILE *fnm;
+void skipcomms(FILE *fnm)
 {
-  int i;
+  long i;
   char str[MAXSTR];
 
+    str[0] = '\0';
     i = ftell(fnm);
-    fscanf(fnm, "%s", str); 
+    if (fscanf(fnm, "%511s", str) == EOF) return;
     while (str[0] == '#')
     {
-      fgets(str, MAXSTR, fnm);
+      if (fgets(str, MAXSTR, fnm) == NULL) return;
       i = ftell(fnm);
-      fscanf(fnm, "%s", str); 
+      if (fscanf(fnm, "%511s", str) == EOF) return;
     }
     fseek(fnm, i-1, 0);
 }
 
-double maxval(nn, am)
-int nn;
-double *am;
+double maxval(int nn, double *am)
 {
 int   j;
 double mxl = 0.0;

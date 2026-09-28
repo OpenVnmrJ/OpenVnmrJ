@@ -10,8 +10,7 @@
  */
 /* Pbox_sim.h - Pbox simulator */
 
-void bloch(bl)
-Blodata *bl;
+void bloch(Blodata *bl)
 {
   FILE *fil;
   char ch, name[MAXSTR];
@@ -40,7 +39,11 @@ Blodata *bl;
 
     if (fscanf(fil, "%c", &ch) && ch == '#')
     {
-      fscanf(fil, "%d %d", &nt, &j);
+      if (fscanf(fil, "%d %d", &nt, &j) != 2)
+      {
+        printf("Pbox: corrupt or truncated header in pbox.sim. Simulation aborted.\n\n");
+        exit(1);
+      }
     }
     else
     {
@@ -155,7 +158,7 @@ Blodata *bl;
     }
     frq -= step;
     finsh = time(NULL);
-    if (((finsh - start) > 10) && (bl->reps > 1) && (iflg == 0))
+    if ((j > 0) && ((finsh - start) > 10) && (bl->reps > 1) && (iflg == 0))
     {
       dumm = (finsh - start) * (((double) bl->nstp / j) - 1.0);
       if (dumm > 10)
@@ -166,6 +169,7 @@ Blodata *bl;
 	{
 	  printf("     which exceeds the time limit of %d sec\n", bl->time);
 	  printf("\n  Simulation aborted...\n\n");
+	  free(csp); free(snp);
 	  return;
 	}
       }
@@ -189,7 +193,11 @@ Blodata *bl;
     {
       for (i = 0; i < bl->nstp; i++)
       {
-	fscanf(fil, "%lf %lf %lf %lf\n", &axis, &mx, &my, &mz);
+	if (fscanf(fil, "%lf %lf %lf %lf\n", &axis, &mx, &my, &mz) != 4)
+	{
+	  printf("Pbox: truncated or corrupt data in pbox.sim. Simulation aborted.\n\n");
+	  exit(1);
+	}
 	bl->Mx[i] += mx;
 	bl->My[i] += my;
 	bl->Mz[i] += mz;
@@ -199,7 +207,11 @@ Blodata *bl;
     {
       for (i = 0; i < bl->nstp; i++)
       {
-	fscanf(fil, "%lf %lf %lf %lf\n", &axis, &mx, &my, &mz);
+	if (fscanf(fil, "%lf %lf %lf %lf\n", &axis, &mx, &my, &mz) != 4)
+	{
+	  printf("Pbox: truncated or corrupt data in pbox.sim. Simulation aborted.\n\n");
+	  exit(1);
+	}
 	bl->Mx[i] = mx - bl->Mx[i];
 	bl->My[i] = my - bl->My[i];
 	bl->Mz[i] = mz - bl->Mz[i];
@@ -268,11 +280,11 @@ Blodata *bl;
 
   if (bl->reps > 1) printf("\n");
 
+  free(csp); free(snp);
 }
 
 
-void bloch_rd(bl)		/* Bloch simulation with Radiation Damping */
-Blodata *bl;
+void bloch_rd(Blodata *bl)  /* Bloch simulation with Radiation Damping */
 {
   FILE *fil;
   char ch, name[MAXSTR];
@@ -301,7 +313,11 @@ Blodata *bl;
 
     if (fscanf(fil, "%c", &ch) && ch == '#')
     {
-      fscanf(fil, "%d %d", &nt, &j);
+      if (fscanf(fil, "%d %d", &nt, &j) != 2)
+      {
+        printf("Pbox: corrupt or truncated header in pbox.sim. Simulation aborted.\n\n");
+        exit(1);
+      }
     }
     else
     {
@@ -426,7 +442,7 @@ Blodata *bl;
     }
     frq -= step;
     finsh = time(NULL);
-    if (((finsh - start) > 10) && (bl->reps > 1) && (iflg == 0))
+    if ((j > 0) && ((finsh - start) > 10) && (bl->reps > 1) && (iflg == 0))
     {
       dumm = (finsh - start) * (((double) bl->nstp / j) - 1.0);
       if (dumm > 10)
@@ -437,6 +453,7 @@ Blodata *bl;
 	{
 	  printf("     which exceeds the time limit of %d sec\n", bl->time);
 	  printf("\n  Simulation aborted...\n\n");
+	  free(csp); free(snp);
 	  return;
 	}
       }
@@ -460,7 +477,11 @@ Blodata *bl;
     {
       for (i = 0; i < bl->nstp; i++)
       {
-	fscanf(fil, "%lf %lf %lf %lf\n", &axis, &mx, &my, &mz);
+	if (fscanf(fil, "%lf %lf %lf %lf\n", &axis, &mx, &my, &mz) != 4)
+	{
+	  printf("Pbox: truncated or corrupt data in pbox.sim. Simulation aborted.\n\n");
+	  exit(1);
+	}
 	bl->Mx[i] += mx;
 	bl->My[i] += my;
 	bl->Mz[i] += mz;
@@ -470,7 +491,11 @@ Blodata *bl;
     {
       for (i = 0; i < bl->nstp; i++)
       {
-	fscanf(fil, "%lf %lf %lf %lf\n", &axis, &mx, &my, &mz);
+	if (fscanf(fil, "%lf %lf %lf %lf\n", &axis, &mx, &my, &mz) != 4)
+	{
+	  printf("Pbox: truncated or corrupt data in pbox.sim. Simulation aborted.\n\n");
+	  exit(1);
+	}
 	bl->Mx[i] = mx - bl->Mx[i];
 	bl->My[i] = my - bl->My[i];
 	bl->Mz[i] = mz - bl->Mz[i];
@@ -539,11 +564,11 @@ Blodata *bl;
 
   if (bl->reps > 1) printf("\n");
 
+  free(csp); free(snp);
 }
 
 
-void    blqtph(bl)		/* Bloch trajectories */
-Blodata *bl;
+void    blqtph(Blodata *bl)  /* Bloch trajectories */
 {
   FILE   *fil;
   char    name[MAXSTR];

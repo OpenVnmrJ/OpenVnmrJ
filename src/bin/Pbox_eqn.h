@@ -42,9 +42,7 @@ void parse_eqn(char *expr)
 }
 
 
-int findeqn(fnm, str, val)    /* find equation */
-FILE *fnm;
-char *str, *val;
+int findeqn(FILE *fnm, char *str, char *val)  /* find equation */
 {
   char chr[MAXSTR], *c;
           
@@ -53,16 +51,17 @@ char *str, *val;
   {
     while ((chr[0] == '#') || (chr[0] == '('))
     {
-      fgets(chr, MAXSTR, fnm); fscanf(fnm, "%s", chr);
+      if (fgets(chr, MAXSTR, fnm) == NULL) break;
+      if (fscanf(fnm, "%s", chr) == EOF) break;
     }
     if (chr[0] == str[0])
     {
       if (strcmp(chr,str) == 0)
       {
-        fscanf(fnm, "%s", chr);
+        if (fscanf(fnm, "%s", chr) == EOF) return (0);
         if (chr[0] == '=')
         {
-          fgets(val, MAXSTR, fnm); 
+          if (fgets(val, MAXSTR, fnm) == NULL) return (0);
           if( (c = strchr(val, ';')) )
           {
             *c = '\0';
@@ -76,7 +75,7 @@ char *str, *val;
       else if ((cutstr2(val, chr, '=')) && (strcmp(val, str) == 0))
       {
         strcpy(val, chr);
-        fgets(chr, MAXSTR, fnm); 
+        if (fgets(chr, MAXSTR, fnm) == NULL) return 1;
         if ( (c = strchr(chr, ';')) )
         {
           *c = '\0';
@@ -91,10 +90,7 @@ char *str, *val;
 }
 
 
-int findeqnm(fnm, str, val, ip)   /* find modified eqn */
-FILE *fnm;
-char *val, *str;
-int  ip;
+int findeqnm(FILE *fnm, char *str, char *val, int ip)  /* find modified eqn */
 {
   char chr[MAXSTR], *c;
   
@@ -106,10 +102,10 @@ int  ip;
     {
       if(strcmp(chr,str) == 0)
       {
-        fscanf(fnm, "%s", chr);
+        if (fscanf(fnm, "%s", chr) == EOF) return (0);
         if (chr[0] == '=') 
         {
-          fgets(val, MAXSTR, fnm); 
+          if (fgets(val, MAXSTR, fnm) == NULL) return (0);
           if ( (c = strchr(val, ';')) )
           {
             *c = '\0';
@@ -123,7 +119,7 @@ int  ip;
       else if ((cutstr2(val, chr, '=')) && (strcmp(val, str) == 0))
       {
         strcpy(val, chr);
-        fgets(chr, MAXSTR, fnm); 
+        if (fgets(chr, MAXSTR, fnm) == NULL) return 1;
         if ( (c = strchr(chr, ';')) )
         {
           *c = '\0';
@@ -141,8 +137,7 @@ int  ip;
 /* Available functions : acos, asin, cos, atan, exp, floor, log,  
    sech, ceil, ln, sin, sinh, cosh, sqrt, tan, tanh, fabs  */
 
-char set_func(sfun)
-char *sfun;
+char set_func(char *sfun)
 {
   switch(sfun[0])
   {
@@ -166,7 +161,7 @@ char *sfun;
       if (strcmp(sfun,"sin") == 0) return 's';
       else if (strcmp(sfun,"sinh") == 0) return 'n';
       else if (strcmp(sfun,"sech") == 0) return 'h';
-      else if (strcmp(sfun,"sqrt") == 0) return 's';
+      else if (strcmp(sfun,"sqrt") == 0) return 'q';
     case 't': 
       if (strcmp(sfun,"tan") == 0) return 't';
       else if (strcmp(sfun,"tanh") == 0) return 'z';
@@ -176,8 +171,7 @@ char *sfun;
 }
 
 
-int isdelim(delim)
-char delim;
+int isdelim(char delim)
 {
   switch(delim)
   {
@@ -195,10 +189,7 @@ char delim;
 }
 
 
-int get_tokens(expr, tkn, sfnm, tc)
-char *expr, *sfnm;
-Var  *tkn;
-int  *tc;
+int get_tokens(char *expr, Var *tkn, char *sfnm, int *tc)
 {
   int i=0, j=0, prn=0, imax=0;          
   char str[MAXSTR], val[MAXSTR];
@@ -272,8 +263,7 @@ int  *tc;
 }
 
 
-int all_tokens(expr)		/* count all tokens */
-char *expr;
+int all_tokens(char *expr)  /* count all tokens */
 {
   int i=0, toks=0;          
   
@@ -296,9 +286,7 @@ char *expr;
 }
 
 
-double eval_exp(lval, rval, delim)
-double  lval, rval;
-char    delim;
+double eval_exp(double lval, double rval, char delim)
 {
   double in;
   
@@ -379,10 +367,7 @@ char    delim;
 }
 
 
-void eval_exp1(lval, rval, delim, np)
-double  lval, *rval[];
-char    delim;
-int     np;
+void eval_exp1(double lval, double *rval[], char delim, int np)
 {
   int    i;
   double in;
@@ -541,10 +526,7 @@ int     np;
 }
 
 
-double eval_exp2(lval, rval, delim, np)
-double  *lval[], rval;
-char    delim;
-int     np;
+double eval_exp2(double *lval[], double rval, char delim, int np)
 {
   int    i;
   double in;
@@ -595,10 +577,7 @@ int     np;
 }
 
 
-void eval_exp3(lval, rval, delim, np)
-double  *lval[], *rval[];
-char    delim;
-int     np;
+void eval_exp3(double *lval[], double *rval[], char delim, int np)
 {
   int    i;
   double in;
@@ -654,10 +633,7 @@ int     np;
 }
 
 
-int ee(eqn, fnm, np, ar)
-char    *eqn, *fnm;
-int      np;
-double  *ar[];
+int ee(char *eqn, char *fnm, int np, double *ar[])
 {
   int    i, j, k, ip, jp, toks, tkmax, ii=0, ic[2], tc, ti, tj;
   char   expr[MAXSTR];
@@ -667,7 +643,11 @@ double  *ar[];
   strcpy(expr, eqn);
   toks = all_tokens(expr);          
   if (toks)
+  {
     tok = (Var *) calloc(++toks, sizeof(Var));
+    if (tok == NULL)
+      pxerr("allocation failure in ee()");
+  }
   else
   {
     printf("Pbox wave expr : missing expression. \n");
@@ -678,6 +658,8 @@ double  *ar[];
   if (tc>0) 
   {
     a = (double **) calloc(tc, sizeof(double *));
+    if (a == NULL)
+      pxerr("allocation failure in ee()");
     for (i = 0; i < tc; i++)
       a[i] = arry(np);
     for (i = 0; i < tc; i++)
@@ -689,8 +671,8 @@ double  *ar[];
   }
   else
   {
-    for (i = 0; i < tc; i++)
-      Amp[i] = 1.0;
+    for (i = 0; i < np; i++)
+      (*ar)[i] = 1.0;
     return(1);
   }
   

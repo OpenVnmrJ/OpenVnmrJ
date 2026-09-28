@@ -14,10 +14,7 @@
 
 double *Amp, *Pha;
 
-readshape(inpf, ext, tpa)
-FILE     *inpf;
-char     *ext;
-double   tpa;
+int readshape(FILE *inpf, char *ext, double tpa)
 {
   int j, k, gt, nn, tokens;
   char str[MAXSTR];
@@ -102,6 +99,7 @@ double   tpa;
 
       for (k = 0; k < (int) ln; k++)
       {
+	if (j >= nn) break;
 	Amp[j] = am; 
 	Pha[j] = ph; 
 	j++;
@@ -133,8 +131,9 @@ double   tpa;
         am += 1.0;
 
       ln /= (int) tpa;
-      for (k = 0; k < ln; k++)
+      for (k = 0; k < (int) ln; k++)
       {
+	if (j >= nn) break;
 	Amp[j] = am;
 	Pha[j] = ph;
 	j++;
@@ -151,8 +150,9 @@ double   tpa;
       if (tokens < 2)
         ln = 1.0;
 
-      for (k = 0; k < ln; k++)
+      for (k = 0; k < (int) ln; k++)
       {
+	if (j >= nn) break;
 	Amp[j] = am;
 	Pha[j] = 0.0;
 	j++;
