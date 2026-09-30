@@ -111,7 +111,7 @@ public class DFFileTableModel extends DefaultTableModel
                     {
                         try
                         {
-                            Integer n1 = new Integer(strValue);
+                            Integer n1 = Integer.valueOf(strValue);
                             vecData.add(n1);
                         }
                         catch (Exception e) { }

@@ -158,7 +158,7 @@ public class VDetailArea extends WObj implements PropertyChangeListener, VGroupI
                 else if (strPropName.indexOf(WGlobal.SET_VISIBLE) >= 0)
                 {
                     if (objVal != null && objVal instanceof HashMap)
-                        setVisibility((HashMap)objVal);
+                        setVisibility((HashMap<String,WUserDefData>)objVal);
                 }
                 else if (strPropName.indexOf(WGlobal.PART11) >= 0)
                 {
@@ -257,7 +257,7 @@ public class VDetailArea extends WObj implements PropertyChangeListener, VGroupI
         boolean bOk = true;
         String strName = getItemValue(WGlobal.NAME);
         boolean bNewUser = isNewUser(objVal);
-        HashMap hmDef = new HashMap();
+        HashMap<String,WUserDefData> hmDef = new HashMap<String,WUserDefData>();
 
         AppIF appIf = Util.getAppIF();
         VUserToolBar userToolBar = null;
@@ -281,7 +281,7 @@ public class VDetailArea extends WObj implements PropertyChangeListener, VGroupI
             if (objVal instanceof JButton && bOk)
             {
                 ((JButton)objVal).setText(strName);
-                ArrayList aListNewUser = new ArrayList();
+                ArrayList<String> aListNewUser = new ArrayList<String>();
                 aListNewUser.add(strName);
                 WUserUtil.addToUserListFile(aListNewUser);
                 WUserUtil.updateDB();
@@ -314,11 +314,11 @@ public class VDetailArea extends WObj implements PropertyChangeListener, VGroupI
 
         String filepath = FileUtil.savePath("USER/PERSISTENCE/tmpAudit");
 
-        Vector paths1 = new Vector();
+        Vector<String> paths1 = new Vector<String>();
         paths1.addElement(str);
         String label1 = "Select a path";
 
-        Vector paths2 = new Vector();
+        Vector<String> paths2 = new Vector<String>();
         paths2.addElement(filepath);
         String label2 = "Select a type";
 
@@ -484,7 +484,7 @@ public class VDetailArea extends WObj implements PropertyChangeListener, VGroupI
      *  Sets the visibility of the components in this panel.
      *  @hmDef  Hashmap of the defaults for the user panel.
      */
-    public void setVisibility(HashMap hmDef)
+    public void setVisibility(HashMap<String,WUserDefData> hmDef)
     {
         int nCompCount = getComponentCount();
         String strKey = "";
@@ -564,7 +564,7 @@ public class VDetailArea extends WObj implements PropertyChangeListener, VGroupI
         if (Util.getAppIF() instanceof VAdminIF)
         {
             VAdminIF appIf = (VAdminIF)Util.getAppIF();
-            HashMap hmDef = appIf.getUserDefaults();
+            HashMap<String,WUserDefData> hmDef = appIf.getUserDefaults();
             setVisibility(hmDef);
         }
 
@@ -685,7 +685,7 @@ public class VDetailArea extends WObj implements PropertyChangeListener, VGroupI
         {
             String strAppDir = strItype;
             if(!bResetAppDir) strAppDir = txfAppDir.getText();
-            ArrayList aListDirs = WUtil.strToAList(strAppDir);
+            ArrayList<String> aListDirs = WUtil.strToAList(strAppDir);
             int nIndex = aListDirs.indexOf(FileUtil.SYS_VNMR);
             if (nIndex < 0)
                 nIndex = aListDirs.size() - 1;

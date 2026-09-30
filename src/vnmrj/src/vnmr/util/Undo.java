@@ -32,7 +32,7 @@ public class Undo
     static KeyAdapter ka = new KeyAdapter() 
     {
         public void keyPressed(KeyEvent e) {
-            int modifiers = e.getModifiers();
+            // int modifiers = e.getModifiers();
             int code=e.getKeyCode();
             if(code==KeyEvent.VK_UNDO || (code==KeyEvent.VK_Z && e.isControlDown())){
    	            if(current !=null){

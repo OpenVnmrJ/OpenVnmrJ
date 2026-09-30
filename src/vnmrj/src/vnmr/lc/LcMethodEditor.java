@@ -1043,7 +1043,7 @@ public class LcMethodEditor
      */
     private void recordChange(String squib) {
         m_changeIndex++;
-        m_changeList.put(m_changeIndex, squib);
+        m_changeList.put(Long.valueOf(m_changeIndex), squib);
         m_saveButton.setEnabled(true);
     }
 
@@ -1073,7 +1073,7 @@ public class LcMethodEditor
             if (DebugOutput.isSetFor("LcMethodChanges")) {
                 Messages.postDebug("Changes to method:");
                 for (long i = m_saveIndex + 1; i <= m_changeIndex; i++) {
-                    Messages.postDebug("... " + m_changeList.get(i));
+                    Messages.postDebug("... " + m_changeList.get(Long.valueOf(i)));
                 }
             }
 

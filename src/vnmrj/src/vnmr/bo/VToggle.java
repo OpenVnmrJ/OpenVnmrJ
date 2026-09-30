@@ -103,7 +103,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         mlEditor = new MouseAdapter() {
               public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         ParamEditUtil.setEditObj((VObjIF) evt.getSource());
@@ -758,7 +758,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         {ENABLE, Util.getLabel("vgENABLE"), "radio", m_arrStrYesNo},
         {JUSTIFY,      "Label justification:", "menu", m_arrStrTtlJust},
         {TOOLTIP,      Util.getLabel(TOOLTIP)},
-        {new Integer(HELPLINK), Util.getLabel("blHelp")}
+        {Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}
    };
 
     public void setModalMode(boolean s) {
@@ -809,6 +809,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         if (!inEditMode)
             setBounds(curLoc.x, curLoc.y, curDim.width, curDim.height);
     }
+
     public void setBounds(int x, int y, int w, int h) {
         if(inEditMode) {
             defLoc.x = x;
@@ -826,10 +827,12 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
             if(rWidth <= 0) {
                 calSize();
             }
+            if ((w != nWidth) || (w < rWidth2)) {
+                adjustFont();
+            }
         }
         super.setBounds(x, y, w, h);
     }
-
 
     public void calSize() {
         if (fm == null) {
@@ -844,7 +847,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
             rWidth += getIcon().getIconWidth();
         rWidth2 = rWidth;
     }
-
+/*
     public void reshape(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
@@ -866,7 +869,7 @@ public class VToggle extends JToggleButton implements VObjIF, VEditIF,
         }
         super.reshape(x, y, w, h);
     }
-
+*/
      public Point getLocation() {
         if (inEditMode) {
            tmpLoc.x = defLoc.x;

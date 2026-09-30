@@ -212,8 +212,8 @@ abstract public class AbstractLookAndFeel extends MetalLookAndFeel {
             "Slider.background", getBackgroundColor(),
             "Slider.focus", getFocusColor(),
             "Slider.focusInsets", new InsetsUIResource(0, 0, 0, 0),
-            "Slider.trackWidth", new Integer(7),
-            "Slider.majorTickLength", new Integer(6),
+            "Slider.trackWidth", Integer.valueOf(7),
+            "Slider.majorTickLength", Integer.valueOf(6),
             // Progress Bar
             "ProgressBar.border", progressBarBorder,
             "ProgressBar.background", progressBarBackground,
@@ -252,7 +252,7 @@ abstract public class AbstractLookAndFeel extends MetalLookAndFeel {
             "InternalFrame.border", getBorderFactory().getInternalFrameBorder(),
             "InternalFrame.font", getWindowTitleFont(),
             "InternalFrame.paletteBorder", getBorderFactory().getPaletteBorder(),
-            "InternalFrame.paletteTitleHeight", new Integer(11),
+            "InternalFrame.paletteTitleHeight", Integer.valueOf(11),
             "InternalFrame.paletteCloseIcon", getIconFactory().getPaletteCloseIcon(),
             "InternalFrame.icon", getIconFactory().getMenuIcon(),
             "InternalFrame.iconifyIcon", getIconFactory().getIconIcon(),
@@ -280,7 +280,7 @@ abstract public class AbstractLookAndFeel extends MetalLookAndFeel {
             "ScrollBar.thumb", getControlBackgroundColor(),
             "ScrollBar.thumbShadow", getControlShadowColor(),
             "ScrollBar.thumbHighlight", getControlHighlightColor(),
-            "ScrollBar.width", new Integer(17),
+            "ScrollBar.width", Integer.valueOf(17),
             "ScrollBar.allowsAbsolutePositioning", Boolean.TRUE,
             // ScrollPane
             "ScrollPane.border", scrollPaneBorder,
@@ -391,7 +391,7 @@ abstract public class AbstractLookAndFeel extends MetalLookAndFeel {
             "Separator.foreground", getControlForegroundColor(),
             // SplitPane
             "SplitPane.centerOneTouchButtons", Boolean.TRUE,
-            "SplitPane.dividerSize", new Integer(7),
+            "SplitPane.dividerSize", Integer.valueOf(7),
             "SplitPane.border", BorderFactory.createEmptyBorder(),
             // Tree
             // "Tree.background", getInputBackgroundColor(),

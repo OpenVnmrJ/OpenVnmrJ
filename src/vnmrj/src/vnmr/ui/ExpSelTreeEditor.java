@@ -471,7 +471,7 @@ public class ExpSelTreeEditor extends ModalDialog implements ActionListener
     public void destroyPanel() {
         try {
             dispose();
-            finalize();
+            // finalize();
         }
         catch (Throwable e) {
             

@@ -26,8 +26,6 @@ import vnmr.bo.*;
 import vnmr.util.*;
 import vnmr.templates.*;
 
-import com.sun.xml.tree.*;
-
 import static vnmr.templates.ProtocolBuilder.*;
 
 /**
@@ -124,7 +122,7 @@ public class QueuePanel extends JPanel
         menu=new SubMenu();
         ma = new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
-                int modifier = e.getModifiers();
+                int modifier = e.getModifiersEx();
                 VElement sel = null;
                 int x = e.getX();
                 int y = e.getY();
@@ -132,7 +130,7 @@ public class QueuePanel extends JPanel
                 if (path != null) {
                     sel=(VElement)path.getLastPathComponent();
                 }
-                if ((modifier & InputEvent.BUTTON1_MASK) != 0) {
+                if ((modifier & InputEvent.getMaskForButton(1)) != 0) {
                     // Left click -- selection may need modification
                     // TODO: Check for shift/ctl
                     if (sel != null) {
@@ -150,7 +148,7 @@ public class QueuePanel extends JPanel
                             }
                         }
                     }
-                } else if ((modifier & InputEvent.BUTTON3_MASK) != 0) {
+                } else if ((modifier & InputEvent.getMaskForButton(3)) != 0) {
                     // Deal with right clicks
                     TreePath[] paths = jtree.getSelectionPaths();
                     String nodeIds = getNodeIds(paths);

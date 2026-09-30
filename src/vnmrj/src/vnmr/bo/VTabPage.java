@@ -58,7 +58,7 @@ public class VTabPage extends VGroup
     }
     public Object[][] getAttributes() {	return attributes; }
     private final static Object[][] attributes = {
-    	{new Integer(LABEL),	"Tab label "} 
+    	{Integer.valueOf(LABEL),	"Tab label "} 
     };
 }
 

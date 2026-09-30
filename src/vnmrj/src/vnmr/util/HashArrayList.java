@@ -26,10 +26,10 @@ import java.io.*;
  *   removed from this object.
  * 
  </pre> **********************************************************/
-public class HashArrayList extends Hashtable implements  Serializable {
+public class HashArrayList extends Hashtable<Object, Object> implements  Serializable {
 
-    private ArrayList list;
-    private ArrayList keylist;
+    private ArrayList<Object> list;
+    private ArrayList<Object> keylist;
 
     /************************************************** <pre>
      * Summary: Constructor.  Create a Hashtable and ArrayList.
@@ -37,26 +37,26 @@ public class HashArrayList extends Hashtable implements  Serializable {
     public HashArrayList () {
         // ArrayList of values at the corresponding positions of each key
         // in the keylist.
-	list = new ArrayList();
+	list = new ArrayList<>();
         // ArrayList of keys which correspond to values in 'list'
-	keylist = new ArrayList();
+	keylist = new ArrayList<>();
     }
 
     /************************************************** <pre>
      * Summary: Constructor.  Create a Hashtable and ArrayList given a
      *  Hashtable with current information.
      </pre> **************************************************/
-    public HashArrayList (Hashtable initTable) {
+    public HashArrayList (Hashtable<Object, Object> initTable) {
         // ArrayList of values at the corresponding positions of each key
         // in the keylist.
-	list = new ArrayList();
+	list = new ArrayList<>();
         // ArrayList of keys which correspond to values in 'list'
-	keylist = new ArrayList();
+	keylist = new ArrayList<>();
 
-        Set set = initTable.entrySet();
-        Iterator iter = set.iterator();
+        Set<Map.Entry<Object,Object>> set = initTable.entrySet();
+        Iterator<Map.Entry<Object,Object>> iter = set.iterator();
         while(iter.hasNext()) {
-           Map.Entry entry = (Map.Entry)iter.next();
+           Map.Entry<Object,Object> entry = iter.next();
            // Fill the two array lists
            list.add(entry.getValue());
            keylist.add(entry.getKey());
@@ -93,15 +93,15 @@ public class HashArrayList extends Hashtable implements  Serializable {
     /************************************************** <pre>
      * Summary: Returns the list of keys as an ArrayList.
      </pre> **************************************************/
-    public ArrayList getKeyList() {
+    public ArrayList<Object> getKeyList() {
 	return keylist;
     }
 
     /************************************************** <pre>
      * Summary: Returns ordered element list of values.
      </pre> **************************************************/
-    public Enumeration elements() {
-        Vector v=new Vector(list);
+    public Enumeration<Object> elements() {
+        Vector<Object> v = new Vector<>(list);
 	    return v.elements();
     }
 
@@ -175,7 +175,7 @@ public class HashArrayList extends Hashtable implements  Serializable {
 
     public Object put(Object key, Object value)  {
         int i=set(key, value);
-        return new Integer(i);
+        return Integer.valueOf(i);
     }
 
     /************************************************** <pre>
@@ -263,17 +263,17 @@ public class HashArrayList extends Hashtable implements  Serializable {
      *
      *****************************************************************/
 
-    public Hashtable getHashtable() {
-        Hashtable ht = new Hashtable();
+    public Hashtable<String, ArrayList<Object>> getHashtable() {
+        Hashtable<String, ArrayList<Object>> ht = new Hashtable<>();
 
-        Set set = entrySet();
-        Iterator iter = set.iterator();
+        Set<Map.Entry<Object,Object>> set = entrySet();
+        Iterator<Map.Entry<Object,Object>> iter = set.iterator();
         // Go through the Hashtable part of this HashArrayList and create
         // a Hashtable.
         while(iter.hasNext()) {
-            Map.Entry entry = (Map.Entry)iter.next();
+            Map.Entry<Object,Object> entry = iter.next();
             String key = (String)entry.getKey();
-            ArrayList al = (ArrayList)entry.getValue();
+            ArrayList<Object> al = (ArrayList<Object>)entry.getValue();
 
             ht.put(key, al);
         }

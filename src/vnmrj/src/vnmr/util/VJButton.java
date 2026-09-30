@@ -27,7 +27,7 @@ import java.beans.*;
 
 public class VJButton extends JButton implements PropertyChangeListener
 {
-    private int nButtonMask = InputEvent.BUTTON1_MASK;
+    private int nButtonMask = InputEvent.getMaskForButton(1);
     private int nModify;
     private boolean    bPaintBorder = false;
     private boolean    bBorderAlways = false;
@@ -76,14 +76,14 @@ public class VJButton extends JButton implements PropertyChangeListener
             public void mousePressed(MouseEvent e) {
 		boolean bDo = false;
 
-		nModify = e.getModifiers();
+		nModify = e.getModifiersEx();
 		// Button1 will do the default job
-		if ((nModify & InputEvent.BUTTON2_MASK) != 0 &&
-		     (nButtonMask & InputEvent.BUTTON2_MASK) != 0) {
+		if ((nModify & InputEvent.getMaskForButton(2)) != 0 &&
+		     (nButtonMask & InputEvent.getMaskForButton(2)) != 0) {
 		     bDo = true;
 		}
-		if ((nModify & InputEvent.BUTTON3_MASK) != 0 &&
-		     (nButtonMask & InputEvent.BUTTON3_MASK) != 0) {
+		if ((nModify & InputEvent.getMaskForButton(3)) != 0 &&
+		     (nButtonMask & InputEvent.getMaskForButton(3)) != 0) {
 		     bDo = true;
 		}
 

@@ -60,7 +60,7 @@ public class ParameterTabControl extends JLayeredPane
         setLayout(new ControlLayout());
 
         tabbedPane = new JTabbedPane();
-        add(tabbedPane, new Integer(LAYER0));
+        add(tabbedPane, Integer.valueOf(LAYER0));
         tabbedPane.setSize(800, 500);
 
         String appType = "";
@@ -71,7 +71,7 @@ public class ParameterTabControl extends JLayeredPane
         actionPane.setLayout(new BorderLayout());
         actionPane.putClientProperty(VnmrjUiNames.PanelTexture, "no");
         if (Global.WALKUPIF.equals(appType))
-            add(actionPane, new Integer(LAYER1));
+            add(actionPane, Integer.valueOf(LAYER1));
 
         tabbedPane.addChangeListener(new ChangeListener() {
             public void stateChanged(ChangeEvent e) {

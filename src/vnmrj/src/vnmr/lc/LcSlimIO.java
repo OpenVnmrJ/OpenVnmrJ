@@ -20,7 +20,7 @@ import vnmr.util.*;
 import vnmr.ui.*;
 
 
-public class LcSlimIO implements LcDef {
+public class LcSlimIO implements LcDef, AutoCloseable {
 
     public static final int N_ADCS = 3;
 
@@ -952,9 +952,9 @@ public class LcSlimIO implements LcDef {
     }
 
     // need to close the ports when the object is destroyed
-    protected void finalize() throws Throwable {
+    @Override
+    public void close() {
         closePort();
-        super.finalize();
     }
 
     public void setMakeupFlow(double mlPerMin) {

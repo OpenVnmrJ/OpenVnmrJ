@@ -79,7 +79,7 @@ public class VPopup extends JLabel implements VEditIF,
         ml = new MouseAdapter() {
               public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         ParamEditUtil.setEditObj((VObjIF) evt.getSource());
@@ -153,12 +153,12 @@ public class VPopup extends JLabel implements VEditIF,
 */
     /** The array of the attributes that are displayed in the edit template.*/
     private final static Object[][] attributes = {
-	{new Integer(LABEL), 	"Label of item:"},
-	{new Integer(ICON), 	"Icon of item:"},
-	{new Integer(SHOW),	"Enable condition:"},
-	{new Integer(SETCHOICE),"Labels of choices:"},
-	{new Integer(SETCHVAL),	"Values of choices:"},
-        {new Integer(TOOL_TIP), "Tool tip:"},
+	{Integer.valueOf(LABEL), 	"Label of item:"},
+	{Integer.valueOf(ICON), 	"Icon of item:"},
+	{Integer.valueOf(SHOW),	"Enable condition:"},
+	{Integer.valueOf(SETCHOICE),"Labels of choices:"},
+	{Integer.valueOf(SETCHVAL),	"Values of choices:"},
+        {Integer.valueOf(TOOL_TIP), "Tool tip:"},
     };
 
     public Object[][] getAttributes()  { return attributes; }

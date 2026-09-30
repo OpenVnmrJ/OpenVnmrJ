@@ -1419,7 +1419,7 @@ public class LcCorbaClient extends CorbaClient implements LcStatusListener {
                             String msg = m_statusName + "Press "
                                     + pressure + " atm";
                             m_expPanel.processStatusData(msg);
-                            state.put("pressure", new Double(pressure));
+                            state.put("pressure", Double.valueOf(pressure));
                             Messages.postDebug("gpibStatus",
                                                "gpibStatus: " + msg);
                         }
@@ -1435,7 +1435,7 @@ public class LcCorbaClient extends CorbaClient implements LcStatusListener {
                                 msg += (m_flow / 1000.0) + " mL/min";
                             }
                             m_expPanel.processStatusData(msg);
-                            state.put("flow", new Integer(m_flow));
+                            state.put("flow", Integer.valueOf(m_flow));
                             Messages.postDebug("gpibStatus",
                                                "gpibStatus: " + msg);
 
@@ -1463,7 +1463,7 @@ public class LcCorbaClient extends CorbaClient implements LcStatusListener {
                             String msg = m_statusName + "PctA "
                                     + m_pctA + " %A";
                             m_expPanel.processStatusData(msg);
-                            state.put("percentA", new Double(m_pctA));
+                            state.put("percentA", Double.valueOf(m_pctA));
                             change = true;
                         }
                         if (m_pctB != status[8]) {
@@ -1471,7 +1471,7 @@ public class LcCorbaClient extends CorbaClient implements LcStatusListener {
                             String msg = m_statusName + "PctB "
                                     + m_pctB + " %B";
                             m_expPanel.processStatusData(msg);
-                            state.put("percentB", new Double(m_pctB));
+                            state.put("percentB", Double.valueOf(m_pctB));
                             change = true;
                         }
                         if (m_pctC != status[9]) {
@@ -1479,7 +1479,7 @@ public class LcCorbaClient extends CorbaClient implements LcStatusListener {
                             String msg = m_statusName + "PctC "
                                     + m_pctC + " %C";
                             m_expPanel.processStatusData(msg);
-                            state.put("percentC", new Double(m_pctC));
+                            state.put("percentC", Double.valueOf(m_pctC));
                             change = true;
                         }
                             
@@ -1499,7 +1499,7 @@ public class LcCorbaClient extends CorbaClient implements LcStatusListener {
 
                         if (methodState != status[15]) {
                             methodState = status[15];
-                            state.put("state", new Integer(methodState));
+                            state.put("state", Integer.valueOf(methodState));
                             change = true;
                             String strMethodState;
                             switch (methodState) {

@@ -22,11 +22,10 @@ public class WSharedConsoleCommands {
 
     static String status() {
         String output=null;
-        String cmd = WGlobal.SUDO + " " + FileUtil.sysdir() + "/bin/dtsharcntrl status";
-        Runtime rt = Runtime.getRuntime();
         Process prcs = null;
         try {
-            prcs = rt.exec(cmd);
+            prcs = new ProcessBuilder(WGlobal.SUDO,
+                       FileUtil.sysdir() + "/bin/dtsharcntrl", "status").start();
             // Wait for it to complete
             prcs.waitFor();
 
@@ -68,12 +67,11 @@ public class WSharedConsoleCommands {
 
     static String enable(String password) {
         String output=null;
-        String cmd = WGlobal.SUDO + " " + FileUtil.sysdir() + "/bin/dtsharcntrl start "
-                     + password;
-        Runtime rt = Runtime.getRuntime();
         Process prcs = null;
         try {
-            prcs = rt.exec(cmd);
+            prcs = new ProcessBuilder(WGlobal.SUDO,
+                       FileUtil.sysdir() + "/bin/dtsharcntrl", "start",
+                       password).start();
             // Wait for it to complete
             prcs.waitFor();
 
@@ -115,11 +113,10 @@ public class WSharedConsoleCommands {
 
     static String disable() {
         String output=null;
-        String cmd = WGlobal.SUDO + " " + FileUtil.sysdir() + "/bin/dtsharcntrl stop";
-        Runtime rt = Runtime.getRuntime();
         Process prcs = null;
         try {
-            prcs = rt.exec(cmd);
+            prcs = new ProcessBuilder(WGlobal.SUDO,
+                       FileUtil.sysdir() + "/bin/dtsharcntrl", "stop").start();
             // Wait for it to complete
             prcs.waitFor();
 

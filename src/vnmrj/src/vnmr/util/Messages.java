@@ -172,13 +172,13 @@ public class  Messages
 
     private static void initCodeTable() {
         mcodes = new Hashtable<String, Integer>();
-        mcodes.put("ai", new Integer(CLI|MBOX|ACQ|INFO));
-        mcodes.put("aw", new Integer(CLI|MBOX|ACQ|WARN));
-        mcodes.put("ae", new Integer(CLI|MBOX|ACQ|ERROR|LOG));
-        mcodes.put("oi", new Integer(CLI|MBOX|OTHER|INFO));
-        mcodes.put("ow", new Integer(CLI|MBOX|OTHER|WARN));
-        mcodes.put("oe", new Integer(CLI|MBOX|OTHER|ERROR|LOG));
-        mcodes.put("oc", new Integer(CLI|OTHER|ERROR|LOG));
+        mcodes.put("ai", Integer.valueOf(CLI | MBOX | ACQ | INFO));
+        mcodes.put("aw", Integer.valueOf(CLI | MBOX | ACQ | WARN));
+        mcodes.put("ae", Integer.valueOf(CLI | MBOX | ACQ | ERROR | LOG));
+        mcodes.put("oi", Integer.valueOf(CLI | MBOX | OTHER | INFO));
+        mcodes.put("ow", Integer.valueOf(CLI | MBOX | OTHER | WARN));
+        mcodes.put("oe", Integer.valueOf(CLI | MBOX | OTHER | ERROR | LOG));
+        mcodes.put("oc", Integer.valueOf(CLI | OTHER | ERROR | LOG));
     }
 
     public static void setLogWarnings(boolean b) {
@@ -186,11 +186,11 @@ public class  Messages
             initCodeTable();
         }
         if (b) {
-            mcodes.put("aw", new Integer(CLI|MBOX|ACQ|WARN|LOG));
-            mcodes.put("ow", new Integer(CLI|MBOX|OTHER|WARN|LOG));
+            mcodes.put("aw", Integer.valueOf(CLI | MBOX | ACQ | WARN | LOG));
+            mcodes.put("ow", Integer.valueOf(CLI | MBOX | OTHER | WARN | LOG));
         } else {
-            mcodes.put("aw", new Integer(CLI|MBOX|ACQ|WARN));
-            mcodes.put("ow", new Integer(CLI|MBOX|OTHER|WARN));
+            mcodes.put("aw", Integer.valueOf(CLI | MBOX | ACQ | WARN));
+            mcodes.put("ow", Integer.valueOf(CLI | MBOX | OTHER | WARN));
         }
     }
 
@@ -199,11 +199,11 @@ public class  Messages
             initCodeTable();
         }
         if (b) {
-            mcodes.put("ai", new Integer(CLI|MBOX|ACQ|INFO|LOG));
-            mcodes.put("oi", new Integer(CLI|MBOX|OTHER|INFO|LOG));
+            mcodes.put("ai", Integer.valueOf(CLI | MBOX | ACQ | INFO | LOG));
+            mcodes.put("oi", Integer.valueOf(CLI | MBOX | OTHER | INFO | LOG));
         } else {
-            mcodes.put("ai", new Integer(CLI|MBOX|ACQ|INFO));
-            mcodes.put("oi", new Integer(CLI|MBOX|OTHER|INFO));
+            mcodes.put("ai", Integer.valueOf(CLI | MBOX | ACQ | INFO));
+            mcodes.put("oi", Integer.valueOf(CLI | MBOX | OTHER | INFO));
         }
     }
 

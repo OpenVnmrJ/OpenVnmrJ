@@ -62,12 +62,12 @@ public class WUserUtil
     /**
      *  Reads the userlist file, and returns the list of the vj users.
      */
-    public static ArrayList readUserListFile()
+    public static ArrayList<String> readUserListFile()
     {
         String strPath = FileUtil.openPath("SYSTEM/USRS/userlist");
         BufferedReader reader = WFileUtil.openReadFile(strPath);
 
-        ArrayList aListUsers = new ArrayList();
+        ArrayList<String> aListUsers = new ArrayList<String>();
         String strLine = null;
 
         if (reader == null)
@@ -98,7 +98,7 @@ public class WUserUtil
      *  @param aListNewUsers  new vj users created that need to be added to the
      *                        userlist file.
      */
-    public static void addToUserListFile(ArrayList aListNewUsers)
+    public static void addToUserListFile(ArrayList<String> aListNewUsers)
     {
         String strPath = FileUtil.openPath("SYSTEM/USRS/userlist");
         BufferedReader reader = WFileUtil.openReadFile(strPath);
@@ -131,7 +131,7 @@ public class WUserUtil
                                 strNewUsers).toString();
 
                     // Check that there are no duplicate names in the userlist.
-                    ArrayList aListNew = WUtil.strToAList(strLine, false);
+                    ArrayList<String> aListNew = WUtil.strToAList(strLine, false);
 
                     // convert the array to string.
                     strLine = WUtil.aListToStr(aListNew);
@@ -155,7 +155,7 @@ public class WUserUtil
      *  If the current panel displayed is the user panel, then add these new users
      *  to the panel, and show all users.
      */
-    public static void showAllUsers(ArrayList aListNames)
+    public static void showAllUsers(ArrayList<String> aListNames)
     {
         AppIF appIf = Util.getAppIF();
         if (appIf instanceof VAdminIF)
@@ -177,7 +177,7 @@ public class WUserUtil
         }
     }
 
-    public static ArrayList getUnixUsers()
+    public static ArrayList<String> getUnixUsers()
     {
         String strPath = FileUtil.sysdir() + "/bin/jvnmruser";
         if (Util.iswindows())
@@ -185,36 +185,36 @@ public class WUserUtil
 
         // Run the jvnmruser script that gets all the vnmr users including vj users
         String[] cmd = {WGlobal.SHTOOLCMD, "-c", strPath};
-        ArrayList aListUsers = getUsers(cmd);
+        ArrayList<String> aListUsers = getUsers(cmd);
 
         return aListUsers;
     }
 
-    public static ArrayList getDisabledAcc()
+    public static ArrayList<String> getDisabledAcc()
     {
-        ArrayList aListLock = getAccounts("LK");
+        ArrayList<String> aListLock = getAccounts("LK");
 
         return aListLock;
     }
 
-    public static ArrayList getPswdAcc()
+    public static ArrayList<String> getPswdAcc()
     {
-        ArrayList aListPswd = getAccounts("PS");
+        ArrayList<String> aListPswd = getAccounts("PS");
 
         return aListPswd;
     }
 
-    public static ArrayList getNPswdAcc()
+    public static ArrayList<String> getNPswdAcc()
     {
-        ArrayList aListNPswd = getAccounts("NP");
+        ArrayList<String> aListNPswd = getAccounts("NP");
 
         return aListNPswd;
     }
 
 
-    protected static ArrayList getUsers(String[] cmd)
+    protected static ArrayList<String> getUsers(String[] cmd)
     {
-        ArrayList aListUsers = new ArrayList();
+        ArrayList<String> aListUsers = new ArrayList<String>();
         Messages.postDebug("Running script: " + cmd[2]);
         Runtime rt = Runtime.getRuntime();
         String strg = null;
@@ -271,12 +271,12 @@ public class WUserUtil
         return aListUsers;
     }
 
-    protected static ArrayList getAccounts(String strType)
+    protected static ArrayList<String> getAccounts(String strType)
     {
         String[] cmd = {WGlobal.SHTOOLCMD, WGlobal.SHTOOLOPTION, WGlobal.SUDO +
                          WGlobal.SBIN + "aupw -s all"};
-        ArrayList aListUsers = getUsers(cmd);
-        ArrayList aListAccType = new ArrayList();
+        ArrayList<String> aListUsers = getUsers(cmd);
+        ArrayList<String> aListAccType = new ArrayList<String>();
         String strLine;
         String strUser;
         String strStatus;
@@ -346,7 +346,7 @@ public class WUserUtil
                 msg.bOk = isUnixUser(strName, true);
                 
                 // Write this user to the operatorlist file
-                HashMap hmUser = WFileUtil.getHashMapUser(strName);
+                HashMap<String,String> hmUser = WFileUtil.getHashMapUser(strName);
                 WUserUtil.writeOperatorFile(strName, hmUser);
 
             }
@@ -386,13 +386,13 @@ public class WUserUtil
      *                      else if creating a new user by using defaults, then it's null.
      */
     public static boolean writeNewUserFile(String strUser, String strItype,
-                                            HashMap hmUserDef, boolean bConvert,
-                                            JPanel pnlItem, HashMap userInfo)
+                                            HashMap<String,?> hmUserDef, boolean bConvert,
+                                            JPanel pnlItem, HashMap<String,String> userInfo)
     {
         String strPbPath = FileUtil.openPath(SYSPROFILE + File.separator + strUser);
         String strPrvPath = FileUtil.openPath(USRPROFILE + File.separator + strUser);
         WMessage msg = new WMessage(true, "");
-        HashMap hmUser = null;
+        HashMap<String,String> hmUser = null;
         Date date = new Date();
 
         // if the files don't exist, then it's a new user
@@ -510,7 +510,7 @@ public class WUserUtil
     }
 
     protected static void writeUserFile(String strPbPath, String strPrvPath,
-                                            HashMap hmUser, HashMap hmUserDef)
+                                            HashMap<String,String> hmUser, HashMap<String,?> hmUserDef)
     {
         Iterator keySetItr = hmUser.keySet().iterator();
         String strKey = null;
@@ -556,7 +556,7 @@ public class WUserUtil
         }
     }
 
-    protected static String getOperators(String strUser, HashMap hmUser)
+    protected static String getOperators(String strUser, HashMap<String,String> hmUser)
     {
         String strOperators = (String)hmUser.get("operators");
 //        String strItype = (String)hmUser.get("itype");
@@ -590,7 +590,7 @@ public class WUserUtil
         return true;
     }
 
-    public static void writeOperatorFile(String strUser, HashMap hmUser)
+    public static void writeOperatorFile(String strUser, HashMap<String,String> hmUser)
     {
         String strOperators = getOperators(strUser, hmUser);
         if (strOperators == null)
@@ -599,7 +599,7 @@ public class WUserUtil
         String strPath = FileUtil.openPath(OPERATORLIST);
         StringBuffer sbPassword = new StringBuffer();
         // list of all operators from the operator list file
-        HashMap hmOperatorsFile = getOperatorList(strPath);
+        HashMap<String,String> hmOperatorsFile = getOperatorList(strPath);
         String strItype = (String)hmUser.get("itype");
         if (strItype == null || strItype.equals(""))
             strItype= "Spectroscopy";
@@ -632,7 +632,7 @@ public class WUserUtil
         }
 
         // list of operators entered for this user
-        ArrayList aListOperators = WUtil.strToAList(strOperators, false, " \t,");
+        ArrayList<String> aListOperators = WUtil.strToAList(strOperators, false, " \t,");
         String password = WOperators.getDefPassword();
         try
         {
@@ -687,7 +687,7 @@ public class WUserUtil
                     if (strlist != null && strlist.equals("null"))
                         strlist = "";
                     // List of users that have this operator in their list
-                    ArrayList alistOperatorsFile = WUtil.strToAList(strlist, false, ",");
+                    ArrayList<String> alistOperatorsFile = WUtil.strToAList(strlist, false, ",");
                     if (!alistOperatorsFile.contains(strUser))
                     {
                         String user;
@@ -1200,7 +1200,7 @@ public class WUserUtil
             // then that username cannot be used again.
             BufferedReader reader = WFileUtil.openReadFile(DELFILE);
             String strLine = "";
-            ArrayList aListUsers = new ArrayList();
+            ArrayList<String> aListUsers = new ArrayList<String>();
             if (reader == null)
                 bOk = true;
             else

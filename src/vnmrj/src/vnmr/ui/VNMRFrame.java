@@ -462,7 +462,7 @@ public class VNMRFrame extends JFrame implements AppInstaller {
             }
         }
         doLogout();
-        System.gc();
+        // System.gc();
         if (memorymonitor != null)
             memorymonitor.repaint();
 

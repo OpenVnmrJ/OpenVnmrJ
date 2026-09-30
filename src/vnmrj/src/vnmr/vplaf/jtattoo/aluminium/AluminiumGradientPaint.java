@@ -242,7 +242,7 @@ public class AluminiumGradientPaint implements Paint {
                 return raster;
             } else {
                 // if the x position is earlier requested we can return the chached raster 
-                Object o = rasterCache.get(new Integer(x));
+                Object o = rasterCache.get(Integer.valueOf(x));
                 if (o != null) {
                     return (Raster) o;
                 } else {
@@ -268,7 +268,7 @@ public class AluminiumGradientPaint implements Paint {
                         }
                     }
                     // remember this raster 
-                    rasterCache.put(new Integer(x), raster);
+                    rasterCache.put(Integer.valueOf(x), raster);
                     return raster;
                 }
             }

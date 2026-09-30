@@ -303,8 +303,8 @@ public class JbInstrument implements JbDefs {
             double time_s = time * 0.6;
             float au1 = (float)signal(time_s, m_lambda1);
             float au2 = (float)signal(time_s, m_lambda2);
-            m_detectorParms.set("Absorbance1", new Float(au1));
-            m_detectorParms.set("Absorbance2", new Float(au2));
+            m_detectorParms.set("Absorbance1", Float.valueOf(au1));
+            m_detectorParms.set("Absorbance2", Float.valueOf(au2));
         } else {
             processed = false;
         }
@@ -321,8 +321,8 @@ public class JbInstrument implements JbDefs {
     }
 
     public static int getReplyFor(int command) {
-        Integer itmp = sm_REPLIES.get(command);
-        return (itmp == null) ? ID_RSP_UNKNOWN_COMMAND : itmp;
+        Integer itmp = sm_REPLIES.get(Integer.valueOf(command));
+        return (itmp == null) ? ID_RSP_UNKNOWN_COMMAND : itmp.intValue();
     }
 
 

@@ -57,7 +57,7 @@ public class WUtil
     /**
      *  Takes a string and returns the array list for that string.
      */
-    public static ArrayList strToAList(String strTokenize)
+    public static ArrayList<String> strToAList(String strTokenize)
     {
         return strToAList(strTokenize, true);
     }
@@ -67,7 +67,7 @@ public class WUtil
      *  @strTokenize    string from which an arraylist should be made.
      *  @strDelim       delimeter string for the tokenizer.
      */
-    public static ArrayList strToAList(String strTokenize, String strDelim)
+    public static ArrayList<String> strToAList(String strTokenize, String strDelim)
     {
         return strToAList(strTokenize, true, strDelim);
     }
@@ -77,7 +77,7 @@ public class WUtil
      *  @param strTokenize  the string from which an arraylist should be made.
      *  @param bAllowDups   true if duplicates should be allowed in the arraylist.
      */
-    public static ArrayList strToAList(String strTokenize, boolean bAllowDups)
+    public static ArrayList<String> strToAList(String strTokenize, boolean bAllowDups)
     {
         return strToAList(strTokenize, bAllowDups, " \t\n\r\f");
     }
@@ -88,7 +88,7 @@ public class WUtil
      *  @param bAllowDups   true if duplicates should be allowed in the arraylist.
      *  @param strDelim     delimeter string for the tokenizer.
      */
-    public static ArrayList strToAList(String strTokenize, boolean bAllowDups,
+    public static ArrayList<String> strToAList(String strTokenize, boolean bAllowDups,
                                         String strDelim)
     {
         ArrayList<String> aListValues = new ArrayList<String>();
@@ -114,12 +114,12 @@ public class WUtil
     /**
      *  Takes an arraylist and returns a string.
      */
-    public static String aListToStr(ArrayList aList)
+    public static String aListToStr(ArrayList<String> aList)
     {
         return aListToStr(aList, " ");
     }
 
-    public static String aListToStr(ArrayList aList, String strDelimiter)
+    public static String aListToStr(ArrayList<String> aList, String strDelimiter)
     {
         StringBuffer sbLine = new StringBuffer();
 
@@ -203,7 +203,7 @@ public class WUtil
 
     public static String unixDirToWindows(String strDir)
     {
-        ArrayList aListDir = strToAList(strDir, ";");
+        ArrayList<String> aListDir = strToAList(strDir, ";");
         StringBuffer sbData = new StringBuffer();
 
         int nLength = aListDir.size();
@@ -228,7 +228,7 @@ public class WUtil
 
     public static String windowsDirToUnix(String strDir)
     {
-        ArrayList aListDir = strToAList(strDir, ";");
+        ArrayList<String> aListDir = strToAList(strDir, ";");
         StringBuffer sbData = new StringBuffer();
         
         int nLength = aListDir.size();
@@ -271,9 +271,7 @@ public class WUtil
         {
             if (bPostMsg)
                 Messages.postDebug("Running script: " + cmd);
-            Runtime rt = Runtime.getRuntime();
-
-            prcs = rt.exec(cmd);
+            prcs = new ProcessBuilder(cmd.split("\\s+")).start();
 
             if (prcs == null)
                 return msg;
@@ -388,10 +386,8 @@ public class WUtil
         try
         {
             if (bShowMesg)
-                Messages.postDebug("Running script: " + cmd[2]);
-            Runtime rt = Runtime.getRuntime();
-
-            prcs = rt.exec(cmd);
+                Messages.postDebug("Running script: " + Arrays.toString(cmd));
+            prcs = new ProcessBuilder(cmd).start();
 
             if (prcs == null)
                 return msg;
@@ -466,8 +462,7 @@ public class WUtil
         {
             if (bPostMsg)
                 Messages.postDebug("Running script: " + cmd);
-            Runtime rt = Runtime.getRuntime();
-            prcs = rt.exec(cmd);
+            prcs = new ProcessBuilder(cmd.split("\\s+")).start();
         }
         catch (Exception e)
         {
@@ -513,9 +508,8 @@ public class WUtil
         try
         {
             if (bPostMsg)
-                Messages.postDebug("Running script: " + cmd[2]);
-            Runtime rt = Runtime.getRuntime();
-            prcs = rt.exec(cmd);
+                Messages.postDebug("Running script: " + Arrays.toString(cmd));
+            prcs = new ProcessBuilder(cmd).start();
         }
         catch (Exception e)
         {
@@ -665,8 +659,7 @@ public class WUtil
      */
     public static boolean isRightMouseClick(MouseEvent e)
     {
-        return ((e.getModifiers() & InputEvent.BUTTON3_MASK)
-                            == InputEvent.BUTTON3_MASK);
+        return ((e.getModifiersEx() & InputEvent.getMaskForButton(3)) != 0);
     }
 
     /**
@@ -674,8 +667,7 @@ public class WUtil
      */
     public static boolean isLeftMouseClick(MouseEvent e)
     {
-        return ((e.getModifiers() & InputEvent.BUTTON1_MASK)
-                            == InputEvent.BUTTON1_MASK);
+        return ((e.getModifiersEx() & InputEvent.getMaskForButton(1)) != 0);
     }
 
     public static void setCurrentAdmin(String name)

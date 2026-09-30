@@ -123,7 +123,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
      * @param dst The parameter table to which parameter values are written.
      */
     public void copyPars(int msg, JbParameters src, JbParameters dst) {
-        Command command = (Command)get(new Integer(msg));
+        Command command = (Command)get(Integer.valueOf(msg));
         String[] pnames = command.getParameters();
         for (int i = 0; i < pnames.length; i++) {
             String name = pnames[i];
@@ -141,7 +141,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
         if (m_validateReplies && ok) {
             synchronized (m_expectedReplyList) {
                 int reply = JbInstrument.getReplyFor(code);
-                m_expectedReplyList.add(reply);
+                m_expectedReplyList.add(Integer.valueOf(reply));
                 if (LcMsg.isSetFor("jbio")) {
                     LcMsg.postDebug("Sent command: 0x"
                                     + Integer.toHexString(code)
@@ -191,7 +191,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
         }
 
         synchronized (out) {
-            Command command = (Command)get(new Integer(code));
+            Command command = (Command)get(Integer.valueOf(code));
             if (command == null) {
                 LcMsg.postError("Unknown command code: 0x"
                                 + Integer.toHexString(code));
@@ -352,7 +352,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
     }
 
     private int validateLength(int code, int len) {
-        int l = ((Command)get(new Integer(code))).getSize();
+        int l = ((Command)get(Integer.valueOf(code))).getSize();
         if (l == -1) {
             // No check possible
         } else if (l < 0) {
@@ -399,14 +399,14 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
                                 + Integer.toHexString(code));
                 code = -1;
             } else {
-                int idx = m_expectedReplyList.indexOf(new Integer(code));
+                int idx = m_expectedReplyList.indexOf(Integer.valueOf(code));
                 if (idx >= 0) {
                     // The normal case
                     m_expectedReplyList.remove(idx);
                     len = validateLength(code, len);
                 } else if (n == 1) {
                     // Bad code, but correct value is known
-                    int c = m_expectedReplyList.remove(0);
+                    int c = m_expectedReplyList.remove(0).intValue();
                     LcMsg.postError("Bad msg code from 335 PDA: expected 0x"
                                     + Integer.toHexString(c)
                                     + ", got 0x" + Integer.toHexString(code));
@@ -425,8 +425,8 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
                                             + "Got 0x"
                                             + Integer.toHexString(code)
                                             + ", but length is correct for 0x"
-                                            + Integer.toHexString(ic));
-                            code = ic;
+                                            + Integer.toHexString(ic.intValue()));
+                            code = ic.intValue();
                             m_expectedReplyList.remove(i);
                             guessed = true;
                             break;
@@ -517,7 +517,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
             m_replyProcessor.dataReceived();
         }
 
-        Command command = (Command)get(new Integer(code));
+        Command command = (Command)get(Integer.valueOf(code));
         String[] pnames = null;
         if (command != null) {
             pnames = command.getParameters();
@@ -543,7 +543,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
         }
 
         // Read in the message
-        pars.set("Length", new Integer(nbytes));
+        pars.set("Length", Integer.valueOf(nbytes));
         if (dbg) {
             LcMsg.postDebug("receiveMessage: length=" + nbytes
                             + " (0x" + Integer.toHexString(nbytes) + ")");
@@ -643,7 +643,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
             } else {
                 val = in.readUnsignedByte();
             }
-            Integer ival = new Integer(val);
+            Integer ival = Integer.valueOf(val);
             if (dbg) {
                 LcMsg.postDebug("receiveMessage: " + val
                                 + " (0x" + Integer.toHexString(val)
@@ -658,7 +658,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
             pars.set(name, ival);
             nbytes -= wbytes;
         } else if (oval instanceof Float) {
-            Float fval = new Float(in.readFloat());
+            Float fval = Float.valueOf(in.readFloat());
             if (dbg) {
                 LcMsg.postDebug("receiveMessage: "
                                 + fval + "\t (" + name
@@ -840,7 +840,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
          "Lamp Action",
         },
         {"Set IP Params", ID_CMD_SET_IP_PARAMS,
-         new Integer(28),
+                Integer.valueOf(28),
          "SetFixedIP",
          "SetSubnetMask",
          "GatewayAddress",
@@ -857,7 +857,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
          "MaxNumberOfSpectra"
         },
         {"Method Header", ID_CMD_METHOD_HEADER_335,
-         new Integer(112),
+                Integer.valueOf(112),
          "Method Version",
          "Method Name",
          "Min Wavelength",
@@ -880,7 +880,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
         },
         // This inserts a line with all allowed parameters defined
         {"Method Line", ID_CMD_METHOD_LINE_ENTRY_335,
-         new Integer(84),
+                Integer.valueOf(84),
          "Run Time",
          "Code Wavelength 1", "Param Wavelength 1",
          "Code Wavelength 2", "Param Wavelength 2",
@@ -901,7 +901,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
         },
         // This inserts the last line of the method
         {"Method End Line", ID_CMD_METHOD_END_335,
-         new Integer(9),
+                Integer.valueOf(9),
          "Run Time",
          "Code Method End", "Param Method End",
         },
@@ -926,7 +926,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
         // Replies
         //
         {"Get Inst Identity", ID_RSP_GET_INST_IDENTITY,
-         new Integer(32),
+                Integer.valueOf(32),
          "Family",
          "Model",
          "Version",
@@ -938,7 +938,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
          "Method Action",
         },
         {"Auto Zero", ID_RSP_AUTO_ZERO,
-         new Integer(-8),
+                Integer.valueOf(-8),
          "ReturnCode",
          "Spare Int Parameter", // Seems to be present on error
         },
@@ -952,7 +952,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
          "ReturnCode",
         },
         {"Get IP Params", ID_RSP_GET_IP_PARAMS,
-         new Integer(32),
+                Integer.valueOf(32),
          "ReturnCode",
          "SetFixedIP",
          "SetSubnetMask",
@@ -1000,7 +1000,7 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
          "AbsValue",
         },
         {"Get Status", ID_RSP_RETURN_STATUS,
-         new Integer(64),
+                Integer.valueOf(64),
          "ReturnCode",
          "InstErrorField",
          "D2LampState",
@@ -1031,13 +1031,13 @@ public class JbCommands extends HashMap<Integer, JbCommands.Command>
          "ReturnCode",
         },
         {"Get Cell Params", ID_RSP_GET_CELL_PARAMS,
-         new Integer(12),
+                Integer.valueOf(12),
          "ReturnCode",
          "CellRatio",
          "CellType",
         },
         {"Get Globals", ID_RSP_GET_GLOBALS,
-         new Integer(52),
+                Integer.valueOf(52),
          "ReturnCode",
          "InstType",
          "InstConfig",

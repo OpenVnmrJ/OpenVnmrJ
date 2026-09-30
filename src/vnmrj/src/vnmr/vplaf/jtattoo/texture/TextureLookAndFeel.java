@@ -433,7 +433,7 @@ public class TextureLookAndFeel extends AbstractLookAndFeel {
 
     protected void initComponentDefaults(UIDefaults table) {
         super.initComponentDefaults(table);
-        table.put("SplitPane.dividerSize", new Integer(8));
+        table.put("SplitPane.dividerSize", Integer.valueOf(8));
         table.put("TabbedPane.tabAreaInsets", new InsetsUIResource(5, 5, 6, 5));
     }
 }

@@ -95,7 +95,6 @@ class DatePanel extends JComponent {
                 Runnable runCal = new Runnable() {
                     public void run() {
                         try {
-                            Runtime rt = Runtime.getRuntime();
                             // Get the system directory where the 
                             // executable is
                             String dir = FileUtil.sysdir();
@@ -103,7 +102,7 @@ class DatePanel extends JComponent {
                             Process prcs = null;
                             try {
                                 // Start up the calendar
-                                prcs = rt.exec(dir + "/tcl/bin/xcal2");
+                                prcs = new ProcessBuilder(dir + "/tcl/bin/xcal2").start();
                                 // attach to its stdout
                                 InputStream istrm = prcs.getInputStream();
                                 BufferedReader bfr;

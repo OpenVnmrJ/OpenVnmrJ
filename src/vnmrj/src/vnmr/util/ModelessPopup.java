@@ -229,9 +229,9 @@ public class ModelessPopup extends ModelessDialog
             Component comp = panel.getComponent(i);
             if (comp instanceof VObjIF) ((VObjIF)comp).destroy();
         }
-    panel.removeAll();
-        System.gc();
-        System.runFinalization();
+        panel.removeAll();
+        // System.gc();
+        // System.runFinalization();
     }
 
     public void showDialogAndSetParms(String loc) {

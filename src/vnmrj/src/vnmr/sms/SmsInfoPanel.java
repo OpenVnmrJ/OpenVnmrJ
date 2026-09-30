@@ -24,12 +24,12 @@ public  class SmsInfoPanel extends JPanel implements SmsDef
    private JTextArea textPan;
    private JScrollPane textScroll;
    private JSeparator separator;
-   private JComboBox rackMenu;
-   private JComboBox zoneMenu;
-   private JComboBox zone2Menu;
-   private JComboBox orientMenu;
-   private JComboBox orderMenu;
-   private JComboBox order2Menu;
+   private JComboBox<String> rackMenu;
+   private JComboBox<String> zoneMenu;
+   private JComboBox<String> zone2Menu;
+   private JComboBox<String> orientMenu;
+   private JComboBox<String> orderMenu;
+   private JComboBox<String> order2Menu;
    private JLabel  rackLabel;
    private JLabel  rackName;
    private JLabel  zoneLabel;
@@ -71,9 +71,9 @@ public  class SmsInfoPanel extends JPanel implements SmsDef
         textPan.setLineWrap(false);
         textPan.setMargin(new Insets(2, 2, 1, 2));
 
-        rackMenu = new JComboBox();
-        zoneMenu = new JComboBox();
-        zone2Menu = new JComboBox();
+        rackMenu = new JComboBox<String>();
+        zoneMenu = new JComboBox<String>();
+        zone2Menu = new JComboBox<String>();
 
         zoneMenu.setOpaque(false);
         rackMenu.setOpaque(false);
@@ -110,13 +110,13 @@ public  class SmsInfoPanel extends JPanel implements SmsDef
         zone2Menu.addItem("2,1");
 
         orientL = new OrientListener();
-        orientMenu = new JComboBox();
+        orientMenu = new JComboBox<String>();
         orientMenu.addActionListener(orientL);
         orientMenu.addItem("Horizontal");
         orientMenu.addItem("Vertical");
 
         orderL = new OrderListener();
-        orderMenu = new JComboBox();
+        orderMenu = new JComboBox<String>();
         orderMenu.addActionListener(orderL);
         orderMenu.addItem("Left & Front");
         orderMenu.addItem("Right & Front");
@@ -124,7 +124,7 @@ public  class SmsInfoPanel extends JPanel implements SmsDef
         orderMenu.addItem("Right & Back");
 
         order2L = new Order2Listener();
-        order2Menu = new JComboBox();
+        order2Menu = new JComboBox<String>();
         order2Menu.addActionListener(order2L);
         order2Menu.addItem("Downward only");
         order2Menu.addItem("Upward only");

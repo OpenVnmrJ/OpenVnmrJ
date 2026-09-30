@@ -10,6 +10,7 @@
 package vnmr.lc;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 import vnmr.util.Messages;
 import vnmr.util.StrUtil;
@@ -207,9 +208,9 @@ public class LcMethodParameter {
         if (m_type.equals(STRING_TYPE) || m_type.equals(MS_SCAN_TYPE)) {
             return "";
         } else if (m_type.equals(INT_TYPE)) {
-            return new Integer(0);
+            return Integer.valueOf(0);
         } else if (m_type.equals(DOUBLE_TYPE)) {
-            return new Double(0.0);
+            return Double.valueOf(0.0);
         } else {                // Default is BOOLEAN_TYPE
             return Boolean.FALSE;
         }
@@ -386,7 +387,7 @@ public class LcMethodParameter {
      */
     public boolean setValue(int idx, Object value) {
         Object oldValue = getValue(idx);
-        if (oldValue == value || (value != null && value.equals(oldValue))) {
+        if (Objects.equals(value, oldValue)) {
             return false;
         }
         while (m_values.size() <= idx) {
@@ -518,7 +519,7 @@ public class LcMethodParameter {
         if (obj == null) {
             rtn = "null";
         } else if (obj instanceof Boolean) {
-            rtn = (Boolean)obj ? "y" : "n";
+            rtn = ((Boolean) obj).booleanValue() ? "y" : "n";
         } else {
             rtn = obj.toString();
         }

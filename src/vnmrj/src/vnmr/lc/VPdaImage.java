@@ -642,7 +642,7 @@ public class VPdaImage extends VPlot implements ComponentListener {
                         + ((bTime[1] & 0xff) << 16)
                         + ((bTime[2] & 0xff) << 8)
                         + (bTime[3] & 0xff);
-                times.add(Float.intBitsToFloat(iTime));
+                times.add(Float.valueOf(Float.intBitsToFloat(iTime)));
                 float[] intensityData = new float[m_width];
                 m_spectra.add(intensityData);
                 in.read(bData, 0, m_width * 4);
@@ -670,7 +670,7 @@ public class VPdaImage extends VPlot implements ComponentListener {
         m_height = m_spectra.size();
         m_time = new float[m_height];
         for (int i = 0; i < m_height; i++) {
-            m_time[i] = m_timeOffset + times.get(i);
+            m_time[i] = m_timeOffset + times.get(i).floatValue();
         }
         LcMsg.postDebug("pdaTiming",
                            "VPdaImage.getDataBinary: intensities done");
@@ -712,7 +712,7 @@ public class VPdaImage extends VPlot implements ComponentListener {
                 m_spectra.add(intensityData);
                 StringTokenizer toker = new StringTokenizer(line);
                 long timeL = Integer.parseInt(toker.nextToken());
-                times.add((float)(timeL / 60000.0));
+                times.add(Float.valueOf((float) (timeL / 60000.0)));
                 //m_time[i] = (float)(timeL / 60000.0);
                 for(int j = 0; j < m_width; j++) {
                     if (toker.hasMoreTokens()) {
@@ -736,7 +736,7 @@ public class VPdaImage extends VPlot implements ComponentListener {
         m_height = m_spectra.size();
         m_time = new float[m_height];
         for (int i = 0; i < m_height; i++) {
-            m_time[i] = m_timeOffset + times.get(i);
+            m_time[i] = m_timeOffset + times.get(i).floatValue();
         }
         LcMsg.postDebug("pdaTiming",
                            "VPdaImage.getDataAscii: intensities done");

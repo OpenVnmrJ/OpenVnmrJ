@@ -33,7 +33,7 @@ public class MenuEditor extends ModalDialog implements ActionListener{
     final String[] m_header = {"Path", "Label", "Type"}; 
     JTable m_table = null; // table of menu items in editing popup
     DefaultTableModel m_model = null;
-    Hashtable m_filetypes = null; // types of audit trails, depending on m_type 
+    Hashtable<String,String> m_filetypes = null; // types of audit trails, depending on m_type 
     ComboFileTable m_parent = null; // parent where MenuEditor is poped up.
     String m_defaultLookAndFeel = null;
 
@@ -132,7 +132,7 @@ public class MenuEditor extends ModalDialog implements ActionListener{
                         m_table.setValueAt(type, m_table.getRowCount()-1, 2);
                     } else {
 
-		    	Vector row = new Vector();
+		    	Vector<String> row = new Vector<String>();
 		    	row.add(newpath);
 		    	row.add(label);
 		    	row.add(type);
@@ -202,7 +202,7 @@ public class MenuEditor extends ModalDialog implements ActionListener{
 	
         m_parent.setLookAndFeel(m_defaultLookAndFeel);
 
-	Vector paths = new Vector();
+	Vector<String> paths = new Vector<String>();
 	paths.add(m_parent.getMenuPath());
         m_parent.updateFileMenu(paths, 0);
     }
@@ -228,11 +228,11 @@ public class MenuEditor extends ModalDialog implements ActionListener{
 
     private DefaultTableModel getCurrentMenu() {
 	
-	Vector colNames = new Vector();
+	Vector<String> colNames = new Vector<String>();
 	for(int i=0; i<m_header.length; i++)
 	    colNames.add(m_header[i]);
 
-	Vector entries = new Vector();
+	Vector<Vector<String>> entries = new Vector<Vector<String>>();
 
 	if(m_path != null) {
 
@@ -250,7 +250,7 @@ public class MenuEditor extends ModalDialog implements ActionListener{
                         String path = tok.nextToken();
                         String label = tok.nextToken();
                         String type = tok.nextToken();
-			Vector row = new Vector();
+			Vector<String> row = new Vector<String>();
 			row.add(path);
 			row.add(label);
 			row.add(type);
@@ -265,7 +265,7 @@ public class MenuEditor extends ModalDialog implements ActionListener{
 
 	if(entries.size() == 0) {
 
-	  Vector row = new Vector();
+	  Vector<String> row = new Vector<String>();
 	  row.add("");
 	  row.add("");
 	  row.add("");
@@ -324,7 +324,7 @@ public class MenuEditor extends ModalDialog implements ActionListener{
     }
 
     private void makeFileTypes() {
-	m_filetypes = new Hashtable();
+	m_filetypes = new Hashtable<String,String>();
 	
 	m_filetypes.put(RECORDS, "records");
 	m_filetypes.put(TRASH, "recordTrashInfo");

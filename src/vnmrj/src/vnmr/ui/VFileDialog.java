@@ -49,7 +49,7 @@ public class VFileDialog extends FileDialog {
 	private void openNmrFile() {
 		if (fileName.equals("text")) {
 			try {
-			    Runtime.getRuntime().exec("notepad " + fullPath);
+			    new ProcessBuilder("notepad", fullPath).start();
 			} catch (Exception e) {}
 		} else if (fileName.equals("fid")) {
 		    directory = UtilB.windowsPathToUnix(directory);

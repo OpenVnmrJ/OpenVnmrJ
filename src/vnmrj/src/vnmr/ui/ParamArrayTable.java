@@ -380,7 +380,7 @@ public class ParamArrayTable extends JTable implements VTooltipIF {
 	Object prevOrder = ((Vector) values.elementAt(row)).elementAt(ORDERCOL);
 	if(((String) prevOrder).length() == 0) return null; 
         if(prevOrder.equals("0")) {
-	  Integer ord = new Integer(values.size());
+	  Integer ord = Integer.valueOf(values.size());
 	  prevOrder = ord.toString();
 	}
 	
@@ -398,7 +398,7 @@ public class ParamArrayTable extends JTable implements VTooltipIF {
 	    Object order = ((Vector) values.elementAt(i)).elementAt(ORDERCOL);
 	    String onoff = (String)(((Vector) values.elementAt(i)).elementAt(ONOFFCOL));
 	    if(onoff.equals("On") && order.equals(newOrder) && size != thisSize) {
-		swabbedRows.add(new Integer(i));
+		swabbedRows.add(Integer.valueOf(i));
 		Vector r = (Vector) values.elementAt(i);
 		r.setElementAt(prevOrder, ORDERCOL);
 		values.setElementAt(r, i);

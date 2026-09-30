@@ -43,19 +43,19 @@ public class ComboFileTable extends JPanel
     super();
         setOpaque(false);
 
-        Vector paths = new Vector();
+        Vector<String> paths = new Vector<String>();
         paths.addElement(path);
     makeComboFileTable(paths, label, 0);
     }
 
-    public ComboFileTable(Vector paths, String label) {
+    public ComboFileTable(Vector<String> paths, String label) {
     super();
         setOpaque(false);
 
     makeComboFileTable(paths, label, 0);
     }
 
-    public void makeComboFileTable(Vector paths, String label, int menuIndex) {
+    public void makeComboFileTable(Vector<String> paths, String label, int menuIndex) {
 
         setLayout(new BorderLayout());
         makeFileMenu(paths, menuIndex);
@@ -134,7 +134,7 @@ public class ComboFileTable extends JPanel
         m_menu.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
 
-                JComboBox cb = (JComboBox)e.getSource();
+                JComboBox<?> cb = (JComboBox<?>)e.getSource();
                 String path = (String)cb.getSelectedItem();
 
                 makeFileTable();
@@ -143,7 +143,7 @@ public class ComboFileTable extends JPanel
 
     }
 
-    public void updateComboFileTable(Vector paths, String label, int menuIndex)
+    public void updateComboFileTable(Vector<String> paths, String label, int menuIndex)
     {
         //setLayout(new BorderLayout());
         updateFileMenu(paths, menuIndex);
@@ -170,7 +170,7 @@ public class ComboFileTable extends JPanel
         setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
     }
 
-    public boolean  makeFileMenu(Vector paths, int menuIndex) {
+    public boolean makeFileMenu(Vector<String> paths, int menuIndex) {
         m_menu = new FileMenu(paths);
 
         if(menuIndex >=0 && menuIndex < m_menu.getItemCount())
@@ -185,7 +185,7 @@ public class ComboFileTable extends JPanel
         return(b);
     }
 
-    public boolean  updateFileMenu(Vector paths, int menuIndex) {
+    public boolean updateFileMenu(Vector<String> paths, int menuIndex) {
 
     if (m_menu == null)
     {
@@ -209,7 +209,7 @@ public class ComboFileTable extends JPanel
 
     public void makeFileTable() {
 
-    Vector paths = new Vector();
+    Vector<String> paths = new Vector<String>();
     String type = null;
 
     Object[] selected = m_menu.getSelectedObjects();
@@ -250,7 +250,7 @@ public class ComboFileTable extends JPanel
 
     public void updateFileTable() {
 
-    Vector paths = new Vector();
+    Vector<String> paths = new Vector<String>();
     String type = null;
 
     Object[] selected = m_menu.getSelectedObjects();

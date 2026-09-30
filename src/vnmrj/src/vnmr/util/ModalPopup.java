@@ -220,8 +220,8 @@ public class ModalPopup extends ModalDialog implements ActionListener, VObjDef {
         modalPopup = null;
         scrollPane = null;
 
-        System.gc();
-        System.runFinalization();
+        // System.gc();
+        // System.runFinalization();
 
     }
 

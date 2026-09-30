@@ -43,7 +43,7 @@ public class JbParameters
             Parameter p = (Parameter)itr.next();
             System.out.println(p.getName() + " = " + p.getValue());
             nameSort.add(p.getName().toLowerCase());
-            indexSort.put(p.getIndex(), p.getName());
+            indexSort.put(Integer.valueOf(p.getIndex()), p.getName());
         }
 
         System.out.println("\nTable in sorted order:");
@@ -120,9 +120,9 @@ public class JbParameters
         Object newVal = null;
         try {
             if (oldVal instanceof Float) {
-                newVal = new Float(value);
+                newVal = Float.valueOf(value);
             } else if (oldVal instanceof Integer) {
-                newVal = new Integer(value);
+                newVal = Integer.valueOf(value);
             } else if (oldVal instanceof String) {
                 newVal = value;
             }
@@ -141,15 +141,15 @@ public class JbParameters
     }
 
     public boolean setByte(String name, int value) {
-        return set(name, new Byte((byte)value));
+        return set(name, Byte.valueOf((byte) value));
     }
 
     public boolean set(String name, int value) {
-        return set(name, new Integer(value));
+        return set(name, Integer.valueOf(value));
     }
 
     public boolean set(String name, float value) {
-        return set(name, new Float(value));
+        return set(name, Float.valueOf(value));
     }
 
     /**
@@ -312,15 +312,15 @@ public class JbParameters
         {"Noise Monitor Length",       NOISE_MONITOR_LENGTH_MIN},
         {"Diagnostic Method Enabled",  DIAGNOSTIC_METHOD_DISABLED},
         {"Processing Stage Bypass",    ZERO}, // Req for user mode
-        {"Bandwidth Filter Size",      new Integer(-1)}, // Req for user mode
+        {"Bandwidth Filter Size", Integer.valueOf(-1)}, // Req for user mode
         // Method Lines
         {"Run Time",                   ZERO},
-        {"Param Wavelength 1",         new Float(190)},
-        {"Param Wavelength 2",         new Float(395)},
+        {"Param Wavelength 1",         Float.valueOf(190)},
+        {"Param Wavelength 2",         Float.valueOf(395)},
         {"Param Autozero 1",           ZERO},
         {"Param Autozero 2",           ZERO},
-        {"Param Analog 1 Attn",        new Float(2)},
-        {"Param Analog 2 Attn",        new Float(2)},
+        {"Param Analog 1 Attn",        Float.valueOf(2)},
+        {"Param Analog 2 Attn",        Float.valueOf(2)},
         {"Param Output Relay 1",       ZERO},
         {"Param Output Relay 2",       ZERO},
         {"Param Output Relay 3",       ZERO},
@@ -329,37 +329,37 @@ public class JbParameters
         {"Param Peaksense Peak Width", TWO},
         {"Param Peaksense S N Ratio",  TWO},
         {"Param Time Slice Trigger",   TIME_SLICE_TRIGGER_OFF},
-        {"Param Time Slice Period",    new Integer(1000)}, // ms
-        {"Param Level Sense Threshold", new Float(0.1)}, // AU
+        {"Param Time Slice Period", Integer.valueOf(1000)}, // ms
+        {"Param Level Sense Threshold", 0.1f}, // AU
         {"Param Method End",           END_RUN_HOLD},
 
         // These codes should be considered read only
-        {"Code Wavelength 1",          new Byte((byte)0x10)},
-        {"Code Wavelength 2",          new Byte((byte)0x11)},
-        {"Code Autozero 1",            new Byte((byte)0x12)},
-        {"Code Autozero 2",            new Byte((byte)0x13)},
-        {"Code Analog 1 Attn",         new Byte((byte)0x14)},
-        {"Code Analog 2 Attn",         new Byte((byte)0x15)},
-        {"Code Output Relay 1",        new Byte((byte)0x16)},
-        {"Code Output Relay 2",        new Byte((byte)0x17)},
-        {"Code Output Relay 3",        new Byte((byte)0x18)},
-        {"Code Output Relay 4",        new Byte((byte)0x19)},
-        {"Code Peaksense Relay Mode",  new Byte((byte)0x1a)},
-        {"Code Peaksense Peak Width",  new Byte((byte)0x1b)},
-        {"Code Peaksense S N Ratio",   new Byte((byte)0x1c)},
-        {"Code Time Slice Trigger",    new Byte((byte)0x1d)},
-        {"Code Time Slice Period",     new Byte((byte)0x1e)},
-        {"Code Level Sense Threshold", new Byte((byte)0x1f)},
-        {"Code Method End",            new Byte((byte)0xf0)},
-        {"Code",                       new Byte((byte)0)},
+        {"Code Wavelength 1", Byte.valueOf((byte) 0x10)},
+        {"Code Wavelength 2", Byte.valueOf((byte) 0x11)},
+        {"Code Autozero 1", Byte.valueOf((byte) 0x12)},
+        {"Code Autozero 2", Byte.valueOf((byte) 0x13)},
+        {"Code Analog 1 Attn", Byte.valueOf((byte) 0x14)},
+        {"Code Analog 2 Attn", Byte.valueOf((byte) 0x15)},
+        {"Code Output Relay 1", Byte.valueOf((byte) 0x16)},
+        {"Code Output Relay 2", Byte.valueOf((byte) 0x17)},
+        {"Code Output Relay 3", Byte.valueOf((byte) 0x18)},
+        {"Code Output Relay 4", Byte.valueOf((byte) 0x19)},
+        {"Code Peaksense Relay Mode", Byte.valueOf((byte) 0x1a)},
+        {"Code Peaksense Peak Width", Byte.valueOf((byte) 0x1b)},
+        {"Code Peaksense S N Ratio", Byte.valueOf((byte) 0x1c)},
+        {"Code Time Slice Trigger", Byte.valueOf((byte) 0x1d)},
+        {"Code Time Slice Period", Byte.valueOf((byte) 0x1e)},
+        {"Code Level Sense Threshold", Byte.valueOf((byte) 0x1f)},
+        {"Code Method End", Byte.valueOf((byte) 0xf0)},
+        {"Code", Byte.valueOf((byte) 0)},
 
         // Get multiple spectra
-        {"MaxNumberOfSpectra",         new Integer(100)},
+        {"MaxNumberOfSpectra", Integer.valueOf(100)},
         // Lamp
         {"Lamp",                       LAMP_BOTH},
         {"Lamp Action",                LAMP_OFF},
         // Flow Cell
-        {"CellRatio",                  new Float(0)},
+        {"CellRatio",                  Float.valueOf(0)},
         {"CellType",                   CELL_TYPE_4x0},
         // Set IP
         {"SetFixedIP",                 JbControl.intIpAddress("172.16.0.60")},
@@ -401,7 +401,7 @@ public class JbParameters
         // Get Strings
         {"MoreFlag",                   LAST_DATA},
         {"ErrorCode",                  ZERO},
-        {"StringDescription",          "Some String",          new Integer(52)},
+        {"StringDescription",          "Some String", Integer.valueOf(52)},
         //Get Globals
         {"InstType",                   ZERO},
         {"InstConfig",                 ZERO},
@@ -413,10 +413,10 @@ public class JbParameters
         {"LampActionOnError",          ZERO},
         {"Normalize9x0",               ZERO},
         {"FirmwareRevisionLevel",      "-",                    ONE},
-        {"FirmwareIssueNumber",        new Byte((byte)0)},
+        {"FirmwareIssueNumber", Byte.valueOf((byte) 0)},
 
         // Spare
         {"Spare Int Parameter",        ZERO},
-        {"Spare 10 Bytes",             "Some String",          new Integer(10)},
+        {"Spare 10 Bytes",             "Some String", Integer.valueOf(10)},
     };
 }

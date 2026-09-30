@@ -32,7 +32,7 @@ public class SaveDataDialog extends ModalDialog
 // these are needed for a modal dialog to talk to vnmr
     private SessionShare sshare;
     private ButtonIF vnmrIf;
-    protected Hashtable allLongKeysTypes = null;
+    protected Hashtable<String, String> allLongKeysTypes = null;
     protected ImageIcon images[];
 
     protected static TemplatePanel tempPane = null;
@@ -146,8 +146,8 @@ public class SaveDataDialog extends ModalDialog
         dirPane.destroy();
         saveDataDialog = null;
         removeAll();
-        System.gc();
-        System.runFinalization();
+        // System.gc();
+        // System.runFinalization();
     }
 
     private void okAction() {
@@ -446,17 +446,17 @@ public class SaveDataDialog extends ModalDialog
 
       private String currenttemplate = null;
       private String currenttemplatekey = null;
-      private Vector tempkeys;
-      private Hashtable temps = new Hashtable();
+      private Vector<String> tempkeys;
+      private Hashtable<String, String> temps = new Hashtable<>();
 // make templates a JComboBox
-      private JComboBox templateList_label = null;
+      private JComboBox<String> templateList_label = null;
 // show selected template as editable text field
       private JTextField template = null;
 // button to save user templates
       private JButton saveButton = null;
 
       private JButton removeTempButton = null;
-      private Hashtable removedTemps = new Hashtable();
+      private Hashtable<String, String> removedTemps = new Hashtable<>();
 
     private JTextField keyEntry;
 
@@ -474,7 +474,7 @@ public class SaveDataDialog extends ModalDialog
 
 // template labels are uneditable ComboBox
 
-        templateList_label = new JComboBox( tempkeys );
+        templateList_label = new JComboBox<>(tempkeys);
         templateList_label.setRenderer(new DirComboBoxRenderer());
     	templateList_label.setForeground(actionColor);
         templateList_label.setSelectedItem(currenttemplatekey);
@@ -482,7 +482,7 @@ public class SaveDataDialog extends ModalDialog
 	templateList_label.setMaximumRowCount(6);
         templateList_label.addActionListener(new ActionListener() {
           public void actionPerformed(ActionEvent e) {
-            JComboBox cb = (JComboBox)e.getSource();
+            JComboBox<String> cb = (JComboBox<String>)e.getSource();
             currenttemplatekey = (String)cb.getSelectedItem();
             currenttemplate = (String) temps.get(currenttemplatekey);
             showtemp();
@@ -548,7 +548,7 @@ public class SaveDataDialog extends ModalDialog
 
 		    tempkeys.add(currenttemplatekey);
 		    sortStrVector(tempkeys);
-		    templateList_label.setModel(new DefaultComboBoxModel(tempkeys));
+		    templateList_label.setModel(new DefaultComboBoxModel<>(tempkeys));
                     templateList_label.setSelectedItem(currenttemplatekey);
             	}
 
@@ -577,7 +577,7 @@ public class SaveDataDialog extends ModalDialog
                     currenttemplatekey = (String)tempkeys.elementAt(0);
                     currenttemplate = (String)temps.get(currenttemplatekey);
 
-                    templateList_label.setModel(new DefaultComboBoxModel(tempkeys));
+                    templateList_label.setModel(new DefaultComboBoxModel<>(tempkeys));
                     templateList_label.setSelectedItem(currenttemplatekey);
 
                 } else {
@@ -638,7 +638,7 @@ public class SaveDataDialog extends ModalDialog
 
       public void updateTemplate() {
 	readTemps();
-	templateList_label.setModel(new DefaultComboBoxModel(tempkeys));
+	templateList_label.setModel(new DefaultComboBoxModel<>(tempkeys));
         templateList_label.setSelectedItem(currenttemplatekey);
         saveButton.setEnabled(false);
 	setRemoveTempButton();
@@ -664,7 +664,7 @@ public class SaveDataDialog extends ModalDialog
 	// current values are also set in Read_templates.
           Read_templates();
 
-          tempkeys= new Vector();
+          tempkeys = new Vector<>();
           for(Enumeration en = temps.keys(); en.hasMoreElements(); ) {
             tempkeys.add((String)en.nextElement());
           }
@@ -761,7 +761,7 @@ public class SaveDataDialog extends ModalDialog
 
     String[] keys;
 
-    Hashtable recFiles = null;
+    Hashtable<String, String> recFiles = null;
     JCheckBox[] optBoxes = new JCheckBox[0];
     JCheckBox incCheck = null;
     JTextField incEntry = null;
@@ -771,7 +771,7 @@ public class SaveDataDialog extends ModalDialog
 
     public RecordFilesPanel() {
 
-        recFiles = new Hashtable();
+        recFiles = new Hashtable<>();
         getStandardFiles();
         getOptionalFiles();
         getKeys();
@@ -872,7 +872,7 @@ public class SaveDataDialog extends ModalDialog
     public void updatePanel() {
         if(recFiles == null) {
 
-          recFiles = new Hashtable();
+          recFiles = new Hashtable<>();
           getStandardFiles();
           getOptionalFiles();
           getKeys();
@@ -1083,7 +1083,7 @@ public class SaveDataDialog extends ModalDialog
         }
     }
 
-    public static void sortStrVector(Vector v) {
+    public static void sortStrVector(Vector<String> v) {
 
         for (int i=0; i < v.size(); i++) {
             for (int j=i; j > 0 &&
@@ -1091,7 +1091,7 @@ public class SaveDataDialog extends ModalDialog
 		> 0; j--) {
 
                 // Swap rows j and j-1
-                Object a = v.elementAt(j);
+                String a = v.elementAt(j);
                 v.remove(j);
                 v.add(j, v.elementAt(j-1));
                 v.remove(j-1);
@@ -1125,9 +1125,9 @@ public class SaveDataDialog extends ModalDialog
     	return "";
     }
 
-    protected Hashtable readHash(String path) {
+    protected Hashtable<String, String> readHash(String path) {
 
-	Hashtable hash = new Hashtable();
+	Hashtable<String, String> hash = new Hashtable<>();
 
 	if(path != null) {
 
@@ -1162,7 +1162,7 @@ public class SaveDataDialog extends ModalDialog
     	return hash;
     }
 
-    protected void saveHashToFile(Hashtable hash, String selectedKey, String path,
+    protected void saveHashToFile(Hashtable<String, String> hash, String selectedKey, String path,
 	boolean append) {
     // save selected item first.
 
@@ -1211,21 +1211,21 @@ public class SaveDataDialog extends ModalDialog
 
   class DataDirPanel extends JPanel {
 
-    protected Hashtable p11ParentDirs = null;
-    protected Hashtable dataParentDirs = null;
-    protected Hashtable parentDirs_ds = null;
-    protected Hashtable childDirs = null;
-    protected Hashtable allKeysTypes = null;
-    protected Hashtable allKeysSpaces = null;
-    protected Hashtable allKeysPaths = null;
-    protected Vector allKeys = null;
-    protected Hashtable allLongKeysPaths = null;
-    protected Vector allLongKeys = null;
+    protected Hashtable<String, String> p11ParentDirs = null;
+    protected Hashtable<String, String> dataParentDirs = null;
+    protected Hashtable<String, String> parentDirs_ds = null;
+    protected Hashtable<String, String> childDirs = null;
+    protected Hashtable<String, String> allKeysTypes = null;
+    protected Hashtable<String, String> allKeysSpaces = null;
+    protected Hashtable<String, String> allKeysPaths = null;
+    protected Vector<String> allKeys = null;
+    protected Hashtable<String, String> allLongKeysPaths = null;
+    protected Vector<String> allLongKeys = null;
 
-    protected Hashtable removedChildDirs = new Hashtable();
+    protected Hashtable<String, String> removedChildDirs = new Hashtable<>();
     private JButton removeDirButton;
 
-    private JComboBox dirMenu;
+    private JComboBox<String> dirMenu;
     private JButton newDirButton;
     private JTextField pathEntry;
     private JTextField keyEntry;
@@ -1261,7 +1261,7 @@ public class SaveDataDialog extends ModalDialog
 
 	JLabel blank = new JLabel(" ");
 
-	dirMenu = new JComboBox(allLongKeys);
+	dirMenu = new JComboBox<>(allLongKeys);
 
 	DirComboBoxRenderer renderer = new DirComboBoxRenderer();
         dirMenu.setRenderer(renderer);
@@ -1273,7 +1273,7 @@ public class SaveDataDialog extends ModalDialog
 
         dirMenu.addActionListener(new ActionListener() {
           public void actionPerformed(ActionEvent e) {
-            JComboBox cb = (JComboBox)e.getSource();
+            JComboBox<String> cb = (JComboBox<String>)e.getSource();
             currentDirKey = (String)cb.getSelectedItem();
             currentDir = (String) allLongKeysPaths.get(currentDirKey);
 	    pathEntry.setText(currentDir);
@@ -1341,7 +1341,7 @@ public class SaveDataDialog extends ModalDialog
                     currentDirKey = key + getFreeSpace(path);
                     currentDir = path;
 
-		    dirMenu.setModel(new DefaultComboBoxModel(allLongKeys));
+		    dirMenu.setModel(new DefaultComboBoxModel<>(allLongKeys));
         	    dirMenu.setSelectedItem(currentDirKey);
 		}
             	newDirButton.setEnabled(false);
@@ -1455,7 +1455,7 @@ public class SaveDataDialog extends ModalDialog
             currentDirKey = "";
             currentDir = "";
 	  }
-          dirMenu.setModel(new DefaultComboBoxModel(allLongKeys));
+          dirMenu.setModel(new DefaultComboBoxModel<>(allLongKeys));
           dirMenu.setSelectedItem(currentDirKey);
 	  pathEntry.setText(currentDir);
     	  if(resultPane != null) resultPane.reformat();
@@ -1567,7 +1567,7 @@ public class SaveDataDialog extends ModalDialog
     public void updateDirPane() {
 
 	updateDirHashtables();
-	dirMenu.setModel(new DefaultComboBoxModel(allLongKeys));
+	dirMenu.setModel(new DefaultComboBoxModel<>(allLongKeys));
         dirMenu.setSelectedItem(currentDirKey);
 	pathEntry.setText(currentDir);
         newDirButton.setEnabled(false);
@@ -1617,7 +1617,7 @@ public class SaveDataDialog extends ModalDialog
 
     protected void getparentDirs_ds() {
 
-	parentDirs_ds = new Hashtable();
+	parentDirs_ds = new Hashtable<>();
 
 	for(Enumeration en = p11ParentDirs.keys(); en.hasMoreElements(); ) {
 	    String key = (String) en.nextElement();
@@ -1658,7 +1658,7 @@ public class SaveDataDialog extends ModalDialog
 	return "";
     }
 
-    protected Hashtable readP11ParentDirs() {
+    protected Hashtable<String, String> readP11ParentDirs() {
 
 	String path = FileUtil.openPath(P11DIR+m_userName);
 
@@ -1673,7 +1673,7 @@ public class SaveDataDialog extends ModalDialog
 	return readFirstLine(path);
     }
 
-    protected Hashtable readChildDirs() {
+    protected Hashtable<String, String> readChildDirs() {
 
 	String path = FileUtil.openPath(CHILDDIR);
 
@@ -1683,7 +1683,7 @@ public class SaveDataDialog extends ModalDialog
 	return(readHash(path));
     }
 
-    protected Hashtable readDataDirs() {
+    protected Hashtable<String, String> readDataDirs() {
 
 	String path = FileUtil.openPath(DATADIR+m_userName);
 
@@ -1707,9 +1707,9 @@ public class SaveDataDialog extends ModalDialog
     }
 
     protected void getallKeysValues() {
-	allKeysPaths = new Hashtable();
-	allKeysSpaces = new Hashtable();
-	allKeysTypes = new Hashtable();
+	allKeysPaths = new Hashtable<>();
+	allKeysSpaces = new Hashtable<>();
+	allKeysTypes = new Hashtable<>();
 
 	if(part11Mode != 0)
 	for(Enumeration en = p11ParentDirs.keys(); en.hasMoreElements(); ) {
@@ -1758,12 +1758,12 @@ public class SaveDataDialog extends ModalDialog
     }
 
     protected void sortallKeys() {
-	allKeys = new Vector();
+	allKeys = new Vector<>();
 
 	// sort p11 dirs and data dirs separately
 
- 	Vector p11Dirs = new Vector();
- 	Vector dataDirs = new Vector();
+ 	Vector<String> p11Dirs = new Vector<>();
+ 	Vector<String> dataDirs = new Vector<>();
 
 	for(Enumeration en = allKeysTypes.keys(); en.hasMoreElements(); ) {
 	    String key = (String) en.nextElement();
@@ -1811,7 +1811,7 @@ public class SaveDataDialog extends ModalDialog
             return;
         }
 
-	Hashtable hash = new Hashtable();
+	Hashtable<String, String> hash = new Hashtable<>();
 	if(part11Mode != 0)
 	for(Enumeration en = p11ParentDirs.keys(); en.hasMoreElements(); ) {
 	    String key = (String) en.nextElement();
@@ -1847,9 +1847,9 @@ public class SaveDataDialog extends ModalDialog
     }
 
     protected void makeallLongKeys() {
-	allLongKeys = new Vector();
-	allLongKeysPaths = new Hashtable();
-	allLongKeysTypes = new Hashtable();
+	allLongKeys = new Vector<>();
+	allLongKeysPaths = new Hashtable<>();
+	allLongKeysTypes = new Hashtable<>();
     int nLength = allKeys.size();
 
 	for(int i=0; i<nLength; i++) {

@@ -213,7 +213,7 @@ public class VJMol extends JSplitPane implements ActionListener
         pnl.add(new JLabel("Atom Type:"), gbc);
         gbc.gridx = 1;
         gbc.weightx = 0.2;
-        m_cmbAtomLabels = new JComboBox(m_aStrAtomLabels);
+        m_cmbAtomLabels = new JComboBox<>(m_aStrAtomLabels);
         pnl.add(m_cmbAtomLabels, gbc);
         m_cmbAtomLabels.addActionListener(this);
         m_cmbAtomLabels.setActionCommand("atomlabels");
@@ -224,7 +224,7 @@ public class VJMol extends JSplitPane implements ActionListener
         pnl.add(new JLabel("View:"), gbc);
         gbc.gridx = 1;
         gbc.weightx = 0.2;
-        m_cmbView = new JComboBox(m_aStrView);
+        m_cmbView = new JComboBox<>(m_aStrView);
         pnl.add(m_cmbView, gbc);
         m_cmbView.addActionListener(this);
         m_cmbView.setActionCommand("view");
@@ -236,7 +236,7 @@ public class VJMol extends JSplitPane implements ActionListener
         gbc.gridx = 1;
         gbc.weightx = 0.2;
         String[] aStrMode = {"Rotate", "Zoom", "Translate", "Select", "Measure"};
-        m_cmbMode = new JComboBox(aStrMode);
+        m_cmbMode = new JComboBox<>(aStrMode);
         m_cmbMode.addActionListener(this);
         m_cmbMode.setActionCommand("mode");
         pnl.add(m_cmbMode, gbc);
@@ -252,7 +252,7 @@ public class VJMol extends JSplitPane implements ActionListener
         m_txfImage = new JTextField();
         pnl2.add(m_txfImage, gbc);
         gbc.weightx = 0;
-        m_cmbFormat = new JComboBox(m_aStrFormat);
+        m_cmbFormat = new JComboBox<>(m_aStrFormat);
         gbc.gridx = 1;
         pnl2.add(m_cmbFormat, gbc);
         gbc.gridy = 5;
@@ -783,7 +783,7 @@ public class VJMol extends JSplitPane implements ActionListener
         Container container = frame.getContentPane();
         container.add(vjmol);
         frame.pack();
-        frame.show();
+        frame.setVisible(true);
 
         frame.addWindowListener(new WindowAdapter()
         {
@@ -1020,15 +1020,13 @@ public class VJMol extends JSplitPane implements ActionListener
 
             if (bShow)
             {
-                Vector vecMeasurements = displayControl.getDistanceMeasurements();
+                List<MeasurementInterface> vecMeasurements = displayControl.getDistanceMeasurements();
                 if (nLength == 3)
-                    vecMeasurements = displayControl.getAngleMeasurements();
+                    vecMeasurements = (List<MeasurementInterface>) displayControl.getAngleMeasurements();
                 else if (nLength == 4)
-                    vecMeasurements = displayControl.getDihedralMeasurements();
+                    vecMeasurements = (List<MeasurementInterface>) displayControl.getDihedralMeasurements();
 
-                Enumeration e = vecMeasurements.elements();
-                while (e.hasMoreElements()) {
-                    MeasurementInterface measurement = (MeasurementInterface) e.nextElement();
+                for (MeasurementInterface measurement : vecMeasurements) {
                     if (measurement instanceof Distance)
                     {
                         if (((Distance)measurement).sameAs(selection[0], selection[1]))

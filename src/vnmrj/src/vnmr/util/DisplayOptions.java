@@ -1222,7 +1222,7 @@ public class DisplayOptions extends ModelessDialog
             return false;
         try {
             String sid = name.replace(key, "");
-            id = Integer.decode(sid);
+            id = Integer.decode(sid).intValue();
         } catch(NumberFormatException e) {
             return false;
         }
@@ -1617,7 +1617,7 @@ public class DisplayOptions extends ModelessDialog
                         continue;
                     try {
                         String sid = name.replace(key, "");
-                        id = Integer.decode(sid);
+                        id = Integer.decode(sid).intValue();
                     } catch(NumberFormatException e) {
                         continue;
                     }

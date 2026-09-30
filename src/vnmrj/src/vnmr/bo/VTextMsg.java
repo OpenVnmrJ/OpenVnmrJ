@@ -82,7 +82,7 @@ implements VObjIF, VEditIF, StatusListenerIF, VObjDef,
         mlEditor = new MouseAdapter() {
               public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         if (!m_bParameter)
@@ -486,20 +486,20 @@ implements VObjIF, VEditIF, StatusListenerIF, VObjDef,
     }
 
     private final static Object[][] attributes = {
-        {new Integer(STATPAR),  "Status parameter to display:"},
-        {new Integer(VARIABLE), "Vnmr variables:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(SETVAL),   "Vnmr expression to display:"},
-        {new Integer(NUMDIGIT), "Number of digits:"},
+        {Integer.valueOf(STATPAR),  "Status parameter to display:"},
+        {Integer.valueOf(VARIABLE), "Vnmr variables:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(SETVAL),   "Vnmr expression to display:"},
+        {Integer.valueOf(NUMDIGIT), "Number of digits:"},
     };
     
     private final static Object[][] attributes_H = {
-        {new Integer(STATPAR),  "Status parameter to display:"},
-        {new Integer(VARIABLE), "Vnmr variables:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(SETVAL),   "Vnmr expression to display:"},
-        {new Integer(NUMDIGIT), "Number of digits:"},
-        {new Integer(HELPLINK), Util.getLabel("blHelp")}
+        {Integer.valueOf(STATPAR),  "Status parameter to display:"},
+        {Integer.valueOf(VARIABLE), "Vnmr variables:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(SETVAL),   "Vnmr expression to display:"},
+        {Integer.valueOf(NUMDIGIT), "Number of digits:"},
+        {Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}
     };
     
     public void setModalMode(boolean s) {}
@@ -522,7 +522,8 @@ implements VObjIF, VEditIF, StatusListenerIF, VObjDef,
             setBounds(curLoc.x, curLoc.y, curDim.width, curDim.height);
     }
 
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
            defLoc.y = y;
@@ -538,7 +539,7 @@ implements VObjIF, VEditIF, StatusListenerIF, VObjDef,
               adjustFont(w, h);
            }
         }
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
 

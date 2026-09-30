@@ -151,7 +151,7 @@ public class WFileUtil
             {
                 strPath = getItemPath(strDir);
             }
-            HashMap hmItem = getHashMap(strPath);
+            HashMap<String,String> hmItem = getHashMap(strPath);
             fillValues(hmItem, pnlArea, false);
             inputName(strPath, hmItem, pnlArea);
         }
@@ -170,7 +170,7 @@ public class WFileUtil
      *  @param strPath  the path of the file to be read that has the values.
      *  @param pnlArea  the panel whose components' values need to be filled.
      */
-    public static void fillValues(HashMap hmItem, JPanel pnlArea, boolean bSetName)
+    public static void fillValues(HashMap<String,String> hmItem, JPanel pnlArea, boolean bSetName)
     {
         int nCompCount = pnlArea.getComponentCount();
         String strValue = null;
@@ -297,7 +297,7 @@ public class WFileUtil
             return false;
 
         String strName = changeBtnName(objVal);
-        HashMap hmDefaults = getUserDefaults();
+        HashMap<String,WUserDefData> hmDefaults = getUserDefaults();
         Value objValue = null;
         // write the file in the following format:
         // key   value
@@ -386,7 +386,7 @@ public class WFileUtil
      *  @param pnlArea  the panel belonging to the item.
      *  @param hmItem   the hashmap of the given item.
      */
-    public static void updateItemFile(String strPath, HashMap hmItem)
+    public static void updateItemFile(String strPath, HashMap<String,String> hmItem)
     {
         if (hmItem == null || hmItem.isEmpty())
             return;
@@ -418,24 +418,24 @@ public class WFileUtil
      *  @param hmItem   the hashmap of the given item.
      */
     public static void updateItemFile(BufferedWriter outPb, BufferedWriter outPrv,
-                                        HashMap hmItem)
+                                        HashMap<String,String> hmItem)
     {
         WObjIF objItem = null;
         String strKey = null;
         String strValue = null;
         String strLine = null;
 
-        HashMap hmDef = getUserDefaults();
+        HashMap<String,WUserDefData> hmDef = getUserDefaults();
         StringBuffer sbPbLine = new StringBuffer();
         StringBuffer sbPrvLine = new StringBuffer();
-        Iterator keySetItr = hmItem.keySet().iterator();
+        Iterator<String> keySetItr = hmItem.keySet().iterator();
 
 
         try
         {
             while(keySetItr.hasNext())
             {
-                strKey = (String)keySetItr.next();
+                strKey = keySetItr.next();
                 strValue = (String)hmItem.get(strKey);
                 if (strValue == null)
                     strValue = "";
@@ -549,7 +549,7 @@ public class WFileUtil
      *   and if the key is public.
      */
     protected static Value getKeyValLine(int nComp, JPanel pnlArea, String strName,
-                                            HashMap hmDefaults, HashMap hmUser)
+                                            HashMap<String,?> hmDefaults, HashMap<String,String> hmUser)
     {
         String strValue = null;
         String strLine =  null;
@@ -642,7 +642,7 @@ public class WFileUtil
         }
     }
 
-    protected static void inputName(String strDir, HashMap hmItem, JPanel pnlArea)
+    protected static void inputName(String strDir, HashMap<String,String> hmItem, JPanel pnlArea)
     {
         if (hmItem == null)
             return;
@@ -677,7 +677,7 @@ public class WFileUtil
      *  @param objItem  the object whose value should be set.
      *  @param hmItem   the hashmap that contains the key value pair for the item.
      */
-    protected static String getValue(WObjIF objItem, HashMap hmItem, boolean bSetName)
+    protected static String getValue(WObjIF objItem, HashMap<String,String> hmItem, boolean bSetName)
     {
         String strValue = null;
 
@@ -745,7 +745,7 @@ public class WFileUtil
                     String strNewKey = sbKey.substring(nBegIndex+1, nEndIndex);
 
                     if (objSource instanceof HashMap)
-                        strValue = lookUpValue((HashMap)objSource, strNewKey.trim());
+                        strValue = lookUpValue((HashMap<String,String>)objSource, strNewKey.trim());
                     else if (objSource instanceof VDetailArea)
                         strValue = ((VDetailArea)objSource).getItemValue(strNewKey.trim());
 
@@ -812,13 +812,13 @@ public class WFileUtil
         return strPath;
     }
 
-    public static HashMap getHashMapUser(String strUser)
+    public static HashMap<String,String> getHashMapUser(String strUser)
     {
         String strPath = getHMPath(strUser);
         return getHashMap(strPath);
     }
 
-    public static HashMap getHashMap(String strPath)
+    public static HashMap<String,String> getHashMap(String strPath)
     {
         return getHashMap(strPath, true);
     }
@@ -827,16 +827,16 @@ public class WFileUtil
      *  Returns the hashMap for the given file from the cache.
      *  @param strPath  the file path of the item.
      */
-    public static HashMap getHashMap(String strPath, boolean bCreateNew)
+    public static HashMap<String,String> getHashMap(String strPath, boolean bCreateNew)
     {
-        HashMap hmItem = null;
+        HashMap<String,String> hmItem = null;
         if (strPath != null)
-            hmItem = (HashMap)getObjCache().getData(strPath, bCreateNew);
+            hmItem = (HashMap<String,String>)getObjCache().getData(strPath, bCreateNew);
 
         return hmItem;
     }
 
-    public static void setHashMap(String strKey, HashMap hmItem)
+    public static void setHashMap(String strKey, HashMap<String,String> hmItem)
     {
         if (strKey != null && hmItem != null)
         {
@@ -934,7 +934,7 @@ public class WFileUtil
      *  @param strPath  the path of the file.
      *  @param objMap   the hashmap that needs to be set.
      */
-    private static void setHM(String strPath, HashMap objMap)
+    private static void setHM(String strPath, HashMap<String,String> objMap)
     {
         String strPublicPath = strPath;
         String strPrivatePath = null;
@@ -979,7 +979,7 @@ public class WFileUtil
      *  @param in       the input to be read.
      *  @param hmItem   the hashmap that needs to be set.
      */
-    private static HashMap setHM(BufferedReader in, HashMap hmItem)
+    private static HashMap<String,String> setHM(BufferedReader in, HashMap<String,String> hmItem)
     {
         String strLine;
         String strValue = null;
@@ -1051,17 +1051,17 @@ public class WFileUtil
         return objFile;
     }
 
-    protected static HashMap makeNewHM(HashMap hmUserDef, String strUser, String strItype)
+    protected static HashMap<String,String> makeNewHM(HashMap<String,?> hmUserDef, String strUser, String strItype)
     {
         String strKey = null;
         WUserDefData userData = null;
         String strValue = null;
-        HashMap hmUser = new HashMap();
+        HashMap<String,String> hmUser = new HashMap<String,String>();
 
         if (hmUserDef == null)
             return hmUser;
 
-        Iterator keySetItr = hmUserDef.keySet().iterator();
+        Iterator<String> keySetItr = hmUserDef.keySet().iterator();
 
         try
         {
@@ -1071,8 +1071,9 @@ public class WFileUtil
             // and make a hashmap for the user with key and value.
             while(keySetItr.hasNext())
             {
-                strKey = (String)keySetItr.next();
-                userData = (WUserDefData)hmUserDef.get(strKey);
+                strKey = keySetItr.next();
+                Object _val1 = hmUserDef.get(strKey);
+                userData = (_val1 instanceof WUserDefData) ? (WUserDefData)_val1 : null;
                 if (userData != null)
                     strValue = userData.getValue();
 
@@ -1084,7 +1085,8 @@ public class WFileUtil
                     hmUser.put(strKey, strValue);
             }
             // get the absolute values
-            hmUser = getAbsoluteValues((HashMap)hmUser.clone());
+            HashMap<String,String> hmUserClone = (HashMap<String,String>)hmUser.clone();
+            hmUser = getAbsoluteValues(hmUserClone);
         }
         catch(Exception e)
         {
@@ -1096,11 +1098,11 @@ public class WFileUtil
         return hmUser;
     }
 
-    protected static HashMap makeNewHM(JPanel pnlItem, String strUser)
+    protected static HashMap<String,String> makeNewHM(JPanel pnlItem, String strUser)
     {
         String strKey = null;
         String strValue = null;
-        HashMap hmUser = new HashMap();
+        HashMap<String,String> hmUser = new HashMap<String,String>();
         WObjIF objItem = null;
 
         if (pnlItem == null || !(pnlItem instanceof WObjIF))
@@ -1127,8 +1129,8 @@ public class WFileUtil
 
     // Create a HashMap for a user.  Start with the defaults and then modify
     // as per the options supplied.
-    protected static HashMap makeNewHM(HashMap hmUserDef, String strUser, 
-                                       HashMap userInfo)
+    protected static HashMap<String,String> makeNewHM(HashMap<String,?> hmUserDef, String strUser,
+                                       HashMap<String,String> userInfo)
     {
         String strKey = null;
         WUserDefData userData = null;
@@ -1142,7 +1144,7 @@ public class WFileUtil
         // The hmUser HashMap needs to have Strings for values
         // Thus we have to loop through and create the hmUser HashMap.
         // First just make one that has the defaults.
-        Iterator keySetItr = hmUserDef.keySet().iterator();
+        Iterator<String> keySetItr = hmUserDef.keySet().iterator();
 
         try
         {
@@ -1152,8 +1154,9 @@ public class WFileUtil
             // and make a hashmap for the user with key and value.
             while(keySetItr.hasNext())
             {
-                strKey = (String)keySetItr.next();
-                userData = (WUserDefData)hmUserDef.get(strKey);
+                strKey = keySetItr.next();
+                Object _val2 = hmUserDef.get(strKey);
+                userData = (_val2 instanceof WUserDefData) ? (WUserDefData)_val2 : null;
                 if (userData != null)
                     strValue = userData.getValue();
 
@@ -1172,25 +1175,25 @@ public class WFileUtil
         // We will go through the options and modify hmUser based on those.
         // The HashMap, userInfo, has option keywords as keys (see userDefaults)
         // and values are the values for that option.
-        keySetItr = userInfo.keySet().iterator();
-        while(keySetItr.hasNext())
+        Iterator<String> keySetItr2 = userInfo.keySet().iterator();
+        while(keySetItr2.hasNext())
         {
-            strKey = (String)keySetItr.next();
-            strValue = (String)userInfo.get(strKey);
+            strKey = keySetItr2.next();
+            strValue = userInfo.get(strKey);
             // Overwrite entries in hmUser with any that were specified
             // in userInfo.
             hmUser.put(strKey, strValue);
         }
         // get the absolute values, ie., resolve $home and $userdir items
-        hmUser = getAbsoluteValues((HashMap<String, String>)hmUser.clone());
+        hmUser = getAbsoluteValues(new HashMap<String, String>(hmUser));
 
         return hmUser;
     }
 
 
-    protected static HashMap<String, String> getAbsoluteValues(HashMap hmItem)
+    protected static HashMap<String, String> getAbsoluteValues(HashMap<String, String> hmItem)
     {
-        Iterator keySetItr = hmItem.keySet().iterator();
+        Iterator<String> keySetItr = hmItem.keySet().iterator();
         String strKey = null;
         String strValue = null;
 
@@ -1330,7 +1333,7 @@ public class WFileUtil
         {
             String strIType = aStrITypes[i];
             String strFile = FileUtil.SYS_VNMR + "/tmp/" + strIType;
-            ArrayList aListCache = (ArrayList)pnlCache.getData(strFile, false);
+            ArrayList<String> aListCache = (ArrayList<String>)pnlCache.getData(strFile, false);
 
             //System.out.println("The arraylist is " + aListCache);
             if (aListCache == null || aListCache.isEmpty())
@@ -1350,9 +1353,9 @@ public class WFileUtil
         }
     }
 
-    protected static HashMap getUserDefaults()
+    protected static HashMap<String,WUserDefData> getUserDefaults()
     {
-        HashMap hmDef = null;
+        HashMap<String,WUserDefData> hmDef = null;
         if (Util.getAppIF() instanceof VAdminIF)
         {
             hmDef = ((VAdminIF)Util.getAppIF()).getUserDefaults();
@@ -1414,7 +1417,7 @@ public class WFileUtil
      *  @param hmItem   the hashmap used for lookup.
      *  @param strKey   the key needed to be used for lookup.
      */
-    public static String lookUpValue(HashMap hmItem, String strKey)
+    public static String lookUpValue(HashMap<String,String> hmItem, String strKey)
     {
         String strValue = null;
         if (hmItem != null && strKey != null)
@@ -1452,7 +1455,7 @@ public class WFileUtil
             if (Util.iswindows())
                 strPath = UtilB.unixPathToWindows(strPath);
             File objFile = new File(strPath);
-            HashMap hmConts = new HashMap();
+            HashMap<String,String> hmConts = new HashMap<String,String>();
             setHM(strPath, hmConts);
 
             return new WFile(objFile.lastModified(), hmConts);

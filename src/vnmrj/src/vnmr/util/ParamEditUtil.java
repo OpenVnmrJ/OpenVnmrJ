@@ -387,10 +387,10 @@ public final class ParamEditUtil implements VObjDef,EditListenerIF {
 
                public void mouseClicked(MouseEvent evt) {
                     int clicks = evt.getClickCount();
-                    int modifier = evt.getModifiers();
+                    int modifier = evt.getModifiersEx();
                     clickInPanel(evt);
 
-                    if((modifier & InputEvent.BUTTON3_MASK) !=0){
+                    if((modifier & InputEvent.getMaskForButton(3)) !=0){
                         menuAction(evt);
                     }
                     else if (clicks >= 2) {
@@ -435,7 +435,7 @@ public final class ParamEditUtil implements VObjDef,EditListenerIF {
                     e.consume();
                     if(lastWasPressed){
 	                    int k = e.getKeyCode();
-	                    int m = e.getModifiers();
+	                    int m = e.getModifiersEx();
 	                    if (m == 0){
 	                        if(k==java.awt.event.KeyEvent.VK_BACK_SPACE)
 	                            clearObject();
@@ -444,7 +444,7 @@ public final class ParamEditUtil implements VObjDef,EditListenerIF {
 	                            relocateDummy();
 	                        }
 	                    }
-	                    else if (m == Event.CTRL_MASK){
+	                    else if (m == InputEvent.CTRL_DOWN_MASK){
 	                        switch(k){
 	                        case java.awt.event.KeyEvent.VK_C:
 	                            copyObject();
@@ -781,7 +781,7 @@ public final class ParamEditUtil implements VObjDef,EditListenerIF {
             return;
 
         MouseEvent ne = new MouseEvent(obj, MouseEvent.MOUSE_CLICKED,
-                0, e.getModifiers(), 1, 1, 2, false);
+                0, e.getModifiersEx(), 1, 1, 2, false);
         for (int k = 0; k < +mls.length; k++) {
             MouseListener ms = (MouseListener) mls[k];
             if (ms != null) {
@@ -964,8 +964,8 @@ public final class ParamEditUtil implements VObjDef,EditListenerIF {
         Point pc = editObj.getLocationOnScreen();
         int mx = e.getX() + pe.x - pc.x;
         int my = e.getY() + pe.y - pc.y;
-        int md = e.getModifiers();
-        if ((md & InputEvent.BUTTON1_MASK) != 0) {
+        int md = e.getModifiersEx();
+        if ((md & InputEvent.getMaskForButton(1)) != 0) {
             mDrag(e);
             return;
         }
@@ -2079,7 +2079,7 @@ public final class ParamEditUtil implements VObjDef,EditListenerIF {
 		    DisplayOptions.addChangeListener(this);
 			ParamEditUtil.cut = add(Util.getLabel("emCut", "Cut"));
 			ParamEditUtil.cut.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_X,
-                    java.awt.Event.CTRL_MASK));
+                    InputEvent.CTRL_DOWN_MASK));
 			ParamEditUtil.cut.addActionListener( new ActionListener() {
 				public void actionPerformed(ActionEvent evt) {
 					ParamEditUtil.cutObject();
@@ -2088,7 +2088,7 @@ public final class ParamEditUtil implements VObjDef,EditListenerIF {
 
 			ParamEditUtil.copy = add(Util.getLabel("emCopy", "Copy"));
 			ParamEditUtil.copy.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C,
-                    java.awt.Event.CTRL_MASK));
+                    InputEvent.CTRL_DOWN_MASK));
 			ParamEditUtil.copy.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent evt) {
 					ParamEditUtil.copyObject();
@@ -2097,7 +2097,7 @@ public final class ParamEditUtil implements VObjDef,EditListenerIF {
 
 			ParamEditUtil.paste = add(Util.getLabel("emPaste", "Paste"));
 			ParamEditUtil.paste.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V,
-                    java.awt.Event.CTRL_MASK));
+                    InputEvent.CTRL_DOWN_MASK));
 
 			ParamEditUtil.paste.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent evt) {

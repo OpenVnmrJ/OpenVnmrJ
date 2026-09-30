@@ -88,7 +88,7 @@ public class CryoControl implements MessageIF {
                 m_cryoMsg.postError("Unknown \"cryocmd\": " + str);
                 return false;
             } else {
-                return execCommand(cmd, nCmd, tok);
+                return execCommand(cmd, nCmd.intValue(), tok);
             }
     }
 
@@ -284,10 +284,10 @@ public class CryoControl implements MessageIF {
      * List of possible cryo commands and their Integer codes.
      */
     private static final Object[][] CMD_TABLE = {
-        {"init",                  INIT},
-        {"openDiagnostics",       OPEN_CRYO},
-        {"connectCryoBay",        CONNECT_CRYO},
-        {"connectTempController", CONNECT_TEMP},
+        {"init", Integer.valueOf(INIT)},
+        {"openDiagnostics", Integer.valueOf(OPEN_CRYO)},
+        {"connectCryoBay", Integer.valueOf(CONNECT_CRYO)},
+        {"connectTempController", Integer.valueOf(CONNECT_TEMP)},
     };
 
     @Override
