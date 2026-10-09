@@ -1155,6 +1155,31 @@ void unlockAtcmd(const char *dir)
    unlockit(lockPath,idPath);
 }
 
+/* lockGlobal and unlockGlobal are used by multiple Vnmrbg processes */
+
+void lockGlobal(const char *dir)
+{
+   char lockPath[MAXSTR];
+   char idPath[MAXSTR];
+   const char *lockname = "lockGlobal";
+   time_t lockSecs = 5; /* default lock timeout */
+
+   sprintf(lockPath,"%s/%s",dir,lockname);
+   sprintf(idPath,"%s/gb_%d",dir,getpid());
+   lockit(lockPath,idPath,lockSecs);
+}
+
+void unlockGlobal(const char *dir)
+{
+   char lockPath[MAXSTR];
+   char idPath[MAXSTR];
+   const char *lockname = "lockGlobal";
+
+   sprintf(lockPath,"%s/%s",dir,lockname);
+   sprintf(idPath,"%s/gb_%d",dir,getpid());
+   unlockit(lockPath,idPath);
+}
+
 /* lockPsgQ and unlockPsgQ are used by PSG and Autoproc */
 
 void lockPsgQ(const char *dir)
