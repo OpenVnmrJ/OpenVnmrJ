@@ -263,6 +263,8 @@ extern void set_ybar_style(int n);
 extern int jTable_changed(int argc, char *argv[]);
 extern char *getParentMacro();
 extern int XParseGeometry ( const char *string, int *x, int *y, unsigned int *width, unsigned int *height);
+extern void lockGlobal(const char *dir);
+extern void unlockGlobal(const char *dir);
 
 
 int          Bnmr;
@@ -2063,9 +2065,9 @@ void AcqSocketIsRead(int (*reader)(char *, int, int *))
 
 void insertAcqMsgEntry(char *acqmptr )
 {
-	register int			 esize, finished;
-	register char			*tmpptr;
-	register struct acqmsgentry	*curptr, *newptr;
+	int			 esize, finished;
+	char			*tmpptr;
+	struct acqmsgentry	*curptr, *newptr;
 
 /*  Be careful to leave curptr pointing to something useful, not NULL
     (unless, of course, the queue is empty)				*/
@@ -2113,7 +2115,7 @@ void insertAcqMsgEntry(char *acqmptr )
 
 struct acqmsgentry *removeAcqMsgEntry()
 {
-	register struct acqmsgentry	*curptr;
+	struct acqmsgentry	*curptr;
 
 	if (baseofqueue == NULL) return( NULL );	/* empty queue */
 
@@ -2126,7 +2128,7 @@ struct acqmsgentry *removeAcqMsgEntry()
 
 static void removeJeventEntry(char *keyName, int len)
 {
-	register struct acqmsgentry	*curptr, *pnode, *np;
+	struct acqmsgentry	*curptr, *pnode, *np;
 	char *d;
 
 	if (baseofqueue == NULL) return;
@@ -3701,8 +3703,10 @@ static void flushGlobal(int ret)
 	int diskIsFull, ival;
 	strcpy(parampath,userdir);
 	strcat(parampath,"/global");
+	lockGlobal(userdir);
 	if (P_save(GLOBAL,parampath))
 	{
+	  unlockGlobal(userdir);
 	  ival = isDiskFullFile( userdir, parampath, &diskIsFull );
 	  if (ival == 0 && diskIsFull)
 	    Werrprintf("problem saving global parameters: disk is full");
@@ -3710,6 +3714,7 @@ static void flushGlobal(int ret)
 	    Werrprintf("problem saving global parameters");
 	  return;
 	}
+	unlockGlobal(userdir);
 /* also write out conpar if vnmr1? */
         if (ret > 0)
 	   writelineToVnmrJ("flush","startv");

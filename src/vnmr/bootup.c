@@ -107,6 +107,8 @@ extern int  getAutoDir(char *str, int maxlen);
 extern int  openVnmrInfo(char *dir);
 extern int  delexp(int argc, char *argv[], int retc, char *retv[]);
 extern void setCancel(int doit, char *str);
+extern void lockGlobal(const char *dir);
+extern void unlockGlobal(const char *dir);
 
 #ifdef VNMRJ
 extern int VnmrJViewId;
@@ -410,8 +412,10 @@ void bootup(int enumber)
 
     strcpy(parampath,userdir);
     strcat(parampath,"/global");
+    lockGlobal(userdir);
     if (P_read(GLOBAL,parampath)) 
 	Werrprintf("problem loading global parameters");
+    unlockGlobal(userdir);
 #ifdef VNMRJ
    // set curexpdir based on jcurwin of viewport 1
    jcurwin_init(curexpdir);
@@ -1408,6 +1412,7 @@ int flush( int argc, char *argv[], int retc, char *retv[] )
 
         strcpy(parampath,userdir);
         strcat(parampath,"/global");
+        lockGlobal(userdir);
         if (P_save(GLOBAL,parampath)) 
         {
 	   ival = isDiskFullFile( userdir, parampath, &diskIsFull );
@@ -1415,8 +1420,10 @@ int flush( int argc, char *argv[], int retc, char *retv[] )
 	      Werrprintf("problem saving global parameters: disk is full");
 	   else
 	      Werrprintf("problem saving global parameters");
+           unlockGlobal(userdir);
            ABORT;
         }
+        unlockGlobal(userdir);
        }
 
        if (noGlobal == 0)

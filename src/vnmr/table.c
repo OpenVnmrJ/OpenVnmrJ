@@ -217,10 +217,10 @@ extern int fidproc(int argc, char *argv[], int retc, char *retv[]);
 #ifndef VNMRJ
 extern int files();
 extern int filesinfo();
+extern int flip();
 #endif
 extern int fitspec();
 extern int flashc();			/* flashc reformatting */
-extern int flip();
 extern int flush();
 extern int flush2(int argc, char *argv[], int retc, char *retv[]);
 extern int flushpars(int argc, char *argv[], int retc, char *retv[]);
@@ -391,6 +391,7 @@ extern int recon_all();
 extern int recon3D();
 extern int recon_mm();
 extern int recordOff();
+extern int redirect(int argc, char *argv[], int retc, char *retv[]);
 extern int releaseConsole();
 extern int resume();
 extern int region();
@@ -772,9 +773,9 @@ static cmd_t vnmr_table[] = {
 #ifndef VNMRJ
 	{"files"      , files,		NO_REEXEC, 0},
 	{"filesinfo"  , filesinfo,	NO_REEXEC, 0},
+	{"flip"       , flip,		NO_REEXEC, 0},
 #endif
 	{"flashc"     , flashc,		NO_REEXEC, 0},
-	{"flip"       , flip,		NO_REEXEC, 0},
 	{"flush"      , flush,		NO_REEXEC, 0},
 	{"flush2"     , flush2,		NO_REEXEC, 0},
 	{"flushpars"  , flushpars,	NO_REEXEC, 0},
@@ -1023,6 +1024,7 @@ static cmd_t vnmr_table[] = {
 	{"recon3D"    , recon3D,        NO_REEXEC, 0},
 	{"recon_mm"  , recon_mm,     	NO_REEXEC, 0},
 	{"recordOff"  , recordOff,	NO_REEXEC, 0},
+	{"redirect"  , redirect,	NO_REEXEC, 0},
 	{"releaseConsole", releaseConsole, NO_REEXEC, 0},
 	{"rename"     , shellcmds,	NO_REEXEC, 0},
 	{"region"     , region,		NO_REEXEC, 0},
