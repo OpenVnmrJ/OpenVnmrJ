@@ -206,7 +206,10 @@ extern int	ok;			/* global error flag */
        int	ok2bumpflag;
        int	oldwhenshim;		/* previous value of shimming mask */
 static int	pipe1[2];
-static int	pipe2[2];
+// Note: unistd.h:389: error: previous declaration of 'int pipe2(int*, int)
+// static int pipe2[2];
+// So change the name to pipeB
+static int	pipeB[2];
        int	PSfile = 0;			/* file discriptor for Acode file */
        int	ra_flag;		/* ra flag */
 static int	ready = 0;              /* go.c expects 0 for success */
@@ -336,8 +339,8 @@ int main(int argc, char *argv[])
     Rev_Num = atoi(argv[1]); /* GO -> PSG Revision Number */
     pipe1[0] = atoi(argv[2]);
     pipe1[1] = atoi(argv[3]);
-    pipe2[0] = atoi(argv[4]); /* convert file descriptors for pipe 2*/
-    pipe2[1] = atoi(argv[5]);
+    pipeB[0] = atoi(argv[4]); /* convert file descriptors for pipe 2*/
+    pipeB[1] = atoi(argv[5]);
     setupflag = atoi(argv[6]);	/* alias flag */
     
     if (bgflag)
@@ -350,7 +353,7 @@ int main(int argc, char *argv[])
     }
  
     close(pipe1[1]); /* close write end of pipe 1*/
-    close(pipe2[0]); /* close read end of pipe 2*/
+    close(pipeB[0]); /* close read end of pipe 2*/
     P_rec_stat = P_receive(pipe1);  /* Receive variables from pipe and load trees */    
     close(pipe1[0]);
     /* check options passed to psg */
@@ -749,7 +752,7 @@ int main(int argc, char *argv[])
 	ix = nth2D =  1;		/* make Acodes for FID 1 */
 	if (dps_flag && ! checkflag)
         {
-              createDPS(argv[0], curexp, arraydim, 0, NULL, pipe2[1]);
+              createDPS(argv[0], curexp, arraydim, 0, NULL, pipeB[1]);
               close_error(0);
               exit(0);
         }
@@ -812,7 +815,7 @@ int main(int argc, char *argv[])
         }
 	if (dps_flag)
         {
-              createDPS(argv[0], curexp, arraydim, narrays, arrayStr, pipe2[1]);
+              createDPS(argv[0], curexp, arraydim, narrays, arrayStr, pipeB[1]);
               close_error(0);
               exit(0);
         }
@@ -1067,7 +1070,7 @@ void first_done()
 {
    if ( ! checkflag )
       write_exp_info();
-   write(pipe2[1],&ready,sizeof(int)); /* tell go, PSG is done with first elem */
+   write(pipeB[1],&ready,sizeof(int)); /* tell go, PSG is done with first elem */
 }
 /*--------------------------------------------------------------------------
 |   This closes the pipe that go is waiting on when it is in automation mode.
@@ -1080,11 +1083,11 @@ void closepipe2(int success)
 
 
     if (acqiflag || waitflag)
-       write(pipe2[1],&success,sizeof(int)); /* tell go, PSG is done */
+       write(pipeB[1],&success,sizeof(int)); /* tell go, PSG is done */
     else if (!dps_flag && (getparm("auto","string",GLOBAL,autopar,12) == 0))
         if ((autopar[0] == 'y') || (autopar[0] == 'Y'))
-            write(pipe2[1],&success,sizeof(int)); /* tell go, PSG is done */
-    close(pipe2[1]); /* close write end of pipe 2*/
+            write(pipeB[1],&success,sizeof(int)); /* tell go, PSG is done */
+    close(pipeB[1]); /* close write end of pipe 2*/
 }
 /*-----------------------------------------------------------------------
 +------------------------------------------------------------------------*/
