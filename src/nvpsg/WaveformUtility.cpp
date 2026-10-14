@@ -113,7 +113,9 @@ cPatternEntry *WaveformUtility::readRFWaveform(char *name, RFController *rf1, un
        {
          if ( (*(pStartPos+i) & (31<<26)) == DURATIONKEY)
          {
-           *(pStartPos+i) |= rf1->calcTicks(duration);
+           *(pStartPos+i) |=
+              (unsigned int)
+                (rf1->calcTicks(duration) & 0x3FFFFFFLL);
          }
        }
    if (eventcount > 0)
