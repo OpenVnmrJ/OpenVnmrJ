@@ -201,20 +201,28 @@ then
 
 else
 
-        $vjshell  "$javabin" "$vjmem" \
-          -classpath $vjclasspath $dargs $modsArg $splash \
-          -Xdock:icon=/vnmr/iconlib/Splash_VnmrJ.png \
-          -Xdock:name=OpenVnmrJ \
-          -Ddbhost=$dbhost -Ddbport=$dbport -Dsysdir=$sysdir -Duserdir=$userdir \
-          -Duser=$USER -Dfont="Dialog plain 14" -Dlookandfeel=$laf -Dtheme=$theme -DqueueArea=yes \
-          -DcanvasFont="Dialog plain 12" \
-          -Dcmd="$cmd" \
-          -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX" \
-          -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dvjerrfile=custom \
-          -Dbatchupdates=no -Dpersona=$itype -Dsavepanels=10 -DSQAllowNesting=false \
-          -Dsquish=$squish -Ddbnet_server=$dbnet_server \
-          -Djava.library.path="/vnmr/lib" \
-          -Djogamp.gluegen.UseTempJarCache="false" \
-           vnmr.ui.VNMRFrame >& /dev/null &
+        vjargs=( "$vjmem"
+          -classpath $vjclasspath $dargs $modsArg $splash
+          -Xdock:icon=/vnmr/iconlib/Splash_VnmrJ.png
+          -Xdock:name=OpenVnmrJ
+          -Ddbhost=$dbhost -Ddbport=$dbport -Dsysdir=$sysdir -Duserdir=$userdir
+          -Duser=$USER -Dfont="Dialog plain 14" -Dlookandfeel=$laf -Dtheme=$theme -DqueueArea=yes
+          -DcanvasFont="Dialog plain 12"
+          -Dcmd="$cmd"
+          -Dsfudirwindows="$SFUDIR" -Dsfudirinterix="$SFUDIR_INTERIX"
+          -Dshtoolcmd="$shtoolcmd" -Dshtooloption="$shtooloption" -Dvjerrfile=custom
+          -Dbatchupdates=no -Dpersona=$itype -Dsavepanels=10 -DSQAllowNesting=false
+          -Dsquish=$squish -Ddbnet_server=$dbnet_server
+          -Djava.library.path="/vnmr/lib"
+          -Djogamp.gluegen.UseTempJarCache="false"
+           vnmr.ui.VNMRFrame )
+        if [ -n "$OVJ_APP_LAUNCH" ]
+        then
+           # Started from OpenVnmrJ.app (see VJ.sh): become the app's process
+           # so macOS shows one Dock icon, tied to the bundle.
+           exec $vjshell "$javabin" "${vjargs[@]}" >& /dev/null
+        else
+           $vjshell "$javabin" "${vjargs[@]}" >& /dev/null &
+        fi
 fi
 
