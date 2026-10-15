@@ -49,8 +49,8 @@
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define SWAP(a, b) tm=(a); (a)=(b); (b)=tm
-#define ATTN(db)  exp(0.05 * db * M_LN10)
-#define DCB(b, ref) 20.0 * log(b / ref) / M_LN10 
+#define ATTN(db)  exp(0.05 * (db) * M_LN10)
+#define DCB(b, ref) (20.0 * log((b) / (ref)) / M_LN10)
 
 typedef struct   {
   int     flg;
@@ -130,14 +130,16 @@ Blodata bl;
 
 /* -------------------------- house-keeping ---------------------------- */
 
-void setwavelib()	
+void setwavelib(void)	
 {
 int i;
 
   wv.ndir = 11;
   wv.dir = (char **) calloc(wv.ndir, sizeof(char *));
+  if (!wv.dir)
+    pxerr("allocation failure in setwavelib()");
   for (i = 0; i < wv.ndir; i++)
-    wv.dir[i] = (char *) calloc(NAMLEN, sizeof(char *));
+    wv.dir[i] = (char *) calloc(NAMLEN, sizeof(char));
   strcpy(wv.dir[0], "excitation/");
   strcpy(wv.dir[1], "inversion/");
   strcpy(wv.dir[2], "refocusing/");
@@ -151,8 +153,7 @@ int i;
   strcpy(wv.dir[10],"usr/");
 }
 
-double *arry(nl)
-int nl;
+double *arry(int nl)
 {
   double *ar;
 
@@ -162,8 +163,15 @@ int nl;
   return ar;
 }
 
-double stod(str)		/* string to double conversion */
-char *str;
+char *safecpy(char *dst, char *src, size_t dstsize)
+{
+  if (dstsize == 0) return dst;
+  strncpy(dst, src, dstsize - 1);
+  dst[dstsize - 1] = '\0';
+  return dst;
+}
+
+double stod(char *str)		/* string to double conversion */
 {
   double dn;
   
@@ -173,8 +181,7 @@ char *str;
     return 0.0;
 }
 
-int stoi(str)		/* string to integer conversion */
-char *str;
+int stoi(char *str)  /* string to integer conversion */
 {
   double dn;
   
@@ -182,9 +189,7 @@ char *str;
   return (int) (dn);
 }
 
-int findch(fnm, chr)
-FILE *fnm;
-char chr;
+int findch(FILE *fnm, char chr)
 {
   int i = 0, j;
 
@@ -199,9 +204,7 @@ char chr;
   return i;
 }
 
-double maxval(nn, am)
-int nn;
-double *am;
+double maxval(int nn, double *am)
 {
 int   j;
 double mxl = 0.0;
@@ -211,8 +214,7 @@ double mxl = 0.0;
 }
 
 
-double pboxRound(a, b)
-double a, b;
+double pboxRound(double a, double b)
 {
   double sign = 1.0;
 
@@ -229,9 +231,7 @@ double a, b;
   return (a);
 }
 
-int cutstr(str1, str2)
-char *str1, *str2;
-
+int cutstr(char *str1, char *str2)
 {
   int i, j, k;
 
@@ -254,8 +254,7 @@ char *str1, *str2;
 }
 
 
-int cutstr2(str1, str2, ch)
-char *str1, *str2, ch;
+int cutstr2(char *str1, char *str2, char ch)
 {
   int i, j, k;
 
@@ -270,26 +269,24 @@ char *str1, *str2, ch;
   return k;
 }
 
-void skipcomms(fnm)
-FILE *fnm;
+void skipcomms(FILE *fnm)
 {
-  int i;
+  long i;
   char str[MAXSTR];
 
+    str[0] = '\0';
     i = ftell(fnm);
-    fscanf(fnm, "%s", str); 
+    if (fscanf(fnm, "%s", str) == EOF) return;
     while (str[0] == '#')
     {
-      fgets(str, MAXSTR, fnm);
+      if (fgets(str, MAXSTR, fnm) == NULL) return;
       i = ftell(fnm);
-      fscanf(fnm, "%s", str); 
+      if (fscanf(fnm, "%s", str) == EOF) return;
     }
     fseek(fnm, i-1, 0);
 }
 
-int findpar(fnm, str, val)
-FILE *fnm;
-char *val, *str;
+int findpar(FILE *fnm, char *str, char *val)
 {
   char chr[MAXSTR];
 
@@ -298,16 +295,17 @@ char *val, *str;
   {
     while ((chr[0] == '#') || (chr[0] == '('))
     {
-      fgets(chr, MAXSTR, fnm); fscanf(fnm, "%s", chr);
+      if (fgets(chr, MAXSTR, fnm) == NULL) break;
+      if (fscanf(fnm, "%s", chr) == EOF) break;
     }
     if (chr[0] == str[0])
     {
       if (strcmp(chr,str) == 0)
       {
-        fscanf(fnm, "%s", chr); 
+        if (fscanf(fnm, "%s", chr) == EOF) return (0);
         if (chr[0] == '=') 
         {
-          fscanf(fnm, "%s", val); 
+          if (fscanf(fnm, "%s", val) == EOF) return (0);
           return 1;
         }
       } 
@@ -321,9 +319,7 @@ char *val, *str;
   return (0);
 }
 
-int findpar2(fnm, str, val)
-FILE *fnm;
-char *val, *str;
+int findpar2(FILE *fnm, char *str, char *val)
 {
   char ch, str1[MAXSTR];
   int i = 0;
@@ -331,7 +327,7 @@ char *val, *str;
   fseek(fnm, 0, 0);
   while ((ch = getc(fnm)) == '#')
   {
-    fgets(val, MAXSTR, fnm);
+    if (fgets(val, MAXSTR, fnm) == NULL) break;
     sscanf(val, "%s", str1);
     if ((str[0] == str1[0]) && (strcmp(str,str1) == 0))
     {
@@ -343,8 +339,7 @@ char *val, *str;
   return i;
 }
 
-int isname(nstr)
-char *nstr;
+int isname(char *nstr)
 {
 
   if((nstr[0] == 'n' && nstr[1] == '\0') || (nstr[0] == '\0'))
@@ -353,9 +348,7 @@ char *nstr;
     return 1;
 }
 
-int setunits(dpar, param) 
-double  *dpar;
-char    *param;
+int setunits(double *dpar, char *param)
 {
   int  i=0;
   char units[16], val[16];
@@ -410,9 +403,7 @@ char    *param;
   return 0;
 }
 
-int setpwbw(wpw, wbw, ofs, param) 
-char    *param;
-double *wpw, *wbw, *ofs;
+int setpwbw(double *wpw, double *wbw, double *ofs, char *param)
 {
   int  i=0, j=0;
   char units[16], val[16], param1[512];
@@ -495,19 +486,16 @@ double *wpw, *wbw, *ofs;
 }
 
 
-int getnm(fil, ch)
-FILE *fil;
-char ch;
+int getnm(FILE *fil, char ch)
 {
-  int i = 0, j=0;
+  int j=0;
 
   fseek(fil,0,0);
   while (findch(fil, ch) > 0) j++;
   return j;
 }
 
-int fixdir(dir)
-char *dir;
+int fixdir(char *dir)
 {
   int i;
 
@@ -517,8 +505,7 @@ char *dir;
 }
 
 
-int sethome(dir)
-char *dir;
+int sethome(char *dir)
 {
   int i;
 
@@ -534,8 +521,7 @@ char *dir;
 }
 
 
-int getprm(prm, wstr)
-char *prm, *wstr;
+int getprm(char *prm, char *wstr)
 {
   int i=0, j=0;
 
@@ -545,7 +531,7 @@ char *prm, *wstr;
     return 0;
   else
   {
-    while ((wstr[i] != ' ') && (wstr[i] != ' ') && (wstr[i] != '\0'))
+    while ((wstr[i] != ' ') && (wstr[i] != '\t') && (wstr[i] != '\0'))
     {
       prm[j] = wstr[i];
       wstr[i] = ' ';
@@ -557,8 +543,7 @@ char *prm, *wstr;
   return j;
 }
 
-int is_reserved(prm)            /* check whether the shape name is reserved */
-char *prm;
+int is_reserved(char *prm)            /* check whether the shape name is reserved */
 {
   int j=0;
 

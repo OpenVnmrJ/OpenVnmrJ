@@ -32,14 +32,19 @@ double off, calpwr, calpw;
  FILE *inpf, *pboxinp;
  int i, j, done, sysret;
 
+ if (argc < 11)
+ {
+   printf("Usage: PboxAdapter shape outfile pw bw flip off calpwr calpw dir addopt [dec]\n");
+   exit(1);
+ }
 
- strcpy(shape,argv[1]);
- strcpy(outfile,argv[2]);
- strcpy(spw,argv[3]);
- strcpy(sbw,argv[4]);
- strcpy(sflip,argv[5]);
- strcpy(sdir, argv[9]);
- strcpy(addopt, argv[10]);
+ (void) snprintf(shape, sizeof(shape), "%s", argv[1]);
+ (void) snprintf(outfile, sizeof(outfile), "%s", argv[2]);
+ (void) snprintf(spw, sizeof(spw), "%s", argv[3]);
+ (void) snprintf(sbw, sizeof(sbw), "%s", argv[4]);
+ (void) snprintf(sflip, sizeof(sflip), "%s", argv[5]);
+ (void) snprintf(sdir, sizeof(sdir), "%s", argv[9]);
+ (void) snprintf(addopt, sizeof(addopt), "%s", argv[10]);
 
 
  off=atof(argv[6]);
@@ -70,17 +75,19 @@ double off, calpwr, calpw;
 /* set the name for output shape file */
 if ( !strcmp(outfile,"none") || !strcmp(outfile,"None")  \
        || !strcmp(outfile,"auto") || !strcmp(outfile,"Auto") ) {
-     (void) sprintf(fn, "sc_%s",shape); strcpy(fntemp,fn);
-     if (! CalcPwFlag)  (void) sprintf(fn,"%s_%7.5f",fntemp,spwbw1);
-     if (! CalcBwFlag)  (void) sprintf(fn,"%s_%d",fn,(int)spwbw2);
-     if ( fabs(off) > 0.0 ) (void) sprintf(fn,"%s_%d",fn,(int)off);
-     if (! DefFlipFlag) (void) sprintf(fn,"%s_%s",fn,sflip);
+     { int _tn = snprintf(fn, sizeof(fn), "sc_%s",shape); (void) _tn; } strcpy(fntemp,fn);
+     if (! CalcPwFlag)  { int _tn = snprintf(fn, sizeof(fn), "%s_%7.5f",fntemp,spwbw1); (void) _tn; strcpy(fntemp,fn); }
+     if (! CalcBwFlag)  { int _tn = snprintf(fn, sizeof(fn), "%s_%d",fntemp,(int)spwbw2); (void) _tn; strcpy(fntemp,fn); }
+     if ( fabs(off) > 0.0 ) { int _tn = snprintf(fn, sizeof(fn), "%s_%d",fntemp,(int)off); (void) _tn; strcpy(fntemp,fn); }
+     if (! DefFlipFlag) { int _tn = snprintf(fn, sizeof(fn), "%s_%s",fntemp,sflip); (void) _tn; }
      }
 else {
-      strcpy(fn, outfile);
+      (void) snprintf(fn, sizeof(fn), "%s", outfile);
      }
-    (void) sprintf(str, "rm -f %s%s", sdir,fn);
-    system(str);
+    { int _tn = snprintf(str, sizeof(str), "rm -f %s%s", sdir,fn); (void) _tn; }
+    if (system(str) != 0) {
+      printf("PboxError unable to remove old shape file"); exit(1);
+    }
 
  
 if ( ( !CalcPwFlag ) && (spwbw1 <= 0.0) ) {
@@ -88,7 +95,7 @@ if ( ( !CalcPwFlag ) && (spwbw1 <= 0.0) ) {
 }
    
   
-sprintf(fntemp,"%sPbox.inp", sdir);
+snprintf(fntemp, sizeof(fntemp), "%sPbox.inp", sdir);
 if ((pboxinp = fopen(fntemp,"w")) != NULL) {
    fprintf(pboxinp, "# Pbox input file created by autoshapepulse\n");
 
@@ -139,45 +146,45 @@ else {printf("PboxError in writing Pbox.inp file"); exit(1); }
 
 
 
- sprintf(fntemp,"Pbox > %sPbox.tmpout", sdir);
+ snprintf(fntemp, sizeof(fntemp), "Pbox > %sPbox.tmpout", sdir);
  sysret=system(fntemp);
  if (sysret != 0) {printf("PboxError in execution! check input values"); exit(1); }
 
 				 
 if (argc > 11) 			  /* check to see if it is a decoupling shape */
    {
- sprintf(fntemp,"%s%s.DEC",sdir,fn);
+ { int _tn = snprintf(fntemp, sizeof(fntemp), "%s%s.DEC",sdir,fn); (void) _tn; }
  if ((inpf = fopen(fntemp,"r")) == NULL) 
       {printf("PboxError unable to read shape output file= %s", fntemp);exit(1);}
  else 
       { 
-        i = fscanf(inpf,"%c %s %lf %lf %lf\n", &ch, str, &pw, &pwr, &fpwr);
+        i = fscanf(inpf,"%c %511s %lf %lf %lf\n", &ch, str, &pw, &pwr, &fpwr);
         fclose(inpf);
+        if (! ((i == 5) && (ch == '#') && (!strcmp(str,"Pbox"))) )
+          {printf("PboxError invalid values in shape output file=%s", fntemp); exit(1);}
         if ((pwr > MAX_ATTEN) || (pwr < MIN_ATTEN)) {
             printf("PboxError calculated power out of range! possibly incorrect reference values");
             exit(1);
         }
-        if ((i == 5) && (ch == '#') && (!strcmp(str,"Pbox")) )
-          { printf("Pbox %s %14.2f %f %f", fn, pw, pwr, fpwr); exit(0);}
-        else {printf("PboxError invalid values in shape output file=%s", fntemp); exit(1);}
+        printf("Pbox %s %14.2f %f %f", fn, pw, pwr, fpwr); exit(0);
       }
    }
 else
    {
- sprintf(fntemp,"%s%s.RF",sdir,fn);
+ { int _tn = snprintf(fntemp, sizeof(fntemp), "%s%s.RF",sdir,fn); (void) _tn; }
  if ((inpf = fopen(fntemp,"r")) == NULL) 
       {printf("PboxError unable to read shape output file= %s", fntemp);exit(1);}
  else 
       { 
-        i = fscanf(inpf,"%c %s %lf %lf %lf\n", &ch, str, &pw, &pwr, &fpwr);
+        i = fscanf(inpf,"%c %511s %lf %lf %lf\n", &ch, str, &pw, &pwr, &fpwr);
         fclose(inpf);
+        if (! ((i == 5) && (ch == '#') && (!strcmp(str,"Pbox"))) )
+          {printf("PboxError invalid values in shape output file=%s", fntemp); exit(1);}
         if ((pwr > MAX_ATTEN) || (pwr < MIN_ATTEN)) {
             printf("PboxError calculated power out of range! possibly incorrect reference values");
             exit(1);
         }
-        if ((i == 5) && (ch == '#') && (!strcmp(str,"Pbox")) )
-          { printf("Pbox %s %14.2f %f %f", fn, pw, pwr, fpwr); exit(0);}
-        else {printf("PboxError invalid values in shape output file=%s", fntemp); exit(1);}
+        printf("Pbox %s %14.2f %f %f", fn, pw, pwr, fpwr); exit(0);
       }
    }
 
