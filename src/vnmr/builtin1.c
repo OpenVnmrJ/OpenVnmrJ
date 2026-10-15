@@ -112,6 +112,8 @@ extern void disp_print(char *t);
 extern int setPrinterName(char *name);
 extern int setPlotterName(char *name);
 extern int is_whitespace(char c, int len, char delimiter[]);
+extern void lockGlobal(const char *dir);
+extern void unlockGlobal(const char *dir);
 
 
 extern char     LprinterPort[128];
@@ -124,7 +126,7 @@ extern int jsendParamMaxMin(int num, char *param, char *tree );
 #define VAL_LENGTH 128
 
 /*------------------------------------------------------------------------------|
-|       flip
+|       flip - Obsolete
 |
 |       This procedure flips the screen such that the text window is
 |       either flipped behind or in front of the graphics window
@@ -712,6 +714,7 @@ int writeparam(int argc, char *argv[], int retc, char *retv[] )
    char    par[MAXSTR];
    int     pnum;
    int     pindex;
+   int     globalFile = 0;
 
    (void) retc;
    (void) retv;
@@ -742,6 +745,7 @@ int writeparam(int argc, char *argv[], int retc, char *retv[] )
    {
       type = 2; /* replace type */
    }
+   globalFile = (strstr(argv[1], "global") == NULL) ? 0 : 1;
    if (type != 1)
    {
       int doRead = 1;
@@ -757,10 +761,19 @@ int writeparam(int argc, char *argv[], int retc, char *retv[] )
          }
       }
       P_treereset(TEMPORARY);		/* clear the tree first */
-      if (doRead && P_read(TEMPORARY,argv[1]) )
-      {  Werrprintf("cannot read parameters from %s",argv[1]);
-         P_treereset(TEMPORARY);
-	 RETURN;
+      if (doRead )
+      {
+	 if (globalFile)
+            lockGlobal(userdir);
+	 if ( P_read(TEMPORARY,argv[1]) )
+         {  Werrprintf("cannot read parameters from %s",argv[1]);
+            P_treereset(TEMPORARY);
+	    if (globalFile)
+               unlockGlobal(userdir);
+	    RETURN;
+         }
+	 if (globalFile)
+            unlockGlobal(userdir);
       }
    }
    pParList = argv[2];
@@ -808,7 +821,11 @@ int writeparam(int argc, char *argv[], int retc, char *retv[] )
             }
          }
       }
+      if (globalFile)
+         lockGlobal(userdir);
       P_save(TEMPORARY, argv[1]);
+      if (globalFile)
+         unlockGlobal(userdir);
       P_treereset(TEMPORARY);
       releaseWithId("wpar");
    }

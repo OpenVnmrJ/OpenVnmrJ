@@ -66,6 +66,9 @@ else
    packagecommonlist='tcsh make gcc gfortran expect openssh-server mutt sharutils sendmail-cf gnome-power-manager kdiff3 ghostscript imagemagick xterm'
    if [ $distmajor -ge 22 ] ; then
      packageXlist='default-jre bc libmotif-dev'
+     if [ $distmajor -ge 26 ] ; then
+        packageXlist="$packageXlist systemd-dev"
+     fi
    elif [ $distmajor -gt 16 ] ; then
      packageXlist='openjdk-8-jre bc libmotif-dev'
    fi

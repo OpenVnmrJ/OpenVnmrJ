@@ -47,6 +47,7 @@
 #include "pvars.h"
 #include "wjunk.h"
 #include "allocate.h"
+#include "locksys.h"
 #include "variables.h"
 extern int assignString(const char *s, varInfo *v, int i);
 
@@ -3012,6 +3013,37 @@ int sortCmd(int argc, char *argv[], int retc, char *retv[])
    if (retc)
    {
       retv[ 0 ] = intString(1);
+   }
+   RETURN;
+}
+
+int redirect(int argc, char *argv[], int retc, char *retv[])
+{
+   extern int mode_of_vnmr;
+   char *mode = "a";
+
+   if ( (mode_of_vnmr == ACQUISITION) ||
+        (mode_of_vnmr == AUTOMATION) )
+      RETURN;
+   if (argc < 2)
+   {
+      Werrprintf("%s: requires outut file name",argv[0]);
+      ABORT;
+   }
+   if (argc >= 3)
+   {
+      if ( ! strcmp(argv[2],"w"))
+         mode = "w";
+   }
+   if ( freopen(argv[1], mode, stdout ) == NULL )
+   {
+      Werrprintf("%s: could not redirect stdout to %s",argv[0], argv[1]);
+      ABORT;
+   }
+   if ( freopen(argv[1], "a", stderr ) == NULL )
+   {
+      Werrprintf("%s: could not redirect stderr to %s",argv[0], argv[1]);
+      ABORT;
    }
    RETURN;
 }

@@ -14,9 +14,7 @@
    of this file will need the main (Pbox) programm be recompiled.
    *********************************************************************** */
 
-void sqf(c, n)					/* Square filter d1 */		
-double     *c[];
-int	      n; 
+void sqf(double *c[], int n)  /* Square filter d1 */
 {
   int     j, k;
 
@@ -25,12 +23,10 @@ int	      n;
     (*c)[j] = 1.0; 
 }
 
-void hnw(c, n)					/* Hanning window */		
-double     *c[];
-int	      n; 
+void hnw(double *c[], int n)  /* Hanning window */
 {
   int     j, k;
-  double  a, dj, dnp;
+  double  a, dnp;
 
   k = 2*n + 1; dnp = (double) n/M_PI; 
   for (j=0; j<k; j++)
@@ -40,12 +36,10 @@ int	      n;
   }
 }
 
-void hmw(c, n)					/* Hamming window */		
-double     *c[];
-int	      n; 
+void hmw(double *c[], int n)  /* Hamming window */
 {
   int     j, k;
-  double  a, dj, dnp;
+  double  a, dnp;
 
   k = 2*n + 1; dnp = (double) n/M_PI; 
   for (j=0; j<k; j++)
@@ -55,12 +49,10 @@ int	      n;
   }
 }
 
-void blw(c, n)					/* Blackman window */		
-double     *c[];
-int	      n; 
+void blw(double *c[], int n)  /* Blackman window */
 {
   int     j, k;
-  double  a, dj, dnp;
+  double  a, dnp;
 
   k = 2*n + 1; dnp = (double) n/M_PI; 
   for (j=0; j<k; j++)
@@ -72,9 +64,7 @@ int	      n;
 
 /* - - - - - - - - - - - -  user functions d1, d2 & d3 - - - - - - - - - */
 
-void d1(c, n)					/* User window d1 */		
-double     *c[];
-int	      n; 
+void d1(double *c[], int n)  /* User window d1 */
 {
   int     j, k;
 
@@ -83,9 +73,7 @@ int	      n;
     (*c)[j] = 1.0; 
 }
 
-void d2(c, n)					/* User window d2 */		
-double     *c[];
-int	      n; 
+void d2(double *c[], int n)  /* User window d2 */
 {
   int     j, k;
 
@@ -94,9 +82,7 @@ int	      n;
     (*c)[j] = 1.0; 
 }
 
-void d3(c, n)					/* User window d3 */		
-double     *c[];
-int	      n; 
+void d3(double *c[], int n)  /* User window d3 */
 {
   int     j, k;
 
@@ -107,9 +93,7 @@ int	      n;
 
 /* - - - - - - - - - - - - - - Fourier Transforms - - - - - - - - - - - */
 
-void reorder(re, im, np)
-int   np;
-double *re[], *im[];
+void reorder(double *re[], double *im[], int np)
 {
   int j, k;
   double tm;
@@ -126,12 +110,9 @@ double *re[], *im[];
   }
 }
 
-void shift(re, im, nn, zf)	       /* data reordering of zero filled iFFT */
-double *re[], *im[];                           /* wrap 12345000 into 00123450 */
-int    nn, zf;
+void shift(double *re[], double *im[], int nn, int zf)  /* data reordering of zero filled iFFT, wrap 12345000 into 00123450 */
 {
 int    i, j, k;
-double ar0, tm;
 
   k = (zf - nn)/2;
   for(i=zf-k-1, j=nn-1; j>=0; i--, j--)
@@ -141,9 +122,7 @@ double ar0, tm;
   }
 }
 
-void reorderi(re, im, nn, zf)		/* wrap 12345000 into 34500012 */
-double *re[], *im[];			/* replaces shift + reorder for iFFT */
-int    nn, zf;
+void reorderi(double *re[], double *im[], int nn, int zf)  /* replaces shift + reorder for iFFT, wrap 12345000 into 34500012 */
 {
 int    i, j;
 double re0, im0;
@@ -158,9 +137,7 @@ double re0, im0;
   (*re)[0] = re0, (*im)[0] = im0; 
 }
 
-void fft(re, im, np, sign)
-int  np;
-double *re[], *im[], sign;
+void fft(double *re[], double *im[], int np, double sign)
 {
   int	  i, j, k, m, istep;	
   double  re0, im0, cs, sn, wr, wi, teta, tm;

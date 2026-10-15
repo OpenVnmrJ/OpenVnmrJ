@@ -16,8 +16,7 @@
 
 /* - - - - - - - - - - - -  user functions a1, a2 & a3 - - - - - - - - - */
 
-void a1(s)		/* user #1 */
-Shape *s;
+void a1(Shape *s)  /* user #1 */
 {
   int j;
 
@@ -25,8 +24,7 @@ Shape *s;
     Amp[j] = 1.0;
 }
 
-void a2(s)		/* user #2 */
-Shape *s;
+void a2(Shape *s)  /* user #2 */
 {
   int j;
 
@@ -34,8 +32,7 @@ Shape *s;
     Amp[j] = 1.0;
 }
 
-void a3(s)		/* user #3 */
-Shape *s;
+void a3(Shape *s)  /* user #3 */
 {
   int j;
 
@@ -45,8 +42,7 @@ Shape *s;
 
 /* - - - - - - - - - - Simple AM functions - - - - - - - - */
 
-void sq(s)					/* constant amplitude */
-Shape *s;
+void sq(Shape *s)  /* constant amplitude */
 {
   int j;
 
@@ -54,8 +50,7 @@ Shape *s;
     Amp[j] = 1.0;
 }
 
-void gs(s)					/* Gaussian */
-Shape *s;
+void gs(Shape *s)  /* Gaussian */
 {
   int j;
   double c;
@@ -69,8 +64,7 @@ Shape *s;
 }
 
 
-void lz(s)					/* Lorentzian */
-Shape *s;
+void lz(Shape *s)  /* Lorentzian */
 {
   int     j;
   double  c;
@@ -84,8 +78,7 @@ Shape *s;
 }
 
 
-void sch(s)					/* sech */
-Shape *s;
+void sch(Shape *s)  /* sech */
 {
   int     j;
   double  c;   
@@ -101,8 +94,7 @@ Shape *s;
 }
 
 
-void hta(s)					/* tanh amp */
-Shape *s;
+void hta(Shape *s)  /* tanh amp */
 {
   int     j;
   double  a, c;   
@@ -118,8 +110,7 @@ Shape *s;
 }
 
 
-void csp(s)					/* cosine power */
-Shape *s;
+void csp(Shape *s)  /* cosine power */
 {
   int j;
   double c;
@@ -138,8 +129,7 @@ Shape *s;
 }
 
 
-void sc(s)					/* sinc */
-Shape *s;
+void sc(Shape *s)  /* sinc */
 {
   int j;
   double c;
@@ -156,8 +146,7 @@ Shape *s;
 }
 
 
-void  wr(s) 					/* WURST */
-Shape *s;
+void  wr(Shape *s)  /* WURST */
 {
   int     j;
   double  c;
@@ -171,8 +160,7 @@ Shape *s;
 }
 
 
-void    sed(s)                                  /* seduce-1 */          
-Shape *s;
+void    sed(Shape *s)  /* seduce-1 */
 {
   int     j;
   double  c;
@@ -186,8 +174,7 @@ Shape *s;
   }
 }
 
-void    qp(s)                               /* quadrupolar pulse */        
-Shape *s;
+void    qp(Shape *s)  /* quadrupolar pulse */
 {
   int     j;
   double  c;
@@ -200,8 +187,7 @@ Shape *s;
   }
 }
 
-void ata(s)					/* CA atan amplitude */
-Shape *s;
+void ata(Shape *s)  /* CA atan amplitude */
 {
   int     j;
   double  c;
@@ -214,8 +200,7 @@ Shape *s;
   }
 }
 
-void tra(s)					/* triangle */
-Shape *s;
+void tra(Shape *s)  /* triangle */
 {
   int j;
 
@@ -226,8 +211,7 @@ Shape *s;
   }
 }
 
-void elp(s)					/* Semi ellipse */
-Shape *s;
+void elp(Shape *s)  /* Semi ellipse */
 {
   int j;
 
@@ -238,8 +222,7 @@ Shape *s;
   }
 }
 
-void exa(s)					/* exp ampl mod */
-Shape *s;
+void exa(Shape *s)  /* exp ampl mod */
 {
   int j;
 
@@ -250,8 +233,7 @@ Shape *s;
   }
 }
 
-void tna(s)					/* tan ampl mod */
-Shape *s;
+void tna(Shape *s)  /* tan ampl mod */
 {
   int j;
   double a, c;
@@ -267,8 +249,7 @@ Shape *s;
 
 
 
-void fser(s)					/* fser */
-Shape *s;
+void fser(Shape *s)  /* fser */
 {
   int i, j, k;
   double step, coef, lft, rgt;
@@ -288,8 +269,7 @@ Shape *s;
   }
 }
 
-void ftr(s)					/* inv DFT */
-Shape *s;
+void ftr(Shape *s)  /* inv DFT */
 {
   int i, j, k, m, mm, ni, ni2;
   double cs, sn, re0, im0, step, cf1, cf2;
@@ -333,8 +313,7 @@ Shape *s;
 }
 
 
-void sqa(s)					/* sq wave AM */
-Shape *s;
+void sqa(Shape *s)  /* sq wave AM */
 {
   int i, j, k;
 
