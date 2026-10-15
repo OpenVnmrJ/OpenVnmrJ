@@ -33,8 +33,7 @@ public class CSH_Util   {
             UNFile file = new UNFile(topic);
             if(file.canRead()) {
                 try {
-                    Runtime rt = Runtime.getRuntime();
-                    rt.exec(cmd);
+                    new ProcessBuilder("vnmr_open", topic).start();
                     if(DebugOutput.isSetFor("help"))
                         Messages.postDebug("Help Cmd: " + cmd);
                 }

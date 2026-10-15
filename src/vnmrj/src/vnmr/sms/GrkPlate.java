@@ -13,6 +13,7 @@ import javax.swing.*;
 import java.io.*;
 import java.util.*;
 import java.awt.*;
+import java.awt.event.*;
 
 import vnmr.util.*;
 
@@ -847,9 +848,9 @@ public class GrkPlate extends GenPlateIF implements SmsDef
        if (bDebug)
            System.out.println(" selected loc: "+s+"  selected: "+obj.selected);
        curSample = obj;
-       if ((key & Event.CTRL_MASK) != 0)
+       if ((key & InputEvent.CTRL_DOWN_MASK) != 0)
            ctrlKey = true;
-       else if ((key & Event.SHIFT_MASK) != 0)
+       else if ((key & InputEvent.SHIFT_DOWN_MASK) != 0)
            shiftKey = true;
        if (ctrlKey) {
            if (!selectedZones.contains(z))
@@ -944,7 +945,7 @@ public class GrkPlate extends GenPlateIF implements SmsDef
        bGot = false;
        key = 0;
        if (lastSelected > 0)
-           key = Event.CTRL_MASK; 
+           key = InputEvent.CTRL_DOWN_MASK;
        for (i = 0; i < zoneShowList.size(); i++) {
            z = zoneShowList.elementAt(i);
            oList = z.getSampleList();

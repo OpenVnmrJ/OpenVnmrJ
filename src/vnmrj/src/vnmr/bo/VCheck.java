@@ -98,7 +98,7 @@ public class VCheck extends JCheckBox
         mlEditor = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         if (!m_bParameter)
@@ -601,25 +601,25 @@ public class VCheck extends JCheckBox
     }
 
     private final static Object[][] attributes = {
-            { new Integer(LABEL), Util.getLabel(LABEL) },
-            { new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-            { new Integer(SETVAL), Util.getLabel(SETVAL) },
-            { new Integer(SHOW), Util.getLabel(SHOW) },
-            { new Integer(CMD), Util.getLabel(CMD) },
-            { new Integer(CMD2), Util.getLabel(CMD2) },
-            { new Integer(STATPAR), Util.getLabel(STATPAR) }, 
-            { new Integer(TOOLTIP), Util.getLabel(TOOLTIP) },
+            { Integer.valueOf(LABEL), Util.getLabel(LABEL) },
+            { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+            { Integer.valueOf(SETVAL), Util.getLabel(SETVAL) },
+            { Integer.valueOf(SHOW), Util.getLabel(SHOW) },
+            { Integer.valueOf(CMD), Util.getLabel(CMD) },
+            { Integer.valueOf(CMD2), Util.getLabel(CMD2) },
+            { Integer.valueOf(STATPAR), Util.getLabel(STATPAR) }, 
+            { Integer.valueOf(TOOLTIP), Util.getLabel(TOOLTIP) },
             };
     private final static Object[][] attributes_H = {
-        { new Integer(LABEL), Util.getLabel(LABEL) },
-        { new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-        { new Integer(SETVAL), Util.getLabel(SETVAL) },
-        { new Integer(SHOW), Util.getLabel(SHOW) },
-        { new Integer(CMD), Util.getLabel(CMD) },
-        { new Integer(CMD2), Util.getLabel(CMD2) },
-        { new Integer(STATPAR), Util.getLabel(STATPAR) }, 
-        { new Integer(TOOLTIP), Util.getLabel(TOOLTIP) },
-        {new Integer(HELPLINK), Util.getLabel("blHelp")}
+        { Integer.valueOf(LABEL), Util.getLabel(LABEL) },
+        { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+        { Integer.valueOf(SETVAL), Util.getLabel(SETVAL) },
+        { Integer.valueOf(SHOW), Util.getLabel(SHOW) },
+        { Integer.valueOf(CMD), Util.getLabel(CMD) },
+        { Integer.valueOf(CMD2), Util.getLabel(CMD2) },
+        { Integer.valueOf(STATPAR), Util.getLabel(STATPAR) }, 
+        { Integer.valueOf(TOOLTIP), Util.getLabel(TOOLTIP) },
+        {Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}
         };
 
     public void setModalMode(boolean s) {

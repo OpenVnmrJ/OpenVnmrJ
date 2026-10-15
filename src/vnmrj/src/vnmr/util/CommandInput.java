@@ -149,7 +149,7 @@ implements DropTargetListener, ListSelectionListener, MouseListener, PropertyCha
 
          m_txfCmdInput.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
-                 nextFocus();
+                 transferFocus();
                  setFocus();
             }
         });
@@ -474,7 +474,7 @@ implements DropTargetListener, ListSelectionListener, MouseListener, PropertyCha
         ActionEvent ae = new ActionEvent(m_txfCmdInput,
                               ActionEvent.ACTION_PERFORMED,
                               command,
-                              e.getModifiers());
+                              e.getModifiersEx());
         e.consume();
         a.actionPerformed(ae);
     }

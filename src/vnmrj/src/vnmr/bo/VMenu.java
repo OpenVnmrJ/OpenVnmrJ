@@ -126,28 +126,28 @@ public class VMenu extends JComboBox implements VGroupSave, VObjIF, VObjDef,
     protected final static String[] m_aStrEditable = { "Yes", "No" };
     /** The array of the attributes that are displayed in the edit template.*/
     protected final static Object[][] m_attributes = {
-            { new Integer(LABEL), "Label of item:" },
-            { new Integer(VARIABLE), "Vnmr variables:    " },
-            { new Integer(SETVAL), "Value of item:" },
-            { new Integer(SHOW), "Enable condition:" },
-            { new Integer(CMD), "Vnmr command:" },
-            { new Integer(SETCHOICE), "Label of Choices:" },
-            { new Integer(SETCHVAL), "Value of Choices:" },
-            { new Integer(EDITABLE), "Editable:", "radio", m_aStrEditable },
-            { new Integer(TOOLTIP),  Util.getLabel(TOOLTIP) }
+            { Integer.valueOf(LABEL), "Label of item:" },
+            { Integer.valueOf(VARIABLE), "Vnmr variables:    " },
+            { Integer.valueOf(SETVAL), "Value of item:" },
+            { Integer.valueOf(SHOW), "Enable condition:" },
+            { Integer.valueOf(CMD), "Vnmr command:" },
+            { Integer.valueOf(SETCHOICE), "Label of Choices:" },
+            { Integer.valueOf(SETCHVAL), "Value of Choices:" },
+            { Integer.valueOf(EDITABLE), "Editable:", "radio", m_aStrEditable },
+            { Integer.valueOf(TOOLTIP),  Util.getLabel(TOOLTIP) }
     };
     
     protected final static Object[][] m_attributes_H = {
-        { new Integer(LABEL), "Label of item:" },
-        { new Integer(VARIABLE), "Vnmr variables:    " },
-        { new Integer(SETVAL), "Value of item:" },
-        { new Integer(SHOW), "Enable condition:" },
-        { new Integer(CMD), "Vnmr command:" },
-        { new Integer(SETCHOICE), "Label of Choices:" },
-        { new Integer(SETCHVAL), "Value of Choices:" },
-        { new Integer(EDITABLE), "Editable:", "radio", m_aStrEditable },
-        { new Integer(TOOLTIP),  Util.getLabel(TOOLTIP) },
-        { new Integer(HELPLINK), Util.getLabel("blHelp")} 
+        { Integer.valueOf(LABEL), "Label of item:" },
+        { Integer.valueOf(VARIABLE), "Vnmr variables:    " },
+        { Integer.valueOf(SETVAL), "Value of item:" },
+        { Integer.valueOf(SHOW), "Enable condition:" },
+        { Integer.valueOf(CMD), "Vnmr command:" },
+        { Integer.valueOf(SETCHOICE), "Label of Choices:" },
+        { Integer.valueOf(SETCHVAL), "Value of Choices:" },
+        { Integer.valueOf(EDITABLE), "Editable:", "radio", m_aStrEditable },
+        { Integer.valueOf(TOOLTIP),  Util.getLabel(TOOLTIP) },
+        { Integer.valueOf(HELPLINK), Util.getLabel("blHelp")} 
 };
 
     public VMenu(SessionShare ss, ButtonIF vif, String typ) {
@@ -178,7 +178,7 @@ public class VMenu extends JComboBox implements VGroupSave, VObjIF, VObjDef,
             public void mouseClicked(MouseEvent evt) {
                 if(inEditMode) {
                     int clicks = evt.getClickCount();
-                    int modifier = evt.getModifiers();
+                    int modifier = evt.getModifiersEx();
                     if((modifier & (1 << 4)) != 0) {
                         if(clicks >= 2) {
                             if(!m_bParameter) {

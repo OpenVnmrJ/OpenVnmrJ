@@ -90,7 +90,7 @@ public class ClientGui  {
 
         sf = new ShutdownFrame(cryoBay);
         update = new CryoThread(cryoBay, sf, this);
-        sf.show();
+        sf.setVisible(true);
 	update.start();
 
     }       /*end of constructor*/
@@ -320,7 +320,7 @@ public class ClientGui  {
         warn.setLocation(screenSize.width/2 - 100,
                          screenSize.height/2 - 40);
         warn.setResizable(false);
-        warn.show();
+        warn.setVisible(true);
     }
 
 

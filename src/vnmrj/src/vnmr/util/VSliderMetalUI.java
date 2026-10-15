@@ -198,8 +198,8 @@ public class VSliderMetalUI extends MetalSliderUI implements VSliderUI {
                 return;
             }
             moveStep = largeStep;
-            int modify = e.getModifiers();
-            if ((modify & InputEvent.BUTTON2_MASK) != 0) {
+            int modify = e.getModifiersEx();
+            if ((modify & InputEvent.getMaskForButton(2)) != 0) {
                 switch ( slider.getOrientation() ) {
                     case JSlider.VERTICAL:
                         slider.setValue( valueForYPosition( curY ) );
@@ -213,7 +213,7 @@ public class VSliderMetalUI extends MetalSliderUI implements VSliderUI {
                 inThumb = true;
                 return;
             }
-            if ((modify & InputEvent.BUTTON3_MASK) != 0) {
+            if ((modify & InputEvent.getMaskForButton(3)) != 0) {
                 moveStep = smallStep;
             }
             switch ( slider.getOrientation() ) {

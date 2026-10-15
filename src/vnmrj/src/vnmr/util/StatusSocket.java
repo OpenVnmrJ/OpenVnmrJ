@@ -15,7 +15,7 @@ import java.lang.*;
 
 import vnmr.util.Messages;
 
-public class StatusSocket implements Runnable {
+public class StatusSocket implements Runnable, AutoCloseable {
    private SocketIF  socketIf;
    private ThreadGroup  group;
    private ServerSocket svr;
@@ -66,9 +66,10 @@ public class StatusSocket implements Runnable {
 	go = false;
    }
 
-   protected void finalize() throws Throwable {
-        svr.close();
-   }
+    @Override
+    public void close() throws IOException {
+        quit();
+    }
 
    public void acceptit(Socket i)
    {  
@@ -154,11 +155,11 @@ public class StatusSocket implements Runnable {
     public void quit() {
 	finished = true;
     }
-
+/*
     protected void finalize() throws Throwable {
         incoming.close();
     }
-
+*/
     private Socket incoming;
   }
 }

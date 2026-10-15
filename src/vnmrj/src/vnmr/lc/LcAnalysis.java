@@ -12,6 +12,7 @@ package  vnmr.lc;
 import  vnmr.util.*;
 
 import java.util.*;
+import java.util.Arrays;
 import java.io.*;
 
 
@@ -230,14 +231,11 @@ public class LcAnalysis {
      *****************************************************************/
     public void doAnalysis(double thresh, double width, int chan) {
         Process    proc;
-        Runtime    rt;
-        String     cmd;
 
         this.m_threshold = thresh;
         this.m_peakwidth = width;
 
         try {
-            rt = Runtime.getRuntime();
             File file = new File(m_filepath);
             if (file == null || !file.canRead()) {
                 String errmsg = "doAnalysis(): Cannot read file: \""
@@ -250,15 +248,20 @@ public class LcAnalysis {
                     return;
                 }
             }
-            cmd = "vjLCAnalysis -t " + m_threshold + " -p " + m_peakwidth
-                                   + " -f " + m_filepath + " -c " + chan;
+            List<String> cmdList = new ArrayList<String>(Arrays.asList(
+                "vjLCAnalysis",
+                "-t", String.valueOf(m_threshold),
+                "-p", String.valueOf(m_peakwidth),
+                "-f", m_filepath,
+                "-c", String.valueOf(chan)
+            ));
             if (DebugOutput.isSetFor("Galaxie")) {
-                cmd += " -debug";
+                cmdList.add("-debug");
             }
             Messages.postDebug("Galaxie",
-                               "LcAnalysis.doAnalysis: cmd= " + cmd);
+                               "LcAnalysis.doAnalysis: cmd= " + cmdList);
             Messages.postDebug("Galaxie", "Calling vjLCAnalysis ...");
-            proc = rt.exec(cmd); // Start it.
+            proc = new ProcessBuilder(cmdList).start(); // Start it.
             proc.waitFor(); // Wait here for the anlysis to complete.
             Messages.postDebug("Galaxie", "... vjLCAnalysis done.");
         } catch (Exception e) {

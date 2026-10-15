@@ -132,11 +132,11 @@ public class VAudit extends JPanel
 	if(auditTselect[i] < auditTablemin) auditTablemin = auditTselect[i];
     }
 	
-        Vector paths1 = new Vector();
+        Vector<String> paths1 = new Vector<String>();
     paths1.addElement(str);
     String label1 = "Select a path";
 
-        Vector paths2 = new Vector();
+        Vector<String> paths2 = new Vector<String>();
     paths2.addElement(filepath);
     String label2 = "Select a type";
 
@@ -244,7 +244,7 @@ public class VAudit extends JPanel
     }
 
     public void setAttribute(int attr, String c) {
-        Vector v;
+        Vector<String> v;
         switch (attr) {
         case TYPE:
             type = c;
@@ -346,7 +346,7 @@ public class VAudit extends JPanel
 
     // ExpListenerIF interface
 
-    public void  updateValue(Vector params){
+    public void  updateValue(Vector<String> params){
     if (vnmrIf == null)
         return;
     if(debug)
@@ -372,7 +372,7 @@ public class VAudit extends JPanel
         }
     }
 
-    private void  updateContent(Vector params){
+    private void  updateContent(Vector<String> params){
         if (vnmrIf == null || fileName == null)
         return;
         String  vars=getAttribute(VAR2);
@@ -543,13 +543,13 @@ public class VAudit extends JPanel
     "cmdHistory", "s_auditTrail", "d_auditTrail" };
 
     private final static Object[][] attributes = {
-    {new Integer(VARIABLE),		"Selection variables:"},
-    {new Integer(VAR2),		    "Content variables:"},
-    {new Integer(SETVAL),		"Value of item:"},
-    {new Integer(SHOW),		    "Enable condition:"},
-    {new Integer(CMD),			"Vnmr command:"},
-    {new Integer(PANEL_FILE),	"Table source:"},
-    {new Integer(PANEL_TYPE),	"Table type:",m_types},
+    {Integer.valueOf(VARIABLE),		"Selection variables:"},
+    {Integer.valueOf(VAR2),		    "Content variables:"},
+    {Integer.valueOf(SETVAL),		"Value of item:"},
+    {Integer.valueOf(SHOW),		    "Enable condition:"},
+    {Integer.valueOf(CMD),			"Vnmr command:"},
+    {Integer.valueOf(PANEL_FILE),	"Table source:"},
+    {Integer.valueOf(PANEL_TYPE),	"Table type:",m_types},
     };
     public Object[][] getAttributes()  { return attributes; }
 

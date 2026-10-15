@@ -113,7 +113,7 @@ public class VnmrJHelp {
         public vjHelpSet(String path, String name) {
             strHelpSet = path + File.separator + name;
             try {
-                URL hsURL = new URL (new File(path).toURL(), name);
+                URL hsURL = new File(path).toURI().resolve(name).toURL();
                 vjHs = new HelpSet(null, hsURL);
                 if (vjHs.getLocalMap() == null)
                     vjHs.setLocalMap(new TryMap());

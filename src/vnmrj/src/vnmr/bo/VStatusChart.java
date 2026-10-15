@@ -200,10 +200,10 @@ public class VStatusChart extends JPanel
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
-                if((modifier & InputEvent.BUTTON3_MASK) !=0)
+                int modifier = evt.getModifiersEx();
+                if((modifier & InputEvent.getMaskForButton(3)) !=0)
                     menuAction(evt);
-                else if ((modifier & InputEvent.BUTTON1_MASK) != 0 && clicks >= 2)
+                else if ((modifier & InputEvent.getMaskForButton(1)) != 0 && clicks >= 2)
                     ParamEditUtil.setEditObj((VObjIF) evt.getSource());
             }
         };
@@ -587,7 +587,7 @@ public class VStatusChart extends JPanel
             if (c != null)
             {
                precision = c;
-               numdigits=Integer.valueOf(c);
+               numdigits= Integer.valueOf(c).intValue();
             }
             break;
         case STATCOL:
@@ -758,7 +758,8 @@ public class VStatusChart extends JPanel
             setBounds(curLoc.x, curLoc.y, curDim.width, curDim.height);
     }
 
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
             defLoc.x = x;
             defLoc.y = y;
@@ -769,7 +770,7 @@ public class VStatusChart extends JPanel
         curDim.height = h;
         curLoc.x = x;
         curLoc.y = y;
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation() {
@@ -805,11 +806,11 @@ public class VStatusChart extends JPanel
     public Object[][] getAttributes()  { return attributes; }
 
     private final static Object[][] attributes = {
-        {new Integer(TITLE),     Util.getLabel("lcTITLE")},
-        {new Integer(STATCOL),   Util.getLabel(STATCOL),"menu",status_color},
-        {new Integer(STATKEY),   Util.getLabel(STATKEY)},
-        {new Integer(VALUES),    Util.getLabel("lcVALUES")},
-        {new Integer(SHOWMAX),   Util.getLabel("lcSHOWMAX"), "menu", true_false},
+        {Integer.valueOf(TITLE),     Util.getLabel("lcTITLE")},
+        {Integer.valueOf(STATCOL),   Util.getLabel(STATCOL),"menu",status_color},
+        {Integer.valueOf(STATKEY),   Util.getLabel(STATKEY)},
+        {Integer.valueOf(VALUES),    Util.getLabel("lcVALUES")},
+        {Integer.valueOf(SHOWMAX),   Util.getLabel("lcSHOWMAX"), "menu", true_false},
     };
    
 

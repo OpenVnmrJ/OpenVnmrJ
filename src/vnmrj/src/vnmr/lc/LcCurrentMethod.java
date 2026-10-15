@@ -143,12 +143,13 @@ public class LcCurrentMethod extends LcMethod {
      * detection at the start of the run.  The trace number is given
      * by the name of the method parameter that controls peak detection
      * for the trace: lcPeakDetectX.
-     * @deprecated
+     * @Deprecated
      * @param parm The parameter name for the trace to set.
      * @param run The LcRun this refers to.
      */
     // TODO: This always sets lcPeakDetectX to a single, fixed value.
     // Should not be used.
+    @Deprecated
     public void setPeakEnabled(String parm, LcRun run) {
         // The last letter of the parameter name gives the trace number
         Messages.postDebug("Deprecated method LcCurrentMethod.setPeakEnabled("

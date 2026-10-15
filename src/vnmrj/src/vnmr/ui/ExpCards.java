@@ -141,7 +141,7 @@ public class ExpCards extends JPanel implements	PropertyChangeListener {
     }
 
 
-    public void finalize() {
+    public void cleanup() {
         if (times != null)
            times.stop();
         times = null;

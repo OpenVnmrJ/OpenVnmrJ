@@ -322,14 +322,14 @@ public class PatientTableComm implements Runnable {
     }
 
  }
-
+/*
  private class buttonObserver implements java.util.Observer {
       public buttonObserver() { }
       public void update(java.util.Observable o, Object arg) {
         System.out.println("update called: "+o+" Arg: "+arg);
       }
   }
-
+*/
 
  private class PtInput implements Runnable
  {

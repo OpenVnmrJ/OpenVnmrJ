@@ -326,12 +326,12 @@ public class VjPrintFileDialog extends JDialog
         cancelButton = new JButton(cancelStr);
         String previewStr = Util.getLabel("_Preview", previewCmd);
         previewButton = new JButton(previewStr);
-        if(Util.labelExists("blmsave")) {
+        if(Util.labelExists("blmsave").booleanValue()) {
             okStr = Util.getLabel("blmSave");
             char chOk = okStr.charAt(0);
             saveButton.setMnemonic(chOk);
         }
-        if(Util.labelExists("blmCancel")) {
+        if(Util.labelExists("blmCancel").booleanValue()) {
             cancelStr = Util.getLabel("blmCancel");
             char chCancel = cancelStr.charAt(0);
             cancelButton.setMnemonic(chCancel);
@@ -713,7 +713,7 @@ public class VjPrintFileDialog extends JDialog
          if (s.length() < 1)
              s = def;
          try {
-             retVal = new Float(s);
+             retVal = Float.valueOf(s);
          }
          catch (NumberFormatException e0) {
              retVal = null;
@@ -722,7 +722,7 @@ public class VjPrintFileDialog extends JDialog
              return retVal;
 
          try {
-             retVal = new Float(def);
+             retVal = Float.valueOf(def);
          }
          catch (NumberFormatException e1) {
               retVal = null;
@@ -829,8 +829,8 @@ public class VjPrintFileDialog extends JDialog
             ms = MediaSize.NA.LETTER;
         double w = VjPaperMedia.getPixelWidth(ms);
         double h = VjPaperMedia.getPixelHeight(ms);
-        hs.put(VjPrintDef.PRINT_WIDTH, new Float(w));
-        hs.put(VjPrintDef.PRINT_HEIGHT, new Float(h));
+        hs.put(VjPrintDef.PRINT_WIDTH, Float.valueOf((float) w));
+        hs.put(VjPrintDef.PRINT_HEIGHT, Float.valueOf((float) h));
     }
 
    
@@ -893,8 +893,8 @@ public class VjPrintFileDialog extends JDialog
         else
             hs.put(VjPrintDef.FILE_CURSOR_LINE, VjPrintDef.NO);
         Point pt = this.getLocation();
-        hs.put(VjPrintDef.FILE_LOCX, new Float((float)pt.x));
-        hs.put(VjPrintDef.FILE_LOCY, new Float((float)pt.y));
+        hs.put(VjPrintDef.FILE_LOCX, Float.valueOf((float)pt.x));
+        hs.put(VjPrintDef.FILE_LOCY, Float.valueOf((float)pt.y));
 
         if (fileChooserDir != null)
             hs.put(VjPrintDef.FILE_DIR, fileChooserDir);
@@ -909,8 +909,8 @@ public class VjPrintFileDialog extends JDialog
             hs.put(VjPrintDef.FILE_TMPNAME, tmpPrtFile);
         else
             hs.put(VjPrintDef.FILE_TMPNAME, "");
-        hs.put(VjPrintDef.FILE_HEIGHT, new Float(0));
-        hs.put(VjPrintDef.FILE_WIDTH, new Float(0));
+        hs.put(VjPrintDef.FILE_HEIGHT, Float.valueOf(0));
+        hs.put(VjPrintDef.FILE_WIDTH, Float.valueOf(0));
         saveMedia();
     }
 

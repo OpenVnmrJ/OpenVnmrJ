@@ -28,10 +28,10 @@ public class VGrid extends JComponent implements VEditIF, VObjIF, VObjDef
     private int gridY = 1;
 
     private final static Object[][] m_attributes = {
-        {new Integer(GRID_COLUMN), "grid column:"},
-        {new Integer(GRID_ROW), "grid row:"},
-        {new Integer(GRID_XSPAN), "grid column span:"},
-        {new Integer(GRID_YSPAN), "grid row span:"},
+        {Integer.valueOf(GRID_COLUMN), "grid column:"},
+        {Integer.valueOf(GRID_ROW), "grid row:"},
+        {Integer.valueOf(GRID_XSPAN), "grid column span:"},
+        {Integer.valueOf(GRID_YSPAN), "grid row span:"},
     };
 
 

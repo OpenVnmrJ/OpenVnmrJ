@@ -28,14 +28,14 @@ public class Audit extends JSplitPane
     private FileTable m_auditTable;
     private FileTable m_locatorTable;
     private FileMenu m_locatorMenu;
-    private Vector m_paths1 = new Vector();
-    private Vector m_paths2 = new Vector();
+    private Vector<String> m_paths1 = new Vector<String>();
+    private Vector<String> m_paths2 = new Vector<String>();
     private String m_label1 = null;
     private String m_label2 = null;
     private String m_vnmrCmd = null;
     protected boolean m_bInit = true;
     protected boolean m_bNew = false;
-    public static Hashtable flagtable = new Hashtable();
+    public static Hashtable<String,String> flagtable = new Hashtable<String,String>();
 
     private int m_type;
     private int m_process;
@@ -61,21 +61,21 @@ public class Audit extends JSplitPane
     super();
         setOpaque(false);
 
-        Vector paths1 = new Vector();
+        Vector<String> paths1 = new Vector<String>();
     paths1.addElement(path1);
-        Vector paths2 = new Vector();
+        Vector<String> paths2 = new Vector<String>();
         paths2.addElement(path2);
     makeAudit(paths1, label1, paths2, label2, false);
     }
 
-    public Audit(Vector paths1, String label1, Vector paths2, String label2) {
+    public Audit(Vector<String> paths1, String label1, Vector<String> paths2, String label2) {
     super();
         setOpaque(false);
 
     makeAudit(paths1, label1, paths2, label2, false);
     }
 
-    public void makeAudit(Vector paths1, String label1, Vector paths2,
+    public void makeAudit(Vector<String> paths1, String label1, Vector<String> paths2,
                                 String label2, boolean bCreateNew) {
 
     copyPropertyfiles();
@@ -598,7 +598,7 @@ public class Audit extends JSplitPane
          FileUtil.savePath("USER/PERSISTENCE/auditTableSelection");
 
     String type = m_locatorTable.getFileTableModel().getType();
-    Vector list = new Vector();
+    Vector<String> list = new Vector<String>();
 
         FileWriter fw;
         PrintWriter os;
@@ -808,7 +808,7 @@ public class Audit extends JSplitPane
 
 // get userlist from $vnmrsystem/adm/users/userlist.
 
-        Vector userlist = new Vector();
+        Vector<String> userlist = new Vector<String>();
     String systemDir = System.getProperty("sysdir");
 
     if(systemDir == null) systemDir = "/vnmr";
@@ -827,7 +827,7 @@ public class Audit extends JSplitPane
                     inLine.trim();
                     StringTokenizer tok = new StringTokenizer(inLine, ", \n", false);
             while(tok.hasMoreTokens()){
-                        userlist.add((String)tok.nextToken());
+                        userlist.add(tok.nextToken());
                     }
         }
         }
@@ -836,7 +836,7 @@ public class Audit extends JSplitPane
       }
         }
 
-    Vector part11Dirs = new Vector();
+    Vector<String> part11Dirs = new Vector<String>();
 
     for(int i=0; i<userlist.size(); i++) {
 
@@ -857,7 +857,7 @@ public class Audit extends JSplitPane
                     StringTokenizer tok = new StringTokenizer(inLine, ":,\n", false);
                     if (tok.countTokens() > 1) {
                         String key = tok.nextToken();
-                        part11Dirs.add((String)tok.nextToken());
+                        part11Dirs.add(tok.nextToken());
             }
         }
           }

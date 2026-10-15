@@ -256,13 +256,13 @@ public class ImageColorMapEditor extends JDialog {
             return;
          Dimension dim = getSize();
          if (dim != null) {
-             hs.put("cmpWidth", new Integer(dim.width));
-             hs.put("cmpHeight", new Integer(dim.height));
+             hs.put("cmpWidth", Integer.valueOf(dim.width));
+             hs.put("cmpHeight", Integer.valueOf(dim.height));
          }
          Point pt = getLocation();
          if (pt != null) {
-             hs.put("cmpLocX", new Integer(pt.x));
-             hs.put("cmpLocY", new Integer(pt.y));
+             hs.put("cmpLocX", Integer.valueOf(pt.x));
+             hs.put("cmpLocY", Integer.valueOf(pt.y));
          }
     }
 

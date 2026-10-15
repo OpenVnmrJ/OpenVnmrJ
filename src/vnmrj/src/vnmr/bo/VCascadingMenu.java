@@ -56,8 +56,8 @@ public class VCascadingMenu extends VObj implements ActionListener {
 
         MouseListener mouseListener = new MouseAdapter() {
             public void mousePressed(MouseEvent me) {
-                int modifier = me.getModifiers();
-                if ((modifier & BUTTON1_MASK) == BUTTON1_MASK) {
+                int modifier = me.getModifiersEx();
+                if ((modifier & InputEvent.getMaskForButton(1)) != 0) {
                     Component comp = me.getComponent();
                     buildMenu(m_popupMenu, "", m_sMenuDirPath);
                     m_popupMenu.show(comp, 0, comp.getHeight());
@@ -251,13 +251,13 @@ public class VCascadingMenu extends VObj implements ActionListener {
     protected final static String[] m_aStrShow = {"yes", "no"};
 
     private final static Object[][] attributes = {
-        {new Integer(LABEL),        "Label of item:"},
-        {new Integer(VARIABLE),     "Selection variables:"},
-        {new Integer(SETVAL),       "Value of item:"},
-        {new Integer(SHOW),         "Enable condition:"},
-        {new Integer(CMD),          "Vnmr command:"},
-        {new Integer(PANEL_FILE),   "Menu source:"},
-        {new Integer(STATSHOW),     "Show Dot Files:", "radio", m_aStrShow},
+        {Integer.valueOf(LABEL),        "Label of item:"},
+        {Integer.valueOf(VARIABLE),     "Selection variables:"},
+        {Integer.valueOf(SETVAL),       "Value of item:"},
+        {Integer.valueOf(SHOW),         "Enable condition:"},
+        {Integer.valueOf(CMD),          "Vnmr command:"},
+        {Integer.valueOf(PANEL_FILE),   "Menu source:"},
+        {Integer.valueOf(STATSHOW),     "Show Dot Files:", "radio", m_aStrShow},
     };
 
     public Object[][] getAttributes()  { return attributes; }

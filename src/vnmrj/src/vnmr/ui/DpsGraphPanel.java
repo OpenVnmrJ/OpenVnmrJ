@@ -93,9 +93,9 @@ public class DpsGraphPanel extends JPanel implements Printable {
          g2d.translate(mx, my);
          Rectangle rec = scopePan.getViewRect();
          Dimension dim = channelPan.getSize();
-         Double rw = (double) r.width / (double) (dim.width + rec.width);
-         Double rh = (double) r.height / (double) (rec.height);
-         g2d.scale(rw, rh);
+         Double rw = Double.valueOf((double) r.width / (double) (dim.width + rec.width));
+         Double rh = Double.valueOf((double) r.height / (double) (rec.height));
+         g2d.scale(rw.doubleValue(), rh.doubleValue());
          g2d.translate(0, -rec.y);
          channelPan.print(g2d);
          g2d.translate(-rec.x + dim.width, 0);

@@ -127,7 +127,7 @@ public class IPatTabFrame extends JFrame implements PatientTableListener {
     DownButton.setToolTipText("Move Patient Table Down by increment shown");
     // DownButton.setText("DOWN \u00B11");
     DownButton.setText("DOWN -1");
-    Yincr = new Integer(1);
+    Yincr = Integer.valueOf(1);
 
     DownButton.addActionListener(new java.awt.event.ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -141,7 +141,7 @@ public class IPatTabFrame extends JFrame implements PatientTableListener {
     InButton.setToolTipText("Move Patient Table into Magnet by increment shown");
     // InButton.setText("IN \u00b11");
     InButton.setText("IN +1");
-    Xincr = new Integer(1);
+    Xincr = Integer.valueOf(1);
 
     InButton.addActionListener(new java.awt.event.ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -213,9 +213,9 @@ public class IPatTabFrame extends JFrame implements PatientTableListener {
     });
     UpComboBox.setToolTipText("UP/DOWN Increment Selection");
     INComboBox.setToolTipText("IN/OUT Increment Selection");
-    ilist.add(new Integer(1)); ilist.add(new Integer(5));
-    ilist.add(new Integer(10)); ilist.add(new Integer(25));
-    ilist.add(new Integer(50)); ilist.add(new Integer(100));
+    ilist.add(Integer.valueOf(1)); ilist.add(Integer.valueOf(5));
+    ilist.add(Integer.valueOf(10)); ilist.add(Integer.valueOf(25));
+    ilist.add(Integer.valueOf(50)); ilist.add(Integer.valueOf(100));
     dcbmInOut = new DefaultComboBoxModel(ilist);
     dcbmUpDown = new DefaultComboBoxModel(ilist);
     UpComboBox.setMinimumSize(new Dimension(60, 23));
@@ -285,7 +285,7 @@ public class IPatTabFrame extends JFrame implements PatientTableListener {
   {
     Double axisPos = Double.valueOf(locationValue);
     long axisPosInt = Math.round(axisPos.doubleValue());
-    String locvalue = new Long(axisPosInt).toString();
+    String locvalue = Long.valueOf(axisPosInt).toString();
     System.out.println("Axis Location: "+axisPos+"  Y: "+locvalue);
     return(locvalue);
   }

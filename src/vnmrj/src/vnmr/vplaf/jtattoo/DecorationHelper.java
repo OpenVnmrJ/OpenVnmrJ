@@ -73,7 +73,7 @@ public class DecorationHelper {
             try {
                 Class classParams[] = {Integer.TYPE};
                 Method m = frame.getClass().getMethod("setExtendedState", classParams);
-                Object methodParams[] = {new Integer(state)};
+                Object methodParams[] = {Integer.valueOf(state)};
                 m.invoke(frame, methodParams);
             } catch (Exception ex) {
             }
@@ -85,7 +85,7 @@ public class DecorationHelper {
             try {
                 Class classParams[] = {Integer.TYPE};
                 Method m = tk.getClass().getMethod("isFrameStateSupported", classParams);
-                Object methodParams[] = {new Integer(state)};
+                Object methodParams[] = {Integer.valueOf(state)};
                 Boolean b = (Boolean) m.invoke(tk, methodParams);
                 return b.booleanValue();
             } catch (Exception ex) {

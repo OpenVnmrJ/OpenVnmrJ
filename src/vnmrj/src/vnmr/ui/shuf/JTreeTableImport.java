@@ -351,7 +351,7 @@ public class JTreeTableImport extends JTable {
                     if (getColumnClass(counter) == TreeTableModel.class) {
                         MouseEvent me = (MouseEvent)e;
                         MouseEvent newME = new MouseEvent(tree, me.getID(),
-                                   me.getWhen(), me.getModifiers(),
+                                   me.getWhen(), me.getModifiersEx(),
                                    me.getX() - getCellRect(0, counter, true).x,
                                    me.getY(), me.getClickCount(),
                                    me.isPopupTrigger());

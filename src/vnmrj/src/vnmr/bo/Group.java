@@ -37,9 +37,9 @@ import vnmr.util.*;
 public class Group {
     private String    name;
     private String    longName;
-    private ArrayList members;
+    private ArrayList<String> members;
 
-    public Group(String  name, String  longName, ArrayList  members) {
+    public Group(String name, String longName, ArrayList<String> members) {
 	this.name = name;
 	this.longName = longName;
 	this.members = members;
@@ -54,7 +54,7 @@ public class Group {
 	return longName;
     }
 
-    public ArrayList getmembers() {
+    public ArrayList<String> getmembers() {
 	return members;
     }
 
@@ -73,15 +73,15 @@ public class Group {
 	String		inLine;
 	String		filepath, val1, val2;
 	String		groupName, longGroupName;
-	ArrayList	groupMembers;
+	ArrayList<String> groupMembers;
 	StringTokenizer tok;
 	int		num_elements1, num_elements2;
 	Group		group;
-	Hashtable 	groupHash;
+	Hashtable<String,Group> groupHash;
 	Hashtable	group_tmp;
         boolean         foundVarianAndMe=false;
 
-	groupHash = new Hashtable();
+	groupHash = new Hashtable<String,Group>();
 
 	filepath = new String(System.getProperty("sysdir") +
 			      "/adm/users/group");
@@ -94,7 +94,7 @@ public class Group {
             // We need to add agilent and me even if the file is not there
             groupName = new String("agilent and me");
             longGroupName = new String("Myself and system");
-            groupMembers = new ArrayList();
+            groupMembers = new ArrayList<String>();
             groupMembers.add("me");
             groupMembers.add("Agilent");
             groupMembers.add("agilent");
@@ -144,7 +144,7 @@ public class Group {
 		    longGroupName = new String(tok.nextToken().trim());
 
 		    // Now get the list of users for this group
-		    groupMembers = new ArrayList();
+		    groupMembers = new ArrayList<String>();
 		    for(int i=0; i < num_elements2 - 2; i++) {
 			groupMembers.add(tok.nextToken().trim());
 		    }
@@ -163,7 +163,7 @@ public class Group {
            if(!foundVarianAndMe) {
                groupName = new String("agilent and me");
                longGroupName = new String("Myself and system");
-               groupMembers = new ArrayList();
+               groupMembers = new ArrayList<String>();
                groupMembers.add("me");
                groupMembers.add("Agilent");
                groupMembers.add("agilent");

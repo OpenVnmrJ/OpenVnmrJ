@@ -22,7 +22,6 @@ import vnmr.ui.shuf.*;
 import vnmr.bo.*;
 import vnmr.util.*;
 import vnmr.templates.*;
-import com.sun.xml.tree.*;
 
 /**
  * The review queue interface.
@@ -375,7 +374,7 @@ public class ReviewQueue implements VObjDef, ExpListenerIF
             if (tok.hasMoreTokens())
                 Util.getRQPanel().togglePanel(tok.nextToken().trim());
         } else if(cmd.equals(DRAGMODE) && tok.hasMoreTokens()){
-	    dragMode = Integer.valueOf(tok.nextToken().trim()).intValue();
+	    dragMode = Integer.parseInt(tok.nextToken().trim());
         } else if(cmd.equals(READ)){
             String fn=tok.nextToken().trim();
                 String path=FileUtil.openPath(fn);

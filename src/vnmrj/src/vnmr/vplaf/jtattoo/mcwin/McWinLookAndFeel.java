@@ -24,8 +24,8 @@ public class McWinLookAndFeel extends AbstractLookAndFeel {
 
     private static McWinDefaultTheme myTheme = null;
 
-    private static final ArrayList themesList = new ArrayList();
-    private static final HashMap themesMap = new HashMap();
+    private static final ArrayList<String> themesList = new ArrayList<String>();
+    private static final HashMap<String,Properties> themesMap = new HashMap<String,Properties>();
     private static final Properties defaultProps = new Properties();
     private static final Properties smallFontProps = new Properties();
     private static final Properties largeFontProps = new Properties();
@@ -106,7 +106,7 @@ public class McWinLookAndFeel extends AbstractLookAndFeel {
 
         String key = null;
         String value = null;
-        Iterator iter = smallFontProps.keySet().iterator();
+        Iterator<Object> iter = smallFontProps.keySet().iterator();
         while (iter.hasNext()) {
             key = (String) iter.next();
             value = smallFontProps.getProperty(key);
@@ -176,7 +176,7 @@ public class McWinLookAndFeel extends AbstractLookAndFeel {
         themesMap.put("Pink-Giant-Font", pinkGiantFontProps);
     }
 
-    public static java.util.List getThemes() {
+    public static java.util.List<String> getThemes() {
         return themesList;
     }
 
@@ -188,11 +188,11 @@ public class McWinLookAndFeel extends AbstractLookAndFeel {
         if (myTheme != null) {
             McWinDefaultTheme.setInternalName(name);
         }
-        setTheme((Properties) themesMap.get(name));
+        setTheme(themesMap.get(name));
     }
 
     public static void setTheme(String name, String licenseKey, String logoString) {
-        Properties props = (Properties) themesMap.get(name);
+        Properties props = themesMap.get(name);
         props.put("licenseKey", licenseKey);
         props.put("logoString", logoString);
         if (myTheme != null) {

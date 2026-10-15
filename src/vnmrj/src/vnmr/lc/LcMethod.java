@@ -274,7 +274,7 @@ public class LcMethod {
         for (int i = iRow; rtn == null && i >= 0; --i) {
             rtn = (Double)par.getValue(i);
         }
-        return rtn == null ? 0 : rtn;
+        return rtn == null ? 0 : rtn.doubleValue();
     }
 
     /**
@@ -375,7 +375,7 @@ public class LcMethod {
      */
     public void setRowCount(int nRows) {
         LcMethodParameter par = getRowCountParameter();
-        par.setValue(0, (Integer)nRows);
+        par.setValue(0, Integer.valueOf(nRows));
     }
 
     /**
@@ -479,7 +479,7 @@ public class LcMethod {
             /*Messages.postDebug("schedule.addRow(): nrows=" + getRowCount()
                                + ", new row=" + row);/*CMP*/
             for (LcMethodParameter par: m_methodParameters.values()) {
-                Object val = (par == getTimeParameter()) ? (Double)time : null;
+                Object val = (par == getTimeParameter()) ? Double.valueOf(time) : null;
                 if (par.isTabled()) {
                     par.insertValue(row, val);
                 }
@@ -498,7 +498,7 @@ public class LcMethod {
         if (par != null) {
             Object value = par.getValue();
             if (value != null) {
-                rtn = (Integer)value;
+                rtn = ((Integer) value).intValue();
             }
         }
         return rtn;
@@ -651,7 +651,7 @@ public class LcMethod {
                 // Interpolate
                 double t0 = getTime(row0);
                 double t1 = getTime(row1);
-                value = value0 + (time - t0) * (value1 - value0) / (t1 - t0);
+                value = Double.valueOf(value0 + (time - t0) * (value1 - value0) / (t1 - t0));
             } else if (value0 != null) {
                 // Use previous value
                 value = value0;
@@ -695,7 +695,7 @@ public class LcMethod {
         int len = params.length;
         double[] pct = new double[len];
         for (int i = 0; i < len; i++) {
-            pct[i] = getInterpolatedValue(params[i], time);
+            pct[i] = getInterpolatedValue(params[i], time).doubleValue();
         }
         return pct;
     }
@@ -880,20 +880,20 @@ public class LcMethod {
      */
     public double getEndTime() {
         // Return time of last row.
-        int nrows = (Integer)getValue("lcMethodRows");
-        return (Double)getValue("lcTime", nrows - 1);
+        int nrows = ((Integer) getValue("lcMethodRows")).intValue();
+        return ((Double) getValue("lcTime", nrows - 1)).doubleValue();
     }
 
     public double getEquilTime() {
-        return (Double)getValue("lcEquilTime");
+        return ((Double) getValue("lcEquilTime")).doubleValue();
     }
 
     public int getMinPressure() {
-        return (int)(double)(Double)getValue("lcMinPressure");
+        return (int) ((Double) getValue("lcMinPressure")).doubleValue();
     }
 
     public int getMaxPressure() {
-        return (int)(double)(Double)getValue("lcMaxPressure");
+        return (int) ((Double) getValue("lcMaxPressure")).doubleValue();
     }
 
     public String getEndAction() {
@@ -977,7 +977,7 @@ public class LcMethod {
             return null;
         }
         if (isTimeParameter(name)) {
-            return (Double)time;
+            return Double.valueOf(time);
         }
 
         // Find the row that has the value we can use
@@ -1028,7 +1028,7 @@ public class LcMethod {
                     double p = p0 + (time - t0) * (p1 - p0) / (t1 - t0);
                     Messages.postDebug("loopCollect","getValue(" + name + ", "
                                        + Fmt.f(2, time) + ")=" + Fmt.f(2, p));
-                    value = new Integer((int)(p + 0.5));
+                    value = Integer.valueOf((int) (p + 0.5));
                 }
             }
         }
@@ -1222,10 +1222,10 @@ public class LcMethod {
             if (!param.isTabled()) {
                 Double value = (Double)param.getValue();
                 if (value == null) {
-                    value = 0.0;
+                    value = Double.valueOf(0.0);
                 }
-                value = Math.min(100, Math.max(0, value));
-                totalFixedPct = value;
+                value = Double.valueOf(Math.min(100, Math.max(0, value)));
+                totalFixedPct = value.doubleValue();
                 param.setValue(0, value);
             }
         }
@@ -1238,10 +1238,10 @@ public class LcMethod {
                 if (!param.isTabled()) {
                     Double value = (Double)param.getValue();
                     if (value == null) {
-                        value = 0.0;
+                        value = Double.valueOf(0.0);
                     }
-                    value = Math.min(100 - totalFixedPct, Math.max(0, value));
-                    totalFixedPct += value;
+                    value = Double.valueOf(Math.min(100 - totalFixedPct, Math.max(0, value)));
+                    totalFixedPct += value.doubleValue();
                     param.setValue(0, value);
                     param.setTabled(false);
                 }
@@ -1270,12 +1270,12 @@ public class LcMethod {
                             double correction = 100 - totalPct;
                             double delta;
                             if (correction > 0) {
-                                delta = Math.min(100 - value, correction);
+                                delta = Math.min(100 - value.doubleValue(), correction);
                             } else {
-                                delta = Math.max(-value, correction);
+                                delta = Math.max(-value.doubleValue(), correction);
                             }
                             totalPct += delta;
-                            value += delta;
+                            value = value.doubleValue() + delta;
                             param.setValue(0, value);
                         }
                     }
@@ -1332,7 +1332,7 @@ public class LcMethod {
                 }
             }
         }
-        return tabledPct == null ? fixedPct : tabledPct + fixedPct;
+        return tabledPct == null ? fixedPct : tabledPct.doubleValue() + fixedPct;
     }
 
     /**
@@ -1371,18 +1371,18 @@ public class LcMethod {
             for (LcMethodParameter param : parlist) {
                 Double value = (Double)param.getValue(row);
                 if (value == null) {
-                    value = 0.0;
+                    value = Double.valueOf(0.0);
                     System.err.println("r=" + row + ", par=" + param.getName()+ ", value=" + value);
                 }
 
                 // Make each pct individually compatible with fixedPct
-                value = Math.max(0, Math.min(100 - fixedPct, value));
+                value = Double.valueOf(Math.max(0, Math.min(100 - fixedPct, value)));
                 param.setValue(row, value);
                 param.setTabled(true);
             }
 
             // Now try to make them add to 100% (They are already non-null.)
-            double totalPct = fixedPct + sumPctsInRow(parlist, row);
+            double totalPct = fixedPct + sumPctsInRow(parlist, row).doubleValue();
             LcMethodParameter refParam = getParameter(refName);// Maybe null
             for (LcMethodParameter param : parlist) {
                 if (param != refParam) { // refParam must be done last
@@ -1412,12 +1412,12 @@ public class LcMethod {
                 double correction = 100 - totalPct;
                 double delta;
                 if (correction > 0) {
-                    delta = Math.min(100 - value, correction);
+                    delta = Math.min(100 - value.doubleValue(), correction);
                 } else {
-                    delta = Math.max(-value, correction);
+                    delta = Math.max(-value.doubleValue(), correction);
                 }
                 totalPct += delta;
-                value += delta;
+                value = value.doubleValue() + delta;
                 param.setValue(row, value);
                 param.setTabled(true);
             }
@@ -1436,7 +1436,7 @@ public class LcMethod {
         for (LcMethodParameter param : parlist) {
             Double value = (Double)param.getValue(row);
             if (value != null) {
-                rowPct = rowPct == null ? value : rowPct + value;
+                rowPct = Double.valueOf(rowPct == null ? value : rowPct + value);
             }
         }
         return rowPct;
@@ -1816,7 +1816,7 @@ public class LcMethod {
         Set<Integer> availableSolvents = new TreeSet<Integer>();
         for (int i = 0; i < nConfigSolvents; i++) {
             configSolvents[i] = config.getSolvent(i);
-            availableSolvents.add(i);
+            availableSolvents.add(Integer.valueOf(i));
         }
 
         // Collect info on solvents / percents from method
@@ -1853,17 +1853,17 @@ public class LcMethod {
             Set<Integer> usedIndices = new TreeSet<Integer>();
             for (int j = 0; solvent != null && j < nConfigSolvents; j++) {
                 if (solvent.equals(configSolvents[j])
-                    && !usedIndices.contains(j))
+                    && !usedIndices.contains(Integer.valueOf(j)))
                 {
                     methodToConfigMap[i] = j;
-                    usedIndices.add(j);
-                    availableSolvents.remove(j);
+                    usedIndices.add(Integer.valueOf(j));
+                    availableSolvents.remove(Integer.valueOf(j));
                     foundIt = true;
                     break;
                 }
             }
             if (!foundIt) {
-                orphanSolvents.add(i);
+                orphanSolvents.add(Integer.valueOf(i));
                 if (isSolventUsed[i]) {
                     Messages.postError("Solvent not available: " + solvent);
                 }
@@ -1873,11 +1873,11 @@ public class LcMethod {
         Iterator<Integer> availableSolventsItr = availableSolvents.iterator();
         Iterator<Integer> orphanSolventsItr = orphanSolvents.iterator();
         while (orphanSolventsItr.hasNext()) {
-            int i = orphanSolventsItr.next();
+            int i = orphanSolventsItr.next().intValue();
             if (isSolventUsed[i]) {
                 String solvent = getValueString(methodSolventBottles[i]);
                 if (availableSolventsItr.hasNext()) {
-                    methodToConfigMap[i] = availableSolventsItr.next();
+                    methodToConfigMap[i] = availableSolventsItr.next().intValue();
                     availableSolventsItr.remove();
                     orphanSolventsItr.remove();
                 } else {
@@ -1890,10 +1890,10 @@ public class LcMethod {
         // Finally, assign non-matching, unused solvents
         orphanSolventsItr = orphanSolvents.iterator();
         while (orphanSolventsItr.hasNext()) {
-            int i = orphanSolventsItr.next();
+            int i = orphanSolventsItr.next().intValue();
             String solvent = getValueString(methodSolventBottles[i]);
             if (availableSolventsItr.hasNext()) {
-                methodToConfigMap[i] = availableSolventsItr.next();
+                methodToConfigMap[i] = availableSolventsItr.next().intValue();
                 availableSolventsItr.remove();
                 orphanSolventsItr.remove();
             } else {

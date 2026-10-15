@@ -83,13 +83,13 @@ public class VColorChooser extends JPanel
     protected JLabel tbox=null;
     
     private  Object[][] attributes = {
-    {new Integer(LABEL),  Util.getLabel(LABEL)},
-    {new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-    {new Integer(SETVAL), Util.getLabel("LABELVALUE","Value of item")},
-    {new Integer(KEYVAL), Util.getLabel("ccKEYVAL","Color value")},
-    {new Integer(KEYSTR), Util.getLabel("ccKEYSTR","Display Variable")},
-    {new Integer(CMD),	  Util.getLabel(CMD)},
-    {new Integer(DISPLAY),Util.getLabel("ccDISPLAY","Color Names"),"menu",
+    {Integer.valueOf(LABEL),  Util.getLabel(LABEL)},
+    {Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+    {Integer.valueOf(SETVAL), Util.getLabel("LABELVALUE","Value of item")},
+    {Integer.valueOf(KEYVAL), Util.getLabel("ccKEYVAL","Color value")},
+    {Integer.valueOf(KEYSTR), Util.getLabel("ccKEYSTR","Display Variable")},
+    {Integer.valueOf(CMD),	  Util.getLabel(CMD)},
+    {Integer.valueOf(DISPLAY),Util.getLabel("ccDISPLAY","Color Names"),"menu",
                             (types=(Util.getAppIF() instanceof VAdminIF) ?
                                 WFontColors.getShowTypes() : DisplayOptions.getShowTypes())},
     };
@@ -103,7 +103,7 @@ public class VColorChooser extends JPanel
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     //if (clicks >= 2) {
                         ParamEditUtil.setEditObj(vobj);

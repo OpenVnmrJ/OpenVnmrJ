@@ -32,33 +32,33 @@ public class User {
     private String fullName = null;
     /** List of directories containing nmr data for the shuffler
         The first one is where data should be saved to. */
-    private ArrayList dataDirectories = null;
-    private ArrayList dataDirsNotConanical = null;
+    private ArrayList<String> dataDirectories = null;
+    private ArrayList<String> dataDirsNotConanical = null;
     /** users p11 directory list */
-    private ArrayList p11Directories = null;
+    private ArrayList<String> p11Directories = null;
     /** user's vnmrsys directory */
     private String vnmrsysDir = null;
     private int userLevel = 2;
     private String vnmrDir = null;
     private String m_currOperatorName = null;
 
-    private ArrayList appDirectories = null;
-    private ArrayList appDirLabels = null;
-    private ArrayList ownedDirectories = null;
-    private ArrayList accessList = null;
+    private ArrayList<String> appDirectories = null;
+    private ArrayList<String> appDirLabels = null;
+    private ArrayList<String> ownedDirectories = null;
+    private ArrayList<String> accessList = null;
     private String homeDir = null;
     //    private String m_cmdArea = null;
     /** list of Application type Strings (e.g. Walkup, Imaging, LC-NMR)  */
-    private ArrayList appTypes = new ArrayList();
+    private ArrayList<String> appTypes = new ArrayList<String>();
     /** list of Application type file extensions (e.g. walkup, imaging, lc) */
     private ArrayList<String> appTypeExts = new ArrayList<String>();
-    private ArrayList operators = new ArrayList();
+    private ArrayList<String> operators = new ArrayList<String>();
 
     /** constructor */
     public User(String accountName, int userLevel, String fullName,
-            String passWord, ArrayList dataDirectories,
-            ArrayList dataDirsNotConanical, String vnmrsysDir,
-            ArrayList p11Directories) {
+            String passWord, ArrayList<String> dataDirectories,
+            ArrayList<String> dataDirsNotConanical, String vnmrsysDir,
+            ArrayList<String> p11Directories) {
 
         this.accountName = accountName.trim();
         this.userLevel = userLevel;
@@ -68,16 +68,16 @@ public class User {
         this.dataDirsNotConanical = dataDirsNotConanical;
         this.p11Directories = p11Directories;
         this.vnmrsysDir = vnmrsysDir.trim();
-        this.appDirectories = new ArrayList();
-        this.appDirLabels = new ArrayList();
+        this.appDirectories = new ArrayList<String>();
+        this.appDirLabels = new ArrayList<String>();
 
         homeDir = new StringBuffer().append("/export/home/")
                 .append(accountName).toString();
 
-        ownedDirectories = new ArrayList();
+        ownedDirectories = new ArrayList<String>();
         ownedDirectories.add(homeDir);
 
-        accessList = new ArrayList();
+        accessList = new ArrayList<String>();
         homeDir = new StringBuffer().append("/export/home/")
                 .append(accountName).toString();
 
@@ -88,13 +88,13 @@ public class User {
     /** constructor */
     public User(String accountName) {
         this.accountName = accountName.trim();
-        appDirectories = new ArrayList();
-        appDirLabels = new ArrayList();
-        ownedDirectories = new ArrayList();
-        accessList = new ArrayList();
-        dataDirectories = new ArrayList();
-        p11Directories = new ArrayList();
-        dataDirsNotConanical = new ArrayList();
+        appDirectories = new ArrayList<String>();
+        appDirLabels = new ArrayList<String>();
+        ownedDirectories = new ArrayList<String>();
+        accessList = new ArrayList<String>();
+        dataDirectories = new ArrayList<String>();
+        p11Directories = new ArrayList<String>();
+        dataDirsNotConanical = new ArrayList<String>();
     }
 
     /** get user's account name */
@@ -132,7 +132,7 @@ public class User {
             user.appType = Global.WALKUPIF;
     }
 
-    public ArrayList getAppTypes() {
+    public ArrayList<String> getAppTypes() {
         // For compatability with vnmr_jadmin, add the appType
         // to the appTypes arraylist. vnmr_jadmin sets the appType
         // with the access level, whereas WandaIF have check boxes
@@ -155,17 +155,17 @@ public class User {
     }
 
     /** get user's data directory list. */
-    public ArrayList getDataDirectories() {
+    public ArrayList<String> getDataDirectories() {
         return dataDirectories;
     }
 
     /** get user's data directory list, but not in conanical form. */
-    public ArrayList getDataDirsNotConanical() {
+    public ArrayList<String> getDataDirsNotConanical() {
         return dataDirsNotConanical;
     }
 
     /** get user's p11 directory list. */
-    public ArrayList getP11Directories() {
+    public ArrayList<String> getP11Directories() {
         return p11Directories;
     }
 
@@ -188,7 +188,7 @@ public class User {
             bChanged = true;
         else
             for (int i = 0; i < appDirs.size(); i++) {
-                if (!((String) appDirectories.get(i)).equals((String) appDirs
+                if (!(appDirectories.get(i)).equals(appDirs
                         .get(i)))
                     bChanged = true;
             }
@@ -200,8 +200,8 @@ public class User {
         appDirectories.clear();
         appDirLabels.clear();
         for (int i = 0; i < appDirs.size(); i++) {
-            appDirectories.add((String) appDirs.get(i));
-            appDirLabels.add((String) labels.get(i));
+            appDirectories.add(appDirs.get(i));
+            appDirLabels.add(labels.get(i));
         }
 
         // update FileUtil
@@ -211,7 +211,7 @@ public class User {
     }
 
     /** get user's app directory list. */
-    public ArrayList getAppDirectories() {
+    public ArrayList<String> getAppDirectories() {
         // If we are running from managedb, the appdirs may not have
         // been filled yet.
         if(FillDBManager.managedb && appDirectories.size() == 0) {
@@ -222,12 +222,12 @@ public class User {
     }
 
     /** get user's app directory labels. */
-    public ArrayList getAppLabels() {
+    public ArrayList<String> getAppLabels() {
         return appDirLabels;
     }
 
     /** get list of directories "owned" by user. */
-    public ArrayList getOwnedDirectories() {
+    public ArrayList<String> getOwnedDirectories() {
         return ownedDirectories;
     }
 
@@ -242,7 +242,7 @@ public class User {
     //    }
 
     /** get user's access list. */
-    public ArrayList getAccessList() {
+    public ArrayList<String> getAccessList() {
         return accessList;
     }
 
@@ -496,7 +496,7 @@ public class User {
     }
 
     /** set appTypeExts type */
-    public ArrayList getAppTypeExts() {
+    public ArrayList<String> getAppTypeExts() {
         return appTypeExts;
     }
 
@@ -504,7 +504,7 @@ public class User {
         String dir;
         StringTokenizer tok;
         int userLevel = 2;
-        ArrayList canonList;
+        ArrayList<String> canonList;
         boolean bwindows = UtilB.OSNAME.startsWith("Windows");
 
         String val = (String) props.get("userdir");
@@ -516,8 +516,8 @@ public class User {
         val = (String) props.get("datadir");
         try {
             if (val != null) {
-                user.dataDirectories = new ArrayList();
-                user.dataDirsNotConanical = new ArrayList();
+                user.dataDirectories = new ArrayList<String>();
+                user.dataDirsNotConanical = new ArrayList<String>();
                 if (bwindows)
                     tok = new StringTokenizer(val, ";");
                 else
@@ -748,7 +748,7 @@ public class User {
         // end up with two symbolic links pointing to the same place
         // or something.
         UNFile file;
-        canonList = new ArrayList();
+        canonList = new ArrayList<String>();
         String canonPath;
         for (int i = 0; i < user.dataDirectories.size(); i++) {
             diri = (String) user.dataDirectories.get(i);
@@ -799,7 +799,7 @@ public class User {
                 "PROFILES").append(File.separator).append("p11").append(
                 File.separator).append(user.accountName).toString());
 
-        user.p11Directories = new ArrayList();
+        user.p11Directories = new ArrayList<String>();
 
         if (p11DataDirs != null) {
             try {
@@ -854,7 +854,7 @@ public class User {
         String dir;
         String accountName, passWord, fullName, dataDirectory;
         String vnmrsysDirectory;
-        ArrayList dataDirectories, dataDirsNotConanical;
+        ArrayList<String> dataDirectories, dataDirsNotConanical;
         int userLevel;
         StringTokenizer tok, dirtok;
         User user;
@@ -969,8 +969,8 @@ public class User {
                         }
                     }
 
-                    dataDirectories = new ArrayList();
-                    dataDirsNotConanical = new ArrayList();
+                    dataDirectories = new ArrayList<String>();
+                    dataDirsNotConanical = new ArrayList<String>();
 
                     string = tok.nextToken();
                     if (!string.equals(":")) {
@@ -1033,7 +1033,7 @@ public class User {
                     string = tok.nextToken();
                     userLevel = Integer.valueOf(string).intValue();
 
-                    ArrayList p11Dir = new ArrayList();
+                    ArrayList<String> p11Dir = new ArrayList<String>();
                     // Create an User object with all the info.
                     user = new User(accountName, userLevel, fullName, passWord,
                             dataDirectories, dataDirsNotConanical,
@@ -1066,7 +1066,7 @@ public class User {
     /**
      *  Takes an arraylist and returns a string.
      */
-    public String aListToStr(ArrayList aList) {
+    public String aListToStr(ArrayList<String> aList) {
         StringBuffer sbLine = new StringBuffer();
 
         if (aList != null) {

@@ -70,12 +70,12 @@ public class VMakePanelsTag extends JTextField implements VEditIF, VObjIF, VObjD
 
     /** The array of the attributes that are displayed in the edit template.*/
     private final static Object[][] m_attributes = {
-        {new Integer(VARIABLE), "Vnmr variables:    "},
-        {new Integer(SETVAL),   "Value of item:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(CMD),      "Vnmr command:"},
-        {new Integer(NUMDIGIT), "Decimal Places:"},
-        {new Integer(DISABLE),  "Disable Style:", "menu", m_arrStrDisAbl}
+        {Integer.valueOf(VARIABLE), "Vnmr variables:    "},
+        {Integer.valueOf(SETVAL),   "Value of item:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(CMD),      "Vnmr command:"},
+        {Integer.valueOf(NUMDIGIT), "Decimal Places:"},
+        {Integer.valueOf(DISABLE),  "Disable Style:", "menu", m_arrStrDisAbl}
     };
 
     public VMakePanelsTag(SessionShare sshare, ButtonIF vif, String typ) {
@@ -108,7 +108,7 @@ public class VMakePanelsTag extends JTextField implements VEditIF, VObjIF, VObjD
         ml = new MouseAdapter() {
               public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         ParamEditUtil.setEditObj((VObjIF) evt.getSource());

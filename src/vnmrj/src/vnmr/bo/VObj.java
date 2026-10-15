@@ -100,7 +100,7 @@ public class VObj extends JPanel
         editML = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0 && clicks == 2) {
                     ParamEditUtil.setEditObj(myself);
                 }
@@ -557,16 +557,16 @@ public class VObj extends JPanel
     }
 
     private final static Object[][] attributes = {
-        {new Integer(LABEL),    "Label of item:"},
-        {new Integer(VARIABLE), "Vnmr variables:"},
-        {new Integer(SETVAL),   "Value of item:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(CMD),      "Vnmr command:"},
-        {new Integer(CMD2),     "Vnmr command 2:"},
-        {new Integer(SETCHOICE),"Labels of choices:"},
-        {new Integer(SETCHVAL), "Values of choices:"},
-        {new Integer(NUMDIGIT), "Decimal places:"},
-        {new Integer(STATPAR),  "Status variable:"},
+        {Integer.valueOf(LABEL),    "Label of item:"},
+        {Integer.valueOf(VARIABLE), "Vnmr variables:"},
+        {Integer.valueOf(SETVAL),   "Value of item:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(CMD),      "Vnmr command:"},
+        {Integer.valueOf(CMD2),     "Vnmr command 2:"},
+        {Integer.valueOf(SETCHOICE),"Labels of choices:"},
+        {Integer.valueOf(SETCHVAL), "Values of choices:"},
+        {Integer.valueOf(NUMDIGIT), "Decimal places:"},
+        {Integer.valueOf(STATPAR),  "Status variable:"},
     };
 
     public void setModalMode(boolean b) {

@@ -23,7 +23,6 @@ import vnmr.ui.shuf.*;
 import vnmr.bo.*;
 import vnmr.util.*;
 import vnmr.templates.*;
-import com.sun.xml.tree.*;
 
 /**
  * The review queue panel.

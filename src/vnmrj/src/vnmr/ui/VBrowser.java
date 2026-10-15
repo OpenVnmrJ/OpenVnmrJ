@@ -62,7 +62,7 @@ public class VBrowser
 
 		if (UtilB.iswindows()) {
 			try {
-				Runtime.getRuntime().exec("cmd /c start " + url);
+				new ProcessBuilder("cmd", "/c", "start", url).start();
 			} catch (Exception e) {
 			}
 		} else {
