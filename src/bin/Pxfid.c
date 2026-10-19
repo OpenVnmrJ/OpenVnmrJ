@@ -43,6 +43,7 @@ int main(int argc, char *argv[])
   char ch, str[MAXSTR];
   char ifn[MAXSTR], ofn[MAXSTR];
   static char ext[10];
+  char *ret __attribute__((unused));
 
   /*----------------------------+
   | check for filename argument |
@@ -116,7 +117,7 @@ int main(int argc, char *argv[])
     if ((ch != ' ') && (ch != '\n') && (ch != '\t') && (ch != '#'))
       k++;
     if (ch == '#')
-      fgets(str, MAXSTR, inpf);
+      ret = fgets(str, MAXSTR, inpf);
     else if ((ch == '\n') && (k > 0))
     {
       np++;

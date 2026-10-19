@@ -52,13 +52,14 @@ int main(int argc, char *argv[])
 {
   FILE *inpf, *outf;
   char ch, ext[10], str[MAXSTR], name[MAXSTR], ifn[MAXSTR], ofn[MAXSTR];
-  int i, j, k, ip, nc, nr, np, gt, nm, ofs, tokens, c;
+  int i, j, k, nc, nr, np, gt, nm, ofs, tokens, c;
   double am, ph, ln, re, im, cs, sn, ax, bx, dm, fgt, fla;
   double *Re, *Im, *an, *bn;
   double rd = PI / 180.0;
   void   d_ft(double *xRe[], double *xIm[], int np),
          f_ft(double *xRe[], double *xIm[], int np),
          re_order(double *xRe[], double *xIm[], int np);
+  char *ret __attribute__((unused));
 
   /*-----------------------------+   
   | check for filename extension |
@@ -124,7 +125,7 @@ int main(int argc, char *argv[])
     if ((ch != ' ') && (ch != '\n') && (ch != '\t') && (ch != '#'))
       k++;
     if (ch == '#')
-      fgets(str, MAXSTR, inpf);
+      ret = fgets(str, MAXSTR, inpf);
     else if ((ch == '\n') && (k > 0))
     {
       nr++;
@@ -559,11 +560,14 @@ int main(int argc, char *argv[])
   
   if ((outf = fopen(ofn, "w")) == NULL)
   {
+    int ret __attribute__((unused));
+    char str2[MAXSTR*2];
+
     (void) strcpy(ifn, home);
-    { int _tn = snprintf(str, sizeof(str), "mkdir %s/vnmrsys/wavelib\n", ifn); (void) _tn; }
-    system(str);  
-    { int _tn = snprintf(str, sizeof(str), "mkdir %s/vnmrsys/wavelib/usr\n", ifn); (void) _tn; }
-    system(str);     
+    { int _tn = snprintf(str2, sizeof(str2), "mkdir %s/vnmrsys/wavelib\n", ifn); (void) _tn; }
+    ret = system(str2);  
+    { int _tn = snprintf(str2, sizeof(str2), "mkdir %s/vnmrsys/wavelib/usr\n", ifn); (void) _tn; }
+    ret = system(str2);     
     if ((outf = fopen(ofn, "w")) == NULL)
     {
       printf("Pxspy: cannot open output file %s\n", ofn);
