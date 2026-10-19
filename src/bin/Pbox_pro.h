@@ -236,6 +236,7 @@ int resetpars(char fln[MAXSTR], int inm)
   FILE *fil;
   int i, j;
   char str[MAXSTR];
+  int ret __attribute__((unused));
 
 
   if ((fil = fopen(fln, "r")) == NULL)   
@@ -246,7 +247,7 @@ int resetpars(char fln[MAXSTR], int inm)
 
   while (findch(fil, '$') > 0)
   {
-    fscanf(fil, "%s", str);
+    ret = fscanf(fil, "%s", str);
     j = ftell(fil);
     if (isdigit(str[0])) 
       i = stoi(str);  
@@ -276,7 +277,7 @@ int closepbox(void)
   static char fnm[MAXSTR], fcl[MAXSTR];
   int i, j, k, n, m, nn, itr, nitr, inp, gate, minnumb, npmax;
   double mindelta, maxdelta, dumm, attf, pls, plu, sum, mxl;
-  double B1max, b1max, qq, dj, itrerr, pw0, edB;
+  double B1max, b1max, qq, itrerr, edB;
   void   blqtph(Blodata *bl);
 
 /* ------------------------------- Reset parameters ------------------------- */
@@ -285,7 +286,7 @@ int closepbox(void)
   i=0, j=0, k=0, n=0, m=0, nn=0, itr=0, nitr=0, inp=0, gate=0, minnumb=0;
   mindelta=0.0, maxdelta=0.0, dumm=0.0, attf=0.0, pls=0.0; 
   plu=0.0, sum=0.0, mxl=0.0, Pfact=0.0, B1rms=0.0, MaxAmp=0.0, MaxIncr=0.0;
-  B1max=0.0, b1max=0.0, RmsPwr=0, qq=0.0, dj=0.0, itrerr=0.0, pw0=0.0;
+  B1max=0.0, b1max=0.0, RmsPwr=0, qq=0.0, itrerr=0.0;
 
 
 /* -------------------------- set up NULL pulses -----------------------------*/
@@ -1131,7 +1132,7 @@ FSLG -  one of the versions disabled here. EK.
       reportwave(&Wv[i], h.reps);
       printf("\n");
       if(Sh[i].set == 1)
-        printcoms(Wv[i].dir, Wv[i].sh, 'h');
+        printcoms(Wv[i].dir, Wv[i].sh, 'h', sizeof(Wv[i].dir));
       else
         printf("\n# reserved shape name : %s, (id = %d)\n", Wv[i].sh, Sh[i].set);
       reportshape(&Sh[i]);
@@ -1518,7 +1519,7 @@ FSLG -  one of the versions disabled here. EK.
         {
           if (Sh[i].set > 0) 
           {
-            printcoms(Wv[0].dir, Wv[0].sh, 't');
+            printcoms(Wv[0].dir, Wv[0].sh, 't', sizeof(Wv[i].dir));
             fprintf(fil, "%s", Wv[0].dir);
             fprintf(fil, "# VERSION       8.2\n"); 
             fprintf(fil, "# TYPE          %s\n", h.ptype);

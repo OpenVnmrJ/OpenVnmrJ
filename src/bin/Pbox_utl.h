@@ -13,8 +13,6 @@
 
 void setglo(void)			/* set Pbox globals */
 {
-  FILE *fnm;
-  
   strcpy(g.shdir, "/vnmrsys/shapelib/");
   strcpy(g.wvdir, "/vnmrsys/wavelib/");
   g.maxst = 65500;
@@ -321,6 +319,8 @@ void shapeinfo(char *sh, char *opt)  /* not used */
 {
 FILE  *fil;
 char   str[MAXSTR];
+  int ret __attribute__((unused));
+  char *ret2 __attribute__((unused));
 
   (void) strcat(strcpy(str, waves), sh);
   if ((fil = fopen(str, "r")) == NULL)
@@ -329,7 +329,7 @@ char   str[MAXSTR];
     if ((fil = fopen(str, "r")) == NULL) err(sh); 
   }
 
-  fscanf(fil, "%s", str);
+  ret = fscanf(fil, "%s", str);
   if (opt[0] == 't')
   {
     strcpy(opt, str);
@@ -340,9 +340,9 @@ char   str[MAXSTR];
   while (str[0] == '#')
   {
     printf("%s", str);
-    fgets(str, MAXSTR, fil);
+    ret2 = fgets(str, MAXSTR, fil);
     printf("%s", str);
-    fscanf(fil, "%s", str);
+    ret = fscanf(fil, "%s", str);
   }
 
   if (opt[0] == 'i')
@@ -390,11 +390,12 @@ int findcom(FILE *fnm, char *str)
 {
   char str1[MAXSTR], str2[MAXSTR];
   int i = 0;
+  char *ret2 __attribute__((unused));
 
   fseek(fnm, 0, 0);
   while (getc(fnm) == '#')
   {
-    fgets(str1, MAXSTR, fnm);
+    ret2 = fgets(str1, MAXSTR, fnm);
     sscanf(str1, "%s", str2); 
       if (strcmp(str, str2) == 0)
       {
@@ -736,7 +737,6 @@ void setname(char *nm)
 void gethdr(FILE *fil)
 {
   char val[MAXSTR];
-  int  i;
 
   val[0] = '\0';
   if (findpar(fil, "type", val) > 0) 				    /* type */
@@ -1067,7 +1067,7 @@ void resetwave(Wave *wa)
 
 int setwave(Wave *wa, int tfl)
 {
-char ch, wstr[512], str[256], prm[256];
+char wstr[512], str[256], prm[256];
 int i=0, j, k=1;
 
     if (wa->str[0] != '{')
@@ -1167,7 +1167,7 @@ int i=0, j, k=1;
 
 int getwave(FILE *fil, Wave *wa, int tfl)
 {
-char str[256], prm[256];
+char prm[256];
 int i=0, j=0, k=1;
 
   resetwave(wa); 
@@ -1511,7 +1511,6 @@ int dfil(Windw *wn)  /* Digital Filters */
 int wmult(Shape *s, Windw *wn)
 {
   int j;
-  double mx=0.0;
 
   for (j = 0; j < s->np; j++)
     Pha[j] = Amp[j];
@@ -1796,7 +1795,7 @@ FILE *findwave(char *lib, char *dir, char *sh, char *shf)
 }
 
 
-int printcoms(char *dir, char *sh, char opt)
+int printcoms(char *dir, char *sh, char opt, size_t len)
 {
   FILE *fil;
   char shape[MAXSTR], str[MAXSTR];
@@ -1817,7 +1816,7 @@ int printcoms(char *dir, char *sh, char opt)
   if (opt == 't')
   {
     if (str[0] == '#')
-    { int _tn = snprintf(dir, NAMLEN, "%s", shape); (void) _tn; }
+    { int _tn = snprintf(dir, len, "%s", shape); (void) _tn; }
   }
   else
   {
@@ -1844,6 +1843,8 @@ int getshape(char *dir, char *sh, Shape *s, int reps)
   FILE *fil;
   char str[MAXSTR], str1[MAXSTR];
   int i, j, k;
+  int ret __attribute__((unused));
+  char *ret2 __attribute__((unused));
 
   if ((sh[0]=='a' || sh[0]=='A' || sh[0]=='r') && (sh[1]=='-'))  /* internal phase cycles */
   {
@@ -1886,7 +1887,7 @@ int getshape(char *dir, char *sh, Shape *s, int reps)
   while (str[0] == '#')
   {
     if (fgets(str, MAXSTR, fil) == NULL) { err(sh); return 0; }
-    fscanf(fil, "%s", str);
+    ret = fscanf(fil, "%s", str);
   }
 		/* Shape parameters */  
   strcpy(s->sh, sh); 
@@ -1956,12 +1957,12 @@ int getshape(char *dir, char *sh, Shape *s, int reps)
   if (findpar(fil, "rows", str) > 0) s->m = stoi(str);
   if ((k = s->n * s->m) > 0)
   {
-    fgets(str, MAXSTR, fil);
+    ret2 = fgets(str, MAXSTR, fil);
     skipcomms(fil);
     s->f = arry(k); k=0;     
     for(i = 0; i< s->m; i++) {
       for(j = 0; j< s->n; j++) 	{
-	fscanf(fil, "%lf", &s->f[k]); 
+	ret = fscanf(fil, "%lf", &s->f[k]); 
 	k++;			}
         		     }
   }
@@ -1974,8 +1975,10 @@ int getshape(char *dir, char *sh, Shape *s, int reps)
 int getwindow(char *dir, char *sh, Windw *wn, int reps)
 {
   FILE *fil;
-  char shape[MAXSTR], str[MAXSTR];
+  char str[MAXSTR];
   int i, j, k;
+  int ret __attribute__((unused));
+  char *ret2 __attribute__((unused));
 
   if (((fil = findwave(waves, dir, sh, wn->fnm)) == NULL) &&
       ((fil = findwave(SYSWAVELIB, dir, sh, wn->fnm)) == NULL))
@@ -1987,7 +1990,7 @@ int getwindow(char *dir, char *sh, Windw *wn, int reps)
   while (str[0] == '#')
   {
     if (fgets(str, MAXSTR, fil) == NULL) { err(sh); return 0; }
-    fscanf(fil, "%s", str);
+    ret = fscanf(fil, "%s", str);
   }
 		/* Window parameters */
 
@@ -2013,12 +2016,12 @@ int getwindow(char *dir, char *sh, Windw *wn, int reps)
   if (findpar(fil, "rows", str) > 0) wn->m = stoi(str);
   if ((k = wn->n * wn->m) > 0)
   {
-    fgets(str, MAXSTR, fil);
+    ret2 = fgets(str, MAXSTR, fil);
     skipcomms(fil);
     wn->f = arry(k); k=0;     
     for(i = 0; i< wn->m; i++) {
       for(j = 0; j< wn->n; j++) 	{
-	fscanf(fil, "%lf", &wn->f[k]);
+	ret = fscanf(fil, "%lf", &wn->f[k]);
 	k++;			}
         		     }
   }
@@ -2029,6 +2032,7 @@ int getwindow(char *dir, char *sh, Windw *wn, int reps)
 int findparm(FILE *fnm, char *str, char *val, int ip)
 {
   char chr[MAXSTR];
+  int ret __attribute__((unused));
   
   chr[0] = '\0';
   fseek(fnm, ip, 0); 
@@ -2036,10 +2040,10 @@ int findparm(FILE *fnm, char *str, char *val, int ip)
   {
     if ((str[0] == chr[0]) && (strcmp(chr,str) == 0))
     {
-      fscanf(fnm, "%s", chr);
+      ret = fscanf(fnm, "%s", chr);
       if (chr[0] == '=') 
       {
-        fscanf(fnm, "%s", val); 
+        ret = fscanf(fnm, "%s", val); 
         return 1;
       }
     }
@@ -2053,6 +2057,8 @@ void modpars(FILE *fil, Shape *s, int ip)
 {
   char str[MAXSTR];
   int i, j, k=0;
+  int ret __attribute__((unused));
+  char *ret2 __attribute__((unused));
 
 		/* Modify shape parameters */
 
@@ -2239,14 +2245,14 @@ void modpars(FILE *fil, Shape *s, int ip)
   }
   if ((i) || (j))
   {
-    fgets(str, MAXSTR, fil);
+    ret2 = fgets(str, MAXSTR, fil);
     s->f = arry(k); k=0;     
     for(i = 0; i< s->m; i++) 
     {
       { char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), "#      "); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
       for(j = 0; j< s->n; j++) 	
       {
-	fscanf(fil, "%lf", &s->f[k]);
+	ret = fscanf(fil, "%lf", &s->f[k]);
 	{ char _mp[MAXSTR + 64]; snprintf(_mp, sizeof(_mp), " %12.6f  ", s->f[k]); strncat(s->modpar, _mp, sizeof(s->modpar) - strlen(s->modpar) - 1); }
 	k++;			
       }

@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
                   {
                     e_str[0]='\0';
                     if(verb=='y') printf("%s \n", argv[j+k]); 
-                    printcoms(e_str, argv[j+k], 'h');
+                    printcoms(e_str, argv[j+k], 'h', sizeof(e_str));
                     printf("\n");
                     k++; 
                   }
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
                   {
                     e_str[0]='\0';
                     if(verb=='y') printf("%s \n", argv[j+k]); 
-                    printcoms(e_str, argv[j+k], 'i');
+                    printcoms(e_str, argv[j+k], 'i', sizeof(e_str));
                     printf("\n");
                     k++; 
                   }
@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
                   {
                     e_str[0]='\0';
                     if(verb=='y') printf("%s \n", argv[j+k]); 
-                    printcoms(e_str, argv[j+k], 't');
+                    printcoms(e_str, argv[j+k], 't', sizeof(e_str));
                     printf("\n");
                     k++; 
                   }

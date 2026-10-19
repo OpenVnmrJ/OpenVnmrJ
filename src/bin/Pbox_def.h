@@ -166,8 +166,8 @@ double *arry(int nl)
 char *safecpy(char *dst, char *src, size_t dstsize)
 {
   if (dstsize == 0) return dst;
-  strncpy(dst, src, dstsize - 1);
-  dst[dstsize - 1] = '\0';
+  if ( snprintf(dst, dstsize, "%s", src) >= dstsize )
+     printf("Warning safecpy truncation: %s\n",src);
   return dst;
 }
 
