@@ -278,7 +278,6 @@ char	       *phi = "phi";
 char	       *theta = "theta";
 char           *str_in;
 char           *cur_line;
-char           *tempnam();
 char            s_token[5120];
 char            argArray[2048];
 char            argStr[2048*2];
@@ -340,16 +339,16 @@ int G_simpulse();
 int G_sync();
 int translate_show();
 void cat_arg(char *dstr, char *format, ...);
-void cleansource();
-void get_args();
-void add_def_list();
-void chk_def();
-void parsesource();
-void eat_quot();
-void eat_singleQuote();
-void eat_bracket();
-void adjustment();
-void changename();
+void cleansource(char *filename, int exit_flag);
+void get_args(FILE *fin);
+void add_def_list(char *token, int *index, int len);
+void chk_def(char *source, char *token, int *ptr);
+void parsesource(char *filename);
+void eat_quot(FILE *fin, int *ptr);
+void eat_singleQuote(FILE *fin, int *ptr);
+void eat_bracket(FILE *fin, int *ptr);
+void adjustment(char *source, int *ptr);
+void changename(char *source, int *index);
 
 
 void
@@ -509,14 +508,6 @@ main(int argc, char *argv[])
 /*
    fprintf(fout, "extern  FILE   *dpsdata;\n");
 */
-#ifdef AIX
-   fprintf(fout, "int x_pulsesequence();\n");
-   fprintf(fout, "int t_pulsesequence();\n");
-   fprintf(fout, "main(argc,argv)\n");
-   fprintf(fout, "int     argc; char    *argv[];\n{\n");
-   fprintf(fout, "   set_dps_func (x_pulsesequence, t_pulsesequence);\n");
-   fprintf(fout, "   psg_main(argc,argv);\n}\n");
-#endif
 
    phase_2 = 0;
    s_rout = NULL;
@@ -565,7 +556,7 @@ main(int argc, char *argv[])
 	s_rout = NULL;
 	s_def = NULL;
 	s_token[0] = '\0';
-	parsesource(tmp_source, 0);
+	parsesource(tmp_source);
    	fprintf(fout, "\n#endif\n");
    	fclose(fout);
 
@@ -579,7 +570,7 @@ main(int argc, char *argv[])
 	     exit(0);
            }
 	   /* change all subroutine names */
-	   parsesource(time_file1, 0);
+	   parsesource(time_file1);
 	   fclose(fout);
 	   unlink(time_file1);
    	}
@@ -7209,8 +7200,7 @@ change_proc_name(char *source)
          fprintf(fout, "%s", src);
 }
 
-void
-parsesource(char *filename)
+void parsesource(char *filename)
 {
    int   ptrn, insert, exist, newline;
    int   p_flag, ptri;
@@ -7560,8 +7550,12 @@ parsesource(char *filename)
 			}
 			if (!exist)
 			{
-			    t_rout = (struct routine *)
-			    malloc(sizeof(struct routine));
+			    t_rout = (struct routine *) malloc(sizeof(struct routine));
+			    if (t_rout == NULL)
+			    {
+                               fprintf(stderr, "dps_ps_gen(4): memory allocation error\n");
+                               exit(0);
+			    }
 			    strcpy(t_rout->name, cmd_name);
 			    t_rout->next = NULL;
 			    if (s_rout == NULL)
@@ -7666,8 +7660,7 @@ parsesource(char *filename)
 }
 
 
-void
-eat_quot(FILE *fin, int *ptr)
+void eat_quot(FILE *fin, int *ptr)
 {
 	int	 index, slash;
 
@@ -7760,8 +7753,7 @@ void eat_singleQuote(FILE *fin, int *ptr)
 }
 
 
-void
-eat_bracket(FILE *fin, int *ptr)
+void eat_bracket(FILE *fin, int *ptr)
 {
 	int	 index, bracket, slash, quot;
 
@@ -7855,8 +7847,7 @@ remove_comment()
 
 
 /*   add "X_"  to the subroutine name  */
-void
-changename(char *source, int *index)
+void changename(char *source, int *index)
 {
    int             count;
    int             pn;
@@ -7897,8 +7888,7 @@ changename(char *source, int *index)
 
 
 /*   to retrieve the arguments of the PSG function  */
-void
-get_args(FILE *fin)
+void get_args(FILE *fin)
 {
    int  argptr;
    int  pl, pr;
@@ -8033,8 +8023,7 @@ get_args(FILE *fin)
 
 
 
-void
-adjustment(char *source, int *ptr)
+void adjustment(char *source, int *ptr)
 {
    int             loop,
                    index;
@@ -8065,8 +8054,7 @@ adjustment(char *source, int *ptr)
 
 
 /* collect all defined variables */
-void
-add_def_list(char *token, int *index, int len)
+void add_def_list(char *token, int *index, int len)
 {
 	int  n, insert, ptr;
 	
@@ -8101,8 +8089,12 @@ add_def_list(char *token, int *index, int len)
 	 	token[n] = '\0';
 		if ( n <= 0)
 		    return;
-		t_def = (struct routine *)
-			malloc(sizeof(struct routine));
+		t_def = (struct routine *) malloc(sizeof(struct routine));
+	  	if (t_def == NULL)
+		{
+                   fprintf(stderr, "dps_ps_gen(4): memory allocation error\n");
+                   exit(0);
+		}
 		strcpy(t_def->name, token);
 		t_def->next = NULL;
 		if (s_def == NULL)
@@ -8119,8 +8111,7 @@ add_def_list(char *token, int *index, int len)
 
 
 /* check variables if it is a defined var then change it's name */
-void
-chk_def(char *source, char *token, int *ptr)
+void chk_def(char *source, char *token, int *ptr)
 {
 	int  exist;
 	struct routine *pp_def;
