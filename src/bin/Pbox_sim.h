@@ -14,12 +14,10 @@ void bloch(Blodata *bl)
 {
   FILE *fil;
   char ch, name[MAXSTR];
-  int i, j, Xm, Ym, Zm, iflg=0, nt=0;
+  int i, j, j0, j1, chunk, Xm, Ym, Zm, iflg=0, nt=0;
   double *csp, *snp;
   double axis, mx, my, mz, rx1, rx2, p1, frq, dumm, scl = 32767.0;
-  double teta, snt, cst, st2, ct2, Beff, csf, snf, step;
-  double ca2, sa2, cas, ctsf, sfst, stct, scc, csf1, caf, scc1, sas;
-  double xx, xy, xz, yx, yy, yz, zx, zy, zz;
+  double step, *frqs;
   double rd = M_PI / 180.0, pi2 = 2.0 * M_PI, mxl = 0.0;
   int start, finsh;		/* time */
 
@@ -112,55 +110,90 @@ void bloch(Blodata *bl)
   for (i = 0; i < bl->np; i++)
     Amp[i] = bl->B1max * Amp[i] / mxl; 
 
-  start = time(NULL);		/* start the simulation */
+  frqs = arry(bl->nstp);
   for (j = 0; j < bl->nstp; j++)
   {
-    for (i = 0; i < bl->np; i++)
-    {
-      teta = atan2(Amp[i], frq);
-      Beff = sqrt(Amp[i] * Amp[i] + frq * frq);
-
-      snt = sin(teta);
-      cst = cos(teta);
-      ct2 = cst * cst;
-      st2 = snt * snt;
-      snf = sin(Beff * p1);
-      csf = cos(Beff * p1);
-      ctsf = cst * snf;
-      sfst = snf * snt;
-      ca2 = csp[i] * csp[i];
-      sa2 = snp[i] * snp[i];
-      cas = csp[i] * snp[i];
-      scc = st2 + ct2 * csf;
-      stct = snt * cst;
-      csf1 = 1 - csf;
-      caf = cas * (csf - scc);
-      scc1 = stct * csf1;
-      sas = snp[i] * sfst;
-
-      xx = ca2 * csf + sa2 * scc;
-      xy = caf - ctsf;
-      xz = csp[i] * sfst - snp[i] * scc1;
-      yx = ctsf + caf;
-      yy = sa2 * csf + ca2 * scc;
-      yz = sas + csp[i] * scc1;
-      zx = csp[i] * sfst + snp[i] * scc1;
-      zy = csp[i] * scc1 - sas;
-      zz = ct2 + st2 * csf;
-      
-      mx = bl->Mx[j]*xx + bl->My[j]*xy + bl->Mz[j]*xz - bl->Mx[j]*rx2; 
-      my = bl->Mx[j]*yx + bl->My[j]*yy + bl->Mz[j]*yz - bl->My[j]*rx2; 
-      mz = -bl->Mx[j]*zx + bl->My[j]*zy + bl->Mz[j]*zz - bl->Mz[j]*rx1 + rx1;
-
-      bl->Mx[j] = mx;
-      bl->My[j] = my;
-      bl->Mz[j] = mz;
-    }
+    frqs[j] = frq;
     frq -= step;
-    finsh = time(NULL);
-    if ((j > 0) && ((finsh - start) > 10) && (bl->reps > 1) && (iflg == 0))
+  }
+  chunk = bl->nstp / 32;
+  if (chunk < 16) chunk = 16;
+
+  start = time(NULL);		/* start the simulation */
+  for (j0 = 0; j0 < bl->nstp; j0 += chunk)
+  {
+    j1 = (j0 + chunk < bl->nstp) ? j0 + chunk : bl->nstp;
+
+#pragma omp parallel for schedule(static)
+    for (j = j0; j < j1; j++)
     {
-      dumm = (finsh - start) * (((double) bl->nstp / j) - 1.0);
+      int i;
+      double ox, oy, oz, nx, ny, nz, fq = frqs[j];
+      double snt = 0.0, cst = 0.0, st2 = 0.0, ct2 = 0.0, Beff = 0.0, csf = 0.0, snf = 0.0;
+      double ctsf = 0.0, sfst = 0.0, stct = 0.0, scc = 0.0, csf1 = 0.0, scc1 = 0.0;
+      double ca2, sa2, cas, caf, sas;
+      double xx, xy, xz, yx, yy, yz, zx, zy, zz;
+
+      ox = bl->Mx[j]; oy = bl->My[j]; oz = bl->Mz[j];
+
+      for (i = 0; i < bl->np; i++)
+      {
+        if ((i == 0) || (Amp[i] != Amp[i - 1]))   /* terms that depend on amplitude only */
+        {
+          Beff = sqrt(Amp[i] * Amp[i] + fq * fq);
+          if (Beff > 0.0)
+          {
+            snt = Amp[i] / Beff;
+            cst = fq / Beff;
+          }
+          else
+          {
+            snt = 0.0;
+            cst = 1.0;
+          }
+          ct2 = cst * cst;
+          st2 = snt * snt;
+          snf = sin(Beff * p1);
+          csf = cos(Beff * p1);
+          ctsf = cst * snf;
+          sfst = snf * snt;
+          scc = st2 + ct2 * csf;
+          stct = snt * cst;
+          csf1 = 1 - csf;
+          scc1 = stct * csf1;
+        }
+        ca2 = csp[i] * csp[i];
+        sa2 = snp[i] * snp[i];
+        cas = csp[i] * snp[i];
+        caf = cas * (csf - scc);
+        sas = snp[i] * sfst;
+
+        xx = ca2 * csf + sa2 * scc;
+        xy = caf - ctsf;
+        xz = csp[i] * sfst - snp[i] * scc1;
+        yx = ctsf + caf;
+        yy = sa2 * csf + ca2 * scc;
+        yz = sas + csp[i] * scc1;
+        zx = csp[i] * sfst + snp[i] * scc1;
+        zy = csp[i] * scc1 - sas;
+        zz = ct2 + st2 * csf;
+      
+        nx = ox*xx + oy*xy + oz*xz - ox*rx2; 
+        ny = ox*yx + oy*yy + oz*yz - oy*rx2; 
+        nz = -ox*zx + oy*zy + oz*zz - oz*rx1 + rx1;
+
+        ox = nx;
+        oy = ny;
+        oz = nz;
+      }
+      bl->Mx[j] = ox;
+      bl->My[j] = oy;
+      bl->Mz[j] = oz;
+    }
+    finsh = time(NULL);
+    if ((j1 > 0) && ((finsh - start) > 10) && (bl->reps > 1) && (iflg == 0))
+    {
+      dumm = (finsh - start) * (((double) bl->nstp / j1) - 1.0);
       if (dumm > 10)
       {
 	printf("  Simulation will take another %.0f sec ...\n", dumm);
@@ -169,12 +202,13 @@ void bloch(Blodata *bl)
 	{
 	  printf("     which exceeds the time limit of %d sec\n", bl->time);
 	  printf("\n  Simulation aborted...\n\n");
-	  free(csp); free(snp);
+	  free(csp); free(snp); free(frqs);
 	  return;
 	}
       }
     }
   }
+  free(frqs);
   dumm = bl->sw;
   if (bl->sw > 1500.0) dumm = 0.001 * bl->sw;
 
@@ -288,12 +322,10 @@ void bloch_rd(Blodata *bl)  /* Bloch simulation with Radiation Damping */
 {
   FILE *fil;
   char ch, name[MAXSTR];
-  int i, j, Xm, Ym, Zm, iflg=0, nt=0;
-  double *csp, *snp, csr, snr;
+  int i, j, j0, j1, chunk, Xm, Ym, Zm, iflg=0, nt=0;
+  double *csp, *snp;
   double axis, mx, my, mz, rx1, rx2, p1, frq, dumm, scl = 32767.0;
-  double teta, snt, cst, st2, ct2, Beff, csf, snf, step;
-  double ca2, sa2, cas, ctsf, sfst, stct, scc, csf1, caf, scc1, sas;
-  double xx, xy, xz, yx, yy, yz, zx, zy, zz, rdc;
+  double step, rdc, *frqs;
   double rd = M_PI / 180.0, pi2 = 2.0 * M_PI, mxl = 0.0;
   int start, finsh;		/* time */ 
 
@@ -391,60 +423,92 @@ void bloch_rd(Blodata *bl)  /* Bloch simulation with Radiation Damping */
     snp[i] = Amp[i] * sin(Pha[i]);
   }
 
-  start = time(NULL);		/* start the simulation */
+  frqs = arry(bl->nstp);
   for (j = 0; j < bl->nstp; j++)
   {
-    for (i = 0; i < bl->np; i++)
-    {
-      mx = csp[i] - rdc*bl->Mx[j]; 
-      my = snp[i] - rdc*bl->My[j];
-      mz = sqrt(mx*mx + my*my);
-      csr=mx/mz;  snr=my/mz;
-
-      teta = atan2(mz, frq);
-      Beff = sqrt(mz * mz + frq * frq);
-
-      snt = sin(teta);
-      cst = cos(teta);
-      ct2 = cst * cst;
-      st2 = snt * snt;
-      snf = sin(Beff * p1);
-      csf = cos(Beff * p1);
-      ctsf = cst * snf;
-      sfst = snf * snt;
-      ca2 = csr * csr;
-      sa2 = snr * snr;
-      cas = csr * snr;
-      scc = st2 + ct2 * csf;
-      stct = snt * cst;
-      csf1 = 1 - csf;
-      caf = cas * (csf - scc);
-      scc1 = stct * csf1;
-      sas = snr * sfst;
-
-      xx = ca2 * csf + sa2 * scc;
-      xy = caf - ctsf;
-      xz = csr * sfst - snr * scc1;
-      yx = ctsf + caf;
-      yy = sa2 * csf + ca2 * scc;
-      yz = sas + csr * scc1;
-      zx = csr * sfst + snr * scc1;
-      zy = csr * scc1 - sas;
-      zz = ct2 + st2 * csf;
-      
-      mx = bl->Mx[j]*xx + bl->My[j]*xy + bl->Mz[j]*xz - bl->Mx[j]*rx2; 
-      my = bl->Mx[j]*yx + bl->My[j]*yy + bl->Mz[j]*yz - bl->My[j]*rx2; 
-      mz = -bl->Mx[j]*zx + bl->My[j]*zy + bl->Mz[j]*zz - bl->Mz[j]*rx1 + rx1;
-
-      bl->Mx[j] = mx;
-      bl->My[j] = my;
-      bl->Mz[j] = mz;
-    }
+    frqs[j] = frq;
     frq -= step;
-    finsh = time(NULL);
-    if ((j > 0) && ((finsh - start) > 10) && (bl->reps > 1) && (iflg == 0))
+  }
+  chunk = bl->nstp / 32;
+  if (chunk < 16) chunk = 16;
+
+  start = time(NULL);		/* start the simulation */
+  for (j0 = 0; j0 < bl->nstp; j0 += chunk)
+  {
+    j1 = (j0 + chunk < bl->nstp) ? j0 + chunk : bl->nstp;
+
+#pragma omp parallel for schedule(static)
+    for (j = j0; j < j1; j++)
     {
-      dumm = (finsh - start) * (((double) bl->nstp / j) - 1.0);
+      int i;
+      double ox, oy, oz, nx, ny, nz, fq = frqs[j];
+      double snt, cst, st2, ct2, Beff, csf, snf;
+      double ca2, sa2, cas, ctsf, sfst, stct, scc, csf1, caf, scc1, sas;
+      double xx, xy, xz, yx, yy, yz, zx, zy, zz;
+      double csr, snr;
+
+      ox = bl->Mx[j]; oy = bl->My[j]; oz = bl->Mz[j];
+
+      for (i = 0; i < bl->np; i++)
+      {
+        nx = csp[i] - rdc*ox; 
+        ny = snp[i] - rdc*oy;
+        nz = sqrt(nx*nx + ny*ny);
+        csr=nx/nz;  snr=ny/nz;
+
+        Beff = sqrt(nz * nz + fq * fq);
+        if (Beff > 0.0)
+        {
+          snt = nz / Beff;
+          cst = fq / Beff;
+        }
+        else
+        {
+          snt = 0.0;
+          cst = 1.0;
+        }
+        ct2 = cst * cst;
+        st2 = snt * snt;
+        snf = sin(Beff * p1);
+        csf = cos(Beff * p1);
+        ctsf = cst * snf;
+        sfst = snf * snt;
+        ca2 = csr * csr;
+        sa2 = snr * snr;
+        cas = csr * snr;
+        scc = st2 + ct2 * csf;
+        stct = snt * cst;
+        csf1 = 1 - csf;
+        caf = cas * (csf - scc);
+        scc1 = stct * csf1;
+        sas = snr * sfst;
+
+        xx = ca2 * csf + sa2 * scc;
+        xy = caf - ctsf;
+        xz = csr * sfst - snr * scc1;
+        yx = ctsf + caf;
+        yy = sa2 * csf + ca2 * scc;
+        yz = sas + csr * scc1;
+        zx = csr * sfst + snr * scc1;
+        zy = csr * scc1 - sas;
+        zz = ct2 + st2 * csf;
+      
+        nx = ox*xx + oy*xy + oz*xz - ox*rx2; 
+        ny = ox*yx + oy*yy + oz*yz - oy*rx2; 
+        nz = -ox*zx + oy*zy + oz*zz - oz*rx1 + rx1;
+
+        ox = nx;
+        oy = ny;
+        oz = nz;
+      }
+      bl->Mx[j] = ox;
+      bl->My[j] = oy;
+      bl->Mz[j] = oz;
+    }
+    finsh = time(NULL);
+    if ((j1 > 0) && ((finsh - start) > 10) && (bl->reps > 1) && (iflg == 0))
+    {
+      dumm = (finsh - start) * (((double) bl->nstp / j1) - 1.0);
       if (dumm > 10)
       {
 	printf("  Simulation will take another %.0f sec ...\n", dumm);
@@ -453,12 +517,13 @@ void bloch_rd(Blodata *bl)  /* Bloch simulation with Radiation Damping */
 	{
 	  printf("     which exceeds the time limit of %d sec\n", bl->time);
 	  printf("\n  Simulation aborted...\n\n");
-	  free(csp); free(snp);
+	  free(csp); free(snp); free(frqs);
 	  return;
 	}
       }
     }
   }
+  free(frqs);
   dumm = bl->sw;
   if (bl->sw > 1500.0) dumm = 0.001 * bl->sw;
 
