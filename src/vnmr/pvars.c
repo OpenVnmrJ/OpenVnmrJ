@@ -1585,7 +1585,6 @@ int P_save(int tree, const char *filename)
 		unlink( &tmpfilename[ 0 ] );
 		return(-19);			/* error writing file */
 	    }
-	    unlink( filename );
 	    rename( &tmpfilename[ 0 ], filename );
 	    return(0);
 	}
@@ -1674,7 +1673,6 @@ int P_saveUnsharedGlobal(const char *filename)
 		unlink( &tmpfilename[ 0 ] );
 		return(-19);			/* error writing file */
 	    }
-	    unlink( filename );
 	    rename( &tmpfilename[ 0 ], filename );
 	    return(0);
 	}

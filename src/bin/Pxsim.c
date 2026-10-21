@@ -37,10 +37,9 @@
 int main(int argc, char *argv[])
 {
   FILE *fil;
-  int i, np;
-  char ext[4], str[32];
-  double tmp;
-  Blodata bl;
+  int i;
+  char ext[4];
+  Blodata bl = {0};
 
   bl.time = 60;
 

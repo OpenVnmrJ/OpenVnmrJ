@@ -12,40 +12,44 @@
 
 static char e_str[512];
 
-void err(fstr)
-char *fstr;
+void err(char *fstr) __attribute__((noreturn));
+void flerr(char *fname) __attribute__((noreturn));
+void pxerr(char *str) __attribute__((noreturn));
+
+void err(char *fstr)
 {
   printf("\n Pandora in panic! Can't find the \"%s\" file.\n", fstr);
   printf("Aborting...\n");
   exit(1);
 }
 
-void flerr(fname)
-char *fname;
+void flerr(char *fname)
 {
   printf("\n Pbox: Can't open file \"%s\" file.\n Aborting...\n", fname);
   exit(1);
 }
 
-void pxerr(str)
-char *str;
+void pxerr(char *str)
 {
   printf("\n %s\n\n", str);
   exit(1);
 }
 
-void pxout(str, dev)
-char *str, dev;
+void pxout(char *str, char dev)
 {
   printf("%s", str);
 }
 
-double pxscan()
+double pxscan(void)
 {
   double dbl;
 
   printf("\n %s\n\n", e_str);
-  scanf("%lf", &dbl);
+  if (scanf("%lf", &dbl) != 1)
+  {
+    printf("Pbox: invalid numeric input.\n");
+    return 0.0;
+  }
   return dbl;
 }
 
