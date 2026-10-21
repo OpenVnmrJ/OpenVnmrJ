@@ -2478,7 +2478,10 @@ exec_sequence(int firstime, int argc, char *argv[])
     int     ret;
     int     ready;
     int     pipe1[2];
-    int     pipe2[2];
+// Note: unistd.h:389: error: previous declaration of 'int pipe2(int*, int)
+// static int pipe2[2];
+// So change the name to pipeB
+    int     pipeB[2];
     int     suflag;   /* setup flag,0=GO,1-6=different alias's of GO */
     /* --- child and pipe variables --- */
     char    pipe1_0[3];
@@ -2537,7 +2540,7 @@ exec_sequence(int firstime, int argc, char *argv[])
     {   Werrprintf("dps error: could not create system pipes!");
         return(0);
     }
-    ret = pipe(pipe2); /* make second pipe */
+    ret = pipe(pipeB); /* make second pipe */
     /*
      *  The second pipe is used to cause go to wait for DPS to
      *  complete.  This is only used in automation mode.
@@ -2556,8 +2559,8 @@ exec_sequence(int firstime, int argc, char *argv[])
 
         sprintf(pipe1_0,"%d",pipe1[0]);
         sprintf(pipe1_1,"%d",pipe1[1]);
-        sprintf(pipe2_0,"%d",pipe2[0]);
-        sprintf(pipe2_1,"%d",pipe2[1]);
+        sprintf(pipe2_0,"%d",pipeB[0]);
+        sprintf(pipe2_1,"%d",pipeB[1]);
         sprintf(suflagstr,"%d",suflag);
         sprintf(Rev_Num,"%d",GO_PSG_REV);
 
@@ -2572,7 +2575,7 @@ exec_sequence(int firstime, int argc, char *argv[])
     }
 
     close(pipe1[0]);  /* parent closes its read end of first pipe */
-    close(pipe2[1]);  /* parent closes its write end of second pipe */
+    close(pipeB[1]);  /* parent closes its write end of second pipe */
 
     psg_busted = 0;   /* see go.c */
     catch_sigpipe();  /* see go.c */
@@ -2619,7 +2622,7 @@ exec_sequence(int firstime, int argc, char *argv[])
 	inputs[1] = '\0';
 	while(1)
 	{
-          sizeT = read(pipe2[0],inputs, MAXPATH);
+          sizeT = read(pipeB[0],inputs, MAXPATH);
           if (debug > 1)  
              fprintf(stderr, "DPS read psg status:  %zu chars\n", sizeT);
           if(sizeT <= 0)
@@ -2668,7 +2671,7 @@ exec_sequence(int firstime, int argc, char *argv[])
         if (ready < 1)
           Werrprintf( "dps error: run '%s' pulse sequence failed.", psgfile);
     }
-    close(pipe2[0]);  /* parent closes its read end of first pipe */
+    close(pipeB[0]);  /* parent closes its read end of first pipe */
     cleanup_pars();
     if (debug > 1)  
         fprintf(stderr, "DPS: psg was finished  %d \n", ready);

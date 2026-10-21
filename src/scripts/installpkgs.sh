@@ -677,6 +677,8 @@ else
       fi
       if [[ $distmajor -lt 26 ]]; then
           acqInstall="$acqInstall libcanberra-gtk-module"
+      else
+          acqInstall="$acqInstall systemd-dev"
       fi
   fi
   apt-get -qq update &>> $logfile

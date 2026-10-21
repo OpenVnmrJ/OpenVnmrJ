@@ -162,7 +162,10 @@ extern int psg_pid;
 /* --- child process variables */
 static int child;
 static int pipe1[2];
-static int pipe2[2];
+// Note: unistd.h:389: error: previous declaration of 'int pipe2(int*, int)
+// static int pipe2[2];
+// So change the name to pipeB
+static int pipeB[2];
 
 static char  arrayname[MAXSTR];/* array variable name at present 'array' */
 static char  autodir[MAXPATH]; /* path to automation directory */
@@ -1335,9 +1338,9 @@ int acq(int argc, char *argv[], int retc, char *retv[])
        */
       if ((automode || acqi_fid || waitflag) && psg_busted == 0)
       {
-        psg_return_val = protectedRead(pipe2[0]);
+        psg_return_val = protectedRead(pipeB[0]);
       }
-      close(pipe2[0]);  /* parent closes its read end of first pipe */
+      close(pipeB[0]);  /* parent closes its read end of first pipe */
     }
     /* copy and write files out only if GO */
     if ((suflag == EXEC_GO) && !acqi_fid)
@@ -1404,7 +1407,7 @@ static int sacq(int acqi_fid, char *psgpath, int retc, char *retv[])
           release_console();
         return(1);
     }
-    ret = pipe(pipe2); /* make second pipe */
+    ret = pipe(pipeB); /* make second pipe */
     /*
      *  The second pipe is used to cause go to wait for PSG to
      *  complete.  This is only used in automation mode.
@@ -1431,8 +1434,8 @@ static int sacq(int acqi_fid, char *psgpath, int retc, char *retv[])
           release_console();
         close(pipe1[0]);
         close(pipe1[1]);
-        close(pipe2[0]);
-        close(pipe2[1]);
+        close(pipeB[0]);
+        close(pipeB[1]);
         return(1);
     }
     psg_pid = child;  /* set global psg pid value */
@@ -1447,8 +1450,8 @@ static int sacq(int acqi_fid, char *psgpath, int retc, char *retv[])
 
 	sprintf(pipe1_0,"%d",pipe1[0]);
      	sprintf(pipe1_1,"%d",pipe1[1]);
-	sprintf(pipe2_0,"%d",pipe2[0]);
-     	sprintf(pipe2_1,"%d",pipe2[1]);
+	sprintf(pipe2_0,"%d",pipeB[0]);
+     	sprintf(pipe2_1,"%d",pipeB[1]);
 	sprintf(suflagstr,"%d",suflag);
 	sprintf(Rev_Num,"%d",GO_PSG_REV);
         set_effective_user();
@@ -1470,7 +1473,7 @@ static int sacq(int acqi_fid, char *psgpath, int retc, char *retv[])
 #endif 
 
     close(pipe1[0]);  /* parent closes its read end of first pipe */
-    close(pipe2[1]);  /* parent closes its write end of second pipe */
+    close(pipeB[1]);  /* parent closes its write end of second pipe */
  
 /* The following 5 lines were added September 1994.  See
    comments at catch_sigpipe and block_sigchld, above.   */
@@ -1548,7 +1551,7 @@ static int sacq(int acqi_fid, char *psgpath, int retc, char *retv[])
     /* go waits here until psg finishes the first element of the experiemnt */
     if (psg_busted == 0)
     {
-       int psg_return_val = protectedRead(pipe2[0]);
+       int psg_return_val = protectedRead(pipeB[0]);
        if (retc)
        {
           if (psg_return_val == 0)
@@ -2338,15 +2341,13 @@ static int do_space_check(int nelem)
        /* The fudge factor takes into account some overhead headers, etc. 256 bytes */
        if ( fidSizeBytes/MBYTE > maxFidSizeMB-MAXFIDSIZEFUDGE_MB)
        {
-          char msge[1024];
           /* "FID size (%5.3lf MB) too large for Console DTM Memory (%5.3lf MB), 
 	      change to single precision, or remove compression from an imaging 
                dimension via seqcon", 
           */
 
-          sprintf(msge,"FID size exceeds %.0f MB Max. by %.0f bytes for Console DTM Memory, reduce FID size",
+          Werrprintf("FID size exceeds %.0f MB Max. by %.0f bytes for Console DTM Memory, reduce FID size",
                   maxFidSizeMB, fidSizeBytes - (maxFidSizeMB-MAXFIDSIZEFUDGE_MB)*MBYTE);
-          Werrprintf(msge);
 	  disp_acq("");
           return( -1 );
        }
@@ -2956,8 +2957,8 @@ static int savepars(char *acqfile, int debugPutCmd)
 +------------------------------------------------------------------------*/
 static int copytext(char *dirname)
 {
-    char   filea[MAXPATH];
-    char   fileb[MAXPATH];
+    char   filea[MAXPATH+8];
+    char   fileb[MAXPATH+8];
 
     GPRINT2(1,"copytext from '%s/text' to '%s/text'\n",curexpdir,dirname);
     sprintf(filea,"%s/text",curexpdir);
