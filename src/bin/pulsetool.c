@@ -3274,6 +3274,9 @@ static void bloch_simulate(int mode)
     double   *bloch_ptr[3];
     register double   x, y, z, st, ct;
     register int      i, j, steps, sweep_var;
+    double   *cache = NULL, *c_b1 = NULL, *c_mag = NULL, *c_st = NULL,
+             *c_ct = NULL, *c_omc = NULL, *c_z = NULL, last_b1mult = 0.0;
+    int      have = 0, reuse = 0;
 
     steps = (mode) ? index_inc : nsteps;
 
@@ -3399,8 +3402,22 @@ static void bloch_simulate(int mode)
         /*****
         * Step through the pulse template.
         *****/
+        /*****
+        * Per-sweep-point terms that depend only on the amplitude.
+        *****/
+        cache = (double *)malloc(6*(size_t)sim_steps*sizeof(double));
+        if (cache != NULL) {
+            c_b1  = cache;
+            c_mag = c_b1  + sim_steps;
+            c_st  = c_mag + sim_steps;
+            c_ct  = c_st  + sim_steps;
+            c_omc = c_ct  + sim_steps;
+            c_z   = c_omc + sim_steps;
+        }
+
         for(i=0; i<steps && pulse_index<nsteps; i++, pulse_index++) {
             if (interrupt)  {
+                free(cache);
                 set_frame_label(SIMULATE_FRAME, simulate_frame_label);
                 return;
 		}
@@ -3430,6 +3447,8 @@ static void bloch_simulate(int mode)
 		pulse_index--;
 	    }
 
+            reuse = (cache != NULL  &&  have  &&  b1mult == last_b1mult);
+
             /*****
             * Step through either the B1, or frequency range.
             *****/
@@ -3439,17 +3458,38 @@ static void bloch_simulate(int mode)
                 my = *bloch_ptr[1];
                 mz = *bloch_ptr[2];
 
-                b1 = b1mult*b1max;
-                mag = sqrt(freq*freq + b1*b1);
+                if (reuse) {
+                    b1 = c_b1[j];
+                    mag = c_mag[j];
+                    st = c_st[j];
+                    ct = c_ct[j];
+                    one_min_ct = c_omc[j];
+                    z = c_z[j];
+                }
+                else {
+                    b1 = b1mult*b1max;
+                    mag = sqrt(freq*freq + b1*b1);
+                    if (mag > 0.0) {
+                        theta = mag*dt;
+                        st = sin(theta);
+                        ct = cos(theta);
+                        one_min_ct = 1.0 - ct;
+                        z = freq/mag;
+                    }
+                    if (cache != NULL) {
+                        c_b1[j] = b1;
+                        c_mag[j] = mag;
+                        if (mag > 0.0) {
+                            c_st[j] = st;
+                            c_ct[j] = ct;
+                            c_omc[j] = one_min_ct;
+                            c_z[j] = z;
+                        }
+                    }
+                }
                 if (mag > 0.0) {
-                    theta = mag*dt;
-                    st = sin(theta);
-                    ct = cos(theta);
-		    one_min_ct = 1.0 - ct;
-
                     x = b1*cb/mag;
                     y = b1*sb/mag;
-                    z = freq/mag;
 
                     x_1_minus_ct = x*one_min_ct;
                     y_1_minus_ct = y*one_min_ct;
@@ -3483,7 +3523,13 @@ static void bloch_simulate(int mode)
                 else if (sweep_var == 1)
                     b1max += increment;
             } 
+            if (cache != NULL) {
+                have = 1;
+                last_b1mult = b1mult;
+            }
         }
+        free(cache);
+        cache = NULL;
     }
 
     /*****
