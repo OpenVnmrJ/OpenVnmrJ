@@ -9,6 +9,31 @@
 /*
  */
 /* Pbox_sim.h - Pbox simulator */
+#include <unistd.h>
+
+#ifndef MACOS
+static int firstMP = 1;
+
+static char *ncpu(void)
+{
+   int cores;
+   static char val[8];
+#ifdef MACOS
+   size_t len = sizeof(cores);
+
+   if (sysctlbyname("hw.physicalcpu", &cores, &len, NULL, 0 ) )
+      return("1");
+#else
+   cores = (int) sysconf(_SC_NPROCESSORS_ONLN);
+#endif
+   if (cores < 1)
+      return("1");
+   else if (cores > 8)
+      cores = 8;
+   snprintf(val, sizeof(val), "%1d", cores);
+   return(val);
+}
+#endif
 
 void bloch(Blodata *bl)
 {
@@ -124,7 +149,16 @@ void bloch(Blodata *bl)
   {
     j1 = (j0 + chunk < bl->nstp) ? j0 + chunk : bl->nstp;
 
+#ifndef MACOS
+     if (firstMP)
+     {
+        setenv("OMP_PLACES","cores",0);
+        setenv("OMP_PROC_BIND","close",0);
+        setenv("OMP_NUM_THREADS",ncpu(),0);
+        firstMP = 0;
+     }
 #pragma omp parallel for schedule(static)
+#endif
     for (j = j0; j < j1; j++)
     {
       int i;
@@ -317,7 +351,6 @@ void bloch(Blodata *bl)
   free(csp); free(snp);
 }
 
-
 void bloch_rd(Blodata *bl)  /* Bloch simulation with Radiation Damping */
 {
   FILE *fil;
@@ -437,7 +470,16 @@ void bloch_rd(Blodata *bl)  /* Bloch simulation with Radiation Damping */
   {
     j1 = (j0 + chunk < bl->nstp) ? j0 + chunk : bl->nstp;
 
+#ifndef MACOS
+    if (firstMP)
+    {
+       setenv("OMP_PLACES","cores",0);
+       setenv("OMP_PROC_BIND","close",0);
+       setenv("OMP_NUM_THREADS",ncpu(),0);
+       firstMP = 0;
+    }
 #pragma omp parallel for schedule(static)
+#endif
     for (j = j0; j < j1; j++)
     {
       int i;
