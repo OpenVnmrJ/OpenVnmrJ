@@ -126,6 +126,15 @@ case "$1" in
                  # echo "starting postmaster, owner=$vnmradm"
                  if [ -f "$vnmrsystem/pgsql/data/postmaster.pid" ]
                  then
+                    # Remove a stale pid file, but not that of a running
+                    # server: without it, pg_ctl can no longer stop it.
+                    pgpid=$(head -1 "$vnmrsystem/pgsql/data/postmaster.pid")
+                    case "$(ps -p "$pgpid" -o comm= 2> /dev/null)" in
+                       *postgres*)
+                          echo "postgres is already running (pid $pgpid)"
+                          exit 0
+                          ;;
+                    esac
                     rm -f "$vnmrsystem/pgsql/data/postmaster.pid"
                  fi
                  if [ x$lflvr = "xrhat" ]; then

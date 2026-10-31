@@ -1806,6 +1806,14 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
         sudo cp -p "$dest_dir"/bin/S99pgsql /etc/init.d/pgsql
         sudo chown root:root /etc/init.d/pgsql
         sudo /usr/sbin/update-rc.d pgsql defaults > /dev/null 2>&1;
+        # PostgreSQL runs as $nmr_adm, a regular user. With systemd-logind's
+        # RemoveIPC=yes (the Ubuntu default), logind deletes that user's
+        # semaphores when they log out and the server crashes.
+        if [ -d /run/systemd/system ]; then
+           sudo mkdir -p /etc/systemd/logind.conf.d
+           printf "[Login]\nRemoveIPC=no\n" | \
+              sudo tee /etc/systemd/logind.conf.d/openvnmrj.conf > /dev/null
+        fi
      fi
 
    if [ x$os_version = "xrht" ]
@@ -2251,6 +2259,15 @@ then
    fi
    if [ ! -f $dest_dir/pgsql/persistence/LocatorOff ] ; then
       "$dest_dir"/bin/dbsetup ${nmr_adm} "$dest_dir"
+      # dbsetup leaves the server running in the installing user's session,
+      # where systemd stops it when that user logs out. Restart it through
+      # systemd, as at boot. /etc/init.d/pgsql serves /vnmr only.
+      if [ x$lflvr = "xdebian" ] && [ -d /run/systemd/system ] &&
+         [ "$(readlink -f /vnmr)" = "$(readlink -f "$dest_dir")" ]; then
+         /etc/init.d/pgsql stop > /dev/null 2>&1
+         systemctl daemon-reload > /dev/null 2>&1
+         systemctl restart pgsql > /dev/null 2>&1
+      fi
    fi
    if [ $update_adm = "yes" ]; then
       echo " "
