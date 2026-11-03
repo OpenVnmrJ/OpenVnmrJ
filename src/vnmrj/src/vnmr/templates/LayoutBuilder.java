@@ -16,9 +16,12 @@ import java.lang.reflect.*;
 import javax.swing.*;
 
 import org.w3c.dom.*;
-import org.xml.sax.*;
-import org.xml.sax.helpers.ParserFactory;
-import com.sun.xml.parser.Resolver;
+import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.DefaultHandler;
+import javax.xml.parsers.SAXParserFactory;
 
 import vnmr.ui.*;
 import vnmr.bo.*;
@@ -288,178 +291,178 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
         // registered attributes
         // developers: add a line here for each xml attribute
 
-        addAttribute("font",        new Integer(FONT_NAME));
-        addAttribute("style",       new Integer(FONT_STYLE));
-        addAttribute("point",       new Integer(FONT_SIZE));
-        addAttribute("fg",          new Integer(FGCOLOR));
-        addAttribute("label",       new Integer(LABEL));
-        addAttribute("value",       new Integer(LABEL));
-        addAttribute("vq",          new Integer(VARIABLE));
-        addAttribute("vc",          new Integer(CMD));
-        addAttribute("vc2",         new Integer(CMD2));
-        addAttribute("set",         new Integer(SETVAL));
-        addAttribute("show",        new Integer(SHOW));
-        addAttribute("digital",     new Integer(DIGITAL));
-        addAttribute("min",         new Integer(MIN));
-        addAttribute("max",         new Integer(MAX));
-        addAttribute("minmark",     new Integer(SHOWMIN));
-        addAttribute("maxmark",     new Integer(SHOWMAX));
-        addAttribute("incr1",       new Integer(INCR1));
-        addAttribute("incr2",       new Integer(INCR2));
-        addAttribute("chval",       new Integer(CHVAL));
-        addAttribute("values",      new Integer(VALUES));
-        addAttribute("panel",       new Integer(PANEL_TAB));
-        addAttribute("name",        new Integer(PANEL_NAME));
-        addAttribute("file",        new Integer(PANEL_FILE));
-        addAttribute("param",       new Integer(PANEL_PARAM));
-        addAttribute("type",        new Integer(PANEL_TYPE));
-        addAttribute("actionfile",  new Integer(ACTION_FILE));
-        addAttribute("bg",          new Integer(BGCOLOR));
-        addAttribute("editable",    new Integer(EDITABLE));
-        addAttribute("border",      new Integer(BORDER));
-        addAttribute("side",        new Integer(SIDE));
-        addAttribute("justify",     new Integer(JUSTIFY));
-        addAttribute("tab",         new Integer(TAB));
-        addAttribute("savekids",    new Integer(SAVEKIDS));
-        addAttribute("vq2",         new Integer(VAR2));
-        addAttribute("set2",        new Integer(SETVAL2));
-        addAttribute("seperator",   new Integer(SEPERATOR));
-        addAttribute("digits",      new Integer(NUMDIGIT));
-        addAttribute("title",       new Integer(TITLE));
-        addAttribute("statkey",     new Integer(STATKEY));
-        addAttribute("statpar",     new Integer(STATPAR));
-        addAttribute("statset",     new Integer(STATSET));
-        addAttribute("statcol",     new Integer(STATCOL));
-        addAttribute("statval",     new Integer(STATVAL));
-        addAttribute("statshow",    new Integer(STATSHOW));
-        addAttribute("enabled",     new Integer(ENABLED));
-        addAttribute("pointy",      new Integer(POINTY));
-        addAttribute("rocker",      new Integer(ROCKER));
-        addAttribute("arrow",       new Integer(ARROW));
-        addAttribute("arrowcolor",  new Integer(ARROW_COLOR));
-        addAttribute("orientation", new Integer(ORIENTATION));
-        addAttribute("checkenabled", new Integer(CHECKENABLED));
-        addAttribute("checkvalue",  new Integer(CHECKVALUE));
-        addAttribute("checkcmd",    new Integer(CHECKCMD));
-        addAttribute("checkcmd2",   new Integer(CHECKCMD2));
-        addAttribute("entryvalue",  new Integer(ENTRYVALUE));
-        addAttribute("entrycmd",    new Integer(ENTRYCMD));
-        addAttribute("entrysize",   new Integer(ENTRYSIZE));
-        addAttribute("unitsenabled", new Integer(UNITSENABLED));
-        addAttribute("unitssize",   new Integer(UNITSSIZE));
-        addAttribute("unitscmd",    new Integer(UNITSCMD));
-        addAttribute("unitslabel",  new Integer(UNITSLABEL));
-        addAttribute("unitsvalue",  new Integer(UNITSVALUE));
-        addAttribute("count",       new Integer(COUNT));
-        addAttribute("color1",      new Integer(COLOR1));
-        addAttribute("color2",      new Integer(COLOR2));
-        addAttribute("color3",      new Integer(COLOR3));
-        addAttribute("color4",      new Integer(COLOR4));
-        addAttribute("color5",      new Integer(COLOR5));
-        addAttribute("color6",      new Integer(COLOR6));
-        addAttribute("color7",      new Integer(COLOR7));
-        addAttribute("color8",      new Integer(COLOR8));
-        addAttribute("color9",      new Integer(COLOR9));
-        addAttribute("color10",     new Integer(COLOR10));
-        addAttribute("color11",     new Integer(COLOR11));
-        addAttribute("color12",     new Integer(COLOR12));
-        addAttribute("color13",     new Integer(COLOR13));
-        addAttribute("color14",     new Integer(COLOR14));
-        addAttribute("color15",     new Integer(COLOR15));
-        addAttribute("decor1",      new Integer(DECOR1));
-        addAttribute("decor2",      new Integer(DECOR2));
-        addAttribute("decor3",      new Integer(DECOR3));
-        addAttribute("key",         new Integer(KEYSTR));
-        addAttribute("keyval",      new Integer(KEYVAL));
-        addAttribute("icon",        new Integer(ICON));
-        addAttribute("enable",      new Integer(ENABLE));
-        addAttribute("visible",     new Integer(VISIBLE));
-        addAttribute("elastic",     new Integer(ELASTIC));
-        addAttribute("radiobutton", new Integer(RADIOBUTTON));
-        addAttribute("display",     new Integer(DISPLAY));
-        addAttribute("reference",   new Integer(REFERENCE));
-        addAttribute("useref",      new Integer(USEREF));
-        addAttribute("hotkey",      new Integer(HOTKEY));
-        addAttribute("jointpts",    new Integer(JOINPTS));
-        addAttribute("fillhistgm",  new Integer(FILLHISTGM));
-        addAttribute("pointsize",   new Integer(POINTSIZE));
-        addAttribute("disable",     new Integer(DISABLE));
-        addAttribute("lcvq",        new Integer(LCVARIABLE));
-        addAttribute("lcset",       new Integer(LCSETVAL));
-        addAttribute("lccmd",       new Integer(LCCMD));
-        addAttribute("lccmd2",      new Integer(LCCMD2));
-        addAttribute("lccmd3",      new Integer(LCCMD3));
-        addAttribute("lcshow",      new Integer(LCSHOW));
-        addAttribute("lccolor",     new Integer(LCCOLOR));
-        addAttribute("rcvq",        new Integer(RCVARIABLE));
-        addAttribute("rcset",       new Integer(RCSETVAL));
-        addAttribute("rccmd",       new Integer(RCCMD));
-        addAttribute("rccmd2",      new Integer(RCCMD2));
-        addAttribute("rccmd3",      new Integer(RCCMD3));
-        addAttribute("rcshow",      new Integer(RCSHOW));
-        addAttribute("rccolor",     new Integer(RCCOLOR));
-        addAttribute("graphbgcolor",new Integer(GRAPHBGCOL));
-        addAttribute("graphbgcolor2",new Integer(GRAPHBGCOL2));
-        addAttribute("graphfgcolor",new Integer(GRAPHFGCOL));
-        addAttribute("graphfgcolor2",new Integer(GRAPHFGCOL2));
-        addAttribute("graphfgcolor3",new Integer(GRAPHFGCOL3));
-        addAttribute("xaxisshow",   new Integer(XAXISSHOW));
-        addAttribute("yaxisshow",   new Integer(YAXISSHOW));
-        addAttribute("xlabelshow",  new Integer(XLABELSHOW));
-        addAttribute("ylabelshow",  new Integer(YLABELSHOW));
-        addAttribute("logxaxis",    new Integer(LOGXAXIS));
-        addAttribute("logyaxis",    new Integer(LOGYAXIS));
-        addAttribute("showgrid",    new Integer(SHOWGRID));
-        addAttribute("range",       new Integer(RANGE));
-        addAttribute("gridcolor",   new Integer(GRIDCOLOR));
-        addAttribute("tickcolor",   new Integer(TICKCOLOR));
-        addAttribute("subtype",     new Integer(SUBTYPE));
-        addAttribute("tabled",      new Integer(TABLED));
-        addAttribute("keyword",     new Integer(KEYWORD));
-        addAttribute("path1",       new Integer(PATH1));
-        addAttribute("path2",       new Integer(PATH2));
-        addAttribute("wrap",        new Integer(WRAP));
-        addAttribute("expanded",    new Integer(EXPANDED));
-        addAttribute("drag",        new Integer(DRAG));
-        addAttribute("size1",       new Integer(SIZE1));
-        addAttribute("size2",       new Integer(SIZE2));
-        addAttribute("units",       new Integer(UNITS));
-        addAttribute("layout",      new Integer(LAYOUT));
-        addAttribute("row",         new Integer(ROW));
-        addAttribute("column",      new Integer(COLUMN));
-        addAttribute("prefix",      new Integer(PREFIX));
+        addAttribute("font",        Integer.valueOf(FONT_NAME));
+        addAttribute("style",       Integer.valueOf(FONT_STYLE));
+        addAttribute("point",       Integer.valueOf(FONT_SIZE));
+        addAttribute("fg",          Integer.valueOf(FGCOLOR));
+        addAttribute("label",       Integer.valueOf(LABEL));
+        addAttribute("value",       Integer.valueOf(LABEL));
+        addAttribute("vq",          Integer.valueOf(VARIABLE));
+        addAttribute("vc",          Integer.valueOf(CMD));
+        addAttribute("vc2",         Integer.valueOf(CMD2));
+        addAttribute("set",         Integer.valueOf(SETVAL));
+        addAttribute("show",        Integer.valueOf(SHOW));
+        addAttribute("digital",     Integer.valueOf(DIGITAL));
+        addAttribute("min",         Integer.valueOf(MIN));
+        addAttribute("max",         Integer.valueOf(MAX));
+        addAttribute("minmark",     Integer.valueOf(SHOWMIN));
+        addAttribute("maxmark",     Integer.valueOf(SHOWMAX));
+        addAttribute("incr1",       Integer.valueOf(INCR1));
+        addAttribute("incr2",       Integer.valueOf(INCR2));
+        addAttribute("chval",       Integer.valueOf(CHVAL));
+        addAttribute("values",      Integer.valueOf(VALUES));
+        addAttribute("panel",       Integer.valueOf(PANEL_TAB));
+        addAttribute("name",        Integer.valueOf(PANEL_NAME));
+        addAttribute("file",        Integer.valueOf(PANEL_FILE));
+        addAttribute("param",       Integer.valueOf(PANEL_PARAM));
+        addAttribute("type",        Integer.valueOf(PANEL_TYPE));
+        addAttribute("actionfile",  Integer.valueOf(ACTION_FILE));
+        addAttribute("bg",          Integer.valueOf(BGCOLOR));
+        addAttribute("editable",    Integer.valueOf(EDITABLE));
+        addAttribute("border",      Integer.valueOf(BORDER));
+        addAttribute("side",        Integer.valueOf(SIDE));
+        addAttribute("justify",     Integer.valueOf(JUSTIFY));
+        addAttribute("tab",         Integer.valueOf(TAB));
+        addAttribute("savekids",    Integer.valueOf(SAVEKIDS));
+        addAttribute("vq2",         Integer.valueOf(VAR2));
+        addAttribute("set2",        Integer.valueOf(SETVAL2));
+        addAttribute("seperator",   Integer.valueOf(SEPERATOR));
+        addAttribute("digits",      Integer.valueOf(NUMDIGIT));
+        addAttribute("title",       Integer.valueOf(TITLE));
+        addAttribute("statkey",     Integer.valueOf(STATKEY));
+        addAttribute("statpar",     Integer.valueOf(STATPAR));
+        addAttribute("statset",     Integer.valueOf(STATSET));
+        addAttribute("statcol",     Integer.valueOf(STATCOL));
+        addAttribute("statval",     Integer.valueOf(STATVAL));
+        addAttribute("statshow",    Integer.valueOf(STATSHOW));
+        addAttribute("enabled",     Integer.valueOf(ENABLED));
+        addAttribute("pointy",      Integer.valueOf(POINTY));
+        addAttribute("rocker",      Integer.valueOf(ROCKER));
+        addAttribute("arrow",       Integer.valueOf(ARROW));
+        addAttribute("arrowcolor",  Integer.valueOf(ARROW_COLOR));
+        addAttribute("orientation", Integer.valueOf(ORIENTATION));
+        addAttribute("checkenabled", Integer.valueOf(CHECKENABLED));
+        addAttribute("checkvalue",  Integer.valueOf(CHECKVALUE));
+        addAttribute("checkcmd",    Integer.valueOf(CHECKCMD));
+        addAttribute("checkcmd2",   Integer.valueOf(CHECKCMD2));
+        addAttribute("entryvalue",  Integer.valueOf(ENTRYVALUE));
+        addAttribute("entrycmd",    Integer.valueOf(ENTRYCMD));
+        addAttribute("entrysize",   Integer.valueOf(ENTRYSIZE));
+        addAttribute("unitsenabled", Integer.valueOf(UNITSENABLED));
+        addAttribute("unitssize",   Integer.valueOf(UNITSSIZE));
+        addAttribute("unitscmd",    Integer.valueOf(UNITSCMD));
+        addAttribute("unitslabel",  Integer.valueOf(UNITSLABEL));
+        addAttribute("unitsvalue",  Integer.valueOf(UNITSVALUE));
+        addAttribute("count",       Integer.valueOf(COUNT));
+        addAttribute("color1",      Integer.valueOf(COLOR1));
+        addAttribute("color2",      Integer.valueOf(COLOR2));
+        addAttribute("color3",      Integer.valueOf(COLOR3));
+        addAttribute("color4",      Integer.valueOf(COLOR4));
+        addAttribute("color5",      Integer.valueOf(COLOR5));
+        addAttribute("color6",      Integer.valueOf(COLOR6));
+        addAttribute("color7",      Integer.valueOf(COLOR7));
+        addAttribute("color8",      Integer.valueOf(COLOR8));
+        addAttribute("color9",      Integer.valueOf(COLOR9));
+        addAttribute("color10",     Integer.valueOf(COLOR10));
+        addAttribute("color11",     Integer.valueOf(COLOR11));
+        addAttribute("color12",     Integer.valueOf(COLOR12));
+        addAttribute("color13",     Integer.valueOf(COLOR13));
+        addAttribute("color14",     Integer.valueOf(COLOR14));
+        addAttribute("color15",     Integer.valueOf(COLOR15));
+        addAttribute("decor1",      Integer.valueOf(DECOR1));
+        addAttribute("decor2",      Integer.valueOf(DECOR2));
+        addAttribute("decor3",      Integer.valueOf(DECOR3));
+        addAttribute("key",         Integer.valueOf(KEYSTR));
+        addAttribute("keyval",      Integer.valueOf(KEYVAL));
+        addAttribute("icon",        Integer.valueOf(ICON));
+        addAttribute("enable",      Integer.valueOf(ENABLE));
+        addAttribute("visible",     Integer.valueOf(VISIBLE));
+        addAttribute("elastic",     Integer.valueOf(ELASTIC));
+        addAttribute("radiobutton", Integer.valueOf(RADIOBUTTON));
+        addAttribute("display",     Integer.valueOf(DISPLAY));
+        addAttribute("reference",   Integer.valueOf(REFERENCE));
+        addAttribute("useref",      Integer.valueOf(USEREF));
+        addAttribute("hotkey",      Integer.valueOf(HOTKEY));
+        addAttribute("jointpts",    Integer.valueOf(JOINPTS));
+        addAttribute("fillhistgm",  Integer.valueOf(FILLHISTGM));
+        addAttribute("pointsize",   Integer.valueOf(POINTSIZE));
+        addAttribute("disable",     Integer.valueOf(DISABLE));
+        addAttribute("lcvq",        Integer.valueOf(LCVARIABLE));
+        addAttribute("lcset",       Integer.valueOf(LCSETVAL));
+        addAttribute("lccmd",       Integer.valueOf(LCCMD));
+        addAttribute("lccmd2",      Integer.valueOf(LCCMD2));
+        addAttribute("lccmd3",      Integer.valueOf(LCCMD3));
+        addAttribute("lcshow",      Integer.valueOf(LCSHOW));
+        addAttribute("lccolor",     Integer.valueOf(LCCOLOR));
+        addAttribute("rcvq",        Integer.valueOf(RCVARIABLE));
+        addAttribute("rcset",       Integer.valueOf(RCSETVAL));
+        addAttribute("rccmd",       Integer.valueOf(RCCMD));
+        addAttribute("rccmd2",      Integer.valueOf(RCCMD2));
+        addAttribute("rccmd3",      Integer.valueOf(RCCMD3));
+        addAttribute("rcshow",      Integer.valueOf(RCSHOW));
+        addAttribute("rccolor",     Integer.valueOf(RCCOLOR));
+        addAttribute("graphbgcolor",Integer.valueOf(GRAPHBGCOL));
+        addAttribute("graphbgcolor2",Integer.valueOf(GRAPHBGCOL2));
+        addAttribute("graphfgcolor",Integer.valueOf(GRAPHFGCOL));
+        addAttribute("graphfgcolor2",Integer.valueOf(GRAPHFGCOL2));
+        addAttribute("graphfgcolor3",Integer.valueOf(GRAPHFGCOL3));
+        addAttribute("xaxisshow",   Integer.valueOf(XAXISSHOW));
+        addAttribute("yaxisshow",   Integer.valueOf(YAXISSHOW));
+        addAttribute("xlabelshow",  Integer.valueOf(XLABELSHOW));
+        addAttribute("ylabelshow",  Integer.valueOf(YLABELSHOW));
+        addAttribute("logxaxis",    Integer.valueOf(LOGXAXIS));
+        addAttribute("logyaxis",    Integer.valueOf(LOGYAXIS));
+        addAttribute("showgrid",    Integer.valueOf(SHOWGRID));
+        addAttribute("range",       Integer.valueOf(RANGE));
+        addAttribute("gridcolor",   Integer.valueOf(GRIDCOLOR));
+        addAttribute("tickcolor",   Integer.valueOf(TICKCOLOR));
+        addAttribute("subtype",     Integer.valueOf(SUBTYPE));
+        addAttribute("tabled",      Integer.valueOf(TABLED));
+        addAttribute("keyword",     Integer.valueOf(KEYWORD));
+        addAttribute("path1",       Integer.valueOf(PATH1));
+        addAttribute("path2",       Integer.valueOf(PATH2));
+        addAttribute("wrap",        Integer.valueOf(WRAP));
+        addAttribute("expanded",    Integer.valueOf(EXPANDED));
+        addAttribute("drag",        Integer.valueOf(DRAG));
+        addAttribute("size1",       Integer.valueOf(SIZE1));
+        addAttribute("size2",       Integer.valueOf(SIZE2));
+        addAttribute("units",       Integer.valueOf(UNITS));
+        addAttribute("layout",      Integer.valueOf(LAYOUT));
+        addAttribute("row",         Integer.valueOf(ROW));
+        addAttribute("column",      Integer.valueOf(COLUMN));
+        addAttribute("prefix",      Integer.valueOf(PREFIX));
 
         //Additional Attributes for DefaultToolBar.xml
 
-        addAttribute("ImageOrLabel", new Integer(IMAGEORLABEL));
-        addAttribute("setVC",      new Integer(SET_VC));
-        addAttribute("toolTip",    new Integer(TOOL_TIP));
-        addAttribute("tooltip",    new Integer(TOOLTIP));
-        addAttribute("dockat",    new Integer(DOCKAT));
-        addAttribute("halignment",  new Integer(HALIGN));
-        addAttribute("valignment",  new Integer(VALIGN));
+        addAttribute("ImageOrLabel", Integer.valueOf(IMAGEORLABEL));
+        addAttribute("setVC",      Integer.valueOf(SET_VC));
+        addAttribute("toolTip",    Integer.valueOf(TOOL_TIP));
+        addAttribute("tooltip",    Integer.valueOf(TOOLTIP));
+        addAttribute("dockat",    Integer.valueOf(DOCKAT));
+        addAttribute("halignment",  Integer.valueOf(HALIGN));
+        addAttribute("valignment",  Integer.valueOf(VALIGN));
 
-        addAttribute("locx",  new Integer(LOCX));
-        addAttribute("locy",  new Integer(LOCY));
-        addAttribute("rows",  new Integer(ROWS));
-        addAttribute("columns",  new Integer(COLUMNS));
-        addAttribute("idnumber",  new Integer(OBJID));
-        addAttribute("checkmark",  new Integer(CHECKMARK));
-        addAttribute("checkobject",  new Integer(CHECKOBJ));
-        addAttribute("checkObject",  new Integer(CHECKOBJ));
-        addAttribute("showObject",  new Integer(SHOWOBJ));
-        addAttribute("actionCmd",  new Integer(ACTIONCMD));
-        addAttribute("trackViewport",  new Integer(TRACKVIEWPORT));
-        addAttribute("helplink",  new Integer(HELPLINK));
+        addAttribute("locx",  Integer.valueOf(LOCX));
+        addAttribute("locy",  Integer.valueOf(LOCY));
+        addAttribute("rows",  Integer.valueOf(ROWS));
+        addAttribute("columns",  Integer.valueOf(COLUMNS));
+        addAttribute("idnumber",  Integer.valueOf(OBJID));
+        addAttribute("checkmark",  Integer.valueOf(CHECKMARK));
+        addAttribute("checkobject",  Integer.valueOf(CHECKOBJ));
+        addAttribute("checkObject",  Integer.valueOf(CHECKOBJ));
+        addAttribute("showObject",  Integer.valueOf(SHOWOBJ));
+        addAttribute("actionCmd",  Integer.valueOf(ACTIONCMD));
+        addAttribute("trackViewport",  Integer.valueOf(TRACKVIEWPORT));
+        addAttribute("helplink",  Integer.valueOf(HELPLINK));
 
-        addAttribute("grid-column",  new Integer(GRID_COLUMN));
-        addAttribute("grid-row",  new Integer(GRID_ROW));
-        addAttribute("grid-column-span",  new Integer(GRID_XSPAN));
-        addAttribute("grid-row-span",  new Integer(GRID_YSPAN));
-        addAttribute("grid-row-align",  new Integer(GRID_ROWALIGN));
-        addAttribute("stretch",  new Integer(STRETCH));
-        addAttribute("squish",  new Integer(SQUISH));
-        addAttribute("modalclose",  new Integer(MODALCLOSE));
+        addAttribute("grid-column",  Integer.valueOf(GRID_COLUMN));
+        addAttribute("grid-row",  Integer.valueOf(GRID_ROW));
+        addAttribute("grid-column-span",  Integer.valueOf(GRID_XSPAN));
+        addAttribute("grid-row-span",  Integer.valueOf(GRID_YSPAN));
+        addAttribute("grid-row-align",  Integer.valueOf(GRID_ROWALIGN));
+        addAttribute("stretch",  Integer.valueOf(STRETCH));
+        addAttribute("squish",  Integer.valueOf(SQUISH));
+        addAttribute("modalclose",  Integer.valueOf(MODALCLOSE));
 
         // registered objects
         // developers: add a line here for each xml object
@@ -594,9 +597,11 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
     //----------------------------------------------------------------
     /** Create sax parser. */
     //----------------------------------------------------------------
-    private Parser makeSaxParser() {
+    private XMLReader makeSaxParser() {
         try {
-            return ParserFactory.makeParser( "com.sun.xml.parser.Parser" );
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            factory.setNamespaceAware(false);
+            return factory.newSAXParser().getXMLReader();
         }
         catch (Exception e) {
             Messages.writeStackTrace(e,"Could not make XML parser");
@@ -1393,18 +1398,18 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
 
     //+++++++++++++ local classes +++++++++++++++++++++++++++++++++++
 
-    public class SAXparser extends HandlerBase implements VObjDef
+    public class SAXparser extends DefaultHandler implements VObjDef
     {
         private  Container curParent;
         private  Container preParent;
         private  LayoutBuilder lb=null;
-        private  Parser parser;
+        private  XMLReader parser;
         private  boolean badObj;
 
         public SAXparser(LayoutBuilder l){
             lb=l;
             parser=makeSaxParser();
-            parser.setDocumentHandler( SAXparser.this );
+            parser.setContentHandler( SAXparser.this );
         }
 
         //----------------------------------------------------------------
@@ -1473,8 +1478,8 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
             }
             
             stream=FileUtil.skipUtf8Bom(stream);
-            input = Resolver.createInputSource("text/xml", stream,
-                                               false, "file");
+            input = new InputSource(stream);
+            input.setSystemId(new File(f).toURI().toString());
             //input = Resolver.createInputSource( new File( f ));
             parser.parse(input);
             try {
@@ -1484,7 +1489,7 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
             }
         }
 
-        private boolean readExpandedRef(AttributeList attrs){
+        private boolean readExpandedRef(Attributes attrs){
             String attr;
             attr=attrs.getValue("reference");
             if(attr == null || attr.length()==0)
@@ -1513,7 +1518,8 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
         //===========================================================
         //          SAX DocumentHandler methods
         //===========================================================
-        public void startElement( String name, AttributeList attrs )
+        public void startElement( String uri, String localName,
+                                  String name, Attributes attrs )
         {
         StringTokenizer st;
             boolean  font;
@@ -1578,9 +1584,9 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
             font = false;
             bFg = false;
             if( attrs != null ) {
-                int nSize = attrs.getLength ();
+                int nSize = attrs.getLength();
                 for( int i = 0; i < nSize; i++ )  {
-                    String s = attrs.getName(i);
+                    String s = attrs.getQName(i);
                     String s2 = attrs.getValue(i);
                     if (s!=null && s.equals("size")) {
                         st = new StringTokenizer(s2," ");
@@ -1685,7 +1691,7 @@ public class LayoutBuilder extends PanelTemplate implements VObjDef, Types
             }
         }
 
-        public void endElement( String name ) throws SAXException {
+        public void endElement( String uri, String localName, String name ) throws SAXException {
             if (curParent instanceof VMenuitemIF) {
                 VMenuitemIF v = (VMenuitemIF) curParent;
                 curParent = v.getVParent();

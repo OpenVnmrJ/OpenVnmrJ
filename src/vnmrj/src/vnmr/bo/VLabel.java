@@ -136,40 +136,40 @@ public class VLabel extends JLabel
 
     /** The array of the attributes that are displayed in the edit template.*/
     private final static Object[][] m_attributes = {
-	{new Integer(LABEL), "Label of item:"},
-	{new Integer(ICON), 	"Icon of item:"},
-	{new Integer(VARIABLE),	"Vnmr variables:    "},
-	{new Integer(SHOW),	"Enable condition:"},
-	{new Integer(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
+	{Integer.valueOf(LABEL), "Label of item:"},
+	{Integer.valueOf(ICON), 	"Icon of item:"},
+	{Integer.valueOf(VARIABLE),	"Vnmr variables:    "},
+	{Integer.valueOf(SHOW),	"Enable condition:"},
+	{Integer.valueOf(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
     };
     
     private final static Object[][] m_attributes_H = {
-        {new Integer(LABEL), "Label of item:"},
-        {new Integer(ICON),     "Icon of item:"},
-        {new Integer(VARIABLE), "Vnmr variables:    "},
-        {new Integer(SHOW), "Enable condition:"},
-        {new Integer(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
-        {new Integer(HELPLINK), Util.getLabel("blHelp")}
+        {Integer.valueOf(LABEL), "Label of item:"},
+        {Integer.valueOf(ICON),     "Icon of item:"},
+        {Integer.valueOf(VARIABLE), "Vnmr variables:    "},
+        {Integer.valueOf(SHOW), "Enable condition:"},
+        {Integer.valueOf(JUSTIFY), "Label justification:", "menu", m_arrStrTtlJust},
+        {Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}
         };
 
     private final static Object[][] m_attributes_2 = {
-	{new Integer(LABEL), "Label of item:"},
-	{new Integer(ICON), 	"Icon of item:"},
-	{new Integer(SHOW),	"Show condition:"},
-	{new Integer(HALIGN), "Horizontal alignment:", "menu", m_arrStrTtlJust},
-	{new Integer(VALIGN), "Vertical alignment:", "menu", m_verticalJuststr},
-        {new Integer(ORIENTATION), "Orientation:", "menu", m_orientStr},
-        {new Integer(ELASTIC), "Font Size:", "menu", m_sizeStr}
+	{Integer.valueOf(LABEL), "Label of item:"},
+	{Integer.valueOf(ICON), 	"Icon of item:"},
+	{Integer.valueOf(SHOW),	"Show condition:"},
+	{Integer.valueOf(HALIGN), "Horizontal alignment:", "menu", m_arrStrTtlJust},
+	{Integer.valueOf(VALIGN), "Vertical alignment:", "menu", m_verticalJuststr},
+        {Integer.valueOf(ORIENTATION), "Orientation:", "menu", m_orientStr},
+        {Integer.valueOf(ELASTIC), "Font Size:", "menu", m_sizeStr}
     };
 
     private final static Object[][] m_attributes_3 = {
-        {new Integer(SETVAL),   "Imaging parameter to display:"},
-        {new Integer(NUMDIGIT), "Number of digits:"},
-	{new Integer(SHOW),	"Show condition:"},
-	{new Integer(HALIGN), "Horizontal alignment:", "menu", m_arrStrTtlJust},
-	{new Integer(VALIGN), "Vertical alignment:", "menu", m_verticalJuststr},
-        {new Integer(ORIENTATION), "Orientation:", "menu", m_orientStr},
-        {new Integer(ELASTIC), "Font Size:", "menu", m_sizeStr}
+        {Integer.valueOf(SETVAL),   "Imaging parameter to display:"},
+        {Integer.valueOf(NUMDIGIT), "Number of digits:"},
+	{Integer.valueOf(SHOW),	"Show condition:"},
+	{Integer.valueOf(HALIGN), "Horizontal alignment:", "menu", m_arrStrTtlJust},
+	{Integer.valueOf(VALIGN), "Vertical alignment:", "menu", m_verticalJuststr},
+        {Integer.valueOf(ORIENTATION), "Orientation:", "menu", m_orientStr},
+        {Integer.valueOf(ELASTIC), "Font Size:", "menu", m_sizeStr}
     };
 
     public VLabel(SessionShare sshare, ButtonIF vif, String typ) {
@@ -187,7 +187,7 @@ public class VLabel extends JLabel
 	mlEditor = new MouseAdapter() {
               public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         informEditor(evt);
@@ -1263,8 +1263,8 @@ public class VLabel extends JLabel
         }
     }
 
-
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
            defLoc.y = y;
@@ -1318,7 +1318,7 @@ public class VLabel extends JLabel
            }
 */
         }
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation() {
@@ -1486,7 +1486,7 @@ public class VLabel extends JLabel
         curDim.width = w;
         curDim.height = h;
         // if (!bPrintMode)
-           super.reshape(x, y, w, h);
+           super.setBounds(x, y, w, h);
     }
 
     public int getWidth() {

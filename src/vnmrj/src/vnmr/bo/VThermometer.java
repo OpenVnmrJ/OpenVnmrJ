@@ -70,7 +70,7 @@ public class VThermometer extends JProgressBar
 	ml = new MouseAdapter() {
               public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         ParamEditUtil.setEditObj((VObjIF) evt.getSource());
@@ -358,7 +358,8 @@ public class VThermometer extends JProgressBar
          return tmpLoc;
     }
 
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
            defLoc.y = y;
@@ -369,7 +370,7 @@ public class VThermometer extends JProgressBar
         curLoc.y = y;
         curDim.width = w;
         curDim.height = h;
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation() {
@@ -455,15 +456,15 @@ public class VThermometer extends JProgressBar
     private final static String[] orient_str = {"Vertical", "Horizontal"};
     private final static String[] true_false = {"True", "False"};
     private final static Object[][] attributes = {
-	{new Integer(STATPAR), "Status parameter:"},
-	{new Integer(VARIABLE), "Vnmr variables:"},
-	{new Integer(SETVAL), "Vnmr value expression:"},
-	{new Integer(MIN), "Min displayed value:"},
-	{new Integer(MAX), "Max displayed value:"},
-	{new Integer(ORIENTATION), "Orientation:", "menu", orient_str},
-	{new Integer(DIGITAL), "Show digital readout:", "menu", true_false},
-	{new Integer(BGCOLOR), "Background color:", "color"},
-	//{new Integer(SHOWMAX), "Show max value marker:", "menu", true_false},
+	{Integer.valueOf(STATPAR), "Status parameter:"},
+	{Integer.valueOf(VARIABLE), "Vnmr variables:"},
+	{Integer.valueOf(SETVAL), "Vnmr value expression:"},
+	{Integer.valueOf(MIN), "Min displayed value:"},
+	{Integer.valueOf(MAX), "Max displayed value:"},
+	{Integer.valueOf(ORIENTATION), "Orientation:", "menu", orient_str},
+	{Integer.valueOf(DIGITAL), "Show digital readout:", "menu", true_false},
+	{Integer.valueOf(BGCOLOR), "Background color:", "color"},
+	//{Integer.valueOf(SHOWMAX), "Show max value marker:", "menu", true_false},
     };
 
     public void setModalMode(boolean s) {}

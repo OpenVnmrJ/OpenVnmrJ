@@ -19,7 +19,7 @@ public class VMouseDispatch {
     public static void fireEvent(MouseEvent e, Component c, int x, int y) {
          MouseEvent me = new MouseEvent(c,
                e.getID(), e.getWhen(),
-               e.getModifiersEx() | e.getModifiers(),
+               e.getModifiersEx(),
                x, y, e.getXOnScreen(), e.getYOnScreen(),
                e.getClickCount(),
                e.isPopupTrigger(),

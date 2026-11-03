@@ -181,9 +181,9 @@ public class VGroup extends JPanel
 	        }
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 ParamEditUtil.clickInPanel(evt);
-                if((modifier & InputEvent.BUTTON3_MASK) !=0){
+                if((modifier & InputEvent.getMaskForButton(3)) !=0){
                     ParamEditUtil.menuAction(evt);
                 }
                 else if ((modifier & (1 << 4)) != 0) {
@@ -1449,44 +1449,44 @@ to be done in setEditMode()
     private final static String[] yes_no = {m_yes,m_no};
 
     private final static Object[][] attributes = {
-        { new Integer(LABEL), Util.getLabel(LABEL) },
-        { new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-        { new Integer(SHOW), Util.getLabel("vgSHOW") },
-        { new Integer(CMD), Util.getLabel("vgCMD") },
-        { new Integer(CMD2), Util.getLabel("vgCMD2") },
-        { new Integer(BORDER), Util.getLabel("vgBORDER"), "radio",bdrTypes },
-        { new Integer(SUBTYPE), Util.getLabel("vgSUBTYPE"), "radio",subtypes },
-        { new Integer(DIGITAL), Util.getLabel("vgDIGITAL"), m_true },
-        { new Integer(COUNT), Util.getLabel("vgCOUNT"), m_true },
-        { new Integer(BGCOLOR), Util.getLabel(BGCOLOR), "color" },
-        { new Integer(TAB), Util.getLabel("vgTAB"), "radio", yes_no },
-        { new Integer(ENABLE), Util.getLabel("vgENABLE"), "radio", yes_no }, 
+        { Integer.valueOf(LABEL), Util.getLabel(LABEL) },
+        { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+        { Integer.valueOf(SHOW), Util.getLabel("vgSHOW") },
+        { Integer.valueOf(CMD), Util.getLabel("vgCMD") },
+        { Integer.valueOf(CMD2), Util.getLabel("vgCMD2") },
+        { Integer.valueOf(BORDER), Util.getLabel("vgBORDER"), "radio",bdrTypes },
+        { Integer.valueOf(SUBTYPE), Util.getLabel("vgSUBTYPE"), "radio",subtypes },
+        { Integer.valueOf(DIGITAL), Util.getLabel("vgDIGITAL"), m_true },
+        { Integer.valueOf(COUNT), Util.getLabel("vgCOUNT"), m_true },
+        { Integer.valueOf(BGCOLOR), Util.getLabel(BGCOLOR), "color" },
+        { Integer.valueOf(TAB), Util.getLabel("vgTAB"), "radio", yes_no },
+        { Integer.valueOf(ENABLE), Util.getLabel("vgENABLE"), "radio", yes_no }, 
         };
     
     private final static Object[][] attributesH = {
-        { new Integer(LABEL), Util.getLabel(LABEL) },
-        { new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-        { new Integer(SHOW), Util.getLabel("vgSHOW") },
-        { new Integer(CMD), Util.getLabel("vgCMD") },
-        { new Integer(CMD2), Util.getLabel("vgCMD2") },
-        { new Integer(BORDER), Util.getLabel("vgBORDER"), "radio",bdrTypes },
-        { new Integer(SUBTYPE), Util.getLabel("vgSUBTYPE"), "radio",subtypes },
-        { new Integer(DIGITAL), Util.getLabel("vgDIGITAL"), m_true },
-        { new Integer(COUNT), Util.getLabel("vgCOUNT"), m_true },
-        { new Integer(TAB), Util.getLabel("vgTAB"), "radio", yes_no },
-        { new Integer(ENABLE), Util.getLabel("vgENABLE"), "radio", yes_no }, 
-        { new Integer(HELPLINK), Util.getLabel("blHelp")}, 
+        { Integer.valueOf(LABEL), Util.getLabel(LABEL) },
+        { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+        { Integer.valueOf(SHOW), Util.getLabel("vgSHOW") },
+        { Integer.valueOf(CMD), Util.getLabel("vgCMD") },
+        { Integer.valueOf(CMD2), Util.getLabel("vgCMD2") },
+        { Integer.valueOf(BORDER), Util.getLabel("vgBORDER"), "radio",bdrTypes },
+        { Integer.valueOf(SUBTYPE), Util.getLabel("vgSUBTYPE"), "radio",subtypes },
+        { Integer.valueOf(DIGITAL), Util.getLabel("vgDIGITAL"), m_true },
+        { Integer.valueOf(COUNT), Util.getLabel("vgCOUNT"), m_true },
+        { Integer.valueOf(TAB), Util.getLabel("vgTAB"), "radio", yes_no },
+        { Integer.valueOf(ENABLE), Util.getLabel("vgENABLE"), "radio", yes_no }, 
+        { Integer.valueOf(HELPLINK), Util.getLabel("blHelp")}, 
         };
 
     
     private final static Object[][] attributes2 = {
-        { new Integer(LABEL), Util.getLabel(LABEL) },
-        { new Integer(VARIABLE), Util.getLabel(VARIABLE) },
-        { new Integer(SHOW), Util.getLabel("vgSHOW") },
-        { new Integer(CMD), Util.getLabel("vgCMD") },
-        { new Integer(CMD2), Util.getLabel("vgCMD2") },
-        { new Integer(BORDER), Util.getLabel("vgBORDER"), "radio",bdrTypes },
-        { new Integer(SUBTYPE), Util.getLabel("vgSUBTYPE"), "radio",subtypes },
+        { Integer.valueOf(LABEL), Util.getLabel(LABEL) },
+        { Integer.valueOf(VARIABLE), Util.getLabel(VARIABLE) },
+        { Integer.valueOf(SHOW), Util.getLabel("vgSHOW") },
+        { Integer.valueOf(CMD), Util.getLabel("vgCMD") },
+        { Integer.valueOf(CMD2), Util.getLabel("vgCMD2") },
+        { Integer.valueOf(BORDER), Util.getLabel("vgBORDER"), "radio",bdrTypes },
+        { Integer.valueOf(SUBTYPE), Util.getLabel("vgSUBTYPE"), "radio",subtypes },
         };
 
     private void setBorder() {

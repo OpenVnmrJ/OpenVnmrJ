@@ -205,11 +205,11 @@ public class ParameterPanel extends JLayeredPane implements StatusListenerIF, Pr
             tabList.repaint();
         }
     }
-
+/*
     protected void finalize() throws Throwable   {
         super.finalize();
     }
-
+*/
     public void setFileInfo(ExpPanInfo info) {
         if (paramLayout != null)
             paramLayout.setFileInfo(info);

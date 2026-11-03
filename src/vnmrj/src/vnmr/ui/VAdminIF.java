@@ -350,7 +350,7 @@ public class VAdminIF extends AppIF
             WFileUtil objFileUtil = new WFileUtil();
 
             topMenuBar = new MenuPanel();
-            add(topMenuBar, new Integer(LAYER1));
+            add(topMenuBar, Integer.valueOf(LAYER1));
 
             m_vmenuBar = new WandaMenuBar(sshare, null, 0);
             setMenuBar(m_vmenuBar);
@@ -397,11 +397,11 @@ public class VAdminIF extends AppIF
 
             m_pnlErrorBar = new JPanel();
             m_pnlErrorBar.add(new JLabel(""));
-            add(m_pnlErrorBar, new Integer(LAYER1));
+            add(m_pnlErrorBar, Integer.valueOf(LAYER1));
 
             statusBar = new ExpStatusBar(sshare, expViewArea.getDefaultExp(),
                                                     "INTERFACE/AdminHardwareBar.xml");
-            add(statusBar, new Integer(LAYER1));
+            add(statusBar, Integer.valueOf(LAYER1));
 
             m_trashCan = new WTrashCan();
 
@@ -421,7 +421,7 @@ public class VAdminIF extends AppIF
             m_spRightPane.setUI(new WBasicSplitPaneUI());
             m_spFullPane.setUI(new WBasicSplitPaneUI());
 
-            add(m_spFullPane, new Integer(LAYER2));
+            add(m_spFullPane, Integer.valueOf(LAYER2));
 
             // initialize the change listeners for the panels after everything
             // is initialized.

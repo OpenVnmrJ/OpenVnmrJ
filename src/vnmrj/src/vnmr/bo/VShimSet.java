@@ -633,14 +633,14 @@ public class VShimSet extends VGroup {
     {"None", "Etched", "RaisedBevel", "LoweredBevel"};
     private final static String[] true_false = {"true", "false"};
     private final static Object[][] attributes = {
-	{new Integer(BORDER),	"Border type:", "menu", bdrTypes},
-	{new Integer(SAVEKIDS),	"Freeze layout:", "menu", true_false},
-	{new Integer(VARIABLE),	"Vnmr shim set parameter:"},
-	{new Integer(SETVAL),	"Vnmr shim set value:"},
-	{new Integer(CMD),	"Shim setting command:"},
-	{new Integer(STATPAR),	"Status parameter for shim:"},
-	{new Integer(VAR2),	"Vnmr variables for shim:"},
-	{new Integer(SETVAL2),	"Vnmr expression for shim:"},
+	{Integer.valueOf(BORDER),	"Border type:", "menu", bdrTypes},
+	{Integer.valueOf(SAVEKIDS),	"Freeze layout:", "menu", true_false},
+	{Integer.valueOf(VARIABLE),	"Vnmr shim set parameter:"},
+	{Integer.valueOf(SETVAL),	"Vnmr shim set value:"},
+	{Integer.valueOf(CMD),	"Shim setting command:"},
+	{Integer.valueOf(STATPAR),	"Status parameter for shim:"},
+	{Integer.valueOf(VAR2),	"Vnmr variables for shim:"},
+	{Integer.valueOf(SETVAL2),	"Vnmr expression for shim:"},
     };
     public void setModalMode(boolean s) {}
     public void sendVnmrCmd() {}

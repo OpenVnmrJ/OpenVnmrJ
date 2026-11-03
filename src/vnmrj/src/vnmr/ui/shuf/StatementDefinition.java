@@ -32,7 +32,7 @@ public class StatementDefinition extends JComponent {
     /** flow layout */
     protected FlowLayout flowLayout;
     /** List of StatmementElement's comprising the statement */
-    private ArrayList elementList;
+    private ArrayList<Object> elementList;
     /** Menu string and statement type identifier */
     private String menuString=null;
     /** Should this statement be limited by the browser's directory */
@@ -67,11 +67,11 @@ public class StatementDefinition extends JComponent {
      *    in the Statement display.
      *
      </pre> **************************************************/
-    public StatementDefinition(ArrayList eList)  throws Exception {
+    public StatementDefinition(ArrayList<Object> eList)  throws Exception {
         StatementElement element;
         String etype;
         String evalues[];
-        ArrayList menuList;
+        ArrayList<String> menuList;
         EPopButton  popupMenu;  
         DateRangePanel dateRangePanel;
         boolean gotColumns=false;
@@ -140,7 +140,7 @@ public class StatementDefinition extends JComponent {
                 }
                 if(element.getdisplayElement()) {
                     // Create empty menu to be filled later as needed
-                    ArrayList menulist = new ArrayList();
+                    ArrayList<String> menulist = new ArrayList<String>();
 
                     // Create a pop up menu
                     popupMenu = new EPopButton(menulist);
@@ -201,7 +201,7 @@ public class StatementDefinition extends JComponent {
                     // Create empty menu to be filled later as needed.
                     // Search for "update the Attribute- menu" below
                     // for where it is done.
-                    ArrayList values = new ArrayList();
+                    ArrayList<String> values = new ArrayList<String>();
 
                     // Create a pop up menu
                     popupMenu = new EPopButton(values);
@@ -286,7 +286,7 @@ public class StatementDefinition extends JComponent {
                 // If we are supposed to display this element, create it.
                 if(element.getdisplayElement()) {
                     // Create empty menu to be filled later as needed
-                    menuList = new ArrayList();
+                    menuList = new ArrayList<String>();
 
                     // Create a pop up menu
                     popupMenu = new EPopButton(menuList);
@@ -341,7 +341,7 @@ public class StatementDefinition extends JComponent {
                 // a label as well as in the fixed attribute.
                 if(element.getdisplayElement()) {
                     // create an empty menu to be update later
-                    ArrayList values = new ArrayList();
+                    ArrayList<String> values = new ArrayList<String>();
 
                     // Create a pop up menu
                     popupMenu = new EPopButton(values);
@@ -397,7 +397,7 @@ public class StatementDefinition extends JComponent {
                 // If we are supposed to display this element, create it.
                 if(element.getdisplayElement()) {
                     // Create empty menu to be update later
-                    menuList = new ArrayList();
+                    menuList = new ArrayList<String>();
 
                     // Create a pop up menu
                     popupMenu = new EPopButton(menuList);
@@ -453,9 +453,9 @@ public class StatementDefinition extends JComponent {
                     // Get all of the attribute names in the DB and then
                     // keep only the ones which start with time_.
                     // Put those into the menu.
-                    ArrayList values = 
+                    ArrayList<String> values = 
                            FillDBManager.attrList.getAttrNamesLimited(objType);
-                    ArrayList timevalues = new ArrayList();
+                    ArrayList<String> timevalues = new ArrayList<String>();
                     String str;
 
                     for(int i=0; i < values.size(); i++) {
@@ -653,7 +653,7 @@ public class StatementDefinition extends JComponent {
      * update statement values
      * @param statement table of values
      */
-    public void updateValues(Hashtable statement, boolean force) {
+    public void updateValues(Hashtable<String,Object> statement, boolean force) {
         String str=null;
         String str1, str2, str3, val;
         int numadded;
@@ -768,7 +768,7 @@ public class StatementDefinition extends JComponent {
 
                         // Lets update the menu list in case something
                         // has be added to the DB.
-                        ArrayList menulist;
+                        ArrayList<String> menulist;
                         menulist = getUserMenuList(string, Shuf.DB_VNMR_DATA);
                         popButton.resetMenuChoices(menulist);
                     }
@@ -800,10 +800,10 @@ public class StatementDefinition extends JComponent {
                             getElementThisEtype(attrval);
                         // Get the new values list
                         ShufDBManager dbMg = ShufDBManager.getdbManager();
-                        ArrayList list = dbMg.attrList.getAttrValueListSort(
+                        ArrayList<String> list = dbMg.attrList.getAttrValueListSort(
                             str, objType);
                         if(list == null) {
-                            list = new ArrayList();
+                            list = new ArrayList<String>();
                         }
                         list.add(Shuf.SEPARATOR);
                         list.add("all");
@@ -944,10 +944,10 @@ public class StatementDefinition extends JComponent {
                             }
 
                             ShufDBManager dbMg = ShufDBManager.getdbManager();
-                            ArrayList list = dbMg.attrList.getAttrValueListSort(
+                            ArrayList<String> list = dbMg.attrList.getAttrValueListSort(
                                                          attrName, objType);
                             if(list == null) {
-                                list = new ArrayList();
+                                list = new ArrayList<String>();
                             }
                             list.add(Shuf.SEPARATOR);
                             list.add("all");
@@ -1004,10 +1004,10 @@ public class StatementDefinition extends JComponent {
 
                             // Get the new values list
                             ShufDBManager dbMg = ShufDBManager.getdbManager();
-                            ArrayList list = dbMg.attrList.getAttrValueListSort(
+                            ArrayList<String> list = dbMg.attrList.getAttrValueListSort(
                                                         str, objType);
                             if(list == null) {
-                                list = new ArrayList();
+                                list = new ArrayList<String>();
                             }
                             list.add(Shuf.SEPARATOR);
                             list.add("all");
@@ -1058,10 +1058,10 @@ public class StatementDefinition extends JComponent {
                             }
 
                             ShufDBManager dbMg = ShufDBManager.getdbManager();
-                            ArrayList list = dbMg.attrList.getAttrValueListSort(
+                            ArrayList<String> list = dbMg.attrList.getAttrValueListSort(
                                                             attrName, objType);
                             if(list == null) {
-                                list = new ArrayList();
+                                list = new ArrayList<String>();
                             }
                             list.add(Shuf.SEPARATOR);
                             // Use *** to mean "do nothing with this one"
@@ -1148,7 +1148,7 @@ public class StatementDefinition extends JComponent {
      *
      </pre> **************************************************/
 
-    public SearchInfo getSearchInfo(Hashtable statement) {
+    public SearchInfo getSearchInfo(Hashtable<String,Object> statement) {
         String           string;
         String           classMode=null;
         String[]         headers; 
@@ -1156,7 +1156,7 @@ public class StatementDefinition extends JComponent {
         String           vals[];
         String           value;
         String           attrName;
-        ArrayList       accInv;
+        ArrayList<String>       accInv;
         LoginService    loginService;
         Hashtable       accessHash;
         String          curuser;
@@ -1413,7 +1413,7 @@ public class StatementDefinition extends JComponent {
             // If the first item in the access list is 'all' then ignore
             // the list and use instead, all of the users found in the DB.
             if(info.accessibleUsers.get(0).equals("all")) {
-                ArrayList strarr = shufflerService.
+                ArrayList<String> strarr = shufflerService.
                     queryCategoryValues(info.objectType, "owner");
                 if(strarr.size() == 0) {
                     // We show nothing in the DB, perhaps the locattrlist is
@@ -1441,7 +1441,7 @@ public class StatementDefinition extends JComponent {
         }
         // If not using access list, set to empty list
         else {
-            info.accessibleUsers = new ArrayList();
+            info.accessibleUsers = new ArrayList<String>();
         }
             
         // Get the stuff out of header.
@@ -1476,7 +1476,7 @@ public class StatementDefinition extends JComponent {
      * Summary: Return the menu list of Users of this type.
      *
      </pre> **************************************************/
-    public ArrayList getUserMenuList(String userType, String objType) {
+    public ArrayList<String> getUserMenuList(String userType, String objType) {
 
         ShufDBManager dbManager = ShufDBManager.getdbManager();
 
@@ -1491,32 +1491,32 @@ public class StatementDefinition extends JComponent {
         }
         // Create a pop up menu
         // Get list of values to put into menu.
-        ArrayList list = 
+        ArrayList<String> list = 
                   dbManager.attrList.getAttrValueListSort(userType, objType);
         if(list == null) {
             Messages.postError("Problem getting attribute list for "
                                 + userType);
             // return empty list
-            return new ArrayList();
+            return new ArrayList<String>();
 
         }
 
         // Now trim down the list to include ONLY entries accessible
         // by this owner.
         // Get the access list.
-        ArrayList menulist;
+        ArrayList<String> menulist;
         String curuser = System.getProperty("user.name");
         Hashtable accessHash = LoginService.getaccessHash();
         Access access  = (Access) accessHash.get(curuser);
-        ArrayList accList = access.getlist();
-        ArrayList accGroups = access.getgroups();
+        ArrayList<String> accList = access.getlist();
+        ArrayList<String> accGroups = access.getgroups();
 
         // If accList is anything but 'all'
         if(!accList.get(0).equals("all")) {
             // Go thru the list from the DB and check to see if 
             // it is an accessible user.  Skip the last entry 
             // which should be everyone.
-            ArrayList alist = new ArrayList();
+            ArrayList<String> alist = new ArrayList<String>();
             for(int i=0; i < list.size() -1; i++) {
                 if(accList.contains(list.get(i))) {
                                 // This entry is valid, keep it
@@ -1591,7 +1591,7 @@ public class StatementDefinition extends JComponent {
      * Summary: Get elementList.
      *
      </pre> **************************************************/
-    public ArrayList getelementList() {
+    public ArrayList<Object> getelementList() {
         return elementList;
     }
 

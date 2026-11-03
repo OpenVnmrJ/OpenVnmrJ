@@ -1152,7 +1152,7 @@ public class ExpViewArea extends  ExpViewIF implements VnmrKey,
             ****/
         }
         expNum = num;
-        sshare.putProperty("expNum",new Integer(expNum));
+        sshare.putProperty("expNum", Integer.valueOf(expNum));
 
         // if (activeWin >= num)
         //     activeWin = 0;
@@ -1584,7 +1584,7 @@ public class ExpViewArea extends  ExpViewIF implements VnmrKey,
 */
         }
         activeExp.setActive(true);
-        sshare.putProperty("activeWin",new Integer(activeWin));
+        sshare.putProperty("activeWin", Integer.valueOf(activeWin));
         // if(tp != null) tp.switchLayout(id);
         if (bOverlayed) {
             bChangeCanvas = false;
@@ -2042,7 +2042,7 @@ public class ExpViewArea extends  ExpViewIF implements VnmrKey,
                  setExpVisible(i, false);
         }
 
-        sshare.putProperty(viewAllStr,new Boolean(viewAll));
+        sshare.putProperty(viewAllStr, Boolean.valueOf(viewAll));
 
         for (int k = 0; k < maxViews; k++) {
             if (k != id && expPanels[k] != null)
@@ -2471,7 +2471,7 @@ public class ExpViewArea extends  ExpViewIF implements VnmrKey,
             openActiveExp();
         }
         viewAll = true;
-        sshare.putProperty(viewAllStr,new Boolean(viewAll));
+        sshare.putProperty(viewAllStr, Boolean.valueOf(viewAll));
         if (bChangeCanvas) {
             adjustRowColumn();
             initCanvasArray();
@@ -2530,9 +2530,9 @@ public class ExpViewArea extends  ExpViewIF implements VnmrKey,
             canvasObj[a] = null;
             String s = expShowStr+a;
             if (expSelected[a])
-                sshare.putProperty(s, new Boolean(true));
+                sshare.putProperty(s, Boolean.TRUE);
             else
-                sshare.putProperty(s, new Boolean(false));
+                sshare.putProperty(s, Boolean.FALSE);
         }
         for (a = 0; a < maxViews; a++) {
             if (expThread[a] != null && expThread[a].isAlive()) {
@@ -2544,7 +2544,7 @@ public class ExpViewArea extends  ExpViewIF implements VnmrKey,
             }
             expThread[a] = null;
         }
-        sshare.putProperty(viewAllStr,new Boolean(viewAll));
+        sshare.putProperty(viewAllStr, Boolean.valueOf(viewAll));
     }
 
     public void setViewMargin(int m)

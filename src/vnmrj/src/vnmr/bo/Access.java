@@ -37,10 +37,10 @@ import vnmr.util.*;
 
 public class Access {
     private String    userName;
-    private ArrayList list;
-    private ArrayList groups;
+    private ArrayList<String> list;
+    private ArrayList<String> groups;
 
-    public Access(String  userName,  ArrayList list, ArrayList groups) {
+    public Access(String userName, ArrayList<String> list, ArrayList<String> groups) {
         this.userName = userName;
         this.list = list;
         this.groups = groups;
@@ -50,11 +50,11 @@ public class Access {
         return userName;
     }
 
-    public ArrayList getlist() {
+    public ArrayList<String> getlist() {
         return list;
     }
 
-    public ArrayList getgroups() {
+    public ArrayList<String> getgroups() {
         return groups;
     }
 
@@ -76,7 +76,7 @@ public class Access {
     public static Hashtable readAccessFile(Hashtable userHash, 
         Hashtable groupHash) 
     {
-        HashArrayList accessList= new HashArrayList();
+        HashArrayList accessList = new HashArrayList();
         String path=FileUtil.openPath("SYSTEM/USRS/userlist");
         
         if(path !=null)
@@ -113,11 +113,11 @@ public class Access {
             User user=(User)users.nextElement();
             String username=user.getAccountName();
 	    
-            ArrayList userAccess=user.getAccessList();
-            Hashtable AHash=new Hashtable();
-            Hashtable GHash=new Hashtable();
-            ArrayList accessList=new ArrayList();
-            ArrayList groupList=new ArrayList();
+            ArrayList<String> userAccess = user.getAccessList();
+            Hashtable<String,String> AHash = new Hashtable<String,String>();
+            Hashtable<String,String> GHash = new Hashtable<String,String>();
+            ArrayList<String> accessList = new ArrayList<String>();
+            ArrayList<String> groupList = new ArrayList<String>();
             String item;
             boolean allset=false;
 
@@ -129,7 +129,7 @@ public class Access {
                 }
                 if(groupHash.containsKey(name)) {
                     grp = (Group)groupHash.get(name);
-                    ArrayList mlist = grp.getmembers();
+                    ArrayList<String> mlist = grp.getmembers();
                     for(int m=0; m < mlist.size(); m++){
                         item=(String)mlist.get(m);
                         AHash.put(item,item);
@@ -184,15 +184,15 @@ public class Access {
             Messages.postError(err);
 
 	        // Add this user to the list
-            ArrayList accessList = new ArrayList(1);
+            ArrayList<String> accessList = new ArrayList<String>(1);
             accessList.add(curuser);
-            Access access = new Access(curuser, accessList, new ArrayList(1));
+            Access access = new Access(curuser, accessList, new ArrayList<String>(1));
             accessHash.put(curuser, access);
         }
         // Now we have this user for sure, get his list and be sure
         // varian is in it.
         Access access = (Access) accessHash.get(curuser);
-        ArrayList accessList = (ArrayList) access.getlist();
+        ArrayList<String> accessList = access.getlist();
         if(!accessList.contains("varian"))
             accessList.add("varian");
     }
@@ -221,14 +221,14 @@ public class Access {
 	BufferedReader  in;
 	String		inLine;
 	String		val1, val2;
-	ArrayList	accessList;
-	ArrayList	groupsList;
+	ArrayList<String> accessList;
+	ArrayList<String> groupsList;
 	StringTokenizer tok;
 	int		num_elements1, num_elements2;
 	Access		access;
         FileReader      fr;
 
-	groupsList = new ArrayList();
+	groupsList = new ArrayList<String>();
 
 	// Open the access file.
 	try {
@@ -254,8 +254,8 @@ public class Access {
 		    tok = new StringTokenizer(inLine, ":");
 
 		    // Create new lists to fill for this user.
-		    accessList = new ArrayList();
-		    groupsList = new ArrayList();
+		    accessList = new ArrayList<String>();
+		    groupsList = new ArrayList<String>();
 
 		    num_elements1 = tok.countTokens();
 
@@ -296,7 +296,7 @@ public class Access {
 				Group grp = (Group)groupHash.get(user);
 				    
 				    // put each users name into the tmp hash.
-				ArrayList mlist = grp.getmembers();
+				ArrayList<String> mlist = grp.getmembers();
 				for(int m=0; m < mlist.size(); m++){
 				    accessList.add(mlist.get(m));
 				}

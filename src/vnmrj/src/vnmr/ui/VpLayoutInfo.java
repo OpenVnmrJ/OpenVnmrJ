@@ -249,8 +249,8 @@ public class VpLayoutInfo
                     continue;
                 }
                 if (atr.startsWith(tp_dividerPrefix)) {
-		    tp_dividers.put(atr.substring(tp_dividerPrefix.length()+1), 
-			new Integer(data));
+		    tp_dividers.put(atr.substring(tp_dividerPrefix.length()+1),
+                    Integer.valueOf(data));
                     continue;
                 }
                 if (atr.equals("sysToolBar")) {

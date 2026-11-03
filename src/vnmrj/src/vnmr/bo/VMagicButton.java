@@ -101,7 +101,7 @@ public class VMagicButton extends JToggleButton implements VObjIF, VEditIF,
         ml = new MouseAdapter() {
               public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         ParamEditUtil.setEditObj((VObjIF) evt.getSource());
@@ -587,6 +587,7 @@ public class VMagicButton extends JToggleButton implements VObjIF, VEditIF,
         if (!inEditMode)
             setBounds(curLoc.x, curLoc.y, curDim.width, curDim.height);
     }
+
     public void setBounds(int x, int y, int w, int h) {
         if(inEditMode) {
             defLoc.x = x;
@@ -604,10 +605,12 @@ public class VMagicButton extends JToggleButton implements VObjIF, VEditIF,
             if(rWidth <= 0) {
                 calSize();
             }
+            if ((w != nWidth) || (w < rWidth2)) {
+                adjustFont();
+            }
         }
         super.setBounds(x, y, w, h);
     }
-
 
     public void calSize() {
         if(icon !=null && label==null){
@@ -627,7 +630,7 @@ public class VMagicButton extends JToggleButton implements VObjIF, VEditIF,
             rWidth2 = rWidth;
         }
     }
-
+/*
     public void reshape(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
@@ -649,7 +652,7 @@ public class VMagicButton extends JToggleButton implements VObjIF, VEditIF,
         }
         super.reshape(x, y, w, h);
     }
-
+*/
      public Point getLocation() {
         if (inEditMode) {
            tmpLoc.x = defLoc.x;

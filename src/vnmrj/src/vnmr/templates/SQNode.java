@@ -156,7 +156,7 @@ public class SQNode {
      * @return The acquisition time (s).
      */
     public Double getAcqTime() {
-        return Double.parseDouble(getAttr(ATTR_TIME));
+        return Double.valueOf(Double.parseDouble(getAttr(ATTR_TIME)));
     }
 
     /**
@@ -204,7 +204,7 @@ public class SQNode {
      * @return True if this node is locked.
      */
     public Boolean isLocked() {
-        return ("on" == getAttr(ATTR_LOCK));
+        return Boolean.valueOf("on" == getAttr(ATTR_LOCK));
     }
 
     /**

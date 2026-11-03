@@ -10,6 +10,9 @@
 package  vnmr.util;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import vnmr.ui.*;
 import vnmr.admin.ui.*;
 
@@ -48,17 +51,23 @@ public class VnmrProcess implements Runnable {
 
    public void run() {
        try {
-           Runtime rt = Runtime.getRuntime();
-           // exec and get back a Process class
-           String cmd = "Vnmrbg master  -port "+socketPort+" -view "+id;
+           List<String> cmdList = new ArrayList<String>();
            if (Util.iswindows())
            {
-               cmd = FileUtil.sysdir() + "/bin/Vnmrbg.exe master -port " +
-                            socketPort + " -view " + id;
+               cmdList.add(FileUtil.sysdir() + "/bin/Vnmrbg.exe");
            }
+           else
+           {
+                cmdList.add("Vnmrbg");
+           }
+           cmdList.add("master");
+           cmdList.add("-port");
+           cmdList.add(String.valueOf(socketPort));
+           cmdList.add("-view");
+           cmdList.add(String.valueOf(id));
            if (info != null)
-               cmd = cmd + " "+info;
-           chkit = rt.exec(cmd);
+               cmdList.addAll(Arrays.asList(info.split("\\s+")));
+           chkit = new ProcessBuilder(cmdList).start();
            new VnmrStderrReader().start();
 
            // wait for process to exit

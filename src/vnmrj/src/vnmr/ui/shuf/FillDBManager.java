@@ -682,7 +682,7 @@ public class FillDBManager {
                 // So, go through the appdir list and take dirs that start
                 // with sysdir.  We have to do this for each user.
 
-                ArrayList appDirsToUse = new ArrayList();
+                ArrayList<String> appDirsToUse = new ArrayList<String>();
                 
                 // Go thru the users
                 for(Enumeration en = users.elements(); en.hasMoreElements(); ) {
@@ -887,13 +887,13 @@ public class FillDBManager {
 
     }
 
-    public ArrayList getTagListFromDB(String objType) throws SQLException {
+    public ArrayList<String> getTagListFromDB(String objType) throws SQLException {
         ArrayList output;
         java.sql.ResultSet rs;
         int numTagCol;
         String value;
 
-        output = new ArrayList();
+        output = new ArrayList<String>();
 
         /* I have not found a way to get SQL to give DISTINCT results
            across several columns.  Thus we have to get the tag values
@@ -948,7 +948,7 @@ public class FillDBManager {
 
 
         // Alphabetize or numeric order
-        Collections.sort(output,  new NumericStringComparator());
+        Collections.sort(output, new NumericStringComparator());
 
         return output;
     }
@@ -1586,7 +1586,7 @@ public class FillDBManager {
     }
 
 
-    public ArrayList fillATable(String objType, String dir, String user,
+    public ArrayList<UNFile> fillATable(String objType, String dir, String user,
                                 boolean recursive, DBCommunInfo info,
                                 long sleepMs) {
 
@@ -1596,7 +1596,7 @@ public class FillDBManager {
 
     }
 
-    public ArrayList fillATable(String objType, String dir, String user,
+    public ArrayList<UNFile> fillATable(String objType, String dir, String user,
                                 boolean recursive, DBCommunInfo info) {
 
         // Call fillATable with a sleepMs = 0
@@ -1616,7 +1616,7 @@ public class FillDBManager {
      *
      </pre> **************************************************/
 
-    public ArrayList fillATable(String objType, String dir, String user,
+    public ArrayList<UNFile> fillATable(String objType, String dir, String user,
                           boolean recursive, DBCommunInfo info, long sleepMs,
                           String attrName, String attrVal) {
         String suffix="", prefix="";
@@ -1624,7 +1624,7 @@ public class FillDBManager {
         String hostFullpath;
         String filename;
         boolean success=false;
-        ArrayList files = new ArrayList();
+        ArrayList<UNFile> files = new ArrayList<UNFile>();
         UNFile file;
         int filesAdded=0, totFiles=0;
         java.util.Date starttime=null;
@@ -2144,7 +2144,7 @@ public class FillDBManager {
             filepath = FileUtil.openPath("LOCATOR/pulse_sequence_macros.xml");
 
 
-        commandDefinitionList = new ArrayList();
+        commandDefinitionList = new ArrayList<String>();
 
         // Parse the file
         try {
@@ -2167,7 +2167,7 @@ public class FillDBManager {
 
             // add the "name" attribute.
             if(info != null) {
-                ArrayList List = new ArrayList();
+                ArrayList<String> List = new ArrayList<String>();
                 List.add(name);
                 ok = addRowToDBSetAttr(objType, "name", "text",
                                              List, name, info);
@@ -2191,8 +2191,8 @@ public class FillDBManager {
                     // If this ever changes, we have to determine what
                     // the type is.  For example any attribute starting
                     // with "time_" could be set to date.
-                    ArrayList List = new ArrayList();
-                    List.add(attribList.get(key));
+                    ArrayList<String> List = new ArrayList<String>();
+                    List.add((String)attribList.get(key));
                     ok = addRowToDBSetAttr(objType, key, "text",
                                            List , name, info);
                 }
@@ -2550,7 +2550,7 @@ public class FillDBManager {
                               attr + "\" " + attrType);
 
                 // add to attrList
-                ArrayList attrValues = new ArrayList();
+                ArrayList<String> attrValues = new ArrayList<String>();
                 // Add this attribute with an empty list of values.
                 attrValues.add("");
                 attrList.updateValues(attr, attrValues, objType);
@@ -2905,13 +2905,12 @@ public class FillDBManager {
             if(DebugOutput.isSetFor("destroydb"))
                Messages.postDebug("destroyDB executing 'dropdb vnmr'");
 
-            if(UtilB.OSNAME.startsWith("Windows")) 
-                cmd = sysdir + "/pgsql/bin/dropdb.exe " + dbName;
-            else
-                cmd = "dropdb " + dbName;
-
             try {
-                chkit = rt.exec(cmd);
+                if(UtilB.OSNAME.startsWith("Windows"))
+                    chkit = new ProcessBuilder(sysdir + "/pgsql/bin/dropdb.exe",
+                                               dbName).start();
+                else
+                    chkit = new ProcessBuilder("dropdb", dbName).start();
                 // Wait here as long is the process is alive.
                 chkit.waitFor();
             }
@@ -4035,7 +4034,7 @@ public class FillDBManager {
         // limited list.  Then the code below can just always loop in the
         // same manner.
         // Start with the beginning of the path
-        ArrayList fileList = new ArrayList();
+        ArrayList fileList = new ArrayList<String>();
         if(limited) {
             fileList.add("LOCATOR/");
         }
@@ -4493,7 +4492,7 @@ public class FillDBManager {
         }
 
         // Add some standard attributes.
-        ArrayList List = new ArrayList();
+        ArrayList<String> List = new ArrayList<String>();
         List.add(dhostFullpath);
         addRowToDBSetAttr(objType,  "host_fullpath",
                               DB_ATTR_TEXT, List, dhostFullpath, info);
@@ -4662,7 +4661,7 @@ public class FillDBManager {
                 if(attr.equals("name"))
                     foundName = true;
 
-                List = new ArrayList();
+                List = new ArrayList<String>();
                 List.add(value);
 
 
@@ -4698,7 +4697,7 @@ public class FillDBManager {
                     string = new String((String)List.get(0));
                     tokstring = new StringTokenizer(string, ",");
                     // Make a new empty list to fill in
-                    List = new ArrayList();
+                    List = new ArrayList<String>();
 
                     while(tokstring.hasMoreTokens()) {
                         List.add(tokstring.nextToken().trim());
@@ -4723,7 +4722,7 @@ public class FillDBManager {
 
         // If 'name' was not given, use filename.
         if(!foundName) {
-            List = new ArrayList();
+            List = new ArrayList<String>();
             List.add(rootFilename);
             addRowToDBSetAttr(objType, "name",
                               DB_ATTR_TEXT, List, dhostFullpath, info);
@@ -4784,7 +4783,7 @@ public class FillDBManager {
         // Note: the first arg of addRowToDBSetAttr() is the objType, but
         //       in this case, that is DB_TRASH, not the objType of the
         //       file that has been trashed.
-        ArrayList List = new ArrayList();
+        ArrayList<String> List = new ArrayList<String>();
 
         List.add(tHostFullpath);
         addRowToDBSetAttr(Shuf.DB_TRASH,  "host_fullpath",
@@ -4931,7 +4930,7 @@ public class FillDBManager {
         UNFile    file;
         String    name, path=null;
         String    autoHostFullpath;
-        ArrayList fileList = new ArrayList();
+        ArrayList fileList = new ArrayList<String>();
         String dhost, dpath;
 
         // Add the automation itself
@@ -5293,7 +5292,7 @@ public class FillDBManager {
         UNFile    procparFile;
         String    name, path=null;
         String    imageHostFullpath;
-        ArrayList fileList = new ArrayList();
+        ArrayList fileList = new ArrayList<String>();
         String dhost, dpath;
 
         // Add the image dir itself
@@ -5364,7 +5363,7 @@ public class FillDBManager {
         BufferedReader  in=null;
         String          rootFilename;
         String          parPath;
-        ArrayList       valuesAsString=new ArrayList();
+        ArrayList<String> valuesAsString = new ArrayList<String>();
         String          dataType;
         String          param="";
         String          directory;
@@ -5657,7 +5656,7 @@ public class FillDBManager {
             directory = directory.substring(index+1);
 
         // Add some standard attributes that will not be in the file.
-        ArrayList List = new ArrayList();
+        ArrayList<String> List = new ArrayList<String>();
         List.add(dhostFullpath);
         addRowToDBSetAttr(objType,  "host_fullpath",
                               DB_ATTR_TEXT, List, dhostFullpath, info);
@@ -5886,7 +5885,7 @@ public class FillDBManager {
                                 // If protocol AND param is sfrq, then we
                                 // want to calc a field in Tesla and add it
                                 if(objType.equals(Shuf.DB_PROTOCOL) && param.equals("sfrq")) {
-                                    double field = convertFreqToTesla(tok.sval);
+                                    double field = convertFreqToTesla(tok.sval).doubleValue();
                                     valuesAsString.add(Double.toString(field));
                                     addRowToDBSetAttr(objType, "field", dataType,
                                             valuesAsString, dhostFullpath,
@@ -6044,7 +6043,7 @@ public class FillDBManager {
         /* If investigator is not set for this entry, then set it to
            the owner. */
         if(!investigatorFound) {
-            List = new ArrayList();
+            List = new ArrayList<String>();
             List.add(owner);
             addRowToDBSetAttr(objType, "investigator", DB_ATTR_TEXT,
                               List, dhostFullpath, info);
@@ -6058,7 +6057,7 @@ public class FillDBManager {
             SimpleDateFormat formatter =
                 new SimpleDateFormat ("MMM d, yyyy HH:mm:ss");
             String str = formatter.format(timeSavedDate);
-            List = new ArrayList();
+            List = new ArrayList<String>();
             List.add(str);
             addRowToDBSetAttr(objType, Shuf.DB_TIME_SAVED, DB_ATTR_DATE,
                               List, dhostFullpath, info);
@@ -6103,7 +6102,7 @@ public class FillDBManager {
         }
     }
 
-    public void getFileListing(ArrayList fileList, String prefix,
+    public void getFileListing(ArrayList<UNFile> fileList, String prefix,
                                     String suffix, String directory,
                                     boolean recursive, String objType) {
         int entryCounter = 0;
@@ -6145,7 +6144,7 @@ public class FillDBManager {
      *    found.
      *
      </pre> **************************************************/
-    private void getFileListingRecursive(ArrayList fileList, String prefix,
+    private void getFileListingRecursive(ArrayList<UNFile> fileList, String prefix,
                                          String suffix, String directory,
                                          boolean recursive, String objType,
                                          int entryCounter) {
@@ -6200,7 +6199,7 @@ public class FillDBManager {
                 // Transfser the files found to the output list
                 if(files != null) {
                     for(int i=0; i < files.length; i++) {
-                        fileList.add(files[i]);
+                        fileList.add((UNFile)files[i]);
                     }
                 }
 
@@ -6243,7 +6242,7 @@ public class FillDBManager {
                 if(files != null) {
                     // Transfser the files found to the output list
                     for(int i=0; i < files.length; i++)
-                        fileList.add(files[i]);
+                        fileList.add((UNFile)files[i]);
                 }
             }
         }
@@ -6420,14 +6419,14 @@ public class FillDBManager {
         return true;
     }
 
-    public void updateDB(Hashtable users, long sleepMs)
+    public void updateDB(Hashtable<String,User> users, long sleepMs)
                                           throws InterruptedException {
         // Default to filling of workspace as true.
         boolean workspace = true;
         updateDB(users, sleepMs, workspace);
     }
 
-    public void updateDB(Hashtable users, long sleepMs, boolean workspace) 
+    public void updateDB(Hashtable<String,User> users, long sleepMs, boolean workspace)
                                           throws InterruptedException {
         // Default to filling of appdirOnly as false.
         boolean appdirOnly = false;
@@ -6436,7 +6435,7 @@ public class FillDBManager {
     }
     
 
-    public void updateDB(Hashtable users, long sleepMs, boolean workspace, 
+    public void updateDB(Hashtable<String,User> users, long sleepMs, boolean workspace,
                          boolean appdirOnly) throws InterruptedException {
         User      user;
         String    dir;
@@ -6446,7 +6445,7 @@ public class FillDBManager {
         long timems;
         java.util.Date starttime = new java.util.Date();
         DBCommunInfo info = new DBCommunInfo();
-        ArrayList dirChecked = new ArrayList();
+        ArrayList<String> dirChecked = new ArrayList<String>();
 
         
         if(attrList == null)
@@ -6542,7 +6541,7 @@ public class FillDBManager {
 
                     // Add cDataDirs to dirChecked for future checks
                     for(int j=0; j < cDataDirs.size(); j++) {
-                        dirChecked.add(cDataDirs.get(j));
+                        dirChecked.add((String)cDataDirs.get(j));
                     }
 
                     // Check this users list of directories in SavedDirList
@@ -6578,7 +6577,7 @@ public class FillDBManager {
                     // cDataDirs and dirChecked
                     for(int j=0; j < cSavedDirList.size(); j++) {
                         cDataDirs.add(cSavedDirList.get(j));
-                        dirChecked.add(cSavedDirList.get(j));
+                        dirChecked.add((String)cSavedDirList.get(j));
                     }
 
 
@@ -6778,7 +6777,7 @@ public class FillDBManager {
      *
      </pre> **************************************************/
 
-    public ArrayList getAllAttributeNamesFromDB(String objType)
+    public ArrayList<String> getAllAttributeNamesFromDB(String objType)
                                                   throws Exception {
         java.sql.ResultSet rs;
         ResultSetMetaData md;
@@ -6792,7 +6791,7 @@ public class FillDBManager {
                        DebugOutput.isSetFor("locTiming"))
             starttime = new java.util.Date();
 
-        output = new ArrayList();
+        output = new ArrayList<String>();
         // Get a list of all attributes for this objType
         try {
             rs = executeQuery("SELECT * FROM " + objType +
@@ -6914,7 +6913,7 @@ public class FillDBManager {
                        DebugOutput.isSetFor("locTiming"))
             starttime = new java.util.Date();
 
-        output = new ArrayList();
+        output = new ArrayList<String>();
         if(attr.startsWith("tag")) {
             /* I have not found a way to get SQL to give DISTINCT results
                across several columns.  Thus we have to get the tag values
@@ -7121,7 +7120,7 @@ public class FillDBManager {
         }
 
         // Alphabetize or numeric order
-        Collections.sort(output,  new NumericStringComparator());
+        Collections.sort(output, new NumericStringComparator());
 
         if(DebugOutput.isSetFor("getAttrValueListFromDB")) {
             java.util.Date endtime = new java.util.Date();
@@ -8025,21 +8024,11 @@ return list;
         Process   proc=null;
         String   owner="";
         try {
-            Runtime rt = Runtime.getRuntime();
             String dir = System.getProperty("sysdir");
 
             // If a file or directory does not exist, fileowner will
             // return an owner of 'root'
-            String cmd;
-            
-            // Windows needs double quotes around the filename in case
-            // there are any spaces.  Unix fileowner did not like the quotes.
-            if(UtilB.OSNAME.startsWith("Windows"))
-                cmd = dir +"/bin/fileowner \"" + fullpath + "\"";
-            else
-                cmd = dir +"/bin/fileowner " + fullpath ;
-
-            proc = rt.exec(cmd);
+            proc = new ProcessBuilder(dir + "/bin/fileowner", fullpath).start();
 
             BufferedReader str = (new BufferedReader
                                       (new InputStreamReader
@@ -8646,7 +8635,7 @@ return list;
      *    then show the list in the locator for the user to choose from.
      *****************************************************************/
     public ArrayList getAvailSubTypeList(String objType, String hostFullpath) {
-        ArrayList subTypeList = new ArrayList();
+        ArrayList subTypeList = new ArrayList<String>();
         String cmd;
         java.sql.ResultSet rs;
 
@@ -9017,7 +9006,7 @@ return list;
     public void sendTableModifiedNotification(String objType) {
         String cmd;
         java.sql.ResultSet rs;
-        ArrayList hostList = new ArrayList();
+        ArrayList hostList = new ArrayList<String>();
         String host, value;
 
         // First get the list of hosts who have registered to be notified
@@ -9069,7 +9058,7 @@ return list;
     public static Double convertFreqToTesla(String h1freq) {
         if(h1freq == null)
             h1freq = "0";
-        Double field = new Double(h1freq);
+        Double field = Double.valueOf(h1freq);
         return convertFreqToTesla(field.doubleValue());
     }
     
@@ -9098,7 +9087,7 @@ return list;
             field = 18.8;
 
 
-        return field;
+        return Double.valueOf(field);
     }
 
 
@@ -9128,7 +9117,7 @@ class DBCommunInfo {
     DBCommunInfo() {
         numFilesAdded = 0;
         numFilesRemoved = 0;
-        attrList = new ArrayList();
+        attrList = new ArrayList<String>();
     }
 
     public String toString() {

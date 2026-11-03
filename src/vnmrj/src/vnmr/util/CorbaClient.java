@@ -192,7 +192,7 @@ public abstract class CorbaClient {
         Object accessor = m_accessorTable.get(refName);
         int failureType = ERROR_OK;
         try {
-            failureType = m_accessorStateTable.get(refName);
+            failureType = m_accessorStateTable.get(refName).intValue();
         } catch (Exception e) {
         }
         boolean ok = true;
@@ -304,7 +304,7 @@ public abstract class CorbaClient {
             //m_accessorStateTable.put(refName, failureType);
             //invalidateAccessor(refName);
             //} else {
-            m_accessorStateTable.put(refName, failureType);
+            m_accessorStateTable.put(refName, Integer.valueOf(failureType));
             m_accessorTable.put(refName, accessor);
             //}
         //if (accessor instanceof Integer) {
@@ -320,7 +320,7 @@ public abstract class CorbaClient {
     public int getAccessorState(String refName) {
         int state = ERROR_UNKNOWN;
         try {
-            state = m_accessorStateTable.get(refName);
+            state = m_accessorStateTable.get(refName).intValue();
         } catch (Exception e) {
         }
         return state;
@@ -331,7 +331,7 @@ public abstract class CorbaClient {
      */
     protected void invalidateAccessor(String refName, int errorType) {
         m_accessorTable.remove(refName);
-        m_accessorStateTable.put(refName, errorType);
+        m_accessorStateTable.put(refName, Integer.valueOf(errorType));
         //if (!(m_accessorTable.get(refName) instanceof Integer)) {
         //    m_accessorTable.remove(refName);
         //}

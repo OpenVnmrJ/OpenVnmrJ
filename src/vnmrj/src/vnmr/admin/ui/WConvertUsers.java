@@ -275,7 +275,7 @@ public class WConvertUsers extends AddRemoveTool
         if (e.getActionCommand().equals("east"))
         {
             // Get the list of the selected values to be added to the table.
-            Object[] aItems = m_listLeft.getSelectedValues();
+            Object[] aItems = m_listLeft.getSelectedValuesList().toArray();
             if (aItems == null)
                 return;
 

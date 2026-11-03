@@ -67,16 +67,16 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         "Browser", "Robot View", "Paramameter Panel", "Study Queue" };
 
 
-    ArrayList           spanes = new ArrayList();
-    ArrayList           spNames = new ArrayList();
-    ArrayList           objList = new ArrayList();
-    Hashtable           panes = new Hashtable();
+    ArrayList<Object> spanes = new ArrayList<Object>();
+    ArrayList<String> spNames = new ArrayList<String>();
+    ArrayList<Component> objList = new ArrayList<Component>();
+    Hashtable<String,Object> panes = new Hashtable<String,Object>();
     Dimension           zeroDim = new Dimension(0,0);
-    HashMap             vobjs = new HashMap();
+    HashMap<String,Object> vobjs = new HashMap<String,Object>();
     HoldingArea         holdingArea;
     QueuePanel          queueArea;
     SessionShare        sshare;
-    Hashtable           hs = null;
+    Hashtable<String,Object> hs = null;
     PushpinPanel        pinPanel;
     JPanel              toolPanel;
     Component           popupComp = null;
@@ -87,8 +87,8 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
     int maxViews = 9;
     int nviews = 1;
     int openComps = 0;
-    Hashtable tp_paneInfo[] = new Hashtable[maxViews+1];
-    public Hashtable tp_dividers = new Hashtable();
+    Hashtable<String,String>[] tp_paneInfo = new Hashtable[maxViews+1];
+    public Hashtable<String,Object> tp_dividers = new Hashtable<String,Object>();
     boolean bSwitching = false;
     boolean RQinit = false;
     String tp_rqtype = "";
@@ -96,8 +96,8 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
     long   dateOfbuildFile = 0;
 
 
-    ArrayList keys = new ArrayList();
-    ArrayList vpInfo = new ArrayList();
+    ArrayList<String> keys = new ArrayList<String>();
+    ArrayList<String> vpInfo = new ArrayList<String>();
    
     public VToolPanel(SessionShare sshare) {
         // super( new BorderLayout() );
@@ -119,7 +119,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         }
 
         for(int i=0; i<nviews; i++) {
-            tp_paneInfo[i] = new Hashtable();
+            tp_paneInfo[i] = new Hashtable<String,String>();
         }
 
 /*
@@ -372,7 +372,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         for (int j=0; j<spanes.size(); j++) {
             JSplitPane jsp = (JSplitPane) spanes.get(j);
             int sv = jsp.getDividerLocation();
-            tp_dividers.put("pane"+j, new Integer(sv));
+            tp_dividers.put("pane"+j, Integer.valueOf(sv));
             JComponent obj = (JComponent) jsp.getBottomComponent();
             if (obj instanceof PushpinIF) {
                ((PushpinIF) obj).setDividerLoc(sv);
@@ -454,7 +454,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         for(Enumeration e=tp_dividers.keys(); e.hasMoreElements();) {
            String key = (String)e.nextElement();
            int value = ((Integer)tp_dividers.get(key)).intValue();
-           info.tp_dividers.put(key, new Integer(value));
+           info.tp_dividers.put(key, Integer.valueOf(value));
         }
     }
 
@@ -478,7 +478,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
 
            if(value1 != value2) {
                 tp_dividers.remove(key);
-                tp_dividers.put(key, new Integer(value2));
+                tp_dividers.put(key, Integer.valueOf(value2));
                 b = true;
            } 
         }
@@ -519,9 +519,9 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
             if (obj instanceof PushpinIF) {
                pobj = (PushpinIF) obj;
                name = "tool."+id+"."+pobj.getName()+".";
-               hs.put(name+"dividerLoc", new Integer(pobj.getDividerLoc()));
-               hs.put(name+"refY", new Float(pobj.getRefY()));
-               hs.put(name+"refH", new Float(pobj.getRefH()));
+               hs.put(name+"dividerLoc", Integer.valueOf(pobj.getDividerLoc()));
+               hs.put(name+"refY", Float.valueOf(pobj.getRefY()));
+               hs.put(name+"refH", Float.valueOf(pobj.getRefH()));
                key = pobj.getStatus();
                if (key != null)
                   hs.put(name+"status", key);
@@ -797,7 +797,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         }
     }
 
-    public void updateValue(Vector v) {
+    public void updateValue(Vector<String> v) {
         if(vpId >= nviews) return;
 
         Object obj = tp_paneInfo[vpId].get("Rq");
@@ -1065,7 +1065,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
 /*
         for (int i=0; i<spanes.size(); i++) {
             int splitValue = ((JSplitPane)spanes.get(i)).getDividerLocation();
-            hs.put("pane"+i, new Integer(splitValue));
+            hs.put("pane"+i, Integer.valueOf(splitValue));
         }
 */
         RQPanel rq = Util.getRQPanel();
@@ -1088,7 +1088,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
         for(int i=0; i < nviews; i++) 
             tp_paneInfo[i].clear();
         if (expCard != null) {
-            ((ExpCards) expCard).finalize();
+            ((ExpCards) expCard).cleanup();
             expCard = null;
         }
     }
@@ -1332,7 +1332,7 @@ public class VToolPanel extends PushpinPanel implements ExpListenerIF, PropertyC
 
         if(n > nviews) 
         for(int i=nviews; i<n; i++)
-            tp_paneInfo[i] = new Hashtable();
+            tp_paneInfo[i] = new Hashtable<String,String>();
 
         nviews = n;
 

@@ -708,21 +708,21 @@ public class VStatusButton extends TwoLineButton
     private final static String[] yes_no = {Util.getLabel("mlYes"), Util.getLabel("mlNo")};
 
     private final static Object[][] attributes = {
-        {new Integer(TITLE),     Util.getLabel("lcTITLE")},
-        {new Integer(STATKEY),   Util.getLabel(STATKEY)},
-        {new Integer(VARIABLE),  Util.getLabel(VARIABLE)},
-        {new Integer(SETVAL),    Util.getLabel(SETVAL)},
-        {new Integer(CMD),       Util.getLabel(CMD)},
-        {new Integer(CMD2),      Util.getLabel(CMD2)},
-        {new Integer(PANEL_NAME),Util.getLabel("lcPANEL_NAME")},
-        {new Integer(VALUES),    Util.getLabel("lcVALUES")},
-        {new Integer(INCR1),     Util.getLabel("lcUPDATE")},
-        {new Integer(NUMDIGIT),  Util.getLabel("eNUMDIGIT")},
-        {new Integer(DISPLAY),   Util.getLabel("lcDISPLAY"),"radio", yes_no},
-        {new Integer(MIN),       Util.getLabel(MIN)},
-        {new Integer(MAX),       Util.getLabel(MAX)},
-        {new Integer(SHOWMAX),   Util.getLabel("lcSHOWMAX"), "menu", true_false},
-        {new Integer(STATCOL),   Util.getLabel(STATCOL),"menu",status_color},
+        {Integer.valueOf(TITLE),     Util.getLabel("lcTITLE")},
+        {Integer.valueOf(STATKEY),   Util.getLabel(STATKEY)},
+        {Integer.valueOf(VARIABLE),  Util.getLabel(VARIABLE)},
+        {Integer.valueOf(SETVAL),    Util.getLabel(SETVAL)},
+        {Integer.valueOf(CMD),       Util.getLabel(CMD)},
+        {Integer.valueOf(CMD2),      Util.getLabel(CMD2)},
+        {Integer.valueOf(PANEL_NAME),Util.getLabel("lcPANEL_NAME")},
+        {Integer.valueOf(VALUES),    Util.getLabel("lcVALUES")},
+        {Integer.valueOf(INCR1),     Util.getLabel("lcUPDATE")},
+        {Integer.valueOf(NUMDIGIT),  Util.getLabel("eNUMDIGIT")},
+        {Integer.valueOf(DISPLAY),   Util.getLabel("lcDISPLAY"),"radio", yes_no},
+        {Integer.valueOf(MIN),       Util.getLabel(MIN)},
+        {Integer.valueOf(MAX),       Util.getLabel(MAX)},
+        {Integer.valueOf(SHOWMAX),   Util.getLabel("lcSHOWMAX"), "menu", true_false},
+        {Integer.valueOf(STATCOL),   Util.getLabel(STATCOL),"menu",status_color},
     };
 
     class ChartFrame extends JDialog {

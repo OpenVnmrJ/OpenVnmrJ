@@ -1030,7 +1030,7 @@ public class AnnotationEditor extends JFrame
          } catch (Exception e) {}
 
          AnnotationEditor ed = new AnnotationEditor();
-         ed.show();
+         ed.setVisible(true);
     }
 
     class attrLayout implements LayoutManager {

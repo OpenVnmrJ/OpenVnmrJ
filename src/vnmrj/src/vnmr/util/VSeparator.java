@@ -50,13 +50,13 @@ public class VSeparator extends JComponent
 	this.iSize = 0;
 	addMouseListener(new MouseAdapter() {
 	    public void mousePressed(MouseEvent evt) {
-		int iMf = evt.getModifiers();
+		int iMf = evt.getModifiersEx();
 		bResize = false;
 		bMove = false;
-		if ((iMf & InputEvent.BUTTON1_MASK) != 0) {
+		if ((iMf & InputEvent.getMaskForButton(1)) != 0) {
 			startResize(evt);
 		}
-		else if ((iMf & InputEvent.BUTTON2_MASK) != 0) {
+		else if ((iMf & InputEvent.getMaskForButton(2)) != 0) {
 			startMove(evt);
 		}
 	    }

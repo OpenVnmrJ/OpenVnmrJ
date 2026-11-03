@@ -218,7 +218,7 @@ public class ReqparWarnDialog extends ModalDialog
         // count backwards, because we may remove rows
         for (int i=L-1; i>=0; i--) {
             try {
-                x = (new Double( (String) realParameterTable.getValueAt(i,2))).doubleValue();
+                x = (Double.valueOf( (String) realParameterTable.getValueAt(i,2))).doubleValue();
                 vnmrCommand = (String) realParameterTable.getValueAt(i,0);      // parameter name
                 vnmrCommand = vnmrCommand + "=" + x;
                 buttonIF.sendToVnmr(vnmrCommand);

@@ -82,22 +82,22 @@ public class VTextUndoMgr extends UndoManager
 
         //Ctrl-b to go backward one character
         Action action = getActionByName(DefaultEditorKit.backwardAction);
-        KeyStroke key = KeyStroke.getKeyStroke(KeyEvent.VK_B, Event.CTRL_MASK);
+        KeyStroke key = KeyStroke.getKeyStroke(KeyEvent.VK_B, InputEvent.CTRL_DOWN_MASK);
         keymap.addActionForKeyStroke(key, action);
 
         //Ctrl-f to go forward one character
         action = getActionByName(DefaultEditorKit.forwardAction);
-        key = KeyStroke.getKeyStroke(KeyEvent.VK_F, Event.CTRL_MASK);
+        key = KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK);
         keymap.addActionForKeyStroke(key, action);
 
         //Ctrl-p to go up one line
         action = getActionByName(DefaultEditorKit.upAction);
-        key = KeyStroke.getKeyStroke(KeyEvent.VK_P, Event.CTRL_MASK);
+        key = KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.CTRL_DOWN_MASK);
         keymap.addActionForKeyStroke(key, action);
 
         //Ctrl-n to go down one line
         action = getActionByName(DefaultEditorKit.downAction);
-        key = KeyStroke.getKeyStroke(KeyEvent.VK_N, Event.CTRL_MASK);
+        key = KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK);
         keymap.addActionForKeyStroke(key, action);
 
         text.setKeymap(keymap);

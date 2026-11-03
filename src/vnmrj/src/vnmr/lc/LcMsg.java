@@ -84,7 +84,7 @@ public class  LcMsg {
                 System.out.println(s);
             }
         } else {
-            Object[] args = {new Integer(type), s};
+            Object[] args = {Integer.valueOf(type), s};
             try {
                 m_postMessage.invoke(null, args);
             } catch (IllegalAccessException iae) {

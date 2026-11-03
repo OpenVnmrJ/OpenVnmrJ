@@ -139,23 +139,23 @@ public class FileTableModel extends DefaultTableModel
     // input type.
     private String m_type = null;
     // input path(s).
-    private Vector m_paths = new Vector();
+    private Vector<String> m_paths = new Vector<>();
     // row values of the given type.
-    private Vector m_rowValues = new Vector();
+    private Vector<String> m_rowValues = new Vector<>();
     // output types of the given type.
-    private Vector m_outputTypes = new Vector();
+    private Vector<String> m_outputTypes = new Vector<>();
     // table header of the given type.
-    private Vector m_header = new Vector();
+    private Vector<String> m_header = new Vector<>();
     // 2D vectors of table content.
-    private Vector m_values2D = new Vector();
+    private Vector<Vector<Object>> m_values2D = new Vector<>();
 
-    private Vector m_flags = new Vector();
+    private Vector<Boolean> m_flags = new Vector<>();
     private int m_goodRows = 0;
     private int m_badRows = 0;
-    Hashtable m_months = null;
+    Hashtable<String, String> m_months = null;
 
     private void makeMonths() {
-       m_months = new Hashtable();
+       m_months = new Hashtable<>();
        m_months.put("Jan", "1");
        m_months.put("Feb", "2");
        m_months.put("Mar", "3");
@@ -185,7 +185,7 @@ public class FileTableModel extends DefaultTableModel
     setOutputTypes();
     }
 
-    public FileTableModel(Vector paths, String type) {
+    public FileTableModel(Vector<String> paths, String type) {
 
     m_type = type;
     m_paths.clear();
@@ -197,7 +197,7 @@ public class FileTableModel extends DefaultTableModel
     setOutputTypes();
     }
 
-    public void updateModel(Vector paths, String type)
+    public void updateModel(Vector<String> paths, String type)
     {
         m_type = type;
         m_paths.clear();
@@ -241,11 +241,11 @@ public class FileTableModel extends DefaultTableModel
     else return(null);
     }
 
-    public Vector getFlags() {
+    public Vector<Boolean> getFlags() {
     return(m_flags);
     }
 
-    public Vector getOutputTypes() {
+    public Vector<String> getOutputTypes() {
     return(m_outputTypes);
     }
 
@@ -258,7 +258,7 @@ public class FileTableModel extends DefaultTableModel
 
     if (m_outputTypes == null)
     {
-        m_outputTypes = new Vector();
+        m_outputTypes = new Vector<>();
     }
     m_outputTypes.clear();
 
@@ -455,7 +455,7 @@ public class FileTableModel extends DefaultTableModel
 
     /* add current session to s_auditTrailFiles */
     if(m_type.equals("s_auditTrailFiles") && !(Util.getAppIF() instanceof VAdminIF)) {
-        Vector row = new Vector();
+        Vector<Object> row = new Vector<Object>();
             row.addElement("current");
             row.addElement("current");
         String usr=System.getProperty("user.name");
@@ -466,7 +466,7 @@ public class FileTableModel extends DefaultTableModel
         String value =
         FileUtil.savePath( "USER/PERSISTENCE");
         m_rowValues.addElement(value);
-            m_flags.add(new Boolean(false));
+            m_flags.add(Boolean.FALSE);
     }
 
     if(m_type.equals("records")) {
@@ -482,11 +482,11 @@ public class FileTableModel extends DefaultTableModel
     }
 
     if(m_values2D.size() == 0) {
-        Vector row = new Vector();
+        Vector<Object> row = new Vector<Object>();
         for(int i=0; i<m_header.size(); i++) row.addElement("");
         m_values2D.addElement(row);
         m_rowValues.addElement("");
-        m_flags.add(new Boolean(false));
+        m_flags.add(Boolean.FALSE);
     }
 
     // build tableModel from m_values2D and m_header.
@@ -588,13 +588,13 @@ public class FileTableModel extends DefaultTableModel
                 if(tok.hasMoreElements())
                 cmds+=" ";
             }
-            Vector row = new Vector();
+            Vector<Object> row = new Vector<Object>();
             row.addElement(convertTime(time.trim()));
             row.addElement(cmds.trim());
             row.addElement(getDescription(cmds.trim()));
             m_rowValues.addElement(cmds.trim());
             m_values2D.addElement(row);
-            m_flags.add(new Boolean(false));
+            m_flags.add(Boolean.FALSE);
             }
         }
     }
@@ -643,7 +643,7 @@ public class FileTableModel extends DefaultTableModel
 
     BufferedReader text = new BufferedReader(fr);
 
-    Vector row = null;
+    Vector<Object> row = null;
 
     try
     {
@@ -671,7 +671,7 @@ public class FileTableModel extends DefaultTableModel
                 cmds+=" ";
               }
             }
-            row = new Vector();
+            row = new Vector<Object>();
             row.addElement(convertTime(time.trim()));
             //row.addElement(func.trim());
             row.addElement(cmds.trim());
@@ -699,7 +699,7 @@ public class FileTableModel extends DefaultTableModel
             row.addElement(output.trim());
             m_rowValues.addElement(output.trim());
             m_values2D.addElement(row);
-            m_flags.add(new Boolean(false));
+            m_flags.add(Boolean.FALSE);
           }
             } else if(m_type.equals("d_auditTrail")) {
           if(tok.countTokens() < 2 )
@@ -718,7 +718,7 @@ public class FileTableModel extends DefaultTableModel
                 cmds+=" ";
               }
             }
-            row = new Vector();
+            row = new Vector<Object>();
             row.addElement(convertTime(time.trim()));
             row.addElement(console.trim());
             row.addElement(user.trim());
@@ -736,7 +736,7 @@ public class FileTableModel extends DefaultTableModel
             row.addElement(output.trim());
             m_rowValues.addElement(output.trim());
             m_values2D.addElement(row);
-            m_flags.add(new Boolean(false));
+            m_flags.add(Boolean.FALSE);
           }
         }
         }
@@ -800,7 +800,7 @@ public class FileTableModel extends DefaultTableModel
     String console=tok.nextToken();
     String user=tok.nextToken();
     user = user.substring(0, user.lastIndexOf(".vaudit"));
-    Vector row = new Vector();
+    Vector<Object> row = new Vector<Object>();
     row.addElement(convertTime(logintime.trim()));
     row.addElement(convertStrTime(logouttime.trim()));
     row.addElement(user.trim());
@@ -808,7 +808,7 @@ public class FileTableModel extends DefaultTableModel
 
     m_rowValues.addElement(path);
     m_values2D.addElement(row);
-    m_flags.add(new Boolean(false));
+    m_flags.add(Boolean.FALSE);
 
     return true;
     }
@@ -860,8 +860,8 @@ public class FileTableModel extends DefaultTableModel
     // get invalid file flag
     String flag = path +"/checksum.flag";
     File file=new File(flag);
-    if(file.exists()) bflag = new Boolean(true);
-    else bflag = new Boolean(false);
+    if(file.exists()) bflag = Boolean.TRUE;
+    else bflag = Boolean.FALSE;
 
     // get records name
 
@@ -959,7 +959,7 @@ public class FileTableModel extends DefaultTableModel
             line=text.readLine();
         }
         }
-        Vector row = new Vector();
+        Vector<Object> row = new Vector<Object>();
 	if(time_saved.length() <= 1) time_saved = time_run;
         row.addElement(convertTime(time_saved.trim()));
         row.addElement(dataid);
@@ -1032,12 +1032,12 @@ public class FileTableModel extends DefaultTableModel
             if(tok.hasMoreElements())
             info+=" ";
         }
-        Vector row = new Vector();
+        Vector<Object> row = new Vector<Object>();
             row.addElement(convertTime(time.trim()));
         row.addElement(info.trim());
         m_rowValues.addElement(info.trim());
         m_values2D.addElement(row);
-        m_flags.add(new Boolean(false));
+        m_flags.add(Boolean.FALSE);
         }
     }
     catch(java.io.IOException e){
@@ -1118,14 +1118,14 @@ public class FileTableModel extends DefaultTableModel
               if(tok.hasMoreElements())
               info+=" ";
             }
-            Vector row = new Vector();
+            Vector<Object> row = new Vector<Object>();
             row.addElement(convertTime(time.trim()));
             row.addElement(user.trim());
             row.addElement(cmds.trim());
             row.addElement(info.trim());
             m_rowValues.addElement(cmds.trim());
             m_values2D.addElement(row);
-            m_flags.add(new Boolean(false));
+            m_flags.add(Boolean.FALSE);
         }
         }
     }
@@ -1162,7 +1162,7 @@ public class FileTableModel extends DefaultTableModel
            return calendar.getTime();
 	}
         String year=tok.nextToken();
-        int month = (new Integer(tok.nextToken())).intValue();
+        int month = (Integer.valueOf(tok.nextToken())).intValue();
         String day=tok.nextToken();
         //String time=tok.nextToken();
         int hour = Integer.parseInt(tok.nextToken());
@@ -1176,7 +1176,7 @@ public class FileTableModel extends DefaultTableModel
     } else if(str.length() == 15 && str.indexOf("T") == 8) {
         String year = str.substring(0,4);
         String mon = str.substring(4,6);
-        int month = (new Integer(mon)).intValue();
+        int month = (Integer.valueOf(mon)).intValue();
         String day = str.substring(6,8);
         String time = str.substring(9,11)+":"+str.substring(11,13)
         +":"+str.substring(13,15);
@@ -1192,7 +1192,7 @@ public class FileTableModel extends DefaultTableModel
     } else if(str.length() == 14) {
         String year = str.substring(0,4);
         String mon = str.substring(4,6);
-        int month = (new Integer(mon)).intValue();
+        int month = (Integer.valueOf(mon)).intValue();
         String day = str.substring(6,8);
         String time = str.substring(8,10)+":"+str.substring(10,12)
         +":"+str.substring(12,14);
@@ -1259,7 +1259,7 @@ public class FileTableModel extends DefaultTableModel
            return calendar.getTime().toString();
 	}
         String year=tok.nextToken();
-        int month = (new Integer(tok.nextToken())).intValue();
+        int month = (Integer.valueOf(tok.nextToken())).intValue();
         String day=tok.nextToken();
         //String time=tok.nextToken();
         int hour = Integer.parseInt(tok.nextToken());
@@ -1273,7 +1273,7 @@ public class FileTableModel extends DefaultTableModel
     } else if(str.length() == 15 && str.indexOf("T") == 8) {
         String year = str.substring(0,4);
         String mon = str.substring(4,6);
-        int month = (new Integer(mon)).intValue();
+        int month = (Integer.valueOf(mon)).intValue();
         String day = str.substring(6,8);
         String time = str.substring(9,11)+":"+str.substring(11,13)
         +":"+str.substring(13,15);
@@ -1289,7 +1289,7 @@ public class FileTableModel extends DefaultTableModel
     } else if(str.length() == 14) {
         String year = str.substring(0,4);
         String mon = str.substring(4,6);
-        int month = (new Integer(mon)).intValue();
+        int month = (Integer.valueOf(mon)).intValue();
         String day = str.substring(6,8);
         String time = str.substring(8,10)+":"+str.substring(10,12)
         +":"+str.substring(12,14);
@@ -1390,14 +1390,14 @@ public class FileTableModel extends DefaultTableModel
         if(key.equals("usrlvl")) level = value;
         if(key.equals("access")) access = value;
         }
-        Vector row = new Vector();
+        Vector<Object> row = new Vector<Object>();
         row.addElement(user.trim());
         row.addElement(name.trim());
         row.addElement(level.trim());
         row.addElement(access.trim());
         m_rowValues.addElement(user.trim());
         m_values2D.addElement(row);
-        m_flags.add(new Boolean(false));
+        m_flags.add(Boolean.FALSE);
     }
     catch(java.io.IOException e){
         System.out.println("FileTableModel Error: "+e.toString());
@@ -1441,13 +1441,13 @@ public class FileTableModel extends DefaultTableModel
 
     String timeb=tok.nextToken();
     String timet=tok.nextToken();
-    Vector row = new Vector();
+    Vector<Object> row = new Vector<Object>();
     row.addElement(convertTime(timeb.trim()));
     row.addElement(convertStrTime(timet.trim()));
 
     m_rowValues.addElement(path);
     m_values2D.addElement(row);
-    m_flags.add(new Boolean(false));
+    m_flags.add(Boolean.FALSE);
 
     return true;
     }
@@ -1483,14 +1483,14 @@ public class FileTableModel extends DefaultTableModel
     String timeb=tok.nextToken();
     String timet=tok.nextToken();
     String console=tok.nextToken();
-    Vector row = new Vector();
+    Vector<Object> row = new Vector<Object>();
     row.addElement(convertTime(timeb.trim()));
     row.addElement(convertStrTime(timet.trim()));
     row.addElement(console.trim());
 
     m_rowValues.addElement(path);
     m_values2D.addElement(row);
-    m_flags.add(new Boolean(false));
+    m_flags.add(Boolean.FALSE);
 
     return true;
     }
@@ -1554,14 +1554,14 @@ public class FileTableModel extends DefaultTableModel
            info = tok.nextToken();
         }
 
-        Vector row = new Vector();
+        Vector<Object> row = new Vector<Object>();
         row.addElement(convertTime(time.trim()));
         row.addElement(admin.trim());
         row.addElement(user.trim());
         row.addElement(info.trim());
         m_rowValues.addElement(info.trim());
         m_values2D.addElement(row);
-        m_flags.add(new Boolean(false));
+        m_flags.add(Boolean.FALSE);
         }
     }
     catch(java.io.IOException e){
@@ -1630,7 +1630,7 @@ public class FileTableModel extends DefaultTableModel
         String filepath = null;
         String owner = null;
         String info = null;
-	Vector paths = new Vector();
+	Vector<String> paths = new Vector<>();
 
         String line=null;
         while((line=text.readLine()) !=null){
@@ -1699,7 +1699,7 @@ public class FileTableModel extends DefaultTableModel
             }
             count++;
             if(count >= 6) {
-            Vector row = new Vector();
+            Vector<Object> row = new Vector<Object>();
             row.addElement(convertTime(time.trim()));
             row.addElement(action.trim());
             row.addElement(user.trim());
@@ -1713,7 +1713,7 @@ public class FileTableModel extends DefaultTableModel
             row.addElement(info.trim());
             m_rowValues.addElement(action +" "+ allPath);
             m_values2D.addElement(row);
-            m_flags.add(new Boolean(false));
+            m_flags.add(Boolean.FALSE);
             }
             count = 0;
 	    paths.clear();
@@ -1811,7 +1811,7 @@ public class FileTableModel extends DefaultTableModel
             }
             count++;
             if(count >= 5) {
-            Vector row = new Vector();
+            Vector<Object> row = new Vector<Object>();
             row.addElement(convertTime(time.trim()));
             row.addElement(action.trim());
             row.addElement(user.trim());
@@ -1820,7 +1820,7 @@ public class FileTableModel extends DefaultTableModel
             row.addElement(info.trim());
             m_rowValues.addElement(action +" "+ filepath);
             m_values2D.addElement(row);
-            m_flags.add(new Boolean(false));
+            m_flags.add(Boolean.FALSE);
             }
             count = 0;
         }
@@ -1919,7 +1919,7 @@ public class FileTableModel extends DefaultTableModel
             count++;
             if(info.indexOf("failure") != -1 && count >= 6) {
 
-              Vector row = new Vector();
+              Vector<Object> row = new Vector<Object>();
               row.addElement(convertTime(time.trim()));
               row.addElement(action.trim());
               row.addElement(user.trim());
@@ -1928,7 +1928,7 @@ public class FileTableModel extends DefaultTableModel
               row.addElement(info.trim());
               m_rowValues.addElement(action +" "+ filepath);
               m_values2D.addElement(row);
-              m_flags.add(new Boolean(false));
+              m_flags.add(Boolean.FALSE);
             }
             count = 0;
         }
@@ -1976,13 +1976,13 @@ public class FileTableModel extends DefaultTableModel
 
     String timeb=tok.nextToken();
     String timet=tok.nextToken();
-    Vector row = new Vector();
+    Vector<Object> row = new Vector<Object>();
     row.addElement(convertTime(timeb.trim()));
     row.addElement(convertStrTime(timet.trim()));
 
     m_rowValues.addElement(path);
     m_values2D.addElement(row);
-    m_flags.add(new Boolean(false));
+    m_flags.add(Boolean.FALSE);
 
     return true;
     }
@@ -2121,7 +2121,7 @@ public class FileTableModel extends DefaultTableModel
 
 	    if(count == 11) {
 
-            	Vector row = new Vector();
+            	Vector<Object> row = new Vector<Object>();
 	        if(time_saved.length() <= 1) time_saved = time_run;
             	row.addElement(convertTime(time_saved));
             	row.addElement(dataid);
@@ -2131,7 +2131,7 @@ public class FileTableModel extends DefaultTableModel
             	m_rowValues.addElement(fullpath+":"+time_delete+":"+user
 			+":"+owner+":"+samplename+":"+seqfil);
             	m_values2D.addElement(row);
-            	m_flags.add(new Boolean(false));
+            	m_flags.add(Boolean.FALSE);
 
 		count = 0;
 	    }
@@ -2161,7 +2161,7 @@ public class FileTableModel extends DefaultTableModel
 		String samplename = tok.nextToken().trim();
 		String seqfil = tok.nextToken().trim();
 
-            	Vector row = new Vector();
+            	Vector<Object> row = new Vector<Object>();
             	row.addElement(convertTime(time_delete));
             	row.addElement(fullpath);
             	row.addElement(user);
@@ -2170,7 +2170,7 @@ public class FileTableModel extends DefaultTableModel
             	row.addElement(seqfil);
             	m_rowValues.addElement(fullpath);
             	m_values2D.addElement(row);
-            	m_flags.add(new Boolean(false));
+            	m_flags.add(Boolean.FALSE);
     		return true;
 	    }
 
