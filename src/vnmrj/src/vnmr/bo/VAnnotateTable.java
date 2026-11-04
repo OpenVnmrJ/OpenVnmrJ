@@ -113,7 +113,7 @@ public class VAnnotateTable extends JPanel
         ml = new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         informEditor();
@@ -1322,10 +1322,10 @@ public class VAnnotateTable extends JPanel
     } // drop
 
     private final static Object[][] attributes = {
-       {new Integer(ROWS),      "Number of Rows:"},
-       {new Integer(COLUMNS),   "Number of Cols:"},
-       {new Integer(SHOW),      "Show condition:"},
-       {new Integer(DOCKAT),    "Dock at:", "menu", dockChoice}
+       {Integer.valueOf(ROWS),      "Number of Rows:"},
+       {Integer.valueOf(COLUMNS),   "Number of Cols:"},
+       {Integer.valueOf(SHOW),      "Show condition:"},
+       {Integer.valueOf(DOCKAT),    "Dock at:", "menu", dockChoice}
     };
 
     public Object[][] getAttributes() {
@@ -1365,7 +1365,8 @@ public class VAnnotateTable extends JPanel
         return tmpLoc;
     }
 
-    public void reshape(int x, int y, int w, int h)
+    @Override
+    public void setBounds(int x, int y, int w, int h)
     {
         if (inEditMode) {
             defLoc.x = x;
@@ -1379,7 +1380,7 @@ public class VAnnotateTable extends JPanel
         curDim.height = h;
         rowGap = h / numRows;
         colGap = w / numCols;
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation()

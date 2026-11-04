@@ -869,7 +869,7 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
                 mpx = evt.getX();
                 mpy = evt.getY();
                 if (activeObj != null) {
-                    set_move_cursor(mpx, mpy, true);
+                    set_move_cursor(mpx, mpy, Boolean.TRUE);
                     return;
                 }
                 if (bFrameAct) {
@@ -1705,7 +1705,7 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
             }
         }
 
-        if (bCanvasObj && bMove)
+        if (bCanvasObj.booleanValue() && bMove)
             cursor = Cursor.MOVE_CURSOR;
         //use objCursor when cursorIndex is delfault
         if (cursorIndex != cursor) {
@@ -1750,7 +1750,7 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
         moveH = frameH;
         moveX2 = moveX + frameW;
         moveY2 = moveY + frameH;
-        bMoveFrame = set_move_cursor(ev.getX(), ev.getY(), false);
+        bMoveFrame = set_move_cursor(ev.getX(), ev.getY(), Boolean.FALSE);
         if (bShowMoveBorder && !bMoveFrame)
             repaint_canvas();
         return bMoveFrame;
@@ -1765,7 +1765,7 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
         moveH = r.height;
         moveX2 = moveX + moveW;
         moveY2 = moveY + moveH;
-        set_move_cursor(ev.getX(), ev.getY(), true);
+        set_move_cursor(ev.getX(), ev.getY(), Boolean.TRUE);
         return true;
     }
 
@@ -3119,8 +3119,8 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
                 imgGrayNums = pv[1];
                 imgGrayStart = pv[0];
                 if (hs != null) {
-                    hs.put("imgGrayNums", new Integer(imgGrayNums));
-                    hs.put("imgGrayStart", new Integer(imgGrayStart));
+                    hs.put("imgGrayNums", Integer.valueOf(imgGrayNums));
+                    hs.put("imgGrayStart", Integer.valueOf(imgGrayStart));
                 }
             }
             setImageGrayMap();
@@ -5944,7 +5944,7 @@ public class VnmrCanvas extends JLayeredPane implements CanvasIF, VGaphDef,
                 sendIconInfo(m_vIcon);
             cursorIndex = -1;
             set_active_obj(activeObj);
-            set_move_cursor(x - scrX, y - scrY, true);
+            set_move_cursor(x - scrX, y - scrY, Boolean.TRUE);
         }
         repaint_canvas();
     }

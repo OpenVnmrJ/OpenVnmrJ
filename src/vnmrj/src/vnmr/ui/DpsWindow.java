@@ -169,13 +169,13 @@ public class DpsWindow extends JFrame {
         if (hs == null)
             return;
         Point pt = getLocation();
-        hs.put("dpsWinLocX", new Integer(pt.x));
-        hs.put("dpsWinLocY", new Integer(pt.y));
+        hs.put("dpsWinLocX", Integer.valueOf(pt.x));
+        hs.put("dpsWinLocY", Integer.valueOf(pt.y));
         Dimension dm = getSize();
-        hs.put("dpsWinWidth", new Integer(dm.width));
-        hs.put("dpsWinHeight", new Integer(dm.height));
+        hs.put("dpsWinWidth", Integer.valueOf(dm.width));
+        hs.put("dpsWinHeight", Integer.valueOf(dm.height));
         int x = splitPan.getDividerLocation();
-        hs.put("dpsWinLocX2", new Integer(x));
+        hs.put("dpsWinLocX2", Integer.valueOf(x));
     }
 
     private void toolAction(ActionEvent e )

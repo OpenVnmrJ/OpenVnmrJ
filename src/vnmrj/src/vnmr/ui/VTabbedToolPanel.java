@@ -45,9 +45,9 @@ import vnmr.bo.*;
 public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
 
     AppIF        appIF;
-    Hashtable    panes                = new Hashtable();
+    Hashtable<String,Object> panes = new Hashtable<String,Object>();
     Dimension    zeroDim              = new Dimension(0, 0);
-    Hashtable    vobjs                = new Hashtable();
+    Hashtable<String,Constructor<?>> vobjs = new Hashtable<String,Constructor<?>>();
     SessionShare sshare;
     JPanel       tabbedToolPanel;
     JTabbedPane  tabbedPane           = null;
@@ -60,14 +60,14 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
     long         dateOfbuildFile      = 0;
     Component    popupComp            = null;
     PushpinPanel locatorPanel         = null;
-    ArrayList    toolList             = new ArrayList();
-    ArrayList    objList              = new ArrayList();
+    ArrayList<Component> toolList = new ArrayList<Component>();
+    ArrayList<Component> objList = new ArrayList<Component>();
 
     int          maxViews             = 9;
     int          nviews               = 0;
-    Hashtable    tp_paneInfo[]        = new Hashtable[maxViews];
-    ArrayList    keys                 = new ArrayList();
-    ArrayList    vpInfo               = new ArrayList();
+    Hashtable<String,String>[] tp_paneInfo = new Hashtable[maxViews];
+    ArrayList<String> keys = new ArrayList<String>();
+    ArrayList<String> vpInfo = new ArrayList<String>();
 
     int          vpId                 = 0;
     int          layoutId             = 99;
@@ -117,7 +117,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         } else nviews = 1;
 
         for(int i=0; i<nviews; i++)
-            tp_paneInfo[i] = new Hashtable();
+            tp_paneInfo[i] = new Hashtable<String,String>();
 
         /*
 	obj = sshare.userInfo().get("activeWin");	
@@ -151,8 +151,8 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         } 
 
         try {
-            Constructor c = tool.getConstructor(constructArgs);
-            vobjs.put(key,c);
+            Constructor<?> c = tool.getConstructor(constructArgs);
+            vobjs.put(key, c);
         }
         catch (NoSuchMethodException nse) {
             Messages.postError("Problem initiating " + key + " area.");
@@ -173,8 +173,8 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         appIF = appIF;
     }
 
-    private Constructor getTool(String key) {
-        return ( (Constructor) vobjs.get(key) );
+    private Constructor<?> getTool(String key) {
+        return vobjs.get(key);
     }
 
     private void displayTool(Component comp) {
@@ -419,7 +419,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
     }
 
     public void putHsLayout(int id) {
-        Hashtable hs = sshare.userInfo();
+        Hashtable<String,Object> hs = sshare.userInfo();
         if (hs == null)
             return;
         String key, name;
@@ -432,9 +432,9 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
             if (obj != null && (obj instanceof PushpinIF)) {
                 pobj = (PushpinIF) obj;
                 name = "tabTool."+id+"."+pobj.getName()+".";
-                hs.put(name+"refY", new Float(pobj.getRefY()));
-                hs.put(name+"refX", new Float(pobj.getRefX()));
-                hs.put(name+"refH", new Float(pobj.getRefH()));
+                hs.put(name+"refY", Float.valueOf(pobj.getRefY()));
+                hs.put(name+"refX", Float.valueOf(pobj.getRefX()));
+                hs.put(name+"refH", Float.valueOf(pobj.getRefH()));
                 key = "open";
                 if (pobj.isHide())
                     key = "hide";
@@ -458,7 +458,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
     }
 
     public void getHsLayout(int id) {
-        Hashtable hs = sshare.userInfo();
+        Hashtable<String,Object> hs = sshare.userInfo();
         if (hs == null)
             return;
         String  key, name, status;
@@ -929,7 +929,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         }
     }
 
-    public void updateValue(Vector v) {
+    public void updateValue(Vector<String> v) {
 
         if(!initVp) {
             initVp = true;
@@ -999,7 +999,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         initPanel();
         updatePinTabs();
 
-        Hashtable hs = sshare.userInfo();
+        Hashtable<String,Object> hs = sshare.userInfo();
         if (hs == null || tabbedPane == null || tabbedPane.getTabCount() <= 0)
             return;
         Object obj = hs.get("tabbedToolPanel");
@@ -1016,7 +1016,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         for (int i=0; i< toolList.size(); i++)
             ((VToolPanel) toolList.get(i)).saveUiLayout();
 
-        Hashtable hs = sshare.userInfo();
+        Hashtable<String,Object> hs = sshare.userInfo();
         /*
         if (hs == null || tabbedPane == null || tabbedPane.getTabCount() <= 0)
             return;
@@ -1024,13 +1024,13 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
         if (hs == null || tabbedPane == null)
             return;
         if (tabbedPane.getTabCount() > 0) {
-            Integer hashValue = new Integer(tabbedPane.getSelectedIndex()); 
+            Integer hashValue = Integer.valueOf(tabbedPane.getSelectedIndex());
             hs.put("tabbedToolPanel", hashValue);
         }
         putHsLayout(vpId);
     }
 
-    public ArrayList getToolPanels() {
+    public ArrayList<Component> getToolPanels() {
         return  toolList;
     }
 
@@ -1114,7 +1114,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
                 /* get VToolPanel only */
                 String key = "Locator"; 
                 PushpinIF pObj;
-                Constructor c = (Constructor)getTool(key);
+                Constructor<?> c = getTool(key);
                 Object[] vargs = new Object[1];
                 vargs[0] = sshare;
                 if (c != null) {
@@ -1197,7 +1197,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
             PushpinIF pObj = null;
             lastName = attr.getValue("name");
             String helplink = attr.getValue("helplink");
-            Constructor c = (Constructor)getTool(lastName);
+            Constructor<?> c = getTool(lastName);
             Object[] vargs;
             String toolFile; 
             if (lastName.equals("XMLToolPanel")) {
@@ -1275,7 +1275,7 @@ public class VTabbedToolPanel extends PushpinPanel implements EditListenerIF{
 
         if(n > nviews) 
             for(int i=nviews; i<n; i++)
-                tp_paneInfo[i] = new Hashtable();
+                tp_paneInfo[i] = new Hashtable<String,String>();
 
         nviews = n;
 

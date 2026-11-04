@@ -196,12 +196,12 @@ public class VTextFilePane extends VScrollTextPane implements VEditIF {
 
     private final static String[] yes_no = {"yes", "no"};
     private final static Object[][] attributes = {
-        {new Integer(VARIABLE), "File name variables:"},
-        {new Integer(SETVAL),   "Value of file path:"},
-        {new Integer(CMD),      "Vnmr command:"},
-        {new Integer(SHOW),     "Enable condition:"},
-        {new Integer(EDITABLE), "Editable:", "radio", yes_no},
-        {new Integer(WRAP),     "Wrap lines:", "radio", yes_no},
+        {Integer.valueOf(VARIABLE), "File name variables:"},
+        {Integer.valueOf(SETVAL),   "Value of file path:"},
+        {Integer.valueOf(CMD),      "Vnmr command:"},
+        {Integer.valueOf(SHOW),     "Enable condition:"},
+        {Integer.valueOf(EDITABLE), "Editable:", "radio", yes_no},
+        {Integer.valueOf(WRAP),     "Wrap lines:", "radio", yes_no},
     };
     public void setModalMode(boolean s) {}
     public void sendVnmrCmd() {}

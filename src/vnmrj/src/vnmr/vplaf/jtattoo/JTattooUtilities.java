@@ -50,9 +50,9 @@ public class JTattooUtilities {
                         version += ver.charAt(i);
                     }
                 }
-                javaVersion = new Double(version);
+                javaVersion = Double.parseDouble(version);
             } catch (Exception ex) {
-                javaVersion = new Double(1.3);
+                javaVersion = 1.3;
             }
         }
         return javaVersion.doubleValue();

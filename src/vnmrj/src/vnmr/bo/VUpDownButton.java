@@ -108,7 +108,7 @@ public class VUpDownButton extends UpDownButton implements VObjIF, VEditIF,
     ml = new MouseAdapter() {
         public void mouseClicked(MouseEvent evt) {
                 int clicks = evt.getClickCount();
-                int modifier = evt.getModifiers();
+                int modifier = evt.getModifiersEx();
                 if ((modifier & (1 << 4)) != 0) {
                     if (clicks >= 2) {
                         ParamEditUtil.setEditObj((VObjIF) evt.getSource());
@@ -500,7 +500,8 @@ public class VUpDownButton extends UpDownButton implements VObjIF, VEditIF,
         return tmpLoc;
     }
 
-    public void reshape(int x, int y, int w, int h) {
+    @Override
+    public void setBounds(int x, int y, int w, int h) {
         if (inEditMode) {
            defLoc.x = x;
            defLoc.y = y;
@@ -516,7 +517,7 @@ public class VUpDownButton extends UpDownButton implements VObjIF, VEditIF,
               adjustFont();
            }
         }
-        super.reshape(x, y, w, h);
+        super.setBounds(x, y, w, h);
     }
 
     public Point getLocation() {
@@ -667,19 +668,19 @@ public class VUpDownButton extends UpDownButton implements VObjIF, VEditIF,
 
     private final static String[] true_false = {"true", "false"};
     private final static Object[][] attributes = {
-    {new Integer(VARIABLE),	"Vnmr Variables:"},
-    {new Integer(SETVAL),	"Value of item:"},
-    {new Integer(LABEL),	"Label:"},
-    {new Integer(CMD),	"Vnmr command:"},
-    {new Integer(STATPAR),	"Status parameter:"},
-    {new Integer(VAR2),	"Limits parameter:"},
-    {new Integer(MIN),	"Min allowed value:"},
-    {new Integer(MAX),	"Max allowed value:"},
-    {new Integer(POINTY),	"Pointy style:", "menu", true_false},
-    {new Integer(ROCKER),	"Rocker style:", "menu", true_false},
-    {new Integer(ARROW),	"Arrow feedback:", "menu", true_false},
-    {new Integer(ARROW_COLOR),	"Arrow color:", "color"},
-    {new Integer(WRAP),	"Values wrap around:", "menu", true_false},
+    {Integer.valueOf(VARIABLE),	"Vnmr Variables:"},
+    {Integer.valueOf(SETVAL),	"Value of item:"},
+    {Integer.valueOf(LABEL),	"Label:"},
+    {Integer.valueOf(CMD),	"Vnmr command:"},
+    {Integer.valueOf(STATPAR),	"Status parameter:"},
+    {Integer.valueOf(VAR2),	"Limits parameter:"},
+    {Integer.valueOf(MIN),	"Min allowed value:"},
+    {Integer.valueOf(MAX),	"Max allowed value:"},
+    {Integer.valueOf(POINTY),	"Pointy style:", "menu", true_false},
+    {Integer.valueOf(ROCKER),	"Rocker style:", "menu", true_false},
+    {Integer.valueOf(ARROW),	"Arrow feedback:", "menu", true_false},
+    {Integer.valueOf(ARROW_COLOR),	"Arrow color:", "color"},
+    {Integer.valueOf(WRAP),	"Values wrap around:", "menu", true_false},
     };
 
     public void setModalMode(boolean s) {

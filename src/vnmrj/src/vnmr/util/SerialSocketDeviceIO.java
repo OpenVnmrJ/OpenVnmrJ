@@ -15,7 +15,7 @@ import java.net.*;
 import java.util.*;
 
 
-public class SerialSocketDeviceIO {
+public class SerialSocketDeviceIO implements AutoCloseable {
 
     private final static int SOCKET_TIMEOUT = 1000; // ms
 
@@ -219,10 +219,10 @@ public class SerialSocketDeviceIO {
     /**
      * Close the port when we are scooped up by the garbage collector.
      */
-    protected void finalize() throws Throwable {
-        Messages.postDebug("SerialSocketDeviceIO.finalize: closing port");
+    @Override
+    public void close() {
+        Messages.postDebug("SerialSocketDeviceIO.close: closing port");
         closePort();
-        super.finalize();
     }
 
 

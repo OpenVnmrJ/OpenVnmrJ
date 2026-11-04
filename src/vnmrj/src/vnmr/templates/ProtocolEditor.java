@@ -21,7 +21,6 @@ import vnmr.bo.*;
 import vnmr.util.*;
 
 import org.w3c.dom.*;
-import com.sun.xml.tree.*;
 import javax.swing.tree.*;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;

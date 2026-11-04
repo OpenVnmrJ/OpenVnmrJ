@@ -36,7 +36,7 @@ public class FileSystemModel extends AbstractTreeTableModel
     static protected Class[]  cTypes = {TreeTableModel.class, String.class, Date.class};
 
     // The the returned file length for directories. 
-    public static final Integer ZERO = new Integer(0); 
+    public static final Integer ZERO = Integer.valueOf(0);
     public static final String HYPHEN = new String("-");
 
     public FileSystemModel(String root) {

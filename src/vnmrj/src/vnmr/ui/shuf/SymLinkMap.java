@@ -70,7 +70,6 @@ public class SymLinkMap {
 
 
     public void checkForSymLinks(String dirToSearch) {
-        String cmd;
         String strg=null;
         String absPath, conPath;
         FileReader fr;
@@ -117,14 +116,11 @@ public class SymLinkMap {
             String sysdir = System.getProperty("sysdir");
             String filePath = sysdir +  "/tmp/findLinks" + thName;
 
-            cmd = sysdir + "/bin/findLinks " 
-                                           + directory + " " + filePath;
-
-            Runtime rt = Runtime.getRuntime();
             Process prcs = null;
             try {
                 // Start the C program
-                prcs = rt.exec(cmd);
+                prcs = new ProcessBuilder(sysdir + "/bin/findLinks",
+                                          directory, filePath).start();
                 // Wait for it to complete the writing out of its results
                 prcs.waitFor();
             }

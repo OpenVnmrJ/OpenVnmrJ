@@ -104,7 +104,7 @@ public class VComboFileTable extends ComboFileTable
     m_menu.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
 
-                JComboBox cb = (JComboBox)e.getSource();
+                JComboBox<?> cb = (JComboBox<?>)e.getSource();
                 String path = (String)cb.getSelectedItem();
 
                 updateFileTable();
@@ -119,7 +119,7 @@ public class VComboFileTable extends ComboFileTable
         return((String)m_tableModel.getRowValue(row));
     }
 
-    public Vector getOutputTypes() {
+    public Vector<String> getOutputTypes() {
         return(m_tableModel.getOutputTypes());
     }
 
@@ -150,7 +150,7 @@ public class VComboFileTable extends ComboFileTable
     if(fileType.equals("comdHistory")) label = "Select a type";
     else label = "Select a path";
 
-    Vector paths = new Vector();
+    Vector<String> paths = new Vector<String>();
     paths.addElement(str);
 
     removeAll();
@@ -241,7 +241,7 @@ public class VComboFileTable extends ComboFileTable
     }
 
     public void setAttribute(int attr, String c) {
-        Vector v;
+        Vector<String> v;
         switch (attr) {
         case TYPE:
             type = c;
@@ -349,7 +349,7 @@ public class VComboFileTable extends ComboFileTable
 
     // ExpListenerIF interface
 
-    public void  updateValue(Vector params){
+    public void  updateValue(Vector<String> params){
     if (vnmrIf == null)
         return;
     if(debug)
@@ -375,7 +375,7 @@ public class VComboFileTable extends ComboFileTable
         }
     }
 
-    private void  updateContent(Vector params){
+    private void  updateContent(Vector<String> params){
         if (vnmrIf == null || fileName == null)
         return;
         String  vars=getAttribute(VAR2);
@@ -546,13 +546,13 @@ public class VComboFileTable extends ComboFileTable
     "cmdHistory", "s_auditTrail", "d_auditTrail" };
 
     private final static Object[][] attributes = {
-    {new Integer(VARIABLE),		"Selection variables:"},
-    {new Integer(VAR2),		    "Content variables:"},
-    {new Integer(SETVAL),		"Value of item:"},
-    {new Integer(SHOW),		    "Enable condition:"},
-    {new Integer(CMD),			"Vnmr command:"},
-    {new Integer(PANEL_FILE),	"Table source:"},
-    {new Integer(PANEL_TYPE),	"Table type:",m_types},
+    {Integer.valueOf(VARIABLE),		"Selection variables:"},
+    {Integer.valueOf(VAR2),		    "Content variables:"},
+    {Integer.valueOf(SETVAL),		"Value of item:"},
+    {Integer.valueOf(SHOW),		    "Enable condition:"},
+    {Integer.valueOf(CMD),			"Vnmr command:"},
+    {Integer.valueOf(PANEL_FILE),	"Table source:"},
+    {Integer.valueOf(PANEL_TYPE),	"Table type:",m_types},
     };
     public Object[][] getAttributes()  { return attributes; }
 

@@ -877,7 +877,7 @@ public class DocViewer extends JPanel implements Printable {
            Graphics2D g2 = (Graphics2D) g;
            g2.translate(pf.getImageableX(), pf.getImageableY());
            paint(g2);
-           System.gc();
+           // System.gc();
            return Printable.PAGE_EXISTS;
        }
 

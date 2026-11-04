@@ -552,7 +552,7 @@ public class SmsPanel extends JPanel
                int k = splitPan.getDividerLocation();
                int w = getWidth();
                dratio = (double) k / w;
-               sshare.putProperty("asmLocX", new Double(dratio));
+               sshare.putProperty("asmLocX", Double.valueOf(dratio));
                if (curType == VAST && grkName != null)
                   sshare.putProperty("grkName", grkName);
             }
@@ -638,7 +638,7 @@ public class SmsPanel extends JPanel
 
     public void setTrayTooltip() {
         if (sshare != null)
-            sshare.putProperty("trayTooltip", new Boolean(bTrayTooltip));
+            sshare.putProperty("trayTooltip", Boolean.valueOf(bTrayTooltip));
         if (tray != null)
             tray.showTooltip(bTrayTooltip);
     }

@@ -47,7 +47,7 @@ import java.awt.KeyboardFocusManager;
 import java.awt.Font;
 import java.awt.event.*;
 import java.awt.Point;
-import java.io.FilePermission;
+// import java.io.FilePermission;
 import java.net.URI;
 import java.net.URL;
 import java.text.DecimalFormat;
@@ -625,20 +625,20 @@ public class ServicePopup extends JDialog implements ActionListener,
     }
 
     public static void initResource() {
-        java.security.AccessController.doPrivileged(
+        /* java.security.AccessController.doPrivileged(
             new java.security.PrivilegedAction<Object>() {
-                public Object run() {
+                public Object run() { */
                     try {
                         messageRB = ResourceBundle.getBundle(strBundle);
-                        return null;
+                        // return null;
                     } catch (java.util.MissingResourceException e) {
                         // throw new Error("Fatal: Resource for ServiceUI " +
                         //                "is missing");
                     }
-                    return null;
-                }
+                    // return null;
+                /* }
             }
-        );
+        ); */
     }
 
 
@@ -868,7 +868,7 @@ public class ServicePopup extends JDialog implements ActionListener,
 
          try {
              if (s.length() > 0)
-                 retVal = new Float(s);
+                 retVal = Float.valueOf(s);
          }
          catch (NumberFormatException e0) {
              retVal = null;
@@ -877,7 +877,7 @@ public class ServicePopup extends JDialog implements ActionListener,
              return retVal;
 
          try {
-             retVal = new Float(def);
+             retVal = Float.valueOf(def);
          }
          catch (NumberFormatException e1) {
               retVal = null;
@@ -1059,8 +1059,8 @@ public class ServicePopup extends JDialog implements ActionListener,
             ms = MediaSize.NA.LETTER;
         double w = VjPaperMedia.getPixelWidth(ms);
         double h = VjPaperMedia.getPixelHeight(ms);
-        hs.put(VjPrintDef.PRINT_WIDTH, new Float(w));
-        hs.put(VjPrintDef.PRINT_HEIGHT, new Float(h));
+        hs.put(VjPrintDef.PRINT_WIDTH, Float.valueOf((float) w));
+        hs.put(VjPrintDef.PRINT_HEIGHT, Float.valueOf((float) h));
     }
 
     @SuppressWarnings("unchecked")
@@ -1078,8 +1078,8 @@ public class ServicePopup extends JDialog implements ActionListener,
         String s;
         Float fval;
         Point pt = this.getLocation();
-        hs.put(VjPrintDef.PRINT_LOCX, new Float((float)pt.x));
-        hs.put(VjPrintDef.PRINT_LOCY, new Float((float)pt.y));
+        hs.put(VjPrintDef.PRINT_LOCX, Float.valueOf((float)pt.x));
+        hs.put(VjPrintDef.PRINT_LOCY, Float.valueOf((float)pt.y));
         hs.put(VjPrintDef.DESTIONATION, VjPrintDef.PRINTER);
         hs.put(VjPrintDef.PRINT_MARGIN_UNIT, VjPrintDef.MM);
         hs.put(VjPrintDef.FILE_MARGIN_UNIT, VjPrintDef.MM);
@@ -1146,13 +1146,13 @@ public class ServicePopup extends JDialog implements ActionListener,
         }
         if (leftMargin != null) {
             fval = (Float)leftMargin.getValue();
-            hs.put(VjPrintDef.PRINT_LEFT_MARGIN, new Float(fval.floatValue()));
+            hs.put(VjPrintDef.PRINT_LEFT_MARGIN, Float.valueOf(fval.floatValue()));
             fval = (Float)rightMargin.getValue();
-            hs.put(VjPrintDef.PRINT_RIGHT_MARGIN, new Float(fval.floatValue()));
+            hs.put(VjPrintDef.PRINT_RIGHT_MARGIN, Float.valueOf(fval.floatValue()));
             fval = (Float)topMargin.getValue();
-            hs.put(VjPrintDef.PRINT_TOP_MARGIN, new Float(fval.floatValue()));
+            hs.put(VjPrintDef.PRINT_TOP_MARGIN, Float.valueOf(fval.floatValue()));
             fval = (Float)bottomMargin.getValue();
-            hs.put(VjPrintDef.PRINT_BOTTOM_MARGIN, new Float(fval.floatValue()));
+            hs.put(VjPrintDef.PRINT_BOTTOM_MARGIN, Float.valueOf(fval.floatValue()));
         }
         s = VjPrintDef.NORMAL_RES;
         if (rbDraft != null) {
@@ -1168,7 +1168,7 @@ public class ServicePopup extends JDialog implements ActionListener,
             if (f < 1.0f)
                 f = 1.0f;
         }
-        hs.put(VjPrintDef.PRINT_COPIES, new Float(f));
+        hs.put(VjPrintDef.PRINT_COPIES, Float.valueOf(f));
         hs.put(VjPrintDef.PRINT_FORMAT, getFormat());
         saveMedia();
     }
@@ -1228,7 +1228,7 @@ public class ServicePopup extends JDialog implements ActionListener,
         implements ActionListener, ItemListener, PopupMenuListener
     {
         private String strTitle;
-        private FilePermission printToFilePermission;
+        // private FilePermission printToFilePermission;
         private JButton btnProperties;
         // private JComboBox cbName;
         private JLabel lblType, lblStatus, lblInfo;
@@ -1454,14 +1454,15 @@ public class ServicePopup extends JDialog implements ActionListener,
          * We disable the "Print To File" checkbox if this returns false
          */
         private boolean allowedToPrintToFile() {
-            if (psCurrent == null)
+            /* if (psCurrent == null)
                 return true;
             try {
                 throwPrintToFile();
                 return true;
             } catch (SecurityException e) {
                 return false;
-            }
+            } */
+            return true;
         }
 
         /**
@@ -1469,7 +1470,7 @@ public class ServicePopup extends JDialog implements ActionListener,
          * specify printing to a file. In that case its probably right
          * to throw a SecurityException if the permission is not granted.
          */
-        private void throwPrintToFile() {
+        /* private void throwPrintToFile() {
             SecurityManager security = System.getSecurityManager();
             if (security != null) {
                 if (printToFilePermission == null) {
@@ -1478,7 +1479,7 @@ public class ServicePopup extends JDialog implements ActionListener,
                 }
                 security.checkPermission(printToFilePermission);
             }
-        }
+        } */
 
         //  class PrintServicePanel
         public void updateInfo() {
@@ -1590,8 +1591,8 @@ public class ServicePopup extends JDialog implements ActionListener,
             format.setParseIntegerOnly(true);
             format.setDecimalSeparatorAlwaysShown(false);
             NumberFormatter nf = new NumberFormatter(format);
-            nf.setMinimum(new Integer(1));
-            nf.setMaximum(new Integer(Integer.MAX_VALUE));
+            nf.setMinimum(Integer.valueOf(1));
+            nf.setMaximum(Integer.valueOf(Integer.MAX_VALUE));
             nf.setAllowsInvalid(true);
             nf.setCommitsOnValidEdit(true);
             tfRangeFrom = new JFormattedTextField(nf);
@@ -1685,12 +1686,12 @@ public class ServicePopup extends JDialog implements ActionListener,
 
             if (min < 1) {
                 min = 1;
-                tfRangeFrom.setValue(new Integer(1));
+                tfRangeFrom.setValue(Integer.valueOf(1));
             }
 
             if (max < min) {
                 max = min;
-                tfRangeTo.setValue(new Integer(min));
+                tfRangeTo.setValue(Integer.valueOf(min));
             }
 
             PageRanges pr = new PageRanges(min, max);
@@ -1891,14 +1892,14 @@ public class ServicePopup extends JDialog implements ActionListener,
                 // max = Integer.MAX_VALUE;
                 max = 99;
             }
-            copiesModel.setMinimum(new Integer(min));
-            copiesModel.setMaximum(new Integer(max));
+            copiesModel.setMinimum(Integer.valueOf(min));
+            copiesModel.setMaximum(Integer.valueOf(max));
 
             int value = cp.getValue();
             if ((value < min) || (value > max)) {
                 value = min;
             }
-            copiesModel.setValue(new Integer(value));
+            copiesModel.setValue(Integer.valueOf(value));
 
             Class<SheetCollate> scCategory = SheetCollate.class;
             SheetCollate sc = null;
@@ -2024,8 +2025,8 @@ public class ServicePopup extends JDialog implements ActionListener,
             format.setParseIntegerOnly(false);
             format.setDecimalSeparatorAlwaysShown(true);
             NumberFormatter nf = new NumberFormatter(format);
-            nf.setMinimum(new Float(0.0f));
-            nf.setMaximum(new Float(999.0f));
+            nf.setMinimum(Float.valueOf(0.0f));
+            nf.setMaximum(Float.valueOf(999.0f));
             nf.setAllowsInvalid(true);
             nf.setCommitsOnValidEdit(true);
 
@@ -2096,9 +2097,9 @@ public class ServicePopup extends JDialog implements ActionListener,
 
             Float fv;
             if (units == MediaPrintableArea.MM)
-                fv = new Float(20.0f);
+                fv = Float.valueOf(20.0f);
             else
-                fv = new Float(1.0f);
+                fv = Float.valueOf(1.0f);
             leftMargin.setValue(fv);
             rightMargin.setValue(fv);
             topMargin.setValue(fv);
@@ -2479,10 +2480,10 @@ public class ServicePopup extends JDialog implements ActionListener,
             rmVal = mediaSize.getX(units) - pax - paw;
             bmVal = mediaSize.getY(units) - pay - pah;
 
-            lmObj = new Float(lmVal);
-            rmObj = new Float(rmVal);
-            tmObj = new Float(tmVal);
-            bmObj = new Float(bmVal);
+            lmObj = Float.valueOf(lmVal);
+            rmObj = Float.valueOf(rmVal);
+            tmObj = Float.valueOf(tmVal);
+            bmObj = Float.valueOf(bmVal);
 
             /* Now we know the values to use, we need to assign them
              * to the fields appropriate for the orientation.
@@ -3458,7 +3459,7 @@ public class ServicePopup extends JDialog implements ActionListener,
             if ((value < 1) || (value > 100)) {
                 value = 1;
             }
-            snModel.setValue(new Integer(value));
+            snModel.setValue(Integer.valueOf(value));
             lblPriority.setEnabled(jpSupported);
             spinPriority.setEnabled(jpSupported);
 

@@ -362,7 +362,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
 
 
     // Cleanup
-    public void finalize() {
+    public void cleanup() {
         if (times != null)
             times.stop();
         times = null;
@@ -1532,7 +1532,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
         String filepath = FileUtil.openPath("USER/PERSISTENCE/ExpSelOrder_"
                 + curOperator + ".xml");
 
-        Boolean foundESOrder = false;
+        Boolean foundESOrder = Boolean.FALSE;
 
         if (filepath != null) {
             if((DebugOutput.isSetFor("expselector")))
@@ -1543,7 +1543,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
             if (file.length() > 20) {
               try {
                 parser.parse(file, expSelSAXHandler);
-                foundESOrder = true;
+                foundESOrder = Boolean.TRUE;
               }
               catch (Exception e) {
                 Messages.writeStackTrace(e);
@@ -1564,7 +1564,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
                 if (file.length() > 20) {
                   try {
                     parser.parse(file, expSelSAXHandler);
-                    foundESOrder = true;
+                    foundESOrder = Boolean.TRUE;
                   }
                   catch (Exception e) {
                     Messages.writeStackTrace(e);
@@ -1656,7 +1656,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
         // Now parse the  ExperimentSelector.xml file.
         // If we have already parsed an ESOrder file, then we want
         // to use the ES.xml file to be sure we have the right protocols.
-        if (!userOnly && !admin && !foundESOrder) {
+        if (!userOnly && !admin && !foundESOrder.booleanValue()) {
             // No ExpSelOrder_ file found, just use the ES.xml file
             filepath = FileUtil
                     .openPath("INTERFACE/ExperimentSelector.xml");
@@ -1679,7 +1679,7 @@ public class ExpSelTree extends JPanel implements   PropertyChangeListener {
                 Messages.postWarning("No ExperimentSelector.xml file found");
             }
         }
-        else if(foundESOrder) {
+        else if(foundESOrder.booleanValue()) {
             // An ExpSelOrder_ file was found.  Thus we want to use the ES.xml
             // file for only two things:
             // - If a protocol is not in the ES.xml file, remove it from the list

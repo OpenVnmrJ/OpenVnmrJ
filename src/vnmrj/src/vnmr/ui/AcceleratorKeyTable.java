@@ -34,10 +34,10 @@ import vnmr.util.*;
 public class AcceleratorKeyTable extends Template
 {
     private static AcceleratorKeyTable acceleratorKeyTable = null;
-    private Vector value2D = null;
-    private Vector header = null;
-    private Hashtable label2key = null;
-    private Hashtable key2cmd = null;
+    private Vector<Vector<String>> value2D = null;
+    private Vector<String> header = null;
+    private Hashtable<String,String> label2key = null;
+    private Hashtable<String,String> key2cmd = null;
     public static String KEYS = "keys";
     public static String CMD = "cmd";
     public static String LABEL = "label";
@@ -58,7 +58,7 @@ public class AcceleratorKeyTable extends Template
     double gsec = 0.5; //time allowed between keystokes when entering a number.
     double tm = 0.0;
 
-    Vector menuList = new Vector();
+    Vector<String> menuList = new Vector<String>();
 
     public AcceleratorKeyTable() {
 	initMenu();
@@ -112,11 +112,11 @@ public class AcceleratorKeyTable extends Template
 	return acceleratorKeyTable;  
     }
 
-    public Hashtable getLabel2keyTable() {
+    public Hashtable<String,String> getLabel2keyTable() {
 	return label2key;
     }
 
-    public Hashtable getKey2cmdTable() {
+    public Hashtable<String,String> getKey2cmdTable() {
 	return key2cmd;
     }
 
@@ -133,16 +133,16 @@ public class AcceleratorKeyTable extends Template
     }
 
     private void initHeader() {
-	header = new Vector();
+	header = new Vector<String>();
 	header.add(LABEL);
 	header.add(KEYS);
 	header.add(CMD);
     }
 
     private void initMenu() {
-        label2key = new Hashtable();
-        key2cmd = new Hashtable();
-	value2D = new Vector();
+        label2key = new Hashtable<String,String>();
+        key2cmd = new Hashtable<String,String>();
+	value2D = new Vector<Vector<String>>();
 	String path = FileUtil.openPath(accPath);
 	if(path == null) return;
 
@@ -190,7 +190,7 @@ public class AcceleratorKeyTable extends Template
 		keys.length()>0 && label.length()>0 && cmd.length()>0) {
 		label2key.put(label,keys);
 		key2cmd.put(keys,cmd);
-		Vector row = new Vector();
+		Vector<String> row = new Vector<String>();
 		row.add(label.trim());
 		row.add(keys.trim().toLowerCase());
 		row.add(cmd.trim());
@@ -199,7 +199,7 @@ public class AcceleratorKeyTable extends Template
 	}
     }
 
-    public Vector getMenuList() {
+    public Vector<String> getMenuList() {
 	if(root == null) return null;
 	// will be called by AcceleratorKeyEditor to make a comboBox menu for
 	// possible selection of submenu.
@@ -347,7 +347,7 @@ public class AcceleratorKeyTable extends Template
 
 	if(str.length() <= 0) return;
 
-	ArrayList nums = new ArrayList();
+	ArrayList<String> nums = new ArrayList<String>();
 	if(!matchKeys(str, nums)) {
 	   char[] c = str.toCharArray();
 	   String keys = "";
@@ -381,7 +381,7 @@ public class AcceleratorKeyTable extends Template
 	}
     }
 
-    private boolean matchKeys(String str, ArrayList nums) {
+    private boolean matchKeys(String str, ArrayList<String> nums) {
     
 	// every [N] in keys corresponds to a [n] is the cmd.
 	// [n] need to be replaced by actual number in nums.
@@ -457,7 +457,7 @@ public class AcceleratorKeyTable extends Template
 
     public class MyTableModel extends DefaultTableModel {
 
-	public MyTableModel(Vector v2d, Vector header) {
+	public MyTableModel(Vector<Vector<String>> v2d, Vector<String> header) {
 	    super(v2d, header);
 	}
 

@@ -156,15 +156,15 @@ public class CryoSocketControl implements CryoBay {
      * List of possible Cryo commands and their Integer codes.
      */
     private static final Object[][] STATUS_CODES = {
-        {new Integer(0), 	"IDLE"},
-        {new Integer(1), 	"VACUUM PUMPING"},
-        {new Integer(2), 	"COOLING"},
-        {new Integer(3), 	"OPERATING"},
-        {new Integer(4), 	"WARMING"},
-        {new Integer(5), 	"FAULT"},
-        {new Integer(6), 	"SAFE"},
-        {new Integer(7), 	"PURGE"},		//never used
-        {new Integer(8), 	"THERMAL CYCLE"},
+        {Integer.valueOf(0), 	"IDLE"},
+        {Integer.valueOf(1), 	"VACUUM PUMPING"},
+        {Integer.valueOf(2), 	"COOLING"},
+        {Integer.valueOf(3), 	"OPERATING"},
+        {Integer.valueOf(4), 	"WARMING"},
+        {Integer.valueOf(5), 	"FAULT"},
+        {Integer.valueOf(6), 	"SAFE"},
+        {Integer.valueOf(7), 	"PURGE"},		//never used
+        {Integer.valueOf(8), 	"THERMAL CYCLE"},
     };
 
 
@@ -932,11 +932,11 @@ public class CryoSocketControl implements CryoBay {
     }
 
     private void hideFile(String path) {
-        // TODO: in Java 7 use File.toPath().setAttribute("dos:hidden", true)
         if (!isUnix()) {
             try {
-                Runtime.getRuntime().exec("attrib +h " + path);
-            } catch (IOException e) {
+                java.nio.file.Files.setAttribute(
+                    java.nio.file.Paths.get(path), "dos:hidden", true);
+            } catch (Exception e) {
             }
         }
     }
@@ -1214,7 +1214,7 @@ public class CryoSocketControl implements CryoBay {
         }
 
         if (cmd.startsWith("<GETSTATE")) {
-            status = m_statusNames.get(Integer.parseInt(values[0]));
+            status = m_statusNames.get(Integer.valueOf(Integer.parseInt(values[0])));
             m_cryoMsg.postDebug("cryomsg",
                                 "CryoSocketControl status: " + status);
             if(getStatus) {
@@ -1639,7 +1639,7 @@ public class CryoSocketControl implements CryoBay {
     protected boolean waitForConfirmation(int key) {
         boolean result = false;
         while (!result) {
-            boolean nResult = m_resultTable.remove(key);
+            boolean nResult = m_resultTable.remove(Integer.valueOf(key)).booleanValue();
             /*if (nResult == null) {
                 // TODO: (Java 5) Use semaphore
                 try {
@@ -1756,7 +1756,7 @@ public class CryoSocketControl implements CryoBay {
      * @param value The value to set.
      */
     protected void setConfirmation(String key, boolean value) {
-        m_resultTable.put(new String(key), new Boolean(value));
+        m_resultTable.put(new String(key), Boolean.valueOf(value));
     }
 
     /**

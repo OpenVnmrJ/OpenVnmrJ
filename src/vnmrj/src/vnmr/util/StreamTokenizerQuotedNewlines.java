@@ -197,6 +197,7 @@ public class StreamTokenizerQuotedNewlines {
      * @see        java.io.InputStreamReader
      * @see        java.io.StreamTokenizer#StreamTokenizer(java.io.Reader)
      */
+    @Deprecated
     public StreamTokenizerQuotedNewlines(InputStream is) {
 	this();
         if (is == null) {

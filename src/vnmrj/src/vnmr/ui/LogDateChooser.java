@@ -67,7 +67,7 @@ public class LogDateChooser extends JPanel {
         month.setHorizontalAlignment(SwingConstants.CENTER);
         month.setFont(f);
         add(month);
-        year  = new JLabel(new Integer(gc.get(Calendar.YEAR)).toString());
+        year  = new JLabel(Integer.valueOf(gc.get(Calendar.YEAR)).toString());
         year.setFont(f);
         add(year);
         yDown = new JButton("<");
@@ -87,7 +87,7 @@ public class LogDateChooser extends JPanel {
         //    System.out.println(year.getText());
         NumberEar numberEar = new NumberEar();
         for (int i=0; i<31; i++) {
-            number[i] = new JButton(new Integer(i+1).toString());
+            number[i] = new JButton(Integer.valueOf(i + 1).toString());
             number[i].setMargin(new Insets(0,0,0,0));
             number[i].addActionListener(numberEar);
             number[i].setBorderPainted(false);
@@ -125,7 +125,7 @@ public class LogDateChooser extends JPanel {
         public void layoutContainer(Container parent) {
             //      System.out.println("Layout called");
             month.setText(months[gc.get(Calendar.MONTH)]);
-            year.setText(new Integer(gc.get(Calendar.YEAR)).toString());
+            year.setText(Integer.valueOf(gc.get(Calendar.YEAR)).toString());
             gc.set(Calendar.DAY_OF_MONTH,1);
             int dayOffset = gc.get(Calendar.DAY_OF_WEEK)-1;
             int daysInMonth = gc.getActualMaximum(Calendar.DAY_OF_MONTH);
@@ -172,7 +172,7 @@ public class LogDateChooser extends JPanel {
         public void actionPerformed(ActionEvent ae) {
             JButton b = (JButton)ae.getSource();
             //      System.out.println("NumberEar: button="+b.getText());
-            int i = new Integer(b.getText()).intValue()-1;
+            int i = Integer.valueOf(b.getText()).intValue()-1;
             number[date].setForeground(Color.BLUE);
             date=i;
             number[i].setForeground(Color.CYAN);
@@ -196,14 +196,14 @@ public class LogDateChooser extends JPanel {
         public void actionPerformed(ActionEvent ae) {
             gc.roll(Calendar.YEAR,1);
             //      System.out.println("Date now is: "+gc.getTime());
-            year.setText(new Integer(gc.get(Calendar.YEAR)).toString());
+            year.setText(Integer.valueOf(gc.get(Calendar.YEAR)).toString());
         }
     }
     private class YDownEar implements ActionListener {
         public void actionPerformed(ActionEvent ae) {
             gc.roll(Calendar.YEAR,-1);
             //      System.out.println("Date now is: "+gc.getTime().toString());
-            year.setText(new Integer(gc.get(Calendar.YEAR)).toString());
+            year.setText(Integer.valueOf(gc.get(Calendar.YEAR)).toString());
         }
     }
 }
