@@ -562,10 +562,6 @@ then
     mkdir -p "$dest_dir"
 else
     echo "'$dest_dir' already exists"
-    if [ -d "$dest_dir"/jre ]
-    then
-        chmod -R u+w "$dest_dir"/jre
-    fi
 fi
 
 rm -f $dest_dir/pw_fault   #just in case
@@ -857,9 +853,9 @@ EOF
       fi
       if [ x$lflvr != "xdebian" ]
       then
-         (su $nmr_adm -fc "dbsetup remove")
+         (su $nmr_adm -fc "/vnmr/bin/dbsetup remove")
       else
-         (sudo -u $nmr_adm dbsetup remove)
+         (sudo -u $nmr_adm /vnmr/bin/dbsetup remove)
       fi
       
 fi
@@ -934,26 +930,6 @@ else
             continue
          fi
 
-         if (test $tar_name = "code/tarfiles/jre.tar")
-              then
-                    echo "  Extracting  \"$Item\"  $(basename $tar_name .tar)"
-          if [ x$os_version != "xwin" ]
-          then
-             if [ x$lflvr != "xdebian" ]
-             then
-                (su $nmr_adm -fc "cp -r $source_dir/code/jre.linux $dest_dir"/jre; chmod -R 755 $dest_dir/jre)
-             else
-                (sudo -u $nmr_adm cp -r $source_dir/code/jre.linux $dest_dir/jre; chmod -R 755 $dest_dir/jre)
-             fi
-          else
-             (cp -r "$source_dir"/"$tar_name" "$dest_dir"/jre)
-          fi
-          if [ $? -ne 0 ]
-          then
-             echo "Installation of $Item failed"
-          fi
-          echo "  DONE:  $tar_size KB."
-       else
           echo "  Extracting  \"$Item\"  $(basename $tar_name .tar)"
           if [ x$os_version != "xwin" ]
           then
@@ -986,7 +962,6 @@ else
                     fi
                     echo "  DONE:  $tar_size KB."
               fi
-           fi
         done
       )
 
@@ -1770,51 +1745,40 @@ home yes no '${nmr_home}'/$accname' > "$dest_dir"/adm/users/userDefaults.bak
       sudo chmod 4755 "$dest_dir"/bin/cptoconpar
    fi
 
-   #To have the Postgres postmaster started at system boot up
-     if [ x$lflvr != "xdebian" ]
-     then
-	if [[ ! -z $sysdDir ]] ; then
-           cp $dest_dir/pgsql/postgres.service $sysdDir/.
-	   systemctl enable --quiet postgres.service
-	   systemctl start --quiet postgres.service
-	fi
-        # Use older version. New version has problem with client server protocol
-        if [ $distmajor -ge 8 ] && [ -d "$dest_dir"/pgsql/bin_ver9 ] ; then
-           mv "$dest_dir"/pgsql/bin_ver9 "$dest_dir"/pgsql/bin
-        fi
+   # if a non Vnmr postgres installed, disable it from start at boot,
+   # most likely they use the same port number
+   systemctl --now mask postgresql > /dev/null 2>&1
+ 
+   # Use older version. New version has problem with client server protocol
+   if [ -d "$dest_dir"/pgsql/bin_ver9 ] ; then
+      mv "$dest_dir"/pgsql/bin_ver9 "$dest_dir"/pgsql/bin
+   fi
 
-     else
-        # Use older version. New version has problem with client server protocol
-        if [ $distmajor -gt 16 ] && [ -d "$dest_dir"/pgsql/bin_ver9 ] ; then
-           mv "$dest_dir"/pgsql/bin_ver9 "$dest_dir"/pgsql/bin
-        fi
-        if [ $distmajor -gt 16 ] ; then
-           systemctl --now mask postgresql > /dev/null 2>&1
-        else
-           # Ubuntu installs with a version number, making it bit more difficult
-           # must find the correct postgres-version# script
-           postgrescript=$(cd /etc/init.d; ls postgresql* 2> /dev/null)
-           if [ ! -z "$postgrescript" ]; then
-              sudo /etc/init.d/$postgrescript stop
-              ( cd /etc/init.d; postgrscript=$(ls postgresql*) ; sudo rm -f $postgrscript; sudo /usr/sbin/update-rc.d -f $postgrscript remove > /dev/null 2>&1; )
-           fi
-        fi
-        #remove previous version
-        rm -f /etc/init.d/pgsql
-        sudo /usr/sbin/update-rc.d -f pgsql remove > /dev/null 2>&1
-        #install new version
-        sudo cp -p "$dest_dir"/bin/S99pgsql /etc/init.d/pgsql
-        sudo chown root:root /etc/init.d/pgsql
-        sudo /usr/sbin/update-rc.d pgsql defaults > /dev/null 2>&1;
-        # PostgreSQL runs as $nmr_adm, a regular user. With systemd-logind's
-        # RemoveIPC=yes (the Ubuntu default), logind deletes that user's
-        # semaphores when they log out and the server crashes.
-        if [ -d /run/systemd/system ]; then
-           sudo mkdir -p /etc/systemd/logind.conf.d
-           printf "[Login]\nRemoveIPC=no\n" | \
-              sudo tee /etc/systemd/logind.conf.d/openvnmrj.conf > /dev/null
-        fi
-     fi
+   #To have the Postgres postmaster started at system boot up
+   if [[ ! -z $sysdDir ]] ; then
+      cp $dest_dir/pgsql/postgres.service $sysdDir/.
+      systemctl enable --quiet postgres.service
+   fi
+
+   # Postgres runs as $nmr_adm, a regular user. With systemd-logind's
+   # RemoveIPC=yes (the default), logind deletes that user's semaphores and
+   # shared memory when their last login session ends, and the server
+   # crashes. A systemd service has no session of its own to prevent that.
+   # Reload logind so the setting applies now, including to the sessions
+   # this installer opens; a logind that can't reload reads it at boot.
+   if [ -d /run/systemd/system ] ; then
+      mkdir -p /etc/systemd/logind.conf.d
+      printf "[Login]\nRemoveIPC=no\n" > /etc/systemd/logind.conf.d/openvnmrj.conf
+      systemctl reload systemd-logind > /dev/null 2>&1
+   fi
+
+   #remove previous version
+   if [ -f /etc/init.d/pgsql ] ; then
+      rm -f /etc/init.d/pgsql
+      if [ -x /usr/sbin/update-rc.d ]; then
+          sudo /usr/sbin/update-rc.d -f pgsql remove > /dev/null 2>&1
+      fi
+   fi
 
    if [ x$os_version = "xrht" ]
    then
@@ -2259,15 +2223,10 @@ then
    fi
    if [ ! -f $dest_dir/pgsql/persistence/LocatorOff ] ; then
       "$dest_dir"/bin/dbsetup ${nmr_adm} "$dest_dir"
-      # dbsetup leaves the server running in the installing user's session,
-      # where systemd stops it when that user logs out. Restart it through
-      # systemd, as at boot. /etc/init.d/pgsql serves /vnmr only.
-      if [ x$lflvr = "xdebian" ] && [ -d /run/systemd/system ] &&
-         [ "$(readlink -f /vnmr)" = "$(readlink -f "$dest_dir")" ]; then
-         /etc/init.d/pgsql stop > /dev/null 2>&1
-         systemctl daemon-reload > /dev/null 2>&1
-         systemctl restart pgsql > /dev/null 2>&1
-      fi
+
+#     Restart postgres using systemd so it will not exit
+#     after a logout
+      systemctl start --quiet postgres.service
    fi
    if [ $update_adm = "yes" ]; then
       echo " "
