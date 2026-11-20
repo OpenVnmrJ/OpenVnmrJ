@@ -23,6 +23,12 @@ else
    else
       printf "vnmr\t%s\n" $dir > /etc/synthetic.conf  
    fi
+   # macOS reads /etc/synthetic.conf only at startup, and OpenVnmrJ.app runs
+   # /vnmr/bin/vnmrj, so on a first install it won't open until a restart.
+   # Create /vnmr now instead (apfs.util -t, macOS 11 and later).
+   if [[ ! -e /vnmr ]]; then
+      /System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util -t >& /dev/null
+   fi
 fi
 
 codesign -s - $dir/bin/Vnmrbg
