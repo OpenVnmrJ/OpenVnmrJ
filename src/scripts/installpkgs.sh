@@ -701,7 +701,7 @@ else
       if [[ -z $(type -t rsh) ]]; then
           dir=$(dirname $0)
           apt-get install -y $dir/linux/rsh-redone-client_85-4_amd64.deb \
-		     $dir/linux/rsh-redone-server_85-4_amd64.deb &>> logfile
+		     $dir/linux/rsh-redone-server_85-4_amd64.deb &>> $logfile
       fi
   fi
   apt-get $repoArg -o DPkg::Options::="--force-confnew" -y install \
