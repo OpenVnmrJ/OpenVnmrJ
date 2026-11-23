@@ -102,6 +102,10 @@ if [[ "x$(basename $0)" = "xovjGetRepo" ]]; then
   if [[ $ovjRepo -eq 1 ]]; then
     if [ -x /usr/bin/dpkg ]; then
        mv /etc/apt/sources.ovj /etc/apt/sources.list
+       if [[ -d /etc/apt/sources.list.d.ovj ]]; then
+          rmdir /etc/apt/sources.list.d && \
+             mv /etc/apt/sources.list.d.ovj /etc/apt/sources.list.d
+       fi
     else
        rm -f /etc/yum.repos.d/openvnmrj.repo
     fi
@@ -694,10 +698,24 @@ else
 # Prevent packages from presenting an interactive popup
   export DEBIAN_FRONTEND=noninteractive
   if [[ $repoGet -eq 1 ]]; then
-     acqInstall="rarpd rsh-client rsh-server tftp-hpa tftpd-hpa"
-     apt-get -y install dpkg-dev &>> $logfile
+     # Keep the release-specific acqInstall from above (rsh-client and
+     # rsh-server no longer exist on Ubuntu 24+). Always include rarpd,
+     # so the repository also serves a DDR console. On 26+ the bundled
+     # rsh-redone debs need openbsd-inetd and tcpd from the archive.
+     if [[ $b12Acq -eq 0 ]]; then
+        acqInstall="$acqInstall rarpd"
+     fi
+     if [[ $distmajor -ge 26 ]]; then
+        acqInstall="$acqInstall openbsd-inetd tcpd"
+     fi
+     # dpkg-dev is installed at the end, after the downloads: anything
+     # installed here would be left out of the repository.
   fi
-  if [[ $distmajor -ge 26 ]]; then
+  # The installer's .tar archives are bzip2-compressed, but the desktop's
+  # Default selection has no bzip2. Install it on its own, so that a
+  # failure in the large install below can't leave it out.
+  apt-get $repoArg -y install bzip2 &>> $logfile
+  if [[ $distmajor -ge 26 ]] && [[ $repoGet -eq 0 ]]; then
       if [[ -z $(type -t rsh) ]]; then
           dir=$(dirname $0)
           apt-get install -y $dir/linux/rsh-redone-client_85-4_amd64.deb \
@@ -812,10 +830,16 @@ else
   fi
   if [[ $ovjRepo -eq 1 ]]; then
      mv /etc/apt/sources.ovj /etc/apt/sources.list
+     # Put back the sources ovjUseRepo set aside
+     if [[ -d /etc/apt/sources.list.d.ovj ]]; then
+        rmdir /etc/apt/sources.list.d && \
+           mv /etc/apt/sources.list.d.ovj /etc/apt/sources.list.d
+     fi
   fi
   if [[ $repoGet -eq 1 ]]; then
      mv $repoPath/dnld/archives/* $repoPath
      rm -rf $repoPath/dnld $repoPath/partial $repoPath/lock
+     apt-get -y install dpkg-dev &>> $logfile
      cd $repoPath
      dpkg-scanpackages . /dev/null | gzip -c9 > Packages.gz
      echo "Ubuntu package download complete"

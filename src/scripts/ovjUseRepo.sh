@@ -64,6 +64,14 @@ if [ -f /etc/debian_version ]; then
    mv $infile $outfile
 #   grep "^deb" $outfile | awk '$2="file:'$repoPath'"' > $infile
    echo "deb [ trusted=yes ] file:$repoPath /" > $infile
+   # Ubuntu 24+ keeps its sources in sources.list.d (ubuntu.sources, and
+   # cdrom.sources after an ISO install). Set them aside too: an installed
+   # system has package lists for them, and apt would try to download
+   # from them. installpkgs puts them back.
+   if [[ -d /etc/apt/sources.list.d ]] && [[ ! -e /etc/apt/sources.list.d.ovj ]]; then
+      mv /etc/apt/sources.list.d /etc/apt/sources.list.d.ovj
+      mkdir /etc/apt/sources.list.d
+   fi
    apt-get update 2> /dev/null
 else
    rm -f /etc/yum.repos.d/openvnmrj.repo
