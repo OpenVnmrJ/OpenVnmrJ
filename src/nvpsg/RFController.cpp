@@ -402,23 +402,42 @@ void RFController::setGates(int GatePattern)
 }
 
 //
-//
-void RFController::setUserGate(int which, int state)
+// BDZ 03-15-2023 - made the code match the original developer's intent
+//                  and made it easier to read.
+
+void RFController::setUserGate(int gate, int turn_on)
 {
   int buffer[2];
   int mask, action;
-  mask = 0;
-  action = 0;
-  if (which > 3)  buffer[0] = 0x28;  // zero all
-  else
-  {
-    mask = (1 << (which - 1));
-    if (state)
-       action = mask;
-    else
-       action = 0;
+
+  if (gate < 1) {
+    
+    abort_message("RFController::setUserGate() input error: specified gate is < 1");
   }
+  else if (gate <= 3) {
+   
+    // affect one gate: 1 or 2 or 3
+
+    mask = (1 << (gate - 1)); 
+  }
+  else { // gate > 3
+
+    // affect all three gates
+
+    mask = 7;
+  }  
+
+  if (turn_on) {
+ 
+    action = mask;
+  }
+  else {
+
+    action = 0;
+  }
+
   buffer[0] = (mask & 7) << 3 | (action & 7);
+  
   outputACode(RFSPARELINE,1,buffer); // out they go..
 }
 
